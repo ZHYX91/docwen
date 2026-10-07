@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 import uuid
 from collections import deque
 from typing import TYPE_CHECKING, Any
@@ -112,6 +113,50 @@ def _process_cell_newlines(df: Any) -> Any:
     return df_copy
 
 
+_NUMERIC_TEXT_RE = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$")
+
+
+def _requires_literal_numeric_text(value: Any) -> bool:
+    """Return whether tabulate numeric parsing would risk changing authored text."""
+
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if not text or _NUMERIC_TEXT_RE.fullmatch(text) is None:
+        return False
+
+    unsigned = text.lstrip("+-")
+    mantissa, exponent_sep, _exponent = unsigned.lower().partition("e")
+    if exponent_sep or text.startswith("+"):
+        return True
+    integer, dot, fraction = mantissa.partition(".")
+    if len(integer) > 1 and integer.startswith("0"):
+        return True
+    if not dot:
+        return len(integer) > 15
+    if fraction.endswith("0") and fraction:
+        return True
+    significant = (integer.lstrip("0") + fraction).lstrip("0")
+    return len(significant) > 6
+
+
+def _markdown_numparse_disabled_columns(data: Any) -> list[int]:
+    disabled: list[int] = []
+    for column_index in range(data.shape[1]):
+        if any(_requires_literal_numeric_text(value) for value in data.iloc[:, column_index].tolist()):
+            disabled.append(column_index)
+    return disabled
+
+
+def _dataframe_to_markdown(data: Any, headers: list[str]) -> str:
+    if not hasattr(data, "to_markdown"):
+        return ""
+    disabled = _markdown_numparse_disabled_columns(data)
+    if disabled:
+        return data.to_markdown(index=False, headers=headers, disable_numparse=disabled)
+    return data.to_markdown(index=False, headers=headers)
+
+
 def _worksheet_to_dataframe(
     ws: Any,
     table_merge_strategy: str = "fill",
@@ -167,7 +212,8 @@ def _worksheet_to_dataframe(
             )
         )
         anchor_value = ws.cell(row=range_min_row, column=range_min_col).value
-        cell_text_by_position.setdefault((range_min_row - 1, range_min_col - 1), str(anchor_value or ""))
+        anchor_text = "" if anchor_value is None else str(anchor_value)
+        cell_text_by_position.setdefault((range_min_row - 1, range_min_col - 1), anchor_text)
 
     if max_row <= 0 or max_col <= 0:
         return pd.DataFrame()
@@ -226,15 +272,15 @@ def _read_csv_flexible(file_path: str, source_format: str) -> Any:
                     sep=sep,
                     skip_blank_lines=should_skip_blank_lines(sep),
                 )
+            fallback_sep = "\t" if is_tsv else ","
             return pd.read_csv(
                 file_path,
                 header=None,
                 dtype=str,
                 keep_default_na=False,
                 encoding=encoding,
-                sep=None,
-                engine="python",
-                skip_blank_lines=should_skip_blank_lines(),
+                sep=fallback_sep,
+                skip_blank_lines=should_skip_blank_lines(fallback_sep),
             )
         except Exception:
             continue
@@ -615,7 +661,7 @@ class SpreadsheetToMarkdownConverter:
                     for j, h in enumerate(block.iloc[0].tolist())
                 ]
                 data = block.iloc[1:]
-                block_md = data.to_markdown(index=False, headers=headers) if hasattr(data, "to_markdown") else ""
+                block_md = _dataframe_to_markdown(data, headers)
             else:
                 block_md = ""
 
@@ -865,9 +911,7 @@ class SpreadsheetToMarkdownConverter:
                             for j, h in enumerate(block.iloc[0].tolist())
                         ]
                         data = block.iloc[1:]
-                        block_md = (
-                            data.to_markdown(index=False, headers=headers) if hasattr(data, "to_markdown") else ""
-                        )
+                        block_md = _dataframe_to_markdown(data, headers)
                     else:
                         block_md = ""
 
