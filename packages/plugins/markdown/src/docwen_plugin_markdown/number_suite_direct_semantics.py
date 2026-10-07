@@ -30,6 +30,7 @@ from docwen_plugin_markdown.document_semantics_v3 import (
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     project_fenced_source_v3,
 )
+from docwen_plugin_markdown.literal_source_spans import comment_and_url_spans
 
 SEMANTICS_SCHEMA = "docwen.markdown_semantics.v3"
 SEMANTICS_SCHEMA_ID = "urn:docwen:schema:markdown-semantics:v3"
@@ -1912,15 +1913,6 @@ def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[Source
             ranges.append(SourceRange(offset, offset + len(segment)))
         offset += len(segment)
 
-    # Keep the direct consumer's URL boundary: only the literal prefix owns
-    # URL protection when an authored semantic suffix starts at @[[.
-    for match in re.finditer(r"https?://[^\s<]+", source):
-        text = match.group(0)
-        semantic_start = text.find("@[[")
-        end = match.end() if semantic_start < 0 else match.start() + semantic_start
-        if end > match.start():
-            ranges.append(SourceRange(match.start(), end))
-
     # Comment delimiters inside code are literal.  Scan the remaining syntax
     # against a length-preserving projection so an unclosed delimiter in a
     # code block cannot swallow later authored references.
@@ -1941,8 +1933,6 @@ def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[Source
     projected_source = "".join(characters)
 
     patterns = (
-        re.compile(r"<!--.*?(?:-->|$)", re.DOTALL),
-        re.compile(r"%%.*?(?:%%|$)", re.DOTALL),
         re.compile(r"(`+)(?:(?!\1).)*\1", re.DOTALL),
         re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
         re.compile(r"<[^>\r\n]*>"),
@@ -1952,6 +1942,16 @@ def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[Source
     )
     for pattern in patterns:
         ranges.extend(SourceRange(match.start(), match.end()) for match in pattern.finditer(projected_source))
+
+    # Renderer atoms and destinations own their delimiters before URL/comment
+    # scanning. Inside a comment, a URL cannot hide that comment's closer.
+    for span in ranges:
+        for index in range(span.start, span.end):
+            if characters[index] not in "\r\n":
+                characters[index] = " "
+    ranges.extend(
+        SourceRange(start, end) for start, end in comment_and_url_spans("".join(characters), semantic_url_suffix=True)
+    )
 
     return _merge_ranges(ranges)
 

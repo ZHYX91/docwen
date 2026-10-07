@@ -20,6 +20,7 @@ from zipfile import BadZipFile, ZipFile
 import lxml.etree as etree
 
 from docwen_core.links import split_markdown_block_segments, split_markdown_inline_segments
+from docwen_plugin_markdown.literal_source_spans import comment_and_url_spans
 
 # ── OOXML constants ─────────────────────────────────────────────────────
 WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -82,7 +83,9 @@ def _mask_note_protected_source(source: str) -> str:
     # following that code block.
     offset = 0
     for block, block_protected in split_markdown_block_segments(source):
-        segments = [(block, True)] if block_protected else split_markdown_inline_segments(block)
+        segments = (
+            [(block, True)] if block_protected else split_markdown_inline_segments(block, protect_bare_urls=False)
+        )
         for segment, protected in segments:
             if protected:
                 ranges.append((offset, offset + len(segment)))
@@ -94,12 +97,9 @@ def _mask_note_protected_source(source: str) -> str:
                 characters[index] = " "
     projected_source = "".join(characters)
     patterns = (
-        re.compile(r"<!--.*?(?:-->|$)", re.DOTALL),
-        re.compile(r"%%.*?(?:%%|$)", re.DOTALL),
         re.compile(r"(`+)(?:(?!\1).)*\1", re.DOTALL),
         re.compile(r"!?\[\[[^\]\r\n]+\]\]"),
         re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
-        re.compile(r"https?://[^\s<]+"),
         re.compile(r"<[^>\r\n]*>"),
     )
     for pattern in patterns:
@@ -107,6 +107,11 @@ def _mask_note_protected_source(source: str) -> str:
     # Projection spaces do not create authored indentation.  A code span at
     # column zero can mask four or more characters before visible note text.
     ranges.extend(match.span() for match in re.finditer(r"(?m)^(?: {4}|\t).*?$", source))
+    for start, end in ranges:
+        for index in range(start, end):
+            if characters[index] not in "\r\n":
+                characters[index] = " "
+    ranges.extend(comment_and_url_spans("".join(characters)))
     if not ranges:
         return source
 

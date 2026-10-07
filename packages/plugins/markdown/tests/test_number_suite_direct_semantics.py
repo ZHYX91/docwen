@@ -69,6 +69,30 @@ def test_url_comment_literal_preserves_semantic_suffix_and_later_tokens() -> Non
     assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
 
 
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "`%% literal https://example.test/path`",
+        "`<!-- literal https://example.test/path`",
+        "%% https://example.test/path%%",
+        "Text <!-- https://example.test/path-->",
+        "%% <!-- https://example.test/path%%",
+        "Text <!-- %% https://example.test/path-->",
+    ],
+)
+@pytest.mark.parametrize("separator", [" ", "\n\n"])
+def test_literal_delimiters_keep_ownership_before_urls(literal: str, separator: str) -> None:
+    source = f"# 中文😀 ^target\n\n{literal}{separator}See @[[#^target]] and @real-cite.\n".replace("\n", "\r\n")
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["resolution_status"] == "resolved"
+    assert source[reference["range"]["start"] : reference["range"]["end"]] == "@[[#^target]]"
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
+
+
 def test_direct_number_suite_profile_keeps_standalone_captions_and_normalizes_targets() -> None:
     source = """Figure: Standalone   Caption ^Figure-ID
 
