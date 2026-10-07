@@ -104,7 +104,7 @@ def test_direct_number_suite_reference_scanner_respects_literal_regions() -> Non
 <!-- @[[#^missing]] @hidden-html -->
 %% @[[#^missing]] @hidden-obsidian %%
 [Link](https://example.test/@[[#^missing]])
-<span data-ref="@[[#^missing]]">@hidden-attribute</span>
+<span data-ref="@[[#^missing]]" data-cite="@hidden-attribute">literal</span>
 `@[[#^missing]] @hidden-code`
 https://example.test/path@[[#^target]]
 Real @[[#^target]] @real-cite.
