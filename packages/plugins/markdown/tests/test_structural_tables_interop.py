@@ -210,9 +210,7 @@ def test_structural_table_backtick_boundaries_do_not_consume_column_pipes(
     assert not analysis.has_errors
     metadata = analysis.ast[0]["_document_semantics_table"]
     assert metadata["column_count"] == 2
-    first_anchor = next(
-        anchor for anchor in metadata["anchors"] if anchor["row"] == 0 and anchor["column"] == 0
-    )
+    first_anchor = next(anchor for anchor in metadata["anchors"] if anchor["row"] == 0 and anchor["column"] == 0)
     assert [(child.get("type"), child.get("raw")) for child in first_anchor["children"]] == [
         (expected_kind, expected_raw)
     ]
