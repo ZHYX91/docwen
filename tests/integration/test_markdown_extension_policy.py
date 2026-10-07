@@ -309,6 +309,40 @@ def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_p
     assert any(cell[3:5] == (2, 2) for row in direct_signatures[1][3] for cell in row if not cell[5])
 
 
+def test_structural_tables_in_quote_callout_and_list_render_as_native_docx_tables(tmp_path: Path) -> None:
+    source = tmp_path / "container-tables.md"
+    source.write_text(
+        "> | - | - |\n"
+        "> | Quote A | Quote B |\n"
+        "> | Quote C | Quote D |\n\n"
+        "> [!note]\n"
+        ">\n"
+        "> | - | - |\n"
+        "> | Callout A | Callout B |\n"
+        "> | Callout C | Callout D |\n\n"
+        "- Item\n\n"
+        "  | - | - |\n"
+        "  | List A | List B |\n"
+        "  | List C | List D |\n",
+        encoding="utf-8",
+    )
+    root = tmp_path / "container-tables-out"
+    root.mkdir()
+
+    result = MdToDocxConverter().convert(_structural_direct_context(root, source))
+
+    assert result.success, result.error
+    document = Document(str(result.artifacts[0].staging_path))
+    assert len(document.tables) == 3
+    values = [
+        [[cell.text for cell in row.cells] for row in table.rows]
+        for table in document.tables
+    ]
+    assert values[0] == [["Quote A", "Quote B"], ["Quote C", "Quote D"]]
+    assert values[1] == [["Callout A", "Callout B"], ["Callout C", "Callout D"]]
+    assert values[2] == [["List A", "List B"], ["List C", "List D"]]
+
+
 def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Path) -> None:
     source = tmp_path / "no-header.md"
     source.write_text("| --- | --- |\n| Alice | 10 |\n| Bob | 20 |\n", encoding="utf-8")
