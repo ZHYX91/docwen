@@ -162,3 +162,58 @@ def test_formatted_merge_markers_are_literal_cell_content() -> None:
     metadata = analysis.ast[0]["_document_semantics_table"]
     for anchor in metadata["anchors"]:
         assert anchor["row_span"] == anchor["column_span"] == 1
+
+
+
+def _nested_tables(nodes):
+    found = []
+    for node in nodes:
+        if node.get("type") == "table":
+            found.append(node)
+        found.extend(_nested_tables(node.get("children", [])))
+    return found
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "> | - | - |\n> | A | B |\n> | C | D |",
+        "> [!note]\n>\n> | - | - |\n> | A | B |\n> | C | D |",
+        "- Item\n\n  | - | - |\n  | A | B |\n  | C | D |",
+    ],
+)
+def test_structural_tables_inside_quote_callout_and_list_are_annotated(source: str) -> None:
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    tables = _nested_tables(analysis.ast)
+    assert len(tables) == 1
+    metadata = tables[0]["_document_semantics_table"]
+    assert metadata["header_rows"] == 0
+    assert metadata["column_count"] == 2
+    assert metadata["row_count"] == 2
+
+
+@pytest.mark.parametrize(
+    ("source", "first_cell"),
+    [
+        ("| - | - |\n| `literal | value |\n| left | right |", "`literal"),
+        ("| - | - |\n| `C:\\` | value |\n| left | right |", "`C:\\`"),
+    ],
+)
+def test_structural_table_backtick_boundaries_do_not_consume_column_pipes(
+    source: str,
+    first_cell: str,
+) -> None:
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    metadata = analysis.ast[0]["_document_semantics_table"]
+    assert metadata["column_count"] == 2
+    text_values = [
+        child["raw"]
+        for anchor in metadata["anchors"]
+        for child in anchor["children"]
+        if child.get("type") == "text"
+    ]
+    assert first_cell in text_values
