@@ -164,6 +164,45 @@ class TestPptxToMd:
             linked_image = _linked_path(sidecar_path, image_targets[0])
             assert linked_image.read_bytes() == expected_image_bytes
 
+    def test_pptx_group_shape_recursively_preserves_text_and_image(self, pipeline, tmp_path: Path) -> None:
+        from PIL import Image
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        image_path = tmp_path / "group-image.png"
+        Image.new("RGB", (8, 8), (12, 34, 56)).save(image_path)
+
+        presentation = Presentation()
+        presentation.core_properties.title = "Grouped Content"
+        slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+        text_box = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(3), Inches(0.6))
+        text_box.text_frame.text = "Grouped text sentinel"
+        picture = slide.shapes.add_picture(str(image_path), Inches(1), Inches(2), Inches(1), Inches(1))
+        group = slide.shapes.add_group_shape([text_box, picture])
+        assert len(group.shapes) == 2
+
+        input_path = tmp_path / "grouped-content.pptx"
+        presentation.save(str(input_path))
+
+        _plugin, task_mgr, _ws_mgr = pipeline
+        output_dir = tmp_path / "output_grouped_content"
+        output_dir.mkdir()
+        result = _run_request(
+            task_mgr,
+            input_path,
+            "pptx",
+            output_dir,
+            image_link_style="markdown_embed",
+        )
+
+        assert result.success, result.error
+        content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+        assert "Grouped text sentinel" in content
+        image_artifacts = [artifact for artifact in result.artifacts if artifact.kind == "image"]
+        assert len(image_artifacts) == 1
+        assert Path(image_artifacts[0].staging_path).read_bytes() == image_path.read_bytes()
+        assert image_artifacts[0].suggested_name in content
+
     def test_pptx_jpeg_image_uses_standard_media_type(self, pipeline, tmp_path: Path) -> None:
         """JPEG artifacts use the IANA ``image/jpeg`` type, not ``image/jpg``."""
         from PIL import Image
