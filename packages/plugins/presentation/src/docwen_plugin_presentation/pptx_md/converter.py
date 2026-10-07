@@ -889,13 +889,14 @@ class PptxToMarkdownConverter:
     def _flatten_slide_shapes(cls, shapes: Any) -> list[Any]:
         """Return leaf shapes in stable visual order, recursing into groups."""
 
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
+
         ordered = list(shapes or [])
         ordered.sort(key=lambda shape: (_safe_int(getattr(shape, "top", 0)), _safe_int(getattr(shape, "left", 0))))
         flattened: list[Any] = []
         for shape in ordered:
             nested = getattr(shape, "shapes", None)
-            shape_type = getattr(shape, "shape_type", None)
-            if nested is not None and (str(shape_type).endswith("GROUP") or shape_type == 6):
+            if nested is not None and getattr(shape, "shape_type", None) == MSO_SHAPE_TYPE.GROUP:
                 flattened.extend(cls._flatten_slide_shapes(nested))
             else:
                 flattened.append(shape)
