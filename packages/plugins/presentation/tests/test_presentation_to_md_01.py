@@ -168,6 +168,68 @@ class TestPptxToMd:
         assert "标题: Test Presentation" not in yaml_block
         assert "title: Test Presentation" not in yaml_block
 
+    @pytest.mark.integration
+    def test_grouped_text_and_image_use_the_normal_shape_pipeline(self, pipeline, tmp_path) -> None:
+        from PIL import Image
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        image_path = tmp_path / "grouped.png"
+        Image.new("RGB", (8, 8), (12, 80, 160)).save(image_path)
+
+        presentation = Presentation()
+        presentation.core_properties.title = "Grouped content"
+        slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+        group = slide.shapes.add_group_shape()
+        textbox = group.shapes.add_textbox(Inches(1), Inches(1), Inches(3), Inches(1))
+        textbox.text_frame.text = "Grouped text payload"
+        group.shapes.add_picture(str(image_path), Inches(1), Inches(2), Inches(1), Inches(1))
+
+        source = tmp_path / "grouped-content.pptx"
+        presentation.save(source)
+        output_dir = tmp_path / "output-grouped-content"
+        output_dir.mkdir()
+        _plugin, task_mgr, _ws_mgr = pipeline
+
+        result = _run_request(
+            task_mgr,
+            source,
+            "pptx",
+            output_dir,
+            image_link_style="markdown_embed",
+        )
+
+        assert result.success, result.error
+        markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+        assert "Grouped text payload" in markdown
+        images = [artifact for artifact in result.artifacts if artifact.kind == "image"]
+        assert len(images) == 1
+        assert images[0].suggested_name in markdown
+
+    @pytest.mark.integration
+    def test_pptx_frontmatter_quotes_yaml_sensitive_title(self, pipeline, tmp_path) -> None:
+        import yaml
+        from pptx import Presentation
+
+        title = "计划: 修订 #1"
+        presentation = Presentation()
+        presentation.core_properties.title = title
+        presentation.slides.add_slide(presentation.slide_layouts[6])
+        source = tmp_path / "yaml-sensitive-title.pptx"
+        presentation.save(source)
+        output_dir = tmp_path / "output-yaml-sensitive-title"
+        output_dir.mkdir()
+        _plugin, task_mgr, _ws_mgr = pipeline
+
+        result = _run_request(task_mgr, source, "pptx", output_dir)
+
+        assert result.success, result.error
+        markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+        frontmatter = yaml.safe_load(markdown.split("---", 2)[1])
+        assert frontmatter["title"] == title
+        assert frontmatter["aliases"] == [title]
+
+
     def test_pptx_slide_content(self, pipeline, sample_pptx_file, tmp_path) -> None:
         """Slide headings and text must be preserved."""
         _plugin, task_mgr, _ws_mgr = pipeline
