@@ -331,6 +331,7 @@ def process_markdown_links(
     _canonicalize_local_docx_targets: bool = False,
     _boundary_rescan_remaining: int = 1,
     declared_image: Callable[[str, str], str] | None = None,
+    declared_wiki_link: Callable[[str, str], str | None] | None = None,
 ) -> str:
     """Process Markdown links using one immutable request policy."""
     if not text:
@@ -392,6 +393,8 @@ def process_markdown_links(
             _visited_files=inner_visited,
             _depth=inner_depth,
             _canonicalize_local_docx_targets=True,
+            declared_image=declared_image,
+            declared_wiki_link=declared_wiki_link,
         )
         if kwargs.get("table_safe"):
             from docwen_core.links._embed_md import _make_table_safe
@@ -486,6 +489,7 @@ def process_markdown_links(
         on_not_found=resolved_not_found,
         canonicalize_local_docx_targets=_canonicalize_local_docx_targets,
         table_safe=table_safe,
+        declared_wiki_link=declared_wiki_link,
     )
     if table_safe:
         result = _escape_table_image_placeholder_pipes(result, image_scope)
@@ -526,6 +530,7 @@ def process_markdown_links(
                 _canonicalize_local_docx_targets=(_canonicalize_local_docx_targets),
                 _boundary_rescan_remaining=0,
                 declared_image=declared_image,
+                declared_wiki_link=declared_wiki_link,
             )
             if span_in_table:
                 replacement = escape_unescaped_pipes(replacement)
