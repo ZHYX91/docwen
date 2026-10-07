@@ -236,6 +236,69 @@ class TestExecuteMethods:
         with pytest.raises(ControllerError, match="No runtime port"):
             ctrl.execute_batch(request)
 
+    def test_preconversion_rebinds_machine_integrity_to_derived_file(
+        self,
+        mock_runtime: MagicMock,
+        tmp_path,
+    ) -> None:
+        import hashlib
+
+        from docwen_application.preconversion.pre_converter import PreConversionResult
+        from docwen_core.models.result import ConversionResult
+
+        source = tmp_path / "legacy.rtf"
+        source.write_bytes(b"{\\rtf1\\ansi original}")
+        converted = tmp_path / "legacy.docx"
+        converted.write_bytes(b"derived docx bytes")
+        source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+        converted_sha = hashlib.sha256(converted.read_bytes()).hexdigest()
+
+        ref = _file_ref(str(source), "rtf")
+        ref.metadata.update(
+            {
+                "machine_input_id": "source",
+                "machine_input_size_bytes": source.stat().st_size,
+                "machine_input_sha256": source_sha,
+            }
+        )
+        request = ConversionRequest(
+            request_id="typed-preconversion-integrity",
+            input_refs=[ref],
+            target_format="md",
+        )
+        mock_runtime.execute.return_value = ConversionResult(task_id=request.request_id, success=True)
+        ctrl = ApplicationController(runtime_port=mock_runtime)
+
+        with (
+            patch(
+                "docwen_application.preconversion.chain_resolver.resolve_chain",
+                return_value=["docx", "md"],
+            ),
+            patch(
+                "docwen_application.preconversion.pre_converter.pre_convert",
+                return_value=PreConversionResult(
+                    pre_converted_path=str(converted),
+                    original_source_format="rtf",
+                    backend="Fake Office",
+                    source_sha256=source_sha,
+                ),
+            ),
+        ):
+            ctrl.execute_single(request)
+
+        runtime_request = mock_runtime.execute.call_args[0][0]
+        derived = runtime_request.input_refs[0]
+        assert derived.path == str(converted)
+        assert derived.size_bytes == converted.stat().st_size
+        assert derived.metadata["machine_input_size_bytes"] == converted.stat().st_size
+        assert derived.metadata["machine_input_sha256"] == converted_sha
+        assert derived.metadata["machine_input_id"] == "source"
+        assert derived.metadata["_docwen_preconversion_source"]["machine_input"] == {
+            "input_id": "source",
+            "size_bytes": source.stat().st_size,
+            "sha256": source_sha,
+        }
+
     def test_preconversion_records_intermediate_when_setting_enabled(
         self,
         mock_runtime: MagicMock,
