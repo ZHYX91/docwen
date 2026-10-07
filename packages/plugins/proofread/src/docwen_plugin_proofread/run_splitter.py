@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from copy import deepcopy
-from typing import Any
 from typing import Any, cast
 
 from docx.oxml import OxmlElement
