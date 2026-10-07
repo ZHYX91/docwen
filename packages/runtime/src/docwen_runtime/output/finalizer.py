@@ -61,6 +61,8 @@ class _PreparedArtifact:
     temp_path: str | None = None
     reuse: ArtifactManifest | None = None
     skip_existing: bool = False
+    protected_input_path: str | None = None
+    protected_input_key: str | None = None
 
 
 if sys.platform == "win32":
@@ -758,13 +760,8 @@ class OutputFinalizer:
         reused = cls._reuse_identical_input_artifact(artifact, output_dir, overwrite_mode, input_path, cancellation)
         suggested = artifact.suggested_name or os.path.basename(artifact.staging_path)
         destination, suggested = cls._safe_final_path(output_dir, suggested)
-        if (
-            artifact.is_primary
-            and input_path
-            and not allow_primary_input_replacement
-            and os.path.normcase(destination) == os.path.normcase(os.path.abspath(input_path))
-        ):
-            raise ValueError("Primary output must not replace its input file")
+        protected_input_path = input_path if not (artifact.is_primary and allow_primary_input_replacement) else None
+        protected_input_key = cls._lock_key(input_path) if protected_input_path else None
         rename_base = destination if overwrite_mode == "rename" else None
         if reused is not None:
             return _PreparedArtifact(
@@ -774,6 +771,8 @@ class OutputFinalizer:
                 rename_base=rename_base,
                 reuse=reused[0],
             )
+
+        cls._check_input_destination(destination, protected_input_path, protected_input_key)
 
         io_destination = cls._io_path(destination)
         if io_destination.exists():
@@ -786,6 +785,8 @@ class OutputFinalizer:
                     destination=destination,
                     rename_base=rename_base,
                     skip_existing=True,
+                    protected_input_path=protected_input_path,
+                    protected_input_key=protected_input_key,
                 )
             if overwrite_mode == "rename":
                 destination = cls._rename_path(destination)
@@ -814,6 +815,8 @@ class OutputFinalizer:
             destination=destination,
             rename_base=rename_base,
             temp_path=temp_path,
+            protected_input_path=protected_input_path,
+            protected_input_key=protected_input_key,
         )
 
     @classmethod
@@ -849,10 +852,12 @@ class OutputFinalizer:
 
         destination = item.destination
         if overwrite_mode == "overwrite":
+            cls._check_input_destination(destination, item.protected_input_path, item.protected_input_key)
             os.replace(cls._io_path(item.temp_path), cls._io_path(destination))
         else:
             while True:
                 try:
+                    cls._check_input_destination(destination, item.protected_input_path, item.protected_input_key)
                     cls._publish_no_clobber(item.temp_path, destination)
                     break
                 except FileExistsError:
@@ -956,7 +961,7 @@ class OutputFinalizer:
             artifact.suggested_name or os.path.basename(artifact.staging_path),
         )
         input_abs = os.path.abspath(input_path)
-        if os.path.normcase(final_path) != os.path.normcase(input_abs):
+        if OutputFinalizer._lock_key(final_path) != OutputFinalizer._lock_key(input_abs):
             return None
         if (
             not OutputFinalizer._io_path(artifact.staging_path).is_file()
@@ -1013,6 +1018,11 @@ class OutputFinalizer:
         io_path = filesystem_path(absolute, force_extended=sys.platform == "win32")
         resolved = os.path.realpath(io_path)
         return os.path.normcase(cls._logical_io_spelling(resolved))
+
+    @classmethod
+    def _check_input_destination(cls, destination: str, input_path: str | None, input_key: str | None) -> None:
+        if input_path and cls._lock_key(destination) in {input_key, cls._lock_key(input_path)}:
+            raise ValueError("Primary output must not replace its input file")
 
     @staticmethod
     def _resolve_output_dir(policy: OutputPolicy, input_path: str) -> str:

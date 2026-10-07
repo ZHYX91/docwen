@@ -37,23 +37,33 @@ def _apply_wrappers(text: str, wrappers: list[tuple[str, str]]) -> str:
     return text
 
 
-def _unwrap_wrappers(text: str, wrappers: list[tuple[str, str]]) -> str | None:
-    inner = text
-    for prefix, suffix in reversed(wrappers):
-        if not inner.startswith(prefix) or not inner.endswith(suffix):
-            return None
-        inner = inner[len(prefix) : len(inner) - len(suffix)]
-    return inner
+class _RenderedRunPart(str):
+    """Keep the actual run policy beside text until paragraph joining.
+
+    Delimiter spelling alone cannot distinguish italic from bold, or literal
+    text from code. Only fragments emitted with the same policy may coalesce.
+    """
+
+    raw_text: str
+    wrappers: tuple[tuple[str, str], ...]
+    inline_code: bool
+
+    def __new__(cls, raw_text: str, wrappers: list[tuple[str, str]], *, inline_code: bool = False):
+        body = _render_inline_code_span(raw_text) if inline_code else raw_text
+        part = super().__new__(cls, _apply_wrappers(body, wrappers))
+        part.raw_text = raw_text
+        part.wrappers = tuple(wrappers)
+        part.inline_code = inline_code
+        return part
 
 
 def _append_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, str]]) -> None:
-    rendered = _apply_wrappers(raw_text, wrappers)
     if wrappers and parts:
-        previous_inner = _unwrap_wrappers(parts[-1], wrappers)
-        if previous_inner is not None:
-            parts[-1] = _apply_wrappers(previous_inner + raw_text, wrappers)
+        previous = parts[-1]
+        if isinstance(previous, _RenderedRunPart) and not previous.inline_code and previous.wrappers == tuple(wrappers):
+            parts[-1] = _RenderedRunPart(previous.raw_text + raw_text, wrappers)
             return
-    parts.append(rendered)
+    parts.append(_RenderedRunPart(raw_text, wrappers) if wrappers else raw_text)
 
 
 def _longest_backtick_run(text: str) -> int:
@@ -79,41 +89,21 @@ def _render_inline_code_span(text: str) -> str:
     return f"{delimiter}{body}{delimiter}"
 
 
-def _decode_rendered_inline_code_span(rendered: str) -> str | None:
-    if not rendered or rendered[0] != "`":
-        return None
-    delimiter_length = 0
-    while delimiter_length < len(rendered) and rendered[delimiter_length] == "`":
-        delimiter_length += 1
-    delimiter = "`" * delimiter_length
-    if len(rendered) < delimiter_length * 2 or not rendered.endswith(delimiter):
-        return None
-    body = rendered[delimiter_length:-delimiter_length]
-    if body.startswith(" ") and body.endswith(" ") and len(body) >= 2:
-        inner = body[1:-1]
-        if (
-            inner.startswith("`")
-            or inner.endswith("`")
-            or (inner.startswith(" ") and inner.endswith(" ") and bool(inner.strip(" ")))
-        ):
-            return inner
-    return body
-
-
 def _append_inline_code_wrapped(
     parts: list[str],
     raw_text: str,
     outer_wrappers: list[tuple[str, str]],
 ) -> None:
     if parts:
-        previous = _unwrap_wrappers(parts[-1], outer_wrappers) if outer_wrappers else parts[-1]
-        if previous is not None:
-            previous_code = _decode_rendered_inline_code_span(previous)
-            if previous_code is not None:
-                combined = _render_inline_code_span(previous_code + raw_text)
-                parts[-1] = _apply_wrappers(combined, outer_wrappers)
-                return
-    parts.append(_apply_wrappers(_render_inline_code_span(raw_text), outer_wrappers))
+        previous = parts[-1]
+        if (
+            isinstance(previous, _RenderedRunPart)
+            and previous.inline_code
+            and previous.wrappers == tuple(outer_wrappers)
+        ):
+            parts[-1] = _RenderedRunPart(previous.raw_text + raw_text, outer_wrappers, inline_code=True)
+            return
+    parts.append(_RenderedRunPart(raw_text, outer_wrappers, inline_code=True))
 
 
 def _marker_pair(kind: str, config: DocxMarkdownSyntaxConfig) -> tuple[str, str]:

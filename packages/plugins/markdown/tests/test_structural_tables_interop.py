@@ -227,7 +227,7 @@ def test_escaped_backtick_does_not_open_a_structural_cell_code_span() -> None:
 
 
 @pytest.mark.parametrize("prefix", ["", "> "])
-def test_comment_tables_remain_visible_literal_source(prefix: str) -> None:
+def test_comment_tables_are_hidden_with_structural_input(prefix: str) -> None:
     source = "\n".join(prefix + line for line in ["%%", "| A | < |", "| - | - |", "| 1 | 2 |", "%%"])
     ast = parse_markdown_text(source)
 
@@ -236,8 +236,15 @@ def test_comment_tables_remain_visible_literal_source(prefix: str) -> None:
     def text(nodes):
         return "".join(node.get("raw", "") + text(node.get("children", [])) for node in nodes)
 
-    assert "| A | < |" in text(ast)
-    assert "%%" in text(ast)
+    assert "| A | < |" not in text(ast)
+    assert "%%" not in text(ast)
+
+    from docwen_core.markdown_extensions import MarkdownExtensions
+
+    literal = parse_markdown_text(source, extensions=MarkdownExtensions(structural_tables=False))
+    assert not _nested_tables(literal)
+    assert "| A | < |" in text(literal)
+    assert "%%" in text(literal)
 
 
 @pytest.mark.parametrize(

@@ -152,6 +152,28 @@ def test_render_paragraph_runs_coalesces_adjacent_runs_through_shared_helper():
     assert rendered == "__Hello World__"
 
 
+@pytest.mark.parametrize("marker", ["asterisk", "underscore"])
+def test_adjacent_different_run_formats_keep_their_own_markers(marker):
+    doc = Document()
+    paragraph = doc.add_paragraph()
+    paragraph.add_run("Bold").bold = True
+    paragraph.add_run("Italic").italic = True
+    syntax = DocxMarkdownSyntaxConfig(bold=marker, italic=marker)
+    actual = render_paragraph_runs(paragraph, syntax_config=syntax)
+    token = "_" if marker == "underscore" else "*"
+    assert actual == f"{token * 2}Bold{token * 2}{token}Italic{token}"
+
+
+def test_literal_code_like_text_does_not_coalesce_with_a_styled_code_run():
+    doc = Document()
+    paragraph = doc.add_paragraph("`literal`")
+    run = paragraph.add_run("actual code")
+    shading = OxmlElement("w:shd")
+    shading.set(qn("w:fill"), "D9D9D9")
+    run._r.get_or_add_rPr().append(shading)
+    assert render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig()) == "`literal``actual code`"
+
+
 def test_page_break_segments_preserve_formatting_inside_the_same_run():
     doc = Document()
     paragraph = doc.add_paragraph()

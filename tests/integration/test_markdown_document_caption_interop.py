@@ -35,6 +35,49 @@ from tests.integration._round_trip_helper import docx_to_md, md_to_docx
 pytestmark = [pytest.mark.integration, pytest.mark.pr_gate]
 
 
+def test_structural_comment_body_is_absent_from_visible_docx(round_trip_runtime: Any, tmp_path: Path) -> None:
+    source_path = tmp_path / "protected-tables.md"
+    source = (
+        "Visible before.\n\n"
+        "%%\n| Hidden root | < |\n| - | - |\n| secret | secret |\n%%\n\n"
+        "> %%\n> | Hidden nested | < |\n> | - | - |\n> | secret | secret |\n> %%\n\n"
+        "```md\n%%\nLiteral code example\n%%\n```\n\n"
+        "| - | - |\n| visible table | value |\n\nVisible after.\n"
+    )
+    source_path.write_bytes(source.encode("utf-8"))
+    output = md_to_docx(round_trip_runtime, source_path, tmp_path / "comment-output")
+    reopened = Document(str(output))
+    visible = "\n".join(element.text or "" for element in reopened.element.iter(qn("w:t")))
+    assert "Hidden" not in visible and "secret" not in visible
+    assert "Visible before." in visible and "Visible after." in visible
+    assert "Literal code example" in visible and "%%" in visible
+    assert len(reopened.tables) == 1
+    assert [[cell.text for cell in row.cells] for row in reopened.tables[0].rows] == [["visible table", "value"]]
+    assert source_path.read_bytes() == source.encode("utf-8")
+
+
+@pytest.mark.parametrize("preserve", [False, True])
+def test_docx_note_formatting_follows_request_policy(round_trip_runtime: Any, tmp_path: Path, preserve: bool) -> None:
+    source_path = tmp_path / "note-policy.md"
+    source_path.write_text(
+        "Body **bold**[^foot] and *italic*[^endnote:tail].\n\n"
+        "[^foot]: Foot **bold** and *italic* with `` `code` ``.\n"
+        "[^endnote:tail]: End **bold** and *italic* with `` `code` ``.\n",
+        encoding="utf-8",
+    )
+    output = md_to_docx(round_trip_runtime, source_path, tmp_path / "note-docx")
+    markdown = docx_to_md(
+        round_trip_runtime, output, tmp_path / "note-markdown", options={"preserve_formatting": preserve}
+    )
+    for domain in ["Foot", "End"]:
+        expected = (
+            f"{domain} **bold** and *italic* with `` `code` ``."
+            if preserve
+            else f"{domain} bold and italic with `code`."
+        )
+        assert expected in markdown
+
+
 def test_figure_captioned_multi_image_table_round_trips_as_native_table(
     round_trip_runtime: Any,
     tmp_path: Path,

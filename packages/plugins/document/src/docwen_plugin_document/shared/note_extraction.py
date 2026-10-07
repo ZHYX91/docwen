@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import Any
 from zipfile import ZipFile
 
+from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_core.docx_parsing.xml_ns import NS_W
+from docwen_plugin_document.shared.markdown_runs import append_formatted_run_text
 
 
 def _extract_notes_with_status(
@@ -13,6 +15,10 @@ def _extract_notes_with_status(
     docx_path: str | None,
     part_name: str,
     note_tag: str,
+    *,
+    preserve_formatting: bool = True,
+    syntax_config: DocxMarkdownSyntaxConfig | None = None,
+    style_detector_config: StyleDetectorConfig | None = None,
 ) -> tuple[dict[int, str], bool]:
     """Extract notes from python-docx part or ZIP fallback.
 
@@ -49,7 +55,14 @@ def _extract_notes_with_status(
             continue
         if _is_system_note(note_elem, w_ns):
             continue
-        content = _extract_note_content(note_elem, w_ns, ref_tag)
+        content = _extract_note_content(
+            note_elem,
+            w_ns,
+            ref_tag,
+            preserve_formatting=preserve_formatting,
+            syntax_config=syntax_config,
+            style_detector_config=style_detector_config,
+        )
         if content.strip():
             notes[int(w_id_raw)] = content
     return notes, False
@@ -75,7 +88,15 @@ def _is_system_note(elem, w_ns: str) -> bool:
     return ntype in ("separator", "continuationSeparator")
 
 
-def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
+def _extract_note_content(
+    elem,
+    w_ns: str,
+    ref_tag: str,
+    *,
+    preserve_formatting: bool = True,
+    syntax_config: DocxMarkdownSyntaxConfig | None = None,
+    style_detector_config: StyleDetectorConfig | None = None,
+) -> str:
     """Extract note Markdown while preserving supported run formatting and breaks."""
 
     para_texts: list[str] = []
@@ -93,16 +114,29 @@ def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
                 separator_expected = False
                 continue
             separator_expected = False
-            rendered = _render_note_run(run, w_ns)
-            if rendered:
-                run_texts.append(rendered)
+            _append_note_run(
+                run_texts,
+                run,
+                w_ns,
+                preserve_formatting=preserve_formatting,
+                syntax_config=syntax_config or DocxMarkdownSyntaxConfig(),
+                style_detector_config=style_detector_config,
+            )
         if run_texts:
             para_texts.append("".join(run_texts))
     return "\n".join(para_texts)
 
 
-def _render_note_run(run: Any, w_ns: str) -> str:
-    """Render one note run using the Markdown formatting DocWen writes."""
+def _append_note_run(
+    rendered: list[str],
+    run: Any,
+    w_ns: str,
+    *,
+    preserve_formatting: bool,
+    syntax_config: DocxMarkdownSyntaxConfig,
+    style_detector_config: StyleDetectorConfig | None,
+) -> None:
+    """Use the body renderer's syntax, code-span padding and run coalescing."""
 
     parts: list[str] = []
     for child in run:
@@ -113,78 +147,21 @@ def _render_note_run(run: Any, w_ns: str) -> str:
         elif child.tag == f"{{{w_ns}}}tab":
             parts.append("\t")
     text = "".join(parts)
-    if not text:
-        return ""
-
-    properties = run.find(f"{{{w_ns}}}rPr")
-    if properties is None:
-        return text
-
-    fonts = properties.find(f"{{{w_ns}}}rFonts")
-    shading = properties.find(f"{{{w_ns}}}shd")
-    code_run = (
-        fonts is not None
-        and (fonts.get(f"{{{w_ns}}}ascii") == "Consolas" or fonts.get(f"{{{w_ns}}}hAnsi") == "Consolas")
-        and shading is not None
-        and shading.get(f"{{{w_ns}}}fill") == "D9D9D9"
-    )
-    bold = _run_property_enabled(properties.find(f"{{{w_ns}}}b"), w_ns)
-    italic = _run_property_enabled(properties.find(f"{{{w_ns}}}i"), w_ns)
-    strike = _run_property_enabled(properties.find(f"{{{w_ns}}}strike"), w_ns)
-
-    return "\n".join(
-        _format_note_text_segment(
-            segment,
-            code=code_run,
-            bold=bold,
-            italic=italic,
-            strike=strike,
-        )
-        for segment in text.split("\n")
-    )
-
-
-def _run_property_enabled(element: Any, w_ns: str) -> bool:
-    if element is None:
-        return False
-    value = element.get(f"{{{w_ns}}}val")
-    return value is None or str(value).lower() not in {"0", "false", "off", "none"}
-
-
-def _format_note_text_segment(
-    text: str,
-    *,
-    code: bool,
-    bold: bool,
-    italic: bool,
-    strike: bool,
-) -> str:
-    if not text:
-        return ""
-    if code:
-        delimiter = "`" * (_longest_backtick_run(text) + 1)
-        return f"{delimiter}{text}{delimiter}"
-
-    rendered = text
-    if bold:
-        rendered = f"**{rendered}**"
-    if italic:
-        rendered = f"*{rendered}*"
-    if strike:
-        rendered = f"~~{rendered}~~"
-    return rendered
-
-
-def _longest_backtick_run(text: str) -> int:
-    longest = 0
-    current = 0
-    for character in text:
-        if character == "`":
-            current += 1
-            longest = max(longest, current)
+    for index, segment in enumerate(text.split("\n")):
+        if index:
+            rendered.append("\n")
+        if not segment:
+            continue
+        if preserve_formatting:
+            append_formatted_run_text(
+                rendered,
+                segment,
+                run,
+                syntax_config=syntax_config,
+                style_detector_config=style_detector_config,
+            )
         else:
-            current = 0
-    return longest
+            rendered.append(segment)
 
 
 def _is_reference_separator_run(run: Any, w_ns: str) -> bool:
@@ -243,19 +220,34 @@ class NoteExtractor:
     """Aggregate footnote/endnote extraction, mapping, reference text, and
     Markdown definitions block."""
 
-    def __init__(self, doc, docx_path: str | None = None, *, typed_endnotes: bool = True) -> None:
+    def __init__(
+        self,
+        doc,
+        docx_path: str | None = None,
+        *,
+        typed_endnotes: bool = True,
+        preserve_formatting: bool = True,
+        syntax_config: DocxMarkdownSyntaxConfig | None = None,
+        style_detector_config: StyleDetectorConfig | None = None,
+    ) -> None:
         self._endnote_prefix = "endnote:" if typed_endnotes else "endnote-"
         self.footnotes, self.footnote_part_failed = _extract_notes_with_status(
             doc,
             docx_path,
             "footnotes",
             "footnote",
+            preserve_formatting=preserve_formatting,
+            syntax_config=syntax_config,
+            style_detector_config=style_detector_config,
         )
         self.endnotes, self.endnote_part_failed = _extract_notes_with_status(
             doc,
             docx_path,
             "endnotes",
             "endnote",
+            preserve_formatting=preserve_formatting,
+            syntax_config=syntax_config,
+            style_detector_config=style_detector_config,
         )
         # Display IDs are assigned lazily from the first body reference.
         # Footnotes and endnotes own independent per-file domains.

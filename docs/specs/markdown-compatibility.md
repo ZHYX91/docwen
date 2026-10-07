@@ -117,13 +117,15 @@ DocWen accepts the Structural Tables pipe-table dialect in addition to ordinary 
 - invalid widths or structures remain visible source text instead of being guessed.
 
 Standalone Obsidian comment blocks delimited by lines containing only `%%` are not
-table input. DOCX conversion retains the block as visible literal text rather than
-silently hiding unsupported content; spreadsheet extraction ignores its tables.
+table input. When Structural Tables input is enabled, DOCX omits their visible content;
+spreadsheet extraction ignores their tables. With that input dialect disabled, DOCX
+retains the block as visible literal text.
 Fenced code still owns its literal `%%` examples. This table boundary does not promise
 general Obsidian comment rendering or note transclusion.
 
-独立 `%%` 行包围的 Obsidian 注释块不作为表格输入。DOCX 保留其可见字面正文，
-表格提取忽略其中的表格；围栏代码中的 `%%` 仍由代码语法处理。此边界不承诺
+独立 `%%` 行包围的 Obsidian 注释块不作为表格输入。启用 Structural Tables 输入时，
+DOCX 不呈现其正文，表格提取忽略其中的表格；关闭该输入方言时 DOCX 保留其可见字面正文。
+围栏代码中的 `%%` 仍由代码语法处理。此边界不承诺
 完整 Obsidian 注释呈现或链接笔记内容转置。
 
 DOCX export maps these roles and merge rectangles to native table semantics. DOCX import emits the canonical

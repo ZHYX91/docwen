@@ -1,6 +1,8 @@
+import mistune
 import pytest
 from lxml import etree
 
+from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig
 from docwen_plugin_document.shared.note_extraction import (
     NoteExtractor,
     _extract_note_content,
@@ -70,6 +72,46 @@ def test_note_content_preserves_codespan_with_embedded_backtick():
     etree.SubElement(run, f"{{{WML_NS}}}t").text = "a`b"
 
     assert _extract_note_content(note, WML_NS, "footnoteRef") == "``a`b``"
+
+
+@pytest.mark.parametrize("ref_tag", ["footnoteRef", "endnoteRef"])
+@pytest.mark.parametrize("value", ["value", "a`b", "`value", "value`", "`value`", " value ", "   "])
+def test_note_codespan_reparses_with_exact_literal_value(ref_tag, value):
+    note = etree.Element(f"{{{WML_NS}}}note")
+    paragraph = etree.SubElement(note, f"{{{WML_NS}}}p")
+    # Word can split a code span across otherwise identical runs when saving.
+    for text in [value[:1], value[1:]]:
+        run = etree.SubElement(paragraph, f"{{{WML_NS}}}r")
+        props = etree.SubElement(run, f"{{{WML_NS}}}rPr")
+        fonts = etree.SubElement(props, f"{{{WML_NS}}}rFonts")
+        fonts.set(f"{{{WML_NS}}}ascii", "Consolas")
+        shading = etree.SubElement(props, f"{{{WML_NS}}}shd")
+        shading.set(f"{{{WML_NS}}}fill", "D9D9D9")
+        etree.SubElement(run, f"{{{WML_NS}}}t").text = text
+    markdown = _extract_note_content(note, WML_NS, ref_tag)
+    ast = mistune.create_markdown(renderer="ast")(markdown)
+    assert ast == [{"type": "paragraph", "children": [{"type": "codespan", "raw": value}]}]
+    assert _extract_note_content(note, WML_NS, ref_tag, preserve_formatting=False) == value
+
+
+@pytest.mark.parametrize("ref_tag", ["footnoteRef", "endnoteRef"])
+@pytest.mark.parametrize("preserve", [False, True])
+def test_note_content_uses_selected_formatting_and_syntax(ref_tag, preserve):
+    note = etree.Element(f"{{{WML_NS}}}note")
+    paragraph = etree.SubElement(note, f"{{{WML_NS}}}p")
+    for property_name, text in [("b", "Bold"), ("i", "Italic"), ("strike", "Strike")]:
+        run = etree.SubElement(paragraph, f"{{{WML_NS}}}r")
+        properties = etree.SubElement(run, f"{{{WML_NS}}}rPr")
+        etree.SubElement(properties, f"{{{WML_NS}}}{property_name}")
+        etree.SubElement(run, f"{{{WML_NS}}}t").text = text
+    actual = _extract_note_content(
+        note,
+        WML_NS,
+        ref_tag,
+        preserve_formatting=preserve,
+        syntax_config=DocxMarkdownSyntaxConfig(bold="underscore", italic="underscore", strikethrough="html"),
+    )
+    assert actual == ("__Bold___Italic_<del>Strike</del>" if preserve else "BoldItalicStrike")
 
 
 def test_build_note_definitions_formats_multiline_content():
