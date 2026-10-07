@@ -31,6 +31,25 @@ _WPS_RUN_SHADING_GRAY_COLORS = frozenset(
 )
 
 
+def resolve_run_style_type(run: Any, parent: Any, config: StyleDetectorConfig | None) -> str | None:
+    """Resolve body and notes character styles through the document's styles part."""
+    if not hasattr(parent, "part"):
+        return None
+    try:
+        from docx.oxml import parse_xml
+        from docx.oxml.text.run import CT_R
+        from docx.text.run import Run
+        from lxml.etree import tostring
+
+        # ZIP-loaded notes can expose generic XML rather than a python-docx CT_R.
+        typed_run = run if isinstance(run, CT_R) else parse_xml(tostring(run))
+        if not isinstance(typed_run, CT_R):
+            return None
+        return detect_run_style_type(Run(typed_run, parent), config=config)
+    except Exception:
+        return None
+
+
 def _apply_wrappers(text: str, wrappers: list[tuple[str, str]]) -> str:
     for prefix, suffix in wrappers:
         text = f"{prefix}{text}{suffix}"
@@ -423,18 +442,8 @@ def _render_paragraph_run_segments(
             run,
             syntax_config=syntax_config,
             style_detector_config=style_detector_config,
-            run_style_type=_resolved_run_style_type(run),
+            run_style_type=resolve_run_style_type(run, para, style_detector_config),
         )
-
-    def _resolved_run_style_type(run: Any) -> str | None:
-        try:
-            from docx.text.run import Run
-
-            if not hasattr(para, "part"):
-                return None
-            return detect_run_style_type(Run(run, para), config=style_detector_config)
-        except Exception:
-            return None
 
     def _handle_run(run: Any) -> None:
         w_ns = NS_W

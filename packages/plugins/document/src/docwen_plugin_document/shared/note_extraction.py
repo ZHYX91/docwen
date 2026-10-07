@@ -7,7 +7,7 @@ from zipfile import ZipFile
 
 from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_core.docx_parsing.xml_ns import NS_W
-from docwen_plugin_document.shared.markdown_runs import append_formatted_run_text
+from docwen_plugin_document.shared.markdown_runs import append_formatted_run_text, resolve_run_style_type
 
 
 def _extract_notes_with_status(
@@ -62,6 +62,7 @@ def _extract_notes_with_status(
             preserve_formatting=preserve_formatting,
             syntax_config=syntax_config,
             style_detector_config=style_detector_config,
+            style_parent=doc,
         )
         if content.strip():
             notes[int(w_id_raw)] = content
@@ -96,6 +97,7 @@ def _extract_note_content(
     preserve_formatting: bool = True,
     syntax_config: DocxMarkdownSyntaxConfig | None = None,
     style_detector_config: StyleDetectorConfig | None = None,
+    style_parent: Any = None,
 ) -> str:
     """Extract note Markdown while preserving supported run formatting and breaks."""
 
@@ -121,6 +123,7 @@ def _extract_note_content(
                 preserve_formatting=preserve_formatting,
                 syntax_config=syntax_config or DocxMarkdownSyntaxConfig(),
                 style_detector_config=style_detector_config,
+                style_parent=style_parent,
             )
         if run_texts:
             para_texts.append("".join(run_texts))
@@ -135,6 +138,7 @@ def _append_note_run(
     preserve_formatting: bool,
     syntax_config: DocxMarkdownSyntaxConfig,
     style_detector_config: StyleDetectorConfig | None,
+    style_parent: Any,
 ) -> None:
     """Use the body renderer's syntax, code-span padding and run coalescing."""
 
@@ -159,6 +163,7 @@ def _append_note_run(
                 run,
                 syntax_config=syntax_config,
                 style_detector_config=style_detector_config,
+                run_style_type=resolve_run_style_type(run, style_parent, style_detector_config),
             )
         else:
             rendered.append(segment)

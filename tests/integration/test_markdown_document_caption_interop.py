@@ -41,6 +41,8 @@ def test_structural_comment_body_is_absent_from_visible_docx(round_trip_runtime:
         "Visible before.\n\n"
         "%%\n| Hidden root | < |\n| - | - |\n| secret | secret |\n%%\n\n"
         "> %%\n> | Hidden nested | < |\n> | - | - |\n> | secret | secret |\n> %%\n\n"
+        "- %%\n  | Hidden list | < |\n  | - | - |\n  | secret | secret |\n  %%\n\n"
+        "> - %%\n>   | Hidden quote list | < |\n>   | - | - |\n>   | secret | secret |\n>   %%\n\n"
         "```md\n%%\nLiteral code example\n%%\n```\n\n"
         "| - | - |\n| visible table | value |\n\nVisible after.\n"
     )

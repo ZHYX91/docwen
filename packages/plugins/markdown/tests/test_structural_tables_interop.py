@@ -262,3 +262,18 @@ def test_comment_and_fence_boundaries_do_not_hide_a_later_table(protected: str) 
     assert len(_nested_tables(analysis.ast)) == 1
     [table] = parse_raw_md_tables(source, structural_tables=True)
     assert table["all_rows"] == [["visible", "value"]]
+
+
+@pytest.mark.parametrize("container, indent", [("- ", "  "), ("1. ", "   "), ("> - ", ">   "), ("- > ", "  > ")])
+@pytest.mark.parametrize("fenced", [False, True])
+def test_container_comment_and_fence_preserve_later_raw_table(container, indent, fenced) -> None:
+    lines = (
+        ["```md", "%%", "| - | - |", "| hidden | value |", "%%", "```"]
+        if fenced
+        else ["%%", "| - | - |", "| hidden | value |", "%%"]
+    )
+    protected = container + lines[0] + "\n" + "\n".join(indent + line for line in lines[1:])
+    source = protected + "\n\n| - | - |\n| `visible|code` | [label](target.md) |\n"
+    assert len(_nested_tables(parse_markdown_text(source))) == 1
+    [table] = parse_raw_md_tables(source, structural_tables=True)
+    assert table["all_rows"] == [["`visible|code`", "[label](target.md)"]]

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from docwen_core.links import restore_table_safe_breaks
+from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.models.file_inspection import FILE_INSPECTION_METADATA_KEY, DetectionMethod
 from docwen_core.models.request import ConversionRequest
 from docwen_core.text.heading_numbering import (
@@ -22,6 +23,7 @@ from docwen_core.text.heading_numbering import (
     resolve_heading_numbering_scheme,
     strip_heading_prefix,
 )
+from docwen_plugin_markdown.mistune_extensions import create_extended_markdown
 
 # ── File reading ───────────────────────────────────────────────────────
 
@@ -195,7 +197,57 @@ def parse_raw_md_tables(
     preserve_merge_marker_escapes: bool = False,
     structural_tables: bool = False,
 ) -> list[dict[str, Any]]:
-    """Parse pipe tables while preserving spreadsheet-facing cell text.
+    """Use block ownership while preserving spreadsheet-facing cell source.
+
+    The same parser owns comments, fences, indentation and nested containers
+    for DOCX and spreadsheets. Only its unprotected pipe blocks reach the raw
+    cell splitter; inline links and code never pass through an AST renderer.
+    """
+    parser = create_extended_markdown(extensions=MarkdownExtensions(structural_tables=structural_tables))
+
+    def parse_spreadsheet_table(block, match, state):
+        tables = _parse_unprotected_md_tables(
+            match.group(0),
+            preserve_merge_marker_escapes=preserve_merge_marker_escapes,
+            structural_tables=structural_tables,
+        )
+        if not tables:
+            return None
+        state.append_token({"type": "spreadsheet_table", "tables": tables})
+        return match.end()
+
+    parser.block.register(
+        "spreadsheet_table",
+        r"^ {0,3}(?:[^\n]*\|[^\n]*(?:\n|$)){2,}",
+        parse_spreadsheet_table,
+        before="structural_table" if structural_tables else "table",
+    )
+    for rules in (parser.block.block_quote_rules, parser.block.list_rules):
+        before = "structural_table" if "structural_table" in rules else "table"
+        index = rules.index(before) if before in rules else len(rules)
+        rules.insert(index, "spreadsheet_table")
+    tokens = parser(content)
+    if not isinstance(tokens, list):
+        raise TypeError("Spreadsheet Markdown parser must return block tokens")
+    tables: list[dict[str, Any]] = []
+
+    def collect(nodes):
+        for node in nodes:
+            if node.get("type") == "spreadsheet_table":
+                tables.extend(node["tables"])
+            collect(node.get("children", []))
+
+    collect(tokens)
+    return tables
+
+
+def _parse_unprotected_md_tables(
+    content: str,
+    *,
+    preserve_merge_marker_escapes: bool,
+    structural_tables: bool,
+) -> list[dict[str, Any]]:
+    """Split a parser-owned unprotected pipe block into raw spreadsheet cells.
 
     Mistune is the right parser for DOCX rendering, but spreadsheet export
     treats table cell text as Markdown source text: links remain source text,
@@ -210,16 +262,9 @@ def parse_raw_md_tables(
     index = 0
     in_fence = False
     fence_marker = ""
-    in_comment = False
 
     while index < len(lines):
         line = lines[index]
-        comment_boundary = re.fullmatch(r" {0,3}%%[ \t]*", re.sub(r"^(?: {0,3}>[ \t]?)+", "", line))
-        if in_comment:
-            if comment_boundary is not None:
-                in_comment = False
-            index += 1
-            continue
         opening_fence = _opening_fence(line) if not in_fence else None
         if opening_fence is not None:
             in_fence = True
@@ -232,11 +277,6 @@ def parse_raw_md_tables(
             index += 1
             continue
         if in_fence:
-            index += 1
-            continue
-
-        if comment_boundary is not None:
-            in_comment = True
             index += 1
             continue
 

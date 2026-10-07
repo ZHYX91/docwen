@@ -1,8 +1,12 @@
+from zipfile import ZipFile
+
 import mistune
 import pytest
+from docx import Document
+from docx.enum.style import WD_STYLE_TYPE
 from lxml import etree
 
-from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig
+from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_plugin_document.shared.note_extraction import (
     NoteExtractor,
     _extract_note_content,
@@ -112,6 +116,37 @@ def test_note_content_uses_selected_formatting_and_syntax(ref_tag, preserve):
         syntax_config=DocxMarkdownSyntaxConfig(bold="underscore", italic="underscore", strikethrough="html"),
     )
     assert actual == ("__Bold___Italic_<del>Strike</del>" if preserve else "BoldItalicStrike")
+
+
+@pytest.mark.parametrize("note_tag", ["footnote", "endnote"])
+@pytest.mark.parametrize("style_name", ["Inline Code", "行内代码", "LiteralSnippet"])
+@pytest.mark.parametrize("preserve", [False, True])
+def test_note_character_style_from_real_document_uses_body_policy(tmp_path, note_tag, style_name, preserve):
+    document = Document()
+    style = document.styles.add_style(style_name, WD_STYLE_TYPE.CHARACTER)
+    body_run = document.add_paragraph().add_run("`value`")
+    body_run.style = style_name
+    path = tmp_path / "styled-notes.docx"
+    document.save(path)
+    root = etree.Element(f"{{{WML_NS}}}{note_tag}s", nsmap={"w": WML_NS})
+    note = etree.SubElement(root, f"{{{WML_NS}}}{note_tag}")
+    note.set(f"{{{WML_NS}}}id", "1")
+    paragraph = etree.SubElement(note, f"{{{WML_NS}}}p")
+    run = etree.SubElement(paragraph, f"{{{WML_NS}}}r")
+    properties = etree.SubElement(run, f"{{{WML_NS}}}rPr")
+    applied_style = etree.SubElement(properties, f"{{{WML_NS}}}rStyle")
+    applied_style.set(f"{{{WML_NS}}}val", style.style_id)
+    etree.SubElement(run, f"{{{WML_NS}}}t").text = "`value`"
+    with ZipFile(path, "a") as package:
+        package.writestr(f"word/{note_tag}s.xml", etree.tostring(root))
+    extractor = NoteExtractor(
+        Document(path),
+        str(path),
+        preserve_formatting=preserve,
+        style_detector_config=StyleDetectorConfig(code_character_style_names=frozenset({"LiteralSnippet"})),
+    )
+    notes = extractor.footnotes if note_tag == "footnote" else extractor.endnotes
+    assert notes == {1: "`` `value` ``" if preserve else "`value`"}
 
 
 def test_build_note_definitions_formats_multiline_content():

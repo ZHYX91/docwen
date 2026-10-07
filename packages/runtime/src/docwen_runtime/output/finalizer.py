@@ -63,6 +63,7 @@ class _PreparedArtifact:
     skip_existing: bool = False
     protected_input_path: str | None = None
     protected_input_key: str | None = None
+    authorized_input_key: str | None = None
 
 
 if sys.platform == "win32":
@@ -125,10 +126,7 @@ class OutputFinalizer:
         node_plan: DocumentNodeLayoutPlan | None = None
         if artifacts and (group_outputs or has_markdown_artifacts(artifacts)):
             in_place_markdown = bool(
-                policy.output_path
-                and input_path
-                and os.path.normcase(os.path.abspath(policy.output_path))
-                == os.path.normcase(os.path.abspath(input_path))
+                policy.output_path and input_path and self._lock_key(policy.output_path) == self._lock_key(input_path)
             )
             if policy.output_path and not in_place_markdown:
                 raise ValueError("Grouped conversion output requires an output parent directory, not output_path")
@@ -760,8 +758,14 @@ class OutputFinalizer:
         reused = cls._reuse_identical_input_artifact(artifact, output_dir, overwrite_mode, input_path, cancellation)
         suggested = artifact.suggested_name or os.path.basename(artifact.staging_path)
         destination, suggested = cls._safe_final_path(output_dir, suggested)
-        protected_input_path = input_path if not (artifact.is_primary and allow_primary_input_replacement) else None
-        protected_input_key = cls._lock_key(input_path) if protected_input_path else None
+        input_key = cls._lock_key(input_path) if input_path else None
+        authorized_input_key = (
+            input_key
+            if artifact.is_primary and allow_primary_input_replacement and cls._lock_key(destination) == input_key
+            else None
+        )
+        protected_input_path = input_path if authorized_input_key is None else None
+        protected_input_key = input_key if protected_input_path else None
         rename_base = destination if overwrite_mode == "rename" else None
         if reused is not None:
             return _PreparedArtifact(
@@ -787,6 +791,7 @@ class OutputFinalizer:
                     skip_existing=True,
                     protected_input_path=protected_input_path,
                     protected_input_key=protected_input_key,
+                    authorized_input_key=authorized_input_key,
                 )
             if overwrite_mode == "rename":
                 destination = cls._rename_path(destination)
@@ -817,6 +822,7 @@ class OutputFinalizer:
             temp_path=temp_path,
             protected_input_path=protected_input_path,
             protected_input_key=protected_input_key,
+            authorized_input_key=authorized_input_key,
         )
 
     @classmethod
@@ -852,12 +858,12 @@ class OutputFinalizer:
 
         destination = item.destination
         if overwrite_mode == "overwrite":
-            cls._check_input_destination(destination, item.protected_input_path, item.protected_input_key)
+            cls._check_prepared_destination(item, destination)
             os.replace(cls._io_path(item.temp_path), cls._io_path(destination))
         else:
             while True:
                 try:
-                    cls._check_input_destination(destination, item.protected_input_path, item.protected_input_key)
+                    cls._check_prepared_destination(item, destination)
                     cls._publish_no_clobber(item.temp_path, destination)
                     break
                 except FileExistsError:
@@ -868,6 +874,12 @@ class OutputFinalizer:
         if not cls._io_path(item.temp_path).exists():
             item.temp_path = None
         return cls._placed_manifest(item, destination), item.artifact.size_bytes or 0
+
+    @classmethod
+    def _check_prepared_destination(cls, item: _PreparedArtifact, destination: str) -> None:
+        cls._check_input_destination(destination, item.protected_input_path, item.protected_input_key)
+        if item.authorized_input_key is not None and cls._lock_key(destination) != item.authorized_input_key:
+            raise ValueError("Explicit in-place output target changed before publication")
 
     @classmethod
     def _publish_no_clobber(cls, temp_path: str, destination: str) -> None:
