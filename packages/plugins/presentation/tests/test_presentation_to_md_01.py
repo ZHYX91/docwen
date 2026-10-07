@@ -168,6 +168,27 @@ class TestPptxToMd:
         assert "标题: Test Presentation" not in yaml_block
         assert "title: Test Presentation" not in yaml_block
 
+    def test_pptx_yaml_frontmatter_quotes_structural_title_characters(self, pipeline, tmp_path) -> None:
+        import yaml
+        from pptx import Presentation
+
+        presentation = Presentation()
+        presentation.core_properties.title = "计划: 修订 #1"
+        presentation.slides.add_slide(presentation.slide_layouts[6])
+        input_path = tmp_path / "yaml-title.pptx"
+        presentation.save(str(input_path))
+
+        _plugin, task_mgr, _ws_mgr = pipeline
+        output_dir = tmp_path / "output_yaml_title"
+        output_dir.mkdir()
+        result = _run_request(task_mgr, input_path, "pptx", output_dir)
+
+        assert result.success, result.error
+        content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+        frontmatter = yaml.safe_load(content.split("---", 2)[1])
+        assert frontmatter["title"] == "计划: 修订 #1"
+        assert frontmatter["aliases"] == ["计划: 修订 #1"]
+
     def test_pptx_slide_content(self, pipeline, sample_pptx_file, tmp_path) -> None:
         """Slide headings and text must be preserved."""
         _plugin, task_mgr, _ws_mgr = pipeline
