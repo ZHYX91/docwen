@@ -9,6 +9,37 @@ from docwen_plugin_markdown.number_suite_direct_semantics import analyze_markdow
 pytestmark = pytest.mark.contract
 
 
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "%% [Link](local%%)",
+        "%% `local%%`",
+        "%% $local%%$",
+        '%% <span data-x="%%">',
+        "%% `local%%` %% inside`",
+        "%% $local%%$literal %% inside$",
+        "%% [Link](local%%) [Link](next%%)",
+        "Text <!-- [Link](local-->)",
+        "[Link](local%%)",
+        "`local%%`",
+        "$local%%$",
+        '<span data-x="%%">Text</span>',
+    ],
+)
+def test_literal_owner_preserves_comment_closers_and_later_source_ranges(literal: str) -> None:
+    source = f"Figure: 中文😀 ^target\r\n\r\n{literal}\r\n\r\nSee @[[#^target]] @visible.\r\n"
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    [citation] = analysis.projection["citations"]
+    assert reference["resolution_status"] == "resolved"
+    for item in (reference, citation):
+        span = item["range"]
+        assert source[span["start"] : span["end"]] == item["raw"]
+
+
 def _analyze(source: str):
     return analyze_markdown_semantics_v3(
         source,

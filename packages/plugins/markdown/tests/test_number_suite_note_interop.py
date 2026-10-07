@@ -150,6 +150,69 @@ def test_docx_url_delimiters_preserve_refs_and_typed_notes(literal: str, tmp_pat
     assert source.read_bytes() == original
 
 
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "%% [Link](local%%)",
+        "%% [[Other%%]]",
+        "%% `local%%`",
+        "%% $local%%$",
+        '%% <span data-x="%%">',
+        "%% `local%%` %% inside`",
+        "%% $local%%$literal %% inside$",
+        "%% [Link](local%%) [Link](next%%)",
+        "Text <!-- [Link](local-->)",
+        "[Link](local%%)",
+        "[[Other%%]]",
+        "`local%%`",
+        "$local%%$",
+        '<span data-x="%%">Text</span>',
+    ],
+)
+def test_literal_owner_preserves_comment_closers_and_typed_note_domains(literal: str) -> None:
+    source = f"{literal}\r\n\r\nFoot[^f], end[^endnote:e].\r\n\r\n[^f]: Foot.\r\n[^endnote:e]: End.\r\n"
+
+    projection = normalize_note_syntax(source)
+    _ast, note_ctx = process_md_body_with_notes(source)
+
+    assert literal in projection
+    assert len(note_ctx._footnote_children) == 1
+    assert len(note_ctx._endnote_children) == 1
+
+
+@pytest.mark.parametrize("literal", ["%% [Link](local%%)", "%% [[Other%%]]"])
+def test_docx_comment_owns_closers_inside_link_metadata(literal: str, tmp_path: Path) -> None:
+    from zipfile import ZipFile
+
+    from lxml import etree
+
+    from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
+
+    from .conftest import make_context
+
+    source = tmp_path / "comment-owner.md"
+    original = (
+        f"Figure: 中文😀 ^target\r\n\r\n{literal}\r\n\r\n"
+        "See @[[#^target]]. Foot[^f], end[^endnote:e].\r\n\r\n[^f]: Foot.\r\n[^endnote:e]: End.\r\n"
+    ).encode()
+    source.write_bytes(original)
+    context, _workspace = make_context(
+        str(source),
+        options={"markdown_extensions": {"input": {"captions_references": True, "typed_endnotes": True}}},
+    )
+
+    result = MdToDocxConverter().convert(context)
+
+    assert result.success, result.error
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    with ZipFile(result.artifacts[0].staging_path) as archive:
+        document = etree.fromstring(archive.read("word/document.xml"))
+        assert document.xpath(".//w:endnoteReference/@w:id", namespaces=ns) == ["1"]
+        assert document.xpath(".//w:footnoteReference/@w:id", namespaces=ns) == ["1"]
+        assert sum("REF " in (node.text or "") for node in document.findall(".//w:instrText", ns)) == 1
+    assert source.read_bytes() == original
+
+
 def test_docx_pipeline_keeps_code_literals_later_fields_and_separate_note_domains(tmp_path: Path) -> None:
     from zipfile import ZipFile
 

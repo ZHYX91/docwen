@@ -19,7 +19,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
-from docwen_core.links import split_markdown_block_segments, split_markdown_inline_segments
+from docwen_core.links import split_markdown_block_segments
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_markdown.document_semantics_v3 import (
     ExternalCitationResolution,
@@ -30,7 +30,7 @@ from docwen_plugin_markdown.document_semantics_v3 import (
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     project_fenced_source_v3,
 )
-from docwen_plugin_markdown.literal_source_spans import comment_and_url_spans
+from docwen_plugin_markdown.literal_source_spans import literal_source_spans
 
 SEMANTICS_SCHEMA = "docwen.markdown_semantics.v3"
 SEMANTICS_SCHEMA_ID = "urn:docwen:schema:markdown-semantics:v3"
@@ -1922,35 +1922,16 @@ def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[Source
             if characters[index] not in "\r\n":
                 characters[index] = " "
     projected_source = "".join(characters)
-    offset = 0
-    for segment, protected in split_markdown_inline_segments(projected_source, protect_bare_urls=False):
-        if protected:
-            ranges.append(SourceRange(offset, offset + len(segment)))
-            for index in range(offset, offset + len(segment)):
-                if characters[index] not in "\r\n":
-                    characters[index] = " "
-        offset += len(segment)
-    projected_source = "".join(characters)
-
     patterns = (
-        re.compile(r"(`+)(?:(?!\1).)*\1", re.DOTALL),
         re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
         re.compile(r"<[^>\r\n]*>"),
         re.compile(r"\\@\[\[[^\]\r\n]+\]\]"),
         re.compile(r"\\@[A-Za-z0-9][A-Za-z0-9_-]{0,127}"),
         re.compile(r"\\\[@[^\]\r\n]+\]"),
     )
-    for pattern in patterns:
-        ranges.extend(SourceRange(match.start(), match.end()) for match in pattern.finditer(projected_source))
-
-    # Renderer atoms and destinations own their delimiters before URL/comment
-    # scanning. Inside a comment, a URL cannot hide that comment's closer.
-    for span in ranges:
-        for index in range(span.start, span.end):
-            if characters[index] not in "\r\n":
-                characters[index] = " "
     ranges.extend(
-        SourceRange(start, end) for start, end in comment_and_url_spans("".join(characters), semantic_url_suffix=True)
+        SourceRange(start, end)
+        for start, end in literal_source_spans(projected_source, metadata_patterns=patterns, semantic_url_suffix=True)
     )
 
     return _merge_ranges(ranges)
