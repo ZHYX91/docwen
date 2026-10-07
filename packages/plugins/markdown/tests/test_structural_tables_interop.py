@@ -164,7 +164,6 @@ def test_formatted_merge_markers_are_literal_cell_content() -> None:
         assert anchor["row_span"] == anchor["column_span"] == 1
 
 
-
 def _nested_tables(nodes):
     found = []
     for node in nodes:
@@ -211,9 +210,6 @@ def test_structural_table_backtick_boundaries_do_not_consume_column_pipes(
     metadata = analysis.ast[0]["_document_semantics_table"]
     assert metadata["column_count"] == 2
     text_values = [
-        child["raw"]
-        for anchor in metadata["anchors"]
-        for child in anchor["children"]
-        if child.get("type") == "text"
+        child["raw"] for anchor in metadata["anchors"] for child in anchor["children"] if child.get("type") == "text"
     ]
     assert first_cell in text_values
