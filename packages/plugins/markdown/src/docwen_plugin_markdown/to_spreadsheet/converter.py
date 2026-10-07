@@ -411,7 +411,12 @@ class MdToCsvConverter:
             # ── Parse tables ────────────────────────────────────────
             cancellable.check()
             progress.report_progress(30.0, "Parsing Markdown tables")
-            tables = parse_md_tables(markdown_body)
+            tables = parse_md_tables(
+                markdown_body,
+                structural_tables=resolve_markdown_extensions(
+                    context.request.options, context.config, direction="input"
+                ).structural_tables,
+            )
 
             if not tables:
                 return ConversionResult(

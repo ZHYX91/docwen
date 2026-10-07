@@ -442,6 +442,20 @@ def _split_md_table_row(line: str) -> list[str] | None:
     index = 0
     while index < len(stripped):
         char = stripped[index]
+        if char == "`" and (code_tick_count or not escaped):
+            tick_count = _count_repeated(stripped, index, "`")
+            if code_tick_count == 0:
+                if _has_exact_backtick_closer(stripped, index + tick_count, tick_count):
+                    code_tick_count = tick_count
+            elif tick_count == code_tick_count:
+                code_tick_count = 0
+            cell_chars.append("`" * tick_count)
+            index += tick_count
+            continue
+        if code_tick_count:
+            cell_chars.append(char)
+            index += 1
+            continue
         if escaped:
             if char == "|":
                 cell_chars.append(char)
@@ -454,15 +468,6 @@ def _split_md_table_row(line: str) -> list[str] | None:
         if char == "\\":
             escaped = True
             index += 1
-            continue
-        if char == "`":
-            tick_count = _count_repeated(stripped, index, "`")
-            if code_tick_count == 0:
-                code_tick_count = tick_count
-            elif tick_count == code_tick_count:
-                code_tick_count = 0
-            cell_chars.append("`" * tick_count)
-            index += tick_count
             continue
         if char == "|" and code_tick_count == 0:
             cells.append("".join(cell_chars))
@@ -481,6 +486,19 @@ def _split_md_table_row(line: str) -> list[str] | None:
     if stripped.endswith("|"):
         cells = cells[:-1]
     return cells or None
+
+
+def _has_exact_backtick_closer(text: str, start: int, length: int) -> bool:
+    cursor = start
+    while cursor < len(text):
+        tick = text.find("`", cursor)
+        if tick < 0:
+            return False
+        run = _count_repeated(text, tick, "`")
+        if run == length:
+            return True
+        cursor = tick + run
+    return False
 
 
 def _count_repeated(text: str, start: int, char: str) -> int:
@@ -515,7 +533,7 @@ def write_table_to_csv(table_data: dict[str, Any], path: str) -> None:
     """Write a parsed table to a CSV file."""
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        if table_data["headers"]:
-            writer.writerow(table_data["headers"])
-        for row in table_data["rows"]:
-            writer.writerow(row)
+        rows = table_data.get("all_rows")
+        if rows is None:
+            rows = [table_data["headers"], *table_data["rows"]] if table_data["headers"] else table_data["rows"]
+        writer.writerows(rows)

@@ -118,13 +118,15 @@ def test_declared_source_images_match_raw_source_with_tables_and_captions(
     assert snapshot.read_bytes() == raw_source.read_bytes() == source.encode()
 
 
+@pytest.mark.parametrize("line_ending", ["\n", "\r\n"])
 def test_declared_source_wikilink_uses_authenticated_navigation_uri(
     round_trip_runtime: Any,
     tmp_path: Path,
+    line_ending: str,
 ) -> None:
-    source = "See [[Other#Section|Other note]].\n"
+    source = "See [[Other#Section|Other note]]." + line_ending
     snapshot = tmp_path / "source.md"
-    snapshot.write_text(source, encoding="utf-8")
+    snapshot.write_bytes(source.encode("utf-8"))
     href = "obsidian://open?vault=Knowledge&file=Notes%2FOther.md%23Section"
     source_ref = FileRef(
         path=str(snapshot),
@@ -167,4 +169,4 @@ def test_declared_source_wikilink_uses_authenticated_navigation_uri(
     }
     assert href in hyperlink_targets
     assert "Other note" in "\n".join(paragraph.text for paragraph in document.paragraphs)
-    assert snapshot.read_text(encoding="utf-8") == source
+    assert snapshot.read_bytes() == source.encode("utf-8")

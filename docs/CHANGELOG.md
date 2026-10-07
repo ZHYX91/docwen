@@ -5,6 +5,17 @@
 
 ## Unreleased / 未发布
 
+## 0.17.0 (2026-10-07)
+
+- Protect source files from implicit replacement and bind preconverted inputs to their actual bytes; align batch planning, results and source-backed warning diagnostics.
+- Preserve Structural Tables spreadsheet input/output, falsy values, high-precision text and missing formula-cache warnings. CSV keeps zero or multiple header rows when the dialect is enabled.
+- Improve Number Suite captions, aliases, heading-policy references, table-cell references and formatted footnote/endnote round trips. Preserve code literals during Markdown export and resource relocation.
+- Accept source-hash-bound WikiLink navigation targets, including Obsidian URIs in DOCX hyperlinks, without importing linked note contents.
+- Correct hyperlink proofreading coordinates, HTML/EPUB resource contexts, grouped presentation shapes and YAML, managed source locations and fractional GUI label widths. Recover release writes after explicit rate-limit rejection.
+- 保护源文件、校验预转换输入真实字节，统一批量结果与成功警告；补齐结构化表格及电子表格数值、公式缓存诊断。
+- 改善题注、别名、表内引用、脚注尾注及代码字面保真；新增原文摘要绑定的 WikiLink 导航，保留 DOCX 中的 Obsidian 超链接。
+- 修复超链接校对坐标、HTML/EPUB 资源上下文、演示文稿分组及 YAML、受管源位置与分数宽度；补齐发布限流恢复。
+
 ## 0.16.0 (2026-10-04)
 
 - Keep result-directory layout for plain and extension-only Markdown after content admission, including direct and declared-source conversion.

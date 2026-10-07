@@ -455,7 +455,9 @@ def add_hyperlink(
     """
     link_children = children if children is not None else [{"type": "text", "raw": text or ""}]
     target = _resolve_hyperlink_target(url, source_dir)
-    if not target or not target.lower().startswith(("http://", "https://", "mailto:", "ftp://", "file://")):
+    if not target or not target.lower().startswith(
+        ("http://", "https://", "mailto:", "ftp://", "file://", "obsidian://")
+    ):
         if fallback_renderer is not None:
             fallback_renderer(paragraph, link_children)
             return
@@ -954,7 +956,7 @@ def _resolve_hyperlink_target(url: str, source_dir: Path | None) -> str:
 
     parsed = urlsplit(url)
     normalized_scheme = parsed.scheme.lower()
-    if normalized_scheme in {"http", "https", "mailto", "ftp", "file"}:
+    if normalized_scheme in {"http", "https", "mailto", "ftp", "file", "obsidian"}:
         return urlunsplit(
             (
                 normalized_scheme,
