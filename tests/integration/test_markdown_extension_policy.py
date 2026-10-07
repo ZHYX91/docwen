@@ -334,10 +334,7 @@ def test_structural_tables_in_quote_callout_and_list_render_as_native_docx_table
     assert result.success, result.error
     document = Document(str(result.artifacts[0].staging_path))
     assert len(document.tables) == 3
-    values = [
-        [[cell.text for cell in row.cells] for row in table.rows]
-        for table in document.tables
-    ]
+    values = [[[cell.text for cell in row.cells] for row in table.rows] for table in document.tables]
     assert values[0] == [["Quote A", "Quote B"], ["Quote C", "Quote D"]]
     assert values[1] == [["Callout A", "Callout B"], ["Callout C", "Callout D"]]
     assert values[2] == [["List A", "List B"], ["List C", "List D"]]
