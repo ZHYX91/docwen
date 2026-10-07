@@ -199,10 +199,7 @@ def _escape_literal_structural_markers(
             value = escaped.iat[row_offset, column_offset]
             text = "" if value is None else str(value)
             stripped = text.strip()
-            if (
-                stripped in {"<", "^"}
-                and (int(row_label), int(column_label)) not in structural_positions
-            ):
+            if stripped in {"<", "^"} and (int(row_label), int(column_label)) not in structural_positions:
                 escaped.iat[row_offset, column_offset] = f"\\{stripped}"
     return escaped
 
