@@ -263,11 +263,12 @@ class HtmlToMarkdownConverter:
         # Read HTML content
         html_bytes = Path(html_path).read_bytes()
 
-        # Try to decode HTML
-        try:
-            html_text = html_bytes.decode("utf-8", errors="replace")
-        except Exception:
-            html_text = html_bytes.decode("latin-1", errors="replace")
+        input_ref = context.request.input_refs[0] if context.request.input_refs else None
+        preferred_encoding = getattr(input_ref, "encoding", None)
+        html_text = _decode_html_payload(
+            html_bytes,
+            preferred_encoding=preferred_encoding,
+        )
 
         # Extract title from HTML
         title = _extract_html_title(html_text)
@@ -690,7 +691,7 @@ def _resolve_local_path(*, src: str, html_path: str, base_href: str | None, reso
 
     raw_path = parsed.path or src
     raw_path = unquote(raw_path).replace("\\", "/")
-    base_dir = Path(resource_dir) if resource_dir else Path(html_path).parent
+    html_dir = Path(html_path).parent
 
     if raw_path.startswith("/") and base_href and base_href.startswith("file:"):
         try:
@@ -700,7 +701,23 @@ def _resolve_local_path(*, src: str, html_path: str, base_href: str | None, reso
         except Exception:
             return None
 
-    return (base_dir / raw_path).resolve()
+    html_relative = (html_dir / raw_path).resolve()
+    if html_relative.exists():
+        return html_relative
+
+    if resource_dir:
+        resource_root = Path(resource_dir)
+        resource_relative = (resource_root / raw_path).resolve()
+        if resource_relative.exists():
+            return resource_relative
+        normalized_parts = [part for part in raw_path.split("/") if part not in ("", ".")]
+        if normalized_parts and normalized_parts[0].casefold() == resource_root.name.casefold():
+            stripped = resource_root.joinpath(*normalized_parts[1:]).resolve()
+            if stripped.exists():
+                return stripped
+        return resource_relative
+
+    return html_relative
 
 
 def _guess_media_type(filename: str) -> str:
@@ -714,6 +731,31 @@ def _extract_html_title(html_text: str) -> str:
     if match:
         return unescape(match.group(1).strip())
     return ""
+
+
+def _decode_html_payload(payload: bytes, *, preferred_encoding: str | None) -> str:
+    """Decode HTML using admitted encoding, in-document declaration, then fallbacks."""
+
+    declared_match = re.search(
+        rb"charset\s*=\s*['\"]?\s*([a-zA-Z0-9._:-]+)",
+        payload[:16384],
+        re.IGNORECASE,
+    )
+    declared_charset = declared_match.group(1).decode("ascii") if declared_match else None
+    candidates = [preferred_encoding, declared_charset, "utf-8", "windows-1252"]
+    attempted: set[str] = set()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        normalized = candidate.strip().lower()
+        if not normalized or normalized in attempted:
+            continue
+        attempted.add(normalized)
+        try:
+            return payload.decode(normalized)
+        except (LookupError, UnicodeDecodeError):
+            continue
+    return payload.decode("utf-8", errors="replace")
 
 
 def _decode_mhtml_html_payload(payload: bytes, *, mime_charset: str | None) -> str:
