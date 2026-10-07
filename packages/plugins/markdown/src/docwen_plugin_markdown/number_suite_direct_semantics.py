@@ -1917,7 +1917,7 @@ def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[Source
                 characters[index] = " "
     projected_source = "".join(characters)
     offset = 0
-    for segment, protected in split_markdown_inline_segments(projected_source):
+    for segment, protected in split_markdown_inline_segments(projected_source, protect_bare_urls=False):
         if protected:
             ranges.append(SourceRange(offset, offset + len(segment)))
             for index in range(offset, offset + len(segment)):

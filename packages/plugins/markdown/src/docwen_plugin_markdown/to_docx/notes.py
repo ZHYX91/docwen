@@ -101,10 +101,12 @@ def _mask_note_protected_source(source: str) -> str:
         re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
         re.compile(r"https?://[^\s<]+"),
         re.compile(r"<[^>\r\n]*>"),
-        re.compile(r"(?m)^(?: {4}|\t).*?$"),
     )
     for pattern in patterns:
         ranges.extend(match.span() for match in pattern.finditer(projected_source))
+    # Projection spaces do not create authored indentation.  A code span at
+    # column zero can mask four or more characters before visible note text.
+    ranges.extend(match.span() for match in re.finditer(r"(?m)^(?: {4}|\t).*?$", source))
     if not ranges:
         return source
 
