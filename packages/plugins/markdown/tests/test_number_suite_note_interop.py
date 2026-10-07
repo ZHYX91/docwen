@@ -129,3 +129,30 @@ def test_docx_pipeline_keeps_code_literals_later_fields_and_separate_note_domain
         endnotes = etree.fromstring(archive.read("word/endnotes.xml"))
         assert endnotes.xpath(".//w:strike", namespaces=ns)
     assert source.read_bytes() == original
+
+
+def test_docx_retains_visible_note_after_inline_code_and_link_destination(tmp_path: Path) -> None:
+    from zipfile import ZipFile
+
+    from lxml import etree
+
+    from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
+
+    from .conftest import make_context
+
+    source = tmp_path / "visible-note.md"
+    original = b"`code` and [Link](https://example.test/[^fake]) and visible[^real].\r\n\r\n[^real]: Visible.\r\n"
+    source.write_bytes(original)
+    context, _workspace = make_context(str(source))
+
+    result = MdToDocxConverter().convert(context)
+
+    assert result.success, result.error
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    with ZipFile(result.artifacts[0].staging_path) as archive:
+        document = etree.fromstring(archive.read("word/document.xml"))
+        assert document.xpath(".//w:footnoteReference/@w:id", namespaces=ns) == ["1"]
+        notes = etree.fromstring(archive.read("word/footnotes.xml"))
+        note_text = "".join(node.text or "" for node in notes.findall(".//w:footnote[@w:id='1']//w:t", ns))
+        assert note_text.strip() == "Visible."
+    assert source.read_bytes() == original

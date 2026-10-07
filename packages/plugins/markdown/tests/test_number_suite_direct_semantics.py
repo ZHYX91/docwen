@@ -39,6 +39,36 @@ def test_inline_code_comment_delimiters_do_not_hide_following_references(literal
     assert reference["target_id"] == "image"
 
 
+@pytest.mark.parametrize("literal", ["%%", "<!--"])
+@pytest.mark.parametrize("container", ["space", "tab", "list", "quote"])
+def test_indented_code_preserves_later_references_and_citations(literal: str, container: str) -> None:
+    code = {
+        "space": f"    {literal}\n    literal code",
+        "tab": f"\t{literal}\n\tliteral code",
+        "list": f"- Item\n\n      {literal}\n      literal code",
+        "quote": f">     {literal}\n>     literal code",
+    }[container]
+    source = f"# 中文😀 ^target\n\n{code}\n\nSee @[[#^target]] and @real-cite.\n".replace("\n", "\r\n")
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["target_id"] == "target"
+    assert source[reference["range"]["start"] : reference["range"]["end"]] == "@[[#^target]]"
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
+
+
+def test_url_comment_literal_preserves_semantic_suffix_and_later_tokens() -> None:
+    source = "# Target ^target\n\nhttps://example.test/%%literal@[[#^target]]\nReal @[[#^target]] @real-cite.\n"
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    assert [item["raw"] for item in analysis.projection["references"]] == ["@[[#^target]]", "@[[#^target]]"]
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
+
+
 def test_direct_number_suite_profile_keeps_standalone_captions_and_normalizes_targets() -> None:
     source = """Figure: Standalone   Caption ^Figure-ID
 
