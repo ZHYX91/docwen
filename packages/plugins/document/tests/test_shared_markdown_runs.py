@@ -85,6 +85,39 @@ def test_append_formatted_run_text_honors_explicit_syntax_config(apply_format, e
     assert "".join(parts) == expected
 
 
+def test_inline_code_uses_safe_backtick_delimiter_and_coalesces_adjacent_runs():
+    doc = Document()
+    paragraph = doc.add_paragraph()
+    first = paragraph.add_run("a`")
+    second = paragraph.add_run("b")
+    for run in (first, second):
+        shading = OxmlElement("w:shd")
+        shading.set(qn("w:fill"), "D9D9D9")
+        run._r.get_or_add_rPr().append(shading)
+
+    rendered = render_paragraph_runs(
+        paragraph,
+        syntax_config=DocxMarkdownSyntaxConfig(),
+    )
+
+    assert rendered == "``a`b``"
+
+
+def test_inline_code_with_boundary_backticks_gets_commonmark_padding():
+    doc = Document()
+    run = doc.add_paragraph().add_run("`value`")
+    shading = OxmlElement("w:shd")
+    shading.set(qn("w:fill"), "D9D9D9")
+    run._r.get_or_add_rPr().append(shading)
+
+    rendered = render_paragraph_runs(
+        doc.paragraphs[0],
+        syntax_config=DocxMarkdownSyntaxConfig(),
+    )
+
+    assert rendered == "`` `value` ``"
+
+
 def test_append_formatted_run_text_preserves_gray_shading_as_inline_code():
     doc = Document()
     run = doc.add_paragraph().add_run("value")

@@ -56,6 +56,66 @@ def _append_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, s
     parts.append(rendered)
 
 
+def _longest_backtick_run(text: str) -> int:
+    longest = 0
+    current = 0
+    for character in text:
+        if character == "`":
+            current += 1
+            longest = max(longest, current)
+        else:
+            current = 0
+    return longest
+
+
+def _render_inline_code_span(text: str) -> str:
+    delimiter = "`" * max(1, _longest_backtick_run(text) + 1)
+    needs_padding = (
+        text.startswith("`")
+        or text.endswith("`")
+        or (text.startswith(" ") and text.endswith(" ") and bool(text.strip(" ")))
+    )
+    body = f" {text} " if needs_padding else text
+    return f"{delimiter}{body}{delimiter}"
+
+
+def _decode_rendered_inline_code_span(rendered: str) -> str | None:
+    if not rendered or rendered[0] != "`":
+        return None
+    delimiter_length = 0
+    while delimiter_length < len(rendered) and rendered[delimiter_length] == "`":
+        delimiter_length += 1
+    delimiter = "`" * delimiter_length
+    if len(rendered) < delimiter_length * 2 or not rendered.endswith(delimiter):
+        return None
+    body = rendered[delimiter_length:-delimiter_length]
+    if body.startswith(" ") and body.endswith(" ") and len(body) >= 2:
+        inner = body[1:-1]
+        if (
+            inner.startswith("`")
+            or inner.endswith("`")
+            or (inner.startswith(" ") and inner.endswith(" ") and bool(inner.strip(" ")))
+        ):
+            return inner
+    return body
+
+
+def _append_inline_code_wrapped(
+    parts: list[str],
+    raw_text: str,
+    outer_wrappers: list[tuple[str, str]],
+) -> None:
+    if parts:
+        previous = _unwrap_wrappers(parts[-1], outer_wrappers) if outer_wrappers else parts[-1]
+        if previous is not None:
+            previous_code = _decode_rendered_inline_code_span(previous)
+            if previous_code is not None:
+                combined = _render_inline_code_span(previous_code + raw_text)
+                parts[-1] = _apply_wrappers(combined, outer_wrappers)
+                return
+    parts.append(_apply_wrappers(_render_inline_code_span(raw_text), outer_wrappers))
+
+
 def _marker_pair(kind: str, config: DocxMarkdownSyntaxConfig) -> tuple[str, str]:
     if kind == "bold":
         marker = "__" if config.bold == "underscore" else "**"
@@ -183,8 +243,23 @@ def append_formatted_run_text(
     # corrupt the text by emitting inline-code ticks.
     has_shading = has_shading or run_style_type == "code"
 
+    if has_shading:
+        outer_wrappers = _format_wrappers(
+            has_shading=False,
+            has_highlight=has_highlight,
+            is_superscript=is_superscript,
+            is_subscript=is_subscript,
+            is_strikethrough=is_strikethrough,
+            is_underline=is_underline,
+            is_bold=is_bold,
+            is_italic=is_italic,
+            syntax_config=syntax_config,
+        )
+        _append_inline_code_wrapped(parts, raw_text, outer_wrappers)
+        return
+
     wrappers = _format_wrappers(
-        has_shading=has_shading,
+        has_shading=False,
         has_highlight=has_highlight,
         is_superscript=is_superscript,
         is_subscript=is_subscript,
