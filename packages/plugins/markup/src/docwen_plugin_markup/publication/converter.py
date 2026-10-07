@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import posixpath
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 from docwen_core.models.artifact import (
@@ -109,6 +110,7 @@ class EpubToMarkdownConverter:
 
         # ── Extract images if requested ─────────────────────────────
         image_links: dict[str, str] = {}
+        exact_image_links: dict[str, str] = {}
         image_artifacts: list[ArtifactManifest] = []
         image_items = list(book.get_items_of_type(ebooklib.ITEM_IMAGE))
         resources: list[MarkdownResource] = []
@@ -141,23 +143,19 @@ class EpubToMarkdownConverter:
             )
             seen_artifact_ids: set[str] = set()
             for key, item in written.items():
-                image_links[key] = item.markdown_link
+                exact_image_links[key] = item.markdown_link
                 for artifact in item.artifacts:
                     if artifact.artifact_id not in seen_artifact_ids:
                         image_artifacts.append(artifact)
                         seen_artifact_ids.add(artifact.artifact_id)
-            for resource in resources:
-                normalized = normalize_resource_key(resource.source_key)
-                item = written.get(normalized)
-                if item is None:
-                    continue
-                basename_key = normalize_resource_key(Path(resource.source_key).name)
-                image_links.setdefault(basename_key, item.markdown_link)
+            image_links = _with_unique_basename_fallbacks(exact_image_links)
             images_written = len({artifact.artifact_id for artifact in image_artifacts if artifact.kind == "image"})
         else:
-            for resource in resources:
-                image_links[normalize_resource_key(resource.source_key)] = ""
-                image_links[normalize_resource_key(Path(resource.source_key).name)] = ""
+            exact_image_links = {
+                normalize_resource_key(resource.source_key): ""
+                for resource in resources
+            }
+            image_links = _with_unique_basename_fallbacks(exact_image_links)
 
         # ── Extract text content ────────────────────────────────────
         markdown_parts: list[str] = []
@@ -247,13 +245,20 @@ class EpubToMarkdownConverter:
                 for tag in soup(["script", "style", "nav"]):
                     tag.decompose()
 
+                # Resolve chapter-relative resource locators before rendering.
+                item_name = item.get_name() or ""
+                chapter_image_links = _chapter_image_link_view(
+                    item_name,
+                    exact_image_links,
+                    image_links,
+                )
+
                 # Get text
                 text_root = soup.body if soup.body is not None else soup
-                text = self._html_to_markdown(text_root, image_links)
+                text = self._html_to_markdown(text_root, chapter_image_links)
 
                 if text.strip():
                     # Add section heading from item name if available
-                    item_name = item.get_name() or ""
                     if item_name:
                         section_title = Path(item_name).stem
                         # Only add if the title is meaningful
@@ -436,6 +441,40 @@ class EpubToMarkdownConverter:
                 )
             ],
         )
+
+
+def _with_unique_basename_fallbacks(exact_links: dict[str, str]) -> dict[str, str]:
+    """Add basename aliases only when the basename identifies one resource."""
+
+    output = dict(exact_links)
+    basename_sources: dict[str, list[str]] = {}
+    for source_key in exact_links:
+        basename = normalize_resource_key(PurePosixPath(source_key).name)
+        if basename:
+            basename_sources.setdefault(basename, []).append(source_key)
+    for basename, sources in basename_sources.items():
+        if len(sources) == 1:
+            output.setdefault(basename, exact_links[sources[0]])
+    return output
+
+
+def _chapter_image_link_view(
+    chapter_name: str,
+    exact_links: dict[str, str],
+    fallback_links: dict[str, str],
+) -> dict[str, str]:
+    """Return image links resolved relative to one EPUB chapter directory."""
+
+    output = dict(fallback_links)
+    normalized_chapter = normalize_resource_key(chapter_name)
+    chapter_dir = PurePosixPath(normalized_chapter).parent.as_posix()
+    base = chapter_dir if chapter_dir not in {"", "."} else "."
+    for source_key, link in exact_links.items():
+        relative = posixpath.relpath(source_key, base)
+        if relative == ".." or relative.startswith("../"):
+            continue
+        output[normalize_resource_key(relative)] = link
+    return output
 
 
 # ── Recursive HTML-to-Markdown conversion ────────────────────────────
