@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from ._presentation_to_md_support import _run_request, pipeline as pipeline
+from ._presentation_to_md_support import pipeline as pipeline
+from ._presentation_to_md_support import _run_request
 
 pytestmark = pytest.mark.integration
 
