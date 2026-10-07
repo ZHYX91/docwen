@@ -93,6 +93,46 @@ def test_draft_asset_identity_mismatch_prevents_publication(session, monkeypatch
     assert read_object(receipt)["stage"] != "verified"
 
 
+@pytest.mark.parametrize(
+    "error",
+    [
+        ApiError(429, retry_after=30, limited=True),
+        ApiError(403, retry_after=30, limited=True),
+    ],
+)
+def test_explicit_rate_limit_rejection_can_retry_from_same_receipt(
+    session,
+    monkeypatch: pytest.MonkeyPatch,
+    error: ApiError,
+) -> None:
+    api, create, receipt, _ = session
+    original = api.request
+    rejected = True
+
+    def rate_limited(method, path, **kwargs):
+        nonlocal rejected
+        if rejected and method == "POST" and path.endswith("/releases"):
+            api.writes.append((method, path))
+            raise error
+        return original(method, path, **kwargs)
+
+    monkeypatch.setattr(api, "request", rate_limited)
+    with pytest.raises(ApiError):
+        create().publish(notes="Release notes")
+
+    first_writes = list(api.writes)
+    assert api.release is None
+    assert read_object(receipt)["pending"] is None
+    assert sum(path.endswith("/releases") for _method, path in first_writes) == 1
+
+    rejected = False
+    result = create().publish(notes="Release notes")
+
+    assert result["stage"] == "published-awaiting-readback"
+    assert read_object(receipt)["releaseId"] == 30
+    assert sum(path.endswith("/releases") for _method, path in api.writes) == 2
+
+
 def test_process_interruption_after_upload_resumes_the_pending_write(session, monkeypatch: pytest.MonkeyPatch) -> None:
     api, create, receipt, _ = session
     original = api.request
