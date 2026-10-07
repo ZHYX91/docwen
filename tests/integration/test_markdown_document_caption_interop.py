@@ -183,6 +183,75 @@ def test_direct_number_suite_id_only_and_authored_aliases_round_trip(
     assert "@[[#^plan|   ]]" in markdown
 
 
+@pytest.mark.parametrize("render_mode", ["text", "word_native"])
+def test_direct_number_suite_heading_references_follow_selected_numbering_scheme(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+    render_mode: str,
+) -> None:
+    source_path = tmp_path / f"heading-reference-{render_mode}.md"
+    source_path.write_text(
+        "# Alpha ^alpha\n\n## Beta ^beta\n\nSee @[[#^alpha]] and @[[#^beta]].\n",
+        encoding="utf-8",
+    )
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / f"heading-reference-{render_mode}-docx",
+        request_id=f"heading-reference-{render_mode}",
+        options={
+            "add_numbering": True,
+            "numbering_scheme": "gongwen_standard",
+            "heading_numbering_render_mode": render_mode,
+        },
+    )
+
+    reopened = Document(str(output))
+    recovery = DocxSemanticsV3Recovery.load(output, reopened)
+    assert [item.cached_number for item in recovery.reference_occurrence_identities] == ["一、", "（一）"]
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / f"heading-reference-{render_mode}-md",
+        request_id=f"heading-reference-{render_mode}-reverse",
+        preserve_numbering=False,
+    )
+    assert "@[[#^alpha]]" in markdown
+    assert "@[[#^beta]]" in markdown
+
+
+def test_direct_number_suite_unnumbered_heading_reference_uses_title_fallback(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "heading-reference-unnumbered.md"
+    source_path.write_text("# Alpha ^alpha\n\nSee @[[#^alpha]].\n", encoding="utf-8")
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / "heading-reference-unnumbered-docx",
+        request_id="heading-reference-unnumbered",
+        options={"add_numbering": False},
+    )
+
+    reopened = Document(str(output))
+    recovery = DocxSemanticsV3Recovery.load(output, reopened)
+    assert recovery.reference_occurrence_identities == ()
+    assert len(recovery.soft_reference_identities) == 1
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / "heading-reference-unnumbered-md",
+        request_id="heading-reference-unnumbered-reverse",
+        preserve_numbering=False,
+    )
+    assert "@[[#^alpha]]" in markdown
+
+
 def test_exact_two_figure_captioned_multi_image_table_round_trips_with_short_target_range(
     round_trip_runtime: Any,
     tmp_path: Path,

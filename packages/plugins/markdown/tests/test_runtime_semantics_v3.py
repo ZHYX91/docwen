@@ -331,3 +331,37 @@ def test_marker_namespace_is_source_collision_safe_and_deterministic() -> None:
     assert first.shielded_source == second.shielded_source
     assert first.markers == second.markers
     assert all(item.marker.isascii() and item.marker.isalnum() for item in first.markers)
+
+
+def test_direct_number_suite_runtime_accepts_request_owned_heading_numbers() -> None:
+    source = "# Alpha ^alpha\n## Beta ^beta\n\nSee @[[#^alpha]] and @[[#^beta]].\n"
+
+    numbers = {1: "一、", 2: "（一）"}
+    plan = prepare_runtime_semantics_v3(
+        source,
+        input_id="direct-numbering.md",
+        consumer_profile="number_suite_direct",
+        heading_number_provider=lambda _title, level: numbers[level],
+    )
+
+    references = plan.analysis.projection["references"]
+    assert [(item["resolution_status"], item["cached_number"]) for item in references] == [
+        ("resolved", "一、"),
+        ("resolved", "（一）"),
+    ]
+
+
+def test_direct_number_suite_runtime_projects_unnumbered_heading_fallbacks() -> None:
+    source = "# Alpha ^alpha\n\nSee @[[#^alpha]].\n"
+
+    plan = prepare_runtime_semantics_v3(
+        source,
+        input_id="direct-unnumbered.md",
+        consumer_profile="number_suite_direct",
+        heading_number_provider=lambda _title, _level: "",
+    )
+
+    [reference] = plan.analysis.projection["references"]
+    assert reference["resolution_status"] == "unnumbered"
+    assert reference["fallback_text"] == "Alpha"
+    assert "cached_number" not in reference
