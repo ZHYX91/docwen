@@ -143,6 +143,21 @@ def plugin_extended_atx_headings(md: mistune.Markdown) -> None:
     )
 
 
+def _has_exact_backtick_closer(line: str, start: int, run_length: int) -> bool:
+    cursor = start
+    while cursor < len(line):
+        tick = line.find("`", cursor)
+        if tick < 0:
+            return False
+        run_end = tick
+        while run_end < len(line) and line[run_end] == "`":
+            run_end += 1
+        if run_end - tick == run_length:
+            return True
+        cursor = run_end
+    return False
+
+
 def _structural_pipe_row(line: str) -> list[str] | None:
     """Split one Structural Tables row without consuming escaped/code pipes."""
 
@@ -155,6 +170,22 @@ def _structural_pipe_row(line: str) -> list[str] | None:
     index = 0
     while index < len(line):
         character = line[index]
+        if character == "`":
+            run = 1
+            while index + run < len(line) and line[index + run] == "`":
+                run += 1
+            current.extend("`" * run)
+            if code_ticks == 0:
+                if _has_exact_backtick_closer(line, index + run, run):
+                    code_ticks = run
+            elif code_ticks == run:
+                code_ticks = 0
+            index += run
+            continue
+        if code_ticks:
+            current.append(character)
+            index += 1
+            continue
         if escaped:
             current.append(character)
             escaped = False
@@ -165,18 +196,7 @@ def _structural_pipe_row(line: str) -> list[str] | None:
             escaped = True
             index += 1
             continue
-        if character == "`":
-            run = 1
-            while index + run < len(line) and line[index + run] == "`":
-                run += 1
-            current.extend("`" * run)
-            if code_ticks == 0:
-                code_ticks = run
-            elif code_ticks == run:
-                code_ticks = 0
-            index += run
-            continue
-        if character == "|" and code_ticks == 0:
+        if character == "|":
             segments.append("".join(current))
             current = []
         else:
@@ -305,6 +325,10 @@ def plugin_structural_tables(md: mistune.Markdown) -> None:
         parse_structural_table,
         before="table",
     )
+    for nested_rules_name in ("block_quote_rules", "list_rules"):
+        nested_rules = getattr(md.block, nested_rules_name, None)
+        if isinstance(nested_rules, list) and "structural_table" not in nested_rules:
+            nested_rules.append("structural_table")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
