@@ -176,6 +176,7 @@ class TestPptxToMd:
 
         image_path = tmp_path / "grouped.png"
         Image.new("RGB", (8, 8), (12, 80, 160)).save(image_path)
+        expected_image = image_path.read_bytes()
 
         presentation = Presentation()
         presentation.core_properties.title = "Grouped content"
@@ -204,6 +205,7 @@ class TestPptxToMd:
         assert "Grouped text payload" in markdown
         images = [artifact for artifact in result.artifacts if artifact.kind == "image"]
         assert len(images) == 1
+        assert Path(images[0].staging_path).read_bytes() == expected_image
         assert images[0].suggested_name in markdown
 
     @pytest.mark.integration
