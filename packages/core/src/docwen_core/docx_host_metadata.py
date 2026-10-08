@@ -232,6 +232,8 @@ _BORDERS = frozenset(
         "doubleDiamonds",
         "earth1",
         "earth2",
+        "earth3",
+        "custom",
         "eclipsingSquares1",
         "eclipsingSquares2",
         "eggsBlack",
@@ -318,12 +320,6 @@ _BORDERS = frozenset(
         "trees",
         "triangleParty",
         "triangles",
-        "tribal1",
-        "tribal2",
-        "tribal3",
-        "tribal4",
-        "tribal5",
-        "tribal6",
         "triangle1",
         "triangle2",
         "triangleCircle1",
@@ -396,31 +392,26 @@ def _control_property_values(child: Any) -> bool:
     name = child.tag.removeprefix(_WORD)
     attributes = {key.removeprefix(_WORD): value for key, value in child.attrib.items()}
     if name in _TOGGLE_PROPERTIES:
-        return set(attributes).issubset({"val"}) and attributes.get("val", "true") in _ON_OFF
+        return set(attributes).issubset({"val"}) and _on_off_value(attributes.get("val", "true"))
     if name in {"sz", "szCs", "kern"}:
         return set(attributes) == {"val"} and _unsigned_measure(attributes["val"])
     if name == "color":
         if not set(attributes).issubset({"val", "themeColor", "themeTint", "themeShade"}):
             return False
-        if re.fullmatch(r"auto|[0-9A-Fa-f]{6}", attributes.get("val", "")) is None:
+        if not _hex_color(attributes.get("val", "")):
             return False
         if "themeColor" in attributes and attributes["themeColor"] not in _THEME_COLORS:
             return False
-        return all(
-            re.fullmatch(r"[0-9A-Fa-f]{2}", attributes[key]) is not None
-            for key in ("themeTint", "themeShade")
-            if key in attributes
-        )
+        return all(_hex_bytes(attributes[key], 2) for key in ("themeTint", "themeShade") if key in attributes)
     if name in _ENUM_PROPERTIES:
         return set(attributes) == {"val"} and attributes["val"] in _ENUM_PROPERTIES[name]
     if name in {"position", "spacing"}:
-        return (
-            set(attributes) == {"val"}
-            and re.fullmatch(r"(?:[+-]?[0-9]+|-?[0-9]+(?:\.[0-9]+)?(?:mm|cm|in|pt|pc|pi))", attributes["val"])
-            is not None
+        return set(attributes) == {"val"} and (
+            _decimal_integer(attributes["val"])
+            or re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?(?:mm|cm|in|pt|pc|pi)", attributes["val"]) is not None
         )
     if name == "w":
-        value = attributes.get("val", "100").strip(" \t\r\n")
+        value = attributes.get("val", "100")
         return set(attributes).issubset({"val"}) and (
             _integer_in_range(value, 0, 600) or re.fullmatch(r"0*(?:600|[0-5]?[0-9]?[0-9])%", value) is not None
         )
@@ -468,11 +459,24 @@ def _decimal_integer(value: str) -> bool:
 def _unsigned_measure(value: str) -> bool:
     # ECMA-376 Transitional ST_HpsMeasure / ST_TwipsMeasure use unsignedLong,
     # not the narrower application-specific limits of the Office SDK.
-    value = value.strip(" \t\r\n")
-    return (
-        _integer_in_range(value, 0, 2**64 - 1)
-        or re.fullmatch(r"[0-9]+(?:\.[0-9]+)?(?:mm|cm|in|pt|pc|pi)", value) is not None
-    )
+    return _unsigned_decimal(value) or re.fullmatch(r"[0-9]+(?:\.[0-9]+)?(?:mm|cm|in|pt|pc|pi)", value) is not None
+
+
+def _unsigned_decimal(value: str) -> bool:
+    return re.fullmatch(r"[0-9]+", value.strip(" \t\r\n")) is not None and _integer_in_range(value, 0, 2**64 - 1)
+
+
+def _on_off_value(value: str) -> bool:
+    # The union's boolean member collapses whitespace; its string member does not.
+    return value in {"on", "off"} or value.strip(" \t\r\n") in {"true", "false", "0", "1"}
+
+
+def _hex_bytes(value: str, digits: int) -> bool:
+    return re.fullmatch(r"[0-9A-Fa-f]{" + str(digits) + "}", value.strip(" \t\r\n")) is not None
+
+
+def _hex_color(value: str) -> bool:
+    return value == "auto" or _hex_bytes(value, 6)
 
 
 def _font_attributes(attributes: dict[str, str]) -> bool:
@@ -489,7 +493,7 @@ def _east_asian_attributes(attributes: dict[str, str]) -> bool:
     toggles = {"combine", "vert", "vertCompress"}
     return (
         set(attributes).issubset(toggles | {"id", "combineBrackets"})
-        and all(attributes[key] in _ON_OFF for key in toggles & attributes.keys())
+        and all(_on_off_value(attributes[key]) for key in toggles & attributes.keys())
         and ("id" not in attributes or _decimal_integer(attributes["id"]))
         and attributes.get("combineBrackets", "none") in {"none", "round", "square", "angle", "curly"}
     )
@@ -497,13 +501,10 @@ def _east_asian_attributes(attributes: dict[str, str]) -> bool:
 
 def _color_attributes(attributes: dict[str, str]) -> bool:
     return (
-        all(
-            re.fullmatch(r"auto|[0-9A-Fa-f]{6}", attributes[key]) is not None
-            for key in {"color", "fill"} & attributes.keys()
-        )
+        all(_hex_color(attributes[key]) for key in {"color", "fill"} & attributes.keys())
         and all(attributes[key] in _THEME_COLORS for key in {"themeColor", "themeFill"} & attributes.keys())
         and all(
-            re.fullmatch(r"[0-9A-Fa-f]{2}", attributes[key]) is not None
+            _hex_bytes(attributes[key], 2)
             for key in {"themeTint", "themeShade", "themeFillTint", "themeFillShade"} & attributes.keys()
         )
     )
@@ -523,8 +524,8 @@ def _border_or_shading_attributes(name: str, attributes: dict[str, str]) -> bool
         set(attributes).issubset(allowed)
         and attributes.get("val") in _BORDERS
         and _color_attributes(attributes)
-        and all(attributes[key] in _ON_OFF for key in {"shadow", "frame"} & attributes.keys())
-        and all(_integer_in_range(attributes[key], 0, 2**64 - 1) for key in {"sz", "space"} & attributes.keys())
+        and all(_on_off_value(attributes[key]) for key in {"shadow", "frame"} & attributes.keys())
+        and all(_unsigned_decimal(attributes[key]) for key in {"sz", "space"} & attributes.keys())
     )
 
 

@@ -10,11 +10,11 @@ from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_book
 from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_core.docx_parsing.xml_ns import NS_W
 from docwen_plugin_document.shared.markdown_runs import (
-    _is_transparent_proof_marker,
     _run_is_hidden,
     append_formatted_run_text,
     resolve_run_style_type,
 )
+from docwen_plugin_document.shared.note_target_structure import NOTE_WRAPPERS, is_pure_note_target
 
 
 def _extract_notes_with_status(
@@ -233,13 +233,10 @@ def _native_marker_is_run_payload(reference: Any) -> bool:
     run = reference.getparent()
     if run is None or run.tag != q + "r":
         return False
-    wrappers = {
-        q + name for name in ("ins", "moveTo", "smartTag", "sdt", "sdtContent", "customXml", "hyperlink", "fldSimple")
-    }
     for ancestor in run.iterancestors():
         if ancestor.tag == q + "p":
             return True
-        if ancestor.tag not in wrappers:
+        if ancestor.tag not in NOTE_WRAPPERS:
             return False
     return False
 
@@ -279,14 +276,7 @@ def _note_bookmark_targets(doc) -> dict[str, tuple[str, int]]:
             continue
         # A target is the marker itself, not an arbitrary visible range that
         # happens to contain one. Run formatting contributes no body payload.
-        containers = {q + name for name in ("r", "rPr", "ins", "moveTo", "bookmarkStart", "bookmarkEnd")}
-        if any(
-            element is not reference
-            and element.tag not in containers
-            and not _is_transparent_proof_marker(element)
-            and not any(ancestor.tag == q + "rPr" for ancestor in element.iterancestors())
-            for element in contents
-        ):
+        if not is_pure_note_target(contents, reference):
             continue
         raw_id = reference.get(f"{{{NS_W}}}id", "")
         if not raw_id.isdecimal() or int(raw_id) <= 0:

@@ -15,6 +15,7 @@ from docwen_core.docx_parsing.format_features import (
     detect_run_style_type,
 )
 from docwen_core.docx_parsing.xml_ns import NS_W
+from docwen_plugin_document.shared.word_metadata import run_metadata_is_valid
 
 # Gray fill colours treated as inline code shading.
 _WPS_RUN_SHADING_GRAY_COLORS = frozenset(
@@ -145,7 +146,7 @@ def _extended_pair(kind: str, config: DocxMarkdownSyntaxConfig) -> tuple[str, st
 
 def _on_off_property_is_enabled(element: Any) -> bool:
     value = element.get(f"{{{NS_W}}}val")
-    return value is None or value.casefold() not in {"0", "false", "off", "no", "none"}
+    return value is None or value.strip(" \t\r\n").casefold() not in {"0", "false", "off", "no", "none"}
 
 
 def _run_is_hidden(run: Any) -> bool:
@@ -331,7 +332,7 @@ def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> t
     fields retain their ordinary visible cached projection.
     """
     q = f"{{{NS_W}}}"
-    if _run_is_hidden(children[start]):
+    if _run_is_hidden(children[start]) or not run_metadata_is_valid(children[start]):
         return None
     first = [node for node in children[start] if node.tag != q + "rPr"]
     if len(first) != 1 or first[0].tag != q + "fldChar" or first[0].get(q + "fldCharType") != "begin":
@@ -344,7 +345,7 @@ def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> t
         # markers contribute no visible content or field instruction.
         if _is_transparent_proof_marker(run):
             continue
-        if run.tag != q + "r" or _run_is_hidden(run):
+        if run.tag != q + "r" or _run_is_hidden(run) or not run_metadata_is_valid(run):
             return None
         payload = [node for node in run if node.tag != q + "rPr"]
         if len(payload) == 1 and payload[0].tag == q + "fldChar":
@@ -441,6 +442,7 @@ def _render_paragraph_run_segments(
                         or (
                             run.tag == f"{{{NS_W}}}r"
                             and not _run_is_hidden(run)
+                            and run_metadata_is_valid(run)
                             and all(node.tag in {f"{{{NS_W}}}rPr", f"{{{NS_W}}}t"} for node in run)
                         )
                         for run in child

@@ -1039,6 +1039,18 @@ properties, unknown attributes, nested content, duplicate properties and invalid
 validation. This is a closed metadata profile, not a general DOCX schema validator or an Office rendering promise.
 The source schemas are `wml.xsd` and `shared-commonSimpleTypes.xsd` in the
 [official ECMA-376 Part 4 archive](https://ecma-international.org/publications-and-standards/standards/ecma-376/).
+Lexical validation follows each member type: unsigned decimal measures contain digits without a sign; integer,
+boolean and hexBinary members collapse surrounding XML whitespace, while string members such as unit measures,
+percentage forms, `auto`, `on` and `off` retain it. A union does not trim its string members as if they were numeric.
+
+Native note target proofs use the same rendered wrapper vocabulary as paragraph import. A target may contain
+an inline SDT, hyperlink, tracked insertion/move destination, smart tag, custom XML or simple field, but its only
+body payload remains one visible native note marker. Wrapper structure is checked separately from metadata.
+Run properties (including nested format revisions), SDT properties/end properties, and smart-tag/custom-XML
+properties are validated with the offline Transitional schema subset shipped by the document plugin. An arbitrary
+descendant of `rPr` is not automatically trusted. Simple and complex NOTEREF cache runs use the same metadata
+validation. This does not authorize extra visible text, deleted/hidden markers, malformed SDT bodies or a second
+native reference. Unknown metadata outside the shipped namespace/types cannot establish a trusted target.
 
 `/customXml/itemN.xml` is UTF-8 without a BOM, begins with the exact XML declaration
 `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`, has no comments or insignificant indentation, and uses

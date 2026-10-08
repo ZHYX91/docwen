@@ -87,3 +87,111 @@ def test_proofing_markers_preserve_only_proven_note_identity(tmp_path, kind, loc
     # One definition plus one native occurrence; only a proven field adds another.
     assert text.count(label) == (3 if marker_case == "valid" else 2), text
     assert text.count("Unique body.") == 1
+
+
+@pytest.mark.parametrize("kind", ["footnote", "endnote"])
+@pytest.mark.parametrize("wrapper_kind", ["sdt", "hyperlink", "smartTag", "customXml", "ins", "moveTo", "fldSimple"])
+@pytest.mark.parametrize("malformed", [False, True])
+def test_note_target_wrappers_preserve_only_well_formed_payload(tmp_path, kind, wrapper_kind, malformed):
+    document = _document(tmp_path, kind)
+    reference = next(document.element.iter(Q + kind + "Reference"))
+    run = reference.getparent()
+    wrapper = etree.Element(Q + wrapper_kind)
+    if wrapper_kind in {"ins", "moveTo"}:
+        wrapper.set(Q + "id", "7")
+        wrapper.set(Q + "author", "Editor")
+    elif wrapper_kind in {"smartTag", "customXml"}:
+        wrapper.set(Q + "element", "example")
+    elif wrapper_kind == "fldSimple":
+        wrapper.set(Q + "instr", " QUOTE 1 ")
+    run.addprevious(wrapper)
+    if wrapper_kind == "sdt":
+        properties = etree.SubElement(wrapper, Q + "sdtPr")
+        etree.SubElement(properties, Q + "tag", {Q + "val": "Example"})
+        content = etree.SubElement(wrapper, Q + "sdtContent")
+        content.append(run)
+        if malformed:
+            # A run belongs in sdtContent, never beside it.
+            etree.SubElement(wrapper, Q + "r")
+    else:
+        wrapper.append(run)
+        if malformed:
+            etree.SubElement(wrapper, Q + "drawing")
+    _assert_full_note_roundtrip(tmp_path, document, kind, valid=not malformed)
+
+
+@pytest.mark.parametrize("kind", ["footnote", "endnote"])
+@pytest.mark.parametrize("property_name", ["b", "fldChar", "drawing", "proofErr"])
+def test_note_target_run_formatting_is_validated(tmp_path, kind, property_name):
+    document = _document(tmp_path, kind)
+    reference = next(document.element.iter(Q + kind + "Reference"))
+    properties = reference.getparent().find(Q + "rPr")
+    assert properties is not None
+    etree.SubElement(properties, Q + property_name)
+    _assert_full_note_roundtrip(tmp_path, document, kind, valid=property_name == "b")
+
+
+def _assert_full_note_roundtrip(tmp_path, document, kind, *, valid):
+    path = tmp_path / "target-shape.docx"
+    document.save(path)
+    reverse = tmp_path / "reverse"
+    reverse.mkdir()
+    result = DocxToMarkdownConverter().convert(
+        _context(reverse, path, "md", {"output": MarkdownExtensions.obsidian().to_dict()})
+    )
+    assert result.success, result.error
+    text = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+    label = "[^1]" if kind == "footnote" else "[^endnote:1]"
+    assert text.count(label) == (3 if valid else 2), text
+    assert text.count("Unique body.") == 1
+
+
+@pytest.mark.parametrize("kind", ["footnote", "endnote"])
+@pytest.mark.parametrize("valid", [True, False])
+def test_note_target_preserves_nested_format_revision_metadata(tmp_path, kind, valid):
+    document = _document(tmp_path, kind)
+    reference = next(document.element.iter(Q + kind + "Reference"))
+    properties = reference.getparent().find(Q + "rPr")
+    assert properties is not None
+    etree.SubElement(properties, Q + "vanish", {Q + "val": " false "})
+    change = etree.SubElement(properties, Q + "rPrChange", {Q + "id": "7", Q + "author": "Editor"})
+    previous = etree.SubElement(change, Q + "rPr")
+    etree.SubElement(previous, Q + ("i" if valid else "fldChar"))
+    _assert_full_note_roundtrip(tmp_path, document, kind, valid=valid)
+
+
+@pytest.mark.parametrize("kind", ["footnote", "endnote"])
+@pytest.mark.parametrize("valid", [True, False])
+def test_note_target_sdt_properties_have_typed_nested_structure(tmp_path, kind, valid):
+    document = _document(tmp_path, kind)
+    reference = next(document.element.iter(Q + kind + "Reference"))
+    run = reference.getparent()
+    wrapper = etree.Element(Q + "sdt")
+    run.addprevious(wrapper)
+    properties = etree.SubElement(wrapper, Q + "sdtPr")
+    etree.SubElement(properties, Q + "alias", {Q + "val": "Label"})
+    placeholder = etree.SubElement(properties, Q + "placeholder")
+    etree.SubElement(placeholder, Q + ("docPart" if valid else "fldChar"), {Q + "val": "Placeholder"})
+    etree.SubElement(wrapper, Q + "sdtContent").append(run)
+    _assert_full_note_roundtrip(tmp_path, document, kind, valid=valid)
+
+
+@pytest.mark.parametrize("kind", ["footnote", "endnote"])
+@pytest.mark.parametrize("simple", [True, False])
+def test_note_field_cache_cannot_hide_payload_in_run_properties(tmp_path, kind, simple):
+    document = _document(tmp_path, kind)
+    instruction = next(document.element.iter(Q + "instrText"))
+    begin = instruction.getparent().getprevious()
+    parts = [begin]
+    for _ in range(4):
+        parts.append(parts[-1].getnext())
+    properties = parts[3].find(Q + "rPr")
+    assert properties is not None
+    etree.SubElement(properties, Q + "fldChar")
+    if simple:
+        field = etree.Element(Q + "fldSimple", {Q + "instr": instruction.text})
+        field.append(deepcopy(parts[3]))
+        begin.addprevious(field)
+        for run in parts:
+            run.getparent().remove(run)
+    _assert_full_note_roundtrip(tmp_path, document, kind, valid=False)

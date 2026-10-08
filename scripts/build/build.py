@@ -172,6 +172,7 @@ _PYINSTALLER_COMMON_COLLECT_ALL_TARGETS = (
 # surface and, transitively, QtNetwork/TLS into the frozen GUI.
 _PYINSTALLER_GUI_COLLECT_ALL_TARGETS: tuple[str, ...] = ()
 _PYINSTALLER_COMMON_COLLECT_DATA_TARGETS = (
+    "docwen_plugin_document",
     "onnxruntime",
     "latex2mathml",
     "docx",

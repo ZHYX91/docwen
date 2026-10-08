@@ -116,6 +116,9 @@ def test_control_defaults_keep_valid_word_values(content):
         ('<w:shd w:val="clear" w:themeFill="unknown"/>', False),
         ('<w:bdr w:val="single" w:sz="8" w:space="1" w:shadow="false"/>', True),
         ('<w:bdr w:val="zigZagStitch"/>', True),
+        ('<w:bdr w:val="custom"/>', True),
+        ('<w:bdr w:val="earth3"/>', True),
+        *[(f'<w:bdr w:val="tribal{number}"/>', False) for number in range(1, 7)],
         ('<w:bdr w:val="unknown"/>', False),
         ('<w:bdr w:val="single" w:space="32"/>', True),
         ('<w:bdr w:val="single" w:sz="-1"/>', False),
@@ -141,8 +144,9 @@ def test_control_property_families_validate_values_and_unknown_attributes(conten
         ('<w:sz w:val="18446744073709551616"/>', False),
         ('<w:szCs w:val="18446744073709551616"/>', False),
         ('<w:kern w:val="18446744073709551616"/>', False),
-        ('<w:sz w:val="+000000000000000000018"/>', True),
-        ('<w:sz w:val="-0"/>', True),
+        ('<w:sz w:val="+000000000000000000018"/>', False),
+        ('<w:sz w:val="000000000000000000018"/>', True),
+        ('<w:sz w:val="-0"/>', False),
         ('<w:sz w:val=" 18 "/>', True),
         ('<w:sz w:val="12.5pt"/>', True),
         ('<w:rFonts w:ascii="A long font family name beyond thirty one characters"/>', True),
@@ -159,5 +163,34 @@ def test_control_property_families_validate_values_and_unknown_attributes(conten
     ],
 )
 def test_control_defaults_follow_transitional_schema_not_sdk_limits(content, valid):
+    properties = parse_xml(f'<w:sdtPr {_NS}><w:rPr>{content}</w:rPr><w:tag w:val="owned"/></w:sdtPr>')
+    assert has_owned_tag_properties(properties, "owned") is valid
+
+
+@pytest.mark.parametrize(
+    "content,valid",
+    [
+        ('<w:sz w:val=" 12.5pt "/>', False),
+        ('<w:fitText w:val=" 12.5pt "/>', False),
+        ('<w:w w:val=" 050% "/>', False),
+        ('<w:w w:val=" +050 "/>', True),
+        ('<w:position w:val=" -2 "/>', True),
+        ('<w:spacing w:val=" -1.5pt "/>', False),
+        ('<w:bdr w:val="single" w:sz="+8"/>', False),
+        ('<w:bdr w:val="single" w:space="-0"/>', False),
+        ('<w:bdr w:val="single" w:shadow=" false "/>', True),
+        ('<w:eastAsianLayout w:combine=" 1 "/>', True),
+        ('<w:i w:val=" 1 "/><w:vanish w:val=" false "/>', True),
+        ('<w:b w:val=" off "/>', False),
+        ('<w:color w:val=" ABCDEF "/>', True),
+        ('<w:color w:val=" auto "/>', False),
+        ('<w:color w:val="auto" w:themeTint=" 0F "/>', True),
+        ('<w:shd w:val="clear" w:fill=" ABCDEF " w:themeFillTint=" FF "/>', True),
+        ('<w:u w:color=" ABCDEF " w:themeShade=" 0F "/>', True),
+        ('<w:color w:val="AB CD EF"/>', False),
+        ('<w:color w:val="auto" w:themeTint="0 F"/>', False),
+    ],
+)
+def test_control_defaults_respect_each_schema_member_lexical_space(content, valid):
     properties = parse_xml(f'<w:sdtPr {_NS}><w:rPr>{content}</w:rPr><w:tag w:val="owned"/></w:sdtPr>')
     assert has_owned_tag_properties(properties, "owned") is valid
