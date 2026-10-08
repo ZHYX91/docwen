@@ -142,6 +142,7 @@ class DocxToMarkdownConverter:
         self._resolved_v4_recovery: ResolvedNumberingV4Recovery | None = None
         self._resolved_v4_diagnostics: list[tuple[str, str, str]] = []
         self._table_role_diagnostics: list[str] = []
+        self._table_role_overrides: dict[Any, tuple[int, int]] = {}
         self._pending_artifacts: list[Any] = []
         self._pending_primary_path: str | None = None
         self._conversion_lock = RLock()
@@ -184,6 +185,7 @@ class DocxToMarkdownConverter:
         """
         self._resolved_v4_diagnostics.clear()
         self._table_role_diagnostics.clear()
+        self._table_role_overrides.clear()
         from docwen_core.models.result import (
             ConversionDiagnostic,
             ConversionErrorInfo,
@@ -485,7 +487,9 @@ class DocxToMarkdownConverter:
                 self._semantic_v3_recovery = DocxSemanticsV3Recovery.load(input_path, doc)
         else:
             self._semantic_v3_recovery = self._resolved_v4_recovery
-        self._table_role_diagnostics.extend(recover_table_roles(Path(input_path), doc))
+        self._table_role_diagnostics.extend(
+            recover_table_roles(Path(input_path), doc, role_overrides=self._table_role_overrides)
+        )
         lines: list[str] = []
         exact_fenced_fragments: dict[str, str] = {}
 
@@ -872,7 +876,9 @@ class DocxToMarkdownConverter:
                         table_merge_strategy=effective_table_merge_strategy,
                     )
                 if semantic_caption is not None:
-                    metadata = extract_semantic_table_metadata(child)
+                    metadata = extract_semantic_table_metadata(
+                        child, verified_roles=self._table_role_overrides.get(child)
+                    )
                     attributes = [
                         f"header-rows={metadata.header_rows}",
                         f"header-cols={metadata.header_columns}",
@@ -2635,7 +2641,9 @@ class DocxToMarkdownConverter:
             render_docx_table_rows,
         )
 
-        table_metadata = extract_semantic_table_metadata(tbl_element)
+        table_metadata = extract_semantic_table_metadata(
+            tbl_element, verified_roles=self._table_role_overrides.get(tbl_element)
+        )
         structural = table_metadata.header_rows != 1 or table_metadata.header_columns > 0
         if not self._extensions.structural_tables:
             if structural or any(node.tag.rsplit("}", 1)[-1] in {"gridSpan", "vMerge"} for node in tbl_element.iter()):

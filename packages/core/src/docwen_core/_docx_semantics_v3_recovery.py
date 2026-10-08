@@ -136,6 +136,10 @@ class DocxSemanticsV3Recovery:
                 caption_styles = parse_caption_style_binding_map(root)
                 caption_styles = prove_caption_style_registry(package, caption_styles, allow_style_id_rewrite=True)
 
+        from docwen_core.docx_table_roles import TABLE_ROLES_NAMESPACE, prove_table_role_bookmarks
+
+        role_nodes = prove_table_role_bookmarks(document, owned.get(TABLE_ROLES_NAMESPACE, (0, None))[1])
+
         targets: list[TargetIdentityV3] = []
         anchors: list[AnchorIdentityV3] = []
         soft: list[SoftReferenceIdentityV3] = []
@@ -181,6 +185,7 @@ class DocxSemanticsV3Recovery:
             anchor_topology,
             topology_map_present=ANCHOR_TOPOLOGY_MAP_NAMESPACE in owned,
             standalone_target_tags=frozenset(addressable_standalone_tags),
+            proven_table_role_nodes=role_nodes,
         )
         recovery._bind_direct_standalone_occurrences(
             document,
@@ -207,6 +212,7 @@ class DocxSemanticsV3Recovery:
         topology_map_present: bool,
         caption_parser: Callable[..., tuple[str, str]] | None = None,
         standalone_target_tags: frozenset[str] = frozenset(),
+        proven_table_role_nodes: frozenset[Any] = frozenset(),
     ) -> DocxSemanticsV3Recovery:
         from docx.oxml.ns import qn
 
@@ -288,6 +294,7 @@ class DocxSemanticsV3Recovery:
                     blocks,
                     anchor.block_kind,
                     allowed_heading_bookmark_name=heading_bookmark,
+                    proven_table_role_nodes=proven_table_role_nodes,
                 )
                 source_anchor = SourceAnchorV3("ordinary_anchor", anchor.source_id, anchor.block_kind)
                 anchor_group_records.append((child, source_anchor, logical))

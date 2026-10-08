@@ -593,6 +593,7 @@ def extract_semantic_table_metadata(
     tbl_element: Any,
     *,
     default_first_row: bool = True,
+    verified_roles: tuple[int, int] | None = None,
 ) -> DocxSemanticTableMetadata:
     """Read the standard ``cnfStyle``/``tblHeader`` metadata written by DocWen."""
 
@@ -641,6 +642,9 @@ def extract_semantic_table_metadata(
     explicit_first_row_false = first_row_value is not None and first_row_value.casefold() in {"0", "false", "off"}
     if header_rows == 0 and default_first_row and not explicit_first_row_false:
         header_rows = 1 if rows else 0
+    if verified_roles is not None:
+        # Verified authored roles are independent of native pagination policy.
+        header_rows, header_columns = verified_roles
     return DocxSemanticTableMetadata(
         header_rows=header_rows,
         header_columns=header_columns,

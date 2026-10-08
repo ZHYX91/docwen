@@ -57,6 +57,39 @@ def table_role_bookmark_nodes(element: Any) -> frozenset[Any]:
     return frozenset(allowed)
 
 
+def prove_table_role_bookmarks(document: Any, root: Any | None) -> frozenset[Any]:
+    """Authorize auxiliary pairs only against a validated closed role map.
+
+    Deleted declarations are handled as stale by recovery. Existing auxiliary
+    bookmarks must all be declared, globally unique, and in the exact slot.
+    A missing map grants no exception to ordinary-anchor bookmark proof.
+    """
+    if root is None:
+        return frozenset()
+    canonical_table_roles_xml(root)
+    declared = {record.get("bookmark").casefold() for record in root}
+    inventory = build_docx_bookmark_inventory(document)
+    structural_nodes = table_role_bookmark_nodes(document.element)
+    proven: set[Any] = set()
+    for start in inventory.starts:
+        name = start.name or ""
+        if not name.casefold().startswith(_PREFIX.casefold()):
+            continue
+        if name.casefold() not in declared:
+            raise ValueError("Undeclared table role bookmark")
+        proof = prove_bookmark_name(inventory, name)
+        if (
+            not proof.valid
+            or proof.start is None
+            or proof.end is None
+            or proof.start.element not in structural_nodes
+            or proof.end.element not in structural_nodes
+        ):
+            raise ValueError("Invalid table role bookmark binding or position")
+        proven.update((proof.start.element, proof.end.element))
+    return frozenset(proven)
+
+
 def canonical_table_roles_xml(root: Any) -> bytes:
     """Validate the closed map and produce the package identity bytes."""
     if root.tag != f"{{{_NAMESPACE}}}tableRoles" or dict(root.attrib) != {"version": "1"} or root.text or root.tail:
@@ -171,7 +204,9 @@ def inject_table_roles(path: Path, payload: bytes | None) -> None:
     inject_custom_xml_parts(path, [(_NAMESPACE, payload)], allow_existing_owned=True)
 
 
-def recover_table_roles(path: Path, document: Any) -> tuple[str, ...]:
+def recover_table_roles(
+    path: Path, document: Any, *, role_overrides: dict[Any, tuple[int, int]] | None = None
+) -> tuple[str, ...]:
     """Validate bindings before restoring volatile style hints in memory only.
 
     Edited/deleted tables use native roles with an explicit warning. Ambiguous
@@ -182,6 +217,8 @@ def recover_table_roles(path: Path, document: Any) -> tuple[str, ...]:
 
     from docwen_core._docx_semantics_v3_package import verify_custom_xml_support
 
+    if role_overrides is not None:
+        role_overrides.clear()
     parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_blank_text=True)
     maps: list[Any] = []
     with ZipFile(path) as package:
@@ -208,6 +245,7 @@ def recover_table_roles(path: Path, document: Any) -> tuple[str, ...]:
     if len(maps) != 1:
         raise ValueError("Duplicate table role maps")
     root = maps[0]
+    prove_table_role_bookmarks(document, root)
     if root.tag != f"{{{_NAMESPACE}}}tableRoles" or dict(root.attrib) != {"version": "1"} or root.text:
         raise ValueError("Invalid table role map")
     inventory = build_docx_bookmark_inventory(document)
@@ -255,6 +293,8 @@ def recover_table_roles(path: Path, document: Any) -> tuple[str, ...]:
                 header_rows = 0
             if (look.get(qn("w:firstColumn")) or "").casefold() in {"0", "false", "off"}:
                 header_columns = 0
+        if role_overrides is not None:
+            role_overrides[table] = (header_rows, header_columns)
         for row_index, row in enumerate(table.findall(qn("w:tr"))):
             properties = row.find(qn("w:trPr"))
             if properties is None:

@@ -134,7 +134,11 @@ private `urn:docwen:table-roles:v1` custom XML map; ordinary one-row headers kee
 normalized merge geometry; table position and cell text are not identities. Text edits and table moves preserve
 the binding. Changed geometry or deleted bindings produce a warning and use native information; ambiguous
 bookmarks or malformed metadata fail explicitly. Native explicit role disabling and repeat-header policy remain
-authoritative. This carrier does not retain Markdown source or restore old cell content. It is implemented in
+authoritative: verified role counts cannot be enlarged or re-enabled by `tblHeader` pagination markers.
+Without a verified carrier, existing native-header inference remains unchanged. Ordinary-anchor bookmark
+exceptions require a declared, globally unique, balanced pair in the exact first-cell slot; a matching name
+alone grants no exception, and undeclared auxiliary pairs in a document with a role map are rejected.
+This carrier does not retain Markdown source or restore old cell content. It is implemented in
 both Markdown export routes and structured clipboard DOCX export; final candidate Word-save acceptance is
 recorded separately from source regression results. When Structural Tables is enabled, both source analyzers
 recognize multi-row headers and row-header delimiters within their actual quote/list container before binding

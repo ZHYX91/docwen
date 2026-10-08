@@ -137,7 +137,15 @@ def test_ordinary_anchor_exception_does_not_allow_arbitrary_bookmarks(tmp_path: 
     path = _candidate(tmp_path)
     document: Any = Document(str(path))
     table = document.tables[0]._tbl
-    assert prove_ordinary_anchor_group((table,), "table") == (table,)
+    import lxml.etree as etree
+
+    from docwen_core.docx_table_roles import prove_table_role_bookmarks
+
+    payload = prepare_table_roles(document)
+    assert payload is not None
+    role_map = etree.fromstring(payload)
+    proven = prove_table_role_bookmarks(document, role_map)
+    assert prove_ordinary_anchor_group((table,), "table", proven_table_role_nodes=proven) == (table,)
     start = next(table.iter(qn("w:bookmarkStart")))
     end = next(table.iter(qn("w:bookmarkEnd")))
     if mutation == "foreign_name":
@@ -150,5 +158,6 @@ def test_ordinary_anchor_exception_does_not_allow_arbitrary_bookmarks(tmp_path: 
         parent = document.tables[0].cell(2, 0).paragraphs[0]._p
         parent.append(start)
         parent.append(end)
-    with pytest.raises(ValueError, match="must not contain a bookmark"):
-        prove_ordinary_anchor_group((table,), "table")
+    with pytest.raises(ValueError, match="bookmark"):
+        proven = prove_table_role_bookmarks(document, role_map)
+        prove_ordinary_anchor_group((table,), "table", proven_table_role_nodes=proven)

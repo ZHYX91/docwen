@@ -577,3 +577,87 @@ def test_structural_role_carrier_coexists_with_caption_and_ordinary_anchor(
     assert not analysis.has_errors
     assert [(item["id"], item["kind"]) for item in analysis.projection["targets"]] == [("metrics", "table")]
     assert [(item["id"], item["block_kind"]) for item in analysis.projection["anchors"]] == [("raw-table", "table")]
+
+
+@pytest.mark.pr_gate
+@pytest.mark.parametrize("edit", ["disable", "expand_repeat"])
+@pytest.mark.parametrize("resolved", [False, True])
+def test_verified_table_roles_are_independent_of_repeat_headers(tmp_path: Path, edit: str, resolved: bool) -> None:
+    from docx.oxml import OxmlElement
+
+    authored = "| Region | Sales | Total |\n| Quarter | Q1 | Q2 |\n| --- || --- | --- |\n| North | 10 | 12 |\n| South | 8 | 11 |\n"
+    source = tmp_path / "roles.md"
+    source.write_text(authored, encoding="utf-8")
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    context = (
+        _structural_resolved_context(forward_root, authored)
+        if resolved
+        else _structural_direct_context(forward_root, source)
+    )
+    forward = MdToDocxConverter().convert(context)
+    assert forward.success, forward.error
+    document = Document(forward.artifacts[0].staging_path)
+    table = next(document.element.iter(qn("w:tbl")))
+    for marker in list(table.iter(qn("w:cnfStyle"))):
+        marker.getparent().remove(marker)
+    for row in table.findall(qn("w:tr"))[: 2 if edit == "disable" else 3]:
+        properties = row.get_or_add_trPr()
+        marker = properties.find(qn("w:tblHeader"))
+        if marker is None:
+            marker = OxmlElement("w:tblHeader")
+            properties.append(marker)
+        marker.set(qn("w:val"), "1")
+    if edit == "disable":
+        table.tblPr.find(qn("w:tblLook")).set(qn("w:firstRow"), "0")
+    isolated = tmp_path / "isolated.docx"
+    document.save(isolated)
+    reverse_root = tmp_path / "reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(
+        _context(reverse_root, isolated, "md", {"output": {"structural_tables": True}})
+    )
+    assert reverse.success, reverse.error
+    lines = [
+        line
+        for line in Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8").splitlines()
+        if line.startswith("|")
+    ]
+    assert next(index for index, line in enumerate(lines) if "---" in line) == (0 if edit == "disable" else 2)
+    assert "||" in lines[0 if edit == "disable" else 2]
+    saved = Document(isolated)
+    assert len(list(saved.element.iter(qn("w:tblHeader")))) >= (2 if edit == "disable" else 3)
+
+
+@pytest.mark.pr_gate
+def test_ordinary_anchor_rejects_undeclared_table_role_bookmark(tmp_path: Path) -> None:
+    from docx.oxml import OxmlElement
+
+    from docwen_core.docx_semantics_v3 import DocxSemanticsV3Recovery
+
+    source = tmp_path / "anchors.md"
+    source.write_text(
+        "| A | B |\n| C | D |\n| --- || --- |\n| E | F |\n\n^roles\n\n| G | H |\n| --- | --- |\n| I | J |\n\n^plain\n",
+        encoding="utf-8",
+    )
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    forward = MdToDocxConverter().convert(
+        _context(forward_root, source, "docx", {"input": MarkdownExtensions.obsidian().to_dict()})
+    )
+    assert forward.success, forward.error
+    document = Document(forward.artifacts[0].staging_path)
+    DocxSemanticsV3Recovery.load(forward.artifacts[0].staging_path, document)
+    table = list(document.element.iter(qn("w:tbl")))[1]
+    paragraph = table.find(f"{qn('w:tr')}/{qn('w:tc')}/{qn('w:p')}")
+    start = OxmlElement("w:bookmarkStart")
+    start.set(qn("w:id"), "98765")
+    start.set(qn("w:name"), "_DWT_" + "f" * 32)
+    end = OxmlElement("w:bookmarkEnd")
+    end.set(qn("w:id"), "98765")
+    paragraph.insert(0, start)
+    paragraph.insert(1, end)
+    isolated = tmp_path / "unbound.docx"
+    document.save(isolated)
+    with pytest.raises(ValueError, match=r"[Uu]ndeclared|unbound|bookmark"):
+        DocxSemanticsV3Recovery.load(isolated, Document(isolated))

@@ -140,6 +140,9 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         owned: dict[str, tuple[int, Any]],
         caption_styles: tuple[CaptionStyleBindingV3, ...],
     ) -> ResolvedNumberingV4Recovery:
+        from docwen_core.docx_table_roles import TABLE_ROLES_NAMESPACE, prove_table_role_bookmarks
+
+        role_nodes = prove_table_role_bookmarks(document, owned.get(TABLE_ROLES_NAMESPACE, (0, None))[1])
         targets: list[Any] = []
         anchors: list[Any] = []
         soft: list[Any] = []
@@ -225,6 +228,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 topology_map_present=ANCHOR_TOPOLOGY_MAP_NAMESPACE in owned,
                 caption_parser=parse_caption,
                 standalone_target_tags=frozenset(addressable_standalone_tags),
+                proven_table_role_nodes=role_nodes,
             ),
         )
         recovery._resolved_v4_inline_tokens = inline_tokens
