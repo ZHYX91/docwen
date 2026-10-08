@@ -93,6 +93,7 @@ def _replace_markdown_images(
     table_safe: bool,
     image_scope: str | None,
     declared_image: Callable[[str, str], str] | None = None,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Apply a mode to standard ``![alt](target)`` image syntax."""
     normalized_mode = EmbeddedImageMode(mode)
@@ -101,6 +102,8 @@ def _replace_markdown_images(
     index = 0
 
     while index < len(segment):
+        if cancellation_check is not None:
+            cancellation_check()
         construct = parse_inline_link(segment, index, image=True)
         if construct is None:
             index += 1
@@ -187,13 +190,15 @@ def _wiki_construct_end(text: str, start: int) -> int | None:
     return None if close == -1 else close + 2
 
 
-def _auto_link_bare_urls_in_segment(segment: str) -> str:
+def _auto_link_bare_urls_in_segment(segment: str, cancellation_check: Callable[[], None] | None = None) -> str:
     """Turn safe bare HTTP(S) URLs into explicit Markdown links."""
     parts: list[str] = []
     cursor = 0
     index = 0
 
     while index < len(segment):
+        if cancellation_check is not None:
+            cancellation_check()
         construct_end = _markdown_construct_end(segment, index)
         if construct_end is None:
             construct_end = _escaped_markdown_construct_end(segment, index)
@@ -418,6 +423,8 @@ def process_markdown_links(
         cursor = 0
         index = 0
         while index < len(segment):
+            if cancellation_check is not None:
+                cancellation_check()
             construct = parse_inline_link(segment, index, image=True)
             if construct is None:
                 construct = parse_inline_link(segment, index, image=False)
@@ -469,7 +476,7 @@ def process_markdown_links(
     if resolved_auto_link and normalized_target == "docx":
         initial_text = _map_visible_markdown(
             initial_text,
-            _auto_link_bare_urls_in_segment,
+            lambda segment: _auto_link_bare_urls_in_segment(segment, cancellation_check),
             protect_bare_urls=False,
             protect_source_comments=protect_source_comments,
             cancellation_check=cancellation_check,
@@ -494,6 +501,7 @@ def process_markdown_links(
             temp_dir=temp_dir,
             table_safe=table_safe,
             image_scope=image_scope,
+            cancellation_check=cancellation_check,
         ),
         protect_source_comments=protect_source_comments,
         cancellation_check=cancellation_check,

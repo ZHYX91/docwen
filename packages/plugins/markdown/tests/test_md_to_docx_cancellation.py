@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 
 from docwen_core.cancellation import CancellationToken
+from docwen_core.errors import CancellationRequested
 from docwen_plugin_markdown.to_docx import converter
 
 from .conftest import make_context, write_temp_md
@@ -45,11 +46,11 @@ def test_md_to_docx_cancel_between_preprocessing_operations(monkeypatch, complet
     next_operation = Mock(wraps=getattr(converter, following))
     monkeypatch.setattr(converter, completed, cancel_after_operation)
     monkeypatch.setattr(converter, following, next_operation)
-    result = converter.MdToDocxConverter().convert(context)
+    with pytest.raises(CancellationRequested):
+        converter.MdToDocxConverter().convert(context)
 
     assert reached == [completed]
     next_operation.assert_not_called()
-    assert not result.success
     assert workspace.registered_artifacts == []
     assert list(Path(workspace.staging_dir).iterdir()) == []
     assert source.read_bytes() == original
@@ -84,11 +85,11 @@ def test_md_to_docx_cancel_inside_link_preprocessing(monkeypatch):
     monkeypatch.setattr(converter, "process_markdown_links", start_links)
     monkeypatch.setattr(_non_embed, "_split_fenced_code_blocks", cancel_during_scan)
     monkeypatch.setattr(_markdown_orchestrator, "_replace_markdown_images", image_processing)
-    result = converter.MdToDocxConverter().convert(context)
+    with pytest.raises(CancellationRequested):
+        converter.MdToDocxConverter().convert(context)
 
     assert reached == [True]
     image_processing.assert_not_called()
-    assert not result.success
     assert workspace.registered_artifacts == []
     assert list(Path(workspace.staging_dir).iterdir()) == []
     assert source.read_bytes() == original

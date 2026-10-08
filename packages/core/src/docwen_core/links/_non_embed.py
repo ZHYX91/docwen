@@ -691,6 +691,7 @@ def _replace_markdown_links(
     replacer: Callable[[str, str, str], str | None],
     *,
     table_safe: bool = False,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Replace standard Markdown links while supporting nested URL parens."""
     if not segment:
@@ -700,6 +701,8 @@ def _replace_markdown_links(
     cursor = 0
     index = 0
     while index < len(segment):
+        if cancellation_check is not None:
+            cancellation_check()
         image_construct = parse_inline_link(segment, index, image=True)
         if image_construct is not None:
             index = image_construct.end
@@ -958,6 +961,8 @@ def _process_non_embed_links(
         cursor = 0
         index = 0
         while index < len(segment):
+            if cancellation_check is not None:
+                cancellation_check()
             construct = parse_inline_link(segment, index, image=True)
             if construct is None:
                 construct = parse_inline_link(segment, index, image=False)
@@ -996,6 +1001,7 @@ def _process_non_embed_links(
                 result,
                 _replace_markdown,
                 table_safe=table_safe,
+                cancellation_check=cancellation_check,
             )
         if wiki_mode in ("keep", "extract_text", "remove", "resolve", "hyperlink"):
             result = _replace_wiki_links(result)

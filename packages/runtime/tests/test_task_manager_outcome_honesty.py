@@ -112,6 +112,33 @@ def _terminal_events(events: list[TaskEvent]) -> list[TaskEvent]:
     return [event for event in events if event.event_type in {"task_completed", "task_failed", "task_cancelled"}]
 
 
+def test_markdown_preprocessing_cancel_has_no_conversion_failure_diagnostic(tmp_path, monkeypatch):
+    from docwen_plugin_markdown.to_docx import converter
+
+    request = _request(tmp_path, "markdown-cancel")
+    original = Path(request.input_refs[0].path).read_bytes()
+    manager = _build_manager(tmp_path, converter.MdToDocxConverter().convert)
+    read_input = converter.read_input_markdown
+    reached = []
+
+    def cancel_after_read(*args, **kwargs):
+        value = read_input(*args, **kwargs)
+        reached.append(True)
+        assert manager.cancel(request.request_id)
+        return value
+
+    monkeypatch.setattr(converter, "read_input_markdown", cancel_after_read)
+    events = []
+    result = manager.execute_single(request, on_event=events.append)
+    assert reached == [True]
+    assert result.error is not None and result.error.error_type == "cancelled"
+    assert [event.event_type for event in _terminal_events(events)] == ["task_cancelled"]
+    assert not any(item.code == "MD2DOCX-ERROR" or item.level == "error" for item in result.diagnostics)
+    assert result.artifacts == []
+    assert not list((tmp_path / "output").glob("**/*"))
+    assert Path(request.input_refs[0].path).read_bytes() == original
+
+
 def _successful_artifact(context: Any, *, content: str = "placed") -> ArtifactManifest:
     staging_path = context.workspace.create_artifact_path("primary", ".docx")
     Path(staging_path).write_text(content, encoding="utf-8")
