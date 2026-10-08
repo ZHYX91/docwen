@@ -312,6 +312,18 @@ def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
         return None
 
 
+def _is_transparent_proof_marker(element: Any) -> bool:
+    q = f"{{{NS_W}}}"
+    return (
+        element.tag == q + "proofErr"
+        and set(element.attrib) == {q + "type"}
+        and element.get(q + "type") in {"spellStart", "spellEnd", "gramStart", "gramEnd"}
+        and not len(element)
+        and element.text is None
+        and element.tail is None
+    )
+
+
 def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> tuple[str, int] | None:
     """Read Word's split-run NOTEREF form without swallowing unrelated content.
 
@@ -330,14 +342,7 @@ def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> t
         run = children[index]
         # Word's proofing ranges can cross field boundaries. These empty
         # markers contribute no visible content or field instruction.
-        if (
-            run.tag == q + "proofErr"
-            and set(run.attrib) == {q + "type"}
-            and run.get(q + "type") in {"spellStart", "spellEnd", "gramStart", "gramEnd"}
-            and not len(run)
-            and run.text is None
-            and run.tail is None
-        ):
+        if _is_transparent_proof_marker(run):
             continue
         if run.tag != q + "r" or _run_is_hidden(run):
             return None
@@ -429,11 +434,18 @@ def _render_paragraph_run_segments(
                 _process_hyperlink(child)
             elif tag == "fldSimple":
                 resolver = getattr(note_extractor, "get_noteref_text", None)
-                visible_runs = len(child) > 0 and all(
-                    run.tag == f"{{{NS_W}}}r"
-                    and not _run_is_hidden(run)
-                    and all(node.tag in {f"{{{NS_W}}}rPr", f"{{{NS_W}}}t"} for node in run)
-                    for run in child
+                visible_runs = (
+                    len(child) > 0
+                    and all(
+                        _is_transparent_proof_marker(run)
+                        or (
+                            run.tag == f"{{{NS_W}}}r"
+                            and not _run_is_hidden(run)
+                            and all(node.tag in {f"{{{NS_W}}}rPr", f"{{{NS_W}}}t"} for node in run)
+                        )
+                        for run in child
+                    )
+                    and any(run.tag == f"{{{NS_W}}}r" for run in child)
                 )
                 reference = (
                     resolver(child.get(f"{{{NS_W}}}instr", "")) if resolver is not None and visible_runs else None

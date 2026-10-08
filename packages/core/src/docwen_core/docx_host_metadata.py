@@ -398,14 +398,11 @@ def _control_property_values(child: Any) -> bool:
     if name in _TOGGLE_PROPERTIES:
         return set(attributes).issubset({"val"}) and attributes.get("val", "true") in _ON_OFF
     if name in {"sz", "szCs", "kern"}:
-        return (
-            set(attributes) == {"val"}
-            and re.fullmatch(r"(?:[+]?[0-9]+|[0-9]+(?:\.[0-9]+)?(?:mm|cm|in|pt|pc|pi))", attributes["val"]) is not None
-        )
+        return set(attributes) == {"val"} and _unsigned_measure(attributes["val"])
     if name == "color":
         if not set(attributes).issubset({"val", "themeColor", "themeTint", "themeShade"}):
             return False
-        if "val" in attributes and re.fullmatch(r"auto|[0-9A-Fa-f]{6}", attributes["val"]) is None:
+        if re.fullmatch(r"auto|[0-9A-Fa-f]{6}", attributes.get("val", "")) is None:
             return False
         if "themeColor" in attributes and attributes["themeColor"] not in _THEME_COLORS:
             return False
@@ -423,20 +420,21 @@ def _control_property_values(child: Any) -> bool:
             is not None
         )
     if name == "w":
-        return set(attributes).issubset({"val"}) and _integer_in_range(attributes.get("val", "100"), 1, 600)
+        value = attributes.get("val", "100").strip(" \t\r\n")
+        return set(attributes).issubset({"val"}) and (
+            _integer_in_range(value, 0, 600) or re.fullmatch(r"0*(?:600|[0-5]?[0-9]?[0-9])%", value) is not None
+        )
     if name == "rStyle":
         return set(attributes) == {"val"}
     if name == "lang":
-        return set(attributes).issubset({"val", "eastAsia", "bidi"}) and all(
-            len(value) <= 84 for value in attributes.values()
-        )
+        return set(attributes).issubset({"val", "eastAsia", "bidi"})
     if name == "rFonts":
         return _font_attributes(attributes)
     if name == "fitText":
         return (
             set(attributes).issubset({"val", "id"})
-            and _integer_in_range(attributes.get("val", ""), 0, 31680)
-            and ("id" not in attributes or _integer_in_range(attributes["id"], -(2**31), 2**31 - 1))
+            and _unsigned_measure(attributes.get("val", ""))
+            and ("id" not in attributes or _decimal_integer(attributes["id"]))
         )
     if name == "eastAsianLayout":
         return _east_asian_attributes(attributes)
@@ -452,8 +450,29 @@ def _control_property_values(child: Any) -> bool:
 
 
 def _integer_in_range(value: str, minimum: int, maximum: int) -> bool:
-    # Limit digit count before int(), including pathological external XML.
-    return re.fullmatch(r"[+-]?[0-9]{1,10}", value) is not None and minimum <= int(value) <= maximum
+    value = value.strip(" \t\r\n")
+    if not _decimal_integer(value):
+        return False
+    # Bound significant digits before int(); arbitrary leading zeroes are legal.
+    digits = value.lstrip("+-").lstrip("0") or "0"
+    if len(digits) > len(str(max(abs(minimum), abs(maximum)))):
+        return False
+    number = int(digits) * (-1 if value.startswith("-") else 1)
+    return minimum <= number <= maximum
+
+
+def _decimal_integer(value: str) -> bool:
+    return re.fullmatch(r"[+-]?[0-9]+", value.strip(" \t\r\n")) is not None
+
+
+def _unsigned_measure(value: str) -> bool:
+    # ECMA-376 Transitional ST_HpsMeasure / ST_TwipsMeasure use unsignedLong,
+    # not the narrower application-specific limits of the Office SDK.
+    value = value.strip(" \t\r\n")
+    return (
+        _integer_in_range(value, 0, 2**64 - 1)
+        or re.fullmatch(r"[0-9]+(?:\.[0-9]+)?(?:mm|cm|in|pt|pc|pi)", value) is not None
+    )
 
 
 def _font_attributes(attributes: dict[str, str]) -> bool:
@@ -461,7 +480,6 @@ def _font_attributes(attributes: dict[str, str]) -> bool:
     themes = {"asciiTheme", "hAnsiTheme", "eastAsiaTheme", "cstheme"}
     return (
         set(attributes).issubset(strings | themes | {"hint"})
-        and all(len(attributes[key]) <= 31 for key in strings & attributes.keys())
         and all(attributes[key] in _THEME_FONTS for key in themes & attributes.keys())
         and attributes.get("hint", "default") in {"default", "eastAsia", "cs"}
     )
@@ -472,7 +490,7 @@ def _east_asian_attributes(attributes: dict[str, str]) -> bool:
     return (
         set(attributes).issubset(toggles | {"id", "combineBrackets"})
         and all(attributes[key] in _ON_OFF for key in toggles & attributes.keys())
-        and ("id" not in attributes or _integer_in_range(attributes["id"], -(2**31), 2**31 - 1))
+        and ("id" not in attributes or _decimal_integer(attributes["id"]))
         and attributes.get("combineBrackets", "none") in {"none", "round", "square", "angle", "curly"}
     )
 
@@ -485,7 +503,7 @@ def _color_attributes(attributes: dict[str, str]) -> bool:
         )
         and all(attributes[key] in _THEME_COLORS for key in {"themeColor", "themeFill"} & attributes.keys())
         and all(
-            re.fullmatch(r"[0-9A-Fa-f]{1,2}", attributes[key]) is not None
+            re.fullmatch(r"[0-9A-Fa-f]{2}", attributes[key]) is not None
             for key in {"themeTint", "themeShade", "themeFillTint", "themeFillShade"} & attributes.keys()
         )
     )
@@ -506,8 +524,7 @@ def _border_or_shading_attributes(name: str, attributes: dict[str, str]) -> bool
         and attributes.get("val") in _BORDERS
         and _color_attributes(attributes)
         and all(attributes[key] in _ON_OFF for key in {"shadow", "frame"} & attributes.keys())
-        and ("sz" not in attributes or _integer_in_range(attributes["sz"], 0, 2**32 - 1))
-        and ("space" not in attributes or _integer_in_range(attributes["space"], 0, 31))
+        and all(_integer_in_range(attributes[key], 0, 2**64 - 1) for key in {"sz", "space"} & attributes.keys())
     )
 
 

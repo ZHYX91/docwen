@@ -10,6 +10,7 @@ from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_book
 from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_core.docx_parsing.xml_ns import NS_W
 from docwen_plugin_document.shared.markdown_runs import (
+    _is_transparent_proof_marker,
     _run_is_hidden,
     append_formatted_run_text,
     resolve_run_style_type,
@@ -227,6 +228,22 @@ def _format_multiline_content(content: str) -> str:
     return parts[0] + "\n" + "\n".join(f"    {p}" for p in parts[1:])
 
 
+def _native_marker_is_run_payload(reference: Any) -> bool:
+    q = f"{{{NS_W}}}"
+    run = reference.getparent()
+    if run is None or run.tag != q + "r":
+        return False
+    wrappers = {
+        q + name for name in ("ins", "moveTo", "smartTag", "sdt", "sdtContent", "customXml", "hyperlink", "fldSimple")
+    }
+    for ancestor in run.iterancestors():
+        if ancestor.tag == q + "p":
+            return True
+        if ancestor.tag not in wrappers:
+            return False
+    return False
+
+
 def _note_bookmark_targets(doc) -> dict[str, tuple[str, int]]:
     """Resolve unique balanced bookmarks containing exactly one note marker."""
     inventory = build_docx_bookmark_inventory(doc)
@@ -253,6 +270,8 @@ def _note_bookmark_targets(doc) -> dict[str, tuple[str, int]]:
             continue
         reference = references[0]
         q = f"{{{NS_W}}}"
+        if not _native_marker_is_run_payload(reference):
+            continue
         if any(
             ancestor.tag in {q + "del", q + "moveFrom"} or (ancestor.tag == q + "r" and _run_is_hidden(ancestor))
             for ancestor in reference.iterancestors()
@@ -264,6 +283,7 @@ def _note_bookmark_targets(doc) -> dict[str, tuple[str, int]]:
         if any(
             element is not reference
             and element.tag not in containers
+            and not _is_transparent_proof_marker(element)
             and not any(ancestor.tag == q + "rPr" for ancestor in element.iterancestors())
             for element in contents
         ):

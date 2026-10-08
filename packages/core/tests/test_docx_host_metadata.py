@@ -72,8 +72,8 @@ def test_control_defaults_reject_invalid_attribute_values(content):
         '<w:sz w:val="18"/><w:szCs w:val="24"/>',
         '<w:color w:val="auto"/>',
         '<w:color w:val="aBcD12"/>',
-        '<w:color w:themeColor="accent1"/>',
-        '<w:color w:themeColor="text1" w:themeTint="FF" w:themeShade="a0"/>',
+        '<w:color w:val="auto" w:themeColor="accent1"/>',
+        '<w:color w:val="auto" w:themeColor="text1" w:themeTint="FF" w:themeShade="a0"/>',
     ],
 )
 def test_control_defaults_keep_valid_word_values(content):
@@ -99,8 +99,8 @@ def test_control_defaults_keep_valid_word_values(content):
         ('<w:w w:val="600"/>', True),
         ('<w:w w:val="601"/>', False),
         ('<w:fitText w:val="31680" w:id="-1"/>', True),
-        ('<w:fitText w:val="31681"/>', False),
-        ('<w:fitText w:val="1" w:id="2147483648"/>', False),
+        ('<w:fitText w:val="31681"/>', True),
+        ('<w:fitText w:val="1" w:id="2147483648"/>', True),
         ('<w:rStyle w:val="Strong"/><w:lang w:val="en-US" w:eastAsia="zh-CN"/>', True),
         ("<w:rStyle/>", False),
         ('<w:rFonts w:ascii="Arial" w:cstheme="minorBidi" w:hint="eastAsia"/>', True),
@@ -117,7 +117,7 @@ def test_control_defaults_keep_valid_word_values(content):
         ('<w:bdr w:val="single" w:sz="8" w:space="1" w:shadow="false"/>', True),
         ('<w:bdr w:val="zigZagStitch"/>', True),
         ('<w:bdr w:val="unknown"/>', False),
-        ('<w:bdr w:val="single" w:space="32"/>', False),
+        ('<w:bdr w:val="single" w:space="32"/>', True),
         ('<w:bdr w:val="single" w:sz="-1"/>', False),
     ],
 )
@@ -126,3 +126,38 @@ def test_control_property_families_validate_values_and_unknown_attributes(conten
     assert has_owned_tag_properties(properties, "owned") is valid
     properties[0][0].set("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}unexpected", "1")
     assert not has_owned_tag_properties(properties, "owned")
+
+
+@pytest.mark.parametrize(
+    "content,valid",
+    [
+        ('<w:color w:themeColor="accent1"/>', False),
+        ("<w:color/>", False),
+        ('<w:shd w:val="clear" w:themeTint="F"/>', False),
+        ('<w:u w:themeShade="F"/>', False),
+        ('<w:bdr w:val="single" w:themeTint="F"/>', False),
+        ('<w:shd w:val="clear" w:themeTint="0F"/>', True),
+        ('<w:sz w:val="18446744073709551615"/>', True),
+        ('<w:sz w:val="18446744073709551616"/>', False),
+        ('<w:szCs w:val="18446744073709551616"/>', False),
+        ('<w:kern w:val="18446744073709551616"/>', False),
+        ('<w:sz w:val="+000000000000000000018"/>', True),
+        ('<w:sz w:val="-0"/>', True),
+        ('<w:sz w:val=" 18 "/>', True),
+        ('<w:sz w:val="12.5pt"/>', True),
+        ('<w:rFonts w:ascii="A long font family name beyond thirty one characters"/>', True),
+        (f'<w:lang w:val="{"a" * 85}"/>', True),
+        ('<w:fitText w:val="12.5pt"/>', True),
+        ('<w:fitText w:val="18446744073709551616"/>', False),
+        ('<w:eastAsianLayout w:id="2147483648"/>', True),
+        ('<w:w w:val="0"/>', True),
+        ('<w:w w:val="050%"/>', True),
+        ('<w:w w:val="601%"/>', False),
+        ('<w:w w:val="00000000000000000000100"/>', True),
+        ('<w:bdr w:val="single" w:sz="18446744073709551615"/>', True),
+        ('<w:bdr w:val="single" w:space="18446744073709551616"/>', False),
+    ],
+)
+def test_control_defaults_follow_transitional_schema_not_sdk_limits(content, valid):
+    properties = parse_xml(f'<w:sdtPr {_NS}><w:rPr>{content}</w:rPr><w:tag w:val="owned"/></w:sdtPr>')
+    assert has_owned_tag_properties(properties, "owned") is valid

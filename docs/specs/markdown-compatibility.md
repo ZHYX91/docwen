@@ -1028,6 +1028,18 @@ field may have its dirty flag cleared after update, and its cache run may carry 
 number, authored Alias, carrier count and order have all been verified. They never authorize altered visible text
 or a different reference target. Locked citation fields retain their separate lock/dirty rules.
 
+One `w:sdtPr/w:rPr` may contain the recognized, unique, leaf run-formatting defaults validated by
+`docx_host_metadata`. These defaults describe replacement text and do not change existing `sdtContent` or prove
+ownership. Their attribute types follow the ECMA-376 Part 4 (2016) Transitional XSD, not additional Office SDK
+application limits: `color/@val` is required; tint/shade values are one byte (two hex digits); unsigned measures
+use `unsignedLong` or the permitted unit syntax; font/language strings have no SDK-only length cap. Decimal
+formatting IDs use XML Schema integer, while the separate host control `sdtPr/id` retains the signed 32-bit
+identity contract above. Text scale accepts the schema's 0–600 integer and percentage forms. Unsupported
+properties, unknown attributes, nested content, duplicate properties and invalid values still fail ownership
+validation. This is a closed metadata profile, not a general DOCX schema validator or an Office rendering promise.
+The source schemas are `wml.xsd` and `shared-commonSimpleTypes.xsd` in the
+[official ECMA-376 Part 4 archive](https://ecma-international.org/publications-and-standards/standards/ecma-376/).
+
 `/customXml/itemN.xml` is UTF-8 without a BOM, begins with the exact XML declaration
 `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`, has no comments or insignificant indentation, and uses
 this closed element order and attribute order (XML escaping applies to attribute values):
