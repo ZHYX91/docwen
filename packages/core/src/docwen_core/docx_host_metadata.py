@@ -485,7 +485,7 @@ def _font_attributes(attributes: dict[str, str]) -> bool:
     return (
         set(attributes).issubset(strings | themes | {"hint"})
         and all(attributes[key] in _THEME_FONTS for key in themes & attributes.keys())
-        and attributes.get("hint", "default") in {"default", "eastAsia", "cs"}
+        and attributes.get("hint", "default") in {"default", "eastAsia"}
     )
 
 

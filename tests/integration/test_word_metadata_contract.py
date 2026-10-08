@@ -7,6 +7,7 @@ import pytest
 from lxml import etree
 
 from docwen_core.docx_host_metadata import has_owned_tag_properties
+from docwen_plugin_document.shared import word_metadata
 from docwen_plugin_document.shared.word_metadata import is_valid_word_metadata
 
 pytestmark = pytest.mark.integration
@@ -29,6 +30,7 @@ def _enum_cases():
         ("vertAlign", "val", "ST_VerticalAlignRun", {}),
         ("color", "themeColor", "ST_ThemeColor", {"val": "auto"}),
         ("rFonts", "cstheme", "ST_Theme", {}),
+        ("rFonts", "hint", "ST_Hint", {}),
     ]:
         values = [
             value
@@ -97,3 +99,64 @@ def _assert_profile_matches_schema(name, attributes):
     control.append(deepcopy(properties))
     etree.SubElement(control, _Q + "tag", {_Q + "val": "owned"})
     assert has_owned_tag_properties(control, "owned") == is_valid_word_metadata(properties), etree.tostring(properties)
+
+
+def test_font_hint_cs_is_not_a_transitional_hint():
+    _assert_profile_matches_schema("rFonts", {"hint": "cs"})
+
+
+@pytest.mark.parametrize("nested", [False, True])
+@pytest.mark.parametrize("name", ["vanish", "b", "sz"])
+def test_duplicate_run_properties_cannot_establish_metadata_validity(nested, name):
+    properties = etree.Element(_Q + "rPr")
+    target = properties
+    if nested:
+        change = etree.SubElement(properties, _Q + "rPrChange", {_Q + "id": "1", _Q + "author": "Editor"})
+        target = etree.SubElement(change, _Q + "rPr")
+    values = ("2", "3") if name == "sz" else ("false", "true")
+    for value in values:
+        etree.SubElement(target, _Q + name, {_Q + "val": value})
+    assert not is_valid_word_metadata(properties)
+
+
+def test_sdt_end_properties_can_contain_multiple_distinct_run_property_sets():
+    end = etree.Element(_Q + "sdtEndPr")
+    for name in ("b", "i"):
+        etree.SubElement(etree.SubElement(end, _Q + "rPr"), _Q + name)
+    assert is_valid_word_metadata(end)
+
+
+@pytest.mark.parametrize(
+    "name,attribute",
+    [
+        ("sz", "val"),
+        ("szCs", "val"),
+        ("kern", "val"),
+        ("fitText", "val"),
+        ("tabIndex", "val"),
+        ("bdr", "sz"),
+        ("bdr", "space"),
+    ],
+)
+@pytest.mark.parametrize("value", ["+2", "-0", " +2 ", " -0 "])
+def test_unsigned_metadata_policy_survives_a_permissive_validator(monkeypatch, name, attribute, value):
+    # Model the newer validator's acceptance explicitly: the product policy must
+    # still reject signs rather than depend on this host's libxml2 behavior.
+    class PermissiveSchema:
+        def validate(self, element):
+            return True
+
+    monkeypatch.setattr(word_metadata, "_metadata_schema", lambda: PermissiveSchema())
+    properties = etree.Element(_Q + ("sdtPr" if name == "tabIndex" else "rPr"))
+    attributes = {_Q + attribute: value}
+    if name == "bdr":
+        attributes[_Q + "val"] = "single"
+    etree.SubElement(properties, _Q + name, attributes)
+    assert not is_valid_word_metadata(properties)
+
+
+@pytest.mark.parametrize("value", ["0", " 02 ", "18446744073709551615"])
+def test_unsigned_sdt_tab_index_remains_valid(value):
+    properties = etree.Element(_Q + "sdtPr")
+    etree.SubElement(properties, _Q + "tabIndex", {_Q + "val": value})
+    assert is_valid_word_metadata(properties)

@@ -6,6 +6,12 @@ from typing import Any
 
 from lxml import etree
 
+_Q = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+_UNSIGNED_ATTRIBUTES: dict[str, tuple[str, ...]] = {
+    _Q + name: (_Q + "val",) for name in ("sz", "szCs", "kern", "fitText", "tabIndex")
+}
+_UNSIGNED_ATTRIBUTES[_Q + "bdr"] = (_Q + "sz", _Q + "space")
+
 
 @cache
 def _metadata_schema() -> etree.XMLSchema:
@@ -25,7 +31,20 @@ def _metadata_schema() -> etree.XMLSchema:
 
 
 def is_valid_word_metadata(element: Any) -> bool:
-    return not (element.tail and element.tail.strip(" \t\r\n")) and _metadata_schema().validate(element)
+    if element.tail and element.tail.strip(" \t\r\n"):
+        return False
+    for node in element.iter():
+        if node.tag == _Q + "rPr":
+            tags = [child.tag for child in node]
+            if len(tags) != len(set(tags)):
+                return False
+        # Some libxml2 versions accept signed lexical forms for unsignedLong.
+        # Keep the same explicit no-sign contract as Core on every platform.
+        for attribute in _UNSIGNED_ATTRIBUTES.get(node.tag, ()):
+            value = node.get(attribute)
+            if value is not None and value.lstrip(" \t\r\n").startswith(("+", "-")):
+                return False
+    return _metadata_schema().validate(element)
 
 
 def run_metadata_is_valid(run: Any) -> bool:

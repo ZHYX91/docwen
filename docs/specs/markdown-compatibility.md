@@ -1051,6 +1051,13 @@ properties are validated with the offline Transitional schema subset shipped by 
 descendant of `rPr` is not automatically trusted. Simple and complex NOTEREF cache runs use the same metadata
 validation. This does not authorize extra visible text, deleted/hidden markers, malformed SDT bodies or a second
 native reference. Unknown metadata outside the shipped namespace/types cannot establish a trusted target.
+Schema validation is supplemented by two explicit portable metadata rules: each individual `rPr` contains
+at most one occurrence of a property, including previous properties inside `rPrChange`; separate `rPr`
+sets in `sdtEndPr` remain valid. Unsigned numeric attributes reject signs independently of libxml2's version:
+this applies to `sz`, `szCs`, `kern`, `fitText`, `tabIndex` values and border size/spacing. Core and document
+import retain the XML Schema 1.0 no-sign lexical contract even where a validator accepts `+2` or `-0`.
+The metadata profile therefore means the pinned schema plus these rules, not every value accepted by any
+particular libxml2 build. `rFonts/@hint` accepts only the pinned Transitional values `default` and `eastAsia`.
 
 `/customXml/itemN.xml` is UTF-8 without a BOM, begins with the exact XML declaration
 `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`, has no comments or insignificant indentation, and uses

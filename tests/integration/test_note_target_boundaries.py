@@ -178,7 +178,8 @@ def test_note_target_sdt_properties_have_typed_nested_structure(tmp_path, kind, 
 
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("simple", [True, False])
-def test_note_field_cache_cannot_hide_payload_in_run_properties(tmp_path, kind, simple):
+@pytest.mark.parametrize("malformation", ["field", "duplicate-visibility"])
+def test_note_field_cache_cannot_hide_payload_in_run_properties(tmp_path, kind, simple, malformation):
     document = _document(tmp_path, kind)
     instruction = next(document.element.iter(Q + "instrText"))
     begin = instruction.getparent().getprevious()
@@ -187,11 +188,30 @@ def test_note_field_cache_cannot_hide_payload_in_run_properties(tmp_path, kind, 
         parts.append(parts[-1].getnext())
     properties = parts[3].find(Q + "rPr")
     assert properties is not None
-    etree.SubElement(properties, Q + "fldChar")
+    if malformation == "field":
+        etree.SubElement(properties, Q + "fldChar")
+    else:
+        etree.SubElement(properties, Q + "vanish", {Q + "val": "false"})
+        etree.SubElement(properties, Q + "vanish", {Q + "val": "true"})
     if simple:
         field = etree.Element(Q + "fldSimple", {Q + "instr": instruction.text})
         field.append(deepcopy(parts[3]))
         begin.addprevious(field)
         for run in parts:
             run.getparent().remove(run)
+    _assert_full_note_roundtrip(tmp_path, document, kind, valid=False)
+
+
+@pytest.mark.parametrize("kind", ["footnote", "endnote"])
+@pytest.mark.parametrize("nested", [False, True])
+def test_note_target_conflicting_visibility_properties_are_not_trusted(tmp_path, kind, nested):
+    document = _document(tmp_path, kind)
+    reference = next(document.element.iter(Q + kind + "Reference"))
+    properties = reference.getparent().find(Q + "rPr")
+    assert properties is not None
+    if nested:
+        change = etree.SubElement(properties, Q + "rPrChange", {Q + "id": "7", Q + "author": "Editor"})
+        properties = etree.SubElement(change, Q + "rPr")
+    etree.SubElement(properties, Q + "vanish", {Q + "val": "false"})
+    etree.SubElement(properties, Q + "vanish", {Q + "val": "true"})
     _assert_full_note_roundtrip(tmp_path, document, kind, valid=False)
