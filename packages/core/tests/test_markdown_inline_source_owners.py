@@ -130,3 +130,31 @@ def test_source_comment_protection_preserves_original_bytes_across_link_presenta
         protect_source_comments=True,
     )
     assert result == literal
+
+
+@pytest.mark.parametrize("prefix", ["", "> ", "- "])
+@pytest.mark.parametrize("gap", ["\n", "\n\n"])
+def test_source_comment_does_not_create_html_block_authority(prefix: str, gap: str, tmp_path: Path) -> None:
+    source = f"{prefix}%% hidden %%{gap}{prefix}[Visible](https://example.test/page)"
+    result = process_markdown_links(
+        source,
+        str(tmp_path / "source.md"),
+        target_format="docx",
+        link_config=replace(LinkRuntimeConfig(), non_embed_markdown_mode="extract_text"),
+        protect_source_comments=True,
+    )
+    assert result == f"{prefix}%% hidden %%{gap}{prefix}Visible"
+
+
+@pytest.mark.parametrize("target", ["local(foo)%%draft", "local[^fake]"])
+def test_empty_markdown_label_extracts_literal_destination(target: str, tmp_path: Path) -> None:
+    result = process_markdown_links(
+        f"[]({target})",
+        str(tmp_path / "source.md"),
+        target_format="docx",
+        link_config=replace(LinkRuntimeConfig(), non_embed_markdown_mode="extract_text"),
+        protect_source_comments=True,
+    )
+    assert "%%" not in result
+    assert "[^fake]" not in result
+    assert "<!--" not in result

@@ -19,7 +19,7 @@ from zipfile import BadZipFile, ZipFile
 
 import lxml.etree as etree
 
-from docwen_core.links import split_markdown_block_segments
+from docwen_core.links import is_markdown_source_escaped, split_markdown_block_segments
 from docwen_plugin_markdown.literal_source_spans import literal_source_spans
 
 # ── OOXML constants ─────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ _INTERNAL_FOOTNOTE_PREFIX_UC = "DOCWEN-FN-"
 _INTERNAL_ENDNOTE_PREFIX_UC = "DOCWEN-EN-"
 
 _NOTE_DEFINITION_RE = re.compile(r"^(?P<lead> {0,3})\[\^(?P<label>[^\]\\\s]+)\]:[ \t]*(?P<body>.*)$")
-_NOTE_REFERENCE_RE = re.compile(r"(?<!\\)\[\^(?P<label>[^\]\\\s]+)\]")
+_NOTE_REFERENCE_RE = re.compile(r"\[\^(?P<label>[^\]\\\s]+)\]")
 _FENCE_OPEN_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)$")
 
 
@@ -119,6 +119,8 @@ def _rewrite_reference_segments(
     output: list[str] = []
     cursor = 0
     for match in _NOTE_REFERENCE_RE.finditer(source_for_scan):
+        if is_markdown_source_escaped(source_for_scan, match.start()):
+            continue
         output.append(text[cursor : match.start()])
         kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
         output.append(f"[^{internal_keys[(kind, normalized_id)]}]")
@@ -215,6 +217,8 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
             tick = text.find("`", cursor)
             segment_end = len(text) if tick < 0 else tick
             for match in _NOTE_REFERENCE_RE.finditer(protected_text, cursor, segment_end):
+                if is_markdown_source_escaped(protected_text, match.start()):
+                    continue
                 kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
                 reference_identities.append((kind, normalized_id))
             if tick < 0:

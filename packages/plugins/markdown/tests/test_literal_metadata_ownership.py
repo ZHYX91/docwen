@@ -193,3 +193,20 @@ def test_actual_docx_preserves_metadata_following_refs_and_typed_notes(literal: 
             root = etree.fromstring(package.read(f"word/{part}.xml"))
             assert root.xpath(f"count(//w:{element}[@w:id > 0])", namespaces=ns) == 1
     assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize("slashes", [0, 1, 2, 3, 4])
+@pytest.mark.parametrize("citation", ["@visible", "[@visible]"])
+def test_reference_and_citation_source_escape_parity(slashes: int, citation: str) -> None:
+    source = "Figure: Caption ^target\n\n" + "\\" * slashes + "@[[#^target]] " + "\\" * slashes + citation + "\n"
+    _assert_visible(_analyze(source), source, 0 if slashes % 2 else 1)
+
+
+@pytest.mark.parametrize("slashes", [0, 1, 2, 3, 4])
+def test_typed_note_source_escape_parity(slashes: int) -> None:
+    source = "Text " + "\\" * slashes + "[^f] end " + "\\" * slashes + "[^endnote:e]\n\n"
+    source += "[^f]: Foot.\n[^endnote:e]: End.\n"
+    _ast, notes = process_md_body_with_notes(source)
+    expected = 0 if slashes % 2 else 1
+    assert len(notes._footnote_children) == expected
+    assert len(notes._endnote_children) == expected

@@ -217,3 +217,18 @@ def test_yaml_wiki_display_punctuation_stays_literal(tmp_path: Path, mode: str, 
     expected = f"[[guide|{alias}]]" if mode == "keep" else alias
     assert f"网站：{expected}" in observation.text
     assert any(target.startswith("file:") for target in observation.hyperlink_targets) == (mode == "hyperlink")
+
+
+@pytest.mark.parametrize("target", ["local(foo)%%draft", "local[^fake]"])
+def test_yaml_empty_markdown_label_extracts_plain_destination(tmp_path: Path, target: str) -> None:
+    source = tmp_path / "yaml-empty-label.md"
+    original = f"---\nsite: '[]({target})'\n---\n\n正文。\n".encode()
+    source.write_bytes(original)
+    observation = _convert_docx(
+        source,
+        _gongwen_config(wiki_mode="extract_text", markdown_mode="extract_text"),
+        options={"template_name": str(_template(tmp_path))},
+    )
+    assert f"网站：{target}" in observation.text
+    assert "\\" not in observation.text
+    assert source.read_bytes() == original

@@ -612,12 +612,15 @@ def _map_visible_markdown(
     active_tokens: set[str] = set()
     nonce = secrets.token_hex(16)
 
-    def mask(value: str) -> str:
+    def mask(value: str, *, comment: bool = False) -> str:
         index = len(protected)
-        token = f"<DOCWEN-VISIBLE-{nonce}-{index}>"
+        # Comment tokens are re-scanned by the block lexer. They must not
+        # introduce HTML block authority over adjacent authored lines.
+        opening, closing = ("\ue000", "\ue001") if comment else ("<", ">")
+        token = f"{opening}DOCWEN-VISIBLE-{nonce}-{index}{closing}"
         while token in text or token in protected:
             index += 1
-            token = f"<DOCWEN-VISIBLE-{nonce}-{index}>"
+            token = f"{opening}DOCWEN-VISIBLE-{nonce}-{index}{closing}"
         leading_match = re.match(r"[ \t]*", value)
         assert leading_match is not None
         leading = leading_match.group(0)
@@ -644,7 +647,7 @@ def _map_visible_markdown(
         for owner in markdown_source_owners(projection):
             if owner.kind == "comment":
                 comment_parts.append(text[cursor : owner.start])
-                comment_parts.append(mask(text[owner.start : owner.end]))
+                comment_parts.append(mask(text[owner.start : owner.end], comment=True))
                 cursor = owner.end
         comment_parts.append(text[cursor:])
         comment_masked = "".join(comment_parts)
@@ -907,6 +910,8 @@ def _process_non_embed_links(
         display_text = display.strip()
         target_text = target.strip(" \t\r\n")
         if markdown_mode == "extract_text":
+            if not display_text and normalized_target == "docx" and not literal_keep:
+                return escape_markdown_source_literal(target_text)
             return display_text or target_text or ""
         if markdown_mode == "remove":
             return ""

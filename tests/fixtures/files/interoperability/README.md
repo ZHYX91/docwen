@@ -6,7 +6,7 @@ CI reads only these checked-in copies and never a sibling checkout or installed 
 | Fixture | Upstream repository / commit | SHA-256 |
 | --- | --- | --- |
 | structural-tables.json | ZHYX91/obsidian-structural-tables / fc8559003ca95318646b6ddd42634666d0fe5275 | ee46512fc5100d0c1691a804636e24221f970f3ae1e0a82b55484c646e60293c |
-| number-suite.json | ZHYX91/obsidian-number-suite / 6bb8c417f098fca27aa1a2731e41f3401c2fd102 | 09099dc4c94b7af6523fbe8f014bd7384ebac793223dcc2e5a93214ceb687e76 |
+| number-suite.json | ZHYX91/obsidian-number-suite / d3cb0ffe13d9ca04fcd9077a93595ca69fa86203 | fec119f78071e319fd24eb0dfcf6270e52388cba0495592237d273d10f78e8aa |
 
 Both upstream paths are `tests/fixtures/interoperability-syntax-contract.json`.
 The consumer tests map each upstream oracle to DocWen's native representation:

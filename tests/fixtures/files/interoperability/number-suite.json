@@ -178,7 +178,7 @@
     {
       "id": "notes-ignore-protected-inline-and-link-destination",
       "domain": "notes",
-      "source": "`Code[^code]` and \\\\[^escaped] and [Link](https://example.test/[^destination]) and visible[^ok].\n\n[^ok]: Visible.",
+      "source": "`Code[^code]` and \\[^escaped] and [Link](https://example.test/[^destination]) and visible[^ok].\n\n[^ok]: Visible.",
       "expected": {
         "definitions": [
           {
@@ -219,6 +219,181 @@
             "kind": "footnote",
             "id": "b",
             "number": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "notes-backslash-parity-0",
+      "domain": "notes",
+      "source": "Text [^f] and [^endnote:e].\n\n[^f]: Foot.\n[^endnote:e]: End.",
+      "expected": {
+        "definitions": [
+          {
+            "kind": "footnote",
+            "id": "f"
+          },
+          {
+            "kind": "endnote",
+            "id": "e"
+          }
+        ],
+        "references": [
+          {
+            "kind": "footnote",
+            "id": "f"
+          },
+          {
+            "kind": "endnote",
+            "id": "e"
+          }
+        ]
+      }
+    },
+    {
+      "id": "reference-backslash-parity-0",
+      "domain": "document",
+      "source": "Figure: Target ^fig\n\nText @[[#^fig]].",
+      "expected": {
+        "references": [
+          {
+            "kind": "block",
+            "target": "fig",
+            "alias": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "notes-backslash-parity-1",
+      "domain": "notes",
+      "source": "Text \\[^f] and \\[^endnote:e].\n\n[^f]: Foot.\n[^endnote:e]: End.",
+      "expected": {
+        "definitions": [
+          {
+            "kind": "footnote",
+            "id": "f"
+          },
+          {
+            "kind": "endnote",
+            "id": "e"
+          }
+        ],
+        "references": []
+      }
+    },
+    {
+      "id": "reference-backslash-parity-1",
+      "domain": "document",
+      "source": "Figure: Target ^fig\n\nText \\@[[#^fig]].",
+      "expected": {
+        "references": []
+      }
+    },
+    {
+      "id": "notes-backslash-parity-2",
+      "domain": "notes",
+      "source": "Text \\\\[^f] and \\\\[^endnote:e].\n\n[^f]: Foot.\n[^endnote:e]: End.",
+      "expected": {
+        "definitions": [
+          {
+            "kind": "footnote",
+            "id": "f"
+          },
+          {
+            "kind": "endnote",
+            "id": "e"
+          }
+        ],
+        "references": [
+          {
+            "kind": "footnote",
+            "id": "f"
+          },
+          {
+            "kind": "endnote",
+            "id": "e"
+          }
+        ]
+      }
+    },
+    {
+      "id": "reference-backslash-parity-2",
+      "domain": "document",
+      "source": "Figure: Target ^fig\n\nText \\\\@[[#^fig]].",
+      "expected": {
+        "references": [
+          {
+            "kind": "block",
+            "target": "fig",
+            "alias": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "notes-backslash-parity-3",
+      "domain": "notes",
+      "source": "Text \\\\\\[^f] and \\\\\\[^endnote:e].\n\n[^f]: Foot.\n[^endnote:e]: End.",
+      "expected": {
+        "definitions": [
+          {
+            "kind": "footnote",
+            "id": "f"
+          },
+          {
+            "kind": "endnote",
+            "id": "e"
+          }
+        ],
+        "references": []
+      }
+    },
+    {
+      "id": "reference-backslash-parity-3",
+      "domain": "document",
+      "source": "Figure: Target ^fig\n\nText \\\\\\@[[#^fig]].",
+      "expected": {
+        "references": []
+      }
+    },
+    {
+      "id": "notes-backslash-parity-4",
+      "domain": "notes",
+      "source": "Text \\\\\\\\[^f] and \\\\\\\\[^endnote:e].\n\n[^f]: Foot.\n[^endnote:e]: End.",
+      "expected": {
+        "definitions": [
+          {
+            "kind": "footnote",
+            "id": "f"
+          },
+          {
+            "kind": "endnote",
+            "id": "e"
+          }
+        ],
+        "references": [
+          {
+            "kind": "footnote",
+            "id": "f"
+          },
+          {
+            "kind": "endnote",
+            "id": "e"
+          }
+        ]
+      }
+    },
+    {
+      "id": "reference-backslash-parity-4",
+      "domain": "document",
+      "source": "Figure: Target ^fig\n\nText \\\\\\\\@[[#^fig]].",
+      "expected": {
+        "references": [
+          {
+            "kind": "block",
+            "target": "fig",
+            "alias": null
           }
         ]
       }

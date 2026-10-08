@@ -182,6 +182,10 @@ has no link-metadata ownership. WikiLink metadata owns its internal comment deli
 remains eligible for the direct consumer's link projection; the notes consumer treats it as literal metadata.
 Generated DOCX Wiki/embed display text and missing-link placeholders escape their literal punctuation, so converting
 metadata into presentation text cannot introduce new comments or note references.
+An empty standard Markdown label extracted from its destination follows the same literal transport rule;
+authored nonempty labels retain their inline formatting. Comment shielding cannot create HTML block authority
+over adjacent ordinary lines. Direct references/citations and typed-note references use odd/even backslash
+escape parity: an odd run escapes the token, while an even run leaves it active.
 YAML fields that extract plain text keep the literal display value without Markdown transport escapes; hyperlink
 fields decode their escaped label before materializing Word text.
 The source-file DOCX link pipeline protects original comments with the same owner scan before display rewriting;
@@ -202,6 +206,8 @@ autolink，以及合法平衡 Markdown 链接或图片的完整目标和标题�
 比较表达式仍可见，孤立的 `](...)` 不获得链接元数据所有权。WikiLink 内部的注释标记由其元数据拥有，
 但 direct consumer 仍投影真实 WikiLink；notes 路径则把整个 WikiLink 视作字面元数据。
 DOCX 的 Wiki/嵌入展示文字与缺失链接占位文字对字面标点转义，不让元数据改写成展示文字后再引入注释或 notes。
+标准 Markdown 空标签提取目标文字时遵循同一字面传输规则，非空的作者标签保留行内格式。注释保护不能使相邻
+普通行获得 HTML 块所有权。直接引用、文献引用及脚尾注引用按反斜杠奇偶性转义：奇数转义 token，偶数仍有效。
 YAML 字段提取纯文字时保留字面显示值，不写入 Markdown 传输转义；超链接字段先解码转义标签再生成 Word 文字。
 源文件 DOCX 链接处理在展示改写前用同一所有权扫描保护原始注释；notes 仍在递归嵌入完成后校验请求合并内容。
 
