@@ -467,6 +467,7 @@ def _split_inline_code_spans(
     segment: str,
     *,
     protect_bare_urls: bool = True,
+    protect_link_label_atoms: bool = False,
 ) -> list[tuple[str, bool]]:
     """Split non-fenced Markdown into visible text and protected atoms."""
     parts: list[tuple[str, bool]] = []
@@ -485,6 +486,20 @@ def _split_inline_code_spans(
         if construct is None:
             construct = parse_inline_link(segment, index, image=False)
         if construct is not None:
+            if protect_link_label_atoms:
+                label_start = index + (2 if construct.is_image else 1)
+                label_offset = label_start
+                for value, protected in _split_inline_code_spans(
+                    construct.label,
+                    protect_bare_urls=protect_bare_urls,
+                    protect_link_label_atoms=True,
+                ):
+                    if protected:
+                        if cursor < label_offset:
+                            parts.append((segment[cursor:label_offset], False))
+                        parts.append((value, True))
+                        cursor = label_offset + len(value)
+                    label_offset += len(value)
             index = construct.end
             continue
         wiki_match = _WIKI_EMBED_RE.match(segment, index)
@@ -542,12 +557,19 @@ def split_markdown_inline_segments(
     segment: str,
     *,
     protect_bare_urls: bool = True,
+    protect_link_label_atoms: bool = False,
 ) -> list[tuple[str, bool]]:
-    """Split one block segment into visible and protected inline atoms."""
+    """Split one block segment into visible and protected inline atoms.
+
+    Source projections may opt into label atoms while link rewriting keeps
+    complete link constructs intact. Only renderer literals inside a parsed
+    label are protected; ordinary label text remains visible.
+    """
 
     return _split_inline_code_spans(
         segment,
         protect_bare_urls=protect_bare_urls,
+        protect_link_label_atoms=protect_link_label_atoms,
     )
 
 

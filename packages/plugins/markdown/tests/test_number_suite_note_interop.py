@@ -11,6 +11,28 @@ from docwen_plugin_markdown.to_docx.notes import normalize_note_syntax, process_
 pytestmark = pytest.mark.contract
 
 
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "[代码示例 `%%`](https://example.test/item)",
+        "[代码示例 `<!--`](https://example.test/item)",
+        "[公式 $a%%b$](https://example.test/item)",
+        "[公式 $a<!--b$](https://example.test/item)",
+        "[nested [label] `` ` %% ``](https://example.test/item)",
+        "![alt `%%`](picture.png)",
+    ],
+)
+def test_link_label_literals_preserve_typed_note_domains(literal: str) -> None:
+    source = f"{literal}\r\n\r\nFoot[^f], end[^endnote:e].\r\n\r\n[^f]: Foot.\r\n[^endnote:e]: End.\r\n"
+
+    projection = normalize_note_syntax(source)
+    _ast, note_ctx = process_md_body_with_notes(source)
+
+    assert literal in projection
+    assert len(note_ctx._footnote_children) == 1
+    assert len(note_ctx._endnote_children) == 1
+
+
 def test_unicode_note_ids_use_nfc_plus_lowercase_not_casefold() -> None:
     markdown = "First[^Straße], second[^Strasse].\n\n[^Straße]: Sharp-s identity.\n[^Strasse]: Latin ss identity.\n"
 
@@ -180,7 +202,15 @@ def test_literal_owner_preserves_comment_closers_and_typed_note_domains(literal:
     assert len(note_ctx._endnote_children) == 1
 
 
-@pytest.mark.parametrize("literal", ["%% [Link](local%%)", "%% [[Other%%]]"])
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "%% [Link](local%%)",
+        "%% [[Other%%]]",
+        "[代码示例 `%%`](https://example.test/item)",
+        "[代码示例 `<!--`](https://example.test/item)",
+    ],
+)
 def test_docx_comment_owns_closers_inside_link_metadata(literal: str, tmp_path: Path) -> None:
     from zipfile import ZipFile
 

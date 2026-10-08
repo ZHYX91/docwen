@@ -48,6 +48,39 @@ def _analyze(source: str):
     )
 
 
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "[代码示例 `%%`](https://example.test/item)",
+        "[代码示例 `<!--`](https://example.test/item)",
+        "[公式 $a%%b$](https://example.test/item)",
+        "[公式 $a<!--b$](https://example.test/item)",
+        "[nested [label] `` ` %% ``](https://example.test/item)",
+        "![alt `%%`](picture.png)",
+    ],
+)
+def test_link_label_literals_preserve_later_references_and_source_ranges(literal: str) -> None:
+    source = f"Figure: 中文😀 ^target\r\n\r\n{literal}\r\n\r\nSee @[[#^target]] @visible.\r\n"
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    [citation] = analysis.projection["citations"]
+    assert reference["resolution_status"] == "resolved"
+    for item in (reference, citation):
+        span = item["range"]
+        assert source[span["start"] : span["end"]] == item["raw"]
+
+
+def test_link_label_literals_do_not_hide_visible_label_semantics() -> None:
+    source = "Figure: 中文😀 ^target\n\n[示例 `%%` @[[#^target]] @visible](https://example.test/item)\n"
+    analysis = _analyze(source)
+    assert not analysis.has_errors
+    assert [item["raw"] for item in analysis.projection["references"]] == ["@[[#^target]]"]
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@visible"]
+
+
 @pytest.mark.parametrize("literal", ["%%", "<!--", "`%%`", "`<!--`"])
 def test_code_comment_delimiters_do_not_hide_following_semantic_references(literal: str) -> None:
     source = f"Figure: Image ^image\n\n~~~text\n{literal}\n~~~\n\nSee @[[#^image]].\n"

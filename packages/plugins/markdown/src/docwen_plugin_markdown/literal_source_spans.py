@@ -29,7 +29,11 @@ def literal_source_spans(
         remaining = source[start:]
         atoms: list[tuple[int, int, int]] = []
         offset = start
-        for segment, protected in split_markdown_inline_segments(remaining, protect_bare_urls=False):
+        for segment, protected in split_markdown_inline_segments(
+            remaining,
+            protect_bare_urls=False,
+            protect_link_label_atoms=True,
+        ):
             if protected:
                 atoms.append((offset, 0, offset + len(segment)))
             offset += len(segment)
