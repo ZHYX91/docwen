@@ -321,3 +321,21 @@ def test_atomic_record_rejects_foreign_pending_and_final_bytes(tmp_path):
     with pytest.raises(PublicationError, match="record identity"):
         download.atomic_record(final, content)
     assert final.read_bytes() == b"foreign final"
+
+
+def test_atomic_record_supports_long_valid_filename(tmp_path):
+    # Extended syntax makes the target valid independently of Windows' legacy
+    # MAX_PATH setting, while still exercising the component length limit.
+    directory = Path("\\\\?\\" + str(tmp_path.resolve())) if download.os.name == "nt" else tmp_path
+    final = directory / ("r" * 185 + ".json")
+    final.write_bytes(b"probe")
+    final.unlink()
+    content = b'{"identity":"fixed"}\n'
+    pending = download.pending_record(final, content)
+    assert len(pending.name) < 100
+    assert pending != download.pending_record(final.with_name("different.json"), content)
+    assert pending != download.pending_record(final, b"different")
+    pending.write_bytes(content[:5])
+    download.atomic_record(final, content)
+    assert final.read_bytes() == content and not pending.exists()
+    final.unlink()

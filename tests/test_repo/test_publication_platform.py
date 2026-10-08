@@ -300,7 +300,7 @@ def test_record_write_interruption_can_finish_same_command(platform_candidate, m
         nonlocal first
         # At the selected record, the pending file exists but no final bytes are exposed.
         parent = output if record_name == "transfer.json" else receipt.parent
-        if first and parent.exists() and list(parent.glob(record_name + ".writing-*")):
+        if first and parent.exists() and list(parent.glob(".docwen-record-*")):
             first = False
             raise OSError("simulated record flush failure")
         real_fsync(fd)
@@ -310,3 +310,34 @@ def test_record_write_interruption_can_finish_same_command(platform_candidate, m
     assert not (output / "transfer.json" if record_name == "transfer.json" else receipt).exists()
     assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
     assert receipt.is_file() and not (output / "transfer.json").exists()
+
+
+def test_unsupported_receipt_filesystem_fails_before_artifact_download(platform_candidate, monkeypatch):
+    import errno
+
+    api, output, receipt, args = platform_candidate
+    real_link = publication_download.os.link
+
+    def unsupported(source, target):
+        if Path(source).name.startswith(".docwen-link-"):
+            raise OSError(errno.EOPNOTSUPP, "hard links unavailable")
+        return real_link(source, target)
+
+    monkeypatch.setattr(publication_download.os, "link", unsupported)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    assert api.downloads == []
+    assert not output.exists() and not receipt.exists()
+    assert not list(receipt.parent.glob(".docwen-link-*"))
+
+
+def test_complete_cache_does_not_require_new_receipt_links(platform_candidate, monkeypatch):
+    api, _output, _receipt, args = platform_candidate
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
+    api.downloads.clear()
+
+    def forbidden(*_args):
+        raise AssertionError("a complete cache does not create receipt links")
+
+    monkeypatch.setattr(publication_download.os, "link", forbidden)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
+    assert api.downloads == []

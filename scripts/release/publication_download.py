@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -33,7 +34,26 @@ def regular_file(path: Path) -> None:
 
 
 def pending_record(path: Path, content: bytes) -> Path:
-    return path.with_name(path.name + ".writing-" + hashlib.sha256(content).hexdigest())
+    identity = os.fsencode(path.name) + b"\0" + content
+    return path.with_name(".docwen-record-" + hashlib.sha256(identity).hexdigest())
+
+
+def require_record_filesystem(directory: Path) -> None:
+    """Reject unsupported receipt storage before any artifact bytes are fetched."""
+    descriptor, name = tempfile.mkstemp(prefix=".docwen-link-", dir=directory)
+    source = Path(name)
+    target = source.with_name(source.name + ".probe")
+    linked = False
+    try:
+        os.close(descriptor)
+        os.link(source, target)
+        linked = True
+    except OSError as exc:
+        raise PublicationError("receipt filesystem must support hard links for atomic no-overwrite records") from exc
+    finally:
+        if linked:
+            target.unlink()
+        source.unlink()
 
 
 def atomic_record(path: Path, content: bytes) -> None:

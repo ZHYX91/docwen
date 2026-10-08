@@ -30,6 +30,7 @@ from scripts.release.publication_download import (
     finish_download,
     pending_record,
     regular_file,
+    require_record_filesystem,
 )
 from scripts.release.publication_http import GitHub
 from scripts.release.publication_session import verify_candidate_jobs, verify_provenance
@@ -129,6 +130,8 @@ def fetch_platform(
     require(output.parent.is_dir() and not output.is_symlink(), "candidate directory must be inside an owned directory")
     require(receipt.parent.is_dir() and not receipt.is_symlink(), "receipt must be inside an owned directory")
     require(not receipt.resolve().is_relative_to(output.resolve()), "receipt must be outside candidate inventory")
+    if not receipt.exists():
+        require_record_filesystem(receipt.parent)
     reused = output.exists()
     marker = output / "transfer.json"
     transfer = {
