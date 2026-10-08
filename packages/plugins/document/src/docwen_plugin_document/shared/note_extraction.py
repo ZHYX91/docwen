@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 from zipfile import ZipFile
 
+from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_bookmark_name
 from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_core.docx_parsing.xml_ns import NS_W
 from docwen_plugin_document.shared.markdown_runs import append_formatted_run_text, resolve_run_style_type
@@ -221,6 +223,39 @@ def _format_multiline_content(content: str) -> str:
     return parts[0] + "\n" + "\n".join(f"    {p}" for p in parts[1:])
 
 
+def _note_bookmark_targets(doc) -> dict[str, tuple[str, int]]:
+    """Resolve unique balanced bookmarks containing exactly one note marker."""
+    inventory = build_docx_bookmark_inventory(doc)
+    elements = list(doc.element.iter())
+    positions = {id(element): index for index, element in enumerate(elements)}
+    targets: dict[str, tuple[str, int]] = {}
+    for start in inventory.starts:
+        if start.name is None or start.part_name != str(doc.part.partname):
+            continue
+        proof = prove_bookmark_name(inventory, start.name)
+        if not proof.valid or proof.end is None:
+            continue
+        begin = positions.get(id(start.element))
+        end = positions.get(id(proof.end.element))
+        if begin is None or end is None:
+            continue
+        contents = elements[begin + 1 : end]
+        references = [
+            element
+            for element in contents
+            if element.tag in {f"{{{NS_W}}}footnoteReference", f"{{{NS_W}}}endnoteReference"}
+        ]
+        if len(references) != 1 or any(element.tag == f"{{{NS_W}}}t" and element.text for element in contents):
+            continue
+        reference = references[0]
+        raw_id = reference.get(f"{{{NS_W}}}id", "")
+        if not raw_id.isdecimal() or int(raw_id) <= 0:
+            continue
+        kind = "footnote" if reference.tag == f"{{{NS_W}}}footnoteReference" else "endnote"
+        targets[start.name.casefold()] = (kind, int(raw_id))
+    return targets
+
+
 class NoteExtractor:
     """Aggregate footnote/endnote extraction, mapping, reference text, and
     Markdown definitions block."""
@@ -260,6 +295,19 @@ class NoteExtractor:
         self.endnote_id_map: dict[int, str] = {}
         self._referenced_footnote_ids: set[int] = set()
         self._referenced_endnote_ids: set[int] = set()
+        self._note_bookmarks = _note_bookmark_targets(doc)
+
+    def get_noteref_text(self, instruction: str) -> str | None:
+        """Recover only number-valued fields pointing at a proven native note."""
+        match = re.fullmatch(
+            r'\s*NOTEREF\s+(?:"([A-Za-z_][A-Za-z0-9_]{0,39})"|([A-Za-z_][A-Za-z0-9_]{0,39}))(?:\s+\\[hf])*\s*',
+            instruction,
+            re.IGNORECASE,
+        )
+        if match is None:
+            return None
+        target = self._note_bookmarks.get((match[1] or match[2]).casefold())
+        return self.get_reference_text(*target) if target is not None else None
 
     def get_reference_text(self, ref_type: str, word_id: int) -> str:
         """Return an inline reference numbered by first use in its note domain."""

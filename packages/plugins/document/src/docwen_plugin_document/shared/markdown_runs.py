@@ -148,6 +148,11 @@ def _on_off_property_is_enabled(element: Any) -> bool:
     return value is None or value.casefold() not in {"0", "false", "off", "no", "none"}
 
 
+def _run_is_hidden(run: Any) -> bool:
+    vanish = run.find(f"{{{NS_W}}}rPr/{{{NS_W}}}vanish")
+    return vanish is not None and _on_off_property_is_enabled(vanish)
+
+
 def _format_wrappers(
     *,
     has_shading: bool,
@@ -307,6 +312,54 @@ def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
         return None
 
 
+def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> tuple[str, int] | None:
+    """Read Word's split-run NOTEREF form without swallowing unrelated content.
+
+    Unsupported switches, nested fields, mixed boundary runs and malformed
+    fields retain their ordinary visible cached projection.
+    """
+    q = f"{{{NS_W}}}"
+    if _run_is_hidden(children[start]):
+        return None
+    first = [node for node in children[start] if node.tag != q + "rPr"]
+    if len(first) != 1 or first[0].tag != q + "fldChar" or first[0].get(q + "fldCharType") != "begin":
+        return None
+    instruction: list[str] = []
+    separated = False
+    for index in range(start + 1, len(children)):
+        run = children[index]
+        # Word's proofing ranges can cross field boundaries. These empty
+        # markers contribute no visible content or field instruction.
+        if (
+            run.tag == q + "proofErr"
+            and set(run.attrib) == {q + "type"}
+            and run.get(q + "type") in {"spellStart", "spellEnd", "gramStart", "gramEnd"}
+            and not len(run)
+            and run.text is None
+            and run.tail is None
+        ):
+            continue
+        if run.tag != q + "r" or _run_is_hidden(run):
+            return None
+        payload = [node for node in run if node.tag != q + "rPr"]
+        if len(payload) == 1 and payload[0].tag == q + "fldChar":
+            marker = payload[0].get(q + "fldCharType")
+            if marker == "separate" and not separated:
+                separated = True
+            elif marker == "end" and separated:
+                text = resolver("".join(instruction))
+                return (text, index) if text is not None else None
+            else:
+                return None
+        elif not separated and all(node.tag == q + "instrText" for node in payload):
+            instruction.extend(node.text or "" for node in payload)
+        elif separated and all(node.tag == q + "t" for node in payload):
+            continue
+        else:
+            return None
+    return None
+
+
 def _render_paragraph_run_segments(
     para: Any,
     note_extractor: Any = None,
@@ -357,14 +410,36 @@ def _render_paragraph_run_segments(
                     _parts().append("\n")
 
     def _process_children(parent: Any) -> None:
-        for child in parent:
+        children = list(parent)
+        consumed_through = -1
+        for index, child in enumerate(children):
+            if index <= consumed_through:
+                continue
             tag = child.tag.split("}")[-1] if child.tag and "}" in child.tag else (child.tag or "")
 
             if tag == "r":
+                resolver = getattr(note_extractor, "get_noteref_text", None)
+                resolved = _complex_note_reference(children, index, resolver) if resolver is not None else None
+                if resolved is not None:
+                    reference, consumed_through = resolved
+                    _append(reference)
+                    continue
                 _handle_run(child)
             elif tag == "hyperlink":
                 _process_hyperlink(child)
-            elif tag in ("ins", "moveTo", "fldSimple", "smartTag", "sdt", "sdtContent", "customXml"):
+            elif tag == "fldSimple":
+                resolver = getattr(note_extractor, "get_noteref_text", None)
+                visible_runs = len(child) > 0 and all(
+                    run.tag == f"{{{NS_W}}}r" and not _run_is_hidden(run) for run in child
+                )
+                reference = (
+                    resolver(child.get(f"{{{NS_W}}}instr", "")) if resolver is not None and visible_runs else None
+                )
+                if reference is not None:
+                    _append(reference)
+                else:
+                    _process_children(child)
+            elif tag in ("ins", "moveTo", "smartTag", "sdt", "sdtContent", "customXml"):
                 _process_children(child)
             elif tag in ("del", "moveFrom"):
                 pass  # skip tracked deletions
@@ -447,9 +522,7 @@ def _render_paragraph_run_segments(
 
     def _handle_run(run: Any) -> None:
         w_ns = NS_W
-        run_properties = run.find(f"{{{w_ns}}}rPr")
-        vanish = run_properties.find(f"{{{w_ns}}}vanish") if run_properties is not None else None
-        if vanish is not None and _on_off_property_is_enabled(vanish):
+        if _run_is_hidden(run):
             return
         text_parts: list[str] = []
 

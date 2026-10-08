@@ -430,9 +430,12 @@ def _render_resolved_v4_docx(
     candidate_path = Path(candidate_name)
     candidate_path.unlink()
 
+    deferred_note_references = 0
+
     def write_note_parts(path: Path) -> None:
+        nonlocal deferred_note_references
         if note_ctx.has_notes:
-            write_notes_to_docx(str(path), note_ctx)
+            deferred_note_references = write_notes_to_docx(str(path), note_ctx)
 
     session.write_package(
         candidate_path,
@@ -476,6 +479,18 @@ def _render_resolved_v4_docx(
             code="MD2DOCX-RESOLVED-V4-OK",
         )
     )
+    if deferred_note_references:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="MD2DOCX-NOTE-FIELD-UPDATE-REQUIRED",
+                message=(
+                    f"{deferred_note_references} repeated note reference(s) require the document editor to "
+                    "calculate their numbering. A ? mark is shown until fields are updated; "
+                    "update fields in Word after pagination and before printing or PDF export."
+                ),
+            )
+        )
     result = ConversionResult(
         task_id=task_id,
         success=True,

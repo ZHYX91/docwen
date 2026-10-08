@@ -173,6 +173,31 @@ HTML 样尖括号以及字面 `<`/`^`。本导出器生成的未转义 `<`/`^` �
 作者输入的同字符保持转义并在再次解析时仍是文字。这个转义只属于输出传输规则；普通用户 Markdown 输入仍按
 所选 input dialect 解释，不会被全局改成字面模式。
 
+### Repeated DOCX note references / DOCX 重复脚尾注引用
+
+Each generated note has one native Word reference. Further occurrences use a `NOTEREF` field pointing to a
+bookmark around that first reference; they must not duplicate the native reference or drop the occurrence.
+The writer uses a complex field with superscript formatting on its instruction, boundary and cached-result runs,
+so Word saving the document does not turn the repeated mark into baseline text. Bookmark allocation considers
+the complete package, including template headers, and avoids case-insensitive name and numeric-ID collisions.
+
+Cached marks follow the template's document/section numbering settings where they can be computed exactly.
+Page-dependent numbering, formats not implemented by the cache writer, and values outside its exact formatting
+range keep their `NOTEREF` identity but display `?` until the document editor updates fields. Such fields are
+marked dirty and the conversion returns `MD2DOCX-NOTE-FIELD-UPDATE-REQUIRED`; it does not silently substitute
+decimal numbering. Update fields after pagination and before printing or PDF export. The dirty flag requests
+an update but cannot guarantee one when the editor asks for confirmation or the reader does not calculate fields.
+
+DOCX import resolves simple and complex `NOTEREF` fields only when their bookmark uniquely proves a native note
+target and their supported instruction/visible payload is intact. Ordinary cached text remains the fallback for
+unproven targets, unsupported switches, nested or malformed fields. Hidden runs remain hidden. Empty Word
+spelling/grammar proofing markers may cross the field boundary without changing the reference identity.
+
+生成的每条脚尾注只保留一个 Word 原生引用；后续引用通过指向首次引用书签的 `NOTEREF` 域表达，不能复制原生引用，
+也不能删除重复出现。复杂域各 run 保留上标格式，书签名称与编号避开整个模板包中的冲突。导入时只有唯一且可证明的
+脚尾注目标及完整的受支持域结构才恢复成 Markdown 引用；其他情况保留可见缓存文字，隐藏内容不因域识别重新出现。
+Word 的空拼写/语法检查标记不改变引用身份。
+
 ### Inline source ownership / 行内源码所有权
 
 Direct Number Suite semantics and typed-note normalization share the Core link lexer's exact source ranges.

@@ -1130,7 +1130,7 @@ def _note_invalid(message: str) -> NoReturn:
     )
 
 
-def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> None:
+def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> int:
     """Write footnote/endnote body elements into a saved DOCX file.
 
     Opens the DOCX as a ZIP, reads or creates ``word/footnotes.xml``
@@ -1142,7 +1142,7 @@ def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> None:
     contains all body content.
     """
     if not note_ctx.footnote_elements and not note_ctx.endnote_elements:
-        return
+        return 0
 
     original = Path(docx_path)
     try:
@@ -1164,6 +1164,10 @@ def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> None:
         )
         if new_footnote_ids & existing_footnotes or new_endnote_ids & existing_endnotes:
             _note_invalid("A new note ID collides with the existing note domain.")
+
+        from docwen_plugin_markdown.to_docx.note_references import project_repeated_note_references
+
+        projection = project_repeated_note_references(original.read_bytes(), new_footnote_ids, new_endnote_ids)
 
         with tempfile.TemporaryDirectory(prefix=".dw-notes-", dir=original.parent) as tmpdir:
             tmp_path = Path(tmpdir) / "notes_writeback.docx"
@@ -1214,7 +1218,9 @@ def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> None:
                 )
 
                 for item in zf_in.infolist():
-                    if item.filename == "word/footnotes.xml" and fn_bytes is not None:
+                    if item.filename == "word/document.xml":
+                        zf_out.writestr(item, projection.document_xml)
+                    elif item.filename == "word/footnotes.xml" and fn_bytes is not None:
                         zf_out.writestr(item, fn_bytes)
                     elif item.filename == "word/endnotes.xml" and en_bytes is not None:
                         zf_out.writestr(item, en_bytes)
@@ -1232,6 +1238,7 @@ def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> None:
 
             _audit_note_package(tmp_path.read_bytes())
             tmp_path.replace(original)
+        return projection.deferred_count
     except NoteWritebackError:
         raise
     except (BadZipFile, etree.XMLSyntaxError, KeyError, OSError, ValueError) as exc:

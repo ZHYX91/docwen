@@ -50,7 +50,10 @@ First endnote[^endnote:z], then[^endnote:y].
         doc_root = etree.fromstring(_read_zip_entry(output_path, "word/document.xml"))
         footnote_refs = [ref.get(_q("id")) for ref in doc_root.findall(f".//{{{WML_NS}}}footnoteReference")]
         endnote_refs = [ref.get(_q("id")) for ref in doc_root.findall(f".//{{{WML_NS}}}endnoteReference")]
-        assert footnote_refs == ["1", "1", "2"]
+        assert footnote_refs == ["1", "2"]
+        repeated = [n for n in doc_root.iter(_q("instrText")) if (n.text or "").strip().startswith("NOTEREF ")]
+        assert len(repeated) == 1
+        assert repeated[0].xpath("../following-sibling::*[2]/w:t/text()", namespaces={"w": WML_NS}) == ["1"]
         assert endnote_refs == ["1", "2"]
 
         footnote_root = etree.fromstring(_read_zip_entry(output_path, "word/footnotes.xml"))

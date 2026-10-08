@@ -1189,9 +1189,10 @@ class MdToDocxConverter:
             doc.save(output_path)
 
             # Write footnote/endnote body elements into the DOCX ZIP parts
+            deferred_note_references = 0
             if render_body and note_ctx.has_notes:
                 try:
-                    write_notes_to_docx(output_path, note_ctx)
+                    deferred_note_references = write_notes_to_docx(output_path, note_ctx)
                 except NoteWritebackError as exc:
                     return _note_failure(task_id, t_start, exc, output_path=output_path)
 
@@ -1321,6 +1322,20 @@ class MdToDocxConverter:
                         level="warning",
                         message=approximate_warning,
                         code="MD2DOCX-NUMBERING-APPROXIMATE",
+                    ),
+                )
+
+            if deferred_note_references:
+                diagnostics.insert(
+                    0,
+                    ConversionDiagnostic(
+                        level="warning",
+                        code="MD2DOCX-NOTE-FIELD-UPDATE-REQUIRED",
+                        message=(
+                            f"{deferred_note_references} repeated note reference(s) require the document editor to "
+                            "calculate their numbering. A ? mark is shown until fields are updated; "
+                            "update fields in Word after pagination and before printing or PDF export."
+                        ),
                     ),
                 )
 

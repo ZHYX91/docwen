@@ -277,9 +277,12 @@ def test_docx_pipeline_keeps_code_literals_later_fields_and_separate_note_domain
     with ZipFile(result.artifacts[0].staging_path) as archive:
         document = etree.fromstring(archive.read("word/document.xml"))
         assert document.xpath(".//w:endnoteReference/@w:id", namespaces=ns) == ["1"]
-        assert document.xpath(".//w:footnoteReference/@w:id", namespaces=ns) == ["1", "1"]
+        assert document.xpath(".//w:footnoteReference/@w:id", namespaces=ns) == ["1"]
+        repeated = [n for n in document.findall(".//w:instrText", ns) if (n.text or "").strip().startswith("NOTEREF ")]
+        assert len(repeated) == 1
+        assert repeated[0].xpath("../following-sibling::*[2]/w:t/text()", namespaces=ns) == ["1"]
         instructions = [node.text or "" for node in document.findall(".//w:instrText", ns)]
-        assert sum("REF " in value for value in instructions) == 2
+        assert sum(value.strip().startswith("REF ") for value in instructions) == 2
         text = "".join(node.text or "" for node in document.findall(".//w:t", ns))
         assert "%%" in text and "<!--" in text
         assert "@[[" not in text

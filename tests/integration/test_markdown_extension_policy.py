@@ -312,6 +312,51 @@ def test_number_suite_note_identity_and_multiline_round_trip_from_isolated_docx(
     assert "[^4]: First line\n    second line\n    **third line**" in markdown
 
 
+@pytest.mark.parametrize("label,expected", [("n", "[^1]"), ("endnote:n", "[^endnote:1]")])
+@pytest.mark.parametrize("complex_fields", [False, True])
+def test_repeated_note_fields_survive_full_docx_only_conversion(tmp_path, label, expected, complex_fields):
+    from copy import deepcopy
+
+    from lxml import etree
+
+    source = tmp_path / "repeated.md"
+    source.write_text(
+        f"First[^{label}].\n\n[^{label}]\n\nAgain[^{label}].\n\n[^{label}]: Kept note.\n", encoding="utf-8"
+    )
+    policy = MarkdownExtensions.obsidian().to_dict()
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    forward = MdToDocxConverter().convert(_context(forward_root, source, "docx", {"input": policy}))
+    assert forward.success, forward.error
+    isolated = tmp_path / "isolated.docx"
+    isolated.write_bytes(Path(forward.artifacts[0].staging_path).read_bytes())
+    source.unlink()
+    if not complex_fields:
+        doc = Document(isolated)
+        instructions = [n for n in doc.element.iter(qn("w:instrText")) if (n.text or "").strip().startswith("NOTEREF ")]
+        assert len(instructions) == 2
+        for instruction in instructions:
+            begin = instruction.getparent().getprevious()
+            runs = [begin]
+            for _ in range(4):
+                runs.append(runs[-1].getnext())
+            field = etree.Element(qn("w:fldSimple"), {qn("w:instr"): instruction.text})
+            field.append(deepcopy(runs[3]))
+            begin.addprevious(field)
+            for run in runs:
+                run.getparent().remove(run)
+        doc.save(isolated)
+    reverse_root = tmp_path / "reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(_context(reverse_root, isolated, "md", {"output": policy}))
+    assert reverse.success, reverse.error
+    markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert f"First{expected}." in markdown
+    assert f"\n\n{expected}\n\n" in markdown
+    assert f"Again{expected}." in markdown
+    assert f"{expected}: Kept note." in markdown
+
+
 def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_path: Path) -> None:
     authored = """| Region | Sales | < |
 | Quarter | Q1 | Q2 |

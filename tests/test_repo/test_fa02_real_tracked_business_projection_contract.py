@@ -36,9 +36,13 @@ def test_fa02_accepted_view_repairs_have_direct_guards() -> None:
     )
     textbox_tests = _read(PROJECT_ROOT / "packages" / "core" / "tests" / "test_docx_textbox_extraction.py")
 
-    assert 'elif tag in ("ins", "moveTo", "fldSimple", "smartTag", "sdt", "sdtContent", "customXml"):' in renderer
+    assert 'elif tag in ("ins", "moveTo", "smartTag", "sdt", "sdtContent", "customXml"):' in renderer
+    assert 'elif tag == "fldSimple":' in renderer
+    assert 'resolver = getattr(note_extractor, "get_noteref_text", None)' in renderer
+    assert "else:\n                    _process_children(child)" in renderer
     assert 'elif tag == "noBreakHyphen":' in renderer
-    assert "if vanish is not None and _on_off_property_is_enabled(vanish):" in renderer
+    assert "return vanish is not None and _on_off_property_is_enabled(vanish)" in renderer
+    assert "if _run_is_hidden(run):\n            return" in renderer
     assert "processed_text_keys: set[tuple[int | None, str]]" in textbox
     assert 'if local_name in {"del", "moveFrom"}:' in textbox
     assert 'if local_name in {"del", "moveFrom"}:' in breaks
