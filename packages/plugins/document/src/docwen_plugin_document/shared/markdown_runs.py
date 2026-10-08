@@ -430,7 +430,10 @@ def _render_paragraph_run_segments(
             elif tag == "fldSimple":
                 resolver = getattr(note_extractor, "get_noteref_text", None)
                 visible_runs = len(child) > 0 and all(
-                    run.tag == f"{{{NS_W}}}r" and not _run_is_hidden(run) for run in child
+                    run.tag == f"{{{NS_W}}}r"
+                    and not _run_is_hidden(run)
+                    and all(node.tag in {f"{{{NS_W}}}rPr", f"{{{NS_W}}}t"} for node in run)
+                    for run in child
                 )
                 reference = (
                     resolver(child.get(f"{{{NS_W}}}instr", "")) if resolver is not None and visible_runs else None

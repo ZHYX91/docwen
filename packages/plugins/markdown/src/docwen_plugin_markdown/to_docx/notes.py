@@ -971,6 +971,8 @@ def _audit_note_package(
             archive,
             footnote_ids=result[0] | (pending_footnote_ids or set()),
             endnote_ids=result[1] | (pending_endnote_ids or set()),
+            pending_footnote_ids=pending_footnote_ids or set(),
+            pending_endnote_ids=pending_endnote_ids or set(),
         )
         if (pending_footnote_ids or set()) - referenced_footnotes:
             _note_invalid("A pending footnote body has no matching main-document reference.")
@@ -1095,15 +1097,24 @@ def _audit_document_note_references(
     *,
     footnote_ids: set[int],
     endnote_ids: set[int],
+    pending_footnote_ids: set[int],
+    pending_endnote_ids: set[int],
 ) -> tuple[set[int], set[int]]:
     document = etree.fromstring(archive.read("word/document.xml"))
     observed: list[set[int]] = []
-    for element_name, valid_ids in (("footnoteReference", footnote_ids), ("endnoteReference", endnote_ids)):
+    for element_name, valid_ids, pending_ids in (
+        ("footnoteReference", footnote_ids, pending_footnote_ids),
+        ("endnoteReference", endnote_ids, pending_endnote_ids),
+    ):
         observed_ids: set[int] = set()
         for element in document.iter(f"{{{WML_NS}}}{element_name}"):
             raw_id = element.get(f"{{{WML_NS}}}id")
             if not isinstance(raw_id, str) or _NOTE_ID.fullmatch(raw_id) is None or int(raw_id) not in valid_ids:
                 _note_invalid(f"word/document.xml contains a dangling or malformed {element_name}.")
+            # Only freshly generated references await NOTEREF projection.
+            # Existing template references and final output must be unique.
+            if int(raw_id) in observed_ids and int(raw_id) not in pending_ids:
+                _note_invalid(f"word/document.xml contains a duplicate native {element_name}.")
             observed_ids.add(int(raw_id))
         observed.append(observed_ids)
     return observed[0], observed[1]

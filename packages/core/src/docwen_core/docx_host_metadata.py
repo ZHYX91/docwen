@@ -7,6 +7,345 @@ from typing import Any
 
 _WORD = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 _ON_OFF = {"true", "false", "1", "0", "on", "off"}
+_TOGGLE_PROPERTIES = frozenset(
+    [
+        "b",
+        "bCs",
+        "caps",
+        "cs",
+        "dstrike",
+        "emboss",
+        "i",
+        "iCs",
+        "imprint",
+        "noProof",
+        "oMath",
+        "outline",
+        "rtl",
+        "shadow",
+        "smallCaps",
+        "snapToGrid",
+        "specVanish",
+        "strike",
+        "vanish",
+        "webHidden",
+    ]
+)
+_THEME_COLORS = frozenset(
+    [
+        "dark1",
+        "light1",
+        "dark2",
+        "light2",
+        "accent1",
+        "accent2",
+        "accent3",
+        "accent4",
+        "accent5",
+        "accent6",
+        "hyperlink",
+        "followedHyperlink",
+        "none",
+        "background1",
+        "text1",
+        "background2",
+        "text2",
+    ]
+)
+_ENUM_PROPERTIES = {
+    "highlight": frozenset(
+        [
+            "black",
+            "blue",
+            "cyan",
+            "green",
+            "magenta",
+            "red",
+            "yellow",
+            "white",
+            "darkBlue",
+            "darkCyan",
+            "darkGreen",
+            "darkMagenta",
+            "darkRed",
+            "darkYellow",
+            "darkGray",
+            "lightGray",
+            "none",
+        ]
+    ),
+    "effect": frozenset(["blinkBackground", "lights", "antsBlack", "antsRed", "shimmer", "sparkle", "none"]),
+    "em": frozenset(["none", "dot", "comma", "circle", "underDot"]),
+    "vertAlign": frozenset(["baseline", "superscript", "subscript"]),
+}
+_UNDERLINES = frozenset(
+    [
+        "single",
+        "words",
+        "double",
+        "thick",
+        "dotted",
+        "dottedHeavy",
+        "dash",
+        "dashedHeavy",
+        "dashLong",
+        "dashLongHeavy",
+        "dotDash",
+        "dashDotHeavy",
+        "dotDotDash",
+        "dashDotDotHeavy",
+        "wave",
+        "wavyHeavy",
+        "wavyDouble",
+        "none",
+    ]
+)
+_THEME_FONTS = frozenset(
+    ["majorEastAsia", "majorBidi", "majorAscii", "majorHAnsi", "minorEastAsia", "minorBidi", "minorAscii", "minorHAnsi"]
+)
+_SHADING_PATTERNS = frozenset(
+    [
+        "nil",
+        "clear",
+        "solid",
+        "horzStripe",
+        "vertStripe",
+        "reverseDiagStripe",
+        "diagStripe",
+        "horzCross",
+        "diagCross",
+        "thinHorzStripe",
+        "thinVertStripe",
+        "thinReverseDiagStripe",
+        "thinDiagStripe",
+        "thinHorzCross",
+        "thinDiagCross",
+        "pct5",
+        "pct10",
+        "pct12",
+        "pct15",
+        "pct20",
+        "pct25",
+        "pct30",
+        "pct35",
+        "pct37",
+        "pct40",
+        "pct45",
+        "pct50",
+        "pct55",
+        "pct60",
+        "pct62",
+        "pct65",
+        "pct70",
+        "pct75",
+        "pct80",
+        "pct85",
+        "pct87",
+        "pct90",
+        "pct95",
+    ]
+)
+_BORDERS = frozenset(
+    [
+        "nil",
+        "none",
+        "single",
+        "thick",
+        "double",
+        "dotted",
+        "dashed",
+        "dotDash",
+        "dotDotDash",
+        "triple",
+        "thinThickSmallGap",
+        "thickThinSmallGap",
+        "thinThickThinSmallGap",
+        "thinThickMediumGap",
+        "thickThinMediumGap",
+        "thinThickThinMediumGap",
+        "thinThickLargeGap",
+        "thickThinLargeGap",
+        "thinThickThinLargeGap",
+        "wave",
+        "doubleWave",
+        "dashSmallGap",
+        "dashDotStroked",
+        "threeDEmboss",
+        "threeDEngrave",
+        "outset",
+        "inset",
+        "apples",
+        "archedScallops",
+        "babyPacifier",
+        "babyRattle",
+        "balloons3Colors",
+        "balloonsHotAir",
+        "basicBlackDashes",
+        "basicBlackDots",
+        "basicBlackSquares",
+        "basicThinLines",
+        "basicWhiteDashes",
+        "basicWhiteDots",
+        "basicWhiteSquares",
+        "basicWideInline",
+        "basicWideMidline",
+        "basicWideOutline",
+        "bats",
+        "birds",
+        "birdsFlight",
+        "cabins",
+        "cakeSlice",
+        "candyCorn",
+        "celticKnotwork",
+        "certificateBanner",
+        "chainLink",
+        "champagneBottle",
+        "checkedBarBlack",
+        "checkedBarColor",
+        "checkered",
+        "christmasTree",
+        "circlesLines",
+        "circlesRectangles",
+        "classicalWave",
+        "clocks",
+        "compass",
+        "confetti",
+        "confettiGrays",
+        "confettiOutline",
+        "confettiStreamers",
+        "confettiWhite",
+        "cornerTriangles",
+        "couponCutoutDashes",
+        "couponCutoutDots",
+        "crazyMaze",
+        "creaturesButterfly",
+        "creaturesFish",
+        "creaturesInsects",
+        "creaturesLadyBug",
+        "crossStitch",
+        "cup",
+        "decoArch",
+        "decoArchColor",
+        "decoBlocks",
+        "diamondsGray",
+        "doubleD",
+        "doubleDiamonds",
+        "earth1",
+        "earth2",
+        "eclipsingSquares1",
+        "eclipsingSquares2",
+        "eggsBlack",
+        "fans",
+        "film",
+        "firecrackers",
+        "flowersBlockPrint",
+        "flowersDaisies",
+        "flowersModern1",
+        "flowersModern2",
+        "flowersPansy",
+        "flowersRedRose",
+        "flowersRoses",
+        "flowersTeacup",
+        "flowersTiny",
+        "gems",
+        "gingerbreadMan",
+        "gradient",
+        "handmade1",
+        "handmade2",
+        "heartBalloon",
+        "heartGray",
+        "hearts",
+        "heebieJeebies",
+        "holly",
+        "houseFunky",
+        "hypnotic",
+        "iceCreamCones",
+        "lightBulb",
+        "lightning1",
+        "lightning2",
+        "mapPins",
+        "mapleLeaf",
+        "mapleMuffins",
+        "marquee",
+        "marqueeToothed",
+        "moons",
+        "mosaic",
+        "musicNotes",
+        "northwest",
+        "ovals",
+        "packages",
+        "palmsBlack",
+        "palmsColor",
+        "paperClips",
+        "papyrus",
+        "partyFavor",
+        "partyGlass",
+        "pencils",
+        "people",
+        "peopleWaving",
+        "peopleHats",
+        "poinsettias",
+        "postageStamp",
+        "pumpkin1",
+        "pushPinNote2",
+        "pushPinNote1",
+        "pyramids",
+        "pyramidsAbove",
+        "quadrants",
+        "rings",
+        "safari",
+        "sawtooth",
+        "sawtoothGray",
+        "scaredCat",
+        "seattle",
+        "shadowedSquares",
+        "sharksTeeth",
+        "shorebirdTracks",
+        "skyrocket",
+        "snowflakeFancy",
+        "snowflakes",
+        "sombrero",
+        "southwest",
+        "stars",
+        "starsTop",
+        "stars3d",
+        "starsBlack",
+        "starsShadowed",
+        "sun",
+        "swirligig",
+        "tornPaper",
+        "tornPaperBlack",
+        "trees",
+        "triangleParty",
+        "triangles",
+        "tribal1",
+        "tribal2",
+        "tribal3",
+        "tribal4",
+        "tribal5",
+        "tribal6",
+        "triangle1",
+        "triangle2",
+        "triangleCircle1",
+        "triangleCircle2",
+        "shapes1",
+        "shapes2",
+        "twistedLines1",
+        "twistedLines2",
+        "vine",
+        "waveline",
+        "weavingAngles",
+        "weavingBraid",
+        "weavingRibbon",
+        "weavingStrips",
+        "whiteFlowers",
+        "woodwork",
+        "xIllusions",
+        "zanyTriangles",
+        "zigZag",
+        "zigZagStitch",
+    ]
+)
 _CONTROL_RUN_PROPERTIES = frozenset(
     f"{_WORD}{name}"
     for name in [
@@ -53,6 +392,125 @@ _CONTROL_RUN_PROPERTIES = frozenset(
 )
 
 
+def _control_property_values(child: Any) -> bool:
+    name = child.tag.removeprefix(_WORD)
+    attributes = {key.removeprefix(_WORD): value for key, value in child.attrib.items()}
+    if name in _TOGGLE_PROPERTIES:
+        return set(attributes).issubset({"val"}) and attributes.get("val", "true") in _ON_OFF
+    if name in {"sz", "szCs", "kern"}:
+        return (
+            set(attributes) == {"val"}
+            and re.fullmatch(r"(?:[+]?[0-9]+|[0-9]+(?:\.[0-9]+)?(?:mm|cm|in|pt|pc|pi))", attributes["val"]) is not None
+        )
+    if name == "color":
+        if not set(attributes).issubset({"val", "themeColor", "themeTint", "themeShade"}):
+            return False
+        if "val" in attributes and re.fullmatch(r"auto|[0-9A-Fa-f]{6}", attributes["val"]) is None:
+            return False
+        if "themeColor" in attributes and attributes["themeColor"] not in _THEME_COLORS:
+            return False
+        return all(
+            re.fullmatch(r"[0-9A-Fa-f]{2}", attributes[key]) is not None
+            for key in ("themeTint", "themeShade")
+            if key in attributes
+        )
+    if name in _ENUM_PROPERTIES:
+        return set(attributes) == {"val"} and attributes["val"] in _ENUM_PROPERTIES[name]
+    if name in {"position", "spacing"}:
+        return (
+            set(attributes) == {"val"}
+            and re.fullmatch(r"(?:[+-]?[0-9]+|-?[0-9]+(?:\.[0-9]+)?(?:mm|cm|in|pt|pc|pi))", attributes["val"])
+            is not None
+        )
+    if name == "w":
+        return set(attributes).issubset({"val"}) and _integer_in_range(attributes.get("val", "100"), 1, 600)
+    if name == "rStyle":
+        return set(attributes) == {"val"}
+    if name == "lang":
+        return set(attributes).issubset({"val", "eastAsia", "bidi"}) and all(
+            len(value) <= 84 for value in attributes.values()
+        )
+    if name == "rFonts":
+        return _font_attributes(attributes)
+    if name == "fitText":
+        return (
+            set(attributes).issubset({"val", "id"})
+            and _integer_in_range(attributes.get("val", ""), 0, 31680)
+            and ("id" not in attributes or _integer_in_range(attributes["id"], -(2**31), 2**31 - 1))
+        )
+    if name == "eastAsianLayout":
+        return _east_asian_attributes(attributes)
+    if name == "u":
+        return (
+            set(attributes).issubset({"val", "color", "themeColor", "themeTint", "themeShade"})
+            and attributes.get("val", "single") in _UNDERLINES
+            and _color_attributes(attributes)
+        )
+    if name in {"bdr", "shd"}:
+        return _border_or_shading_attributes(name, attributes)
+    return False
+
+
+def _integer_in_range(value: str, minimum: int, maximum: int) -> bool:
+    # Limit digit count before int(), including pathological external XML.
+    return re.fullmatch(r"[+-]?[0-9]{1,10}", value) is not None and minimum <= int(value) <= maximum
+
+
+def _font_attributes(attributes: dict[str, str]) -> bool:
+    strings = {"ascii", "hAnsi", "eastAsia", "cs"}
+    themes = {"asciiTheme", "hAnsiTheme", "eastAsiaTheme", "cstheme"}
+    return (
+        set(attributes).issubset(strings | themes | {"hint"})
+        and all(len(attributes[key]) <= 31 for key in strings & attributes.keys())
+        and all(attributes[key] in _THEME_FONTS for key in themes & attributes.keys())
+        and attributes.get("hint", "default") in {"default", "eastAsia", "cs"}
+    )
+
+
+def _east_asian_attributes(attributes: dict[str, str]) -> bool:
+    toggles = {"combine", "vert", "vertCompress"}
+    return (
+        set(attributes).issubset(toggles | {"id", "combineBrackets"})
+        and all(attributes[key] in _ON_OFF for key in toggles & attributes.keys())
+        and ("id" not in attributes or _integer_in_range(attributes["id"], -(2**31), 2**31 - 1))
+        and attributes.get("combineBrackets", "none") in {"none", "round", "square", "angle", "curly"}
+    )
+
+
+def _color_attributes(attributes: dict[str, str]) -> bool:
+    return (
+        all(
+            re.fullmatch(r"auto|[0-9A-Fa-f]{6}", attributes[key]) is not None
+            for key in {"color", "fill"} & attributes.keys()
+        )
+        and all(attributes[key] in _THEME_COLORS for key in {"themeColor", "themeFill"} & attributes.keys())
+        and all(
+            re.fullmatch(r"[0-9A-Fa-f]{1,2}", attributes[key]) is not None
+            for key in {"themeTint", "themeShade", "themeFillTint", "themeFillShade"} & attributes.keys()
+        )
+    )
+
+
+def _border_or_shading_attributes(name: str, attributes: dict[str, str]) -> bool:
+    allowed = {"val", "color", "themeColor", "themeTint", "themeShade"}
+    if name == "shd":
+        allowed |= {"fill", "themeFill", "themeFillTint", "themeFillShade"}
+        return (
+            set(attributes).issubset(allowed)
+            and attributes.get("val") in _SHADING_PATTERNS
+            and _color_attributes(attributes)
+        )
+    allowed |= {"sz", "space", "shadow", "frame"}
+    return (
+        set(attributes).issubset(allowed)
+        and attributes.get("val") in _BORDERS
+        and _color_attributes(attributes)
+        and all(attributes[key] in _ON_OFF for key in {"shadow", "frame"} & attributes.keys())
+        and ("sz" not in attributes or _integer_in_range(attributes["sz"], 0, 2**32 - 1))
+        and ("space" not in attributes or _integer_in_range(attributes["space"], 0, 31))
+    )
+
+
 def _control_run_defaults(properties: Any) -> bool:
     # SDT defaults format replacement text, not existing sdtContent. Do not apply
     # these defaults to payload runs or use them as evidence of ownership.
@@ -67,6 +525,7 @@ def _control_run_defaults(properties: Any) -> bool:
             or child.text is not None
             or child.tail is not None
             or any(not name.startswith(_WORD) for name in child.attrib)
+            or not _control_property_values(child)
         ):
             return False
         seen.add(child.tag)

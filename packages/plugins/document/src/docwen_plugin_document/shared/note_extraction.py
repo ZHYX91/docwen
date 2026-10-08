@@ -9,7 +9,11 @@ from zipfile import ZipFile
 from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_bookmark_name
 from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_core.docx_parsing.xml_ns import NS_W
-from docwen_plugin_document.shared.markdown_runs import append_formatted_run_text, resolve_run_style_type
+from docwen_plugin_document.shared.markdown_runs import (
+    _run_is_hidden,
+    append_formatted_run_text,
+    resolve_run_style_type,
+)
 
 
 def _extract_notes_with_status(
@@ -248,6 +252,22 @@ def _note_bookmark_targets(doc) -> dict[str, tuple[str, int]]:
         if len(references) != 1 or any(element.tag == f"{{{NS_W}}}t" and element.text for element in contents):
             continue
         reference = references[0]
+        q = f"{{{NS_W}}}"
+        if any(
+            ancestor.tag in {q + "del", q + "moveFrom"} or (ancestor.tag == q + "r" and _run_is_hidden(ancestor))
+            for ancestor in reference.iterancestors()
+        ):
+            continue
+        # A target is the marker itself, not an arbitrary visible range that
+        # happens to contain one. Run formatting contributes no body payload.
+        containers = {q + name for name in ("r", "rPr", "ins", "moveTo", "bookmarkStart", "bookmarkEnd")}
+        if any(
+            element is not reference
+            and element.tag not in containers
+            and not any(ancestor.tag == q + "rPr" for ancestor in element.iterancestors())
+            for element in contents
+        ):
+            continue
         raw_id = reference.get(f"{{{NS_W}}}id", "")
         if not raw_id.isdecimal() or int(raw_id) <= 0:
             continue

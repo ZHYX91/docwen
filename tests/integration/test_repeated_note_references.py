@@ -27,6 +27,31 @@ def _cached_marks(root):
     return [node.getparent().getnext().getnext().find("w:t", NS).text for node in _note_instructions(root)]
 
 
+@pytest.mark.parametrize("kind,label", [("footnote", "n"), ("endnote", "endnote:n")])
+@pytest.mark.parametrize("new_notes", [False, True])
+def test_duplicate_native_template_notes_are_rejected(tmp_path, kind, label, new_notes):
+    source = tmp_path / "template-source.md"
+    source.write_text(f"Existing[^{label}].\n\n[^{label}]: Existing body.\n", encoding="utf-8")
+    initial = MdToDocxConverter().convert(_context(tmp_path, source, "docx", {"input": {"typed_endnotes": True}}))
+    assert initial.success, initial.error
+    template = Document(initial.artifacts[0].staging_path)
+    reference = next(template.element.iter(f"{{{NS['w']}}}{kind}Reference"))
+    template.add_paragraph().add_run()._r.append(deepcopy(reference))
+    template.add_paragraph("{{body}}")
+    template_path = tmp_path / "duplicate-template.docx"
+    template.save(str(template_path))
+    source = tmp_path / "new-source.md"
+    source.write_text("New[^new].\n\n[^new]: New body.\n" if new_notes else "Plain body.\n", encoding="utf-8")
+    conversion_root = tmp_path / "conversion"
+    conversion_root.mkdir()
+    context = _context(conversion_root, source, "docx", {})
+    context.request.options["template_name"] = str(template_path)
+    result = MdToDocxConverter().convert(context)
+    assert not result.success
+    assert not result.artifacts
+    assert any(d.code == "MD2DOCX-NOTE-PART-INVALID" for d in result.diagnostics)
+
+
 @pytest.mark.parametrize(
     "restart,number_format,start",
     [
@@ -245,7 +270,23 @@ def test_repeated_notes_use_one_native_reference_and_linked_fields(
     assert extractor.build_definitions_block().count("One") == 1
 
 
-@pytest.mark.parametrize("case", ["missing", "duplicate", "unbalanced", "text_range", "position_switch"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "missing",
+        "duplicate",
+        "unbalanced",
+        "text_range",
+        "position_switch",
+        "del",
+        "moveFrom",
+        "hidden",
+        "tab",
+        "br",
+        "drawing",
+        "instrText",
+    ],
+)
 def test_unproven_noteref_keeps_cached_text(case):
     q = f"{{{NS['w']}}}"
     doc = Document()
@@ -263,6 +304,16 @@ def test_unproven_noteref_keeps_cached_text(case):
         anchor._p.remove(end)
     elif case == "text_range":
         etree.SubElement(run, q + "t").text = "Unrelated text"
+    elif case in {"del", "moveFrom"}:
+        wrapper = etree.Element(q + case)
+        run.addprevious(wrapper)
+        wrapper.append(run)
+    elif case == "hidden":
+        props = etree.Element(q + "rPr")
+        run.insert(0, props)
+        etree.SubElement(props, q + "vanish")
+    elif case in {"tab", "br", "drawing", "instrText"}:
+        etree.SubElement(run, q + case)
     paragraph = doc.add_paragraph("Before ")
     field = etree.SubElement(paragraph._p, q + "fldSimple")
     instruction = " NOTEREF NoteTarget \\h" + (" \\p" if case == "position_switch" else "")
@@ -277,14 +328,41 @@ def test_unproven_noteref_keeps_cached_text(case):
     )
 
 
-@pytest.mark.parametrize("simple", [False, True])
-@pytest.mark.parametrize("hidden", [False, True])
-def test_note_field_visibility_matches_ordinary_runs(simple, hidden):
+@pytest.mark.parametrize(
+    "payload,expected", [("br", "1\nextra"), ("tab", "1\textra"), ("footnoteReference", "1[^2]extra")]
+)
+def test_simple_note_field_mixed_cache_preserves_visible_content(payload, expected):
     q = f"{{{NS['w']}}}"
     doc = Document()
     anchor = doc.add_paragraph()
     etree.SubElement(anchor._p, q + "bookmarkStart", {q + "id": "1", q + "name": "NoteTarget"})
     etree.SubElement(anchor.add_run()._r, q + "footnoteReference", {q + "id": "1"})
+    etree.SubElement(anchor._p, q + "bookmarkEnd", {q + "id": "1"})
+    paragraph = doc.add_paragraph()
+    field = etree.SubElement(paragraph._p, q + "fldSimple", {q + "instr": " NOTEREF NoteTarget \\h \\f "})
+    etree.SubElement(etree.SubElement(field, q + "r"), q + "t").text = "1"
+    attributes = {q + "id": "2"} if payload == "footnoteReference" else {}
+    etree.SubElement(etree.SubElement(field, q + "r"), q + payload, attributes)
+    etree.SubElement(etree.SubElement(field, q + "r"), q + "t").text = "extra"
+    extractor = NoteExtractor(doc)
+    assert render_paragraph_runs(anchor, extractor, syntax_config=DocxMarkdownSyntaxConfig()) == "[^1]"
+    assert render_paragraph_runs(paragraph, extractor, syntax_config=DocxMarkdownSyntaxConfig()) == expected
+
+
+@pytest.mark.parametrize("simple", [False, True])
+@pytest.mark.parametrize("hidden", [False, True])
+@pytest.mark.parametrize("target_wrapper", [None, "ins", "moveTo"])
+def test_note_field_visibility_matches_ordinary_runs(simple, hidden, target_wrapper):
+    q = f"{{{NS['w']}}}"
+    doc = Document()
+    anchor = doc.add_paragraph()
+    etree.SubElement(anchor._p, q + "bookmarkStart", {q + "id": "1", q + "name": "NoteTarget"})
+    target_run = anchor.add_run()._r
+    etree.SubElement(target_run, q + "footnoteReference", {q + "id": "1"})
+    if target_wrapper:
+        wrapper = etree.Element(q + target_wrapper)
+        target_run.addprevious(wrapper)
+        wrapper.append(target_run)
     etree.SubElement(anchor._p, q + "bookmarkEnd", {q + "id": "1"})
     paragraph = doc.add_paragraph("Before ")
     instruction = " NOTEREF NoteTarget \\h \\f "
