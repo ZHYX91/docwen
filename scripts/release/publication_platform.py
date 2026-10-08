@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import shutil
 import stat
@@ -54,9 +55,22 @@ def _download(api: GitHub, artifact: dict[str, Any], output: Path, names: set[st
                         == {"bytes": entry.file_size, "sha256": hashlib.file_digest(source, "sha256").hexdigest()},
                         "previous extraction differs from verified archive",
                     )
+                temporary = output / (entry.filename + ".extracting")
+                if temporary.exists():
+                    regular_file(temporary)
+                    temporary.unlink()
                 continue
-            with bundle.open(entry) as source, destination.open("xb") as target:
+            temporary = output / (entry.filename + ".extracting")
+            if temporary.exists():
+                regular_file(temporary)
+                temporary.unlink()
+            # The verified transfer sidecar owns this scratch name. Never expose
+            # a partially written member under its final candidate filename.
+            with bundle.open(entry) as source, temporary.open("xb") as target:
                 shutil.copyfileobj(source, target)
+            require(temporary.stat().st_size == entry.file_size, "incomplete extracted member")
+            os.link(temporary, destination)
+            temporary.unlink()
     finish_download(archive)
 
 
@@ -118,6 +132,10 @@ def fetch_platform(
         "version": version,
         "commit": commit,
         "platform": platform,
+        "siblings": {
+            "metadata": {key: metadata[key] for key in ("id", "digest", "size_in_bytes")},
+            "package": {key: package[key] for key in ("id", "digest", "size_in_bytes")},
+        },
     }
     if not reused:
         output.mkdir()
@@ -128,10 +146,12 @@ def fetch_platform(
         "reparse candidate directory rejected",
     )
     recovering = marker.exists()
+    require(recovering or receipt.is_file(), "candidate cache has no identity receipt or transfer journal")
     if recovering:
         regular_file(marker)
         require(read_object(marker) == transfer, "candidate transfer identity mismatch")
         allowed = selected | {MANIFEST_NAME, CHECKSUM_NAME, marker.name}
+        allowed |= {name + ".extracting" for name in selected | {MANIFEST_NAME, CHECKSUM_NAME}}
         for item in (metadata, package):
             allowed |= {f"download-{item['id']}.zip", f"download-{item['id']}.json"}
         require({path.name for path in output.iterdir()} <= allowed, "unexpected candidate recovery files")
@@ -146,14 +166,13 @@ def fetch_platform(
     verify_origin(manifest, run, publication, digest=digest)
     require((output / CHECKSUM_NAME).read_bytes() == checksum_bytes(manifest["assets"]), "checksum inventory mismatch")
     verify_provenance(output, manifest, (MANIFEST_NAME, CHECKSUM_NAME))
-    if recovering:
-        if (output / f"download-{package['id']}.json").exists() or not all(
-            (output / name).is_file() for name in selected
-        ):
-            _download(api, package, output, selected, limit=2 * 1024**3)
-        marker.unlink()
+    if recovering and (
+        (output / f"download-{package['id']}.json").exists() or not all((output / name).is_file() for name in selected)
+    ):
+        _download(api, package, output, selected, limit=2 * 1024**3)
     require(
-        {path.name for path in output.iterdir()} == selected | {MANIFEST_NAME, CHECKSUM_NAME},
+        {path.name for path in output.iterdir()}
+        == selected | {MANIFEST_NAME, CHECKSUM_NAME} | ({marker.name} if recovering else set()),
         "unexpected platform candidate files",
     )
     for name in selected:
@@ -170,8 +189,8 @@ def fetch_platform(
         "artifactDigest": digest,
         "origin": manifest["origin"],
         "manifestSha256": file_identity(output / MANIFEST_NAME)["sha256"],
-        "metadataArtifact": {key: metadata[key] for key in ("id", "digest")},
-        "platformArtifact": {key: package[key] for key in ("id", "digest")},
+        "metadataArtifact": {key: metadata[key] for key in ("id", "digest", "size_in_bytes")},
+        "platformArtifact": {key: package[key] for key in ("id", "digest", "size_in_bytes")},
         "assets": {name: manifest["assets"][name] for name in sorted(selected)},
         "provenance": "verified",
         "scope": "Selected platform bytes only; no native acceptance, other-platform download or publication claim.",
@@ -182,4 +201,6 @@ def fetch_platform(
     else:
         with receipt.open("xb") as stream:
             stream.write(content)
+    if recovering:
+        marker.unlink()
     return {**result, "reused": reused}

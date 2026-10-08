@@ -2,15 +2,25 @@
 
 from __future__ import annotations
 
+import base64
 import http.client
+import json
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
+from urllib.request import getproxies, proxy_bypass
 
-from scripts.release.publication_contract import canonical_json, file_identity, read_object, require
-from scripts.release.publication_http import ApiError, GitHub, env_seconds
+from scripts.release.publication_contract import PublicationError, canonical_json, file_identity, read_object, require
+from scripts.release.publication_http import ApiError, GitHub, env_seconds, retry_after_seconds
+
+
+class StorageRetry(OSError):
+    def __init__(self, retry_after: float) -> None:
+        super().__init__("temporary artifact storage response")
+        self.retry_after = retry_after
 
 
 def regular_file(path: Path) -> None:
@@ -31,7 +41,18 @@ def open_response(url: str, offset: int, *, connect_timeout: float, idle_timeout
         and not parsed.fragment,
         "invalid artifact storage URL",
     )
-    connection = http.client.HTTPSConnection(parsed.hostname, parsed.port, timeout=connect_timeout)
+    proxy_url = getproxies().get("https") if not proxy_bypass(parsed.hostname) else None
+    if proxy_url:
+        proxy = urlsplit(proxy_url if "://" in proxy_url else "http://" + proxy_url)
+        require(proxy.scheme == "http" and bool(proxy.hostname), "HTTPS artifacts require an HTTP CONNECT proxy")
+        connection = http.client.HTTPSConnection(proxy.hostname, proxy.port or 80, timeout=connect_timeout)
+        tunnel_headers = {}
+        if proxy.username is not None:
+            credentials = unquote(proxy.username) + ":" + unquote(proxy.password or "")
+            tunnel_headers["Proxy-Authorization"] = "Basic " + base64.b64encode(credentials.encode()).decode("ascii")
+        connection.set_tunnel(parsed.hostname, parsed.port or 443, headers=tunnel_headers)
+    else:
+        connection = http.client.HTTPSConnection(parsed.hostname, parsed.port, timeout=connect_timeout)
     try:
         connection.connect()
         assert connection.sock is not None
@@ -53,7 +74,7 @@ def open_response(url: str, offset: int, *, connect_timeout: float, idle_timeout
         raise
 
 
-def download_artifact(api: GitHub, artifact: dict, archive: Path) -> None:
+def download_artifact_in_process(api: GitHub, artifact: dict, archive: Path) -> None:
     """Resume only a recorded immutable artifact, with bounded retries and a final full hash."""
     size = artifact.get("size_in_bytes")
     require(type(size) is int and 0 < size <= 8 * 1024**3, "invalid artifact size")
@@ -95,7 +116,7 @@ def download_artifact(api: GitHub, artifact: dict, archive: Path) -> None:
             )
             if response.status in {403, 408, 429, 500, 502, 503, 504}:
                 # Refresh expiring signed URLs on the next attempt; never log them.
-                raise OSError("temporary artifact storage response")
+                raise StorageRetry(retry_after_seconds(response.getheader("Retry-After")))
             require(response.status == (206 if offset else 200), "storage did not honor artifact byte range")
             if offset:
                 match = re.fullmatch(r"bytes (\d+)-(\d+)/(\d+)", response.getheader("Content-Range", ""))
@@ -158,3 +179,43 @@ def finish_download(archive: Path) -> None:
     regular_file(state)
     archive.unlink()
     state.unlink()
+
+
+def download_artifact(api: GitHub, artifact: dict, archive: Path) -> None:
+    """A killable worker bounds DNS, TLS, slow headers, body, and retry waits."""
+    budget = env_seconds("DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT", 7200)
+    payload = json.dumps(
+        {"repository": api.repository, "token": api._token, "artifact": artifact, "archive": str(archive.resolve())}
+    )
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "scripts.release.publication_download"],
+            input=payload,
+            text=True,
+            stdout=subprocess.PIPE,
+            cwd=Path(__file__).resolve().parents[2],
+            timeout=budget,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        # subprocess.run kills and waits for this single worker; there are no
+        # background readers still writing the partial archive after return.
+        raise PublicationError("artifact total download deadline exceeded; partial retained") from None
+    require(result.returncode == 0, "artifact transfer failed; identity-bound partial retained")
+
+
+def _worker_main() -> None:
+    request = json.load(sys.stdin)
+    api = object.__new__(GitHub)
+    api.repository = request["repository"]
+    api._token = request["token"]
+    try:
+        download_artifact_in_process(api, request["artifact"], Path(request["archive"]))
+    except Exception as error:
+        # Never render transport exceptions: they can contain signed URLs.
+        print(str(error) if isinstance(error, PublicationError) else "artifact transport failed", file=sys.stderr)
+        raise SystemExit(1) from None
+
+
+if __name__ == "__main__":
+    _worker_main()

@@ -63,7 +63,7 @@ def test_interrupted_transfer_resumes_range_and_hashes_complete_bytes(transfer, 
         return connection, response, sock
 
     monkeypatch.setattr(download, "open_response", interrupted)
-    download.download_artifact(api, artifact, path)
+    download.download_artifact_in_process(api, artifact, path)
     assert path.read_bytes() == content
     assert [offset for offset, _ in calls] == [0, 7]
     assert "signed-secret" not in capsys.readouterr().err
@@ -78,17 +78,17 @@ def test_exhausted_transfer_can_resume_in_a_later_invocation(transfer, monkeypat
 
     monkeypatch.setattr(download, "open_response", truncated)
     with pytest.raises(PublicationError, match="recovery exhausted"):
-        download.download_artifact(api, artifact, path)
+        download.download_artifact_in_process(api, artifact, path)
     assert path.read_bytes() == content[:5]
     monkeypatch.setattr(download, "open_response", opener)
-    download.download_artifact(api, artifact, path)
+    download.download_artifact_in_process(api, artifact, path)
     assert calls[-1][0] == 5 and path.read_bytes() == content
 
 
 @pytest.mark.parametrize("fault", ["identity", "range", "ignored-range", "digest", "oversized"])
 def test_resume_rejects_different_identity_or_untrusted_response(transfer, monkeypatch, fault):
     api, artifact, path, content, calls, _, opener = transfer
-    download.download_artifact(api, artifact, path)
+    download.download_artifact_in_process(api, artifact, path)
     calls.clear()
     path.write_bytes(content[:5])
     if fault == "identity":
@@ -109,7 +109,7 @@ def test_resume_rejects_different_identity_or_untrusted_response(transfer, monke
 
         monkeypatch.setattr(download, "open_response", invalid)
     with pytest.raises(PublicationError):
-        download.download_artifact(api, artifact, path)
+        download.download_artifact_in_process(api, artifact, path)
     if fault in {"identity", "oversized"}:
         assert not calls
 
@@ -128,7 +128,7 @@ def test_slow_progress_can_exceed_old_ten_minute_limit(transfer, monkeypatch):
         return connection, response, sock
 
     monkeypatch.setattr(download, "open_response", slow)
-    download.download_artifact(api, artifact, path)
+    download.download_artifact_in_process(api, artifact, path)
     assert path.read_bytes() == content and now[0] > 600
 
 
@@ -148,7 +148,7 @@ def test_total_deadline_retains_partial_instead_of_restarting(transfer, monkeypa
 
     monkeypatch.setattr(download, "open_response", slow)
     with pytest.raises(PublicationError, match="total download deadline"):
-        download.download_artifact(api, artifact, path)
+        download.download_artifact_in_process(api, artifact, path)
     assert path.read_bytes() == content[:3] and len(calls) == 1
     assert json.loads(path.with_suffix(".json").read_text())["id"] == 42
 
@@ -171,3 +171,73 @@ def test_timeout_overrides_must_be_finite_positive(monkeypatch, value):
 def test_invalid_storage_url_rejected_before_connection(url):
     with pytest.raises(PublicationError, match="storage URL"):
         download.open_response(url, 0, connect_timeout=30, idle_timeout=120)
+
+
+@pytest.mark.parametrize("bypass", [False, True])
+def test_storage_http_connect_proxy_auth_is_not_forwarded_to_origin(monkeypatch, bypass):
+    calls = {}
+    socket = SimpleNamespace(settimeout=lambda value: None)
+
+    class Connection:
+        sock = socket
+
+        def __init__(self, host, port, timeout):
+            calls["destination"] = (host, port)
+
+        def set_tunnel(self, host, port, headers):
+            calls["tunnel"] = (host, port, headers)
+
+        def connect(self):
+            pass
+
+        def request(self, method, path, headers):
+            calls["headers"] = headers
+
+        def getresponse(self):
+            return SimpleNamespace()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(download, "getproxies", lambda: {"https": "http://user:p%40ss@proxy.invalid:8080"})
+    monkeypatch.setattr(download, "proxy_bypass", lambda host: bypass)
+    monkeypatch.setattr(download.http.client, "HTTPSConnection", Connection)
+    download.open_response("https://storage.invalid/archive?secret", 7, connect_timeout=30, idle_timeout=120)
+    assert calls["destination"] == (("storage.invalid", None) if bypass else ("proxy.invalid", 8080))
+    assert calls["headers"] == {"Accept-Encoding": "identity", "User-Agent": "DocWen-release", "Range": "bytes=7-"}
+    if not bypass:
+        assert calls["tunnel"] == ("storage.invalid", 443, {"Proxy-Authorization": "Basic dXNlcjpwQHNz"})
+
+
+def test_storage_retry_after_is_honored_inside_budget(transfer, monkeypatch):
+    api, artifact, path, content, calls, now, opener = transfer
+
+    def limited(url, offset, **kwargs):
+        connection, response, sock = opener(url, offset, **kwargs)
+        if len(calls) == 1:
+            response.status = 429
+            response.headers["Retry-After"] = "120"
+        return connection, response, sock
+
+    monkeypatch.setattr(download, "open_response", limited)
+    download.download_artifact_in_process(api, artifact, path)
+    assert now[0] == 120 and path.read_bytes() == content
+
+
+def test_worker_absolute_deadline_bounds_blocked_transport(tmp_path, monkeypatch):
+    import subprocess
+    import sys
+
+    real_run = subprocess.run
+
+    def blocked_worker(command, **kwargs):
+        assert kwargs["timeout"] == 1
+        # DNS and slow HTTP headers are contained in this same child boundary.
+        return real_run([sys.executable, "-c", "import time; time.sleep(60)"], **kwargs)
+
+    monkeypatch.setenv("DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT", "1")
+    monkeypatch.setattr(download.subprocess, "run", blocked_worker)
+    with pytest.raises(PublicationError, match="total download deadline"):
+        download.download_artifact(
+            SimpleNamespace(repository="owner/repo", _token="not-real"), {}, tmp_path / "partial.zip"
+        )

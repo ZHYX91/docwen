@@ -12,7 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from scripts.release import publication, publication_download
+from scripts.release import publication, publication_download, publication_platform
 from scripts.release.publication_contract import CHECKSUM_NAME, MANIFEST_NAME, PublicationError, verify_inventory
 from tests.support.publication import COMMIT, REPOSITORY, VERSION, FakeGitHub, candidate
 
@@ -97,6 +97,7 @@ def platform_candidate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(publication, "GitHub", lambda _repository: api)
     monkeypatch.setattr(publication.subprocess, "run", api.execute)
     monkeypatch.setattr(publication_download, "open_response", api.open_response)
+    monkeypatch.setattr(publication_platform, "download_artifact", publication_download.download_artifact_in_process)
     output = tmp_path / "selected"
     receipt = tmp_path / "receipt.json"
     args = [
@@ -253,3 +254,37 @@ def test_interrupted_platform_command_resumes_same_candidate_without_fetching_me
     assert api.downloads.count("21") == 1 and api.downloads.count("22") == 6
     assert {path.name for path in output.iterdir()} == {MANIFEST_NAME, CHECKSUM_NAME, "DocWen-windows-x64.zip"}
     assert json.loads(receipt.read_text())["provenance"] == "verified"
+
+
+def test_extraction_interruption_resumes_without_exposing_partial_member(platform_candidate, monkeypatch):
+    _api, output, receipt, args = platform_candidate
+    original = publication_platform.shutil.copyfileobj
+    first = True
+
+    def interrupted(source, target):
+        nonlocal first
+        if target.name.endswith("DocWen-windows-x64.zip.extracting") and first:
+            first = False
+            target.write(source.read(3))
+            raise OSError("simulated interrupted extraction")
+        return original(source, target)
+
+    monkeypatch.setattr(publication_platform.shutil, "copyfileobj", interrupted)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    assert not (output / "DocWen-windows-x64.zip").exists()
+    assert (output / "DocWen-windows-x64.zip.extracting").stat().st_size == 3
+    metadata_mtime = (output / MANIFEST_NAME).stat().st_mtime_ns
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
+    assert (output / MANIFEST_NAME).stat().st_mtime_ns == metadata_mtime
+    assert not (output / "DocWen-windows-x64.zip.extracting").exists()
+    assert receipt.is_file()
+
+
+def test_recovery_rejects_changed_sibling_identity(platform_candidate):
+    api, _output, receipt, args = platform_candidate
+    api.fail_provenance = True
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    api.fail_provenance = False
+    api.platform_artifacts[0]["id"] += 100
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    assert not receipt.exists()
