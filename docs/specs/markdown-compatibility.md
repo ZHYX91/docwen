@@ -173,6 +173,44 @@ HTML 样尖括号以及字面 `<`/`^`。本导出器生成的未转义 `<`/`^` �
 作者输入的同字符保持转义并在再次解析时仍是文字。这个转义只属于输出传输规则；普通用户 Markdown 输入仍按
 所选 input dialect 解释，不会被全局改成字面模式。
 
+### Inline source ownership / 行内源码所有权
+
+Direct Number Suite semantics and typed-note normalization share the Core link lexer's exact source ranges.
+Code, math, valid HTML/autolinks, and the complete destination/title of a balanced Markdown link or image protect
+their literal contents. Ordinary link-label text and angle-bracket comparisons remain visible. An orphan `](...)`
+has no link-metadata ownership. WikiLink metadata owns its internal comment delimiters while the WikiLink itself
+remains eligible for the direct consumer's link projection; the notes consumer treats it as literal metadata.
+Generated DOCX Wiki/embed display text and missing-link placeholders escape their literal punctuation, so converting
+metadata into presentation text cannot introduce new comments or note references.
+YAML fields that extract plain text keep the literal display value without Markdown transport escapes; hyperlink
+fields decode their escaped label before materializing Word text.
+The source-file DOCX link pipeline protects original comments with the same owner scan before display rewriting;
+notes are still validated after recursive embeds have expanded into the request's combined document.
+
+The first real comment opener owns its original closer, even when that closer occurs inside a later-looking
+link, URL, code or math atom. Invalidated atoms cannot own the remaining suffix. HTML `<!--` follows Markdown
+backslash escape parity. The existing `%%` rule in these semantic projections is separate: a preceding backslash
+does not disable its delimiter recognition. These projection rules do not promise general Obsidian comment rendering.
+
+Bare HTTP(S) URL ownership uses the same left-boundary, hostname validation and trailing-punctuation rules as the
+Core inline lexer. The direct consumer ends a URL's literal prefix at the first `@[[` so the following semantic
+reference remains eligible; notes protect the complete URL. Block ownership is resolved first; masking preserves
+authored Unicode offsets, CRLF and indentation without rewriting the input.
+
+直接 Number Suite 语义与 typed notes 归一化复用 Core 链接词法器的精确源码范围。代码、公式、合法 HTML/
+autolink，以及合法平衡 Markdown 链接或图片的完整目标和标题拥有其中的字面内容；普通标签正文及角括号
+比较表达式仍可见，孤立的 `](...)` 不获得链接元数据所有权。WikiLink 内部的注释标记由其元数据拥有，
+但 direct consumer 仍投影真实 WikiLink；notes 路径则把整个 WikiLink 视作字面元数据。
+DOCX 的 Wiki/嵌入展示文字与缺失链接占位文字对字面标点转义，不让元数据改写成展示文字后再引入注释或 notes。
+YAML 字段提取纯文字时保留字面显示值，不写入 Markdown 传输转义；超链接字段先解码转义标签再生成 Word 文字。
+源文件 DOCX 链接处理在展示改写前用同一所有权扫描保护原始注释；notes 仍在递归嵌入完成后校验请求合并内容。
+
+先出现的真实注释起始符拥有原始关闭符，后出现的链接、URL、代码或公式不能夺取它；失效的 atom 也不能
+继续拥有注释结束后的源码。HTML `<!--` 遵循 Markdown 反斜杠转义奇偶性；这些语义投影原有的 `%%` 规则
+独立处理，前置反斜杠不关闭其分隔识别，不因此承诺完整 Obsidian 注释呈现。裸 HTTP(S) URL 与 Core 共用
+左边界、hostname 校验及尾部标点规则；direct 在首个 `@[[` 结束字面前缀，notes 保护完整 URL。
+块级所有权先确定；投影保留原始 Unicode 坐标、CRLF 和缩进，不改写输入文件。
+
 ## Anchors and semantic targets / 锚点与语义目标
 
 DocWen's canonical Markdown is self-contained and has no Pandoc dependency. Pandoc-style `{#id}` attributes are not

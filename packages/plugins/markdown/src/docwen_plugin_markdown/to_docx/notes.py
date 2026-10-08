@@ -94,12 +94,7 @@ def _mask_note_protected_source(source: str) -> str:
             if characters[index] not in "\r\n":
                 characters[index] = " "
     projected_source = "".join(characters)
-    patterns = (
-        re.compile(r"!?\[\[[^\]\r\n]+\]\]"),
-        re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
-        re.compile(r"<[^>\r\n]*>"),
-    )
-    ranges.extend(literal_source_spans(projected_source, metadata_patterns=patterns))
+    ranges.extend(literal_source_spans(projected_source, exclude_wikilinks=True))
     if not ranges:
         return source
 

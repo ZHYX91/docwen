@@ -838,6 +838,7 @@ class MdToDocxConverter:
                     target_format="docx",
                     temp_dir=str(workspace.staging_dir),
                     image_scope=image_scope,
+                    protect_source_comments=True,
                     declared_image=(
                         declared_resource_resolver.resolve_image if declared_resource_resolver is not None else None
                     ),

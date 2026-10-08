@@ -39,12 +39,19 @@ from docwen_core.links._error_semantics import (
     make_error_placeholder,
     make_keep_link,
 )
-from docwen_core.links._markdown_inline import escape_unescaped_pipes
+from docwen_core.links._markdown_inline import (
+    MarkdownInlineSourceOwner,
+    escape_unescaped_pipes,
+)
+from docwen_core.links._markdown_inline import (
+    _is_backslash_escaped as is_markdown_source_escaped,
+)
 from docwen_core.links._markdown_orchestrator import (
     process_markdown_links,
 )
 from docwen_core.links._non_embed import (
     _process_non_embed_links,
+    markdown_inline_source_owners,
     project_field_links,
     split_markdown_block_segments,
     split_markdown_inline_segments,
@@ -60,6 +67,7 @@ from docwen_core.links._resolver import (
     normalize_link_target,
     resolve_file_path,
 )
+from docwen_core.links._source_ownership import markdown_source_owners
 from docwen_core.links.declared_resources import (
     DeclaredResourceError,
     DeclaredResourceResolver,
@@ -78,6 +86,7 @@ __all__ = [
     "EmbeddedImageMode",
     "EmbeddedMdMode",
     "LinkErrorKind",
+    "MarkdownInlineSourceOwner",
     "NotFoundAction",
     "_process_non_embed_links",
     "bind_declared_markdown_images",
@@ -89,9 +98,12 @@ __all__ = [
     "format_image_placeholder",
     "get_file_type",
     "is_data_uri_image",
+    "is_markdown_source_escaped",
     "make_error_placeholder",
     "make_keep_link",
     "make_table_safe",
+    "markdown_inline_source_owners",
+    "markdown_source_owners",
     "normalize_link_target",
     "parse_anchor",
     "process_embedded_image",

@@ -201,3 +201,19 @@ def test_declared_yaml_links_reject_local_lookup_before_resolution() -> None:
     projection = YamlLinkProjection("source.md", LinkRuntimeConfig(), declared_inputs=True)
     with pytest.raises(DeclaredResourceError):
         projection.project("[[local|alias]]")
+
+
+@pytest.mark.parametrize("mode", ["keep", "extract_text", "hyperlink"])
+@pytest.mark.parametrize("alias", ["draft%%phase", "<!--guide", "*literal*", r"label\suffix"])
+def test_yaml_wiki_display_punctuation_stays_literal(tmp_path: Path, mode: str, alias: str) -> None:
+    (tmp_path / "guide.md").write_text("target", encoding="utf-8")
+    source = tmp_path / "yaml-literal.md"
+    source.write_text(f"---\nsite: '[[guide|{alias}]]'\n---\n\n正文。\n", encoding="utf-8")
+    observation = _convert_docx(
+        source,
+        _gongwen_config(wiki_mode=mode, markdown_mode=mode),
+        options={"template_name": str(_template(tmp_path))},
+    )
+    expected = f"[[guide|{alias}]]" if mode == "keep" else alias
+    assert f"网站：{expected}" in observation.text
+    assert any(target.startswith("file:") for target in observation.hyperlink_targets) == (mode == "hyperlink")

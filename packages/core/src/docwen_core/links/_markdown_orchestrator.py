@@ -112,6 +112,8 @@ def _replace_markdown_images(
         if normalized_mode is EmbeddedImageMode.EXTRACT_TEXT:
             image_target, _, _ = _parse_markdown_image_target(target)
             replacement = alt or Path(unquote(image_target)).name
+            if target_format == "docx":
+                replacement = escape_markdown_source_literal(replacement)
         elif normalized_mode is EmbeddedImageMode.REMOVE:
             replacement = ""
         elif normalized_mode is EmbeddedImageMode.KEEP and target_format == "docx":
@@ -135,6 +137,7 @@ def _replace_markdown_images(
                 table_safe=table_safe,
                 image_scope=image_scope,
                 declared_image=declared_image,
+                literal_text=escape_markdown_source_literal if target_format == "docx" else None,
             )
             if embedded is None:
                 replacement = original
@@ -332,6 +335,7 @@ def process_markdown_links(
     _boundary_rescan_remaining: int = 1,
     declared_image: Callable[[str, str], str] | None = None,
     declared_wiki_link: Callable[[str, str], str | None] | None = None,
+    protect_source_comments: bool = False,
 ) -> str:
     """Process Markdown links using one immutable request policy."""
     if not text:
@@ -395,6 +399,7 @@ def process_markdown_links(
             _canonicalize_local_docx_targets=True,
             declared_image=declared_image,
             declared_wiki_link=declared_wiki_link,
+            protect_source_comments=protect_source_comments,
         )
         if kwargs.get("table_safe"):
             from docwen_core.links._embed_md import _make_table_safe
@@ -444,6 +449,7 @@ def process_markdown_links(
                 process_links=_process_child,
                 _table_context_scoped=True,
                 declared_image=declared_image,
+                literal_text=escape_markdown_source_literal if normalized_target == "docx" else None,
             )
             if normalized_target == "docx" and replacement == original:
                 replacement = escape_markdown_source_literal(original)
@@ -461,9 +467,10 @@ def process_markdown_links(
             initial_text,
             _auto_link_bare_urls_in_segment,
             protect_bare_urls=False,
+            protect_source_comments=protect_source_comments,
         )
 
-    result = _map_visible_markdown(initial_text, _resolve_embeds)
+    result = _map_visible_markdown(initial_text, _resolve_embeds, protect_source_comments=protect_source_comments)
     result = _map_visible_markdown(
         result,
         lambda segment: _replace_markdown_images(
@@ -478,6 +485,7 @@ def process_markdown_links(
             table_safe=table_safe,
             image_scope=image_scope,
         ),
+        protect_source_comments=protect_source_comments,
     )
     result = _process_non_embed_links(
         result,
@@ -490,6 +498,7 @@ def process_markdown_links(
         canonicalize_local_docx_targets=_canonicalize_local_docx_targets,
         table_safe=table_safe,
         declared_wiki_link=declared_wiki_link,
+        protect_source_comments=protect_source_comments,
     )
     if table_safe:
         result = _escape_table_image_placeholder_pipes(result, image_scope)
@@ -531,6 +540,7 @@ def process_markdown_links(
                 _boundary_rescan_remaining=0,
                 declared_image=declared_image,
                 declared_wiki_link=declared_wiki_link,
+                protect_source_comments=protect_source_comments,
             )
             if span_in_table:
                 replacement = escape_unescaped_pipes(replacement)

@@ -27,6 +27,7 @@ from docwen_core.links._error_semantics import (
     make_error_placeholder,
     make_keep_link,
 )
+from docwen_core.links._markdown_inline import format_generated_link_text
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,7 @@ def process_embedded_md_file(
     on_circular: NotFoundAction | str = NotFoundAction.PLACEHOLDER,
     detect_circular: bool = True,
     table_safe: bool = False,
+    literal_text: Callable[[str], str] | None = None,
 ) -> str:
     """Process an embedded Markdown file reference and return replacement text.
 
@@ -188,16 +190,21 @@ def process_embedded_md_file(
 
     normalized_path = str(Path(md_path).resolve())
 
+    def present(value: str) -> str:
+        return format_generated_link_text(value, literal_text, original_link=original_link)
+
     # ── circular-reference check ──────────────────────────────────────
     if detect_circular and normalized_path in visited_files:
         logger.warning("Circular Markdown embed reference")
-        return dispatch_error_output(
-            LinkErrorKind.CIRCULAR_REFERENCE,
-            on_circular,
-            filename,
-            heading=heading,
-            block_id=block_id,
-            original_link=original_link,
+        return present(
+            dispatch_error_output(
+                LinkErrorKind.CIRCULAR_REFERENCE,
+                on_circular,
+                filename,
+                heading=heading,
+                block_id=block_id,
+                original_link=original_link,
+            )
         )
 
     # ── mode dispatch ─────────────────────────────────────────────────
@@ -215,12 +222,14 @@ def process_embedded_md_file(
                 extracted = extract_section_by_heading(content, heading)
                 if extracted is None:
                     logger.warning("Requested Markdown embed section was not found")
-                    return dispatch_error_output(
-                        LinkErrorKind.SECTION_NOT_FOUND,
-                        on_not_found,
-                        filename,
-                        heading=heading,
-                        original_link=original_link,
+                    return present(
+                        dispatch_error_output(
+                            LinkErrorKind.SECTION_NOT_FOUND,
+                            on_not_found,
+                            filename,
+                            heading=heading,
+                            original_link=original_link,
+                        )
                     )
                 content = extracted
                 logger.info("Extracted Markdown embed section (%d chars)", len(content))
@@ -228,12 +237,14 @@ def process_embedded_md_file(
                 extracted = extract_block_by_id(content, block_id)
                 if extracted is None:
                     logger.warning("Requested Markdown embed block was not found")
-                    return dispatch_error_output(
-                        LinkErrorKind.BLOCK_NOT_FOUND,
-                        on_not_found,
-                        filename,
-                        block_id=block_id,
-                        original_link=original_link,
+                    return present(
+                        dispatch_error_output(
+                            LinkErrorKind.BLOCK_NOT_FOUND,
+                            on_not_found,
+                            filename,
+                            block_id=block_id,
+                            original_link=original_link,
+                        )
                     )
                 content = extracted
                 logger.info("Extracted Markdown embed block (%d chars)", len(content))
@@ -262,13 +273,15 @@ def process_embedded_md_file(
 
         except FileNotFoundError:
             logger.error("Markdown embed file was not found")
-            return dispatch_error_output(
-                LinkErrorKind.FILE_NOT_FOUND,
-                on_not_found,
-                filename,
-                heading=heading,
-                block_id=block_id,
-                original_link=original_link,
+            return present(
+                dispatch_error_output(
+                    LinkErrorKind.FILE_NOT_FOUND,
+                    on_not_found,
+                    filename,
+                    heading=heading,
+                    block_id=block_id,
+                    original_link=original_link,
+                )
             )
         except OSError as exc:
             logger.error("Failed to read Markdown embed: %s", type(exc).__name__)
@@ -276,20 +289,10 @@ def process_embedded_md_file(
                 return ""
             if on_not_found == NotFoundAction.KEEP:
                 return original_link or _fmt_keep_link(filename, heading, block_id)
-            return _mk_missing_text(
-                "Error reading",
-                filename,
-                heading,
-                block_id,
-            )
+            return present(_mk_missing_text("Error reading", filename, heading, block_id))
         except Exception:
             logger.error("Unexpected Markdown embed error")
-            return _mk_missing_text(
-                "Error reading",
-                filename,
-                heading,
-                block_id,
-            )
+            return present(_mk_missing_text("Error reading", filename, heading, block_id))
 
     elif mode == EmbeddedMdMode.KEEP:
         logger.debug("Keeping original Markdown embed link")
@@ -298,10 +301,10 @@ def process_embedded_md_file(
     elif mode == EmbeddedMdMode.EXTRACT_TEXT:
         if display_text:
             logger.debug("Extracting Markdown embed display text")
-            return display_text
+            return present(display_text)
         stem = Path(md_path).stem
         logger.debug("Extracting Markdown embed filename stem")
-        return stem
+        return present(stem)
 
     elif mode == EmbeddedMdMode.REMOVE:
         logger.debug("Removing Markdown embed link")
@@ -327,6 +330,7 @@ def process_embedded_md_file(
             on_circular=on_circular,
             detect_circular=detect_circular,
             table_safe=table_safe,
+            literal_text=literal_text,
         )
 
 

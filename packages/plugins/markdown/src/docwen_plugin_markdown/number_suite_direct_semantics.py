@@ -1923,8 +1923,6 @@ def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[Source
                 characters[index] = " "
     projected_source = "".join(characters)
     patterns = (
-        re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
-        re.compile(r"<[^>\r\n]*>"),
         re.compile(r"\\@\[\[[^\]\r\n]+\]\]"),
         re.compile(r"\\@[A-Za-z0-9][A-Za-z0-9_-]{0,127}"),
         re.compile(r"\\\[@[^\]\r\n]+\]"),

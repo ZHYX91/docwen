@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import string
+from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
 from urllib.parse import quote
@@ -50,6 +51,15 @@ class MarkdownInlineLink:
     label: str
     target: str
     is_image: bool
+
+
+@dataclass(frozen=True, slots=True)
+class MarkdownInlineSourceOwner:
+    """One renderer literal, parsed metadata or comment range in source."""
+
+    start: int
+    end: int
+    kind: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -685,3 +695,15 @@ def escape_markdown_label(label: str) -> str:
 def escape_markdown_source_literal(source: str) -> str:
     """Make Markdown syntax render as its exact source characters."""
     return "".join(f"\\{char}" if char in _ASCII_PUNCTUATION else char for char in source)
+
+
+def format_generated_link_text(
+    value: str,
+    literal_text: Callable[[str], str] | None,
+    *,
+    original_link: str | None = None,
+) -> str:
+    """Format generated presentation text, preserving an authored keep result."""
+    if literal_text is None or (original_link is not None and value == original_link):
+        return value
+    return literal_text(value)
