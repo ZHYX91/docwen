@@ -241,3 +241,83 @@ def test_worker_absolute_deadline_bounds_blocked_transport(tmp_path, monkeypatch
         download.download_artifact(
             SimpleNamespace(repository="owner/repo", _token="not-real"), {}, tmp_path / "partial.zip"
         )
+
+
+@pytest.mark.parametrize(
+    "proxy_key,no_proxy,expected", [("all", "", "proxy.invalid"), ("https", "storage.invalid:443", "storage.invalid")]
+)
+def test_proxy_fallback_and_effective_port_bypass(monkeypatch, proxy_key, no_proxy, expected):
+    from urllib.request import proxy_bypass_environment
+
+    hosts = []
+
+    class Connection:
+        sock = SimpleNamespace(settimeout=lambda value: None)
+
+        def __init__(self, host, port, timeout):
+            hosts.append(host)
+
+        def set_tunnel(self, *args, **kwargs):
+            pass
+
+        def connect(self):
+            pass
+
+        def request(self, *args, **kwargs):
+            pass
+
+        def getresponse(self):
+            return SimpleNamespace()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(download, "getproxies", lambda: {proxy_key: "http://proxy.invalid:8080"})
+    monkeypatch.setattr(download, "proxy_bypass", lambda host: proxy_bypass_environment(host, {"no": no_proxy}))
+    monkeypatch.setattr(download.http.client, "HTTPSConnection", Connection)
+    download.open_response("https://storage.invalid/file", 0, connect_timeout=30, idle_timeout=120)
+    assert hosts == [expected]
+
+
+def test_worker_preserves_original_leaf_path_before_validation(tmp_path, monkeypatch):
+    leaf = tmp_path / "download.zip"
+    expected = str(leaf.absolute())
+    original_resolve = Path.resolve
+
+    def checked_resolve(self, *args, **kwargs):
+        assert self != leaf, "download leaf must not be resolved before worker validation"
+        return original_resolve(self, *args, **kwargs)
+
+    def worker(command, **kwargs):
+        assert json.loads(kwargs["input"])["archive"] == expected
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(Path, "resolve", checked_resolve)
+    monkeypatch.setattr(download.subprocess, "run", worker)
+    download.download_artifact(SimpleNamespace(repository="owner/repo", _token="not-real"), {}, leaf)
+
+
+@pytest.mark.parametrize("stage", ["partial", "promoted"])
+def test_atomic_record_recovers_interruption(tmp_path, stage):
+    final = tmp_path / "receipt.json"
+    content = b'{"identity":"fixed"}\n'
+    pending = download.pending_record(final, content)
+    pending.write_bytes(content[:7] if stage == "partial" else content)
+    if stage == "promoted":
+        final.write_bytes(content)
+    download.atomic_record(final, content)
+    assert final.read_bytes() == content and not pending.exists()
+
+
+def test_atomic_record_rejects_foreign_pending_and_final_bytes(tmp_path):
+    final = tmp_path / "receipt.json"
+    content = b'{"identity":"fixed"}\n'
+    pending = download.pending_record(final, content)
+    pending.write_bytes(b"foreign")
+    with pytest.raises(PublicationError, match="pending record identity"):
+        download.atomic_record(final, content)
+    assert pending.read_bytes() == b"foreign" and not final.exists()
+    final.write_bytes(b"foreign final")
+    with pytest.raises(PublicationError, match="record identity"):
+        download.atomic_record(final, content)
+    assert final.read_bytes() == b"foreign final"

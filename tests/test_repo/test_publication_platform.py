@@ -288,3 +288,25 @@ def test_recovery_rejects_changed_sibling_identity(platform_candidate):
     api.platform_artifacts[0]["id"] += 100
     assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
     assert not receipt.exists()
+
+
+@pytest.mark.parametrize("record_name", ["transfer.json", "receipt.json"])
+def test_record_write_interruption_can_finish_same_command(platform_candidate, monkeypatch, record_name):
+    _api, output, receipt, args = platform_candidate
+    real_fsync = publication_download.os.fsync
+    first = True
+
+    def interrupted(fd):
+        nonlocal first
+        # At the selected record, the pending file exists but no final bytes are exposed.
+        parent = output if record_name == "transfer.json" else receipt.parent
+        if first and parent.exists() and list(parent.glob(record_name + ".writing-*")):
+            first = False
+            raise OSError("simulated record flush failure")
+        real_fsync(fd)
+
+    monkeypatch.setattr(publication_download.os, "fsync", interrupted)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    assert not (output / "transfer.json" if record_name == "transfer.json" else receipt).exists()
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
+    assert receipt.is_file() and not (output / "transfer.json").exists()

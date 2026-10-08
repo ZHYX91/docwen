@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import http.client
 import json
+import os
 import re
 import subprocess
 import sys
@@ -30,6 +32,34 @@ def regular_file(path: Path) -> None:
     )
 
 
+def pending_record(path: Path, content: bytes) -> Path:
+    return path.with_name(path.name + ".writing-" + hashlib.sha256(content).hexdigest())
+
+
+def atomic_record(path: Path, content: bytes) -> None:
+    """Commit an exact record without exposing partial final bytes or replacing foreign data."""
+    temporary = pending_record(path, content)
+    if path.exists() or path.is_symlink():
+        regular_file(path)
+        require(path.read_bytes() == content, "record identity mismatch")
+    else:
+        if temporary.exists() or temporary.is_symlink():
+            regular_file(temporary)
+            require(temporary.stat().st_size <= len(content), "unexpected pending record size")
+            require(content.startswith(temporary.read_bytes()), "pending record identity mismatch")
+            temporary.unlink()
+        with temporary.open("xb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(temporary, path)
+    if temporary.exists() or temporary.is_symlink():
+        regular_file(temporary)
+        require(temporary.stat().st_size <= len(content), "unexpected pending record size")
+        require(content.startswith(temporary.read_bytes()), "pending record identity mismatch")
+        temporary.unlink()
+
+
 def open_response(url: str, offset: int, *, connect_timeout: float, idle_timeout: float, deadline: float | None = None):
     """Only the API request has credentials; storage receives no Authorization header."""
     parsed = urlsplit(url)
@@ -41,7 +71,9 @@ def open_response(url: str, offset: int, *, connect_timeout: float, idle_timeout
         and not parsed.fragment,
         "invalid artifact storage URL",
     )
-    proxy_url = getproxies().get("https") if not proxy_bypass(parsed.hostname) else None
+    proxies = getproxies()
+    authority = parsed.netloc if parsed.port is not None else parsed.netloc + ":443"
+    proxy_url = (proxies.get("https") or proxies.get("all")) if not proxy_bypass(authority) else None
     if proxy_url:
         proxy = urlsplit(proxy_url if "://" in proxy_url else "http://" + proxy_url)
         require(proxy.scheme == "http" and bool(proxy.hostname), "HTTPS artifacts require an HTTP CONNECT proxy")
@@ -85,8 +117,7 @@ def download_artifact_in_process(api: GitHub, artifact: dict, archive: Path) -> 
         require(read_object(state) == identity, "partial download identity mismatch")
     else:
         require(not archive.exists() and not archive.is_symlink(), "unowned partial download")
-        with state.open("xb") as stream:
-            stream.write(canonical_json(identity))
+    atomic_record(state, canonical_json(identity))
     if not archive.exists():
         with archive.open("xb"):
             pass
@@ -185,7 +216,7 @@ def download_artifact(api: GitHub, artifact: dict, archive: Path) -> None:
     """A killable worker bounds DNS, TLS, slow headers, body, and retry waits."""
     budget = env_seconds("DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT", 7200)
     payload = json.dumps(
-        {"repository": api.repository, "token": api._token, "artifact": artifact, "archive": str(archive.resolve())}
+        {"repository": api.repository, "token": api._token, "artifact": artifact, "archive": str(archive.absolute())}
     )
     try:
         result = subprocess.run(

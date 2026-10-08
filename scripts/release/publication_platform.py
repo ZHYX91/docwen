@@ -24,7 +24,13 @@ from scripts.release.publication_contract import (
     verify_manifest,
     verify_origin,
 )
-from scripts.release.publication_download import download_artifact, finish_download, regular_file
+from scripts.release.publication_download import (
+    atomic_record,
+    download_artifact,
+    finish_download,
+    pending_record,
+    regular_file,
+)
 from scripts.release.publication_http import GitHub
 from scripts.release.publication_session import verify_candidate_jobs, verify_provenance
 
@@ -139,12 +145,19 @@ def fetch_platform(
     }
     if not reused:
         output.mkdir()
-        with marker.open("xb") as stream:
-            stream.write(canonical_json(transfer))
+
     require(
         output.is_dir() and not getattr(output.stat(), "st_file_attributes", 0) & 0x400,
         "reparse candidate directory rejected",
     )
+    transfer_bytes = canonical_json(transfer)
+    pending_transfer = pending_record(marker, transfer_bytes)
+    if (
+        not reused
+        or (not marker.exists() and {path.name for path in output.iterdir()} == {pending_transfer.name})
+        or marker.exists()
+    ):
+        atomic_record(marker, transfer_bytes)
     recovering = marker.exists()
     require(recovering or receipt.is_file(), "candidate cache has no identity receipt or transfer journal")
     if recovering:
@@ -153,7 +166,14 @@ def fetch_platform(
         allowed = selected | {MANIFEST_NAME, CHECKSUM_NAME, marker.name}
         allowed |= {name + ".extracting" for name in selected | {MANIFEST_NAME, CHECKSUM_NAME}}
         for item in (metadata, package):
-            allowed |= {f"download-{item['id']}.zip", f"download-{item['id']}.json"}
+            state = output / f"download-{item['id']}.json"
+            identity = {
+                "repository": repository,
+                "id": item["id"],
+                "digest": item["digest"],
+                "bytes": item["size_in_bytes"],
+            }
+            allowed |= {f"download-{item['id']}.zip", state.name, pending_record(state, canonical_json(identity)).name}
         require({path.name for path in output.iterdir()} <= allowed, "unexpected candidate recovery files")
         if (output / f"download-{metadata['id']}.json").exists() or not all(
             (output / name).is_file() for name in (MANIFEST_NAME, CHECKSUM_NAME)
@@ -196,11 +216,7 @@ def fetch_platform(
         "scope": "Selected platform bytes only; no native acceptance, other-platform download or publication claim.",
     }
     content = canonical_json(result)
-    if receipt.exists():
-        require(receipt.read_bytes() == content, "platform receipt identity mismatch")
-    else:
-        with receipt.open("xb") as stream:
-            stream.write(content)
+    atomic_record(receipt, content)
     if recovering:
         marker.unlink()
     return {**result, "reused": reused}
