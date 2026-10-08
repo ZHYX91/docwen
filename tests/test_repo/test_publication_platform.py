@@ -9,9 +9,10 @@ import json
 import subprocess
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
-from scripts.release import publication
+from scripts.release import publication, publication_download, publication_platform
 from scripts.release.publication_contract import CHECKSUM_NAME, MANIFEST_NAME, PublicationError, verify_inventory
 from tests.support.publication import COMMIT, REPOSITORY, VERSION, FakeGitHub, candidate
 
@@ -57,6 +58,22 @@ class PlatformGitHub(FakeGitHub):
             return {"total_count": len(self.platform_artifacts), "artifacts": copy.deepcopy(self.platform_artifacts)}
         return super().get(path, allow_missing=allow_missing)
 
+    def artifact_url(self, artifact_id: int, *, timeout: float) -> str:
+        self.downloads.append(str(artifact_id))
+        return f"https://storage.invalid/{artifact_id}"
+
+    def open_response(self, url, offset, **kwargs):
+        artifact_id = int(url.rsplit("/", 1)[1])
+        content = self.archives[artifact_id]
+        response = io.BytesIO(content[offset:])
+        response.status = 206 if offset else 200
+        headers = {
+            "Content-Length": str(len(content) - offset),
+            "Content-Range": f"bytes {offset}-{len(content) - 1}/{len(content)}",
+        }
+        response.getheader = lambda name, default=None: headers.get(name, default)
+        return SimpleNamespace(close=lambda: None), response, SimpleNamespace(settimeout=lambda value: None)
+
     def execute(self, args, **kwargs):
         if args[:2] == ["gh", "api"]:
             artifact_id = int(args[2].split("/")[-2])
@@ -79,6 +96,8 @@ def platform_candidate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     api = PlatformGitHub(directory)
     monkeypatch.setattr(publication, "GitHub", lambda _repository: api)
     monkeypatch.setattr(publication.subprocess, "run", api.execute)
+    monkeypatch.setattr(publication_download, "open_response", api.open_response)
+    monkeypatch.setattr(publication_platform, "download_artifact", publication_download.download_artifact_in_process)
     output = tmp_path / "selected"
     receipt = tmp_path / "receipt.json"
     args = [
@@ -206,3 +225,119 @@ def test_platform_archive_inventory_prevents_unexpected_extraction(platform_cand
     api.set_archive(22, buffer.getvalue(), "windows")
     assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
     assert not receipt.exists() and not (output.parent / "candidate.json").exists()
+
+
+def test_interrupted_platform_command_resumes_same_candidate_without_fetching_metadata_again(
+    platform_candidate, monkeypatch
+):
+    api, output, receipt, args = platform_candidate
+    original = api.open_response
+    offsets = []
+    monkeypatch.setattr(publication_download.time, "sleep", lambda delay: None)
+
+    def interrupted(url, offset, **kwargs):
+        connection, response, sock = original(url, offset, **kwargs)
+        if url.endswith("/22"):
+            offsets.append(offset)
+            # EOF after seven bytes, despite the complete response's Content-Length.
+            source = io.BytesIO(api.archives[22][offset : offset + 7])
+            response.read1 = source.read1
+        return connection, response, sock
+
+    monkeypatch.setattr(publication_download, "open_response", interrupted)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    assert offsets == [0, 7, 14, 21, 28] and not receipt.exists()
+    assert (output / "transfer.json").exists()
+    assert (output / "download-22.zip").stat().st_size == 35
+    monkeypatch.setattr(publication_download, "open_response", original)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
+    assert api.downloads.count("21") == 1 and api.downloads.count("22") == 6
+    assert {path.name for path in output.iterdir()} == {MANIFEST_NAME, CHECKSUM_NAME, "DocWen-windows-x64.zip"}
+    assert json.loads(receipt.read_text())["provenance"] == "verified"
+
+
+def test_extraction_interruption_resumes_without_exposing_partial_member(platform_candidate, monkeypatch):
+    _api, output, receipt, args = platform_candidate
+    original = publication_platform.shutil.copyfileobj
+    first = True
+
+    def interrupted(source, target):
+        nonlocal first
+        if target.name.endswith("DocWen-windows-x64.zip.extracting") and first:
+            first = False
+            target.write(source.read(3))
+            raise OSError("simulated interrupted extraction")
+        return original(source, target)
+
+    monkeypatch.setattr(publication_platform.shutil, "copyfileobj", interrupted)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    assert not (output / "DocWen-windows-x64.zip").exists()
+    assert (output / "DocWen-windows-x64.zip.extracting").stat().st_size == 3
+    metadata_mtime = (output / MANIFEST_NAME).stat().st_mtime_ns
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
+    assert (output / MANIFEST_NAME).stat().st_mtime_ns == metadata_mtime
+    assert not (output / "DocWen-windows-x64.zip.extracting").exists()
+    assert receipt.is_file()
+
+
+def test_recovery_rejects_changed_sibling_identity(platform_candidate):
+    api, _output, receipt, args = platform_candidate
+    api.fail_provenance = True
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    api.fail_provenance = False
+    api.platform_artifacts[0]["id"] += 100
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    assert not receipt.exists()
+
+
+@pytest.mark.parametrize("record_name", ["transfer.json", "receipt.json"])
+def test_record_write_interruption_can_finish_same_command(platform_candidate, monkeypatch, record_name):
+    _api, output, receipt, args = platform_candidate
+    real_fsync = publication_download.os.fsync
+    first = True
+
+    def interrupted(fd):
+        nonlocal first
+        # At the selected record, the pending file exists but no final bytes are exposed.
+        parent = output if record_name == "transfer.json" else receipt.parent
+        if first and parent.exists() and list(parent.glob(".docwen-record-*")):
+            first = False
+            raise OSError("simulated record flush failure")
+        real_fsync(fd)
+
+    monkeypatch.setattr(publication_download.os, "fsync", interrupted)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    assert not (output / "transfer.json" if record_name == "transfer.json" else receipt).exists()
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
+    assert receipt.is_file() and not (output / "transfer.json").exists()
+
+
+def test_unsupported_receipt_filesystem_fails_before_artifact_download(platform_candidate, monkeypatch):
+    import errno
+
+    api, output, receipt, args = platform_candidate
+    real_link = publication_download.os.link
+
+    def unsupported(source, target):
+        if Path(source).name.startswith(".docwen-link-"):
+            raise OSError(errno.EOPNOTSUPP, "hard links unavailable")
+        return real_link(source, target)
+
+    monkeypatch.setattr(publication_download.os, "link", unsupported)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 1
+    assert api.downloads == []
+    assert not output.exists() and not receipt.exists()
+    assert not list(receipt.parent.glob(".docwen-link-*"))
+
+
+def test_complete_cache_does_not_require_new_receipt_links(platform_candidate, monkeypatch):
+    api, _output, _receipt, args = platform_candidate
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
+    api.downloads.clear()
+
+    def forbidden(*_args):
+        raise AssertionError("a complete cache does not create receipt links")
+
+    monkeypatch.setattr(publication_download.os, "link", forbidden)
+    assert publication.main(["fetch-platform", *args, "--platform", "windows"]) == 0
+    assert api.downloads == []
