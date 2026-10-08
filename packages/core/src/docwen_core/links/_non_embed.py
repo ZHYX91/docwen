@@ -606,8 +606,15 @@ def _map_visible_markdown(
     *,
     protect_bare_urls: bool = True,
     protect_source_comments: bool = False,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Apply *transform* once with renderer atoms replaced by scoped tokens."""
+
+    def check_cancelled() -> None:
+        if cancellation_check is not None:
+            cancellation_check()
+
+    check_cancelled()
     protected: dict[str, str] = {}
     active_tokens: set[str] = set()
     nonce = secrets.token_hex(16)
@@ -642,19 +649,23 @@ def _map_visible_markdown(
             "".join(char if char in "\r\n" else " " for char in segment) if is_protected else segment
             for segment, is_protected in _split_fenced_code_blocks(text)
         )
+        check_cancelled()
         comment_parts: list[str] = []
         cursor = 0
         for owner in markdown_source_owners(projection):
+            check_cancelled()
             if owner.kind == "comment":
                 comment_parts.append(text[cursor : owner.start])
                 comment_parts.append(mask(text[owner.start : owner.end], comment=True))
                 cursor = owner.end
         comment_parts.append(text[cursor:])
         comment_masked = "".join(comment_parts)
+    check_cancelled()
     block_masked = "".join(
         mask(segment) if is_protected else segment
         for segment, is_protected in _split_fenced_code_blocks(comment_masked)
     )
+    check_cancelled()
     inline_masked = "".join(
         mask(segment) if is_protected else segment
         for segment, is_protected in _split_inline_code_spans(
@@ -662,13 +673,16 @@ def _map_visible_markdown(
             protect_bare_urls=protect_bare_urls,
         )
     )
+    check_cancelled()
     context_token = _ACTIVE_PROTECTED_TOKENS.set(frozenset(active_tokens))
     try:
         result = transform(inline_masked)
     finally:
         _ACTIVE_PROTECTED_TOKENS.reset(context_token)
     for placeholder, original in reversed(protected.items()):
+        check_cancelled()
         result = result.replace(placeholder, original)
+    check_cancelled()
     return result
 
 
@@ -795,6 +809,7 @@ def _process_non_embed_links(
     hyperlink_renderer: Callable[[str, str], str] | None = None,
     declared_wiki_link: Callable[[str, str], str | None] | None = None,
     protect_source_comments: bool = False,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Process links outside fenced and inline code.
 
@@ -986,6 +1001,11 @@ def _process_non_embed_links(
             result = _replace_wiki_links(result)
         return result
 
-    result = _map_visible_markdown(text, _process_visible, protect_source_comments=protect_source_comments)
+    result = _map_visible_markdown(
+        text,
+        _process_visible,
+        protect_source_comments=protect_source_comments,
+        cancellation_check=cancellation_check,
+    )
     logger.debug("Processed non-embed links: input=%d output=%d", len(text), len(result))
     return result

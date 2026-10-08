@@ -336,8 +336,11 @@ def process_markdown_links(
     declared_image: Callable[[str, str], str] | None = None,
     declared_wiki_link: Callable[[str, str], str | None] | None = None,
     protect_source_comments: bool = False,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Process Markdown links using one immutable request policy."""
+    if cancellation_check is not None:
+        cancellation_check()
     if not text:
         return text
 
@@ -400,6 +403,7 @@ def process_markdown_links(
             declared_image=declared_image,
             declared_wiki_link=declared_wiki_link,
             protect_source_comments=protect_source_comments,
+            cancellation_check=cancellation_check,
         )
         if kwargs.get("table_safe"):
             from docwen_core.links._embed_md import _make_table_safe
@@ -468,9 +472,15 @@ def process_markdown_links(
             _auto_link_bare_urls_in_segment,
             protect_bare_urls=False,
             protect_source_comments=protect_source_comments,
+            cancellation_check=cancellation_check,
         )
 
-    result = _map_visible_markdown(initial_text, _resolve_embeds, protect_source_comments=protect_source_comments)
+    result = _map_visible_markdown(
+        initial_text,
+        _resolve_embeds,
+        protect_source_comments=protect_source_comments,
+        cancellation_check=cancellation_check,
+    )
     result = _map_visible_markdown(
         result,
         lambda segment: _replace_markdown_images(
@@ -486,6 +496,7 @@ def process_markdown_links(
             image_scope=image_scope,
         ),
         protect_source_comments=protect_source_comments,
+        cancellation_check=cancellation_check,
     )
     result = _process_non_embed_links(
         result,
@@ -499,6 +510,7 @@ def process_markdown_links(
         table_safe=table_safe,
         declared_wiki_link=declared_wiki_link,
         protect_source_comments=protect_source_comments,
+        cancellation_check=cancellation_check,
     )
     if table_safe:
         result = _escape_table_image_placeholder_pipes(result, image_scope)
@@ -511,6 +523,8 @@ def process_markdown_links(
         boundary_points = {point for expansion_range in expansion_ranges for point in expansion_range}
         seen_states: set[tuple[str, tuple[int, ...]]] = set()
         while True:
+            if cancellation_check is not None:
+                cancellation_check()
             boundary_ranges = tuple((point, point) for point in sorted(boundary_points))
             spans = _cross_boundary_construct_spans(
                 result,
@@ -541,6 +555,7 @@ def process_markdown_links(
                 declared_image=declared_image,
                 declared_wiki_link=declared_wiki_link,
                 protect_source_comments=protect_source_comments,
+                cancellation_check=cancellation_check,
             )
             if span_in_table:
                 replacement = escape_unescaped_pipes(replacement)

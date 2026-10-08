@@ -15,6 +15,7 @@ from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
 
+from docwen_core.errors import CancellationRequested
 from docwen_core.links._anchor import (
     extract_block_by_id,
     extract_section_by_heading,
@@ -271,6 +272,8 @@ def process_embedded_md_file(
             logger.info("Markdown embed expansion complete")
             return expanded
 
+        except CancellationRequested:
+            raise
         except FileNotFoundError:
             logger.error("Markdown embed file was not found")
             return present(

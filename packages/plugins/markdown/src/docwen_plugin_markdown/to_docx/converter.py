@@ -594,6 +594,7 @@ class MdToDocxConverter:
                 )
             progress.report_progress(5.0, "Reading Markdown input")
             content, input_bytes = read_input_markdown(input_path)
+            cancellable.check()
             authored_content = content
             if declared_resource_resolver is not None:
                 declared_resource_resolver = declared_resource_resolver.with_bindings(
@@ -633,6 +634,7 @@ class MdToDocxConverter:
                     input_bytes=input_bytes,
                 )
             content = semantic_v3_plan.shielded_source
+            cancellable.check()
 
             try:
                 doc = resolve_template(options.get("template_name"))
@@ -748,6 +750,7 @@ class MdToDocxConverter:
             # syntax/ranges; this second projection only replaces its derived
             # Heading-number view before inert markers are materialized.
             if direct_number_suite:
+                cancellable.check()
                 if scheme_config is None:
                     heading_number_provider = _no_direct_heading_number
                 else:
@@ -780,10 +783,12 @@ class MdToDocxConverter:
                         input_bytes=input_bytes,
                     )
                 content = semantic_v3_plan.shielded_source
+                cancellable.check()
 
             if remove_num and render_body:
                 progress.report_progress(10.0, "Removing heading numbering")
                 content = remove_md_numbering(content, rules=cleanup_rules)
+                cancellable.check()
 
             if add_num and render_body:
                 if render_mode == "word_native":
@@ -802,7 +807,9 @@ class MdToDocxConverter:
 
             # ── Stage 1: YAML extraction ───────────────────────────────
             progress.report_progress(15.0, "Extracting YAML front matter")
+            cancellable.check()
             yaml_dict, md_body = extract_yaml_front_matter(content)
+            cancellable.check()
             link_config = _request_link_config(context.config)
             field_processors_config = context.config.get("field_processors", {})
             current_locale = _resolve_locale(context.config.get("gui", {}))
@@ -819,6 +826,7 @@ class MdToDocxConverter:
             note_ctx = NoteContext()
             if render_body:
                 source_image_alt_texts = _markdown_image_alt_texts(md_body)
+                cancellable.check()
 
                 # Numbering may have changed the full shielded source. Use the
                 # freshly extracted body rather than the plan's old YAML offset.
@@ -831,6 +839,7 @@ class MdToDocxConverter:
                         declared_wiki_link=declared_resource_resolver.resolve_wiki_link,
                     )
                 image_scope = secrets.token_urlsafe(24)
+                cancellable.check()
                 md_body = process_markdown_links(
                     link_source,
                     resource_source_path,
@@ -839,6 +848,7 @@ class MdToDocxConverter:
                     temp_dir=str(workspace.staging_dir),
                     image_scope=image_scope,
                     protect_source_comments=True,
+                    cancellation_check=cancellable.check,
                     declared_image=(
                         declared_resource_resolver.resolve_image if declared_resource_resolver is not None else None
                     ),
@@ -846,6 +856,7 @@ class MdToDocxConverter:
                         declared_resource_resolver.resolve_wiki_link if declared_resource_resolver is not None else None
                     ),
                 )
+                cancellable.check()
                 md_body = materialize_image_placeholders(
                     md_body,
                     image_scope=image_scope,
@@ -855,6 +866,7 @@ class MdToDocxConverter:
                 # create a request-local parser projection.  The source Markdown
                 # is never rewritten.
                 try:
+                    cancellable.check()
                     md_body = normalize_note_syntax(md_body, typed_endnotes=extensions.typed_endnotes)
                 except NoteWritebackError as exc:
                     return _note_failure(task_id, t_start, exc)
@@ -870,7 +882,9 @@ class MdToDocxConverter:
                 )
                 # 2g. Parse with extended mistune
                 progress.report_progress(30.0, "Parsing Markdown")
+                cancellable.check()
                 raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)
+                cancellable.check()
                 _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
                 try:
                     raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
@@ -891,6 +905,7 @@ class MdToDocxConverter:
                     )
 
                 # 2h. Annotate AST with merge info
+                cancellable.check()
                 annotate_ast_with_merges(
                     raw_ast,
                     mode=heading_merge_mode,
@@ -898,12 +913,15 @@ class MdToDocxConverter:
                 )
 
                 # 2j. Extract notes from AST
+                cancellable.check()
                 cleaned_ast, note_ctx = extract_notes_from_ast(raw_ast)
 
             # 2k. Recognize the frozen document-semantics v1 slice.  Errors
             # are rejected before rendering so an invalid semantic
             # document never produces a seemingly successful DOCX artifact.
+            cancellable.check()
             semantic_analysis = analyze_document_semantics(cleaned_ast, current_v3=True)
+            cancellable.check()
             if semantic_analysis.has_errors:
                 return ConversionResult(
                     task_id=task_id,
