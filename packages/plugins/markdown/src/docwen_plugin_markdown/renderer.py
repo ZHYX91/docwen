@@ -1297,6 +1297,10 @@ class MdToDocxRenderer:
                 column = int(anchor["column"])
                 table.cell(row, column).merge(table.cell(row + row_span - 1, column + column_span - 1))
 
+        from docwen_core.docx_table_roles import prepare_table_roles
+
+        # Install physical identity before caption/ordinary-anchor snapshots.
+        prepare_table_roles(self._doc, tables=(table._tbl,))
         resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             self._bind_v3_ordinary_anchor((table._element,), node)

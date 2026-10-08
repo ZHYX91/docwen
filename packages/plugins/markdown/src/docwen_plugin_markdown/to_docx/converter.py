@@ -1186,6 +1186,9 @@ class MdToDocxConverter:
             if yaml_dict:
                 _inject_docx_metadata(doc, yaml_dict)
 
+            from docwen_core.docx_table_roles import inject_table_roles, prepare_table_roles
+
+            table_roles = prepare_table_roles(doc)
             doc.save(output_path)
 
             # Write footnote/endnote body elements into the DOCX ZIP parts
@@ -1229,6 +1232,7 @@ class MdToDocxConverter:
                         output_path=output_path,
                     )
 
+            inject_table_roles(Path(output_path), table_roles)
             try:
                 validate_managed_style_package(
                     Path(output_path).read_bytes(),

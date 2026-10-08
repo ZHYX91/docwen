@@ -339,6 +339,12 @@ def _parse_unprotected_md_tables(
     return tables
 
 
+def structural_table_block_end(lines: list[str], start: int) -> int | None:
+    """Return the exclusive end of one accepted structural table source block."""
+    parsed = _parse_structural_table_rows(lines, start, nested_list_table=False, preserve_merge_marker_escapes=True)
+    return parsed[1] if parsed is not None else None
+
+
 def _parse_structural_table_rows(
     lines: list[str],
     start: int,

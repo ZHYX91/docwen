@@ -430,10 +430,14 @@ def _render_resolved_v4_docx(
     candidate_path = Path(candidate_name)
     candidate_path.unlink()
 
+    from docwen_core.docx_table_roles import inject_table_roles, prepare_table_roles
+
+    table_roles = prepare_table_roles(doc)
     deferred_note_references = 0
 
     def write_note_parts(path: Path) -> None:
         nonlocal deferred_note_references
+        inject_table_roles(path, table_roles)
         if note_ctx.has_notes:
             deferred_note_references = write_notes_to_docx(str(path), note_ctx)
 

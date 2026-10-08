@@ -306,8 +306,11 @@ def prove_ordinary_anchor_group(
     if not valid:
         raise DocxSemanticsV3Error("ordinary-anchor group has wrong block kind or cardinality")
     for item in logical:
-        starts = list(item.iter(qn("w:bookmarkStart")))
-        ends = list(item.iter(qn("w:bookmarkEnd")))
+        from docwen_core.docx_table_roles import table_role_bookmark_nodes
+
+        role_nodes = table_role_bookmark_nodes(item)
+        starts = [node for node in item.iter(qn("w:bookmarkStart")) if node not in role_nodes]
+        ends = [node for node in item.iter(qn("w:bookmarkEnd")) if node not in role_nodes]
         has_disallowed_bookmark = bool(starts or ends) and (
             allowed_heading_bookmark_name is None
             or [start.get(qn("w:name")) for start in starts] != [allowed_heading_bookmark_name]

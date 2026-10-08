@@ -128,7 +128,19 @@ DOCX 不呈现其正文，表格提取忽略其中的表格；关闭该输入方
 围栏代码中的 `%%` 仍由代码语法处理。此边界不承诺
 完整 Obsidian 注释呈现或链接笔记内容转置。
 
-DOCX export maps these roles and merge rectangles to native table semantics. DOCX import emits the canonical
+DOCX export maps merge rectangles to native table geometry and writes native role/style hints. Because Word
+recalculates `cnfStyle` on save, tables with multiple column-header rows or any row-header columns also use a
+private `urn:docwen:table-roles:v1` custom XML map; ordinary one-row headers keep their native representation. Each record binds a unique balanced `_DWT_` bookmark inside its physical table and a SHA-256 of the
+normalized merge geometry; table position and cell text are not identities. Text edits and table moves preserve
+the binding. Changed geometry or deleted bindings produce a warning and use native information; ambiguous
+bookmarks or malformed metadata fail explicitly. Native explicit role disabling and repeat-header policy remain
+authoritative. This carrier does not retain Markdown source or restore old cell content. It is implemented in
+both Markdown export routes and structured clipboard DOCX export; final candidate Word-save acceptance is
+recorded separately from source regression results. When Structural Tables is enabled, both source analyzers
+recognize multi-row headers and row-header delimiters within their actual quote/list container before binding
+captions or standalone anchors. Disabling the dialect does not activate this ownership rule.
+
+DOCX import emits the canonical
 Structural Tables spelling when native table metadata requires zero or multiple column-header rows, or row-header
 columns; a one-row column header without row headers remains ordinary GFM. Number Suite dialect interoperation is
 source-defined for ordinary conversion: DocWen reads authenticated

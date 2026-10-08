@@ -497,3 +497,83 @@ def test_word_edit_that_adds_a_block_inside_caption_control_reports_invalid_stru
     assert result.error is not None
     assert "one caption and one logical object" in result.error.message
     assert not result.artifacts
+
+
+@pytest.mark.pr_gate
+@pytest.mark.parametrize("resolved", [False, True])
+@pytest.mark.parametrize("word_normalized", [False, True])
+def test_structural_roles_survive_word_conditional_style_normalization(
+    tmp_path: Path, resolved: bool, word_normalized: bool
+) -> None:
+    authored = (
+        "| Region | Sales | < |\n| Quarter | Q1 | Q2 |\n| --- || --- | --- |\n| North | 10 | 12 |\n| ^ | 8 | 11 |\n"
+    )
+    source = tmp_path / "structural.md"
+    source.write_text(authored, encoding="utf-8")
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    context = (
+        _structural_resolved_context(forward_root, authored)
+        if resolved
+        else _structural_direct_context(forward_root, source)
+    )
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    document = Document(result.artifacts[0].staging_path)
+    table = document.tables[0]
+    if word_normalized:
+        # Models the observed Word save: cnfStyle remains only on the first
+        # row. The final packaged candidate still needs real Word verification.
+        first_row = table._tbl.find(qn("w:tr"))
+        for marker in list(table._tbl.iter(qn("w:cnfStyle"))):
+            parent = marker.getparent()
+            if parent.tag == qn("w:trPr") and parent.getparent() is first_row:
+                continue
+            parent.remove(marker)
+    isolated = tmp_path / "isolated.docx"
+    document.save(isolated)
+    reverse_root = tmp_path / "reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(
+        _context(reverse_root, isolated, "md", {"output": {"structural_tables": True}})
+    )
+    assert reverse.success, reverse.error
+    markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "| Quarter | Q1 | Q2 |\n| --- || --- | --- |" in markdown
+    assert "| North | 10 | 12 |\n| ^ | 8 | 11 |" in markdown
+
+
+@pytest.mark.pr_gate
+@pytest.mark.parametrize("word_normalized", [False, True])
+def test_structural_role_carrier_coexists_with_caption_and_ordinary_anchor(
+    tmp_path: Path, word_normalized: bool
+) -> None:
+    from docwen_plugin_markdown.document_semantics_v3 import analyze_markdown_semantics_v3
+
+    source = tmp_path / "anchored.md"
+    source.write_text(
+        "Table: Metrics ^metrics\n\n| Region | Sales | < |\n| Quarter | Q1 | Q2 |\n"
+        "| --- || --- | --- |\n| North | 10 | 12 |\n| ^ | 8 | 11 |\n\n^raw-table\n",
+        encoding="utf-8",
+    )
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    dialect = MarkdownExtensions.obsidian().to_dict()
+    forward = MdToDocxConverter().convert(_context(forward_root, source, "docx", {"input": dialect}))
+    assert forward.success, forward.error
+    document = Document(forward.artifacts[0].staging_path)
+    if word_normalized:
+        for marker in list(document.element.iter(qn("w:cnfStyle"))):
+            marker.getparent().remove(marker)
+    isolated = tmp_path / "isolated.docx"
+    document.save(isolated)
+    reverse_root = tmp_path / "reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(_context(reverse_root, isolated, "md", {"output": dialect}))
+    assert reverse.success, reverse.error
+    markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "| Quarter | Q1 | Q2 |\n| --- || --- | --- |" in markdown
+    analysis = analyze_markdown_semantics_v3(markdown, input_id="returned.md")
+    assert not analysis.has_errors
+    assert [(item["id"], item["kind"]) for item in analysis.projection["targets"]] == [("metrics", "table")]
+    assert [(item["id"], item["block_kind"]) for item in analysis.projection["anchors"]] == [("raw-table", "table")]

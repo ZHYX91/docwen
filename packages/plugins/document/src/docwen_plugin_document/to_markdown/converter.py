@@ -141,6 +141,7 @@ class DocxToMarkdownConverter:
         self._extensions = MarkdownExtensions.obsidian()
         self._resolved_v4_recovery: ResolvedNumberingV4Recovery | None = None
         self._resolved_v4_diagnostics: list[tuple[str, str, str]] = []
+        self._table_role_diagnostics: list[str] = []
         self._pending_artifacts: list[Any] = []
         self._pending_primary_path: str | None = None
         self._conversion_lock = RLock()
@@ -182,6 +183,7 @@ class DocxToMarkdownConverter:
             ``ConversionResult`` with staging artifacts.
         """
         self._resolved_v4_diagnostics.clear()
+        self._table_role_diagnostics.clear()
         from docwen_core.models.result import (
             ConversionDiagnostic,
             ConversionErrorInfo,
@@ -384,6 +386,12 @@ class DocxToMarkdownConverter:
             )
         all_diagnostics.extend(
             ConversionDiagnostic(
+                level="warning", message=message, code="DOCX2MD-TABLE-ROLES-STALE", location="word/document.xml"
+            )
+            for message in self._table_role_diagnostics
+        )
+        all_diagnostics.extend(
+            ConversionDiagnostic(
                 level="warning",
                 message=message,
                 code=code,
@@ -469,12 +477,15 @@ class DocxToMarkdownConverter:
         from docx import Document
 
         doc = Document(input_path)
+        from docwen_core.docx_table_roles import recover_table_roles
+
         self._resolved_v4_recovery = ResolvedNumberingV4Recovery.load_if_present(input_path, doc)
         if self._resolved_v4_recovery is None:
             if not self._resolved_v4_diagnostics:
                 self._semantic_v3_recovery = DocxSemanticsV3Recovery.load(input_path, doc)
         else:
             self._semantic_v3_recovery = self._resolved_v4_recovery
+        self._table_role_diagnostics.extend(recover_table_roles(Path(input_path), doc))
         lines: list[str] = []
         exact_fenced_fragments: dict[str, str] = {}
 
