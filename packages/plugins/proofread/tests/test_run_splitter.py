@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 from docx import Document
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
@@ -39,6 +40,18 @@ def simple_para(doc):
     assert len(p.runs) == 1
     assert p.text == "ABCDEFGHIJ"
     return p
+
+
+def _append_hyperlink_text(paragraph, text: str) -> None:
+    rel_id = paragraph.part.relate_to("https://example.test", RT.HYPERLINK, is_external=True)
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), rel_id)
+    run = OxmlElement("w:r")
+    node = OxmlElement("w:t")
+    node.text = text
+    run.append(node)
+    hyperlink.append(run)
+    paragraph._p.append(hyperlink)
 
 
 def _make_multi_run_para(doc, texts, para_text=None):
@@ -305,6 +318,40 @@ class TestEnsureRunAtPosition:
             qn("w:t"),
         ]
         assert [child.text for child in reloaded_run._r.iterchildren() if child.tag == qn("w:t")] == ["AB", "CD", "EF"]
+
+
+class TestHyperlinkCoordinates:
+    def test_split_and_comment_anchor_follow_visible_hyperlink_text(self, doc):
+        paragraph = doc.add_paragraph()
+        paragraph.add_run("prefix ")
+        _append_hyperlink_text(paragraph, "wrong")
+        paragraph.add_run(" suffix")
+        assert paragraph.text == "prefix wrong suffix"
+        assert [run.text for run in paragraph.runs] == ["prefix ", " suffix"]
+
+        error = TextError(8, 12, "rong", "right", "typo", "typo")
+        assert plan_run_splits(paragraph, [error]) == [8]
+        ensure_run_at_position(paragraph, 8)
+
+        selected = runs_for_range(paragraph, error.start_pos, error.end_pos)
+
+        assert [run.text for run in selected] == ["rong"]
+        parent = selected[0]._r.getparent()
+        assert parent is not None
+        assert parent.tag == qn("w:hyperlink")
+        doc.add_comment(selected, text="replace", author="DocWen", initials="DW")
+        assert [comment.text for comment in doc.comments] == ["replace"]
+        assert paragraph.text == "prefix wrong suffix"
+
+    def test_range_can_cross_direct_and_hyperlink_runs_in_one_coordinate_stream(self, doc):
+        paragraph = doc.add_paragraph()
+        paragraph.add_run("AA")
+        _append_hyperlink_text(paragraph, "BB")
+        paragraph.add_run("CC")
+
+        selected = runs_for_range(paragraph, 0, 6)
+
+        assert [run.text for run in selected] == ["AA", "BB", "CC"]
 
 
 class TestRunsForRange:

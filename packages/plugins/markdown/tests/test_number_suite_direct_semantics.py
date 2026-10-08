@@ -9,12 +9,152 @@ from docwen_plugin_markdown.number_suite_direct_semantics import analyze_markdow
 pytestmark = pytest.mark.contract
 
 
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "%% [Link](local%%)",
+        "%% `local%%`",
+        "%% $local%%$",
+        '%% <span data-x="%%">',
+        "%% `local%%` %% inside`",
+        "%% $local%%$literal %% inside$",
+        "%% [Link](local%%) [Link](next%%)",
+        "Text <!-- [Link](local-->)",
+        "[Link](local%%)",
+        "`local%%`",
+        "$local%%$",
+        '<span data-x="%%">Text</span>',
+    ],
+)
+def test_literal_owner_preserves_comment_closers_and_later_source_ranges(literal: str) -> None:
+    source = f"Figure: 中文😀 ^target\r\n\r\n{literal}\r\n\r\nSee @[[#^target]] @visible.\r\n"
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    [citation] = analysis.projection["citations"]
+    assert reference["resolution_status"] == "resolved"
+    for item in (reference, citation):
+        span = item["range"]
+        assert source[span["start"] : span["end"]] == item["raw"]
+
+
 def _analyze(source: str):
     return analyze_markdown_semantics_v3(
         source,
         input_id="fixture.md",
         consumer_profile="number_suite_direct",
     )
+
+
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "[代码示例 `%%`](https://example.test/item)",
+        "[代码示例 `<!--`](https://example.test/item)",
+        "[公式 $a%%b$](https://example.test/item)",
+        "[公式 $a<!--b$](https://example.test/item)",
+        "[nested [label] `` ` %% ``](https://example.test/item)",
+        "![alt `%%`](picture.png)",
+    ],
+)
+def test_link_label_literals_preserve_later_references_and_source_ranges(literal: str) -> None:
+    source = f"Figure: 中文😀 ^target\r\n\r\n{literal}\r\n\r\nSee @[[#^target]] @visible.\r\n"
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    [citation] = analysis.projection["citations"]
+    assert reference["resolution_status"] == "resolved"
+    for item in (reference, citation):
+        span = item["range"]
+        assert source[span["start"] : span["end"]] == item["raw"]
+
+
+def test_link_label_literals_do_not_hide_visible_label_semantics() -> None:
+    source = "Figure: 中文😀 ^target\n\n[示例 `%%` @[[#^target]] @visible](https://example.test/item)\n"
+    analysis = _analyze(source)
+    assert not analysis.has_errors
+    assert [item["raw"] for item in analysis.projection["references"]] == ["@[[#^target]]"]
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@visible"]
+
+
+@pytest.mark.parametrize("literal", ["%%", "<!--", "`%%`", "`<!--`"])
+def test_code_comment_delimiters_do_not_hide_following_semantic_references(literal: str) -> None:
+    source = f"Figure: Image ^image\n\n~~~text\n{literal}\n~~~\n\nSee @[[#^image]].\n"
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["resolution_status"] == "resolved"
+    assert reference["target_id"] == "image"
+
+
+@pytest.mark.parametrize("literal", ["%%", "<!--"])
+def test_inline_code_comment_delimiters_do_not_hide_following_references(literal: str) -> None:
+    source = f"Figure: Image ^image\n\n`{literal}`\n\nSee @[[#^image]].\n"
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["target_id"] == "image"
+
+
+@pytest.mark.parametrize("literal", ["%%", "<!--"])
+@pytest.mark.parametrize("container", ["space", "tab", "list", "quote"])
+def test_indented_code_preserves_later_references_and_citations(literal: str, container: str) -> None:
+    code = {
+        "space": f"    {literal}\n    literal code",
+        "tab": f"\t{literal}\n\tliteral code",
+        "list": f"- Item\n\n      {literal}\n      literal code",
+        "quote": f">     {literal}\n>     literal code",
+    }[container]
+    source = f"# 中文😀 ^target\n\n{code}\n\nSee @[[#^target]] and @real-cite.\n".replace("\n", "\r\n")
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["target_id"] == "target"
+    assert source[reference["range"]["start"] : reference["range"]["end"]] == "@[[#^target]]"
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
+
+
+def test_url_comment_literal_preserves_semantic_suffix_and_later_tokens() -> None:
+    source = "# Target ^target\n\nhttps://example.test/%%literal@[[#^target]]\nReal @[[#^target]] @real-cite.\n"
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    assert [item["raw"] for item in analysis.projection["references"]] == ["@[[#^target]]", "@[[#^target]]"]
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
+
+
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "`%% literal https://example.test/path`",
+        "`<!-- literal https://example.test/path`",
+        "%% https://example.test/path%%",
+        "Text <!-- https://example.test/path-->",
+        "%% <!-- https://example.test/path%%",
+        "Text <!-- %% https://example.test/path-->",
+    ],
+)
+@pytest.mark.parametrize("separator", [" ", "\n\n"])
+def test_literal_delimiters_keep_ownership_before_urls(literal: str, separator: str) -> None:
+    source = f"# 中文😀 ^target\n\n{literal}{separator}See @[[#^target]] and @real-cite.\n".replace("\n", "\r\n")
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["resolution_status"] == "resolved"
+    assert source[reference["range"]["start"] : reference["range"]["end"]] == "@[[#^target]]"
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
 
 
 def test_direct_number_suite_profile_keeps_standalone_captions_and_normalizes_targets() -> None:
@@ -95,3 +235,84 @@ def test_direct_number_suite_profile_treats_case_only_block_ids_as_duplicate() -
 
     assert analysis.has_errors
     assert [item["code"] for item in analysis.diagnostics] == ["docwen.markdown.anchor.duplicate"]
+
+
+def test_direct_number_suite_accepts_equation_and_code_id_only_declarations() -> None:
+    source = """Equation: ^energy
+
+Code: ^snippet
+
+See @[[#^energy]] and @[[#^snippet]].
+"""
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    targets = analysis.projection["targets"]
+    assert [(item["kind"], item["title"], item.get("id")) for item in targets] == [
+        ("equation", "", "energy"),
+        ("code_block", "", "snippet"),
+    ]
+    references = analysis.projection["references"]
+    assert [(item["resolution_status"], item["cached_number"]) for item in references] == [
+        ("resolved", "1"),
+        ("resolved", "1"),
+    ]
+
+
+def test_direct_number_suite_normalizes_alias_without_rejecting_suffix_pipes() -> None:
+    source = """Figure: Planned ^plan
+
+@[[#^plan|  Friendly label  ]]
+@[[#^plan|A|B]]
+@[[#^plan|   ]]
+"""
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    references = analysis.projection["references"]
+    assert [item.get("alias") for item in references] == ["Friendly label", "A|B", None]
+    assert all(item["resolution_status"] == "resolved" for item in references)
+
+
+def test_direct_number_suite_reference_scanner_respects_literal_regions() -> None:
+    source = """# Target ^target
+
+\\@[[#^missing]]
+<!-- @[[#^missing]] @hidden-html -->
+%% @[[#^missing]] @hidden-obsidian %%
+[Link](https://example.test/@[[#^missing]])
+<span data-ref="@[[#^missing]]" data-cite="@hidden-attribute">literal</span>
+`@[[#^missing]] @hidden-code`
+https://example.test/path@[[#^target]]
+Real @[[#^target]] @real-cite.
+"""
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    references = analysis.projection["references"]
+    assert [item["raw"] for item in references] == ["@[[#^target]]", "@[[#^target]]"]
+    assert all(item["resolution_status"] == "resolved" for item in references)
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
+
+
+def test_direct_number_suite_multiline_comments_hide_reference_like_tokens() -> None:
+    source = """# Target ^target
+
+<!--
+@[[#^missing]]
+@hidden-html
+-->
+%%
+@[[#^missing]]
+@hidden-obsidian
+%%
+
+@[[#^target]]
+"""
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    assert [item["raw"] for item in analysis.projection["references"]] == ["@[[#^target]]"]
+    assert analysis.projection["citations"] == []

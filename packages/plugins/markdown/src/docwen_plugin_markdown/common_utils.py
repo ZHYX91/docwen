@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from docwen_core.links import restore_table_safe_breaks
+from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.models.file_inspection import FILE_INSPECTION_METADATA_KEY, DetectionMethod
 from docwen_core.models.request import ConversionRequest
 from docwen_core.text.heading_numbering import (
@@ -22,6 +23,7 @@ from docwen_core.text.heading_numbering import (
     resolve_heading_numbering_scheme,
     strip_heading_prefix,
 )
+from docwen_plugin_markdown.mistune_extensions import create_extended_markdown
 
 # ── File reading ───────────────────────────────────────────────────────
 
@@ -175,22 +177,85 @@ def _apply_numbering(content: str, formatter: Any) -> str:
 # ── MD → Spreadsheet helpers ──────────────────────────────────────────
 
 
-def parse_md_tables(content: str) -> list[dict[str, Any]]:
-    """Parse Markdown content and extract tables into structured data.
+def parse_md_tables(content: str, *, structural_tables: bool = False) -> list[dict[str, Any]]:
+    """Parse Markdown content and extract spreadsheet-facing table data.
 
-    Returns a list of dicts: {'headers': [...], 'rows': [[...], ...]}.
+    When structural_tables is enabled, the parser also accepts the Structural
+    Tables delimiter grammar: zero or multiple header rows, an optional row
+    header boundary, one-or-more delimiter dashes, and merge markers.
     """
-    return parse_raw_md_tables(content, preserve_merge_marker_escapes=False)
+    return parse_raw_md_tables(
+        content,
+        preserve_merge_marker_escapes=False,
+        structural_tables=structural_tables,
+    )
 
 
-def parse_raw_md_tables(content: str, *, preserve_merge_marker_escapes: bool = False) -> list[dict[str, Any]]:
-    """Parse pipe tables while preserving spreadsheet-facing cell text.
+def parse_raw_md_tables(
+    content: str,
+    *,
+    preserve_merge_marker_escapes: bool = False,
+    structural_tables: bool = False,
+) -> list[dict[str, Any]]:
+    """Use block ownership while preserving spreadsheet-facing cell source.
+
+    The same parser owns comments, fences, indentation and nested containers
+    for DOCX and spreadsheets. Only its unprotected pipe blocks reach the raw
+    cell splitter; inline links and code never pass through an AST renderer.
+    """
+    parser = create_extended_markdown(extensions=MarkdownExtensions(structural_tables=structural_tables))
+
+    def parse_spreadsheet_table(block, match, state):
+        tables = _parse_unprotected_md_tables(
+            match.group(0),
+            preserve_merge_marker_escapes=preserve_merge_marker_escapes,
+            structural_tables=structural_tables,
+        )
+        if not tables:
+            return None
+        state.append_token({"type": "spreadsheet_table", "tables": tables})
+        return match.end()
+
+    parser.block.register(
+        "spreadsheet_table",
+        r"^ {0,3}(?:[^\n]*\|[^\n]*(?:\n|$)){2,}",
+        parse_spreadsheet_table,
+        before="structural_table" if structural_tables else "table",
+    )
+    for rules in (parser.block.block_quote_rules, parser.block.list_rules):
+        before = "structural_table" if "structural_table" in rules else "table"
+        index = rules.index(before) if before in rules else len(rules)
+        rules.insert(index, "spreadsheet_table")
+    tokens = parser(content)
+    if not isinstance(tokens, list):
+        raise TypeError("Spreadsheet Markdown parser must return block tokens")
+    tables: list[dict[str, Any]] = []
+
+    def collect(nodes):
+        for node in nodes:
+            if node.get("type") == "spreadsheet_table":
+                tables.extend(node["tables"])
+            collect(node.get("children", []))
+
+    collect(tokens)
+    return tables
+
+
+def _parse_unprotected_md_tables(
+    content: str,
+    *,
+    preserve_merge_marker_escapes: bool,
+    structural_tables: bool,
+) -> list[dict[str, Any]]:
+    """Split a parser-owned unprotected pipe block into raw spreadsheet cells.
 
     Mistune is the right parser for DOCX rendering, but spreadsheet export
-    treats table cell text as Markdown source text: links remain
-    ``[label](url)``, code spans keep their backticks, and pipes inside code
-    spans do not split columns. Fenced code blocks are ignored, including
-    unclosed fences.
+    treats table cell text as Markdown source text: links remain source text,
+    code spans keep their backticks, and pipes inside code spans do not split
+    columns. Fenced code blocks are ignored, including unclosed fences.
+
+    Structural Tables recognition is deliberately opt-in so the disabled
+    dialect keeps its documented ordinary-Markdown behavior.
     """
     tables: list[dict[str, Any]] = []
     lines = content.splitlines()
@@ -211,14 +276,30 @@ def parse_raw_md_tables(content: str, *, preserve_merge_marker_escapes: bool = F
             fence_marker = ""
             index += 1
             continue
-        if in_fence or index + 1 >= len(lines):
+        if in_fence:
             index += 1
             continue
+
         nested_list_table = _is_nested_list_table_start(lines, index)
         if line.startswith(("    ", "\t")) and not nested_list_table:
             index += 1
             continue
 
+        if structural_tables:
+            parsed_structural = _parse_structural_table_rows(
+                lines,
+                index,
+                nested_list_table=nested_list_table,
+                preserve_merge_marker_escapes=preserve_merge_marker_escapes,
+            )
+            if parsed_structural is not None:
+                table, index = parsed_structural
+                tables.append(table)
+                continue
+
+        if index + 1 >= len(lines):
+            index += 1
+            continue
         header = _split_md_table_row(lines[index])
         separator = _split_md_table_row(lines[index + 1])
         table_indent = _leading_indent_columns(line) if nested_list_table else 0
@@ -245,16 +326,118 @@ def parse_raw_md_tables(content: str, *, preserve_merge_marker_escapes: bool = F
             index += 1
 
         if rows:
+            restored_header = [
+                _restore_markdown_table_cell(cell.strip(), preserve_merge_marker_escapes) for cell in header
+            ]
             tables.append(
                 {
-                    "headers": [
-                        _restore_markdown_table_cell(cell.strip(), preserve_merge_marker_escapes) for cell in header
-                    ],
+                    "headers": restored_header,
                     "rows": rows,
                 }
             )
 
     return tables
+
+
+def structural_table_block_end(lines: list[str], start: int) -> int | None:
+    """Return the exclusive end of one accepted structural table source block."""
+    parsed = _parse_structural_table_rows(lines, start, nested_list_table=False, preserve_merge_marker_escapes=True)
+    return parsed[1] if parsed is not None else None
+
+
+def _parse_structural_table_rows(
+    lines: list[str],
+    start: int,
+    *,
+    nested_list_table: bool,
+    preserve_merge_marker_escapes: bool,
+) -> tuple[dict[str, Any], int] | None:
+    """Parse one structurally distinctive Structural Tables block."""
+
+    table_indent = _leading_indent_columns(lines[start]) if nested_list_table else 0
+    raw_rows: list[list[str]] = []
+    cursor = start
+    while cursor < len(lines):
+        line = lines[cursor]
+        if line.startswith(("    ", "\t")) and not nested_list_table:
+            break
+        if nested_list_table and _leading_indent_columns(line) < table_indent:
+            break
+        if _opening_fence(line) is not None:
+            break
+        row = _split_md_table_row(line)
+        if row is None:
+            break
+        raw_rows.append(row)
+        cursor += 1
+
+    if len(raw_rows) < 2:
+        return None
+
+    delimiters: list[tuple[int, int, int, bool]] = []
+    for row_index, row in enumerate(raw_rows):
+        shape = _structural_separator_shape(row)
+        if shape is None:
+            continue
+        column_count, header_columns, short_delimiter = shape
+        delimiters.append((row_index, column_count, header_columns, short_delimiter))
+    if len(delimiters) != 1:
+        return None
+
+    delimiter_index, column_count, header_columns, short_delimiter = delimiters[0]
+    content_rows = [*raw_rows[:delimiter_index], *raw_rows[delimiter_index + 1 :]]
+    if not content_rows or any(len(row) != column_count for row in content_rows):
+        return None
+
+    marker_found = any(cell.strip() in {"<", "^"} for row in content_rows for cell in row)
+    structurally_distinctive = delimiter_index != 1 or header_columns > 0 or short_delimiter or marker_found
+    if not structurally_distinctive:
+        return None
+
+    restored_rows = [
+        [_restore_markdown_table_cell(cell.strip(), preserve_merge_marker_escapes) for cell in row]
+        for row in content_rows
+    ]
+    header_rows = delimiter_index
+    headers = restored_rows[header_rows - 1] if header_rows > 0 else []
+    body_rows = restored_rows[header_rows:] if header_rows > 0 else restored_rows
+
+    return (
+        {
+            "headers": headers,
+            "rows": body_rows,
+            "all_rows": restored_rows,
+            "header_rows": header_rows,
+            "header_columns": header_columns,
+            "structural": True,
+        },
+        cursor,
+    )
+
+
+def _structural_separator_shape(cells: list[str]) -> tuple[int, int, bool] | None:
+    """Return column count, row-header boundary, and short-delimiter status."""
+
+    empty_boundaries = [index for index, cell in enumerate(cells) if cell == ""]
+    if len(empty_boundaries) > 1:
+        return None
+    boundary = empty_boundaries[0] if empty_boundaries else None
+    if boundary is not None and boundary in {0, len(cells) - 1}:
+        return None
+
+    tokens = [cell for index, cell in enumerate(cells) if index != boundary]
+    if not tokens:
+        return None
+
+    dash_lengths: list[int] = []
+    for token in tokens:
+        stripped = token.strip()
+        match = re.fullmatch(r":?(-+):?", stripped)
+        if match is None:
+            return None
+        dash_lengths.append(len(match.group(1)))
+
+    return len(tokens), (0 if boundary is None else boundary), any(length < 3 for length in dash_lengths)
 
 
 def _leading_indent_columns(line: str) -> int:
@@ -317,6 +500,20 @@ def _split_md_table_row(line: str) -> list[str] | None:
     index = 0
     while index < len(stripped):
         char = stripped[index]
+        if char == "`" and (code_tick_count or not escaped):
+            tick_count = _count_repeated(stripped, index, "`")
+            if code_tick_count == 0:
+                if _has_exact_backtick_closer(stripped, index + tick_count, tick_count):
+                    code_tick_count = tick_count
+            elif tick_count == code_tick_count:
+                code_tick_count = 0
+            cell_chars.append("`" * tick_count)
+            index += tick_count
+            continue
+        if code_tick_count:
+            cell_chars.append(char)
+            index += 1
+            continue
         if escaped:
             if char == "|":
                 cell_chars.append(char)
@@ -329,15 +526,6 @@ def _split_md_table_row(line: str) -> list[str] | None:
         if char == "\\":
             escaped = True
             index += 1
-            continue
-        if char == "`":
-            tick_count = _count_repeated(stripped, index, "`")
-            if code_tick_count == 0:
-                code_tick_count = tick_count
-            elif tick_count == code_tick_count:
-                code_tick_count = 0
-            cell_chars.append("`" * tick_count)
-            index += tick_count
             continue
         if char == "|" and code_tick_count == 0:
             cells.append("".join(cell_chars))
@@ -356,6 +544,19 @@ def _split_md_table_row(line: str) -> list[str] | None:
     if stripped.endswith("|"):
         cells = cells[:-1]
     return cells or None
+
+
+def _has_exact_backtick_closer(text: str, start: int, length: int) -> bool:
+    cursor = start
+    while cursor < len(text):
+        tick = text.find("`", cursor)
+        if tick < 0:
+            return False
+        run = _count_repeated(text, tick, "`")
+        if run == length:
+            return True
+        cursor = tick + run
+    return False
 
 
 def _count_repeated(text: str, start: int, char: str) -> int:
@@ -390,7 +591,7 @@ def write_table_to_csv(table_data: dict[str, Any], path: str) -> None:
     """Write a parsed table to a CSV file."""
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        if table_data["headers"]:
-            writer.writerow(table_data["headers"])
-        for row in table_data["rows"]:
-            writer.writerow(row)
+        rows = table_data.get("all_rows")
+        if rows is None:
+            rows = [table_data["headers"], *table_data["rows"]] if table_data["headers"] else table_data["rows"]
+        writer.writerows(rows)

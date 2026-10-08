@@ -121,11 +121,13 @@ class _Framing(TypedDict):
         ),
     ),
 )
+@pytest.mark.parametrize("host_regrouping", [False, True])
 def test_direct_blockquote_list_and_omitted_eof_round_trip_exactly(
     tmp_path: Path,
     source: str,
     logical_body: str,
     framing: _Framing,
+    host_regrouping: bool,
 ) -> None:
     identity = _identity(source, logical_body, **framing)
     document = Document()
@@ -139,6 +141,16 @@ def test_direct_blockquote_list_and_omitted_eof_round_trip_exactly(
     output = _write(session, document, tmp_path / f"{identity.tag[-8:]}.docx")
 
     loaded = Document(str(output))
+    if host_regrouping:
+        # Word coalesces adjacent payload runs, including a break and following
+        # text. Run boundaries carry no source characters.
+        content = next(loaded.element.iter(qn("w:sdtContent")))
+        runs = list(content)
+        for run in runs[1:]:
+            for item in list(run):
+                runs[0].append(item)
+            content.remove(run)
+        loaded.save(str(output))
     recovery = DocxSemanticsV3Recovery.load(output, loaded)
     recovered_paragraph = next(cast(Any, loaded.element).body.iter(qn("w:p")))
     assert recovery.render_fenced_source(recovered_paragraph) == source

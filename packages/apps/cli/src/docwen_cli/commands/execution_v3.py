@@ -14,6 +14,7 @@ from docwen_cli.commands.convert import execute_convert
 from docwen_cli.commands.execution_routes import route_for_public_command
 from docwen_cli.exit_codes import ExitCode
 from docwen_cli.presenters.json_presenter import JsonPresenter
+from docwen_cli.utils import expand_paths
 from docwen_core.models.document_node import canonical_source_tag, sanitize_node_label
 from docwen_runtime.path_io import filesystem_path
 
@@ -270,7 +271,8 @@ def _preflight_batch_collisions(args: argparse.Namespace, output_dir: Path) -> t
     markdown_target = target_format == "md"
     extension = target_format
     destinations: dict[str, tuple[Path, list[str]]] = {}
-    for raw_input in getattr(args, "files", []):
+    expanded_inputs = expand_paths(list(getattr(args, "files", [])))
+    for raw_input in expanded_inputs:
         source = Path(raw_input).expanduser().resolve(strict=False)
         if markdown_target or source.suffix.lower() in {".md", ".markdown"}:
             source_tag = canonical_source_tag(source.suffix.lstrip(".") or "document")

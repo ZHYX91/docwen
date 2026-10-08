@@ -93,6 +93,7 @@ def _replace_markdown_images(
     table_safe: bool,
     image_scope: str | None,
     declared_image: Callable[[str, str], str] | None = None,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Apply a mode to standard ``![alt](target)`` image syntax."""
     normalized_mode = EmbeddedImageMode(mode)
@@ -101,6 +102,8 @@ def _replace_markdown_images(
     index = 0
 
     while index < len(segment):
+        if cancellation_check is not None:
+            cancellation_check()
         construct = parse_inline_link(segment, index, image=True)
         if construct is None:
             index += 1
@@ -112,6 +115,8 @@ def _replace_markdown_images(
         if normalized_mode is EmbeddedImageMode.EXTRACT_TEXT:
             image_target, _, _ = _parse_markdown_image_target(target)
             replacement = alt or Path(unquote(image_target)).name
+            if target_format == "docx":
+                replacement = escape_markdown_source_literal(replacement)
         elif normalized_mode is EmbeddedImageMode.REMOVE:
             replacement = ""
         elif normalized_mode is EmbeddedImageMode.KEEP and target_format == "docx":
@@ -135,6 +140,7 @@ def _replace_markdown_images(
                 table_safe=table_safe,
                 image_scope=image_scope,
                 declared_image=declared_image,
+                literal_text=escape_markdown_source_literal if target_format == "docx" else None,
             )
             if embedded is None:
                 replacement = original
@@ -184,13 +190,15 @@ def _wiki_construct_end(text: str, start: int) -> int | None:
     return None if close == -1 else close + 2
 
 
-def _auto_link_bare_urls_in_segment(segment: str) -> str:
+def _auto_link_bare_urls_in_segment(segment: str, cancellation_check: Callable[[], None] | None = None) -> str:
     """Turn safe bare HTTP(S) URLs into explicit Markdown links."""
     parts: list[str] = []
     cursor = 0
     index = 0
 
     while index < len(segment):
+        if cancellation_check is not None:
+            cancellation_check()
         construct_end = _markdown_construct_end(segment, index)
         if construct_end is None:
             construct_end = _escaped_markdown_construct_end(segment, index)
@@ -331,8 +339,13 @@ def process_markdown_links(
     _canonicalize_local_docx_targets: bool = False,
     _boundary_rescan_remaining: int = 1,
     declared_image: Callable[[str, str], str] | None = None,
+    declared_wiki_link: Callable[[str, str], str | None] | None = None,
+    protect_source_comments: bool = False,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Process Markdown links using one immutable request policy."""
+    if cancellation_check is not None:
+        cancellation_check()
     if not text:
         return text
 
@@ -392,6 +405,10 @@ def process_markdown_links(
             _visited_files=inner_visited,
             _depth=inner_depth,
             _canonicalize_local_docx_targets=True,
+            declared_image=declared_image,
+            declared_wiki_link=declared_wiki_link,
+            protect_source_comments=protect_source_comments,
+            cancellation_check=cancellation_check,
         )
         if kwargs.get("table_safe"):
             from docwen_core.links._embed_md import _make_table_safe
@@ -406,6 +423,8 @@ def process_markdown_links(
         cursor = 0
         index = 0
         while index < len(segment):
+            if cancellation_check is not None:
+                cancellation_check()
             construct = parse_inline_link(segment, index, image=True)
             if construct is None:
                 construct = parse_inline_link(segment, index, image=False)
@@ -441,6 +460,7 @@ def process_markdown_links(
                 process_links=_process_child,
                 _table_context_scoped=True,
                 declared_image=declared_image,
+                literal_text=escape_markdown_source_literal if normalized_target == "docx" else None,
             )
             if normalized_target == "docx" and replacement == original:
                 replacement = escape_markdown_source_literal(original)
@@ -456,11 +476,18 @@ def process_markdown_links(
     if resolved_auto_link and normalized_target == "docx":
         initial_text = _map_visible_markdown(
             initial_text,
-            _auto_link_bare_urls_in_segment,
+            lambda segment: _auto_link_bare_urls_in_segment(segment, cancellation_check),
             protect_bare_urls=False,
+            protect_source_comments=protect_source_comments,
+            cancellation_check=cancellation_check,
         )
 
-    result = _map_visible_markdown(initial_text, _resolve_embeds)
+    result = _map_visible_markdown(
+        initial_text,
+        _resolve_embeds,
+        protect_source_comments=protect_source_comments,
+        cancellation_check=cancellation_check,
+    )
     result = _map_visible_markdown(
         result,
         lambda segment: _replace_markdown_images(
@@ -474,7 +501,10 @@ def process_markdown_links(
             temp_dir=temp_dir,
             table_safe=table_safe,
             image_scope=image_scope,
+            cancellation_check=cancellation_check,
         ),
+        protect_source_comments=protect_source_comments,
+        cancellation_check=cancellation_check,
     )
     result = _process_non_embed_links(
         result,
@@ -486,6 +516,9 @@ def process_markdown_links(
         on_not_found=resolved_not_found,
         canonicalize_local_docx_targets=_canonicalize_local_docx_targets,
         table_safe=table_safe,
+        declared_wiki_link=declared_wiki_link,
+        protect_source_comments=protect_source_comments,
+        cancellation_check=cancellation_check,
     )
     if table_safe:
         result = _escape_table_image_placeholder_pipes(result, image_scope)
@@ -498,6 +531,8 @@ def process_markdown_links(
         boundary_points = {point for expansion_range in expansion_ranges for point in expansion_range}
         seen_states: set[tuple[str, tuple[int, ...]]] = set()
         while True:
+            if cancellation_check is not None:
+                cancellation_check()
             boundary_ranges = tuple((point, point) for point in sorted(boundary_points))
             spans = _cross_boundary_construct_spans(
                 result,
@@ -526,6 +561,9 @@ def process_markdown_links(
                 _canonicalize_local_docx_targets=(_canonicalize_local_docx_targets),
                 _boundary_rescan_remaining=0,
                 declared_image=declared_image,
+                declared_wiki_link=declared_wiki_link,
+                protect_source_comments=protect_source_comments,
+                cancellation_check=cancellation_check,
             )
             if span_in_table:
                 replacement = escape_unescaped_pipes(replacement)

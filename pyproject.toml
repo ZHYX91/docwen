@@ -8,7 +8,9 @@ build-backend = "setuptools.build_meta"
 packages = []
 
 [tool.uv]
-required-version = "==0.12.0"
+# Dependency/lock maintenance may use a compatible 0.12.x uv. Production
+# workflows remain independently pinned to 0.12.0 and its verified binary.
+required-version = ">=0.12.0,<0.13"
 # Both upstream consumers import only the shared ``cv2`` module.  pdf2docx
 # already selects the headless wheel, which is also the correct variant when
 # another GUI toolkit (PySide6 here) owns the application windows.  RapidOCR
@@ -60,7 +62,7 @@ docwen-bundle = { workspace = true }
 
 [project]
 name = "docwen"
-version = "0.16.0"
+version = "0.17.0"
 description = "DocWen - 支持 Word/Markdown/Excel 互转"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"

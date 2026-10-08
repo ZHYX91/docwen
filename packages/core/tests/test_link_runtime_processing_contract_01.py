@@ -255,7 +255,7 @@ def test_fragment_only_wiki_hyperlink_downgrades_to_display_text(tmp_path: Path)
             escape_markdown_source_literal("[[missing.md#Part|Shown]]"),
         ),
         ("ignore", ""),
-        ("placeholder", "[File not found: missing.md#Part]"),
+        ("placeholder", r"\[File not found\: missing\.md\#Part\]"),
     ],
 )
 def test_wiki_hyperlink_missing_target_consumes_error_policy(

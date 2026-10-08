@@ -197,7 +197,11 @@ def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
     _place_docx_body(document, elements, placeholder)
     context.cancellation.check()
     output = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".docx")
+    from docwen_core.docx_table_roles import inject_table_roles, prepare_table_roles
+
+    table_roles = prepare_table_roles(document)
     document.save(output)
+    inject_table_roles(Path(output), table_roles)
     inject_clipboard_table_associations(Path(output), document_model)
     artifact = ArtifactManifest(
         artifact_id="clipboard-document-docx",

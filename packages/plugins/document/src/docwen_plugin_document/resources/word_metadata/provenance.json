@@ -1,0 +1,17 @@
+{
+  "source": "https://ecma-international.org/wp-content/uploads/ECMA-376-4_5th_edition_december_2016.zip",
+  "edition": "ECMA-376 Part4 fifth edition2016 Transitional XMLSchema archive",
+  "sourceMembers": {
+    "wml.xsd": "0f7784b36ddc42950e5ff354cd608b83b60e4de39325d5568913f1225365029b",
+    "shared-commonSimpleTypes.xsd": "48675c4f82f6b097434d4b7e313635b790257cca58fa90dd0e8f19c9affa18ed"
+  },
+  "roots": {
+    "rPr": "CT_RPr",
+    "sdtPr": "CT_SdtPr",
+    "sdtEndPr": "CT_SdtEndPr",
+    "smartTagPr": "CT_SmartTagPr",
+    "customXmlPr": "CT_CustomXmlPr"
+  },
+  "declarations": 81,
+  "derivation": "Transitive closure of type/base/ref/memberTypes QNames; unchanged declarations in original order; only sharedTypes import retained; five global metadata roots added."
+}

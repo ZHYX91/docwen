@@ -116,7 +116,35 @@ DocWen accepts the Structural Tables pipe-table dialect in addition to ordinary 
 - escaped pipes and pipes inside code spans do not split cells; and
 - invalid widths or structures remain visible source text instead of being guessed.
 
-DOCX export maps these roles and merge rectangles to native table semantics. DOCX import emits the canonical
+Standalone Obsidian comment blocks delimited by lines containing only `%%` are not
+table input. When Structural Tables input is enabled, DOCX omits their visible content;
+spreadsheet extraction ignores their tables. With that input dialect disabled, DOCX
+retains the block as visible literal text.
+Fenced code still owns its literal `%%` examples. This table boundary does not promise
+general Obsidian comment rendering or note transclusion.
+
+独立 `%%` 行包围的 Obsidian 注释块不作为表格输入。启用 Structural Tables 输入时，
+DOCX 不呈现其正文，表格提取忽略其中的表格；关闭该输入方言时 DOCX 保留其可见字面正文。
+围栏代码中的 `%%` 仍由代码语法处理。此边界不承诺
+完整 Obsidian 注释呈现或链接笔记内容转置。
+
+DOCX export maps merge rectangles to native table geometry and writes native role/style hints. Because Word
+recalculates `cnfStyle` on save, tables with multiple column-header rows or any row-header columns also use a
+private `urn:docwen:table-roles:v1` custom XML map; ordinary one-row headers keep their native representation. Each record binds a unique balanced `_DWT_` bookmark inside its physical table and a SHA-256 of the
+normalized merge geometry; table position and cell text are not identities. Text edits and table moves preserve
+the binding. Changed geometry or deleted bindings produce a warning and use native information; ambiguous
+bookmarks or malformed metadata fail explicitly. Native explicit role disabling and repeat-header policy remain
+authoritative: verified role counts cannot be enlarged or re-enabled by `tblHeader` pagination markers.
+Without a verified carrier, existing native-header inference remains unchanged. Ordinary-anchor bookmark
+exceptions require a declared, globally unique, balanced pair in the exact first-cell slot; a matching name
+alone grants no exception, and undeclared auxiliary pairs in a document with a role map are rejected.
+This carrier does not retain Markdown source or restore old cell content. It is implemented in
+both Markdown export routes and structured clipboard DOCX export; final candidate Word-save acceptance is
+recorded separately from source regression results. When Structural Tables is enabled, both source analyzers
+recognize multi-row headers and row-header delimiters within their actual quote/list container before binding
+captions or standalone anchors. Disabling the dialect does not activate this ownership rule.
+
+DOCX import emits the canonical
 Structural Tables spelling when native table metadata requires zero or multiple column-header rows, or row-header
 columns; a one-row column header without row headers remains ordinary GFM. Number Suite dialect interoperation is
 source-defined for ordinary conversion: DocWen reads authenticated
@@ -160,6 +188,75 @@ grammar 的字符做反斜杠转义，包括管道/反斜杠、代码/强调标�
 HTML 样尖括号以及字面 `<`/`^`。本导出器生成的未转义 `<`/`^` 只用于 covered cell 的 merge carrier；
 作者输入的同字符保持转义并在再次解析时仍是文字。这个转义只属于输出传输规则；普通用户 Markdown 输入仍按
 所选 input dialect 解释，不会被全局改成字面模式。
+
+### Repeated DOCX note references / DOCX 重复脚尾注引用
+
+Each generated note has one native Word reference. Further occurrences use a `NOTEREF` field pointing to a
+bookmark around that first reference; they must not duplicate the native reference or drop the occurrence.
+The writer uses a complex field with superscript formatting on its instruction, boundary and cached-result runs,
+so Word saving the document does not turn the repeated mark into baseline text. Bookmark allocation considers
+the complete package, including template headers, and avoids case-insensitive name and numeric-ID collisions.
+
+Cached marks follow the template's document/section numbering settings where they can be computed exactly.
+Page-dependent numbering, formats not implemented by the cache writer, and values outside its exact formatting
+range keep their `NOTEREF` identity but display `?` until the document editor updates fields. Such fields are
+marked dirty and the conversion returns `MD2DOCX-NOTE-FIELD-UPDATE-REQUIRED`; it does not silently substitute
+decimal numbering. Update fields after pagination and before printing or PDF export. The dirty flag requests
+an update but cannot guarantee one when the editor asks for confirmation or the reader does not calculate fields.
+
+DOCX import resolves simple and complex `NOTEREF` fields only when their bookmark uniquely proves a native note
+target and their supported instruction/visible payload is intact. Ordinary cached text remains the fallback for
+unproven targets, unsupported switches, nested or malformed fields. Hidden runs remain hidden. Empty Word
+spelling/grammar proofing markers may cross the field boundary without changing the reference identity.
+
+生成的每条脚尾注只保留一个 Word 原生引用；后续引用通过指向首次引用书签的 `NOTEREF` 域表达，不能复制原生引用，
+也不能删除重复出现。复杂域各 run 保留上标格式，书签名称与编号避开整个模板包中的冲突。导入时只有唯一且可证明的
+脚尾注目标及完整的受支持域结构才恢复成 Markdown 引用；其他情况保留可见缓存文字，隐藏内容不因域识别重新出现。
+Word 的空拼写/语法检查标记不改变引用身份。
+
+### Inline source ownership / 行内源码所有权
+
+Direct Number Suite semantics and typed-note normalization share the Core link lexer's exact source ranges.
+Code, math, valid HTML/autolinks, and the complete destination/title of a balanced Markdown link or image protect
+their literal contents. Ordinary link-label text and angle-bracket comparisons remain visible. An orphan `](...)`
+has no link-metadata ownership. WikiLink metadata owns its internal comment delimiters while the WikiLink itself
+remains eligible for the direct consumer's link projection; the notes consumer treats it as literal metadata.
+Generated DOCX Wiki/embed display text and missing-link placeholders escape their literal punctuation, so converting
+metadata into presentation text cannot introduce new comments or note references.
+An empty standard Markdown label extracted from its destination follows the same literal transport rule;
+authored nonempty labels retain their inline formatting. Comment shielding cannot create HTML block authority
+over adjacent ordinary lines. Direct references/citations and typed-note references use odd/even backslash
+escape parity: an odd run escapes the token, while an even run leaves it active.
+YAML fields that extract plain text keep the literal display value without Markdown transport escapes; hyperlink
+fields decode their escaped label before materializing Word text.
+The source-file DOCX link pipeline protects original comments with the same owner scan before display rewriting;
+notes are still validated after recursive embeds have expanded into the request's combined document.
+
+The first real comment opener owns its original closer, even when that closer occurs inside a later-looking
+link, URL, code or math atom. Invalidated atoms cannot own the remaining suffix. HTML `<!--` follows Markdown
+backslash escape parity. The existing `%%` rule in these semantic projections is separate: a preceding backslash
+does not disable its delimiter recognition. These projection rules do not promise general Obsidian comment rendering.
+
+Bare HTTP(S) URL ownership uses the same left-boundary, hostname validation and trailing-punctuation rules as the
+Core inline lexer. The direct consumer ends a URL's literal prefix at the first `@[[` so the following semantic
+reference remains eligible; notes protect the complete URL. Block ownership is resolved first; masking preserves
+authored Unicode offsets, CRLF and indentation without rewriting the input.
+
+直接 Number Suite 语义与 typed notes 归一化复用 Core 链接词法器的精确源码范围。代码、公式、合法 HTML/
+autolink，以及合法平衡 Markdown 链接或图片的完整目标和标题拥有其中的字面内容；普通标签正文及角括号
+比较表达式仍可见，孤立的 `](...)` 不获得链接元数据所有权。WikiLink 内部的注释标记由其元数据拥有，
+但 direct consumer 仍投影真实 WikiLink；notes 路径则把整个 WikiLink 视作字面元数据。
+DOCX 的 Wiki/嵌入展示文字与缺失链接占位文字对字面标点转义，不让元数据改写成展示文字后再引入注释或 notes。
+标准 Markdown 空标签提取目标文字时遵循同一字面传输规则，非空的作者标签保留行内格式。注释保护不能使相邻
+普通行获得 HTML 块所有权。直接引用、文献引用及脚尾注引用按反斜杠奇偶性转义：奇数转义 token，偶数仍有效。
+YAML 字段提取纯文字时保留字面显示值，不写入 Markdown 传输转义；超链接字段先解码转义标签再生成 Word 文字。
+源文件 DOCX 链接处理在展示改写前用同一所有权扫描保护原始注释；notes 仍在递归嵌入完成后校验请求合并内容。
+
+先出现的真实注释起始符拥有原始关闭符，后出现的链接、URL、代码或公式不能夺取它；失效的 atom 也不能
+继续拥有注释结束后的源码。HTML `<!--` 遵循 Markdown 反斜杠转义奇偶性；这些语义投影原有的 `%%` 规则
+独立处理，前置反斜杠不关闭其分隔识别，不因此承诺完整 Obsidian 注释呈现。裸 HTTP(S) URL 与 Core 共用
+左边界、hostname 校验及尾部标点规则；direct 在首个 `@[[` 结束字面前缀，notes 保护完整 URL。
+块级所有权先确定；投影保留原始 Unicode 坐标、CRLF 和缩进，不改写输入文件。
 
 ## Anchors and semantic targets / 锚点与语义目标
 
@@ -368,15 +465,19 @@ the conversion request, not to any installed editor plugin. Number Suite install
 an otherwise identical source-native conversion.
 
 The Machine source capability advertises `markdown_resource_bindings` with shape
-`{authored_sha256, images: [{authored_token, logical_path}]}`. The SHA-256 binds the complete UTF-8 source;
-each token must be a visible authored image and each path must identify a declared resource. Bindings preserve
-short Wiki names, cross-folder targets and spaces without basename discovery or source rewriting. Wiki and
-Markdown image policies remain independent. Local Wiki navigation requiring filesystem search and Markdown
-transclusion are outside this declared-image route; text-only link policies do not require file discovery.
+`{authored_sha256, images: [{authored_token, logical_path}], wiki_links?: [{authored_token, href}]}`.
+The SHA-256 binds the complete UTF-8 source. Image tokens must be visible authored images and point to declared
+resource bytes. Wiki navigation tokens must be visible authored non-embed WikiLinks and use an allowed external
+navigation URI (`http`, `https`, `mailto`, or `obsidian`). A bound local WikiLink is resolved only from that
+authenticated URI; DocWen never probes the request host's filesystem or rewrites the source. Unbound local Wiki
+navigation still fails closed when hyperlink/resolve policy requires a target. Wiki and Markdown image policies remain
+independent, and text-only `keep`/`extract_text`/`remove` policies do not consume the navigation binding.
+Markdown note transclusion remains a separate declared-resource contract.
 
-Machine 原文入口通过 `markdown_resource_bindings` 将完整 UTF-8 原文 SHA-256、可见图片标记和已声明资源逻辑路径绑定。
-短 Wiki 名称、跨目录目标及空格文件名不需要按文件名搜索，也不改写原文。Wiki 图片与 Markdown 图片分别遵循各自策略。
-需要文件搜索的本地 Wiki 导航及 Markdown 嵌入展开不在此声明图片入口的范围内；纯文本链接策略无需搜索文件。
+Machine 原文入口通过 `markdown_resource_bindings` 将完整 UTF-8 原文 SHA-256、可见图片标记、已声明图片资源以及可选的
+普通 Wiki 导航标记绑定。普通 Wiki 导航只能使用已认证的外部导航 URI（包括 `obsidian://`），DocWen 不枚举或搜索
+Vault/本地文件；需要目标的未绑定本地 Wiki 链接仍失败关闭。纯文本链接策略不消费导航绑定。Markdown 笔记嵌入展开
+仍属于独立的声明资源合同。
 
 A separate provider-neutral route consumes `resolved_document` plus `numbering_export_plan` under
 [Resolved structured numbering and export plan](structured-numbering-phases.md). On that exact-two route the upstream
@@ -942,6 +1043,37 @@ field may have its dirty flag cleared after update, and its cache run may carry 
 `w:rPr/w:noProof`. These save annotations are ignored only after the field instruction, bookmark, exact cached
 number, authored Alias, carrier count and order have all been verified. They never authorize altered visible text
 or a different reference target. Locked citation fields retain their separate lock/dirty rules.
+
+One `w:sdtPr/w:rPr` may contain the recognized, unique, leaf run-formatting defaults validated by
+`docx_host_metadata`. These defaults describe replacement text and do not change existing `sdtContent` or prove
+ownership. Their attribute types follow the ECMA-376 Part 4 (2016) Transitional XSD, not additional Office SDK
+application limits: `color/@val` is required; tint/shade values are one byte (two hex digits); unsigned measures
+use `unsignedLong` or the permitted unit syntax; font/language strings have no SDK-only length cap. Decimal
+formatting IDs use XML Schema integer, while the separate host control `sdtPr/id` retains the signed 32-bit
+identity contract above. Text scale accepts the schema's 0–600 integer and percentage forms. Unsupported
+properties, unknown attributes, nested content, duplicate properties and invalid values still fail ownership
+validation. This is a closed metadata profile, not a general DOCX schema validator or an Office rendering promise.
+The source schemas are `wml.xsd` and `shared-commonSimpleTypes.xsd` in the
+[official ECMA-376 Part 4 archive](https://ecma-international.org/publications-and-standards/standards/ecma-376/).
+Lexical validation follows each member type: unsigned decimal measures contain digits without a sign; integer,
+boolean and hexBinary members collapse surrounding XML whitespace, while string members such as unit measures,
+percentage forms, `auto`, `on` and `off` retain it. A union does not trim its string members as if they were numeric.
+
+Native note target proofs use the same rendered wrapper vocabulary as paragraph import. A target may contain
+an inline SDT, hyperlink, tracked insertion/move destination, smart tag, custom XML or simple field, but its only
+body payload remains one visible native note marker. Wrapper structure is checked separately from metadata.
+Run properties (including nested format revisions), SDT properties/end properties, and smart-tag/custom-XML
+properties are validated with the offline Transitional schema subset shipped by the document plugin. An arbitrary
+descendant of `rPr` is not automatically trusted. Simple and complex NOTEREF cache runs use the same metadata
+validation. This does not authorize extra visible text, deleted/hidden markers, malformed SDT bodies or a second
+native reference. Unknown metadata outside the shipped namespace/types cannot establish a trusted target.
+Schema validation is supplemented by two explicit portable metadata rules: each individual `rPr` contains
+at most one occurrence of a property, including previous properties inside `rPrChange`; separate `rPr`
+sets in `sdtEndPr` remain valid. Unsigned numeric attributes reject signs independently of libxml2's version:
+this applies to `sz`, `szCs`, `kern`, `fitText`, `tabIndex` values and border size/spacing. Core and document
+import retain the XML Schema 1.0 no-sign lexical contract even where a validator accepts `+2` or `-0`.
+The metadata profile therefore means the pinned schema plus these rules, not every value accepted by any
+particular libxml2 build. `rFonts/@hint` accepts only the pinned Transitional values `default` and `eastAsia`.
 
 `/customXml/itemN.xml` is UTF-8 without a BOM, begins with the exact XML declaration
 `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`, has no comments or insignificant indentation, and uses

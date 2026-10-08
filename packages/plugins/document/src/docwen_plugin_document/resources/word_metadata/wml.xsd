@@ -1,0 +1,707 @@
+<?xml version='1.0' encoding='utf-8'?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:sl="http://schemas.openxmlformats.org/schemaLibrary/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:s="http://schemas.openxmlformats.org/officeDocument/2006/sharedTypes" elementFormDefault="qualified" attributeFormDefault="qualified" blockDefault="#all" targetNamespace="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <xsd:import namespace="http://schemas.openxmlformats.org/officeDocument/2006/sharedTypes" schemaLocation="shared-commonSimpleTypes.xsd"/>
+  <xsd:complexType name="CT_Empty"/>
+  <xsd:complexType name="CT_OnOff">
+    <xsd:attribute name="val" type="s:ST_OnOff"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_UcharHexNumber">
+    <xsd:restriction base="xsd:hexBinary">
+      <xsd:length value="1"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:simpleType name="ST_DecimalNumber">
+    <xsd:restriction base="xsd:integer"/>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_DecimalNumber">
+    <xsd:attribute name="val" type="ST_DecimalNumber" use="required"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_UnsignedDecimalNumber">
+    <xsd:attribute name="val" type="s:ST_UnsignedDecimalNumber" use="required"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_SignedTwipsMeasure">
+    <xsd:union memberTypes="xsd:integer s:ST_UniversalMeasure"/>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_SignedTwipsMeasure">
+    <xsd:attribute name="val" type="ST_SignedTwipsMeasure" use="required"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_HpsMeasure">
+    <xsd:union memberTypes="s:ST_UnsignedDecimalNumber s:ST_PositiveUniversalMeasure"/>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_HpsMeasure">
+    <xsd:attribute name="val" type="ST_HpsMeasure" use="required"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_SignedHpsMeasure">
+    <xsd:union memberTypes="xsd:integer s:ST_UniversalMeasure"/>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_SignedHpsMeasure">
+    <xsd:attribute name="val" type="ST_SignedHpsMeasure" use="required"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_DateTime">
+    <xsd:restriction base="xsd:dateTime"/>
+  </xsd:simpleType>
+  <xsd:simpleType name="ST_EighthPointMeasure">
+    <xsd:restriction base="s:ST_UnsignedDecimalNumber"/>
+  </xsd:simpleType>
+  <xsd:simpleType name="ST_PointMeasure">
+    <xsd:restriction base="s:ST_UnsignedDecimalNumber"/>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_String">
+    <xsd:attribute name="val" type="s:ST_String" use="required"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_TextScale">
+    <xsd:union memberTypes="ST_TextScalePercent ST_TextScaleDecimal"/>
+  </xsd:simpleType>
+  <xsd:simpleType name="ST_TextScalePercent">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="0*(600|([0-5]?[0-9]?[0-9]))%"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:simpleType name="ST_TextScaleDecimal">
+    <xsd:restriction base="xsd:integer">
+      <xsd:minInclusive value="0"/>
+      <xsd:maxInclusive value="600"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_TextScale">
+    <xsd:attribute name="val" type="ST_TextScale"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_HighlightColor">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="black"/>
+      <xsd:enumeration value="blue"/>
+      <xsd:enumeration value="cyan"/>
+      <xsd:enumeration value="green"/>
+      <xsd:enumeration value="magenta"/>
+      <xsd:enumeration value="red"/>
+      <xsd:enumeration value="yellow"/>
+      <xsd:enumeration value="white"/>
+      <xsd:enumeration value="darkBlue"/>
+      <xsd:enumeration value="darkCyan"/>
+      <xsd:enumeration value="darkGreen"/>
+      <xsd:enumeration value="darkMagenta"/>
+      <xsd:enumeration value="darkRed"/>
+      <xsd:enumeration value="darkYellow"/>
+      <xsd:enumeration value="darkGray"/>
+      <xsd:enumeration value="lightGray"/>
+      <xsd:enumeration value="none"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_Highlight">
+    <xsd:attribute name="val" type="ST_HighlightColor" use="required"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_HexColorAuto">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="auto"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:simpleType name="ST_HexColor">
+    <xsd:union memberTypes="ST_HexColorAuto s:ST_HexColorRGB"/>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_Color">
+    <xsd:attribute name="val" type="ST_HexColor" use="required"/>
+    <xsd:attribute name="themeColor" type="ST_ThemeColor" use="optional"/>
+    <xsd:attribute name="themeTint" type="ST_UcharHexNumber" use="optional"/>
+    <xsd:attribute name="themeShade" type="ST_UcharHexNumber" use="optional"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Lang">
+    <xsd:attribute name="val" type="s:ST_Lang" use="required"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_Underline">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="single"/>
+      <xsd:enumeration value="words"/>
+      <xsd:enumeration value="double"/>
+      <xsd:enumeration value="thick"/>
+      <xsd:enumeration value="dotted"/>
+      <xsd:enumeration value="dottedHeavy"/>
+      <xsd:enumeration value="dash"/>
+      <xsd:enumeration value="dashedHeavy"/>
+      <xsd:enumeration value="dashLong"/>
+      <xsd:enumeration value="dashLongHeavy"/>
+      <xsd:enumeration value="dotDash"/>
+      <xsd:enumeration value="dashDotHeavy"/>
+      <xsd:enumeration value="dotDotDash"/>
+      <xsd:enumeration value="dashDotDotHeavy"/>
+      <xsd:enumeration value="wave"/>
+      <xsd:enumeration value="wavyHeavy"/>
+      <xsd:enumeration value="wavyDouble"/>
+      <xsd:enumeration value="none"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_Underline">
+    <xsd:attribute name="val" type="ST_Underline" use="optional"/>
+    <xsd:attribute name="color" type="ST_HexColor" use="optional" default="auto"/>
+    <xsd:attribute name="themeColor" type="ST_ThemeColor" use="optional"/>
+    <xsd:attribute name="themeTint" type="ST_UcharHexNumber" use="optional"/>
+    <xsd:attribute name="themeShade" type="ST_UcharHexNumber" use="optional"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_TextEffect">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="blinkBackground"/>
+      <xsd:enumeration value="lights"/>
+      <xsd:enumeration value="antsBlack"/>
+      <xsd:enumeration value="antsRed"/>
+      <xsd:enumeration value="shimmer"/>
+      <xsd:enumeration value="sparkle"/>
+      <xsd:enumeration value="none"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_TextEffect">
+    <xsd:attribute name="val" type="ST_TextEffect" use="required"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_Border">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="nil"/>
+      <xsd:enumeration value="none"/>
+      <xsd:enumeration value="single"/>
+      <xsd:enumeration value="thick"/>
+      <xsd:enumeration value="double"/>
+      <xsd:enumeration value="dotted"/>
+      <xsd:enumeration value="dashed"/>
+      <xsd:enumeration value="dotDash"/>
+      <xsd:enumeration value="dotDotDash"/>
+      <xsd:enumeration value="triple"/>
+      <xsd:enumeration value="thinThickSmallGap"/>
+      <xsd:enumeration value="thickThinSmallGap"/>
+      <xsd:enumeration value="thinThickThinSmallGap"/>
+      <xsd:enumeration value="thinThickMediumGap"/>
+      <xsd:enumeration value="thickThinMediumGap"/>
+      <xsd:enumeration value="thinThickThinMediumGap"/>
+      <xsd:enumeration value="thinThickLargeGap"/>
+      <xsd:enumeration value="thickThinLargeGap"/>
+      <xsd:enumeration value="thinThickThinLargeGap"/>
+      <xsd:enumeration value="wave"/>
+      <xsd:enumeration value="doubleWave"/>
+      <xsd:enumeration value="dashSmallGap"/>
+      <xsd:enumeration value="dashDotStroked"/>
+      <xsd:enumeration value="threeDEmboss"/>
+      <xsd:enumeration value="threeDEngrave"/>
+      <xsd:enumeration value="outset"/>
+      <xsd:enumeration value="inset"/>
+      <xsd:enumeration value="apples"/>
+      <xsd:enumeration value="archedScallops"/>
+      <xsd:enumeration value="babyPacifier"/>
+      <xsd:enumeration value="babyRattle"/>
+      <xsd:enumeration value="balloons3Colors"/>
+      <xsd:enumeration value="balloonsHotAir"/>
+      <xsd:enumeration value="basicBlackDashes"/>
+      <xsd:enumeration value="basicBlackDots"/>
+      <xsd:enumeration value="basicBlackSquares"/>
+      <xsd:enumeration value="basicThinLines"/>
+      <xsd:enumeration value="basicWhiteDashes"/>
+      <xsd:enumeration value="basicWhiteDots"/>
+      <xsd:enumeration value="basicWhiteSquares"/>
+      <xsd:enumeration value="basicWideInline"/>
+      <xsd:enumeration value="basicWideMidline"/>
+      <xsd:enumeration value="basicWideOutline"/>
+      <xsd:enumeration value="bats"/>
+      <xsd:enumeration value="birds"/>
+      <xsd:enumeration value="birdsFlight"/>
+      <xsd:enumeration value="cabins"/>
+      <xsd:enumeration value="cakeSlice"/>
+      <xsd:enumeration value="candyCorn"/>
+      <xsd:enumeration value="celticKnotwork"/>
+      <xsd:enumeration value="certificateBanner"/>
+      <xsd:enumeration value="chainLink"/>
+      <xsd:enumeration value="champagneBottle"/>
+      <xsd:enumeration value="checkedBarBlack"/>
+      <xsd:enumeration value="checkedBarColor"/>
+      <xsd:enumeration value="checkered"/>
+      <xsd:enumeration value="christmasTree"/>
+      <xsd:enumeration value="circlesLines"/>
+      <xsd:enumeration value="circlesRectangles"/>
+      <xsd:enumeration value="classicalWave"/>
+      <xsd:enumeration value="clocks"/>
+      <xsd:enumeration value="compass"/>
+      <xsd:enumeration value="confetti"/>
+      <xsd:enumeration value="confettiGrays"/>
+      <xsd:enumeration value="confettiOutline"/>
+      <xsd:enumeration value="confettiStreamers"/>
+      <xsd:enumeration value="confettiWhite"/>
+      <xsd:enumeration value="cornerTriangles"/>
+      <xsd:enumeration value="couponCutoutDashes"/>
+      <xsd:enumeration value="couponCutoutDots"/>
+      <xsd:enumeration value="crazyMaze"/>
+      <xsd:enumeration value="creaturesButterfly"/>
+      <xsd:enumeration value="creaturesFish"/>
+      <xsd:enumeration value="creaturesInsects"/>
+      <xsd:enumeration value="creaturesLadyBug"/>
+      <xsd:enumeration value="crossStitch"/>
+      <xsd:enumeration value="cup"/>
+      <xsd:enumeration value="decoArch"/>
+      <xsd:enumeration value="decoArchColor"/>
+      <xsd:enumeration value="decoBlocks"/>
+      <xsd:enumeration value="diamondsGray"/>
+      <xsd:enumeration value="doubleD"/>
+      <xsd:enumeration value="doubleDiamonds"/>
+      <xsd:enumeration value="earth1"/>
+      <xsd:enumeration value="earth2"/>
+      <xsd:enumeration value="earth3"/>
+      <xsd:enumeration value="eclipsingSquares1"/>
+      <xsd:enumeration value="eclipsingSquares2"/>
+      <xsd:enumeration value="eggsBlack"/>
+      <xsd:enumeration value="fans"/>
+      <xsd:enumeration value="film"/>
+      <xsd:enumeration value="firecrackers"/>
+      <xsd:enumeration value="flowersBlockPrint"/>
+      <xsd:enumeration value="flowersDaisies"/>
+      <xsd:enumeration value="flowersModern1"/>
+      <xsd:enumeration value="flowersModern2"/>
+      <xsd:enumeration value="flowersPansy"/>
+      <xsd:enumeration value="flowersRedRose"/>
+      <xsd:enumeration value="flowersRoses"/>
+      <xsd:enumeration value="flowersTeacup"/>
+      <xsd:enumeration value="flowersTiny"/>
+      <xsd:enumeration value="gems"/>
+      <xsd:enumeration value="gingerbreadMan"/>
+      <xsd:enumeration value="gradient"/>
+      <xsd:enumeration value="handmade1"/>
+      <xsd:enumeration value="handmade2"/>
+      <xsd:enumeration value="heartBalloon"/>
+      <xsd:enumeration value="heartGray"/>
+      <xsd:enumeration value="hearts"/>
+      <xsd:enumeration value="heebieJeebies"/>
+      <xsd:enumeration value="holly"/>
+      <xsd:enumeration value="houseFunky"/>
+      <xsd:enumeration value="hypnotic"/>
+      <xsd:enumeration value="iceCreamCones"/>
+      <xsd:enumeration value="lightBulb"/>
+      <xsd:enumeration value="lightning1"/>
+      <xsd:enumeration value="lightning2"/>
+      <xsd:enumeration value="mapPins"/>
+      <xsd:enumeration value="mapleLeaf"/>
+      <xsd:enumeration value="mapleMuffins"/>
+      <xsd:enumeration value="marquee"/>
+      <xsd:enumeration value="marqueeToothed"/>
+      <xsd:enumeration value="moons"/>
+      <xsd:enumeration value="mosaic"/>
+      <xsd:enumeration value="musicNotes"/>
+      <xsd:enumeration value="northwest"/>
+      <xsd:enumeration value="ovals"/>
+      <xsd:enumeration value="packages"/>
+      <xsd:enumeration value="palmsBlack"/>
+      <xsd:enumeration value="palmsColor"/>
+      <xsd:enumeration value="paperClips"/>
+      <xsd:enumeration value="papyrus"/>
+      <xsd:enumeration value="partyFavor"/>
+      <xsd:enumeration value="partyGlass"/>
+      <xsd:enumeration value="pencils"/>
+      <xsd:enumeration value="people"/>
+      <xsd:enumeration value="peopleWaving"/>
+      <xsd:enumeration value="peopleHats"/>
+      <xsd:enumeration value="poinsettias"/>
+      <xsd:enumeration value="postageStamp"/>
+      <xsd:enumeration value="pumpkin1"/>
+      <xsd:enumeration value="pushPinNote2"/>
+      <xsd:enumeration value="pushPinNote1"/>
+      <xsd:enumeration value="pyramids"/>
+      <xsd:enumeration value="pyramidsAbove"/>
+      <xsd:enumeration value="quadrants"/>
+      <xsd:enumeration value="rings"/>
+      <xsd:enumeration value="safari"/>
+      <xsd:enumeration value="sawtooth"/>
+      <xsd:enumeration value="sawtoothGray"/>
+      <xsd:enumeration value="scaredCat"/>
+      <xsd:enumeration value="seattle"/>
+      <xsd:enumeration value="shadowedSquares"/>
+      <xsd:enumeration value="sharksTeeth"/>
+      <xsd:enumeration value="shorebirdTracks"/>
+      <xsd:enumeration value="skyrocket"/>
+      <xsd:enumeration value="snowflakeFancy"/>
+      <xsd:enumeration value="snowflakes"/>
+      <xsd:enumeration value="sombrero"/>
+      <xsd:enumeration value="southwest"/>
+      <xsd:enumeration value="stars"/>
+      <xsd:enumeration value="starsTop"/>
+      <xsd:enumeration value="stars3d"/>
+      <xsd:enumeration value="starsBlack"/>
+      <xsd:enumeration value="starsShadowed"/>
+      <xsd:enumeration value="sun"/>
+      <xsd:enumeration value="swirligig"/>
+      <xsd:enumeration value="tornPaper"/>
+      <xsd:enumeration value="tornPaperBlack"/>
+      <xsd:enumeration value="trees"/>
+      <xsd:enumeration value="triangleParty"/>
+      <xsd:enumeration value="triangles"/>
+      <xsd:enumeration value="triangle1"/>
+      <xsd:enumeration value="triangle2"/>
+      <xsd:enumeration value="triangleCircle1"/>
+      <xsd:enumeration value="triangleCircle2"/>
+      <xsd:enumeration value="shapes1"/>
+      <xsd:enumeration value="shapes2"/>
+      <xsd:enumeration value="twistedLines1"/>
+      <xsd:enumeration value="twistedLines2"/>
+      <xsd:enumeration value="vine"/>
+      <xsd:enumeration value="waveline"/>
+      <xsd:enumeration value="weavingAngles"/>
+      <xsd:enumeration value="weavingBraid"/>
+      <xsd:enumeration value="weavingRibbon"/>
+      <xsd:enumeration value="weavingStrips"/>
+      <xsd:enumeration value="whiteFlowers"/>
+      <xsd:enumeration value="woodwork"/>
+      <xsd:enumeration value="xIllusions"/>
+      <xsd:enumeration value="zanyTriangles"/>
+      <xsd:enumeration value="zigZag"/>
+      <xsd:enumeration value="zigZagStitch"/>
+      <xsd:enumeration value="custom"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_Border">
+    <xsd:attribute name="val" type="ST_Border" use="required"/>
+    <xsd:attribute name="color" type="ST_HexColor" use="optional" default="auto"/>
+    <xsd:attribute name="themeColor" type="ST_ThemeColor" use="optional"/>
+    <xsd:attribute name="themeTint" type="ST_UcharHexNumber" use="optional"/>
+    <xsd:attribute name="themeShade" type="ST_UcharHexNumber" use="optional"/>
+    <xsd:attribute name="sz" type="ST_EighthPointMeasure" use="optional"/>
+    <xsd:attribute name="space" type="ST_PointMeasure" use="optional" default="0"/>
+    <xsd:attribute name="shadow" type="s:ST_OnOff" use="optional"/>
+    <xsd:attribute name="frame" type="s:ST_OnOff" use="optional"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_Shd">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="nil"/>
+      <xsd:enumeration value="clear"/>
+      <xsd:enumeration value="solid"/>
+      <xsd:enumeration value="horzStripe"/>
+      <xsd:enumeration value="vertStripe"/>
+      <xsd:enumeration value="reverseDiagStripe"/>
+      <xsd:enumeration value="diagStripe"/>
+      <xsd:enumeration value="horzCross"/>
+      <xsd:enumeration value="diagCross"/>
+      <xsd:enumeration value="thinHorzStripe"/>
+      <xsd:enumeration value="thinVertStripe"/>
+      <xsd:enumeration value="thinReverseDiagStripe"/>
+      <xsd:enumeration value="thinDiagStripe"/>
+      <xsd:enumeration value="thinHorzCross"/>
+      <xsd:enumeration value="thinDiagCross"/>
+      <xsd:enumeration value="pct5"/>
+      <xsd:enumeration value="pct10"/>
+      <xsd:enumeration value="pct12"/>
+      <xsd:enumeration value="pct15"/>
+      <xsd:enumeration value="pct20"/>
+      <xsd:enumeration value="pct25"/>
+      <xsd:enumeration value="pct30"/>
+      <xsd:enumeration value="pct35"/>
+      <xsd:enumeration value="pct37"/>
+      <xsd:enumeration value="pct40"/>
+      <xsd:enumeration value="pct45"/>
+      <xsd:enumeration value="pct50"/>
+      <xsd:enumeration value="pct55"/>
+      <xsd:enumeration value="pct60"/>
+      <xsd:enumeration value="pct62"/>
+      <xsd:enumeration value="pct65"/>
+      <xsd:enumeration value="pct70"/>
+      <xsd:enumeration value="pct75"/>
+      <xsd:enumeration value="pct80"/>
+      <xsd:enumeration value="pct85"/>
+      <xsd:enumeration value="pct87"/>
+      <xsd:enumeration value="pct90"/>
+      <xsd:enumeration value="pct95"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_Shd">
+    <xsd:attribute name="val" type="ST_Shd" use="required"/>
+    <xsd:attribute name="color" type="ST_HexColor" use="optional"/>
+    <xsd:attribute name="themeColor" type="ST_ThemeColor" use="optional"/>
+    <xsd:attribute name="themeTint" type="ST_UcharHexNumber" use="optional"/>
+    <xsd:attribute name="themeShade" type="ST_UcharHexNumber" use="optional"/>
+    <xsd:attribute name="fill" type="ST_HexColor" use="optional"/>
+    <xsd:attribute name="themeFill" type="ST_ThemeColor" use="optional"/>
+    <xsd:attribute name="themeFillTint" type="ST_UcharHexNumber" use="optional"/>
+    <xsd:attribute name="themeFillShade" type="ST_UcharHexNumber" use="optional"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_VerticalAlignRun">
+    <xsd:attribute name="val" type="s:ST_VerticalAlignRun" use="required"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_FitText">
+    <xsd:attribute name="val" type="s:ST_TwipsMeasure" use="required"/>
+    <xsd:attribute name="id" type="ST_DecimalNumber" use="optional"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_Em">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="none"/>
+      <xsd:enumeration value="dot"/>
+      <xsd:enumeration value="comma"/>
+      <xsd:enumeration value="circle"/>
+      <xsd:enumeration value="underDot"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_Em">
+    <xsd:attribute name="val" type="ST_Em" use="required"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Language">
+    <xsd:attribute name="val" type="s:ST_Lang" use="optional"/>
+    <xsd:attribute name="eastAsia" type="s:ST_Lang" use="optional"/>
+    <xsd:attribute name="bidi" type="s:ST_Lang" use="optional"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_CombineBrackets">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="none"/>
+      <xsd:enumeration value="round"/>
+      <xsd:enumeration value="square"/>
+      <xsd:enumeration value="angle"/>
+      <xsd:enumeration value="curly"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_EastAsianLayout">
+    <xsd:attribute name="id" type="ST_DecimalNumber" use="optional"/>
+    <xsd:attribute name="combine" type="s:ST_OnOff" use="optional"/>
+    <xsd:attribute name="combineBrackets" type="ST_CombineBrackets" use="optional"/>
+    <xsd:attribute name="vert" type="s:ST_OnOff" use="optional"/>
+    <xsd:attribute name="vertCompress" type="s:ST_OnOff" use="optional"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Markup">
+    <xsd:attribute name="id" type="ST_DecimalNumber" use="required"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_TrackChange">
+    <xsd:complexContent>
+      <xsd:extension base="CT_Markup">
+        <xsd:attribute name="author" type="s:ST_String" use="required"/>
+        <xsd:attribute name="date" type="ST_DateTime" use="optional"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <xsd:complexType name="CT_RPrChange">
+    <xsd:complexContent>
+      <xsd:extension base="CT_TrackChange">
+        <xsd:sequence>
+          <xsd:element name="rPr" type="CT_RPrOriginal" minOccurs="1"/>
+        </xsd:sequence>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_Hint">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="default"/>
+      <xsd:enumeration value="eastAsia"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:simpleType name="ST_Theme">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="majorEastAsia"/>
+      <xsd:enumeration value="majorBidi"/>
+      <xsd:enumeration value="majorAscii"/>
+      <xsd:enumeration value="majorHAnsi"/>
+      <xsd:enumeration value="minorEastAsia"/>
+      <xsd:enumeration value="minorBidi"/>
+      <xsd:enumeration value="minorAscii"/>
+      <xsd:enumeration value="minorHAnsi"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_Fonts">
+    <xsd:attribute name="hint" type="ST_Hint"/>
+    <xsd:attribute name="ascii" type="s:ST_String"/>
+    <xsd:attribute name="hAnsi" type="s:ST_String"/>
+    <xsd:attribute name="eastAsia" type="s:ST_String"/>
+    <xsd:attribute name="cs" type="s:ST_String"/>
+    <xsd:attribute name="asciiTheme" type="ST_Theme"/>
+    <xsd:attribute name="hAnsiTheme" type="ST_Theme"/>
+    <xsd:attribute name="eastAsiaTheme" type="ST_Theme"/>
+    <xsd:attribute name="cstheme" type="ST_Theme"/>
+  </xsd:complexType>
+  <xsd:group name="EG_RPrBase">
+    <xsd:choice>
+      <xsd:element name="rStyle" type="CT_String"/>
+      <xsd:element name="rFonts" type="CT_Fonts"/>
+      <xsd:element name="b" type="CT_OnOff"/>
+      <xsd:element name="bCs" type="CT_OnOff"/>
+      <xsd:element name="i" type="CT_OnOff"/>
+      <xsd:element name="iCs" type="CT_OnOff"/>
+      <xsd:element name="caps" type="CT_OnOff"/>
+      <xsd:element name="smallCaps" type="CT_OnOff"/>
+      <xsd:element name="strike" type="CT_OnOff"/>
+      <xsd:element name="dstrike" type="CT_OnOff"/>
+      <xsd:element name="outline" type="CT_OnOff"/>
+      <xsd:element name="shadow" type="CT_OnOff"/>
+      <xsd:element name="emboss" type="CT_OnOff"/>
+      <xsd:element name="imprint" type="CT_OnOff"/>
+      <xsd:element name="noProof" type="CT_OnOff"/>
+      <xsd:element name="snapToGrid" type="CT_OnOff"/>
+      <xsd:element name="vanish" type="CT_OnOff"/>
+      <xsd:element name="webHidden" type="CT_OnOff"/>
+      <xsd:element name="color" type="CT_Color"/>
+      <xsd:element name="spacing" type="CT_SignedTwipsMeasure"/>
+      <xsd:element name="w" type="CT_TextScale"/>
+      <xsd:element name="kern" type="CT_HpsMeasure"/>
+      <xsd:element name="position" type="CT_SignedHpsMeasure"/>
+      <xsd:element name="sz" type="CT_HpsMeasure"/>
+      <xsd:element name="szCs" type="CT_HpsMeasure"/>
+      <xsd:element name="highlight" type="CT_Highlight"/>
+      <xsd:element name="u" type="CT_Underline"/>
+      <xsd:element name="effect" type="CT_TextEffect"/>
+      <xsd:element name="bdr" type="CT_Border"/>
+      <xsd:element name="shd" type="CT_Shd"/>
+      <xsd:element name="fitText" type="CT_FitText"/>
+      <xsd:element name="vertAlign" type="CT_VerticalAlignRun"/>
+      <xsd:element name="rtl" type="CT_OnOff"/>
+      <xsd:element name="cs" type="CT_OnOff"/>
+      <xsd:element name="em" type="CT_Em"/>
+      <xsd:element name="lang" type="CT_Language"/>
+      <xsd:element name="eastAsianLayout" type="CT_EastAsianLayout"/>
+      <xsd:element name="specVanish" type="CT_OnOff"/>
+      <xsd:element name="oMath" type="CT_OnOff"/>
+    </xsd:choice>
+  </xsd:group>
+  <xsd:group name="EG_RPrContent">
+    <xsd:sequence>
+      <xsd:group ref="EG_RPrBase" minOccurs="0" maxOccurs="unbounded"/>
+      <xsd:element name="rPrChange" type="CT_RPrChange" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:group>
+  <xsd:complexType name="CT_RPr">
+    <xsd:sequence>
+      <xsd:group ref="EG_RPrContent" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_RPrOriginal">
+    <xsd:sequence>
+      <xsd:group ref="EG_RPrBase" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_Lock">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="sdtLocked"/>
+      <xsd:enumeration value="contentLocked"/>
+      <xsd:enumeration value="unlocked"/>
+      <xsd:enumeration value="sdtContentLocked"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_Lock">
+    <xsd:attribute name="val" type="ST_Lock"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SdtListItem">
+    <xsd:attribute name="displayText" type="s:ST_String"/>
+    <xsd:attribute name="value" type="s:ST_String"/>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_SdtDateMappingType">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="text"/>
+      <xsd:enumeration value="date"/>
+      <xsd:enumeration value="dateTime"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:complexType name="CT_SdtDateMappingType">
+    <xsd:attribute name="val" type="ST_SdtDateMappingType"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_CalendarType">
+    <xsd:attribute name="val" type="s:ST_CalendarType"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SdtDate">
+    <xsd:sequence>
+      <xsd:element name="dateFormat" type="CT_String" minOccurs="0"/>
+      <xsd:element name="lid" type="CT_Lang" minOccurs="0"/>
+      <xsd:element name="storeMappedDataAs" type="CT_SdtDateMappingType" minOccurs="0"/>
+      <xsd:element name="calendar" type="CT_CalendarType" minOccurs="0"/>
+    </xsd:sequence>
+    <xsd:attribute name="fullDate" type="ST_DateTime" use="optional"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SdtComboBox">
+    <xsd:sequence>
+      <xsd:element name="listItem" type="CT_SdtListItem" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute name="lastValue" type="s:ST_String" use="optional" default=""/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SdtDocPart">
+    <xsd:sequence>
+      <xsd:element name="docPartGallery" type="CT_String" minOccurs="0"/>
+      <xsd:element name="docPartCategory" type="CT_String" minOccurs="0"/>
+      <xsd:element name="docPartUnique" type="CT_OnOff" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SdtDropDownList">
+    <xsd:sequence>
+      <xsd:element name="listItem" type="CT_SdtListItem" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute name="lastValue" type="s:ST_String" use="optional" default=""/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Placeholder">
+    <xsd:sequence>
+      <xsd:element name="docPart" type="CT_String"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SdtText">
+    <xsd:attribute name="multiLine" type="s:ST_OnOff"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_DataBinding">
+    <xsd:attribute name="prefixMappings" type="s:ST_String"/>
+    <xsd:attribute name="xpath" type="s:ST_String" use="required"/>
+    <xsd:attribute name="storeItemID" type="s:ST_String" use="required"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SdtPr">
+    <xsd:sequence>
+      <xsd:element name="rPr" type="CT_RPr" minOccurs="0"/>
+      <xsd:element name="alias" type="CT_String" minOccurs="0"/>
+      <xsd:element name="tag" type="CT_String" minOccurs="0"/>
+      <xsd:element name="id" type="CT_DecimalNumber" minOccurs="0"/>
+      <xsd:element name="lock" type="CT_Lock" minOccurs="0"/>
+      <xsd:element name="placeholder" type="CT_Placeholder" minOccurs="0"/>
+      <xsd:element name="temporary" type="CT_OnOff" minOccurs="0"/>
+      <xsd:element name="showingPlcHdr" type="CT_OnOff" minOccurs="0"/>
+      <xsd:element name="dataBinding" type="CT_DataBinding" minOccurs="0"/>
+      <xsd:element name="label" type="CT_DecimalNumber" minOccurs="0"/>
+      <xsd:element name="tabIndex" type="CT_UnsignedDecimalNumber" minOccurs="0"/>
+      <xsd:choice minOccurs="0" maxOccurs="1">
+        <xsd:element name="equation" type="CT_Empty"/>
+        <xsd:element name="comboBox" type="CT_SdtComboBox"/>
+        <xsd:element name="date" type="CT_SdtDate"/>
+        <xsd:element name="docPartObj" type="CT_SdtDocPart"/>
+        <xsd:element name="docPartList" type="CT_SdtDocPart"/>
+        <xsd:element name="dropDownList" type="CT_SdtDropDownList"/>
+        <xsd:element name="picture" type="CT_Empty"/>
+        <xsd:element name="richText" type="CT_Empty"/>
+        <xsd:element name="text" type="CT_SdtText"/>
+        <xsd:element name="citation" type="CT_Empty"/>
+        <xsd:element name="group" type="CT_Empty"/>
+        <xsd:element name="bibliography" type="CT_Empty"/>
+      </xsd:choice>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SdtEndPr">
+    <xsd:choice maxOccurs="unbounded">
+      <xsd:element name="rPr" type="CT_RPr" minOccurs="0"/>
+    </xsd:choice>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Attr">
+    <xsd:attribute name="uri" type="s:ST_String"/>
+    <xsd:attribute name="name" type="s:ST_String" use="required"/>
+    <xsd:attribute name="val" type="s:ST_String" use="required"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_CustomXmlPr">
+    <xsd:sequence>
+      <xsd:element name="placeholder" type="CT_String" minOccurs="0"/>
+      <xsd:element name="attr" type="CT_Attr" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SmartTagPr">
+    <xsd:sequence>
+      <xsd:element name="attr" type="CT_Attr" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:simpleType name="ST_ThemeColor">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="dark1"/>
+      <xsd:enumeration value="light1"/>
+      <xsd:enumeration value="dark2"/>
+      <xsd:enumeration value="light2"/>
+      <xsd:enumeration value="accent1"/>
+      <xsd:enumeration value="accent2"/>
+      <xsd:enumeration value="accent3"/>
+      <xsd:enumeration value="accent4"/>
+      <xsd:enumeration value="accent5"/>
+      <xsd:enumeration value="accent6"/>
+      <xsd:enumeration value="hyperlink"/>
+      <xsd:enumeration value="followedHyperlink"/>
+      <xsd:enumeration value="none"/>
+      <xsd:enumeration value="background1"/>
+      <xsd:enumeration value="text1"/>
+      <xsd:enumeration value="background2"/>
+      <xsd:enumeration value="text2"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:element name="rPr" type="CT_RPr"/>
+  <xsd:element name="sdtPr" type="CT_SdtPr"/>
+  <xsd:element name="sdtEndPr" type="CT_SdtEndPr"/>
+  <xsd:element name="smartTagPr" type="CT_SmartTagPr"/>
+  <xsd:element name="customXmlPr" type="CT_CustomXmlPr"/>
+</xsd:schema>

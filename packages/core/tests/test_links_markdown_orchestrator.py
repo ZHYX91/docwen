@@ -25,6 +25,7 @@ from docwen_core.links import (
     _process_non_embed_links,
     process_markdown_links,
     restore_table_safe_breaks,
+    split_markdown_inline_segments,
 )
 from docwen_core.links._non_embed import _unescape_pipe
 
@@ -36,6 +37,34 @@ _ORCHESTRATOR_POLICY = replace(
     non_embed_wiki_mode="keep",
     non_embed_markdown_mode="keep",
 )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "[中文😀 `%%` visible $a<!--b$](https://example.test/item)",
+        "![alt `%%` text](picture.png)",
+        "[nested [label] `` ` %% ``](https://example.test/item)",
+        "[outer ![inner `%%`](picture.png) plain](https://example.test/item)",
+    ],
+)
+def test_source_projection_preserves_link_label_literal_spans(source: str) -> None:
+    # Link rewriting retains the original construct; source semantics can opt
+    # into its renderer literals without hiding ordinary labels or destinations.
+    assert split_markdown_inline_segments(source, protect_bare_urls=False) == [(source, False)]
+    parts = split_markdown_inline_segments(source, protect_bare_urls=False, protect_link_label_atoms=True)
+    assert "".join(text for text, _protected in parts) == source
+    assert any(protected for _text, protected in parts)
+    visible = "".join(text for text, protected in parts if not protected)
+    assert "%%" not in visible and "<!--" not in visible
+    assert "](https://example.test/item)" in visible or "](picture.png)" in visible
+
+
+def test_source_projection_does_not_protect_escaped_label_backticks() -> None:
+    source = r"[visible \`%%\`](https://example.test/item)"
+    assert split_markdown_inline_segments(source, protect_bare_urls=False, protect_link_label_atoms=True) == [
+        (source, False)
+    ]
 
 
 @pytest.mark.parametrize(

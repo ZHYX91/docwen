@@ -144,8 +144,8 @@
     },
     {
       "path": "../../../packages/plugins/markdown/src/docwen_plugin_markdown/document_semantics_v3.py",
-      "bytes": 74187,
-      "sha256": "fb645bcbc4abc32435d9b2db494e0b59b28daf47c22c7d5fbd6c348aea77e375"
+      "bytes": 75146,
+      "sha256": "8d272bd162b75d0408d73e8f05f60c4ffc3efda0aa8e19f95c3d4e6df5bbec6c"
     },
     {
       "path": "../../../packages/plugins/markdown/src/docwen_plugin_markdown/document_semantics_v3_fenced_source.py",

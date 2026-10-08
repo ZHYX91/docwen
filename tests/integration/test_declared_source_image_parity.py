@@ -116,3 +116,57 @@ def test_declared_source_images_match_raw_source_with_tables_and_captions(
     assert any("SEQ Figure" in (instruction or "") for instruction in direct_semantics[3])
     assert semantics(declared) == direct_semantics
     assert snapshot.read_bytes() == raw_source.read_bytes() == source.encode()
+
+
+@pytest.mark.parametrize("line_ending", ["\n", "\r\n"])
+def test_declared_source_wikilink_uses_authenticated_navigation_uri(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+    line_ending: str,
+) -> None:
+    source = "See [[Other#Section|Other note]]." + line_ending
+    snapshot = tmp_path / "source.md"
+    snapshot.write_bytes(source.encode("utf-8"))
+    href = "obsidian://open?vault=Knowledge&file=Notes%2FOther.md%23Section"
+    source_ref = FileRef(
+        path=str(snapshot),
+        format="markdown",
+        category="document",
+        input_kind="document",
+        input_role="source",
+        logical_path="Notes/Current.md",
+        media_type="text/markdown",
+    )
+
+    result = round_trip_runtime.execute(
+        ConversionRequest(
+            request_id="declared-wiki-navigation",
+            input_refs=[source_ref],
+            target_format="docx",
+            output_policy=OutputPolicy(output_dir=str(tmp_path / "declared-link")),
+            options={
+                "markdown_resource_bindings": {
+                    "authored_sha256": hashlib.sha256(source.encode()).hexdigest(),
+                    "images": [],
+                    "wiki_links": [
+                        {
+                            "authored_token": "[[Other#Section|Other note]]",
+                            "href": href,
+                        }
+                    ],
+                },
+            },
+        )
+    )
+
+    assert result.success, result.error
+    output = Path(next(artifact.staging_path for artifact in result.artifacts if artifact.kind == "primary"))
+    document = Document(str(output))
+    hyperlink_targets = {
+        relationship.target_ref
+        for relationship in document.part.rels.values()
+        if relationship.reltype.endswith("/hyperlink")
+    }
+    assert href in hyperlink_targets
+    assert "Other note" in "\n".join(paragraph.text for paragraph in document.paragraphs)
+    assert snapshot.read_bytes() == source.encode("utf-8")

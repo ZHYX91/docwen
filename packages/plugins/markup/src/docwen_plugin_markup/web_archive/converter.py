@@ -29,7 +29,7 @@ from email import policy
 from email.parser import BytesParser
 from html import unescape
 from importlib.util import find_spec
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote, urljoin, urlparse
 
@@ -260,14 +260,14 @@ class HtmlToMarkdownConverter:
         elif source in ("html", "htm"):
             resource_dir = _detect_resource_folder(input_path)
 
-        # Read HTML content
+        # Read HTML content. MHTML extraction already writes normalized UTF-8;
+        # ordinary HTML keeps its admitted encoding and in-document charset.
         html_bytes = Path(html_path).read_bytes()
-
-        # Try to decode HTML
-        try:
-            html_text = html_bytes.decode("utf-8", errors="replace")
-        except Exception:
-            html_text = html_bytes.decode("latin-1", errors="replace")
+        source_ref = context.request.input_refs[0] if context.request.input_refs else None
+        admitted_encoding = (
+            str(source_ref.encoding or "").strip() if source_ref is not None and source in {"html", "htm"} else "utf-8"
+        )
+        html_text = _decode_html_payload(html_bytes, admitted_encoding=admitted_encoding)
 
         # Extract title from HTML
         title = _extract_html_title(html_text)
@@ -690,7 +690,7 @@ def _resolve_local_path(*, src: str, html_path: str, base_href: str | None, reso
 
     raw_path = parsed.path or src
     raw_path = unquote(raw_path).replace("\\", "/")
-    base_dir = Path(resource_dir) if resource_dir else Path(html_path).parent
+    html_dir = Path(html_path).parent
 
     if raw_path.startswith("/") and base_href and base_href.startswith("file:"):
         try:
@@ -700,12 +700,66 @@ def _resolve_local_path(*, src: str, html_path: str, base_href: str | None, reso
         except Exception:
             return None
 
-    return (base_dir / raw_path).resolve()
+    # HTML relative paths are anchored at the HTML document. A detected
+    # companion directory is only a fallback for bare resource names; using it
+    # as the primary base duplicates paths such as saved_files/saved_files/x.
+    document_relative = (html_dir / raw_path).resolve()
+    if document_relative.exists() or resource_dir is None:
+        return document_relative
+
+    resource_root = Path(resource_dir)
+    normalized_parts = PurePosixPath(raw_path).parts
+    if normalized_parts and normalized_parts[0].casefold() == resource_root.name.casefold():
+        companion_relative = resource_root.parent.joinpath(*normalized_parts).resolve()
+    else:
+        companion_relative = resource_root.joinpath(*normalized_parts).resolve()
+    return companion_relative
 
 
 def _guess_media_type(filename: str) -> str:
     media_type, _encoding = mimetypes.guess_type(filename)
     return media_type or "application/octet-stream"
+
+
+def _decode_html_payload(payload: bytes, *, admitted_encoding: str | None = None) -> str:
+    """Decode ordinary HTML using admission plus in-document charset evidence."""
+
+    declared_match = re.search(
+        rb"(?:charset\s*=\s*[\"']?\s*)([a-zA-Z0-9._:-]+)",
+        payload[:16384],
+        re.IGNORECASE,
+    )
+    declared_charset = declared_match.group(1).decode("ascii") if declared_match else None
+
+    bom_candidates: list[str] = []
+    if payload.startswith(b"\xef\xbb\xbf"):
+        bom_candidates.append("utf-8-sig")
+    elif payload.startswith((b"\xff\xfe\x00\x00", b"\x00\x00\xfe\xff")):
+        bom_candidates.append("utf-32")
+    elif payload.startswith((b"\xff\xfe", b"\xfe\xff")):
+        bom_candidates.append("utf-16")
+
+    candidates = [
+        *bom_candidates,
+        admitted_encoding,
+        declared_charset,
+        "utf-8",
+        "windows-1252",
+        "latin-1",
+    ]
+    attempted: set[str] = set()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        normalized = candidate.strip().lower()
+        if not normalized or normalized in attempted:
+            continue
+        attempted.add(normalized)
+        try:
+            return payload.decode(candidate)
+        except (LookupError, UnicodeDecodeError):
+            continue
+    return payload.decode("utf-8", errors="replace")
 
 
 def _extract_html_title(html_text: str) -> str:

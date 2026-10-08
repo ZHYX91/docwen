@@ -18,6 +18,7 @@ entry point.
 from __future__ import annotations
 
 import re
+from functools import partial
 from typing import Any
 
 import mistune
@@ -143,6 +144,21 @@ def plugin_extended_atx_headings(md: mistune.Markdown) -> None:
     )
 
 
+def _has_exact_backtick_closer(line: str, start: int, run_length: int) -> bool:
+    cursor = start
+    while cursor < len(line):
+        tick = line.find("`", cursor)
+        if tick < 0:
+            return False
+        run_end = tick
+        while run_end < len(line) and line[run_end] == "`":
+            run_end += 1
+        if run_end - tick == run_length:
+            return True
+        cursor = run_end
+    return False
+
+
 def _structural_pipe_row(line: str) -> list[str] | None:
     """Split one Structural Tables row without consuming escaped/code pipes."""
 
@@ -155,6 +171,22 @@ def _structural_pipe_row(line: str) -> list[str] | None:
     index = 0
     while index < len(line):
         character = line[index]
+        if character == "`" and (code_ticks or not escaped):
+            run = 1
+            while index + run < len(line) and line[index + run] == "`":
+                run += 1
+            current.extend("`" * run)
+            if code_ticks == 0:
+                if _has_exact_backtick_closer(line, index + run, run):
+                    code_ticks = run
+            elif code_ticks == run:
+                code_ticks = 0
+            index += run
+            continue
+        if code_ticks:
+            current.append(character)
+            index += 1
+            continue
         if escaped:
             current.append(character)
             escaped = False
@@ -165,18 +197,7 @@ def _structural_pipe_row(line: str) -> list[str] | None:
             escaped = True
             index += 1
             continue
-        if character == "`":
-            run = 1
-            while index + run < len(line) and line[index + run] == "`":
-                run += 1
-            current.extend("`" * run)
-            if code_ticks == 0:
-                code_ticks = run
-            elif code_ticks == run:
-                code_ticks = 0
-            index += run
-            continue
-        if character == "|" and code_ticks == 0:
+        if character == "|":
             segments.append("".join(current))
             current = []
         else:
@@ -305,6 +326,34 @@ def plugin_structural_tables(md: mistune.Markdown) -> None:
         parse_structural_table,
         before="table",
     )
+    for nested_rules_name in ("block_quote_rules", "list_rules"):
+        nested_rules = getattr(md.block, nested_rules_name, None)
+        if isinstance(nested_rules, list) and "structural_table" not in nested_rules:
+            nested_rules.append("structural_table")
+
+
+def plugin_obsidian_comment_blocks(md: mistune.Markdown, *, hide_content: bool) -> None:
+    """Protect standalone comment blocks before table parsing at every depth."""
+
+    def parse_literal_comment(block, match, state):
+        if hide_content:
+            state.append_token({"type": "blank_line"})
+        else:
+            state.append_token(
+                {"type": "paragraph", "children": [{"type": "text", "raw": match.group(0).rstrip("\n")}]}
+            )
+        return match.end()
+
+    md.block.register(
+        "obsidian_comment",
+        r"^ {0,3}%%[ \t]*\n[\s\S]*?(?:^ {0,3}%%[ \t]*(?:\n|$)|\Z)",
+        parse_literal_comment,
+        before="table",
+    )
+    for rules_name in ("block_quote_rules", "list_rules"):
+        rules = getattr(md.block, rules_name, None)
+        if isinstance(rules, list) and "obsidian_comment" not in rules:
+            rules.insert(0, "obsidian_comment")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -370,6 +419,7 @@ def create_extended_markdown(
         A mistune ``Markdown`` instance configured with ``renderer="ast"``
         for structured output.
     """
+    dialect = extensions or MarkdownExtensions.obsidian()
     plugins: list[Any] = [
         "table",
         "footnotes",
@@ -383,8 +433,8 @@ def create_extended_markdown(
         plugin_single_line_block_math,
         plugin_underline,
         plugin_source_breaks,
+        partial(plugin_obsidian_comment_blocks, hide_content=dialect.structural_tables),
     ]
-    dialect = extensions or MarkdownExtensions.obsidian()
     if dialect.structural_tables:
         plugins.append(plugin_structural_tables)
     if dialect.extended_headings:

@@ -12,6 +12,7 @@ It does NOT:
 
 from __future__ import annotations
 
+import hashlib
 import tempfile
 import threading
 from dataclasses import dataclass, field, replace
@@ -1017,7 +1018,23 @@ class ApplicationController:
                     source_inspection = derived_metadata.pop(FILE_INSPECTION_METADATA_KEY, None)
                     derived_metadata.pop(FILE_ADMISSION_ACCEPTANCE_METADATA_KEY, None)
                     derived_metadata.pop(OOXML_SIGNATURE_INFO_METADATA_KEY, None)
-                    derived_metadata["_docwen_preconversion_source"] = {
+                    source_machine_integrity = None
+                    if "machine_input_size_bytes" in derived_metadata or "machine_input_sha256" in derived_metadata:
+                        source_machine_integrity = {
+                            "input_id": derived_metadata.get("machine_input_id"),
+                            "size_bytes": derived_metadata.get("machine_input_size_bytes"),
+                            "sha256": derived_metadata.get("machine_input_sha256"),
+                        }
+                        converted_path = Path(pre_result.pre_converted_path)
+                        converted_digest = hashlib.sha256()
+                        converted_size = 0
+                        with converted_path.open("rb") as converted_stream:
+                            while converted_chunk := converted_stream.read(1024 * 1024):
+                                converted_size += len(converted_chunk)
+                                converted_digest.update(converted_chunk)
+                        derived_metadata["machine_input_size_bytes"] = converted_size
+                        derived_metadata["machine_input_sha256"] = converted_digest.hexdigest()
+                    source_provenance = {
                         "path": ref.path,
                         "format": actual_format,
                         "sha256": pre_result.source_sha256,
@@ -1026,6 +1043,9 @@ class ApplicationController:
                         "warning_message": ref.warning_message,
                         "inspection": source_inspection if isinstance(source_inspection, dict) else None,
                     }
+                    if source_machine_integrity is not None:
+                        source_provenance["machine_input"] = source_machine_integrity
+                    derived_metadata["_docwen_preconversion_source"] = source_provenance
                     new_refs.append(
                         FileRef(
                             path=pre_result.pre_converted_path,

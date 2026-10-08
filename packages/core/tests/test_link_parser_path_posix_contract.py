@@ -157,7 +157,7 @@ def test_remote_embed_is_explicitly_unsupported_without_local_resolution(
     )
 
     assert "Remote embed fetching is unsupported" in result
-    assert "example.com" in result
+    assert r"example\.com" in result
     assert "File not found" not in result
 
 

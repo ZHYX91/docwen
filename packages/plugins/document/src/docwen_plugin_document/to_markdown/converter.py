@@ -141,6 +141,8 @@ class DocxToMarkdownConverter:
         self._extensions = MarkdownExtensions.obsidian()
         self._resolved_v4_recovery: ResolvedNumberingV4Recovery | None = None
         self._resolved_v4_diagnostics: list[tuple[str, str, str]] = []
+        self._table_role_diagnostics: list[str] = []
+        self._table_role_overrides: dict[Any, tuple[int, int]] = {}
         self._pending_artifacts: list[Any] = []
         self._pending_primary_path: str | None = None
         self._conversion_lock = RLock()
@@ -182,6 +184,8 @@ class DocxToMarkdownConverter:
             ``ConversionResult`` with staging artifacts.
         """
         self._resolved_v4_diagnostics.clear()
+        self._table_role_diagnostics.clear()
+        self._table_role_overrides.clear()
         from docwen_core.models.result import (
             ConversionDiagnostic,
             ConversionErrorInfo,
@@ -384,6 +388,12 @@ class DocxToMarkdownConverter:
             )
         all_diagnostics.extend(
             ConversionDiagnostic(
+                level="warning", message=message, code="DOCX2MD-TABLE-ROLES-STALE", location="word/document.xml"
+            )
+            for message in self._table_role_diagnostics
+        )
+        all_diagnostics.extend(
+            ConversionDiagnostic(
                 level="warning",
                 message=message,
                 code=code,
@@ -469,12 +479,17 @@ class DocxToMarkdownConverter:
         from docx import Document
 
         doc = Document(input_path)
+        from docwen_core.docx_table_roles import recover_table_roles
+
         self._resolved_v4_recovery = ResolvedNumberingV4Recovery.load_if_present(input_path, doc)
         if self._resolved_v4_recovery is None:
             if not self._resolved_v4_diagnostics:
                 self._semantic_v3_recovery = DocxSemanticsV3Recovery.load(input_path, doc)
         else:
             self._semantic_v3_recovery = self._resolved_v4_recovery
+        self._table_role_diagnostics.extend(
+            recover_table_roles(Path(input_path), doc, role_overrides=self._table_role_overrides)
+        )
         lines: list[str] = []
         exact_fenced_fragments: dict[str, str] = {}
 
@@ -514,7 +529,14 @@ class DocxToMarkdownConverter:
         # Note extractor for inline references and definitions block
         from docwen_plugin_document.shared.note_extraction import NoteExtractor
 
-        self._note_extractor = NoteExtractor(doc, input_path, typed_endnotes=self._extensions.typed_endnotes)
+        self._note_extractor = NoteExtractor(
+            doc,
+            input_path,
+            typed_endnotes=self._extensions.typed_endnotes,
+            preserve_formatting=self._preserve_formatting,
+            syntax_config=self._syntax_for_rendering(),
+            style_detector_config=self._request_policy.style_detector,
+        )
         if self._note_extractor.endnotes and not self._extensions.typed_endnotes:
             self._record_extension_loss("typed_endnotes", "Endnotes were exported as ordinary Markdown footnotes.")
 
@@ -854,7 +876,9 @@ class DocxToMarkdownConverter:
                         table_merge_strategy=effective_table_merge_strategy,
                     )
                 if semantic_caption is not None:
-                    metadata = extract_semantic_table_metadata(child)
+                    metadata = extract_semantic_table_metadata(
+                        child, verified_roles=self._table_role_overrides.get(child)
+                    )
                     attributes = [
                         f"header-rows={metadata.header_rows}",
                         f"header-cols={metadata.header_columns}",
@@ -2535,17 +2559,46 @@ class DocxToMarkdownConverter:
                 if formula_text.strip():
                     cell_text_parts.append(formula_text.strip())
             elif para is not None:
-                formatted = render_paragraph_runs(
-                    para,
-                    note_extractor=self._note_extractor,
-                    preserve_formatting=preserve_formatting,
-                    syntax_config=self._syntax_for_rendering(),
-                    style_detector_config=self._request_policy.style_detector,
+                semantic_text = self._semantic_v3_recovery.render_paragraph_text(
+                    para_elem,
+                    emit_references=self._extensions.captions_references,
                 )
+                if (
+                    self._extensions.captions_references
+                    and semantic_text is None
+                    and self._semantic_bookmark_inventory is not None
+                ):
+                    semantic_text = render_semantic_reference_text(
+                        para_elem,
+                        bookmark_inventory=self._semantic_bookmark_inventory,
+                    )
+                if semantic_text is not None:
+                    formatted = semantic_text
+                else:
+                    formatted = render_paragraph_runs(
+                        para,
+                        note_extractor=self._note_extractor,
+                        preserve_formatting=preserve_formatting,
+                        syntax_config=self._syntax_for_rendering(),
+                        style_detector_config=self._request_policy.style_detector,
+                    )
                 if formatted.strip():
                     cell_text_parts.append(formatted.strip())
             else:
-                text = self._extract_paragraph_text_raw(para_elem)
+                semantic_text = self._semantic_v3_recovery.render_paragraph_text(
+                    para_elem,
+                    emit_references=self._extensions.captions_references,
+                )
+                if (
+                    self._extensions.captions_references
+                    and semantic_text is None
+                    and self._semantic_bookmark_inventory is not None
+                ):
+                    semantic_text = render_semantic_reference_text(
+                        para_elem,
+                        bookmark_inventory=self._semantic_bookmark_inventory,
+                    )
+                text = semantic_text if semantic_text is not None else self._extract_paragraph_text_raw(para_elem)
                 if text.strip():
                     cell_text_parts.append(text.strip())
             if paragraph_image_renderer is not None:
@@ -2588,7 +2641,9 @@ class DocxToMarkdownConverter:
             render_docx_table_rows,
         )
 
-        table_metadata = extract_semantic_table_metadata(tbl_element)
+        table_metadata = extract_semantic_table_metadata(
+            tbl_element, verified_roles=self._table_role_overrides.get(tbl_element)
+        )
         structural = table_metadata.header_rows != 1 or table_metadata.header_columns > 0
         if not self._extensions.structural_tables:
             if structural or any(node.tag.rsplit("}", 1)[-1] in {"gridSpan", "vMerge"} for node in tbl_element.iter()):

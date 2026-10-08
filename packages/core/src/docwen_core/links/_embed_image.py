@@ -12,9 +12,12 @@ of duplicating mode-dispatch or placeholder-generation logic.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
 from urllib.parse import quote
+
+from docwen_core.links._markdown_inline import format_generated_link_text
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +116,7 @@ def process_embedded_image(
     width: int | None = None,
     height: int | None = None,
     image_scope: str | None = None,
+    literal_text: Callable[[str], str] | None = None,
 ) -> str:
     """Process an embedded image link according to *mode*.
 
@@ -146,11 +150,11 @@ def process_embedded_image(
     elif mode == EmbeddedImageMode.EXTRACT_TEXT:
         if display_text:
             logger.debug("Extracting image display text")
-            return display_text
+            return format_generated_link_text(display_text, literal_text)
         else:
             filename = Path(image_path).name
             logger.debug("Extracting image filename")
-            return filename
+            return format_generated_link_text(filename, literal_text)
     elif mode == EmbeddedImageMode.REMOVE:
         logger.debug("Removing image link")
         return ""

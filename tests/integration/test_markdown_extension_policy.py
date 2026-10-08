@@ -272,6 +272,91 @@ def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dial
         assert any("flattened" in (item.code or "") for item in result.diagnostics)
 
 
+def test_number_suite_note_identity_and_multiline_round_trip_from_isolated_docx(tmp_path: Path) -> None:
+    source = tmp_path / "notes.md"
+    source.write_text(
+        "One[^endnote-topic], two[^Straße], three[^Strasse], rich[^rich].\n\n"
+        "[^endnote-topic]: Ordinary footnote.\n"
+        "[^Straße]: Sharp-s identity.\n"
+        "[^Strasse]: Latin ss identity.\n"
+        "[^rich]: First line\n"
+        "  second line\n"
+        "  **third line**\n",
+        encoding="utf-8",
+    )
+    obsidian = MarkdownExtensions.obsidian().to_dict()
+
+    forward_root = tmp_path / "notes-forward"
+    forward_root.mkdir()
+    forward = MdToDocxConverter().convert(_context(forward_root, source, "docx", {"input": obsidian}))
+    assert forward.success, forward.error
+    generated = Path(forward.artifacts[0].staging_path)
+    with ZipFile(generated) as package:
+        document_xml = package.read("word/document.xml").decode()
+        assert document_xml.count("<w:footnoteReference") == 4
+        assert "<w:endnoteReference" not in document_xml
+
+    isolated = tmp_path / "notes-isolated.docx"
+    isolated.write_bytes(generated.read_bytes())
+    source.unlink()
+
+    reverse_root = tmp_path / "notes-reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(_context(reverse_root, isolated, "md", {"output": obsidian}))
+    assert reverse.success, reverse.error
+    markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "[^endnote:" not in markdown
+    assert "[^1]: Ordinary footnote." in markdown
+    assert "[^2]: Sharp-s identity." in markdown
+    assert "[^3]: Latin ss identity." in markdown
+    assert "[^4]: First line\n    second line\n    **third line**" in markdown
+
+
+@pytest.mark.parametrize("label,expected", [("n", "[^1]"), ("endnote:n", "[^endnote:1]")])
+@pytest.mark.parametrize("complex_fields", [False, True])
+def test_repeated_note_fields_survive_full_docx_only_conversion(tmp_path, label, expected, complex_fields):
+    from copy import deepcopy
+
+    from lxml import etree
+
+    source = tmp_path / "repeated.md"
+    source.write_text(
+        f"First[^{label}].\n\n[^{label}]\n\nAgain[^{label}].\n\n[^{label}]: Kept note.\n", encoding="utf-8"
+    )
+    policy = MarkdownExtensions.obsidian().to_dict()
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    forward = MdToDocxConverter().convert(_context(forward_root, source, "docx", {"input": policy}))
+    assert forward.success, forward.error
+    isolated = tmp_path / "isolated.docx"
+    isolated.write_bytes(Path(forward.artifacts[0].staging_path).read_bytes())
+    source.unlink()
+    if not complex_fields:
+        doc = Document(isolated)
+        instructions = [n for n in doc.element.iter(qn("w:instrText")) if (n.text or "").strip().startswith("NOTEREF ")]
+        assert len(instructions) == 2
+        for instruction in instructions:
+            begin = instruction.getparent().getprevious()
+            runs = [begin]
+            for _ in range(4):
+                runs.append(runs[-1].getnext())
+            field = etree.Element(qn("w:fldSimple"), {qn("w:instr"): instruction.text})
+            field.append(deepcopy(runs[3]))
+            begin.addprevious(field)
+            for run in runs:
+                run.getparent().remove(run)
+        doc.save(isolated)
+    reverse_root = tmp_path / "reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(_context(reverse_root, isolated, "md", {"output": policy}))
+    assert reverse.success, reverse.error
+    markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert f"First{expected}." in markdown
+    assert f"\n\n{expected}\n\n" in markdown
+    assert f"Again{expected}." in markdown
+    assert f"{expected}: Kept note." in markdown
+
+
 def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_path: Path) -> None:
     authored = """| Region | Sales | < |
 | Quarter | Q1 | Q2 |
@@ -307,6 +392,37 @@ def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_p
     assert direct_signatures[0][:2] == (2, 1)
     assert direct_signatures[1][:2] == (0, 0)
     assert any(cell[3:5] == (2, 2) for row in direct_signatures[1][3] for cell in row if not cell[5])
+
+
+def test_structural_tables_in_quote_callout_and_list_render_as_native_docx_tables(tmp_path: Path) -> None:
+    source = tmp_path / "container-tables.md"
+    source.write_text(
+        "> | - | - |\n"
+        "> | Quote A | Quote B |\n"
+        "> | Quote C | Quote D |\n\n"
+        "> [!note]\n"
+        ">\n"
+        "> | - | - |\n"
+        "> | Callout A | Callout B |\n"
+        "> | Callout C | Callout D |\n\n"
+        "- Item\n\n"
+        "  | - | - |\n"
+        "  | List A | List B |\n"
+        "  | List C | List D |\n",
+        encoding="utf-8",
+    )
+    root = tmp_path / "container-tables-out"
+    root.mkdir()
+
+    result = MdToDocxConverter().convert(_structural_direct_context(root, source))
+
+    assert result.success, result.error
+    document = Document(str(result.artifacts[0].staging_path))
+    assert len(document.tables) == 3
+    values = [[[cell.text for cell in row.cells] for row in table.rows] for table in document.tables]
+    assert values[0] == [["Quote A", "Quote B"], ["Quote C", "Quote D"]]
+    assert values[1] == [["Callout A", "Callout B"], ["Callout C", "Callout D"]]
+    assert values[2] == [["List A", "List B"], ["List C", "List D"]]
 
 
 def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Path) -> None:
@@ -381,3 +497,167 @@ def test_word_edit_that_adds_a_block_inside_caption_control_reports_invalid_stru
     assert result.error is not None
     assert "one caption and one logical object" in result.error.message
     assert not result.artifacts
+
+
+@pytest.mark.pr_gate
+@pytest.mark.parametrize("resolved", [False, True])
+@pytest.mark.parametrize("word_normalized", [False, True])
+def test_structural_roles_survive_word_conditional_style_normalization(
+    tmp_path: Path, resolved: bool, word_normalized: bool
+) -> None:
+    authored = (
+        "| Region | Sales | < |\n| Quarter | Q1 | Q2 |\n| --- || --- | --- |\n| North | 10 | 12 |\n| ^ | 8 | 11 |\n"
+    )
+    source = tmp_path / "structural.md"
+    source.write_text(authored, encoding="utf-8")
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    context = (
+        _structural_resolved_context(forward_root, authored)
+        if resolved
+        else _structural_direct_context(forward_root, source)
+    )
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    document = Document(result.artifacts[0].staging_path)
+    table = document.tables[0]
+    if word_normalized:
+        # Models the observed Word save: cnfStyle remains only on the first
+        # row. The final packaged candidate still needs real Word verification.
+        first_row = table._tbl.find(qn("w:tr"))
+        for marker in list(table._tbl.iter(qn("w:cnfStyle"))):
+            parent = marker.getparent()
+            if parent.tag == qn("w:trPr") and parent.getparent() is first_row:
+                continue
+            parent.remove(marker)
+    isolated = tmp_path / "isolated.docx"
+    document.save(isolated)
+    reverse_root = tmp_path / "reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(
+        _context(reverse_root, isolated, "md", {"output": {"structural_tables": True}})
+    )
+    assert reverse.success, reverse.error
+    markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "| Quarter | Q1 | Q2 |\n| --- || --- | --- |" in markdown
+    assert "| North | 10 | 12 |\n| ^ | 8 | 11 |" in markdown
+
+
+@pytest.mark.pr_gate
+@pytest.mark.parametrize("word_normalized", [False, True])
+def test_structural_role_carrier_coexists_with_caption_and_ordinary_anchor(
+    tmp_path: Path, word_normalized: bool
+) -> None:
+    from docwen_plugin_markdown.document_semantics_v3 import analyze_markdown_semantics_v3
+
+    source = tmp_path / "anchored.md"
+    source.write_text(
+        "Table: Metrics ^metrics\n\n| Region | Sales | < |\n| Quarter | Q1 | Q2 |\n"
+        "| --- || --- | --- |\n| North | 10 | 12 |\n| ^ | 8 | 11 |\n\n^raw-table\n",
+        encoding="utf-8",
+    )
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    dialect = MarkdownExtensions.obsidian().to_dict()
+    forward = MdToDocxConverter().convert(_context(forward_root, source, "docx", {"input": dialect}))
+    assert forward.success, forward.error
+    document = Document(forward.artifacts[0].staging_path)
+    if word_normalized:
+        for marker in list(document.element.iter(qn("w:cnfStyle"))):
+            marker.getparent().remove(marker)
+    isolated = tmp_path / "isolated.docx"
+    document.save(isolated)
+    reverse_root = tmp_path / "reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(_context(reverse_root, isolated, "md", {"output": dialect}))
+    assert reverse.success, reverse.error
+    markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "| Quarter | Q1 | Q2 |\n| --- || --- | --- |" in markdown
+    analysis = analyze_markdown_semantics_v3(markdown, input_id="returned.md")
+    assert not analysis.has_errors
+    assert [(item["id"], item["kind"]) for item in analysis.projection["targets"]] == [("metrics", "table")]
+    assert [(item["id"], item["block_kind"]) for item in analysis.projection["anchors"]] == [("raw-table", "table")]
+
+
+@pytest.mark.pr_gate
+@pytest.mark.parametrize("edit", ["disable", "expand_repeat"])
+@pytest.mark.parametrize("resolved", [False, True])
+def test_verified_table_roles_are_independent_of_repeat_headers(tmp_path: Path, edit: str, resolved: bool) -> None:
+    from docx.oxml import OxmlElement
+
+    authored = "| Region | Sales | Total |\n| Quarter | Q1 | Q2 |\n| --- || --- | --- |\n| North | 10 | 12 |\n| South | 8 | 11 |\n"
+    source = tmp_path / "roles.md"
+    source.write_text(authored, encoding="utf-8")
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    context = (
+        _structural_resolved_context(forward_root, authored)
+        if resolved
+        else _structural_direct_context(forward_root, source)
+    )
+    forward = MdToDocxConverter().convert(context)
+    assert forward.success, forward.error
+    document = Document(forward.artifacts[0].staging_path)
+    table = next(document.element.iter(qn("w:tbl")))
+    for marker in list(table.iter(qn("w:cnfStyle"))):
+        marker.getparent().remove(marker)
+    for row in table.findall(qn("w:tr"))[: 2 if edit == "disable" else 3]:
+        properties = row.get_or_add_trPr()
+        marker = properties.find(qn("w:tblHeader"))
+        if marker is None:
+            marker = OxmlElement("w:tblHeader")
+            properties.append(marker)
+        marker.set(qn("w:val"), "1")
+    if edit == "disable":
+        table.tblPr.find(qn("w:tblLook")).set(qn("w:firstRow"), "0")
+    isolated = tmp_path / "isolated.docx"
+    document.save(isolated)
+    reverse_root = tmp_path / "reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(
+        _context(reverse_root, isolated, "md", {"output": {"structural_tables": True}})
+    )
+    assert reverse.success, reverse.error
+    lines = [
+        line
+        for line in Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8").splitlines()
+        if line.startswith("|")
+    ]
+    assert next(index for index, line in enumerate(lines) if "---" in line) == (0 if edit == "disable" else 2)
+    assert "||" in lines[0 if edit == "disable" else 2]
+    saved = Document(isolated)
+    assert len(list(saved.element.iter(qn("w:tblHeader")))) >= (2 if edit == "disable" else 3)
+
+
+@pytest.mark.pr_gate
+def test_ordinary_anchor_rejects_undeclared_table_role_bookmark(tmp_path: Path) -> None:
+    from docx.oxml import OxmlElement
+
+    from docwen_core.docx_semantics_v3 import DocxSemanticsV3Recovery
+
+    source = tmp_path / "anchors.md"
+    source.write_text(
+        "| A | B |\n| C | D |\n| --- || --- |\n| E | F |\n\n^roles\n\n| G | H |\n| --- | --- |\n| I | J |\n\n^plain\n",
+        encoding="utf-8",
+    )
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    forward = MdToDocxConverter().convert(
+        _context(forward_root, source, "docx", {"input": MarkdownExtensions.obsidian().to_dict()})
+    )
+    assert forward.success, forward.error
+    document = Document(forward.artifacts[0].staging_path)
+    DocxSemanticsV3Recovery.load(forward.artifacts[0].staging_path, document)
+    table = list(document.element.iter(qn("w:tbl")))[1]
+    paragraph = table.find(f"{qn('w:tr')}/{qn('w:tc')}/{qn('w:p')}")
+    start = OxmlElement("w:bookmarkStart")
+    start.set(qn("w:id"), "98765")
+    start.set(qn("w:name"), "_DWT_" + "f" * 32)
+    end = OxmlElement("w:bookmarkEnd")
+    end.set(qn("w:id"), "98765")
+    paragraph.insert(0, start)
+    paragraph.insert(1, end)
+    isolated = tmp_path / "unbound.docx"
+    document.save(isolated)
+    with pytest.raises(ValueError, match=r"[Uu]ndeclared|unbound|bookmark"):
+        DocxSemanticsV3Recovery.load(isolated, Document(isolated))

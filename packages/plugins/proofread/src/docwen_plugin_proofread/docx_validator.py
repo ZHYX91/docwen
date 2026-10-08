@@ -18,16 +18,19 @@ def _find_run_at_position(paragraph, position: int):
 
     Returns the run, or None if no run spans that position.
     """
-    if not paragraph.runs:
+    from docwen_plugin_proofread.run_splitter import paragraph_visible_runs
+
+    runs = paragraph_visible_runs(paragraph)
+    if not runs or "".join(run.text for run in runs) != paragraph.text:
         return None
     current_pos = 0
-    for run in paragraph.runs:
+    for run in runs:
         run_length = len(run.text)
         if current_pos <= position < current_pos + run_length:
             return run
         current_pos += run_length
     # Fall back to the last run (but indicate off-by-one issue)
-    return paragraph.runs[-1] if paragraph.runs else None
+    return runs[-1] if runs else None
 
 
 class DocxValidator:

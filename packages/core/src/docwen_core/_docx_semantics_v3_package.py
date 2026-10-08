@@ -57,6 +57,7 @@ from docwen_core.docx_standalone_caption_occurrence import (
     parse_standalone_caption_occurrence_map,
     standalone_caption_occurrence_map_xml,
 )
+from docwen_core.docx_table_roles import TABLE_ROLES_NAMESPACE, canonical_table_roles_xml
 
 _RELATIONSHIPS_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/relationships"
 _CONTENT_TYPES_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/content-types"
@@ -69,6 +70,7 @@ _ITEM_RE = re.compile(r"customXml/item(?P<number>[1-9][0-9]*)\.xml$")
 
 _OWNED_MAP_NAMESPACES = frozenset(
     {
+        TABLE_ROLES_NAMESPACE,
         ANCHOR_TOPOLOGY_MAP_NAMESPACE,
         CAPTION_STYLE_BINDING_MAP_NAMESPACE,
         CLIPBOARD_TABLE_ASSOCIATION_MAP_NAMESPACE,
@@ -530,7 +532,9 @@ def _reject_malformed_owned_signals(existing: dict[str, bytes], parser: Any) -> 
 
 
 def _canonical_owned_map_bytes(namespace: str, root: Any) -> bytes:
-    if namespace == TARGET_MAP_NAMESPACE:
+    if namespace == TABLE_ROLES_NAMESPACE:
+        expected = canonical_table_roles_xml(root)
+    elif namespace == TARGET_MAP_NAMESPACE:
         targets, anchors = parse_semantic_map(root)
         expected = semantic_map_xml(targets, anchors)
     elif namespace == ANCHOR_TOPOLOGY_MAP_NAMESPACE:

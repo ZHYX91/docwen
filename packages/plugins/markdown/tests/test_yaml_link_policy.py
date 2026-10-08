@@ -201,3 +201,34 @@ def test_declared_yaml_links_reject_local_lookup_before_resolution() -> None:
     projection = YamlLinkProjection("source.md", LinkRuntimeConfig(), declared_inputs=True)
     with pytest.raises(DeclaredResourceError):
         projection.project("[[local|alias]]")
+
+
+@pytest.mark.parametrize("mode", ["keep", "extract_text", "hyperlink"])
+@pytest.mark.parametrize("alias", ["draft%%phase", "<!--guide", "*literal*", r"label\suffix"])
+def test_yaml_wiki_display_punctuation_stays_literal(tmp_path: Path, mode: str, alias: str) -> None:
+    (tmp_path / "guide.md").write_text("target", encoding="utf-8")
+    source = tmp_path / "yaml-literal.md"
+    source.write_text(f"---\nsite: '[[guide|{alias}]]'\n---\n\n正文。\n", encoding="utf-8")
+    observation = _convert_docx(
+        source,
+        _gongwen_config(wiki_mode=mode, markdown_mode=mode),
+        options={"template_name": str(_template(tmp_path))},
+    )
+    expected = f"[[guide|{alias}]]" if mode == "keep" else alias
+    assert f"网站：{expected}" in observation.text
+    assert any(target.startswith("file:") for target in observation.hyperlink_targets) == (mode == "hyperlink")
+
+
+@pytest.mark.parametrize("target", ["local(foo)%%draft", "local[^fake]"])
+def test_yaml_empty_markdown_label_extracts_plain_destination(tmp_path: Path, target: str) -> None:
+    source = tmp_path / "yaml-empty-label.md"
+    original = f"---\nsite: '[]({target})'\n---\n\n正文。\n".encode()
+    source.write_bytes(original)
+    observation = _convert_docx(
+        source,
+        _gongwen_config(wiki_mode="extract_text", markdown_mode="extract_text"),
+        options={"template_name": str(_template(tmp_path))},
+    )
+    assert f"网站：{target}" in observation.text
+    assert "\\" not in observation.text
+    assert source.read_bytes() == original

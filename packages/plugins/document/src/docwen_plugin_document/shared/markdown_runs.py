@@ -15,6 +15,7 @@ from docwen_core.docx_parsing.format_features import (
     detect_run_style_type,
 )
 from docwen_core.docx_parsing.xml_ns import NS_W
+from docwen_plugin_document.shared.word_metadata import run_metadata_is_valid
 
 # Gray fill colours treated as inline code shading.
 _WPS_RUN_SHADING_GRAY_COLORS = frozenset(
@@ -31,29 +32,98 @@ _WPS_RUN_SHADING_GRAY_COLORS = frozenset(
 )
 
 
+def resolve_run_style_type(run: Any, parent: Any, config: StyleDetectorConfig | None) -> str | None:
+    """Resolve body and notes character styles through the document's styles part."""
+    if not hasattr(parent, "part"):
+        return None
+    try:
+        from docx.oxml import parse_xml
+        from docx.oxml.text.run import CT_R
+        from docx.text.run import Run
+        from lxml.etree import tostring
+
+        # ZIP-loaded notes can expose generic XML rather than a python-docx CT_R.
+        typed_run = run if isinstance(run, CT_R) else parse_xml(tostring(run))
+        if not isinstance(typed_run, CT_R):
+            return None
+        return detect_run_style_type(Run(typed_run, parent), config=config)
+    except Exception:
+        return None
+
+
 def _apply_wrappers(text: str, wrappers: list[tuple[str, str]]) -> str:
     for prefix, suffix in wrappers:
         text = f"{prefix}{text}{suffix}"
     return text
 
 
-def _unwrap_wrappers(text: str, wrappers: list[tuple[str, str]]) -> str | None:
-    inner = text
-    for prefix, suffix in reversed(wrappers):
-        if not inner.startswith(prefix) or not inner.endswith(suffix):
-            return None
-        inner = inner[len(prefix) : len(inner) - len(suffix)]
-    return inner
+class _RenderedRunPart(str):
+    """Keep the actual run policy beside text until paragraph joining.
+
+    Delimiter spelling alone cannot distinguish italic from bold, or literal
+    text from code. Only fragments emitted with the same policy may coalesce.
+    """
+
+    raw_text: str
+    wrappers: tuple[tuple[str, str], ...]
+    inline_code: bool
+
+    def __new__(cls, raw_text: str, wrappers: list[tuple[str, str]], *, inline_code: bool = False):
+        body = _render_inline_code_span(raw_text) if inline_code else raw_text
+        part = super().__new__(cls, _apply_wrappers(body, wrappers))
+        part.raw_text = raw_text
+        part.wrappers = tuple(wrappers)
+        part.inline_code = inline_code
+        return part
 
 
 def _append_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, str]]) -> None:
-    rendered = _apply_wrappers(raw_text, wrappers)
     if wrappers and parts:
-        previous_inner = _unwrap_wrappers(parts[-1], wrappers)
-        if previous_inner is not None:
-            parts[-1] = _apply_wrappers(previous_inner + raw_text, wrappers)
+        previous = parts[-1]
+        if isinstance(previous, _RenderedRunPart) and not previous.inline_code and previous.wrappers == tuple(wrappers):
+            parts[-1] = _RenderedRunPart(previous.raw_text + raw_text, wrappers)
             return
-    parts.append(rendered)
+    parts.append(_RenderedRunPart(raw_text, wrappers) if wrappers else raw_text)
+
+
+def _longest_backtick_run(text: str) -> int:
+    longest = 0
+    current = 0
+    for character in text:
+        if character == "`":
+            current += 1
+            longest = max(longest, current)
+        else:
+            current = 0
+    return longest
+
+
+def _render_inline_code_span(text: str) -> str:
+    delimiter = "`" * max(1, _longest_backtick_run(text) + 1)
+    needs_padding = (
+        text.startswith("`")
+        or text.endswith("`")
+        or (text.startswith(" ") and text.endswith(" ") and bool(text.strip(" ")))
+    )
+    body = f" {text} " if needs_padding else text
+    return f"{delimiter}{body}{delimiter}"
+
+
+def _append_inline_code_wrapped(
+    parts: list[str],
+    raw_text: str,
+    outer_wrappers: list[tuple[str, str]],
+) -> None:
+    if parts:
+        previous = parts[-1]
+        if (
+            isinstance(previous, _RenderedRunPart)
+            and previous.inline_code
+            and previous.wrappers == tuple(outer_wrappers)
+        ):
+            parts[-1] = _RenderedRunPart(previous.raw_text + raw_text, outer_wrappers, inline_code=True)
+            return
+    parts.append(_RenderedRunPart(raw_text, outer_wrappers, inline_code=True))
 
 
 def _marker_pair(kind: str, config: DocxMarkdownSyntaxConfig) -> tuple[str, str]:
@@ -76,7 +146,12 @@ def _extended_pair(kind: str, config: DocxMarkdownSyntaxConfig) -> tuple[str, st
 
 def _on_off_property_is_enabled(element: Any) -> bool:
     value = element.get(f"{{{NS_W}}}val")
-    return value is None or value.casefold() not in {"0", "false", "off", "no", "none"}
+    return value is None or value.strip(" \t\r\n").casefold() not in {"0", "false", "off", "no", "none"}
+
+
+def _run_is_hidden(run: Any) -> bool:
+    vanish = run.find(f"{{{NS_W}}}rPr/{{{NS_W}}}vanish")
+    return vanish is not None and _on_off_property_is_enabled(vanish)
 
 
 def _format_wrappers(
@@ -183,8 +258,23 @@ def append_formatted_run_text(
     # corrupt the text by emitting inline-code ticks.
     has_shading = has_shading or run_style_type == "code"
 
+    if has_shading:
+        outer_wrappers = _format_wrappers(
+            has_shading=False,
+            has_highlight=has_highlight,
+            is_superscript=is_superscript,
+            is_subscript=is_subscript,
+            is_strikethrough=is_strikethrough,
+            is_underline=is_underline,
+            is_bold=is_bold,
+            is_italic=is_italic,
+            syntax_config=syntax_config,
+        )
+        _append_inline_code_wrapped(parts, raw_text, outer_wrappers)
+        return
+
     wrappers = _format_wrappers(
-        has_shading=has_shading,
+        has_shading=False,
         has_highlight=has_highlight,
         is_superscript=is_superscript,
         is_subscript=is_subscript,
@@ -221,6 +311,59 @@ def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
         return rel.target_ref
     except (AttributeError, KeyError):
         return None
+
+
+def _is_transparent_proof_marker(element: Any) -> bool:
+    q = f"{{{NS_W}}}"
+    return (
+        element.tag == q + "proofErr"
+        and set(element.attrib) == {q + "type"}
+        and element.get(q + "type") in {"spellStart", "spellEnd", "gramStart", "gramEnd"}
+        and not len(element)
+        and element.text is None
+        and element.tail is None
+    )
+
+
+def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> tuple[str, int] | None:
+    """Read Word's split-run NOTEREF form without swallowing unrelated content.
+
+    Unsupported switches, nested fields, mixed boundary runs and malformed
+    fields retain their ordinary visible cached projection.
+    """
+    q = f"{{{NS_W}}}"
+    if _run_is_hidden(children[start]) or not run_metadata_is_valid(children[start]):
+        return None
+    first = [node for node in children[start] if node.tag != q + "rPr"]
+    if len(first) != 1 or first[0].tag != q + "fldChar" or first[0].get(q + "fldCharType") != "begin":
+        return None
+    instruction: list[str] = []
+    separated = False
+    for index in range(start + 1, len(children)):
+        run = children[index]
+        # Word's proofing ranges can cross field boundaries. These empty
+        # markers contribute no visible content or field instruction.
+        if _is_transparent_proof_marker(run):
+            continue
+        if run.tag != q + "r" or _run_is_hidden(run) or not run_metadata_is_valid(run):
+            return None
+        payload = [node for node in run if node.tag != q + "rPr"]
+        if len(payload) == 1 and payload[0].tag == q + "fldChar":
+            marker = payload[0].get(q + "fldCharType")
+            if marker == "separate" and not separated:
+                separated = True
+            elif marker == "end" and separated:
+                text = resolver("".join(instruction))
+                return (text, index) if text is not None else None
+            else:
+                return None
+        elif not separated and all(node.tag == q + "instrText" for node in payload):
+            instruction.extend(node.text or "" for node in payload)
+        elif separated and all(node.tag == q + "t" for node in payload):
+            continue
+        else:
+            return None
+    return None
 
 
 def _render_paragraph_run_segments(
@@ -273,14 +416,47 @@ def _render_paragraph_run_segments(
                     _parts().append("\n")
 
     def _process_children(parent: Any) -> None:
-        for child in parent:
+        children = list(parent)
+        consumed_through = -1
+        for index, child in enumerate(children):
+            if index <= consumed_through:
+                continue
             tag = child.tag.split("}")[-1] if child.tag and "}" in child.tag else (child.tag or "")
 
             if tag == "r":
+                resolver = getattr(note_extractor, "get_noteref_text", None)
+                resolved = _complex_note_reference(children, index, resolver) if resolver is not None else None
+                if resolved is not None:
+                    reference, consumed_through = resolved
+                    _append(reference)
+                    continue
                 _handle_run(child)
             elif tag == "hyperlink":
                 _process_hyperlink(child)
-            elif tag in ("ins", "moveTo", "fldSimple", "smartTag", "sdt", "sdtContent", "customXml"):
+            elif tag == "fldSimple":
+                resolver = getattr(note_extractor, "get_noteref_text", None)
+                visible_runs = (
+                    len(child) > 0
+                    and all(
+                        _is_transparent_proof_marker(run)
+                        or (
+                            run.tag == f"{{{NS_W}}}r"
+                            and not _run_is_hidden(run)
+                            and run_metadata_is_valid(run)
+                            and all(node.tag in {f"{{{NS_W}}}rPr", f"{{{NS_W}}}t"} for node in run)
+                        )
+                        for run in child
+                    )
+                    and any(run.tag == f"{{{NS_W}}}r" for run in child)
+                )
+                reference = (
+                    resolver(child.get(f"{{{NS_W}}}instr", "")) if resolver is not None and visible_runs else None
+                )
+                if reference is not None:
+                    _append(reference)
+                else:
+                    _process_children(child)
+            elif tag in ("ins", "moveTo", "smartTag", "sdt", "sdtContent", "customXml"):
                 _process_children(child)
             elif tag in ("del", "moveFrom"):
                 pass  # skip tracked deletions
@@ -358,24 +534,12 @@ def _render_paragraph_run_segments(
             run,
             syntax_config=syntax_config,
             style_detector_config=style_detector_config,
-            run_style_type=_resolved_run_style_type(run),
+            run_style_type=resolve_run_style_type(run, para, style_detector_config),
         )
-
-    def _resolved_run_style_type(run: Any) -> str | None:
-        try:
-            from docx.text.run import Run
-
-            if not hasattr(para, "part"):
-                return None
-            return detect_run_style_type(Run(run, para), config=style_detector_config)
-        except Exception:
-            return None
 
     def _handle_run(run: Any) -> None:
         w_ns = NS_W
-        run_properties = run.find(f"{{{w_ns}}}rPr")
-        vanish = run_properties.find(f"{{{w_ns}}}vanish") if run_properties is not None else None
-        if vanish is not None and _on_off_property_is_enabled(vanish):
+        if _run_is_hidden(run):
             return
         text_parts: list[str] = []
 

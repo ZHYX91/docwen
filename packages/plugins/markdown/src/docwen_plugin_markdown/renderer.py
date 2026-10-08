@@ -1297,6 +1297,10 @@ class MdToDocxRenderer:
                 column = int(anchor["column"])
                 table.cell(row, column).merge(table.cell(row + row_span - 1, column + column_span - 1))
 
+        from docwen_core.docx_table_roles import prepare_table_roles
+
+        # Install physical identity before caption/ordinary-anchor snapshots.
+        prepare_table_roles(self._doc, tables=(table._tbl,))
         resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             self._bind_v3_ordinary_anchor((table._element,), node)
@@ -1696,7 +1700,17 @@ class MdToDocxRenderer:
         if not key:
             return
 
-        if key.upper().startswith("ENDNOTE-"):
+        from docwen_plugin_markdown.to_docx.notes import decode_internal_note_key
+
+        decoded = decode_internal_note_key(key)
+        if decoded is not None:
+            note_kind, clean_key = decoded
+            ref_run = (
+                self._note_ctx.create_endnote_ref_run(clean_key)
+                if note_kind == "endnote"
+                else self._note_ctx.create_footnote_ref_run(clean_key)
+            )
+        elif key.upper().startswith("ENDNOTE-"):
             ref_run = self._note_ctx.create_endnote_ref_run(key)
         else:
             ref_run = self._note_ctx.create_footnote_ref_run(key)

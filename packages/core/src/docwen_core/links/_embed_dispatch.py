@@ -27,7 +27,7 @@ from docwen_core.links._error_semantics import (
     LinkErrorKind,
     dispatch_error_output,
 )
-from docwen_core.links._markdown_inline import encode_markdown_destination_escapes
+from docwen_core.links._markdown_inline import encode_markdown_destination_escapes, format_generated_link_text
 from docwen_core.links._patterns import WIKI_EMBED_PATTERN, WIKI_EMBED_SIZE_PATTERN
 from docwen_core.links._resolver import get_file_type, resolve_file_path
 
@@ -147,6 +147,7 @@ def process_single_embed(
     image_scope: str | None = None,
     process_links: Callable[..., str] | None = None,
     declared_image: Callable[[str, str], str] | None = None,
+    literal_text: Callable[[str], str] | None = None,
 ) -> str | None:
     """Dispatch a single embedded link to the correct processor.
 
@@ -208,6 +209,7 @@ def process_single_embed(
             width=width,
             height=height,
             image_scope=image_scope,
+            literal_text=literal_text,
         )
 
     # ── 1. Data URI image ─────────────────────────────────────────────
@@ -226,16 +228,17 @@ def process_single_embed(
                 width=width,
                 height=height,
                 image_scope=image_scope,
+                literal_text=literal_text,
             )
         # Data URI failed to decode — treat as not-found
         logger.warning("Data URI image decode failed")
         if image_mode == EmbeddedImageMode.KEEP:
             return original_link
         if image_mode == EmbeddedImageMode.EXTRACT_TEXT:
-            return display_text or ""
+            return format_generated_link_text(display_text or "", literal_text)
         if image_mode == EmbeddedImageMode.REMOVE:
             return ""
-        return display_text or ""
+        return format_generated_link_text(display_text or "", literal_text)
 
     # Percent-protect wiki/CommonMark backslash escapes before structural
     # query/fragment parsing.  A literal ``\#`` remains part of the filename.
@@ -254,7 +257,7 @@ def process_single_embed(
         # missing local file.  This branch intentionally does not consult the
         # local not-found policy: embed mode must leave an explicit,
         # user-visible explanation and must never attempt a network fetch.
-        return f"[Remote embed fetching is unsupported: {link_target}]"
+        return format_generated_link_text(f"[Remote embed fetching is unsupported: {link_target}]", literal_text)
     if parsed_target.scheme.lower() == "file":
         # ``urlsplit`` separates structure while still encoded; decode the
         # path exactly once and never pass it through ``parse_anchor`` again.
@@ -291,7 +294,7 @@ def process_single_embed(
             desc += f"#{heading}"
         elif block_id:
             desc += f"#^{block_id}"
-        return f"[File not found: {desc}]"
+        return format_generated_link_text(f"[File not found: {desc}]", literal_text)
 
     logger.debug("Resolved embed target")
 
@@ -308,6 +311,7 @@ def process_single_embed(
             width=width,
             height=height,
             image_scope=image_scope,
+            literal_text=literal_text,
         )
 
     if file_type == "markdown":
@@ -318,12 +322,16 @@ def process_single_embed(
             # retain the exact user-authored path, fragment, and display text.
             return original_link
         if max_depth is not None and depth >= max_depth:
-            return dispatch_error_output(
-                LinkErrorKind.MAX_DEPTH,
-                on_max_depth,
-                Path(file_path_part or link_target).name,
-                heading=heading,
-                block_id=block_id,
+            return format_generated_link_text(
+                dispatch_error_output(
+                    LinkErrorKind.MAX_DEPTH,
+                    on_max_depth,
+                    Path(file_path_part or link_target).name,
+                    heading=heading,
+                    block_id=block_id,
+                    original_link=original_link,
+                ),
+                literal_text,
                 original_link=original_link,
             )
         return process_embedded_md_file(
@@ -341,6 +349,7 @@ def process_single_embed(
             on_circular=on_circular,
             detect_circular=detect_circular,
             table_safe=table_safe,
+            literal_text=literal_text,
         )
 
     # Unknown content type — caller decides.  Keep the user-authored suffix in
@@ -396,6 +405,7 @@ def resolve_embedded_links(
     process_links: Callable[..., str] | None = None,
     declared_image: Callable[[str, str], str] | None = None,
     _table_context_scoped: bool = False,
+    literal_text: Callable[[str], str] | None = None,
 ) -> str:
     """Scan Markdown *content* for ``![[...]]`` wiki-embed links and resolve
     every one via :func:`process_single_embed`.
@@ -467,6 +477,7 @@ def resolve_embedded_links(
                 temp_dir=temp_dir,
                 table_safe=table_safe,
                 image_scope=image_scope,
+                literal_text=literal_text,
             )
 
         return _map_visible_markdown(inner_content, _resolve_visible)
@@ -519,6 +530,7 @@ def resolve_embedded_links(
             image_scope=image_scope,
             process_links=process_links if process_links is not None else _recurse,
             declared_image=declared_image,
+            literal_text=literal_text,
         )
 
         parts.append(content[cursor : match.start()])

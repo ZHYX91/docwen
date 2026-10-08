@@ -1,0 +1,190 @@
+{
+  "schema": "structural-tables.interoperability-corpus.v1",
+  "cases": [
+    {
+      "id": "headerless-basic",
+      "class": "positive",
+      "source": "| --- | --- |\n| A | 1 |\n| B | 2 |",
+      "expected": {
+        "structural_table_count": 1,
+        "valid": true,
+        "header_rows": 0,
+        "row_header_columns": 0,
+        "column_count": 2,
+        "contents": [
+          [
+            "A",
+            "1"
+          ],
+          [
+            "B",
+            "2"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "multi-header-row-header-rectangular-merges",
+      "class": "positive",
+      "source": "| Region | Sales | < |\n| Quarter | Q1 | Q2 |\n| --- || --- | --- |\n| North | 10 | 12 |\n| ^ | 8 | 11 |",
+      "expected": {
+        "structural_table_count": 1,
+        "valid": true,
+        "header_rows": 2,
+        "row_header_columns": 1,
+        "column_count": 3,
+        "anchors": [
+          {
+            "row": 0,
+            "column": 1,
+            "row_span": 1,
+            "column_span": 2,
+            "role": "column_header"
+          },
+          {
+            "row": 2,
+            "column": 0,
+            "row_span": 2,
+            "column_span": 1,
+            "role": "row_header"
+          }
+        ]
+      }
+    },
+    {
+      "id": "escaped-merge-markers-are-literal",
+      "class": "positive",
+      "source": "| Group | \\< |\n| Name | Value |\n| --- | --- |\n| A | \\^ |",
+      "expected": {
+        "structural_table_count": 1,
+        "valid": true,
+        "header_rows": 2,
+        "row_header_columns": 0,
+        "column_count": 2,
+        "cells": [
+          {
+            "row": 0,
+            "column": 1,
+            "content": "<",
+            "marker": null
+          },
+          {
+            "row": 2,
+            "column": 1,
+            "content": "^",
+            "marker": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "code-span-pipe-and-backslash-closer",
+      "class": "positive",
+      "source": "| --- | --- |\n| `C:\\\\` | `a|b` |\n| left | right |",
+      "expected": {
+        "structural_table_count": 1,
+        "valid": true,
+        "header_rows": 0,
+        "row_header_columns": 0,
+        "column_count": 2,
+        "contents": [
+          [
+            "`C:\\\\`",
+            "`a|b`"
+          ],
+          [
+            "left",
+            "right"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "blockquote-container",
+      "class": "positive",
+      "source": "> | --- | --- |\n> | A | B |\n> | C | D |",
+      "expected": {
+        "structural_table_count": 1,
+        "valid": true,
+        "header_rows": 0,
+        "row_header_columns": 0,
+        "column_count": 2,
+        "contents": [
+          [
+            "A",
+            "B"
+          ],
+          [
+            "C",
+            "D"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "merge-missing-anchor",
+      "class": "negative",
+      "source": "| < | B |\n| --- | --- |\n| 1 | 2 |",
+      "expected": {
+        "structural_table_count": 1,
+        "valid": false,
+        "diagnostic_codes": [
+          "merge-missing-anchor"
+        ]
+      }
+    },
+    {
+      "id": "merge-crosses-role-boundary",
+      "class": "negative",
+      "source": "| A | B |\n| --- || --- |\n| ^ | 1 |",
+      "expected": {
+        "structural_table_count": 1,
+        "valid": false,
+        "diagnostic_codes": [
+          "merge-boundary"
+        ]
+      }
+    },
+    {
+      "id": "spaced-row-header-boundary",
+      "class": "negative",
+      "source": "| A | B |\n| --- |  | --- |\n| 1 | 2 |",
+      "expected": {
+        "structural_table_count": 1,
+        "valid": false,
+        "diagnostic_codes": [
+          "boundary-token"
+        ]
+      }
+    },
+    {
+      "id": "ordinary-gfm-is-not-structural",
+      "class": "false_positive",
+      "source": "| A | B |\n| --- | --- |\n| 1 | 2 |",
+      "expected": {
+        "structural_table_count": 0,
+        "editable_table_count": 1,
+        "editable_structural": false,
+        "editable_valid": true
+      }
+    },
+    {
+      "id": "fenced-source-is-not-a-table",
+      "class": "false_positive",
+      "source": "```md\n| A | < |\n| --- | --- |\n| 1 | 2 |\n```",
+      "expected": {
+        "structural_table_count": 0,
+        "editable_table_count": 0
+      }
+    },
+    {
+      "id": "obsidian-comment-source-is-not-a-table",
+      "class": "false_positive",
+      "source": "%%\n| A | < |\n| --- | --- |\n| 1 | 2 |\n%%",
+      "expected": {
+        "structural_table_count": 0,
+        "editable_table_count": 0
+      }
+    }
+  ]
+}

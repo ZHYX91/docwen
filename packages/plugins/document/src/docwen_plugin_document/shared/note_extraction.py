@@ -2,10 +2,19 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 from zipfile import ZipFile
 
+from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_bookmark_name
+from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_core.docx_parsing.xml_ns import NS_W
+from docwen_plugin_document.shared.markdown_runs import (
+    _run_is_hidden,
+    append_formatted_run_text,
+    resolve_run_style_type,
+)
+from docwen_plugin_document.shared.note_target_structure import NOTE_WRAPPERS, is_pure_note_target
 
 
 def _extract_notes_with_status(
@@ -13,6 +22,10 @@ def _extract_notes_with_status(
     docx_path: str | None,
     part_name: str,
     note_tag: str,
+    *,
+    preserve_formatting: bool = True,
+    syntax_config: DocxMarkdownSyntaxConfig | None = None,
+    style_detector_config: StyleDetectorConfig | None = None,
 ) -> tuple[dict[int, str], bool]:
     """Extract notes from python-docx part or ZIP fallback.
 
@@ -49,7 +62,15 @@ def _extract_notes_with_status(
             continue
         if _is_system_note(note_elem, w_ns):
             continue
-        content = _extract_note_content(note_elem, w_ns, ref_tag)
+        content = _extract_note_content(
+            note_elem,
+            w_ns,
+            ref_tag,
+            preserve_formatting=preserve_formatting,
+            syntax_config=syntax_config,
+            style_detector_config=style_detector_config,
+            style_parent=doc,
+        )
         if content.strip():
             notes[int(w_id_raw)] = content
     return notes, False
@@ -75,14 +96,18 @@ def _is_system_note(elem, w_ns: str) -> bool:
     return ntype in ("separator", "continuationSeparator")
 
 
-def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
-    """Extract text content from a footnote/endnote element.
+def _extract_note_content(
+    elem,
+    w_ns: str,
+    ref_tag: str,
+    *,
+    preserve_formatting: bool = True,
+    syntax_config: DocxMarkdownSyntaxConfig | None = None,
+    style_detector_config: StyleDetectorConfig | None = None,
+    style_parent: Any = None,
+) -> str:
+    """Extract note Markdown while preserving supported run formatting and breaks."""
 
-    Processes paragraphs individually, skipping runs that contain the
-    reference marker element (e.g. ``footnoteRef`` or ``endnoteRef``)
-    to avoid including the auto-numbering character in the content.
-    Multi-paragraph notes are joined with newlines.
-    """
     para_texts: list[str] = []
     for child in elem:
         tag = child.tag.split("}")[-1] if "}" in (child.tag or "") else (child.tag or "")
@@ -90,11 +115,7 @@ def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
             continue
         run_texts: list[str] = []
         separator_expected = False
-        for run in child:
-            run_tag = run.tag.split("}")[-1] if "}" in (run.tag or "") else (run.tag or "")
-            if run_tag != "r":
-                separator_expected = False
-                continue
+        for run in child.iter(f"{{{w_ns}}}r"):
             if run.find(f"{{{w_ns}}}{ref_tag}") is not None:
                 separator_expected = True
                 continue
@@ -102,12 +123,57 @@ def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
                 separator_expected = False
                 continue
             separator_expected = False
-            for t in run.findall(f"{{{w_ns}}}t"):
-                if t.text:
-                    run_texts.append(t.text)
+            _append_note_run(
+                run_texts,
+                run,
+                w_ns,
+                preserve_formatting=preserve_formatting,
+                syntax_config=syntax_config or DocxMarkdownSyntaxConfig(),
+                style_detector_config=style_detector_config,
+                style_parent=style_parent,
+            )
         if run_texts:
             para_texts.append("".join(run_texts))
     return "\n".join(para_texts)
+
+
+def _append_note_run(
+    rendered: list[str],
+    run: Any,
+    w_ns: str,
+    *,
+    preserve_formatting: bool,
+    syntax_config: DocxMarkdownSyntaxConfig,
+    style_detector_config: StyleDetectorConfig | None,
+    style_parent: Any,
+) -> None:
+    """Use the body renderer's syntax, code-span padding and run coalescing."""
+
+    parts: list[str] = []
+    for child in run:
+        if child.tag == f"{{{w_ns}}}t":
+            parts.append(child.text or "")
+        elif child.tag == f"{{{w_ns}}}br":
+            parts.append("\n")
+        elif child.tag == f"{{{w_ns}}}tab":
+            parts.append("\t")
+    text = "".join(parts)
+    for index, segment in enumerate(text.split("\n")):
+        if index:
+            rendered.append("\n")
+        if not segment:
+            continue
+        if preserve_formatting:
+            append_formatted_run_text(
+                rendered,
+                segment,
+                run,
+                syntax_config=syntax_config,
+                style_detector_config=style_detector_config,
+                run_style_type=resolve_run_style_type(run, style_parent, style_detector_config),
+            )
+        else:
+            rendered.append(segment)
 
 
 def _is_reference_separator_run(run: Any, w_ns: str) -> bool:
@@ -162,23 +228,96 @@ def _format_multiline_content(content: str) -> str:
     return parts[0] + "\n" + "\n".join(f"    {p}" for p in parts[1:])
 
 
+def _native_marker_is_run_payload(reference: Any) -> bool:
+    q = f"{{{NS_W}}}"
+    run = reference.getparent()
+    if run is None or run.tag != q + "r":
+        return False
+    for ancestor in run.iterancestors():
+        if ancestor.tag == q + "p":
+            return True
+        if ancestor.tag not in NOTE_WRAPPERS:
+            return False
+    return False
+
+
+def _note_bookmark_targets(doc) -> dict[str, tuple[str, int]]:
+    """Resolve unique balanced bookmarks containing exactly one note marker."""
+    inventory = build_docx_bookmark_inventory(doc)
+    elements = list(doc.element.iter())
+    positions = {id(element): index for index, element in enumerate(elements)}
+    targets: dict[str, tuple[str, int]] = {}
+    for start in inventory.starts:
+        if start.name is None or start.part_name != str(doc.part.partname):
+            continue
+        proof = prove_bookmark_name(inventory, start.name)
+        if not proof.valid or proof.end is None:
+            continue
+        begin = positions.get(id(start.element))
+        end = positions.get(id(proof.end.element))
+        if begin is None or end is None:
+            continue
+        contents = elements[begin + 1 : end]
+        references = [
+            element
+            for element in contents
+            if element.tag in {f"{{{NS_W}}}footnoteReference", f"{{{NS_W}}}endnoteReference"}
+        ]
+        if len(references) != 1 or any(element.tag == f"{{{NS_W}}}t" and element.text for element in contents):
+            continue
+        reference = references[0]
+        q = f"{{{NS_W}}}"
+        if not _native_marker_is_run_payload(reference):
+            continue
+        if any(
+            ancestor.tag in {q + "del", q + "moveFrom"} or (ancestor.tag == q + "r" and _run_is_hidden(ancestor))
+            for ancestor in reference.iterancestors()
+        ):
+            continue
+        # A target is the marker itself, not an arbitrary visible range that
+        # happens to contain one. Run formatting contributes no body payload.
+        if not is_pure_note_target(contents, reference):
+            continue
+        raw_id = reference.get(f"{{{NS_W}}}id", "")
+        if not raw_id.isdecimal() or int(raw_id) <= 0:
+            continue
+        kind = "footnote" if reference.tag == f"{{{NS_W}}}footnoteReference" else "endnote"
+        targets[start.name.casefold()] = (kind, int(raw_id))
+    return targets
+
+
 class NoteExtractor:
     """Aggregate footnote/endnote extraction, mapping, reference text, and
     Markdown definitions block."""
 
-    def __init__(self, doc, docx_path: str | None = None, *, typed_endnotes: bool = True) -> None:
+    def __init__(
+        self,
+        doc,
+        docx_path: str | None = None,
+        *,
+        typed_endnotes: bool = True,
+        preserve_formatting: bool = True,
+        syntax_config: DocxMarkdownSyntaxConfig | None = None,
+        style_detector_config: StyleDetectorConfig | None = None,
+    ) -> None:
         self._endnote_prefix = "endnote:" if typed_endnotes else "endnote-"
         self.footnotes, self.footnote_part_failed = _extract_notes_with_status(
             doc,
             docx_path,
             "footnotes",
             "footnote",
+            preserve_formatting=preserve_formatting,
+            syntax_config=syntax_config,
+            style_detector_config=style_detector_config,
         )
         self.endnotes, self.endnote_part_failed = _extract_notes_with_status(
             doc,
             docx_path,
             "endnotes",
             "endnote",
+            preserve_formatting=preserve_formatting,
+            syntax_config=syntax_config,
+            style_detector_config=style_detector_config,
         )
         # Display IDs are assigned lazily from the first body reference.
         # Footnotes and endnotes own independent per-file domains.
@@ -186,6 +325,19 @@ class NoteExtractor:
         self.endnote_id_map: dict[int, str] = {}
         self._referenced_footnote_ids: set[int] = set()
         self._referenced_endnote_ids: set[int] = set()
+        self._note_bookmarks = _note_bookmark_targets(doc)
+
+    def get_noteref_text(self, instruction: str) -> str | None:
+        """Recover only number-valued fields pointing at a proven native note."""
+        match = re.fullmatch(
+            r'\s*NOTEREF\s+(?:"([A-Za-z_][A-Za-z0-9_]{0,39})"|([A-Za-z_][A-Za-z0-9_]{0,39}))(?:\s+\\[hf])*\s*',
+            instruction,
+            re.IGNORECASE,
+        )
+        if match is None:
+            return None
+        target = self._note_bookmarks.get((match[1] or match[2]).casefold())
+        return self.get_reference_text(*target) if target is not None else None
 
     def get_reference_text(self, ref_type: str, word_id: int) -> str:
         """Return an inline reference numbered by first use in its note domain."""

@@ -35,6 +35,51 @@ from tests.integration._round_trip_helper import docx_to_md, md_to_docx
 pytestmark = [pytest.mark.integration, pytest.mark.pr_gate]
 
 
+def test_structural_comment_body_is_absent_from_visible_docx(round_trip_runtime: Any, tmp_path: Path) -> None:
+    source_path = tmp_path / "protected-tables.md"
+    source = (
+        "Visible before.\n\n"
+        "%%\n| Hidden root | < |\n| - | - |\n| secret | secret |\n%%\n\n"
+        "> %%\n> | Hidden nested | < |\n> | - | - |\n> | secret | secret |\n> %%\n\n"
+        "- %%\n  | Hidden list | < |\n  | - | - |\n  | secret | secret |\n  %%\n\n"
+        "> - %%\n>   | Hidden quote list | < |\n>   | - | - |\n>   | secret | secret |\n>   %%\n\n"
+        "```md\n%%\nLiteral code example\n%%\n```\n\n"
+        "| - | - |\n| visible table | value |\n\nVisible after.\n"
+    )
+    source_path.write_bytes(source.encode("utf-8"))
+    output = md_to_docx(round_trip_runtime, source_path, tmp_path / "comment-output")
+    reopened = Document(str(output))
+    visible = "\n".join(element.text or "" for element in reopened.element.iter(qn("w:t")))
+    assert "Hidden" not in visible and "secret" not in visible
+    assert "Visible before." in visible and "Visible after." in visible
+    assert "Literal code example" in visible and "%%" in visible
+    assert len(reopened.tables) == 1
+    assert [[cell.text for cell in row.cells] for row in reopened.tables[0].rows] == [["visible table", "value"]]
+    assert source_path.read_bytes() == source.encode("utf-8")
+
+
+@pytest.mark.parametrize("preserve", [False, True])
+def test_docx_note_formatting_follows_request_policy(round_trip_runtime: Any, tmp_path: Path, preserve: bool) -> None:
+    source_path = tmp_path / "note-policy.md"
+    source_path.write_text(
+        "Body **bold**[^foot] and *italic*[^endnote:tail].\n\n"
+        "[^foot]: Foot **bold** and *italic* with `` `code` ``.\n"
+        "[^endnote:tail]: End **bold** and *italic* with `` `code` ``.\n",
+        encoding="utf-8",
+    )
+    output = md_to_docx(round_trip_runtime, source_path, tmp_path / "note-docx")
+    markdown = docx_to_md(
+        round_trip_runtime, output, tmp_path / "note-markdown", options={"preserve_formatting": preserve}
+    )
+    for domain in ["Foot", "End"]:
+        expected = (
+            f"{domain} **bold** and *italic* with `` `code` ``."
+            if preserve
+            else f"{domain} bold and italic with `code`."
+        )
+        assert expected in markdown
+
+
 def test_figure_captioned_multi_image_table_round_trips_as_native_table(
     round_trip_runtime: Any,
     tmp_path: Path,
@@ -137,6 +182,159 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
     assert "@[[#figure: planned architecture]]" in markdown
     assert "@[[#table: planned table]]" in markdown
     assert "![image omitted]()" not in markdown
+
+
+def test_direct_number_suite_id_only_and_authored_aliases_round_trip(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "direct-number-suite-edge.md"
+    source = (
+        "Equation: ^energy\n\n"
+        "Code: ^snippet\n\n"
+        "Figure: Planned ^plan\n\n"
+        "See @[[#^energy]], @[[#^snippet]], @[[#^plan|  Friendly label  ]], "
+        "@[[#^plan|A|B]], and @[[#^plan|   ]].\n"
+    )
+    source_path.write_text(source, encoding="utf-8")
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / "direct-number-suite-edge-docx",
+        request_id="direct-number-suite-edge",
+    )
+
+    reopened = Document(str(output))
+    recovery = DocxSemanticsV3Recovery.load(output, reopened)
+    captions = [(item.kind, item.source_id, item.title) for item in recovery.recovered_captions]
+    assert ("equation", "energy", "") in captions
+    assert ("code_block", "snippet", "") in captions
+    assert ("figure", "plan", "Planned") in captions
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / "direct-number-suite-edge-md",
+        request_id="direct-number-suite-edge-reverse",
+        preserve_numbering=False,
+    )
+    assert "Equation: ^energy" in markdown
+    assert "Code: ^snippet" in markdown
+    assert "@[[#^energy]]" in markdown
+    assert "@[[#^snippet]]" in markdown
+    assert "@[[#^plan|  Friendly label  ]]" in markdown
+    assert "@[[#^plan|A|B]]" in markdown
+    assert "@[[#^plan|   ]]" in markdown
+
+
+@pytest.mark.parametrize("render_mode", ["text", "word_native"])
+def test_direct_number_suite_heading_references_follow_selected_numbering_scheme(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+    render_mode: str,
+) -> None:
+    source_path = tmp_path / f"heading-reference-{render_mode}.md"
+    source_path.write_text(
+        "# Alpha ^alpha\n\n## Beta ^beta\n\nSee @[[#^alpha]] and @[[#^beta]].\n",
+        encoding="utf-8",
+    )
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / f"heading-reference-{render_mode}-docx",
+        request_id=f"heading-reference-{render_mode}",
+        options={
+            "add_numbering": True,
+            "numbering_scheme": "gongwen_standard",
+            "heading_numbering_render_mode": render_mode,
+        },
+    )
+
+    reopened = Document(str(output))
+    recovery = DocxSemanticsV3Recovery.load(output, reopened)
+    assert [item.cached_number for item in recovery.reference_occurrence_identities] == ["一、", "（一）"]
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / f"heading-reference-{render_mode}-md",
+        request_id=f"heading-reference-{render_mode}-reverse",
+        preserve_numbering=False,
+    )
+    assert "@[[#^alpha]]" in markdown
+    assert "@[[#^beta]]" in markdown
+
+
+def test_direct_number_suite_unnumbered_heading_reference_uses_title_fallback(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "heading-reference-unnumbered.md"
+    source_path.write_text("# Alpha ^alpha\n\nSee @[[#^alpha]].\n", encoding="utf-8")
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / "heading-reference-unnumbered-docx",
+        request_id="heading-reference-unnumbered",
+        options={"add_numbering": False},
+    )
+
+    reopened = Document(str(output))
+    recovery = DocxSemanticsV3Recovery.load(output, reopened)
+    assert recovery.reference_occurrence_identities == ()
+    assert len(recovery.soft_reference_identities) == 1
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / "heading-reference-unnumbered-md",
+        request_id="heading-reference-unnumbered-reverse",
+        preserve_numbering=False,
+    )
+    assert "@[[#^alpha]]" in markdown
+
+
+def test_number_suite_reference_inside_table_cell_round_trips_as_reference(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "table-cell-reference.md"
+    source = (
+        "Table: Matrix ^matrix\n\n"
+        "| Value |\n"
+        "| --- |\n"
+        "| A |\n\n"
+        "| Ref |\n"
+        "| --- |\n"
+        "| @[[#^matrix]] |\n\n"
+        "Outside @[[#^matrix]].\n"
+    )
+    source_path.write_text(source, encoding="utf-8")
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / "table-cell-reference-docx",
+        request_id="table-cell-reference",
+    )
+
+    reopened = Document(str(output))
+    instructions = [item.text or "" for item in reopened.element.iter(qn("w:instrText"))]
+    assert sum(" REF " in item for item in instructions) == 2
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / "table-cell-reference-md",
+        request_id="table-cell-reference-reverse",
+        preserve_numbering=False,
+    )
+    assert "| @[[#^matrix]] |" in markdown
+    assert "Outside @[[#^matrix]]." in markdown
+    assert markdown.count("@[[#^matrix]]") == 2
 
 
 def test_exact_two_figure_captioned_multi_image_table_round_trips_with_short_target_range(

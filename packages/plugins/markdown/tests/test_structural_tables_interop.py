@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from docwen_plugin_markdown.common_utils import parse_raw_md_tables
 from docwen_plugin_markdown.document_semantics import analyze_document_semantics
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 
@@ -162,3 +163,117 @@ def test_formatted_merge_markers_are_literal_cell_content() -> None:
     metadata = analysis.ast[0]["_document_semantics_table"]
     for anchor in metadata["anchors"]:
         assert anchor["row_span"] == anchor["column_span"] == 1
+
+
+def _nested_tables(nodes):
+    found = []
+    for node in nodes:
+        if node.get("type") == "table":
+            found.append(node)
+        found.extend(_nested_tables(node.get("children", [])))
+    return found
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "> | - | - |\n> | A | B |\n> | C | D |",
+        "> [!note]\n>\n> | - | - |\n> | A | B |\n> | C | D |",
+        "- Item\n\n  | - | - |\n  | A | B |\n  | C | D |",
+    ],
+)
+def test_structural_tables_inside_quote_callout_and_list_are_annotated(source: str) -> None:
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    tables = _nested_tables(analysis.ast)
+    assert len(tables) == 1
+    metadata = tables[0]["_document_semantics_table"]
+    assert metadata["header_rows"] == 0
+    assert metadata["column_count"] == 2
+    assert metadata["row_count"] == 2
+
+
+@pytest.mark.parametrize(
+    ("source", "expected_kind", "expected_raw"),
+    [
+        ("| - | - |\n| `literal | value |\n| left | right |", "text", "`literal"),
+        ("| - | - |\n| `C:\\` | value |\n| left | right |", "codespan", "C:\\"),
+    ],
+)
+def test_structural_table_backtick_boundaries_do_not_consume_column_pipes(
+    source: str,
+    expected_kind: str,
+    expected_raw: str,
+) -> None:
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    metadata = analysis.ast[0]["_document_semantics_table"]
+    assert metadata["column_count"] == 2
+    first_anchor = next(anchor for anchor in metadata["anchors"] if anchor["row"] == 0 and anchor["column"] == 0)
+    assert [(child.get("type"), child.get("raw")) for child in first_anchor["children"]] == [
+        (expected_kind, expected_raw)
+    ]
+
+
+def test_escaped_backtick_does_not_open_a_structural_cell_code_span() -> None:
+    source = "| - | - |\n| \\`plain | literal` |\n| left | right |"
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    [table] = _nested_tables(analysis.ast)
+    assert table["_document_semantics_table"]["column_count"] == 2
+
+
+@pytest.mark.parametrize("prefix", ["", "> "])
+def test_comment_tables_are_hidden_with_structural_input(prefix: str) -> None:
+    source = "\n".join(prefix + line for line in ["%%", "| A | < |", "| - | - |", "| 1 | 2 |", "%%"])
+    ast = parse_markdown_text(source)
+
+    assert not _nested_tables(ast)
+
+    def text(nodes):
+        return "".join(node.get("raw", "") + text(node.get("children", [])) for node in nodes)
+
+    assert "| A | < |" not in text(ast)
+    assert "%%" not in text(ast)
+
+    from docwen_core.markdown_extensions import MarkdownExtensions
+
+    literal = parse_markdown_text(source, extensions=MarkdownExtensions(structural_tables=False))
+    assert not _nested_tables(literal)
+    assert "| A | < |" in text(literal)
+    assert "%%" in text(literal)
+
+
+@pytest.mark.parametrize(
+    "protected",
+    [
+        "%%\n```\n| - | - |\n| hidden | value |\n%%\n",
+        "```md\n%%\n| - | - |\n| hidden | value |\n%%\n```\n",
+    ],
+)
+def test_comment_and_fence_boundaries_do_not_hide_a_later_table(protected: str) -> None:
+    source = protected + "\n| - | - |\n| visible | value |\n"
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    assert len(_nested_tables(analysis.ast)) == 1
+    [table] = parse_raw_md_tables(source, structural_tables=True)
+    assert table["all_rows"] == [["visible", "value"]]
+
+
+@pytest.mark.parametrize("container, indent", [("- ", "  "), ("1. ", "   "), ("> - ", ">   "), ("- > ", "  > ")])
+@pytest.mark.parametrize("fenced", [False, True])
+def test_container_comment_and_fence_preserve_later_raw_table(container, indent, fenced) -> None:
+    lines = (
+        ["```md", "%%", "| - | - |", "| hidden | value |", "%%", "```"]
+        if fenced
+        else ["%%", "| - | - |", "| hidden | value |", "%%"]
+    )
+    protected = container + lines[0] + "\n" + "\n".join(indent + line for line in lines[1:])
+    source = protected + "\n\n| - | - |\n| `visible|code` | [label](target.md) |\n"
+    assert len(_nested_tables(parse_markdown_text(source))) == 1
+    [table] = parse_raw_md_tables(source, structural_tables=True)
+    assert table["all_rows"] == [["`visible|code`", "[label](target.md)"]]

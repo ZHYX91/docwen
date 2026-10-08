@@ -278,6 +278,50 @@ def _failed_semantic_outcome(task_id: str) -> ConversionTaskOutcome:
     )
 
 
+def test_completed_source_warning_carries_complete_evidence() -> None:
+    diagnostic = ConversionDiagnostic(
+        level="warning",
+        message="Reference alias was normalized.",
+        code="docwen.markdown.reference.alias_normalized",
+        evidence_schema="docwen.machine.diagnostic_evidence.v1",
+        source=DiagnosticSource(input_id="input.1", sha256="0" * 64),
+        range=DiagnosticRange(10, 24),
+        related_ranges=(),
+        fixes=(),
+    )
+    responses, active = _run(
+        _Service(
+            outcome_factory=lambda task_id: replace(
+                _completed_outcome(task_id),
+                diagnostics=(diagnostic,),
+            )
+        )
+    )
+
+    completed = next(message for message in responses if message.get("method") == "task/completed")
+    assert completed["params"]["diagnostics"] == [
+        {
+            "severity": "warning",
+            "code": "docwen.markdown.reference.alias_normalized",
+            "message": "Reference alias was normalized.",
+            "evidence_schema": "docwen.machine.diagnostic_evidence.v1",
+            "source": {
+                "input_id": "input.1",
+                "sha256": "0" * 64,
+                "encoding": "utf-8",
+                "coordinate_system": "unicode_code_point",
+                "offset_base": 0,
+                "range_end": "exclusive",
+            },
+            "range": {"start": 10, "end": 24},
+            "related_ranges": [],
+            "fixes": [],
+        }
+    ]
+    assert active == {}
+    MachineContractValidator().validate_message(completed)
+
+
 def test_failed_semantic_diagnostic_carries_complete_source_evidence() -> None:
     responses, active = _run(_Service(outcome_factory=_failed_semantic_outcome))
 

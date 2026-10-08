@@ -15,10 +15,11 @@ import base64
 import hashlib
 import re
 import unicodedata
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
+from docwen_core.links import split_markdown_block_segments
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_markdown.document_semantics_v3 import (
     ExternalCitationResolution,
@@ -29,6 +30,7 @@ from docwen_plugin_markdown.document_semantics_v3 import (
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     project_fenced_source_v3,
 )
+from docwen_plugin_markdown.literal_source_spans import literal_source_spans
 
 SEMANTICS_SCHEMA = "docwen.markdown_semantics.v3"
 SEMANTICS_SCHEMA_ID = "urn:docwen:schema:markdown-semantics:v3"
@@ -143,6 +145,7 @@ def analyze_markdown_semantics_v3(
     semantic_id_replacements: Mapping[int, str] | None = None,
     extensions: MarkdownExtensions | None = None,
     consumer_profile: SemanticConsumerProfile = "frozen_v3",
+    heading_number_provider: Callable[[str, int], str] | None = None,
 ) -> MarkdownSemanticsV3Analysis:
     """Parse one authenticated Markdown source into the v3 source oracle.
 
@@ -168,12 +171,13 @@ def analyze_markdown_semantics_v3(
     semantic_source = _mask_yaml_front_matter(source)
     lines = _split_lines(semantic_source)
     caption_re = _NUMBER_SUITE_CAPTION_RE if consumer_profile == "number_suite_direct" else _CAPTION_RE
+    dialect = extensions or MarkdownExtensions.obsidian()
     blocks = _scan_blocks(
         lines,
+        structural_tables=dialect.structural_tables,
         caption_re=caption_re,
         captions_top_level_only=consumer_profile == "number_suite_direct",
     )
-    dialect = extensions or MarkdownExtensions.obsidian()
     literal_ranges: list[SourceRange] = []
 
     diagnostics: list[dict[str, Any]] = []
@@ -221,7 +225,11 @@ def analyze_markdown_semantics_v3(
             heading_counters[level - 1] += 1
             for position in range(level, 9):
                 heading_counters[position] = 0
-            number = ".".join(str(value) for value in heading_counters[:level] if value)
+            number = (
+                heading_number_provider(title, level)
+                if consumer_profile == "number_suite_direct" and heading_number_provider is not None
+                else ".".join(str(value) for value in heading_counters[:level] if value)
+            )
             active_heading_titles = active_heading_titles[: level - 1]
             active_heading_titles.append(title)
             if anchor is None:
@@ -274,6 +282,17 @@ def analyze_markdown_semantics_v3(
             block.data["content"],
             absolute_start=int(block.data["content_start"]),
         )
+        if anchor is None and consumer_profile == "number_suite_direct":
+            authored_content = str(block.data["content"])
+            stripped_content = authored_content.strip()
+            if stripped_content.startswith("^") and not any(character.isspace() for character in stripped_content):
+                leading = len(authored_content) - len(authored_content.lstrip())
+                anchor_start = int(block.data["content_start"]) + leading
+                anchor = (
+                    stripped_content,
+                    SourceRange(anchor_start, anchor_start + len(stripped_content)),
+                )
+                content = ""
         content = content.strip()
         if anchor is None:
             anchor = _standalone_semantic_anchor(blocks, index)
@@ -852,6 +871,7 @@ def _split_lines(source: str) -> list[_Line]:
 def _scan_blocks(
     lines: Sequence[_Line],
     *,
+    structural_tables: bool = False,
     caption_re: re.Pattern[str] = _CAPTION_RE,
     captions_top_level_only: bool = False,
 ) -> list[_Block]:
@@ -860,6 +880,7 @@ def _scan_blocks(
         container_path=(),
         container_segments=(),
         paragraph_kind="paragraph",
+        structural_tables=structural_tables,
         caption_re=caption_re,
         captions_top_level_only=captions_top_level_only,
         allow_caption_declarations=True,
@@ -881,11 +902,15 @@ def _scan_container_blocks(
     container_path: tuple[tuple[str, int], ...],
     container_segments: tuple[tuple[str, int, int], ...],
     paragraph_kind: str,
+    structural_tables: bool = False,
     caption_re: re.Pattern[str] = _CAPTION_RE,
     captions_top_level_only: bool = False,
     allow_caption_declarations: bool = True,
 ) -> list[_Block]:
+    from docwen_plugin_markdown.common_utils import structural_table_block_end
+
     blocks: list[_Block] = []
+    source_lines = [item.text for item in lines]
     index = 0
     while index < len(lines):
         line = lines[index]
@@ -1064,10 +1089,24 @@ def _scan_container_blocks(
             )
             index += 1
             continue
-        if index + 1 < len(lines) and "|" in line.text and _is_table_delimiter(lines[index + 1].text):
-            end_index = index + 1
-            while end_index + 1 < len(lines) and lines[end_index + 1].text.strip() and "|" in lines[end_index + 1].text:
-                end_index += 1
+        structural_end = (
+            structural_table_block_end(source_lines, index)
+            if structural_tables
+            and "|" in line.text
+            and _QUOTE_PREFIX_RE.match(line.text) is None
+            and _LIST_ITEM_RE.match(line.text) is None
+            else None
+        )
+        ordinary_table = index + 1 < len(lines) and "|" in line.text and _is_table_delimiter(lines[index + 1].text)
+        if structural_end is not None or ordinary_table:
+            end_index = structural_end - 1 if structural_end is not None else index + 1
+            if structural_end is None:
+                while (
+                    end_index + 1 < len(lines)
+                    and lines[end_index + 1].text.strip()
+                    and "|" in lines[end_index + 1].text
+                ):
+                    end_index += 1
             blocks.append(
                 _Block(
                     "table",
@@ -1194,6 +1233,7 @@ def _scan_container_blocks(
                     container_path=child_path,
                     container_segments=child_segments,
                     paragraph_kind="container_text",
+                    structural_tables=structural_tables,
                     caption_re=caption_re,
                     captions_top_level_only=captions_top_level_only,
                     allow_caption_declarations=not captions_top_level_only,
@@ -1215,6 +1255,7 @@ def _scan_container_blocks(
                         container_path=item_path,
                         container_segments=item_segments,
                         paragraph_kind="list_item",
+                        structural_tables=structural_tables,
                         caption_re=caption_re,
                         captions_top_level_only=captions_top_level_only,
                         allow_caption_declarations=not captions_top_level_only,
@@ -1625,16 +1666,23 @@ def _number_suite_id_key(value: str) -> str:
     return unicodedata.normalize("NFC", value).lower()
 
 
-def _parse_reference_body(body: str) -> tuple[str | None, str, str | None]:
+def _parse_reference_body(
+    body: str,
+    *,
+    number_suite_direct: bool = False,
+) -> tuple[str | None, str, str | None]:
     selector_text, separator, alias = body.partition("|")
-    if separator and (not alias or "|" in alias):
-        raise ValueError("semantic reference Alias must be one non-empty suffix")
+    if separator:
+        if number_suite_direct:
+            alias = alias.strip()
+        elif not alias or "|" in alias:
+            raise ValueError("semantic reference Alias must be one non-empty suffix")
     if "#" not in selector_text:
         raise ValueError("semantic reference requires an explicit # fragment")
     page, fragment = selector_text.split("#", 1)
     if not fragment:
         raise ValueError("semantic reference fragment must not be empty")
-    return (page or None), fragment, (alias if separator else None)
+    return (page or None), fragment, (alias or None if separator else None)
 
 
 def _resolve_reference(
@@ -1652,10 +1700,12 @@ def _resolve_reference(
     diagnostics: list[dict[str, Any]] = []
     body = match.group("body")
     try:
-        page_locator, fragment, alias = _parse_reference_body(body)
+        page_locator, fragment, alias = _parse_reference_body(
+            body,
+            number_suite_direct=normalize_titles or normalize_ids,
+        )
         if normalize_titles or normalize_ids:
             fragment = fragment.strip()
-            alias = alias.strip() if alias is not None else None
     except ValueError:
         record = {
             "selector_kind": "heading_path",
@@ -1877,11 +1927,34 @@ def _citation_item(
 
 
 def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[SourceRange]:
+    """Return source ranges where reference-looking text is literal."""
+
     ranges = [SourceRange(block.start, block.end) for block in blocks if block.kind in {"code_block", "fenced_block"}]
-    for match in re.finditer(r"(`+)(?:(?!\1).)*\1", source):
-        ranges.append(SourceRange(match.start(), match.end()))
-    for match in re.finditer(r"https?://[^\s<]+|<[^>\r\n]*>", source):
-        ranges.append(SourceRange(match.start(), match.end()))
+    offset = 0
+    for segment, protected in split_markdown_block_segments(source):
+        if protected:
+            ranges.append(SourceRange(offset, offset + len(segment)))
+        offset += len(segment)
+
+    # Comment delimiters inside code are literal.  Scan the remaining syntax
+    # against a length-preserving projection so an unclosed delimiter in a
+    # code block cannot swallow later authored references.
+    characters = list(source)
+    for span in ranges:
+        for index in range(span.start, span.end):
+            if characters[index] not in "\r\n":
+                characters[index] = " "
+    projected_source = "".join(characters)
+    patterns = (
+        re.compile(r"(?<!\\)(?:\\\\)*\\@\[\[[^\]\r\n]+\]\]"),
+        re.compile(r"(?<!\\)(?:\\\\)*\\@[A-Za-z0-9][A-Za-z0-9_-]{0,127}"),
+        re.compile(r"(?<!\\)(?:\\\\)*\\\[@[^\]\r\n]+\]"),
+    )
+    ranges.extend(
+        SourceRange(start, end)
+        for start, end in literal_source_spans(projected_source, metadata_patterns=patterns, semantic_url_suffix=True)
+    )
+
     return _merge_ranges(ranges)
 
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 import uuid
 from collections import deque
 from typing import TYPE_CHECKING, Any
@@ -112,6 +113,120 @@ def _process_cell_newlines(df: Any) -> Any:
     return df_copy
 
 
+_NUMERIC_TEXT_RE = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$")
+
+
+def _requires_literal_numeric_text(value: Any) -> bool:
+    """Return whether tabulate numeric parsing would risk changing authored text."""
+
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if not text or _NUMERIC_TEXT_RE.fullmatch(text) is None:
+        return False
+
+    unsigned = text.lstrip("+-")
+    mantissa, exponent_sep, _exponent = unsigned.lower().partition("e")
+    if exponent_sep or text.startswith("+"):
+        return True
+    integer, dot, fraction = mantissa.partition(".")
+    if len(integer) > 1 and integer.startswith("0"):
+        return True
+    if not dot:
+        return len(integer) > 15
+    if fraction.endswith("0") and fraction:
+        return True
+    significant = (integer.lstrip("0") + fraction).lstrip("0")
+    return len(significant) > 6
+
+
+def _markdown_numparse_disabled_columns(data: Any) -> list[int]:
+    disabled: list[int] = []
+    for column_index in range(data.shape[1]):
+        if any(_requires_literal_numeric_text(value) for value in data.iloc[:, column_index].tolist()):
+            disabled.append(column_index)
+    return disabled
+
+
+def _dataframe_to_markdown(data: Any, headers: list[str]) -> str:
+    if not hasattr(data, "to_markdown"):
+        return ""
+    disabled = _markdown_numparse_disabled_columns(data)
+    if disabled:
+        return data.to_markdown(index=False, headers=headers, disable_numparse=disabled)
+    return data.to_markdown(index=False, headers=headers)
+
+
+def _worksheet_merge_marker_positions(ws: Any) -> set[tuple[int, int]]:
+    positions: set[tuple[int, int]] = set()
+    for merged_range in list(ws.merged_cells.ranges):
+        anchor = (merged_range.min_row - 1, merged_range.min_col - 1)
+        for row in range(merged_range.min_row - 1, merged_range.max_row):
+            for column in range(merged_range.min_col - 1, merged_range.max_col):
+                if (row, column) != anchor:
+                    positions.add((row, column))
+    return positions
+
+
+def _structural_header_rows_for_block(ws: Any, block: Any) -> int:
+    if block.empty:
+        return 0
+    first_row = int(block.index[0])
+    block_columns = [int(column) for column in block.columns]
+    if not block_columns:
+        return 0
+    min_column = min(block_columns)
+    max_column = max(block_columns)
+    for merged_range in list(ws.merged_cells.ranges):
+        start_row = merged_range.min_row - 1
+        end_row = merged_range.max_row - 1
+        start_column = merged_range.min_col - 1
+        end_column = merged_range.max_col - 1
+        crosses_boundary = start_row <= first_row < end_row
+        overlaps_columns = start_column <= max_column and min_column <= end_column
+        if crosses_boundary and overlaps_columns:
+            return 0
+    return 1
+
+
+def _escape_literal_structural_markers(
+    block: Any,
+    structural_positions: set[tuple[int, int]],
+) -> Any:
+    escaped = block.copy()
+    for row_offset, row_label in enumerate(escaped.index):
+        for column_offset, column_label in enumerate(escaped.columns):
+            value = escaped.iat[row_offset, column_offset]
+            text = "" if value is None else str(value)
+            stripped = text.strip()
+            if stripped in {"<", "^"} and (int(row_label), int(column_label)) not in structural_positions:
+                escaped.iat[row_offset, column_offset] = f"\\{stripped}"
+    return escaped
+
+
+def _render_structural_table_block(block: Any, *, header_rows: int) -> str:
+    rows = [
+        ["" if value is None else str(value) for value in block.iloc[row_index].tolist()]
+        for row_index in range(block.shape[0])
+    ]
+    if not rows:
+        return ""
+    delimiter = ["---"] * block.shape[1]
+
+    def render_row(values: list[str]) -> str:
+        return "| " + " | ".join(values) + " |"
+
+    output: list[str] = []
+    if header_rows == 0:
+        output.append(render_row(delimiter))
+        output.extend(render_row(row) for row in rows)
+    else:
+        output.append(render_row(rows[0]))
+        output.append(render_row(delimiter))
+        output.extend(render_row(row) for row in rows[1:])
+    return "\n".join(output)
+
+
 def _worksheet_to_dataframe(
     ws: Any,
     table_merge_strategy: str = "fill",
@@ -167,7 +282,8 @@ def _worksheet_to_dataframe(
             )
         )
         anchor_value = ws.cell(row=range_min_row, column=range_min_col).value
-        cell_text_by_position.setdefault((range_min_row - 1, range_min_col - 1), str(anchor_value or ""))
+        anchor_text = "" if anchor_value is None else str(anchor_value)
+        cell_text_by_position.setdefault((range_min_row - 1, range_min_col - 1), anchor_text)
 
     if max_row <= 0 or max_col <= 0:
         return pd.DataFrame()
@@ -226,15 +342,15 @@ def _read_csv_flexible(file_path: str, source_format: str) -> Any:
                     sep=sep,
                     skip_blank_lines=should_skip_blank_lines(sep),
                 )
+            fallback_sep = "\t" if is_tsv else ","
             return pd.read_csv(
                 file_path,
                 header=None,
                 dtype=str,
                 keep_default_na=False,
                 encoding=encoding,
-                sep=None,
-                engine="python",
-                skip_blank_lines=should_skip_blank_lines(),
+                sep=fallback_sep,
+                skip_blank_lines=should_skip_blank_lines(fallback_sep),
             )
         except Exception:
             continue
@@ -480,6 +596,11 @@ class SpreadsheetToMarkdownConverter:
                 "block_count": stats.get("blocks", 0),
                 "image_count": stats.get("images", 0),
                 "merge_strategy": merge_strategy,
+                **(
+                    {"formula_cache_unavailable_count": stats["formula_cache_unavailable_count"]}
+                    if stats.get("formula_cache_unavailable_count")
+                    else {}
+                ),
             },
             is_primary=True,
         )
@@ -526,6 +647,16 @@ class SpreadsheetToMarkdownConverter:
                     location="workbook embedded images",
                 )
             )
+        formula_cache_warning = stats.get("formula_cache_warning_message")
+        if isinstance(formula_cache_warning, str) and formula_cache_warning:
+            diagnostics.append(
+                ConversionDiagnostic(
+                    level="warning",
+                    message=formula_cache_warning,
+                    code="SHEET2MD-FORMULA-CACHE-UNAVAILABLE",
+                    location="workbook formulas",
+                )
+            )
 
         return ConversionResult(
             task_id=task_id,
@@ -557,7 +688,7 @@ class SpreadsheetToMarkdownConverter:
         Returns (markdown_text, stats_dict).
         """
         file_stem = context.request.source_stem
-        stats: dict[str, int] = {"sheets": 0, "rows": 0, "cols": 0, "blocks": 0}
+        stats: dict[str, Any] = {"sheets": 0, "rows": 0, "cols": 0, "blocks": 0}
 
         # YAML frontmatter — routed through shared core utility (F-I2b-001)
         from docwen_core.yaml_tools import generate_basic_yaml_frontmatter
@@ -587,9 +718,9 @@ class SpreadsheetToMarkdownConverter:
         source_format: str,
         file_stem: str,
         md_content: str,
-        stats: dict[str, int],
+        stats: dict[str, Any],
         context: ConverterContext,
-    ) -> tuple[str, dict[str, int]]:
+    ) -> tuple[str, dict[str, Any]]:
         """Convert a CSV file to Markdown."""
         context.progress.report_progress(20.0, "Reading CSV...")
 
@@ -615,7 +746,7 @@ class SpreadsheetToMarkdownConverter:
                     for j, h in enumerate(block.iloc[0].tolist())
                 ]
                 data = block.iloc[1:]
-                block_md = data.to_markdown(index=False, headers=headers) if hasattr(data, "to_markdown") else ""
+                block_md = _dataframe_to_markdown(data, headers)
             else:
                 block_md = ""
 
@@ -629,10 +760,10 @@ class SpreadsheetToMarkdownConverter:
         md_content: str,
         merge_strategy: str,
         keep_images: bool,
-        stats: dict[str, int],
+        stats: dict[str, Any],
         context: ConverterContext,
         options: dict | None = None,
-    ) -> tuple[str, dict[str, int]]:
+    ) -> tuple[str, dict[str, Any]]:
         """Convert an XLSX file to Markdown.
 
         When *keep_images* is ``True``, embedded images are extracted from
@@ -641,11 +772,30 @@ class SpreadsheetToMarkdownConverter:
         """
         if options is None:
             options = context.request.options
-        from docwen_plugin_spreadsheet.csv_xlsx.converter import _load_admitted_xlsx
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import (
+            _find_unavailable_formula_caches,
+            _formula_cache_warning_message,
+            _load_xlsx_views,
+        )
 
         context.progress.report_progress(20.0, "Opening workbook...")
 
-        wb = _load_admitted_xlsx(input_path, data_only=True)
+        wb, formula_wb = _load_xlsx_views(input_path)
+        try:
+            unavailable_formula_count, unavailable_formula_locations = _find_unavailable_formula_caches(
+                wb,
+                formula_wb,
+                input_path=input_path,
+                cancel_check=context.cancellation.check,
+            )
+        finally:
+            formula_wb.close()
+        if unavailable_formula_count:
+            stats["formula_cache_unavailable_count"] = unavailable_formula_count
+            stats["formula_cache_warning_message"] = _formula_cache_warning_message(
+                unavailable_formula_count,
+                unavailable_formula_locations,
+            )
         stats["sheets"] = len(wb.sheetnames)
 
         total_images_extracted = 0
@@ -815,10 +965,12 @@ class SpreadsheetToMarkdownConverter:
 
             total_images_extracted += len(sheet_images)
 
-            if (
-                ws.merged_cells.ranges
-                and not resolve_markdown_extensions(options, context.config, direction="output").structural_tables
-            ):
+            structural_tables = resolve_markdown_extensions(
+                options,
+                context.config,
+                direction="output",
+            ).structural_tables
+            if ws.merged_cells.ranges and not structural_tables:
                 context.progress.report_diagnostic(
                     "warning",
                     "Merged cells were flattened to a standard Markdown table.",
@@ -856,18 +1008,23 @@ class SpreadsheetToMarkdownConverter:
             if not blocks:
                 md_content += " (this sheet is empty)\n\n"
             else:
+                structural_positions = _worksheet_merge_marker_positions(ws)
                 for block in blocks:
                     block = _process_cell_newlines(block)
 
-                    if block.shape[0] > 0:
+                    if block.shape[0] > 0 and structural_tables:
+                        block = _escape_literal_structural_markers(block, structural_positions)
+                        block_md = _render_structural_table_block(
+                            block,
+                            header_rows=_structural_header_rows_for_block(ws, block),
+                        )
+                    elif block.shape[0] > 0:
                         headers = [
                             str(h) if h is not None and str(h).strip() != "" else f"Col{j}"
                             for j, h in enumerate(block.iloc[0].tolist())
                         ]
                         data = block.iloc[1:]
-                        block_md = (
-                            data.to_markdown(index=False, headers=headers) if hasattr(data, "to_markdown") else ""
-                        )
+                        block_md = _dataframe_to_markdown(data, headers)
                     else:
                         block_md = ""
 

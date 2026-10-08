@@ -360,27 +360,24 @@ def _prove_and_read_body_runs(content: Any) -> str:
     from docx.oxml.ns import qn
 
     output: list[str] = []
-    previous_was_text = False
+    payload_items: list[Any] = []
     for run in content:
         if run.tag != qn("w:r") or run.attrib or run.xpath("text()") or run.tail is not None:
             raise DocxSemanticsV3Error("fenced-source content contains a non-canonical run")
         payload = list(run)
-        if len(payload) != 1 or payload[0].tag not in {
-            qn("w:t"),
-            qn("w:br"),
-            qn("w:cr"),
-            qn("w:tab"),
-        }:
+        if not payload or any(item.tag not in {qn("w:t"), qn("w:br"), qn("w:cr"), qn("w:tab")} for item in payload):
             raise DocxSemanticsV3Error("fenced-source run has non-text payload")
-        item = payload[0]
+        payload_items.extend(payload)
+    # Office can merge or split runs without changing the character stream.
+    # Authenticate that stream and the reconstructed block against their hashes.
+    for item in payload_items:
         if item.tag in {qn("w:br"), qn("w:cr"), qn("w:tab")}:
             if item.attrib or item.text is not None or item.tail is not None or len(item) != 0:
                 raise DocxSemanticsV3Error("fenced-source break/tab is not canonical")
             output.append("\n" if item.tag == qn("w:br") else "\r\n" if item.tag == qn("w:cr") else "\t")
-            previous_was_text = False
             continue
         text = item.text or ""
-        if not text or any(character in {"\r", "\n", "\t"} for character in text) or previous_was_text:
+        if not text or any(character in {"\r", "\n", "\t"} for character in text):
             raise DocxSemanticsV3Error("fenced-source text runs are not canonical")
         expected_attributes = (
             (("{http://www.w3.org/XML/1998/namespace}space", "preserve"),)
@@ -390,7 +387,6 @@ def _prove_and_read_body_runs(content: Any) -> str:
         if tuple(item.attrib.items()) != expected_attributes or item.tail is not None or len(item) != 0:
             raise DocxSemanticsV3Error("fenced-source text run is not canonical")
         output.append(text)
-        previous_was_text = True
     return "".join(output)
 
 

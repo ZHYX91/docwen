@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 import secrets
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -24,6 +24,7 @@ from docwen_core.docx_semantics_v3 import (
     DocxSemanticsV3Error,
     DocxSemanticsV3Session,
 )
+from docwen_core.errors import CancellationRequested
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import (
     DeclaredResourceResolver,
@@ -50,6 +51,7 @@ from docwen_core.text.heading_merge import (
     normalize_heading_merge_punctuation,
 )
 from docwen_core.text.heading_numbering import (
+    HeadingFormatter,
     NumberingSchemeResolutionError,
     resolve_heading_numbering_scheme,
 )
@@ -178,6 +180,32 @@ def _option_or_config(
     if allowed is not None and value not in allowed:
         return default
     return value
+
+
+def _no_direct_heading_number(_title: str, _level: int) -> str:
+    return ""
+
+
+def _direct_heading_number_provider(
+    scheme_config: dict[str, dict[str, str]],
+    *,
+    supported_levels: set[int] | None = None,
+) -> Callable[[str, int], str]:
+    """Return a stateful provider matching the selected heading scheme."""
+
+    formatter = HeadingFormatter(scheme_config)
+
+    def provide(title: str, level: int) -> str:
+        formatted = formatter.format_heading(title, level)
+        if supported_levels is not None and level not in supported_levels:
+            return ""
+        if formatted == title:
+            return ""
+        if title and formatted.endswith(title):
+            return formatted[: -len(title)].rstrip()
+        return formatted.rstrip()
+
+    return provide
 
 
 def _resolve_body_formatting_mode(options: dict[str, object], config: object) -> str:
@@ -567,6 +595,8 @@ class MdToDocxConverter:
                 )
             progress.report_progress(5.0, "Reading Markdown input")
             content, input_bytes = read_input_markdown(input_path)
+            cancellable.check()
+            authored_content = content
             if declared_resource_resolver is not None:
                 declared_resource_resolver = declared_resource_resolver.with_bindings(
                     content, options.get("markdown_resource_bindings")
@@ -605,6 +635,7 @@ class MdToDocxConverter:
                     input_bytes=input_bytes,
                 )
             content = semantic_v3_plan.shielded_source
+            cancellable.check()
 
             try:
                 doc = resolve_template(options.get("template_name"))
@@ -632,17 +663,13 @@ class MdToDocxConverter:
                     ),
                 )
 
-            # ── 3. Optionally remove/add heading numbering ────────────
+            # ── 3. Resolve one request-owned Heading numbering policy ──
             remove_num = (
                 bool(options["remove_numbering"])
                 if "remove_numbering" in options
                 else bool(_config_value(context.config, "text.remove_numbering", False))
             )
             cleanup_rules = getattr(context, "heading_cleanup_rules", ()) or ()
-            if remove_num and render_body:
-                progress.report_progress(10.0, "Removing heading numbering")
-                content = remove_md_numbering(content, rules=cleanup_rules)
-
             add_num = (
                 bool(options["add_numbering"])
                 if "add_numbering" in options
@@ -656,8 +683,11 @@ class MdToDocxConverter:
                 "text",
                 allowed={"text", "word_native"},
             )
-            word_native_translation = None  # set if word_native mode is used
+            word_native_translation = None
             approximate_warning: str | None = None
+            scheme = ""
+            scheme_config: dict[str, dict[str, str]] | None = None
+            supported_heading_levels: set[int] | None = None
 
             if add_num and render_body:
                 scheme = str(
@@ -667,22 +697,17 @@ class MdToDocxConverter:
                     )
                 )
                 try:
+                    scheme_config = resolve_heading_numbering_scheme(
+                        scheme,
+                        context.numbering_registry,
+                    )
                     if render_mode == "word_native":
-                        # Word adds the resolved scheme; source text remains clean.
-                        if not remove_num:
-                            content = remove_md_numbering(content, rules=cleanup_rules)
                         from docwen_core.text.numbering_word_adapter import (
                             translate_scheme,
                         )
 
-                        scheme_config = resolve_heading_numbering_scheme(
-                            scheme,
-                            context.numbering_registry,
-                        )
                         translation = translate_scheme(scheme_config)
-
                         if translation.verdict == "unsupported":
-                            # Return error — do NOT silently fall back to text
                             return ConversionResult(
                                 task_id=task_id,
                                 success=False,
@@ -690,8 +715,7 @@ class MdToDocxConverter:
                                     error_type="unsupported_numbering",
                                     message=(
                                         f"Scheme '{scheme}' is not compatible "
-                                        f"with word_native output: "
-                                        f"{translation.reason}"
+                                        f"with word_native output: {translation.reason}"
                                     ),
                                     diagnostic_code="MD2DOCX-NUMBERING-UNSUPPORTED",
                                 ),
@@ -699,8 +723,7 @@ class MdToDocxConverter:
                                     ConversionDiagnostic(
                                         level="error",
                                         message=(
-                                            f"Scheme '{scheme}' cannot be "
-                                            f"translated to Word native "
+                                            f"Scheme '{scheme}' cannot be translated to Word native "
                                             f"numbering: {translation.reason}"
                                         ),
                                         code="MD2DOCX-NUMBERING-UNSUPPORTED",
@@ -710,33 +733,84 @@ class MdToDocxConverter:
                                     duration_ms=(time.monotonic() - t_start) * 1000.0,
                                 ),
                             )
-                        else:
-                            # word_native mode: skip text concatenation,
-                            # inject after save
-                            word_native_translation = translation
-                            if translation.verdict == "approximate":
-                                approximate_warning = (
-                                    f"Scheme '{scheme}' uses numbering styles "
-                                    f"that Word cannot render natively for "
-                                    f"levels 6-9. Those headings will appear "
-                                    f"without numbering. "
-                                    f"Details: {translation.reason}"
-                                )
-                            # Still strip existing numbering (already done
-                            # above if remove_num). Do NOT call
-                            # add_md_numbering — headings stay as pure text.
-                    else:
+                        word_native_translation = translation
+                        supported_heading_levels = {level.ilvl + 1 for level in translation.levels}
+                        if translation.verdict == "approximate":
+                            approximate_warning = (
+                                f"Scheme '{scheme}' uses numbering styles "
+                                f"that Word cannot render natively for "
+                                f"levels 6-9. Those headings will appear "
+                                f"without numbering. Details: {translation.reason}"
+                            )
+                except NumberingSchemeResolutionError as exc:
+                    return _numbering_resolution_failure(task_id, t_start, exc)
+
+            # Direct Number Suite source semantics must consume the same
+            # request-owned Heading numbering policy that the DOCX renderer
+            # applies below.  The first source analysis above authenticates
+            # syntax/ranges; this second projection only replaces its derived
+            # Heading-number view before inert markers are materialized.
+            if direct_number_suite:
+                cancellable.check()
+                if scheme_config is None:
+                    heading_number_provider = _no_direct_heading_number
+                else:
+                    heading_number_provider = _direct_heading_number_provider(
+                        scheme_config,
+                        supported_levels=supported_heading_levels,
+                    )
+                try:
+                    semantic_v3_plan = prepare_runtime_semantics_v3(
+                        authored_content,
+                        input_id=semantic_input_id,
+                        extensions=extensions,
+                        consumer_profile="number_suite_direct",
+                        heading_number_provider=heading_number_provider,
+                    )
+                except RuntimeSemanticsV3Unsupported as exc:
+                    return _semantic_v3_failure(
+                        task_id,
+                        t_start,
+                        str(exc),
+                        [],
+                        input_bytes=input_bytes,
+                    )
+                if semantic_v3_plan.analysis.has_errors:
+                    return _semantic_v3_failure(
+                        task_id,
+                        t_start,
+                        "Markdown v3 source semantics are invalid.",
+                        [_semantic_v3_diagnostic(item) for item in semantic_v3_plan.analysis.diagnostics],
+                        input_bytes=input_bytes,
+                    )
+                content = semantic_v3_plan.shielded_source
+                cancellable.check()
+
+            if remove_num and render_body:
+                progress.report_progress(10.0, "Removing heading numbering")
+                content = remove_md_numbering(content, rules=cleanup_rules)
+                cancellable.check()
+
+            if add_num and render_body:
+                if render_mode == "word_native":
+                    # Word adds the resolved scheme; source text remains clean.
+                    if not remove_num:
+                        content = remove_md_numbering(content, rules=cleanup_rules)
+                else:
+                    try:
                         content = add_md_numbering(
                             content,
                             scheme=scheme,
                             registry=context.numbering_registry,
                         )
-                except NumberingSchemeResolutionError as exc:
-                    return _numbering_resolution_failure(task_id, t_start, exc)
+                    except NumberingSchemeResolutionError as exc:
+                        return _numbering_resolution_failure(task_id, t_start, exc)
 
             # ── Stage 1: YAML extraction ───────────────────────────────
             progress.report_progress(15.0, "Extracting YAML front matter")
+            cancellable.check()
             yaml_dict, md_body = extract_yaml_front_matter(content)
+            cancellable.check()
             link_config = _request_link_config(context.config)
             field_processors_config = context.config.get("field_processors", {})
             current_locale = _resolve_locale(context.config.get("gui", {}))
@@ -753,14 +827,20 @@ class MdToDocxConverter:
             note_ctx = NoteContext()
             if render_body:
                 source_image_alt_texts = _markdown_image_alt_texts(md_body)
+                cancellable.check()
 
                 # Numbering may have changed the full shielded source. Use the
                 # freshly extracted body rather than the plan's old YAML offset.
                 link_source = md_body
                 link_config = _request_link_config(context.config)
                 if declared_resource_resolver is not None:
-                    reject_declared_input_link_lookups(link_source, wiki_mode=link_config.non_embed_wiki_mode)
+                    reject_declared_input_link_lookups(
+                        link_source,
+                        wiki_mode=link_config.non_embed_wiki_mode,
+                        declared_wiki_link=declared_resource_resolver.resolve_wiki_link,
+                    )
                 image_scope = secrets.token_urlsafe(24)
+                cancellable.check()
                 md_body = process_markdown_links(
                     link_source,
                     resource_source_path,
@@ -768,10 +848,16 @@ class MdToDocxConverter:
                     target_format="docx",
                     temp_dir=str(workspace.staging_dir),
                     image_scope=image_scope,
+                    protect_source_comments=True,
+                    cancellation_check=cancellable.check,
                     declared_image=(
                         declared_resource_resolver.resolve_image if declared_resource_resolver is not None else None
                     ),
+                    declared_wiki_link=(
+                        declared_resource_resolver.resolve_wiki_link if declared_resource_resolver is not None else None
+                    ),
                 )
+                cancellable.check()
                 md_body = materialize_image_placeholders(
                     md_body,
                     image_scope=image_scope,
@@ -781,6 +867,7 @@ class MdToDocxConverter:
                 # create a request-local parser projection.  The source Markdown
                 # is never rewritten.
                 try:
+                    cancellable.check()
                     md_body = normalize_note_syntax(md_body, typed_endnotes=extensions.typed_endnotes)
                 except NoteWritebackError as exc:
                     return _note_failure(task_id, t_start, exc)
@@ -796,7 +883,9 @@ class MdToDocxConverter:
                 )
                 # 2g. Parse with extended mistune
                 progress.report_progress(30.0, "Parsing Markdown")
+                cancellable.check()
                 raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)
+                cancellable.check()
                 _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
                 try:
                     raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
@@ -817,6 +906,7 @@ class MdToDocxConverter:
                     )
 
                 # 2h. Annotate AST with merge info
+                cancellable.check()
                 annotate_ast_with_merges(
                     raw_ast,
                     mode=heading_merge_mode,
@@ -824,12 +914,15 @@ class MdToDocxConverter:
                 )
 
                 # 2j. Extract notes from AST
+                cancellable.check()
                 cleaned_ast, note_ctx = extract_notes_from_ast(raw_ast)
 
             # 2k. Recognize the frozen document-semantics v1 slice.  Errors
             # are rejected before rendering so an invalid semantic
             # document never produces a seemingly successful DOCX artifact.
+            cancellable.check()
             semantic_analysis = analyze_document_semantics(cleaned_ast, current_v3=True)
+            cancellable.check()
             if semantic_analysis.has_errors:
                 return ConversionResult(
                     task_id=task_id,
@@ -1112,12 +1205,16 @@ class MdToDocxConverter:
             if yaml_dict:
                 _inject_docx_metadata(doc, yaml_dict)
 
+            from docwen_core.docx_table_roles import inject_table_roles, prepare_table_roles
+
+            table_roles = prepare_table_roles(doc)
             doc.save(output_path)
 
             # Write footnote/endnote body elements into the DOCX ZIP parts
+            deferred_note_references = 0
             if render_body and note_ctx.has_notes:
                 try:
-                    write_notes_to_docx(output_path, note_ctx)
+                    deferred_note_references = write_notes_to_docx(output_path, note_ctx)
                 except NoteWritebackError as exc:
                     return _note_failure(task_id, t_start, exc, output_path=output_path)
 
@@ -1154,6 +1251,7 @@ class MdToDocxConverter:
                         output_path=output_path,
                     )
 
+            inject_table_roles(Path(output_path), table_roles)
             try:
                 validate_managed_style_package(
                     Path(output_path).read_bytes(),
@@ -1250,6 +1348,20 @@ class MdToDocxConverter:
                     ),
                 )
 
+            if deferred_note_references:
+                diagnostics.insert(
+                    0,
+                    ConversionDiagnostic(
+                        level="warning",
+                        code="MD2DOCX-NOTE-FIELD-UPDATE-REQUIRED",
+                        message=(
+                            f"{deferred_note_references} repeated note reference(s) require the document editor to "
+                            "calculate their numbering. A ? mark is shown until fields are updated; "
+                            "update fields in Word after pagination and before printing or PDF export."
+                        ),
+                    ),
+                )
+
             result = ConversionResult(
                 task_id=task_id,
                 success=True,
@@ -1269,6 +1381,11 @@ class MdToDocxConverter:
             workspace.add_artifact(artifact)
             return result
 
+        except CancellationRequested:
+            pending_output = locals().get("output_path")
+            if isinstance(pending_output, str):
+                Path(pending_output).unlink(missing_ok=True)
+            raise
         except Exception as exc:
             pending_output = locals().get("output_path")
             if isinstance(pending_output, str):

@@ -209,8 +209,8 @@ def analyze_markdown_semantics_v3(
     source_identity = _source_identity(input_id, source_sha256)
     semantic_source = _mask_yaml_front_matter(source)
     lines = _split_lines(semantic_source)
-    blocks = _scan_blocks(lines)
     dialect = extensions or MarkdownExtensions.obsidian()
+    blocks = _scan_blocks(lines, structural_tables=dialect.structural_tables)
     literal_ranges: list[SourceRange] = []
 
     diagnostics: list[dict[str, Any]] = []
@@ -859,12 +859,13 @@ def _split_lines(source: str) -> list[_Line]:
     return lines
 
 
-def _scan_blocks(lines: Sequence[_Line]) -> list[_Block]:
+def _scan_blocks(lines: Sequence[_Line], *, structural_tables: bool = False) -> list[_Block]:
     blocks = _scan_container_blocks(
         lines,
         container_path=(),
         container_segments=(),
         paragraph_kind="paragraph",
+        structural_tables=structural_tables,
     )
     return sorted(
         blocks,
@@ -883,8 +884,12 @@ def _scan_container_blocks(
     container_path: tuple[tuple[str, int], ...],
     container_segments: tuple[tuple[str, int, int], ...],
     paragraph_kind: str,
+    structural_tables: bool = False,
 ) -> list[_Block]:
+    from docwen_plugin_markdown.common_utils import structural_table_block_end
+
     blocks: list[_Block] = []
+    source_lines = [item.text for item in lines]
     index = 0
     while index < len(lines):
         line = lines[index]
@@ -1063,10 +1068,24 @@ def _scan_container_blocks(
             )
             index += 1
             continue
-        if index + 1 < len(lines) and "|" in line.text and _is_table_delimiter(lines[index + 1].text):
-            end_index = index + 1
-            while end_index + 1 < len(lines) and lines[end_index + 1].text.strip() and "|" in lines[end_index + 1].text:
-                end_index += 1
+        structural_end = (
+            structural_table_block_end(source_lines, index)
+            if structural_tables
+            and "|" in line.text
+            and _QUOTE_PREFIX_RE.match(line.text) is None
+            and _LIST_ITEM_RE.match(line.text) is None
+            else None
+        )
+        ordinary_table = index + 1 < len(lines) and "|" in line.text and _is_table_delimiter(lines[index + 1].text)
+        if structural_end is not None or ordinary_table:
+            end_index = structural_end - 1 if structural_end is not None else index + 1
+            if structural_end is None:
+                while (
+                    end_index + 1 < len(lines)
+                    and lines[end_index + 1].text.strip()
+                    and "|" in lines[end_index + 1].text
+                ):
+                    end_index += 1
             blocks.append(
                 _Block(
                     "table",
@@ -1193,6 +1212,7 @@ def _scan_container_blocks(
                     container_path=child_path,
                     container_segments=child_segments,
                     paragraph_kind="container_text",
+                    structural_tables=structural_tables,
                 )
             )
         elif block.kind == "list":
@@ -1211,6 +1231,7 @@ def _scan_container_blocks(
                         container_path=item_path,
                         container_segments=item_segments,
                         paragraph_kind="list_item",
+                        structural_tables=structural_tables,
                     )
                 )
     return [*blocks, *nested]

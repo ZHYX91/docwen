@@ -13,6 +13,7 @@ from docwen_core.links._embed_dispatch import _is_table_context
 from docwen_core.links._error_semantics import LinkErrorKind, dispatch_error_output
 from docwen_core.links._markdown_inline import (
     _ACTIVE_PROTECTED_TOKENS,
+    MarkdownInlineSourceOwner,
     _contains_active_protected_token,
     _is_backslash_escaped,
     encode_markdown_angle_destination,
@@ -200,7 +201,7 @@ def _protected_inline_atom_end(
     protect_bare_urls: bool,
 ) -> int | None:
     """Return the end of a renderer atom that link policy must not enter."""
-    if text[start] == "<":
+    if text[start] == "<" and not _is_backslash_escaped(text, start):
         match = _ANGLE_AUTOLINK_RE.match(text, start)
         if match is None:
             match = _INLINE_HTML_RE.match(text, start)
@@ -463,17 +464,16 @@ def split_markdown_block_segments(md: str) -> list[tuple[str, bool]]:
     return _split_fenced_code_blocks(md)
 
 
-def _split_inline_code_spans(
+def _inline_source_owners(
     segment: str,
     *,
     protect_bare_urls: bool = True,
-) -> list[tuple[str, bool]]:
-    """Split non-fenced Markdown into visible text and protected atoms."""
-    parts: list[tuple[str, bool]] = []
-    if not segment:
-        return parts
+    protect_link_label_atoms: bool = False,
+    include_link_metadata: bool = False,
+) -> list[MarkdownInlineSourceOwner]:
+    """Collect exact source ranges with the same grammar used by link policy."""
+    owners: list[MarkdownInlineSourceOwner] = []
 
-    cursor = 0
     index = 0
     while index < len(segment):
         if not protect_bare_urls and segment[index] == "h":
@@ -485,12 +485,28 @@ def _split_inline_code_spans(
         if construct is None:
             construct = parse_inline_link(segment, index, image=False)
         if construct is not None:
+            if protect_link_label_atoms:
+                label_start = index + (2 if construct.is_image else 1)
+                for owner in _inline_source_owners(
+                    construct.label,
+                    protect_bare_urls=protect_bare_urls,
+                    protect_link_label_atoms=True,
+                    include_link_metadata=include_link_metadata,
+                ):
+                    owners.append(
+                        MarkdownInlineSourceOwner(label_start + owner.start, label_start + owner.end, owner.kind)
+                    )
+            if include_link_metadata:
+                label_close = index + (2 if construct.is_image else 1) + len(construct.label)
+                owners.append(MarkdownInlineSourceOwner(label_close, construct.end, "link_metadata"))
             index = construct.end
             continue
         wiki_match = _WIKI_EMBED_RE.match(segment, index)
         if wiki_match is None:
             wiki_match = _WIKI_NON_EMBED_RE.match(segment, index)
         if wiki_match is not None:
+            if include_link_metadata:
+                owners.append(MarkdownInlineSourceOwner(index, wiki_match.end(), "wikilink"))
             index = wiki_match.end()
             continue
         atom_end = _protected_inline_atom_end(
@@ -499,10 +515,7 @@ def _split_inline_code_spans(
             protect_bare_urls=protect_bare_urls,
         )
         if atom_end is not None:
-            if cursor < index:
-                parts.append((segment[cursor:index], False))
-            parts.append((segment[index:atom_end], True))
-            cursor = atom_end
+            owners.append(MarkdownInlineSourceOwner(index, atom_end, "url" if segment[index] == "h" else "literal"))
             index = atom_end
             continue
         if segment[index] != "`":
@@ -527,12 +540,41 @@ def _split_inline_code_spans(
             index += fence_length
             continue
 
-        if cursor < index:
-            parts.append((segment[cursor:index], False))
-        parts.append((segment[index:code_end], True))
-        cursor = code_end
+        owners.append(MarkdownInlineSourceOwner(index, code_end, "literal"))
         index = code_end
 
+    return owners
+
+
+def markdown_inline_source_owners(segment: str) -> list[MarkdownInlineSourceOwner]:
+    """Return renderer literals and parsed link metadata at exact source offsets.
+
+    Callers project authoritative blocks first. Wiki ownership protects its
+    internal delimiters without deciding whether its semantic record is hidden.
+    This scanner does not decide comment ownership: an earlier comment can
+    invalidate later-looking owners, requiring a scan of the remaining suffix.
+    """
+    return _inline_source_owners(segment, protect_link_label_atoms=True, include_link_metadata=True)
+
+
+def _split_inline_code_spans(
+    segment: str,
+    *,
+    protect_bare_urls: bool = True,
+    protect_link_label_atoms: bool = False,
+) -> list[tuple[str, bool]]:
+    """Split non-fenced Markdown into visible text and protected atoms."""
+    if not segment:
+        return []
+    parts: list[tuple[str, bool]] = []
+    cursor = 0
+    for owner in _inline_source_owners(
+        segment, protect_bare_urls=protect_bare_urls, protect_link_label_atoms=protect_link_label_atoms
+    ):
+        if cursor < owner.start:
+            parts.append((segment[cursor : owner.start], False))
+        parts.append((segment[owner.start : owner.end], True))
+        cursor = owner.end
     if cursor < len(segment):
         parts.append((segment[cursor:], False))
     return parts or [(segment, False)]
@@ -542,12 +584,19 @@ def split_markdown_inline_segments(
     segment: str,
     *,
     protect_bare_urls: bool = True,
+    protect_link_label_atoms: bool = False,
 ) -> list[tuple[str, bool]]:
-    """Split one block segment into visible and protected inline atoms."""
+    """Split one block segment into visible and protected inline atoms.
+
+    Source projections may opt into label atoms while link rewriting keeps
+    complete link constructs intact. Only renderer literals inside a parsed
+    label are protected; ordinary label text remains visible.
+    """
 
     return _split_inline_code_spans(
         segment,
         protect_bare_urls=protect_bare_urls,
+        protect_link_label_atoms=protect_link_label_atoms,
     )
 
 
@@ -556,18 +605,29 @@ def _map_visible_markdown(
     transform: Callable[[str], str],
     *,
     protect_bare_urls: bool = True,
+    protect_source_comments: bool = False,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Apply *transform* once with renderer atoms replaced by scoped tokens."""
+
+    def check_cancelled() -> None:
+        if cancellation_check is not None:
+            cancellation_check()
+
+    check_cancelled()
     protected: dict[str, str] = {}
     active_tokens: set[str] = set()
     nonce = secrets.token_hex(16)
 
-    def mask(value: str) -> str:
+    def mask(value: str, *, comment: bool = False) -> str:
         index = len(protected)
-        token = f"<DOCWEN-VISIBLE-{nonce}-{index}>"
+        # Comment tokens are re-scanned by the block lexer. They must not
+        # introduce HTML block authority over adjacent authored lines.
+        opening, closing = ("\ue000", "\ue001") if comment else ("<", ">")
+        token = f"{opening}DOCWEN-VISIBLE-{nonce}-{index}{closing}"
         while token in text or token in protected:
             index += 1
-            token = f"<DOCWEN-VISIBLE-{nonce}-{index}>"
+            token = f"{opening}DOCWEN-VISIBLE-{nonce}-{index}{closing}"
         leading_match = re.match(r"[ \t]*", value)
         assert leading_match is not None
         leading = leading_match.group(0)
@@ -581,9 +641,31 @@ def _map_visible_markdown(
         active_tokens.add(token)
         return placeholder
 
+    comment_masked = text
+    if protect_source_comments:
+        from docwen_core.links._source_ownership import markdown_source_owners
+
+        projection = "".join(
+            "".join(char if char in "\r\n" else " " for char in segment) if is_protected else segment
+            for segment, is_protected in _split_fenced_code_blocks(text)
+        )
+        check_cancelled()
+        comment_parts: list[str] = []
+        cursor = 0
+        for owner in markdown_source_owners(projection):
+            check_cancelled()
+            if owner.kind == "comment":
+                comment_parts.append(text[cursor : owner.start])
+                comment_parts.append(mask(text[owner.start : owner.end], comment=True))
+                cursor = owner.end
+        comment_parts.append(text[cursor:])
+        comment_masked = "".join(comment_parts)
+    check_cancelled()
     block_masked = "".join(
-        mask(segment) if is_protected else segment for segment, is_protected in _split_fenced_code_blocks(text)
+        mask(segment) if is_protected else segment
+        for segment, is_protected in _split_fenced_code_blocks(comment_masked)
     )
+    check_cancelled()
     inline_masked = "".join(
         mask(segment) if is_protected else segment
         for segment, is_protected in _split_inline_code_spans(
@@ -591,13 +673,16 @@ def _map_visible_markdown(
             protect_bare_urls=protect_bare_urls,
         )
     )
+    check_cancelled()
     context_token = _ACTIVE_PROTECTED_TOKENS.set(frozenset(active_tokens))
     try:
         result = transform(inline_masked)
     finally:
         _ACTIVE_PROTECTED_TOKENS.reset(context_token)
     for placeholder, original in reversed(protected.items()):
+        check_cancelled()
         result = result.replace(placeholder, original)
+    check_cancelled()
     return result
 
 
@@ -606,6 +691,7 @@ def _replace_markdown_links(
     replacer: Callable[[str, str, str], str | None],
     *,
     table_safe: bool = False,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Replace standard Markdown links while supporting nested URL parens."""
     if not segment:
@@ -615,6 +701,8 @@ def _replace_markdown_links(
     cursor = 0
     index = 0
     while index < len(segment):
+        if cancellation_check is not None:
+            cancellation_check()
         image_construct = parse_inline_link(segment, index, image=True)
         if image_construct is not None:
             index = image_construct.end
@@ -722,6 +810,9 @@ def _process_non_embed_links(
     table_safe: bool = False,
     literal_keep: bool = False,
     hyperlink_renderer: Callable[[str, str], str] | None = None,
+    declared_wiki_link: Callable[[str, str], str | None] | None = None,
+    protect_source_comments: bool = False,
+    cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Process links outside fenced and inline code.
 
@@ -745,11 +836,22 @@ def _process_non_embed_links(
         target = _unescape_pipe((match.group(1) or "").strip())
         display_raw = match.group(2)
         display = _unescape_pipe(display_raw.strip()) if display_raw else target
+        # Wiki display text is metadata, including comment and note-looking
+        # punctuation. Its generated Markdown spelling must remain literal
+        # when downstream DOCX consumers inspect the processed source.
+        display_source = (
+            escape_markdown_source_literal(display) if normalized_target == "docx" and not literal_keep else display
+        )
+        # A field's extracted text is already plain text, whereas its hyperlink
+        # callback consumes a Markdown label before materializing a Word run.
+        display_label = (
+            escape_markdown_source_literal(display) if normalized_target == "docx" else escape_markdown_label(display)
+        )
 
         if wiki_mode == "keep" and normalized_target == "docx" and not literal_keep:
             return escape_markdown_source_literal(match.group(0))
         if wiki_mode == "extract_text":
-            return display or target
+            return display_source
         if wiki_mode == "remove":
             return ""
 
@@ -757,7 +859,13 @@ def _process_non_embed_links(
         if not should_resolve:
             return match.group(0)
         if not target:
-            return display
+            return display_source
+
+        if declared_wiki_link is not None:
+            declared_target = declared_wiki_link(match.group(0), target)
+            if declared_target is not None:
+                destination = encode_markdown_angle_destination(declared_target)
+                return emit_link(display_label, f"<{destination}>")
 
         encoded_target = encode_markdown_destination_escapes(target)
         path_and_query, separator, raw_fragment = encoded_target.partition("#")
@@ -769,13 +877,13 @@ def _process_non_embed_links(
             # fragment-only target as a hyperlink would therefore create only
             # underlined text with no navigation semantics.  Match both
             # reference implementations and degrade honestly to display text.
-            return display
+            return display_source
 
         if re.match(r"^(?:https?|ftp|file|mailto):", raw_path, re.IGNORECASE):
             destination = encode_markdown_angle_destination(target)
-            return emit_link(escape_markdown_label(display), f"<{destination}>")
+            return emit_link(display_label, f"<{destination}>")
         if encoded_target.startswith("//"):
-            return display
+            return display_source
 
         resolved = resolve_file_path(
             raw_path,
@@ -793,7 +901,7 @@ def _process_non_embed_links(
                 block_id=block_id,
                 original_link=match.group(0),
             )
-            if normalized_target == "docx" and not literal_keep and error_output == match.group(0):
+            if normalized_target == "docx" and not literal_keep:
                 return escape_markdown_source_literal(error_output)
             return error_output
         if canonicalize_local_docx_targets and normalized_target == "docx":
@@ -802,7 +910,7 @@ def _process_non_embed_links(
                 path_text = f"{path_text}?{raw_query}"
             if separator:
                 path_text = f"{path_text}#{quote(unquote(fragment), safe='/-._~')}"
-            return emit_link(escape_markdown_label(display), f"<{path_text}>")
+            return emit_link(display_label, f"<{path_text}>")
 
         try:
             source_dir = Path(source_file_path).parent
@@ -814,12 +922,14 @@ def _process_non_embed_links(
             path_text = f"{path_text}?{raw_query}"
         if separator:
             path_text = f"{path_text}#{quote(fragment, safe='/-._~')}"
-        return emit_link(escape_markdown_label(display), f"<{path_text}>")
+        return emit_link(display_label, f"<{path_text}>")
 
     def _replace_markdown(display: str, target: str, original: str) -> str | None:
         display_text = display.strip()
         target_text = target.strip(" \t\r\n")
         if markdown_mode == "extract_text":
+            if not display_text and normalized_target == "docx" and not literal_keep:
+                return escape_markdown_source_literal(target_text)
             return display_text or target_text or ""
         if markdown_mode == "remove":
             return ""
@@ -851,6 +961,8 @@ def _process_non_embed_links(
         cursor = 0
         index = 0
         while index < len(segment):
+            if cancellation_check is not None:
+                cancellation_check()
             construct = parse_inline_link(segment, index, image=True)
             if construct is None:
                 construct = parse_inline_link(segment, index, image=False)
@@ -889,11 +1001,17 @@ def _process_non_embed_links(
                 result,
                 _replace_markdown,
                 table_safe=table_safe,
+                cancellation_check=cancellation_check,
             )
         if wiki_mode in ("keep", "extract_text", "remove", "resolve", "hyperlink"):
             result = _replace_wiki_links(result)
         return result
 
-    result = _map_visible_markdown(text, _process_visible)
+    result = _map_visible_markdown(
+        text,
+        _process_visible,
+        protect_source_comments=protect_source_comments,
+        cancellation_check=cancellation_check,
+    )
     logger.debug("Processed non-embed links: input=%d output=%d", len(text), len(result))
     return result

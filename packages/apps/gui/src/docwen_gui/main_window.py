@@ -1653,10 +1653,15 @@ class MainWindow(QWidget):
         if current:
             entry = self._batch_list_vm.get_file_entry(current)
             if entry is not None:
-                target_path = entry.output_path or current
+                if entry.output_path:
+                    target_path = entry.output_path
+                elif entry.source_location_available:
+                    target_path = current
         if not target_path:
             sel = self._view_model.selected_file
-            target_path = getattr(sel, "path", None) if sel is not None else None
+            selected_path = getattr(sel, "path", None) if sel is not None else None
+            if selected_path and self._input_area_vm.selected_location_available:
+                target_path = selected_path
         if not target_path:
             self._info_area_vm.set_transient_message(
                 "locate:no-target",

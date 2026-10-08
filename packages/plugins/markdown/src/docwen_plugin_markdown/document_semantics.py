@@ -226,24 +226,31 @@ def _annotate_tables(
     removed: set[int],
 ) -> None:
     for index, node in enumerate(ast):
-        if node.get("type") != "table":
-            continue
-        attributes = None
-        attribute_index = index + 1
-        if attribute_index < len(ast) and ast[attribute_index].get("type") == "paragraph":
-            attributes = _parse_table_attributes(ast[attribute_index])
-            if attributes is not None:
-                removed.add(attribute_index)
-        elif (
-            attribute_index + 1 < len(ast)
-            and ast[attribute_index].get("type") == "blank_line"
-            and _looks_like_table_attribute(ast[attribute_index + 1])
-        ):
-            diagnostics.append(_attribute_invalid("Table attributes must immediately follow the table."))
+        if node.get("type") == "table":
+            attributes = None
+            attribute_index = index + 1
+            if attribute_index < len(ast) and ast[attribute_index].get("type") == "paragraph":
+                attributes = _parse_table_attributes(ast[attribute_index])
+                if attributes is not None:
+                    removed.add(attribute_index)
+            elif (
+                attribute_index + 1 < len(ast)
+                and ast[attribute_index].get("type") == "blank_line"
+                and _looks_like_table_attribute(ast[attribute_index + 1])
+            ):
+                diagnostics.append(_attribute_invalid("Table attributes must immediately follow the table."))
 
-        metadata, table_diagnostics = _analyze_table(node, attributes)
-        node["_document_semantics_table"] = metadata
-        diagnostics.extend(table_diagnostics)
+            metadata, table_diagnostics = _analyze_table(node, attributes)
+            node["_document_semantics_table"] = metadata
+            diagnostics.extend(table_diagnostics)
+
+        children = node.get("children")
+        if not isinstance(children, list):
+            continue
+        child_removed: set[int] = set()
+        _annotate_tables(children, diagnostics, child_removed)
+        if child_removed:
+            node["children"] = [child for child_index, child in enumerate(children) if child_index not in child_removed]
 
 
 def _parse_caption(node: dict[str, Any]) -> dict[str, Any] | None:

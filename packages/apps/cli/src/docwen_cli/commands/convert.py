@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from typing import Any
 
 from docwen_application.controller import CapabilityUnavailableError
@@ -154,6 +154,14 @@ def execute_convert(
         use_detected_format=bool(getattr(args, "use_detected_format", False)),
         inspection_cache=inspections,
     )
+
+    if invalid_files and execution_request.public_command(args).startswith("merge "):
+        return _print_invalid_input(
+            action,
+            args,
+            "Aggregate operations require every requested input to be admitted.",
+            details={"invalid_inputs": [{"path": file_path, "reason": reason} for file_path, reason in invalid_files]},
+        )
 
     # Human mode may summarize invalid inputs. Machine mode carries the same
     # information in its typed result and must not emit a second stream.
@@ -590,9 +598,7 @@ def _execute_batch(
         )
 
     requests_to_convert = [(result_index, _build_request(file_path)) for result_index, file_path in files_to_convert]
-    reservations = {
-        str(request.request_id): deadline.register(request) for _result_index, request in requests_to_convert
-    }
+    reservations: dict[str, Any] = {}
 
     def _convert_one(request: ConversionRequest) -> Any:
         try:
@@ -602,66 +608,63 @@ def _execute_batch(
 
     try:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all files
+            request_iter = iter(requests_to_convert)
             future_to_index: dict[Any, int] = {}
-            for submitted_index, (result_index, request) in enumerate(requests_to_convert):
+            submitted_count = 0
+            stop_triggered = False
+
+            def _submit_next() -> bool:
+                nonlocal submitted_count
+                try:
+                    result_index, request = next(request_iter)
+                except StopIteration:
+                    return False
+                submitted_count += 1
                 if progress_cb:
-                    progress_cb(f"... {submitted_index + 1}/{len(files_to_convert)}")
+                    progress_cb(f"... {submitted_count}/{len(files_to_convert)}")
+                reservations[str(request.request_id)] = deadline.register(request)
                 future = executor.submit(_convert_one, request)
                 future_to_index[future] = result_index
+                return True
 
-            # Collect results in original order
-            for future in as_completed(future_to_index):
-                idx = future_to_index[future]
-                try:
-                    result = future.result()
-                except Exception as exc:
-                    from docwen_core.models.result import (
-                        ConversionErrorInfo,
-                        ConversionMetrics,
-                        ConversionResult,
-                    )
+            while len(future_to_index) < max_workers and _submit_next():
+                pass
 
-                    result = ConversionResult(
-                        task_id=f"batch-{idx}",
-                        success=False,
-                        error=ConversionErrorInfo(
-                            error_type="conversion_failed",
-                            message=str(exc),
-                        ),
-                        metrics=ConversionMetrics(),
-                    )
+            while future_to_index:
+                completed, _pending = wait(tuple(future_to_index), return_when=FIRST_COMPLETED)
+                for future in completed:
+                    idx = future_to_index.pop(future)
+                    try:
+                        result = future.result()
+                    except Exception as exc:
+                        from docwen_core.models.result import (
+                            ConversionErrorInfo,
+                            ConversionMetrics,
+                            ConversionResult,
+                        )
 
-                results[idx] = result
-                seen_result_count += 1
+                        result = ConversionResult(
+                            task_id=f"batch-{idx}",
+                            success=False,
+                            error=ConversionErrorInfo(
+                                error_type="conversion_failed",
+                                message=str(exc),
+                            ),
+                            metrics=ConversionMetrics(),
+                        )
 
-                if progress_cb:
-                    progress_cb(f"... {seen_result_count}/{len(files)}")
+                    results[idx] = result
+                    seen_result_count += 1
 
-                # Stop on error: cancel remaining futures
-                if stop_on_error and not getattr(result, "success", False):
-                    for f in future_to_index:
-                        if not f.done():
-                            f.cancel()
-                    # Mark remaining as skipped
-                    for j, r in enumerate(results):
-                        if r is None and j > idx:
-                            from docwen_core.models.result import (
-                                ConversionErrorInfo,
-                                ConversionMetrics,
-                                ConversionResult,
-                            )
+                    if progress_cb:
+                        progress_cb(f"... {seen_result_count}/{len(files)}")
 
-                            results[j] = ConversionResult(
-                                task_id=f"batch-{j}",
-                                success=False,
-                                error=ConversionErrorInfo(
-                                    error_type="skipped",
-                                    message="Skipped due to previous error",
-                                ),
-                                metrics=ConversionMetrics(),
-                            )
-                    break
+                    if stop_on_error and not getattr(result, "success", False):
+                        stop_triggered = True
+
+                if not stop_triggered:
+                    while len(future_to_index) < max_workers and _submit_next():
+                        pass
     except KeyboardInterrupt:
         if json_mode:
             from docwen_cli.presenters.json_presenter import JsonPresenter

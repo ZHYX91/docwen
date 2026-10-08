@@ -59,7 +59,7 @@ def test_rejects_changed_source_undeclared_and_conflicting_bindings() -> None:
     "wiki_mode,markdown_mode,expected",
     [
         ("embed", "remove", "IMAGE@"),
-        ("extract_text", "remove", "chart.png"),
+        ("extract_text", "remove", r"chart\.png"),
         ("remove", "extract_text", "Markdown"),
         ("keep", "remove", r"chart\.png"),
     ],

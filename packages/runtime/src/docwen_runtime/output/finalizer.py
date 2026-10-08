@@ -61,6 +61,9 @@ class _PreparedArtifact:
     temp_path: str | None = None
     reuse: ArtifactManifest | None = None
     skip_existing: bool = False
+    protected_input_path: str | None = None
+    protected_input_key: str | None = None
+    authorized_input_key: str | None = None
 
 
 if sys.platform == "win32":
@@ -123,10 +126,7 @@ class OutputFinalizer:
         node_plan: DocumentNodeLayoutPlan | None = None
         if artifacts and (group_outputs or has_markdown_artifacts(artifacts)):
             in_place_markdown = bool(
-                policy.output_path
-                and input_path
-                and os.path.normcase(os.path.abspath(policy.output_path))
-                == os.path.normcase(os.path.abspath(input_path))
+                policy.output_path and input_path and self._lock_key(policy.output_path) == self._lock_key(input_path)
             )
             if policy.output_path and not in_place_markdown:
                 raise ValueError("Grouped conversion output requires an output parent directory, not output_path")
@@ -212,6 +212,7 @@ class OutputFinalizer:
                             policy.overwrite_mode,
                             input_path,
                             cancellation,
+                            allow_primary_input_replacement=bool(policy.output_path),
                         )
                     )
                 except CancellationRequested:
@@ -748,6 +749,8 @@ class OutputFinalizer:
         overwrite_mode: str,
         input_path: str,
         cancellation: CancellationTokenView | None,
+        *,
+        allow_primary_input_replacement: bool = False,
     ) -> _PreparedArtifact:
         if overwrite_mode not in {"error", "rename", "overwrite", "skip"}:
             raise ValueError(f"Unknown overwrite mode: {overwrite_mode!r}")
@@ -755,6 +758,14 @@ class OutputFinalizer:
         reused = cls._reuse_identical_input_artifact(artifact, output_dir, overwrite_mode, input_path, cancellation)
         suggested = artifact.suggested_name or os.path.basename(artifact.staging_path)
         destination, suggested = cls._safe_final_path(output_dir, suggested)
+        input_key = cls._lock_key(input_path) if input_path else None
+        authorized_input_key = (
+            input_key
+            if artifact.is_primary and allow_primary_input_replacement and cls._lock_key(destination) == input_key
+            else None
+        )
+        protected_input_path = input_path if authorized_input_key is None else None
+        protected_input_key = input_key if protected_input_path else None
         rename_base = destination if overwrite_mode == "rename" else None
         if reused is not None:
             return _PreparedArtifact(
@@ -764,6 +775,8 @@ class OutputFinalizer:
                 rename_base=rename_base,
                 reuse=reused[0],
             )
+
+        cls._check_input_destination(destination, protected_input_path, protected_input_key)
 
         io_destination = cls._io_path(destination)
         if io_destination.exists():
@@ -776,6 +789,9 @@ class OutputFinalizer:
                     destination=destination,
                     rename_base=rename_base,
                     skip_existing=True,
+                    protected_input_path=protected_input_path,
+                    protected_input_key=protected_input_key,
+                    authorized_input_key=authorized_input_key,
                 )
             if overwrite_mode == "rename":
                 destination = cls._rename_path(destination)
@@ -804,6 +820,9 @@ class OutputFinalizer:
             destination=destination,
             rename_base=rename_base,
             temp_path=temp_path,
+            protected_input_path=protected_input_path,
+            protected_input_key=protected_input_key,
+            authorized_input_key=authorized_input_key,
         )
 
     @classmethod
@@ -839,10 +858,12 @@ class OutputFinalizer:
 
         destination = item.destination
         if overwrite_mode == "overwrite":
+            cls._check_prepared_destination(item, destination)
             os.replace(cls._io_path(item.temp_path), cls._io_path(destination))
         else:
             while True:
                 try:
+                    cls._check_prepared_destination(item, destination)
                     cls._publish_no_clobber(item.temp_path, destination)
                     break
                 except FileExistsError:
@@ -853,6 +874,12 @@ class OutputFinalizer:
         if not cls._io_path(item.temp_path).exists():
             item.temp_path = None
         return cls._placed_manifest(item, destination), item.artifact.size_bytes or 0
+
+    @classmethod
+    def _check_prepared_destination(cls, item: _PreparedArtifact, destination: str) -> None:
+        cls._check_input_destination(destination, item.protected_input_path, item.protected_input_key)
+        if item.authorized_input_key is not None and cls._lock_key(destination) != item.authorized_input_key:
+            raise ValueError("Explicit in-place output target changed before publication")
 
     @classmethod
     def _publish_no_clobber(cls, temp_path: str, destination: str) -> None:
@@ -946,7 +973,7 @@ class OutputFinalizer:
             artifact.suggested_name or os.path.basename(artifact.staging_path),
         )
         input_abs = os.path.abspath(input_path)
-        if os.path.normcase(final_path) != os.path.normcase(input_abs):
+        if OutputFinalizer._lock_key(final_path) != OutputFinalizer._lock_key(input_abs):
             return None
         if (
             not OutputFinalizer._io_path(artifact.staging_path).is_file()
@@ -1003,6 +1030,11 @@ class OutputFinalizer:
         io_path = filesystem_path(absolute, force_extended=sys.platform == "win32")
         resolved = os.path.realpath(io_path)
         return os.path.normcase(cls._logical_io_spelling(resolved))
+
+    @classmethod
+    def _check_input_destination(cls, destination: str, input_path: str | None, input_key: str | None) -> None:
+        if input_path and cls._lock_key(destination) in {input_key, cls._lock_key(input_path)}:
+            raise ValueError("Primary output must not replace its input file")
 
     @staticmethod
     def _resolve_output_dir(policy: OutputPolicy, input_path: str) -> str:
