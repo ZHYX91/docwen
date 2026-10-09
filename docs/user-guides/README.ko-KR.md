@@ -276,6 +276,13 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ## 📝 Markdown 문법 규칙
 
+**Obsidian Markdown 확장 문법을 사용하나요?** 새로 설치한 DocWen에서는 다음 네 가지 선택 확장이 **기본적으로 꺼져 있습니다**: `structural_tables`(병합 셀 및 여러 행의 머리글), `captions_references`(Number Suite 캡션과 상호 참조), `extended_headings`(H7–H9), `typed_endnotes`(유형별 미주).
+
+- **Markdown → Word:** **설정 → Markdown 문법 → 입력**에서 필요한 확장을 활성화하거나 입력 방향의 **Obsidian 확장** 사전 설정을 선택하세요. 꺼져 있으면 특수 마커가 일반 텍스트로 남을 수 있습니다.
+- **Word → Markdown:** 해당 **출력 확장** 또는 출력 방향의 사전 설정을 별도로 켜야 합니다. 꺼져 있으면 구조가 단순화되거나 정규화되며 경고가 표시될 수 있습니다.
+
+원본 Markdown을 보관하고 생성된 DOCX를 확인하세요. Word 번호는 DocWen 변환 옵션을 따르며, 왕복 변환에서 원본 마커와 공백의 완전한 복원은 보장되지 않습니다. 자세한 내용은 [Markdown 호환성 문서](../specs/markdown-compatibility.md)를 참조하세요.
+
 ### 제목 수준 매핑
 
 Markdown 제목은 Word 제목과 **1:1**로 대응됩니다:

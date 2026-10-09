@@ -280,6 +280,13 @@ Im Modus `punct_required` lautet die genaue Standardliste `。：！？.:!?`. Si
 
 ## 📝 Markdown-Syntaxkonventionen
 
+**Obsidian-Markdown-Erweiterungen verwenden?** Bei einer neuen DocWen-Installation sind vier optionale Erweiterungen **ausgeschaltet**: `structural_tables` (verbundene Zellen und mehrzeilige Tabellenköpfe), `captions_references` (Number-Suite-Beschriftungen und Querverweise), `extended_headings` (H7–H9) und `typed_endnotes` (typisierte Endnoten).
+
+- **Markdown → Word:** Aktivieren Sie unter **Einstellungen → Markdown-Syntax → Eingabe** die benötigten Erweiterungen oder wählen Sie für die Eingabe **Obsidian-Erweiterungen verwenden**. Sonst können Marker als gewöhnlicher Text erhalten bleiben.
+- **Word → Markdown:** Aktivieren Sie die entsprechenden **Ausgabe**-Erweiterungen gesondert oder nutzen Sie die Ausgabe-Voreinstellung; ansonsten können Strukturen vereinfacht oder normalisiert werden, mit Warnhinweisen.
+
+Bewahren Sie das ursprüngliche Markdown auf und prüfen Sie die DOCX-Ausgabe. Word-Nummern folgen den DocWen-Konvertierungsoptionen; identische Schreibweisen und Leerzeichen werden bei der Rückkonvertierung nicht garantiert. Details: [Markdown-Kompatibilität](../specs/markdown-compatibility.md).
+
 ### Überschriftenebenen-Zuordnung
 
 Um es Kollegen ohne Hintergrundwissen leichter zu machen, entsprechen die Markdown-Überschriften in dieser Software **eins-zu-eins** den Word-Überschriften:

@@ -277,6 +277,13 @@ No modo `punct_required`, a lista padrão exata é `。：！？.:!?`. Ela pode 
 
 ## 📝 Convenções de Sintaxe Markdown
 
+**Usa extensões Markdown do Obsidian?** Quatro extensões opcionais vêm **desativadas em novas instalações** do DocWen: `structural_tables` (células mescladas e cabeçalhos em várias linhas), `captions_references` (legendas e referências do Number Suite), `extended_headings` (H7–H9) e `typed_endnotes` (notas finais tipadas).
+
+- **Markdown → Word:** em **Configurações → Sintaxe Markdown → Entrada**, ative as extensões necessárias ou o perfil **Extensões do Obsidian** para entrada. Sem isso, alguns marcadores permanecem como texto literal.
+- **Word → Markdown:** ative separadamente as **extensões de saída** correspondentes (ou o perfil de saída). Caso contrário, estruturas podem ser simplificadas ou normalizadas com avisos.
+
+Guarde o Markdown original e confira o DOCX. A numeração do Word segue as opções de conversão do DocWen; não há garantia de recuperar exatamente a mesma sintaxe ou os espaços originais. Consulte a [referência de compatibilidade](../specs/markdown-compatibility.md).
+
 ### Mapeamento de Nível de Cabeçalho
 
 Para facilitar a memorização por colegas sem conhecimento prévio, os cabeçalhos Markdown neste software correspondem **um-para-um** com os cabeçalhos do Word:

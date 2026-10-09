@@ -280,6 +280,13 @@ En mode `punct_required`, la liste exacte par défaut est `。：！？.:!?`. El
 
 ## 📝 Conventions de syntaxe Markdown
 
+**Vous utilisez des extensions Markdown d’Obsidian ?** Quatre extensions facultatives sont **désactivées après une nouvelle installation** de DocWen : `structural_tables` (cellules fusionnées et en-têtes multiples), `captions_references` (légendes et renvois Number Suite), `extended_headings` (H7–H9) et `typed_endnotes` (notes de fin typées).
+
+- **Markdown → Word :** dans **Paramètres → Syntaxe Markdown → Entrée**, activez les extensions nécessaires ou le préréglage **Extensions Obsidian** pour l’entrée. Sinon, certains marqueurs restent du texte ordinaire.
+- **Word → Markdown :** activez séparément les **extensions de sortie** correspondantes (ou leur préréglage). Sinon, les structures peuvent être simplifiées ou normalisées avec des avertissements.
+
+Conservez le Markdown d’origine et vérifiez le DOCX obtenu. La numérotation Word dépend des options de conversion de DocWen ; la reconversion ne garantit pas une restitution identique des marqueurs et espaces. Voir la [référence de compatibilité](../specs/markdown-compatibility.md).
+
 ### Mappage des niveaux d'en-tête
 
 Pour faciliter la mémorisation pour les collègues sans connaissances de base, les en-têtes Markdown dans ce logiciel correspondent **un à un** aux en-têtes Word :

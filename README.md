@@ -296,6 +296,13 @@ The table below lists common commands only. For the full command surface, use `d
 
 ## 📝 Markdown Syntax Conventions
 
+**Using Obsidian Markdown extensions?** Four extensions are optional and **disabled on a new DocWen installation**: `structural_tables` (merged cells and multi-row/row headers), `captions_references` (Number Suite captions and references), `extended_headings` (H7–H9), and `typed_endnotes` (typed endnotes).
+
+- **Markdown → Word:** Open **Settings → Markdown syntax → Input** and enable the extensions your notes need, or click **Use Obsidian extensions** for the input direction. Otherwise special markers may remain literal text.
+- **Word → Markdown:** Enable the corresponding **Output** extensions separately (or use the output preset). With them off, structures may be flattened or normalized and a warning reported.
+
+Keep the original Markdown and inspect the produced DOCX. Word numbering follows DocWen's conversion settings; the round trip does not promise identical source spelling or whitespace. See the [Markdown compatibility reference](https://github.com/ZHYX91/docwen/blob/main/docs/specs/markdown-compatibility.md) for exact boundaries.
+
 ### Heading Level Mapping
 
 To make it easier for colleagues without background knowledge to remember, the Markdown headings in this software correspond **one-to-one** with Word headings:
