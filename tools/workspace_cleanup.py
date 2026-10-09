@@ -336,9 +336,16 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
         onerror=_raise_walk_error,
     ):
         current_path = _logical_path(current)
-        inside_owned_run = LEASE_NAME in files or any(
+        inside_owned_run = any(
             lease_root == current_path or lease_root in current_path.parents for lease_root in lease_roots
         )
+        if not inside_owned_run and LEASE_NAME in directories + files:
+            marker = current_path / LEASE_NAME
+            marker_metadata = os.lstat(_windows_extended_path(marker))
+            if _is_link_or_reparse(marker_metadata) or not stat.S_ISREG(marker_metadata.st_mode):
+                raise HousekeepingError(f"unsafe_lease_marker:{marker}")
+            _snapshot_lease(marker, root=absolute_root)
+            inside_owned_run = True
         if not inside_owned_run:
             # A grouping directory can contain recovery evidence even when a
             # child's marker was lost. Inspect names without following links or

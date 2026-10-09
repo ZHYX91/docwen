@@ -220,6 +220,29 @@ def test_parent_cleanup_holds_child_recovery(tmp_path, marker_present, record_fo
     assert recovery.exists()
 
 
+@pytest.mark.parametrize("marker_form", ["symlink", "directory", "foreign"])
+def test_invalid_parent_marker_cannot_hide_child_recovery(tmp_path, marker_form):
+    workspace, saved, roots = _plan(tmp_path)
+    marker = roots[0] / workspace_cleanup.LEASE_NAME
+    if marker_form == "symlink":
+        try:
+            marker.symlink_to(roots[0] / "input.txt")
+        except OSError as error:
+            pytest.skip(f"symlink creation unavailable: {error}")
+    elif marker_form == "directory":
+        marker.mkdir()
+    else:
+        marker.write_text(json.dumps({"schemaVersion": 1, "owner": "foreign"}))
+    recovery = roots[0] / "child-run.recovery.json"
+    recovery.write_text("unreconciled")
+    with pytest.raises(workspace_cleanup.HousekeepingError, match=r"unsafe_lease_marker|foreign_lease_owner"):
+        workspace_cleanup.create_plan(workspace_root=workspace, explicit_targets=[roots[0]], reason="parent cleanup")
+    with pytest.raises(workspace_cleanup.HousekeepingError, match=r"unsafe_lease_marker|foreign_lease_owner"):
+        workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
+    assert recovery.read_text() == "unreconciled"
+    assert all((root / "input.txt").read_text() == "controlled scratch" for root in roots)
+
+
 def test_failed_atomic_lease_update_preserves_original_marker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from scripts.release import build_production_candidate as production
 
