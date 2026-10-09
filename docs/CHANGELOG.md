@@ -5,6 +5,8 @@
 
 ## Unreleased / 未发布
 
+## 0.17.1 (2026-10-09)
+
 - Check the destination filesystem before conversion and explain when another output folder is required for atomic publication without overwriting existing results.
 - Use the platform cache for default runtime work; keep explicit runtime directories independent of maintainer workspace layouts. Improve managed source launches, candidate cleanup and MSIX payload verification.
 - Explain the opt-in Markdown input/output extensions and Word numbering boundaries.
