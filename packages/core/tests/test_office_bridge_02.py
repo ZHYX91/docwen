@@ -11,9 +11,11 @@ from ._office_bridge_support import (
 pytestmark = pytest.mark.unit
 
 
-def test_try_com_conversion_can_suppress_converter_created_word_revisions(
+@pytest.mark.parametrize("suppression", [None, False, True], ids=["default", "disabled", "enabled"])
+def test_try_com_conversion_suppresses_new_word_revisions_only_when_requested(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    suppression: bool | None,
 ) -> None:
     """A route-owned private copy may disable recording SaveAs normalization."""
     from docwen_core import office_bridge
@@ -36,7 +38,7 @@ def test_try_com_conversion_can_suppress_converter_created_word_revisions(
 
         def SaveAs(self, output: str, *, FileFormat: int) -> None:
             assert FileFormat == 6
-            assert self.TrackRevisions is False
+            assert self.TrackRevisions is (suppression is not True)
             Path(output).write_bytes(b"{\\rtf1 output}")
 
         def Close(self, *, SaveChanges: bool) -> None:
@@ -66,13 +68,18 @@ def test_try_com_conversion_can_suppress_converter_created_word_revisions(
     monkeypatch.setattr(office_bridge, "_import_win32", lambda: (_PythonCom, _Win32Client))
     _mock_owned_process(monkeypatch)
 
-    result = office_bridge._try_com_conversion(
-        str(input_path),
-        str(output_path),
-        prog_id="Word.Application",
-        save_format=6,
-        app_type="word",
-        suppress_new_revisions=True,
-    )
+    if suppression is None:
+        result = office_bridge._try_com_conversion(
+            str(input_path), str(output_path), prog_id="Word.Application", save_format=6, app_type="word"
+        )
+    else:
+        result = office_bridge._try_com_conversion(
+            str(input_path),
+            str(output_path),
+            prog_id="Word.Application",
+            save_format=6,
+            app_type="word",
+            suppress_new_revisions=suppression,
+        )
 
     assert result == str(output_path.resolve())

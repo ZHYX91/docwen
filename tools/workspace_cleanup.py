@@ -19,9 +19,11 @@ if __package__ in {None, ""}:
         sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
 from tools import process_identity
+from tools.housekeeping_journal import ApplyJournal, exclusive_apply
+from tools.run_lease import manual_retention_observation
 from tools.windows_short_path import ShortPathDriveError, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
-from tools.workspace_root import resolve_workspace_root
+from tools.workspace_root import registered_repositories, resolve_workspace_root
 
 LEASE_NAME = ".docwen-temp-lease.json"
 PLAN_SCHEMA = "docwen.housekeeping-plan.v1"
@@ -334,6 +336,23 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
         onerror=_raise_walk_error,
     ):
         current_path = _logical_path(current)
+        inside_owned_run = any(
+            lease_root == current_path or lease_root in current_path.parents for lease_root in lease_roots
+        )
+        if not inside_owned_run and LEASE_NAME in directories + files:
+            marker = current_path / LEASE_NAME
+            marker_metadata = os.lstat(_windows_extended_path(marker))
+            if _is_link_or_reparse(marker_metadata) or not stat.S_ISREG(marker_metadata.st_mode):
+                raise HousekeepingError(f"unsafe_lease_marker:{marker}")
+            _snapshot_lease(marker, root=absolute_root)
+            inside_owned_run = True
+        if not inside_owned_run:
+            # A grouping directory can contain recovery evidence even when a
+            # child's marker was lost. Inspect names without following links or
+            # trusting record contents; fixtures inside an owned run stay data.
+            for name in sorted(directories + files):
+                if name.endswith(".recovery.json"):
+                    raise HousekeepingError(f"pending_run_recovery:{current_path / name}")
         safe_directories: list[str] = []
         for name in sorted(directories):
             child = current_path / name
@@ -367,6 +386,10 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
                 raise HousekeepingError(f"unsupported_special_file:{child}")
             file_count += 1
             total_bytes += metadata.st_size
+            if file_count % 2000 == 0:
+                print(
+                    f"[housekeeping] scanned {file_count} files / {total_bytes} bytes: {absolute_root}", file=sys.stderr
+                )
             record("file", relative, metadata)
             content_digest.update(relative.replace(os.sep, "/").encode("utf-8"))
             content_digest.update(b"\0")
@@ -460,9 +483,7 @@ def _snapshot_lease(marker: Path, *, root: Path) -> dict[str, Any]:
 
 def _managed_roots(workspace: Path) -> tuple[Path, ...]:
     return tuple(workspace / name for name in MANAGED_ROOT_NAMES) + tuple(
-        workspace.parent / "repos" / name / "build"
-        for name in ("docwen", "docwen-openclaw")
-        if (workspace.parent / "repos" / name / ".git").exists()
+        repository / "build" for repository in registered_repositories(workspace) if (repository / ".git").exists()
     )
 
 
@@ -487,7 +508,7 @@ def _classify_target(
             raise HousekeepingError(f"protected_target:{absolute_target}")
     repository_root = engineering_root / "repos"
     for managed in _managed_roots(workspace):
-        if managed.parent.parent == repository_root and _is_within(absolute_target, managed):
+        if managed.parent in registered_repositories(workspace) and _is_within(absolute_target, managed):
             if not _chain_is_plain(managed, boundary=engineering_root):
                 raise HousekeepingError(f"unsafe_managed_root:{managed}")
             if absolute_target == managed:
@@ -530,6 +551,19 @@ def _validate_target_chain(target: Path, *, boundary: Path) -> None:
         raise HousekeepingError(f"target_chain_linked_or_reparse:{target}")
 
 
+def _assert_no_pending_run_recovery(root: Path) -> None:
+    recovery = root.parent / f"{root.name}.recovery.json"
+    try:
+        recovery.lstat()
+    except FileNotFoundError:
+        return
+    except OSError as error:
+        raise HousekeepingError(f"unreadable_run_recovery:{recovery}:{error}") from error
+    # Presence is a hold, regardless of contents, identity or claimed success.
+    # Never follow a link or infer cleanup authority from a recovery record.
+    raise HousekeepingError(f"pending_run_recovery:{recovery}")
+
+
 def _entry_for_target(
     target: Path,
     *,
@@ -550,6 +584,8 @@ def _entry_for_target(
         source = classified_source
     absolute_target = _absolute(target)
     _validate_target_chain(absolute_target, boundary=boundary)
+    _assert_no_pending_run_recovery(absolute_target)
+    print(f"[housekeeping] scan: {absolute_target}", file=sys.stderr)
     identity = _snapshot_tree(absolute_target)
     for lease in identity["leases"]:
         if _lease_process_alive(lease):
@@ -600,6 +636,17 @@ def _automatic_lease_candidates(
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     discovered: list[tuple[Path, dict[str, Any], Path]] = []
     skipped: list[dict[str, str]] = []
+    pending_targets: set[str] = set()
+    for progress in (workspace / "diagnostics").glob("*.progress.json"):
+        try:
+            _validate_plan_path(progress, workspace=workspace, must_exist=True)
+            record = _read_json_object(progress)
+            if record.get("schema") == "docwen.housekeeping-progress.v1" and record.get("pending"):
+                pending_targets.add(os.path.normcase(str(record["pending"]["path"])))
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            # An unreadable progress record may contain a prior refusal. Do not
+            # create a fresh automatic plan that bypasses that unknown outcome.
+            return [], [{"path": str(progress), "reason": f"unreadable_apply_progress:{error}"}]
     for managed_root in _managed_roots(workspace):
         if not managed_root.exists():
             continue
@@ -629,8 +676,16 @@ def _automatic_lease_candidates(
 
     entries: list[dict[str, Any]] = []
     for leased_root, payload, managed_root in discovered:
+        if os.path.normcase(str(leased_root)) in pending_targets:
+            skipped.append({"path": str(leased_root), "reason": "previous_apply_outcome_unconfirmed"})
+            continue
         if _lease_process_alive(payload):
             skipped.append({"path": str(leased_root), "reason": "owner_process_alive"})
+            continue
+        if payload.get("state") == "retained-manual":
+            skipped.append(
+                {"path": str(leased_root), "reason": manual_retention_observation(payload, now=current_time)}
+            )
             continue
         if leased_root.name in DEPENDENCY_DIRECTORY_NAMES:
             skipped.append({"path": str(leased_root), "reason": "dependency_target_requires_clean_deps"})
@@ -681,8 +736,9 @@ def create_plan(
     now: datetime | None = None,
     failure_ttl: timedelta = DEFAULT_FAILURE_TTL,
     failure_max_per_kind: int = DEFAULT_FAILURE_MAX_PER_KIND,
-    disposition: str = "delete",
+    disposition: str | None = None,
 ) -> dict[str, Any]:
+    disposition = disposition or ("recycle" if os.name == "nt" else "delete")
     if disposition not in {"delete", "recycle"}:
         raise HousekeepingError("unsupported_disposition")
     workspace = _absolute(workspace_root)
@@ -733,11 +789,37 @@ def create_plan(
         "entries": entries,
         "observations": {
             "rootTempBypasses": _bypass_observations(workspace),
-            "skipped": sorted(skipped, key=lambda item: os.path.normcase(item["path"])),
+            "skipped": [
+                {**item, "action": observation_action(item["reason"])}
+                for item in sorted(skipped, key=lambda item: os.path.normcase(item["path"]))
+            ],
         },
     }
     plan["planFingerprint"] = _plan_fingerprint(plan)
     return plan
+
+
+def observation_action(reason: str) -> str:
+    """Explain a refusal without weakening its boundary or mutating a lease."""
+    if "run_recovery" in reason:
+        return "Preserve the run and its sibling recovery record; reconcile them manually before retiring either."
+    if "apply_progress" in reason or "apply_outcome" in reason:
+        return "Inspect the saved progress and actual recovery entries; do not retry a refused or ambiguous mutation."
+    if "manual_retention" in reason or reason == "state_not_terminal":
+        return "Ask the recorded owner to review the hold and its reason/deadline; expiry does not authorize removal."
+    if "root_mismatch" in reason:
+        return "Compare the recorded root with the actual run identity; do not rewrite the lease to authorize deletion."
+    if "reparse" in reason or "link" in reason:
+        return (
+            "Review the reported link and its referenced run together; preserve both until dependencies are resolved."
+        )
+    if "owner" in reason and "alive" in reason:
+        return "Wait for the owner and its consumers to exit; recheck PID creation identity."
+    if "Permission" in reason or "denied" in reason or "refused" in reason:
+        return "Stop this target and record the refusal; do not change ACLs or use a different deletion route."
+    if "abandoned" in reason:
+        return "Owner is gone; retain the original active state as interrupted evidence, never infer success."
+    return "Preserve the target and inspect its lease and recorded reason before creating a new plan."
 
 
 def _diagnostics_root(workspace: Path) -> Path:
@@ -816,6 +898,7 @@ def _revalidate_entry(entry: dict[str, Any], *, workspace: Path) -> dict[str, An
     if planned_boundary != _absolute(boundary):
         raise HousekeepingError(f"allowed_boundary_mismatch:{path}")
     _validate_target_chain(path, boundary=boundary)
+    _assert_no_pending_run_recovery(path)
     current_identity = _snapshot_tree(path)
     if current_identity != entry.get("identity"):
         raise HousekeepingError(f"target_identity_changed:{path}")
@@ -878,6 +961,7 @@ def plan_published_candidate(directory: Path, receipt: Path) -> Path | None:
     if target.parent.name != "artifacts" or workspace.name != ".workspace":
         return None
     boundary = _published_candidate_boundary(target, workspace=workspace, receipt=receipt)
+    print(f"[housekeeping] scan: {target}", file=sys.stderr)
     identity = _snapshot_tree(target)
     if any(_lease_process_alive(lease) for lease in identity["leases"]):
         raise HousekeepingError("publication_candidate_still_owned")
@@ -907,6 +991,17 @@ def apply_saved_plan(plan_path: Path, *, workspace_root: Path) -> dict[str, Any]
     """Apply one saved plan after a full preflight and per-target revalidation."""
 
     plan = load_plan(plan_path, workspace_root=workspace_root)
+    workspace = _absolute(Path(str(plan["workspaceRoot"])))
+    progress = _absolute(plan_path).with_suffix(".progress.json")
+    lock = workspace / "diagnostics" / "housekeeping-apply.lock"
+    for path in (progress, lock):
+        _validate_plan_path(path, workspace=workspace, must_exist=path.exists() or path.is_symlink())
+    with exclusive_apply(lock):
+        journal = ApplyJournal(progress, str(plan["planFingerprint"]))
+        return _apply_with_journal(plan, plan_path=plan_path, journal=journal)
+
+
+def _apply_with_journal(plan: dict[str, Any], *, plan_path: Path, journal: ApplyJournal) -> dict[str, Any]:
     disposition = plan.get("disposition", "delete")
     if disposition not in {"delete", "recycle"}:
         raise HousekeepingError("unsupported_disposition")
@@ -917,41 +1012,66 @@ def apply_saved_plan(plan_path: Path, *, workspace_root: Path) -> dict[str, Any]
     if not isinstance(entries, list):
         raise HousekeepingError("plan_entries_must_be_list")
     _assert_non_overlapping(entries)
-    for entry in entries:
+    completed = journal.payload["completed"]
+    completed_paths = [item["path"] for item in completed]
+    if completed_paths != [item["path"] for item in entries[: len(completed)]]:
+        raise HousekeepingError("housekeeping_journal_entry_mismatch")
+    for item, entry in zip(completed, entries, strict=False):
+        path = Path(item["path"])
+        if path.exists() or path.is_symlink() or item.get("bytes") != entry["identity"]["bytes"]:
+            raise HousekeepingError(f"completed_target_changed:{path}")
+        if disposition == "recycle":
+            from tools.recycle import recovery_entries
+
+            recovered = recovery_entries(path)
+            if not item.get("recovery") or any(record not in recovered for record in item["recovery"]):
+                raise HousekeepingError(f"completed_recovery_unverified:{path}")
+    remaining = entries[len(completed) :]
+    if journal.payload.get("pending") is not None:
+        raise HousekeepingError(f"previous_apply_outcome_unconfirmed_review_journal:{journal.path}")
+    for index, entry in enumerate(remaining, start=len(completed) + 1):
         if not isinstance(entry, dict):
             raise HousekeepingError("plan_entry_must_be_object")
+        print(f"[housekeeping] preflight {index}/{len(entries)}: {entry['path']}", file=sys.stderr)
         _revalidate_entry(entry, workspace=workspace)
-    removed: list[str] = []
-    removed_entries: list[dict[str, object]] = []
-    removed_bytes = 0
-    for entry in entries:
+    for index, entry in enumerate(remaining, start=len(completed) + 1):
+        print(f"[housekeeping] apply {index}/{len(entries)}: {entry['path']}", file=sys.stderr)
         _revalidate_entry(entry, workspace=workspace)
-        _unmount_entry_short_drives(entry)
         path = _absolute(Path(str(entry["path"])))
-        if disposition == "recycle":
-            from tools.recycle import recycle_directory
+        journal.begin(path)
+        try:
+            _unmount_entry_short_drives(entry)
+            if disposition == "recycle":
+                from tools.recycle import recycle_directory
 
-            recovery = recycle_directory(path)
-        else:
-            shutil.rmtree(_windows_extended_path(path), onexc=_remove_owned_readonly_path)
-        removed.append(str(path))
-        removed_entries.append(
-            {
-                "path": str(path),
-                "bytes": int(entry["identity"]["bytes"]),
-                **({"recovery": recovery} if disposition == "recycle" else {}),
-            }
-        )
-        removed_bytes += int(entry["identity"]["bytes"])
+                recovery = recycle_directory(path)
+            else:
+                shutil.rmtree(_windows_extended_path(path), onexc=_remove_owned_readonly_path)
+            journal.complete(
+                {
+                    "path": str(path),
+                    "bytes": int(entry["identity"]["bytes"]),
+                    **({"recovery": recovery} if disposition == "recycle" else {}),
+                }
+            )
+        except BaseException as error:
+            # The durable pending record survives even if saving the error fails.
+            if journal.payload.get("pending") is not None:
+                try:
+                    journal.failed(error)
+                except OSError as journal_error:
+                    error.add_note(f"housekeeping error receipt failed: {journal_error}")
+            raise
     return {
         "schema": "docwen.housekeeping-apply-result.v1",
         "disposition": disposition,
         "spaceReclaimed": disposition == "delete",
         "planPath": str(_absolute(plan_path)),
         "planFingerprint": plan["planFingerprint"],
-        "removed": removed,
-        "removedEntries": removed_entries,
-        "removedBytes": removed_bytes,
+        "removed": [item["path"] for item in journal.payload["completed"]],
+        "removedEntries": journal.payload["completed"],
+        "removedBytes": sum(item["bytes"] for item in journal.payload["completed"]),
+        "progressPath": str(journal.path),
     }
 
 
@@ -1015,7 +1135,7 @@ def main(argv: list[str] | None = None) -> int:
                 clean_dependency_targets=tuple(args.clean_deps),
                 failure_ttl=timedelta(hours=args.failure_ttl_hours),
                 failure_max_per_kind=args.failure_max_per_kind,
-                disposition=args.disposition or "delete",
+                disposition=args.disposition,
             )
             if args.plan_output is not None:
                 saved = save_plan(result, args.plan_output)

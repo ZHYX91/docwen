@@ -12,6 +12,7 @@ template_name = "Mẫu Chung Tiếng Việt"
 # Cua so chinh
 # =============================================================================
 [main_window]
+output_filesystem_unsupported = "Không thể lưu an toàn vào thư mục này: hệ thống tệp không hỗ trợ lưu nguyên tử mà không ghi đè kết quả hiện có. Hãy chọn vị trí xuất khác; trong WSL, hãy dùng hệ thống tệp gốc của Linux."
 ocr_quality_notice = "Kết quả OCR có thể có lỗi hoặc thiếu sót; hãy đối chiếu với bản gốc."
 file_admission_missing = "Tệp đầu vào không còn tồn tại: {path}"
 file_admission_unreadable = "Không thể đọc tệp đầu vào: {path}"

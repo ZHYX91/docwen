@@ -275,6 +275,13 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ## 📝 Markdown構文規則
 
+**Obsidian の Markdown 拡張を使いますか？** DocWen の新規インストールでは、次の４つの任意拡張は**無効**です：`structural_tables`（結合セルと複数行ヘッダー）、`captions_references`（Number Suite のキャプションと相互参照）、`extended_headings`（H7–H9）、`typed_endnotes`（型付き文末脚注）。
+
+- **Markdown → Word：** **設定 → Markdown 構文 → 入力**で必要な拡張を有効にするか、入力用の **Obsidian 拡張**プリセットを使用します。無効の場合、特殊な記号が通常のテキストとして残ることがあります。
+- **Word → Markdown：**対応する**出力**拡張または出力用プリセットも別途有効にしてください。無効の場合、構造が単純化・正規化され、警告が出ることがあります。
+
+元の Markdown を保存し、生成された DOCX を確認してください。Word の番号は DocWen の変換オプションに従います。元の記号や空白の完全一致は保証されません。詳細は [Markdown 互換仕様](../specs/markdown-compatibility.md) を参照してください。
+
 ### 見出しレベルのマッピング
 
 背景知識のない同僚が覚えやすくするために、このソフトウェアのMarkdown見出しはWordの見出しと **1対1** で対応しています：

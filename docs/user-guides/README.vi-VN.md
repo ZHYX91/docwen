@@ -277,6 +277,13 @@ Trong chế độ `punct_required`, danh sách mặc định chính xác là `�
 
 ## 📝 Quy ước Markdown
 
+**Bạn dùng phần mở rộng Markdown của Obsidian?** Bốn phần mở rộng tùy chọn **mặc định tắt khi cài DocWen mới**: `structural_tables` (ô gộp và tiêu đề bảng nhiều hàng), `captions_references` (chú thích và tham chiếu Number Suite), `extended_headings` (H7–H9) và `typed_endnotes` (chú thích cuối có kiểu).
+
+- **Markdown → Word:** vào **Cài đặt → Cú pháp Markdown → Đầu vào**, bật các phần mở rộng cần thiết hoặc chọn cấu hình **Phần mở rộng Obsidian** cho đầu vào. Nếu tắt, một số dấu đặc biệt có thể giữ nguyên thành văn bản.
+- **Word → Markdown:** bật riêng **phần mở rộng đầu ra** tương ứng hoặc cấu hình đầu ra. Nếu không, một số cấu trúc có thể bị đơn giản hóa hay chuẩn hóa kèm cảnh báo.
+
+Hãy giữ Markdown gốc và kiểm tra DOCX tạo ra. Đánh số trong Word do các tùy chọn chuyển đổi DocWen quyết định; không đảm bảo phục hồi đúng từng dấu hay khoảng trắng ban đầu. Xem [tài liệu tương thích Markdown](../specs/markdown-compatibility.md).
+
 ### Ánh xạ cấp tiêu đề
 
 Để dễ ghi nhớ, tiêu đề Markdown trong phần mềm tương ứng **1:1** với tiêu đề Word:

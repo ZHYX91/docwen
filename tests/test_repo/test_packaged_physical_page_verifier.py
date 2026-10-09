@@ -9,9 +9,49 @@ from typing import Any
 from urllib.parse import quote
 
 import pytest
+from scripts.release import verify_packaged_cli
 from scripts.release.verify_packaged_cli import _OFD_FIXTURE_SCRIPT, _verify_physical_page_bundle
 
 pytestmark = pytest.mark.contract
+
+
+def test_physical_fault_publishes_a_complete_valid_image_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from PIL import Image
+
+    destination = tmp_path / "input_images"
+    original_writer = verify_packaged_cli._write_ocr_png
+
+    def observe_preparation(path: Path) -> None:
+        assert not destination.exists()
+        original_writer(path)
+        assert not destination.exists()
+
+    monkeypatch.setattr(verify_packaged_cli, "_write_ocr_png", observe_preparation)
+    prepared = verify_packaged_cli._prepare_physical_page_fault(tmp_path, 1)
+    expected = (prepared / "unresolved.png").read_bytes()
+    verify_packaged_cli._publish_physical_page_fault(prepared, destination)
+    assert not prepared.exists()
+    assert (destination / "unresolved.png").read_bytes() == expected
+    with Image.open(destination / "unresolved.png") as image:
+        image.verify()
+
+
+@pytest.mark.parametrize("populated", [False, True])
+def test_physical_fault_does_not_replace_a_started_converter_directory(tmp_path: Path, populated: bool) -> None:
+    destination = tmp_path / "input_images"
+    destination.mkdir()
+    if populated:
+        (destination / "converter.png").write_bytes(b"converter-owned")
+    prepared = verify_packaged_cli._prepare_physical_page_fault(tmp_path, 1)
+    with pytest.raises(FileExistsError):
+        verify_packaged_cli._publish_physical_page_fault(prepared, destination)
+    assert (prepared / "unresolved.png").is_file()
+    assert not (destination / "unresolved.png").exists()
+    assert sorted(path.name for path in destination.iterdir()) == (["converter.png"] if populated else [])
+    if populated:
+        assert (destination / "converter.png").read_bytes() == b"converter-owned"
 
 
 def test_ofd_fixture_disables_dependency_logging_before_import() -> None:

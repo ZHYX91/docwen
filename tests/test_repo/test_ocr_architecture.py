@@ -105,7 +105,10 @@ def test_plugin_typed_ocr_calls_pass_language_and_locale() -> None:
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
-            if not isinstance(func, ast.Name) or func.id not in typed_call_names:
+            is_typed_call = (isinstance(func, ast.Name) and func.id in typed_call_names) or (
+                isinstance(func, ast.Attribute) and func.attr in typed_call_names
+            )
+            if not is_typed_call:
                 continue
             rel = path.relative_to(PROJECT_ROOT).as_posix()
             callers.add(rel)

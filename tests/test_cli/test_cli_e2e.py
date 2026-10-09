@@ -13,6 +13,8 @@ from docx import Document
 from tests.support.cli import bundle_cli_command
 from tests.support.subprocess_runner import run_subprocess
 
+from docwen_core.version import PRODUCT_VERSION
+
 pytestmark = pytest.mark.e2e
 
 _MACOS_PRIMARY_OPERATION_UNAVAILABLE = pytest.mark.skipif(
@@ -81,7 +83,7 @@ def _payload(proc) -> dict[str, object]:
     value = json.loads(proc.stdout)
     assert isinstance(value, dict)
     assert value["protocol_version"] == 3
-    assert value["product_version"] == "0.17.0"
+    assert value["product_version"] == PRODUCT_VERSION
     return value
 
 

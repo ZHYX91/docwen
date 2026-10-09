@@ -144,7 +144,6 @@ def _update_work_lease(work: Path, *, state: str, error: BaseException | None = 
     transition(payload, root=work, owner="docwen.release.build-production-candidate", state=state)
     if error is not None:
         payload["error"] = f"{type(error).__name__}:{error}"
-    marker.unlink()
     atomic_write(marker, canonical_bytes(payload))
 
 
@@ -596,6 +595,7 @@ def _build(args: argparse.Namespace) -> dict[str, Any]:
     resolved_bytes = canonical_bytes(resolved)
     atomic_write(evidence / "resolved-build-inputs.json", resolved_bytes)
     require(git(repo, "status", "--porcelain=v2") == "", "source_changed_during_build")
+    _update_work_lease(work, state="completed-success")
     if getattr(args, "keep_work_root", False):
         _update_work_lease(work, state="retained-manual")
     else:
@@ -610,7 +610,11 @@ def _close_failed_build(args: argparse.Namespace, error: BaseException) -> None:
     work_marker = work / PRODUCTION_WORK_LEASE
     if work_marker.is_file() and not work_marker.is_symlink():
         try:
-            _update_work_lease(work, state="retained-failure", error=error)
+            payload = json.loads(work_marker.read_text(encoding="utf-8"))
+            state = "retained-interrupted" if isinstance(error, (KeyboardInterrupt, SystemExit)) else "retained-failure"
+            if payload.get("outcome") == "completed-success":
+                state = "retained-cleanup-failure"
+            _update_work_lease(work, state=state, error=error)
         except (OSError, ValueError, json.JSONDecodeError) as cleanup_error:
             error.add_note(f"production work lease finalization failed: {cleanup_error}")
 

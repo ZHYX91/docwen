@@ -47,6 +47,7 @@ from docwen_core.models.task import TaskEvent
 from docwen_runtime._request_admission import admit_markdown_ocr_options
 from docwen_runtime.config.document_styles import DocumentStyleCatalogError
 from docwen_runtime.engine.route_resolver import RouteResolutionError
+from docwen_runtime.output.finalizer import OutputPreflightError
 from docwen_runtime.output.identity import conversion_identity
 from docwen_runtime.output.manifest import OutputManifestWriter
 from docwen_runtime.security import NetworkAccessBlockedError
@@ -311,6 +312,16 @@ class TaskManager:
                 ),
                 metrics=ConversionMetrics(input_bytes=input_ref.size_bytes),
             )
+        except OutputPreflightError as exc:
+            return self._known_failure_result(
+                state,
+                ConversionErrorInfo(
+                    error_type="output_finalization_failed",
+                    message=str(exc),
+                    diagnostic_code=exc.diagnostic_code,
+                ),
+                metrics=ConversionMetrics(input_bytes=input_ref.size_bytes),
+            )
         except Exception as exc:
             return self._unexpected_failure_result(state, exc)
         finally:
@@ -321,6 +332,16 @@ class TaskManager:
             # Cleanup workspace after finalization
             with contextlib.suppress(Exception):
                 self._workspaces.cleanup(task_id)
+
+    @staticmethod
+    def _request_groups_outputs(state: _SingleTaskState) -> bool:
+        return state.request.output_policy.group_outputs or (
+            not state.request.action_name
+            and (
+                state.input_ref.format in {"md", "markdown"}
+                or (state.input_ref.category == "markdown" and state.input_ref.format == "txt")
+            )
+        )
 
     def _run_plugin(
         self,
@@ -350,6 +371,16 @@ class TaskManager:
 
         self._validate_route_options(state.request, route_spec)
         state.request = self._resolve_template_options(state.request)
+        self._finalizer.preflight(
+            state.request.output_policy,
+            input_path=state.input_ref.path,
+            group_outputs=self._request_groups_outputs(state),
+            # Markdown validation emits a JSON report, not Markdown artifacts.
+            markdown_output=(
+                state.request.target_format in {"md", "markdown"} and state.request.action_name != "validate"
+            ),
+            cancellation=state.token.view(),
+        )
         workspace = self._workspaces.create(
             state.task_id,
             state.input_ref.path,
@@ -607,16 +638,7 @@ class TaskManager:
             duration_ms=state.duration_ms,
             input_bytes=state.input_ref.size_bytes,
             cancellation=state.token.view(),
-            group_outputs=(
-                state.request.output_policy.group_outputs
-                or (
-                    not state.request.action_name
-                    and (
-                        state.input_ref.format in {"md", "markdown"}
-                        or (state.input_ref.category == "markdown" and state.input_ref.format == "txt")
-                    )
-                )
-            ),
+            group_outputs=self._request_groups_outputs(state),
             identity=state.identity,
             audit_document=OutputManifestWriter.build_for_success(
                 state.request, replace(state.plugin_result, artifacts=artifacts)

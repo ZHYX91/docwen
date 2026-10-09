@@ -98,6 +98,8 @@ def _localized_failure_message(error: object | None = None) -> str:
     diagnostic_code = str(getattr(error, "diagnostic_code", "") or "").strip()
     error_type = str(getattr(error, "error_type", "") or "").strip()
     stable_code = diagnostic_code or error_type
+    if stable_code == "OUTPUT_ATOMIC_PUBLISH_UNSUPPORTED":
+        return _t("main_window.output_filesystem_unsupported")
     return f"{base} [{stable_code}]" if stable_code else base
 
 

@@ -631,6 +631,9 @@ def _build_msix(
         details = (completed.stdout + "\n" + completed.stderr).strip()
         raise MsixBuildError(f"makeappx_failed:{completed.returncode}:{details}")
     _require(built.is_file(), "msix_output_missing")
+    from scripts.release.msix_layout import verify_layout
+
+    verified_staged_files = verify_layout(built, staging_root)
     entry_count, content_sha256 = package_content_identity(built)
     with built.open("rb") as source, output.open("xb") as target:
         shutil.copyfileobj(source, target)
@@ -647,6 +650,7 @@ def _build_msix(
         "sha256": _sha256(output),
         "entryCount": entry_count,
         "contentSha256": content_sha256,
+        "verifiedStagedFiles": verified_staged_files,
         "sanitizedPeCertificateDirectories": list(sanitized_pe_certificates),
         **({"sourceCandidate": candidate} if candidate is not None else {}),
     }

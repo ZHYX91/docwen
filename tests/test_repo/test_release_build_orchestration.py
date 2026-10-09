@@ -275,7 +275,8 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     msix = Path(".github/workflows/msix.yml").read_text(encoding="utf-8")
     assert "DocWen-windows-x64.msix" in msix
     assert "docwen-microsoft-store-${{ github.run_id }}-${{ github.run_attempt }}" in msix
-    assert "--portable-zip" in msix and "publication.py inspect" in msix
+    assert "--portable-zip" in msix and "publication.py fetch-platform" in msix
+    assert "--platform windows" in msix and "--receipt" in msix
     assert "build_production_candidate" not in msix
     assert "DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow

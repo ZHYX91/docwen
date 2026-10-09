@@ -11,6 +11,7 @@ template_name = "Modèle Général Français"
 # 通用文本
 # =============================================================================
 [main_window]
+output_filesystem_unsupported = "Impossible d’enregistrer en toute sécurité dans ce dossier : le système de fichiers ne permet pas une publication atomique sans écrasement. Choisissez un autre emplacement ; sous WSL, utilisez un système de fichiers Linux natif."
 ocr_quality_notice = "Les résultats OCR peuvent contenir des erreurs ou omissions ; vérifiez-les avec la source."
 file_admission_missing = "Le fichier source n’existe plus : {path}"
 file_admission_unreadable = "Impossible de lire le fichier source : {path}"

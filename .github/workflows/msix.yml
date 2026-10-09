@@ -48,13 +48,9 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.identity.outputs.version }}
         run: |
-          uv run --no-project python scripts/release/publication.py fetch `
+          uv run --no-project python scripts/release/publication.py fetch-platform `
             --repository "$env:GITHUB_REPOSITORY" --version "$env:RELEASE_VERSION" --commit "$env:GITHUB_SHA" `
-            --artifact-id "$env:ARTIFACT_ID" --directory "$env:RUNNER_TEMP/publication"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          uv run --no-project python scripts/release/publication.py inspect `
-            --repository "$env:GITHUB_REPOSITORY" --version "$env:RELEASE_VERSION" --commit "$env:GITHUB_SHA" `
-            --artifact-id "$env:ARTIFACT_ID" --directory "$env:RUNNER_TEMP/publication" `
+            --artifact-id "$env:ARTIFACT_ID" --platform windows --directory "$env:RUNNER_TEMP/publication" `
             --receipt "$env:RUNNER_TEMP/candidate-inspection.json"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build unsigned Store package from those same portable bytes

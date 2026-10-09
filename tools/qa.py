@@ -105,11 +105,10 @@ def _patch_runtime_lease(
     for field in remove_fields:
         payload.pop(field, None)
     replacement = marker.with_suffix(".tmp")
-    replacement.write_text(
-        json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
+    with replacement.open("x", encoding="utf-8", newline="\n") as stream:
+        stream.write(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
     replacement.replace(marker)
 
 
@@ -167,6 +166,8 @@ def _optional_workspace_root(repo_root: Path, workspace_root: Path | None = None
     try:
         return resolve_workspace_root(repo_root, explicit=workspace_root)
     except WorkspaceRootError:
+        if workspace_root is not None or os.environ.get(WORKSPACE_ROOT_ENV, "").strip():
+            raise
         return None
 
 
@@ -184,6 +185,8 @@ def _cleanup_expired_workspace_temps(workspace_root: Path) -> None:
     plan = workspace_cleanup.create_plan(workspace_root=workspace_root)
     for observation in plan.get("observations", {}).get("skipped", []):
         print(f"[qa] housekeeping skipped: {observation['path']}: {observation['reason']}", file=sys.stderr)
+        if observation.get("action"):
+            print(f"[qa] {observation['action']}", file=sys.stderr)
     entries = plan.get("entries", [])
     if not entries:
         return
@@ -257,6 +260,7 @@ def _pytest_runtime_environment(
             "TEMP": str(system_temp),
             "TMP": str(system_temp),
             "TMPDIR": str(system_temp),
+            "DOCWEN_RUNTIME_ROOT": str(runtime_root / "r"),
         }
     )
     return runtime_root, environment, owned
@@ -529,7 +533,11 @@ def main(argv: list[str]) -> int:
 
     if not args.skip_pytest:
         print("==> pytest")
-        selected_workspace = _optional_workspace_root(repo_root, args.workspace_root)
+        try:
+            selected_workspace = _optional_workspace_root(repo_root, args.workspace_root)
+        except WorkspaceRootError as error:
+            print(f"[qa] {error}", file=sys.stderr)
+            return 2
         if selected_workspace is not None:
             try:
                 _cleanup_expired_workspace_temps(selected_workspace)
@@ -652,11 +660,12 @@ def main(argv: list[str]) -> int:
                 print(f"[qa] compact report export failed: {error}", file=sys.stderr)
                 return_code = return_code or 2
         if return_code != 0:
-            if runtime_owned:
+            if lease_managed:
                 _update_runtime_lease(runtime_root, state="retained-failure")
                 print(f"[qa] failed pytest runtime retained: {runtime_root}", file=sys.stderr)
             return return_code
         if runtime_owned:
+            _update_runtime_lease(runtime_root, state="completed-success")
             if args.keep_pytest_runtime:
                 _update_runtime_lease(runtime_root, state="retained-manual")
                 print(f"[qa] pytest runtime retained by request: {runtime_root}")

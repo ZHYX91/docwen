@@ -11,6 +11,8 @@ import pytest
 from scripts.release import build_production_candidate as production
 from scripts.release import v4_package_input_build as v4_build
 
+from docwen_core.version import PRODUCT_VERSION
+
 pytestmark = pytest.mark.contract
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,7 +21,7 @@ MANIFEST = ROOT / "release" / "windows-production-manifest.v1.json"
 
 def test_windows_production_manifest_has_one_offline_asset_and_fixed_epoch() -> None:
     manifest = production.read_manifest(MANIFEST)
-    assert manifest["product"]["version"] == "0.17.0"
+    assert manifest["product"]["version"] == PRODUCT_VERSION
     assert manifest["product"]["releaseTagFormat"] == "{version}"
     assert manifest["product"]["cliJsonProtocolVersion"] == 3
     assert manifest["build"]["mode"] == "pure-python"
@@ -29,8 +31,8 @@ def test_windows_production_manifest_has_one_offline_asset_and_fixed_epoch() -> 
     assert "DocWenCLI-windows-x64.zip" not in json.dumps(manifest)
     assert manifest["releaseAssetAllowlist"] == [
         "DocWen-windows-x64.zip",
-        "DocWenCLI-0.17.0-linux-x64.tar.gz",
-        "DocWen-0.17.0-linux-x64.tar.gz",
+        f"DocWenCLI-{PRODUCT_VERSION}-linux-x64.tar.gz",
+        f"DocWen-{PRODUCT_VERSION}-linux-x64.tar.gz",
         "SHA256SUMS.txt",
     ]
     assert manifest["toolchain"]["python"] == {

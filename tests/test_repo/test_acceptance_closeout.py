@@ -66,7 +66,11 @@ def test_closeout_writes_compact_receipt_and_removes_raw_run(tmp_path: Path) -> 
     assert payload["result"] == "passed"
     assert payload["rawRunRemoved"] is True
     assert payload["limitations"] == ["WPS not selected"]
-    assert list((workspace / "diagnostics").iterdir()) == []
+    remaining = list((workspace / "diagnostics").iterdir())
+    assert {path.suffix for path in remaining} == {".json", ".lock"}
+    progress = json.loads(next(path for path in remaining if path.suffix == ".json").read_text())
+    assert progress["pending"] is None
+    assert progress["completed"][0]["path"] == str(run)
 
 
 def test_closeout_rejects_nonterminal_or_live_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

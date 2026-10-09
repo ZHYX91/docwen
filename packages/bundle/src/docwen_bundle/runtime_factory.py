@@ -28,8 +28,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_WORKSPACE_ROOT_ENV = "DOCWEN_WORKSPACE_ROOT"
-_GOVERNED_WORKSPACE_HEADING = "# DocWen 本地工作区"
+_RUNTIME_ROOT_ENV = "DOCWEN_RUNTIME_ROOT"
 
 # Default plugin import paths — each provides a PluginManifest and a
 # Plugin class implementing the ConverterPlugin protocol.
@@ -167,61 +166,28 @@ def create_runtime_port(
 
 
 def _runtime_workspace_root() -> Path:
-    """Select an explicit runtime workspace without using process TEMP.
-
-    Source-tree launches are bound to the engineering workspace. Installed
-    distributions use the platform cache directory, which is application-owned
-    and never a drive root.
-    """
-    configured = os.environ.get(_WORKSPACE_ROOT_ENV, "").strip()
+    """Consume a runtime directory, without interpreting maintainer layouts."""
+    configured = os.environ.get(_RUNTIME_ROOT_ENV, "").strip()
     if configured:
-        governed_root = Path(configured)
-        if not _is_governed_workspace_root(governed_root):
-            raise RuntimeError(f"invalid governed DocWen workspace: {governed_root}")
-        return governed_root / "temp" / "runtime"
-
-    source_repository = _source_repository(Path(__file__))
-    if source_repository is not None:
-        governed_root = source_repository.parent.parent / ".workspace"
-        if not _is_governed_workspace_root(governed_root):
-            raise RuntimeError(f"governed DocWen workspace is missing: {governed_root}")
-        return governed_root / "temp" / "runtime"
+        selected = Path(configured)
+        if not selected.is_absolute() or selected == Path(selected.anchor) or ".." in selected.parts:
+            raise RuntimeError("invalid DocWen runtime root")
+        for current in (selected, *selected.parents):
+            try:
+                metadata = current.lstat()
+            except FileNotFoundError:
+                continue
+            if (
+                not stat.S_ISDIR(metadata.st_mode)
+                or stat.S_ISLNK(metadata.st_mode)
+                or (getattr(metadata, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+            ):
+                raise RuntimeError("invalid DocWen runtime root")
+        return selected
 
     from platformdirs import user_cache_dir
 
     return Path(user_cache_dir("docwen", appauthor=False)) / "runtime"
-
-
-def _source_repository(module_file: Path) -> Path | None:
-    """Return the repository only for the exact editable-source layout."""
-    try:
-        repository = module_file.resolve().parents[4]
-    except IndexError:
-        return None
-    if repository.name.casefold() != "docwen" or repository.parent.name.casefold() != "repos":
-        return None
-    return repository
-
-
-def _is_governed_workspace_root(path: Path) -> bool:
-    """Validate the minimum immutable identity used by runtime placement."""
-    if not path.is_absolute():
-        return False
-    try:
-        root_metadata = path.lstat()
-        temp_metadata = (path / "temp").lstat()
-        heading_matches = (path / "README.md").read_text(encoding="utf-8").startswith(_GOVERNED_WORKSPACE_HEADING)
-    except OSError:
-        return False
-    reparse_flag = int(getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
-
-    def is_plain_directory(metadata: os.stat_result) -> bool:
-        return stat.S_ISDIR(metadata.st_mode) and not (
-            stat.S_ISLNK(metadata.st_mode)
-            or (reparse_flag and int(getattr(metadata, "st_file_attributes", 0)) & reparse_flag)
-        )
-
-    return is_plain_directory(root_metadata) and is_plain_directory(temp_metadata) and heading_matches
 
 
 def _configured_locale(config_snapshot: dict[str, Any]) -> str:

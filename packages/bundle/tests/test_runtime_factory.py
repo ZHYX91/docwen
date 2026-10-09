@@ -19,30 +19,47 @@ def test_create_runtime_port_builds_with_no_default_plugins(
     assert port is not None
 
 
-def test_runtime_workspace_is_bound_to_explicit_governed_root(
+def test_runtime_workspace_uses_explicit_directory_without_engineering_metadata(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     import docwen_bundle.runtime_factory as runtime_factory
 
-    governed_root = tmp_path / ".workspace"
-    (governed_root / "temp").mkdir(parents=True)
-    (governed_root / "README.md").write_text("# DocWen 本地工作区\n", encoding="utf-8")
-    monkeypatch.setenv("DOCWEN_WORKSPACE_ROOT", str(governed_root))
+    runtime_root = tmp_path / "owned" / "runtime"
+    monkeypatch.setenv("DOCWEN_RUNTIME_ROOT", str(runtime_root))
 
-    assert runtime_factory._runtime_workspace_root() == governed_root / "temp" / "runtime"
+    assert runtime_factory._runtime_workspace_root() == runtime_root
 
 
+@pytest.mark.parametrize("invalid", ["relative/runtime", str(Path.cwd().anchor)])
 def test_runtime_workspace_rejects_invalid_explicit_root(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    invalid: str,
 ) -> None:
     import docwen_bundle.runtime_factory as runtime_factory
 
-    monkeypatch.setenv("DOCWEN_WORKSPACE_ROOT", str(tmp_path))
+    monkeypatch.setenv("DOCWEN_RUNTIME_ROOT", invalid)
 
-    with pytest.raises(RuntimeError, match="invalid governed DocWen workspace"):
+    with pytest.raises(RuntimeError, match="invalid DocWen runtime root"):
         runtime_factory._runtime_workspace_root()
+
+
+def test_runtime_default_does_not_depend_on_checkout_location(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    import platformdirs
+
+    import docwen_bundle.runtime_factory as runtime_factory
+
+    monkeypatch.delenv("DOCWEN_RUNTIME_ROOT", raising=False)
+    monkeypatch.setenv("DOCWEN_WORKSPACE_ROOT", str(tmp_path / "private-not-present"))
+    monkeypatch.setattr(platformdirs, "user_cache_dir", lambda *args, **kwargs: str(tmp_path / "cache"))
+    for relative in ("repos/docwen", "worktrees/feature", "arbitrary-clone"):
+        monkeypatch.setattr(
+            runtime_factory,
+            "__file__",
+            str(tmp_path / relative / "packages/bundle/src/docwen_bundle/runtime_factory.py"),
+        )
+        assert runtime_factory._runtime_workspace_root() == tmp_path / "cache" / "runtime"
 
 
 def test_create_runtime_port_wires_config_loader_to_adapter(

@@ -6,6 +6,8 @@ deep-import plugin or runtime internals.
 
 import pytest
 
+from docwen_core.version import PRODUCT_VERSION
+
 pytestmark = pytest.mark.unit
 
 
@@ -13,7 +15,7 @@ def test_cli_importable() -> None:
     """docwen_cli should be importable."""
     import docwen_cli
 
-    assert docwen_cli.__version__ == "0.17.0"
+    assert docwen_cli.__version__ == PRODUCT_VERSION
 
 
 def test_exit_codes_importable() -> None:

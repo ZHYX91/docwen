@@ -11,6 +11,7 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+output_filesystem_unsupported = "无法安全保存到此文件夹：所在文件系统不支持原子防覆盖保存。请选择其他输出位置；WSL 中请选择 Linux 原生文件系统。"
 ocr_quality_notice = "OCR 结果可能存在错漏，请对照原文校对。"
 file_admission_missing = "输入文件不存在或已移走：{path}"
 file_admission_unreadable = "无法读取输入文件：{path}"

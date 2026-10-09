@@ -37,6 +37,19 @@ ruff check . --fix
 ```
 
 ## 一键质量检查（推荐）
+QA 和源码启动都通过显式工程目录保存运行数据。普通 clone 首次准备时，在仓库外初始化一个工作区；已有维护者工作区不重复初始化：
+
+```bash
+python tools/workspace_root.py --init ../.workspace --repository .
+python tools/qa.py --workspace-root ../.workspace
+python tools/run_source.py --workspace-root ../.workspace gui
+python tools/run_source.py --workspace-root ../.workspace cli -- --version
+```
+
+也可设置 `DOCWEN_WORKSPACE_ROOT` 为该目录的绝对路径。标准 `repos/docwen` 布局和关联 Git worktree 可自动定位既有工作区；普通 clone 使用显式参数。初始化只创建明确指定的新目录，或为既有治理根添加仓库登记，不读取维护者私有规划。
+
+运行目录由工程入口租用并通过 `DOCWEN_RUNTIME_ROOT` 传给产品；正常安装默认使用应用缓存。产品不解析工程目录布局或 README。CI 保留显式 `--pytest-runtime-root`、`--own-pytest-runtime` 与报告目录的入口。
+
 在本地一次跑完格式化校验、静态检查、类型检查与快速测试：
 
 ```bash
@@ -80,7 +93,7 @@ pre-commit run --all-files
 运行测试：
 
 ```bash
-python -m pytest
+python tools/qa.py --suite fast
 ```
 
 ## 批量 Import 替换

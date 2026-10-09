@@ -15,14 +15,13 @@
   **NOT PASSED YET**.
 
 - `golden/current_fa06_best_effort_complete_matrix_semantics.json`
-  — VIS-206 is the 90th Golden. It freezes the two source identities, 36-slot
-  DOCX↔DOC/RTF/ODT accounting, initial converter-created-revision RED and
-  repair, warning/source/container/process predicates, Word object projection,
-  39 PDFs / 363 pages, nine manual contact-sheet checks and the exact
-  `PASS_WITH_USER_ACCEPTED_BOUNDARY` loss statement. Office/PDF/PNG binaries
-  remain external. Report:
-  `fa06-complete-matrix-artifact-oracle-2026-07-24.md`. Overall parity remains
-  **NOT PASSED YET**.
+  — Historical VIS-206 evidence retained at its original identity, including
+  the DOCX↔DOC/RTF/ODT matrix, initial revision failure, repair and accepted
+  loss boundaries. Its recorded PASS and counts are not assertions about
+  the current product. Current source regressions execute the bridge and
+  document converter in `test_office_bridge_02.py` and `test_smart_converter.py`;
+  current real-host evidence remains separate. Office/PDF/PNG binaries remain
+  external. Original report: `fa06-complete-matrix-artifact-oracle-2026-07-24.md`.
 
 - `golden/current_policy03_preserved_presentation_payloads_semantics.json`
   — VIS-204 is the 89th Golden. It normalizes the reused VIS-129 source

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 from collections.abc import Callable
 from pathlib import Path
@@ -26,7 +27,7 @@ from docwen_core.models.result import (
 from docwen_core.models.task import TaskEvent
 from docwen_runtime.engine.route_resolver import RouteResolver
 from docwen_runtime.engine.task_manager import TaskManager
-from docwen_runtime.output.finalizer import OutputFinalizer
+from docwen_runtime.output.finalizer import AtomicPublishUnavailable, OutputFinalizer
 from docwen_runtime.plugin_registry.registry import PluginRegistry
 from docwen_runtime.workspace.manager import WorkspaceManager
 
@@ -110,6 +111,29 @@ def _request(
 
 def _terminal_events(events: list[TaskEvent]) -> list[TaskEvent]:
     return [event for event in events if event.event_type in {"task_completed", "task_failed", "task_cancelled"}]
+
+
+def test_output_preflight_failure_never_starts_conversion(tmp_path: Path, monkeypatch) -> None:
+    def convert(context: Any) -> ConversionResult:
+        pytest.fail("Unsupported output must be rejected before conversion")
+
+    def unsupported(source: str, destination: str) -> None:
+        raise AtomicPublishUnavailable(errno.EINVAL, "Choose another output folder")
+
+    monkeypatch.setattr(OutputFinalizer, "_publish_directory_no_clobber", staticmethod(unsupported))
+    request = _request(tmp_path, "unsupported-output")
+    original = Path(request.input_refs[0].path).read_bytes()
+    events: list[TaskEvent] = []
+    result = _build_manager(tmp_path, convert).execute_single(request, on_event=events.append)
+
+    assert not result.success
+    assert result.error is not None
+    assert result.error.diagnostic_code == "OUTPUT_ATOMIC_PUBLISH_UNSUPPORTED"
+    assert result.artifacts == []
+    assert [event.event_type for event in events] == ["task_started", "task_failed"]
+    assert Path(request.input_refs[0].path).read_bytes() == original
+    assert not (tmp_path / "output").exists()
+    assert not list(tmp_path.glob(".__docwen-preflight-*"))
 
 
 def test_markdown_preprocessing_cancel_has_no_conversion_failure_diagnostic(tmp_path, monkeypatch):
@@ -364,10 +388,18 @@ def test_intentional_no_output_success_bypasses_finalizer_and_completes(
     )
 
 
-def test_real_proofread_disabled_result_is_an_intentional_empty_report_success(tmp_path: Path) -> None:
+@pytest.mark.parametrize("overwrite_mode", ["rename", "overwrite"])
+def test_real_proofread_disabled_result_is_an_intentional_empty_report_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, overwrite_mode: str
+) -> None:
     import json
 
     from docwen_plugin_proofread import ProofreadPlugin
+
+    def unsupported_directory(source: str, destination: str) -> None:
+        raise AtomicPublishUnavailable(errno.EINVAL, "Directory publication unavailable")
+
+    monkeypatch.setattr(OutputFinalizer, "_publish_directory_no_clobber", staticmethod(unsupported_directory))
 
     registry = PluginRegistry()
     registry.register(ProofreadPlugin())
@@ -397,7 +429,7 @@ def test_real_proofread_disabled_result_is_an_intentional_empty_report_success(t
             "enable_typos_rule": False,
             "enable_sensitive_word": False,
         },
-        output_policy=OutputPolicy(output_dir=str(tmp_path / "proofread-output")),
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "proofread-output"), overwrite_mode=overwrite_mode),
     )
     events: list[TaskEvent] = []
 

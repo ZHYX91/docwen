@@ -131,3 +131,8 @@ def recycle_path(path: Path) -> list[dict[str, str]]:
 def recycle_directory(path: Path) -> list[dict[str, str]]:
     """Compatibility entry point for saved directory cleanup plans."""
     return recycle_path(path)
+
+
+def recovery_entries(path: Path) -> list[dict[str, str]]:
+    """Read recoverable entries for an exact original path without mutating them."""
+    return _recovery_entries(path)

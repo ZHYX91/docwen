@@ -16,6 +16,10 @@ def _governance_root(engineering_root: Path) -> Path:
     (governed / "README.md").write_text("# DocWen 本地工作区\n", encoding="utf-8")
     for name in workspace_root._GOVERNANCE_DIRECTORIES:
         (governed / name).mkdir()
+    (governed / "workspace.json").write_text(
+        json.dumps({"schema": "docwen.workspace.v1", "repositories": ["repos/docwen", "repos/docwen-openclaw"]}),
+        encoding="utf-8",
+    )
     return governed
 
 
@@ -126,10 +130,15 @@ def test_cleanup_treats_a_leased_runtime_as_one_root(tmp_path: Path) -> None:
     now = datetime(2026, 8, 22, tzinfo=UTC)
     _lease(runtime, created_at=now - timedelta(days=4))
     _lease(nested, created_at=now - timedelta(days=4))
+    (nested.parent / "nested.recovery.json").write_text("synthetic recovery fixture")
 
     markers = workspace_cleanup._lease_markers(workspace / "temp" / "docwen")
 
     assert markers == [runtime / workspace_cleanup.LEASE_NAME]
+    plan = workspace_cleanup.create_plan(
+        workspace_root=workspace, explicit_targets=[runtime], reason="completed runtime", now=now
+    )
+    assert [entry["path"] for entry in plan["entries"]] == [str(runtime)]
 
 
 def test_cleanup_does_not_treat_nested_workspace_fixtures_as_owned_roots(tmp_path: Path) -> None:

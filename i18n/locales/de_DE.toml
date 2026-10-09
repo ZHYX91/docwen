@@ -1664,6 +1664,7 @@ subtitle = "Untertitel"
 
 
 [main_window]
+output_filesystem_unsupported = "In diesem Ordner kann nicht sicher gespeichert werden: Das Dateisystem unterstützt keine atomare Ausgabe ohne Überschreiben. Wählen Sie einen anderen Ausgabeort; verwenden Sie unter WSL ein natives Linux-Dateisystem."
 ocr_quality_notice = "OCR-Ergebnisse können Fehler oder Auslassungen enthalten; bitte mit der Vorlage vergleichen."
 file_admission_missing = "Die Eingabedatei ist nicht mehr vorhanden: {path}"
 file_admission_unreadable = "Die Eingabedatei kann nicht gelesen werden: {path}"

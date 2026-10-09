@@ -87,6 +87,18 @@ else:
         fcntl.flock(file_descriptor, fcntl.LOCK_UN)
 
 
+class OutputPreflightError(OSError):
+    """The selected output location failed its pre-conversion check."""
+
+    diagnostic_code = "OUTPUT_PREFLIGHT_FAILED"
+
+
+class AtomicPublishUnavailable(OutputPreflightError):
+    """The destination cannot preserve atomic, non-overwriting publication."""
+
+    diagnostic_code = "OUTPUT_ATOMIC_PUBLISH_UNSUPPORTED"
+
+
 class OutputFinalizer:
     """Reads staging artifacts and performs final placement.
 
@@ -106,6 +118,77 @@ class OutputFinalizer:
         """Resolve the exact final directory for trusted runtime sidecars."""
         return os.path.abspath(self._resolve_output_dir(policy, input_path))
 
+    def _uses_document_node(
+        self, policy: OutputPolicy, input_path: str, *, group_outputs: bool, markdown_output: bool
+    ) -> bool:
+        if not (group_outputs or markdown_output):
+            return False
+        if policy.output_path:
+            if input_path and self._lock_key(policy.output_path) == self._lock_key(input_path):
+                return False
+            raise ValueError("Grouped conversion output requires an output parent directory, not output_path")
+        return True
+
+    def preflight(
+        self,
+        policy: OutputPolicy,
+        *,
+        input_path: str = "",
+        group_outputs: bool = False,
+        markdown_output: bool = False,
+        cancellation: CancellationTokenView | None = None,
+    ) -> None:
+        """Exercise the actual publication primitive on private, empty entries.
+
+        The finalizer still owns the commit checks. A probe is not a capability
+        cache or permission to overwrite a target that appears later.
+        """
+        if not policy.write_artifacts:
+            return
+        group_outputs = self._uses_document_node(
+            policy, input_path, group_outputs=group_outputs, markdown_output=markdown_output
+        )
+        self._check_cancellation(cancellation)
+        directory = self._io_path(self.resolve_output_dir(policy, input_path))
+        while not directory.exists() and directory.parent != directory:
+            directory = directory.parent
+        try:
+            with tempfile.TemporaryDirectory(prefix=".__docwen-preflight-", dir=directory) as root:
+                source = str(Path(root) / "source")
+                destination = str(Path(root) / "destination")
+                if group_outputs:
+                    self._io_path(source).mkdir()
+                    publish = self._publish_directory_no_clobber
+                else:
+                    self._io_path(source).touch(exist_ok=False)
+                    publish = self._publish_no_clobber
+                if not group_outputs and policy.overwrite_mode == "overwrite":
+                    os.replace(self._io_path(source), self._io_path(destination))
+                else:
+                    publish(source, destination)
+                    if group_outputs:
+                        self._io_path(source).mkdir()
+                    else:
+                        self._io_path(source).touch(exist_ok=False)
+                    try:
+                        publish(source, destination)
+                    except OSError as exc:
+                        if exc.errno not in {errno.EEXIST, errno.ENOTEMPTY}:
+                            raise
+                    else:
+                        raise AtomicPublishUnavailable(
+                            errno.ENOTSUP,
+                            "The output filesystem cannot prevent replacement. Choose another output folder.",
+                        )
+        except OutputPreflightError:
+            raise
+        except OSError as exc:
+            raise OutputPreflightError(
+                exc.errno,
+                "Cannot safely save to the selected output folder. Check its permissions or choose another folder.",
+            ) from exc
+        self._check_cancellation(cancellation)
+
     def finalize(
         self,
         task_id: str,
@@ -124,22 +207,16 @@ class OutputFinalizer:
         self._check_cancellation(cancellation)
         output_dir = self._resolve_output_dir(policy, input_path)
         node_plan: DocumentNodeLayoutPlan | None = None
-        if artifacts and (group_outputs or has_markdown_artifacts(artifacts)):
-            in_place_markdown = bool(
-                policy.output_path and input_path and self._lock_key(policy.output_path) == self._lock_key(input_path)
+        if artifacts and self._uses_document_node(
+            policy, input_path, group_outputs=group_outputs, markdown_output=has_markdown_artifacts(artifacts)
+        ):
+            node_plan = plan_document_node_layout(
+                task_id=task_id,
+                artifacts=artifacts,
+                input_path=input_path,
+                identity=identity,
             )
-            if policy.output_path and not in_place_markdown:
-                raise ValueError("Grouped conversion output requires an output parent directory, not output_path")
-            if in_place_markdown:
-                artifacts = self._artifacts_for_policy(artifacts, policy)
-            else:
-                node_plan = plan_document_node_layout(
-                    task_id=task_id,
-                    artifacts=artifacts,
-                    input_path=input_path,
-                    identity=identity,
-                )
-                artifacts = list(node_plan.artifacts)
+            artifacts = list(node_plan.artifacts)
         else:
             artifacts = self._artifacts_for_policy(artifacts, policy)
         lock_paths = self._finalization_lock_paths(output_dir, artifacts)
@@ -451,9 +528,13 @@ class OutputFinalizer:
                 input_bytes=input_bytes,
                 output_dir=output_dir,
                 root_name=selected.root_name,
-                code="DOCUMENT_NODE_SKIP_MISMATCH"
-                if policy.overwrite_mode == "skip"
-                else "DOCUMENT_NODE_PUBLISH_FAILED",
+                code=(
+                    "OUTPUT_ATOMIC_PUBLISH_UNSUPPORTED"
+                    if isinstance(exc, AtomicPublishUnavailable)
+                    else "DOCUMENT_NODE_SKIP_MISMATCH"
+                    if policy.overwrite_mode == "skip"
+                    else "DOCUMENT_NODE_PUBLISH_FAILED"
+                ),
             )
         finally:
             if temp_root and self._io_path(temp_root).exists():
@@ -894,12 +975,18 @@ class OutputFinalizer:
 
             libc = ctypes.CDLL(None, use_errno=True)
             rename_no_replace = getattr(libc, "renameat2", None)
+            unsupported_message = (
+                "The output filesystem does not support atomic publication without overwriting existing results. "
+                "Choose another output folder, such as a native Linux filesystem instead of a Windows drive mounted in WSL."
+            )
             if rename_no_replace is None:
-                raise OSError(errno.ENOSYS, "Atomic no-replace rename is unavailable", str(io_destination))
+                raise AtomicPublishUnavailable(errno.ENOSYS, unsupported_message, str(io_destination))
             rename_no_replace.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
             rename_no_replace.restype = ctypes.c_int
             if rename_no_replace(-100, os.fsencode(io_temp), -100, os.fsencode(io_destination), 1) != 0:
                 error = ctypes.get_errno()
+                if error in {errno.EINVAL, errno.ENOSYS, errno.ENOTSUP, errno.EOPNOTSUPP}:
+                    raise AtomicPublishUnavailable(error, unsupported_message, str(io_destination))
                 raise OSError(error, os.strerror(error), str(io_destination))
             return
         os.link(io_temp, io_destination)

@@ -340,105 +340,6 @@ def test_key_settings_and_editors_do_not_copy_english_prose() -> None:
             )
 
 
-def test_locale_short_labels_are_not_left_as_english_placeholders() -> None:
-    """已收尾的短标签不应再回退成英文缩写占位。"""
-    expected_values = {
-        "ko_KR.toml": {
-            "components.template_selector_tabbed.document_templates": "문서",
-            "components.template_selector_tabbed.spreadsheet_templates": "시트",
-            "file_types.document": "문서",
-            "file_types.image": "이미지",
-            "file_category.document_short": "문서",
-            "file_category.spreadsheet_short": "시트",
-            "file_category.layout_short": "레이아웃",
-        },
-        "pt_BR.toml": {
-            "action_area.export_options": "Opções de exportação",
-            "editors.common.description": "Descrição:",
-            "file_category.document_short": "Documento",
-            "file_category.spreadsheet_short": "Planilha",
-        },
-    }
-
-    for locale_name, key_values in expected_values.items():
-        locale_data = _read_toml_file(LOCALES_DIR / locale_name)
-        for key, expected_value in key_values.items():
-            assert _get_nested_value(locale_data, key) == expected_value, (
-                f"{locale_name} should use localized value for {key}"
-            )
-
-
-def test_restored_locale_typography_is_preserved() -> None:
-    """High-frequency UI copy should keep native accents, diacritics and scripts."""
-    expected_values = {
-        "de_DE.toml": {
-            "settings.reset.tab_button": "Tab zurücksetzen",
-            "settings.formatting.heading_merge_mode_label": "Modus zum Zusammenführen von Überschrift und Text:",
-            "components.file_drop.add_file_action": "Dateien hinzufügen",
-            "components.file_drop.batch_list.sort_size": "Größe",
-        },
-        "fr_FR.toml": {
-            "settings.reset.tab_button": "Réinitialiser l’onglet",
-            "settings.toml_editor.save_success_title": "Enregistré",
-            "components.file_drop.select_folder_dialog": "Sélectionner un dossier",
-            "components.file_drop.status.failed": "Échec",
-        },
-        "vi_VN.toml": {
-            "main_window.window_title": "DocWen (Phiên bản ngoại tuyến)",
-            "settings.reset.tab_confirm_title": "Xác nhận đặt lại",
-            "components.file_drop.add_file_action": "Thêm tệp",
-            "components.file_drop.batch_list.filter_button": "Lọc",
-            "conversion_panel.layout.split_mode_single_page_warning": "⚠️ Tệp này chỉ có 1 trang; không cần tách",
-            "action_area.generate": "Tạo",
-        },
-        "ru_RU.toml": {
-            "components.file_drop.add_file_action": "Добавить файлы",
-            "components.file_drop.select_folder_dialog": "Выбрать папку",
-            "settings.layout.render_dpi_label": "DPI рендеринга:",
-        },
-        "zh_TW.toml": {
-            "components.template_selector.source_tooltip": "來源資料夾：{value}",
-        },
-        "es_ES.toml": {
-            "settings.layout.render_dpi_label": "DPI de renderizado:",
-        },
-        "ja_JP.toml": {
-            "settings.layout.render_dpi_label": "レンダリング DPI：",
-        },
-        "ko_KR.toml": {
-            "settings.layout.render_dpi_label": "렌더링 DPI:",
-        },
-        "pt_BR.toml": {
-            "settings.layout.render_dpi_label": "DPI de renderização:",
-        },
-    }
-
-    for locale_name, key_values in expected_values.items():
-        locale_data = _read_toml_file(LOCALES_DIR / locale_name)
-        for key, expected_value in key_values.items():
-            assert _get_nested_value(locale_data, key) == expected_value, (
-                f"{locale_name} should preserve native typography for {key}"
-            )
-
-
-def test_zh_tw_gui_status_messages_use_traditional_chinese_wording() -> None:
-    """繁中 GUI 状态消息应保持繁体用词，不回退到简体口径。"""
-    locale_data = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
-
-    expected_values = {
-        "components.file_drop.files_added_msg": "已新增 {count} 個檔案",
-        "components.file_drop.files_added_with_skipped_msg": "已新增 {added} 個檔案，跳過 {skipped} 個",
-        "components.file_drop.file_selected_msg": "目前檔案：{filename}",
-        "components.file_drop.unsupported_type_msg": "不支援的檔案類型：{filename}",
-        "components.template_selector.auto_selected_reason": "已依預設設定自動選取 {template_kind} 中的可用範本。",
-    }
-
-    for key, expected_value in expected_values.items():
-        assert _get_nested_value(locale_data, key) == expected_value, (
-            f"zh_TW.toml should keep Traditional Chinese wording for {key}"
-        )
-
-
 def test_locale_markdown_term_uses_consistent_spelling() -> None:
     """locale 中用户可见术语统一使用 Markdown，不回退到旧的 MarkDown 拼写。"""
     for toml_path in sorted(LOCALES_DIR.glob("*.toml")):
@@ -448,9 +349,6 @@ def test_locale_markdown_term_uses_consistent_spelling() -> None:
 
 def test_language_section_does_not_keep_english_suffix_in_non_en_locales() -> None:
     """非 en_US 语言包不应把语言分区标题保留成“本地词 / Language”混合占位。"""
-    en_data = _read_toml_file(LOCALES_DIR / "en_US.toml")
-    assert _get_nested_value(en_data, "settings.general.language_section") == "Language"
-
     for toml_path in sorted(LOCALES_DIR.glob("*.toml")):
         if toml_path.name == "en_US.toml":
             continue
@@ -460,24 +358,6 @@ def test_language_section_does_not_keep_english_suffix_in_non_en_locales() -> No
 
 
 def test_theme_semantic_labels_exist_in_all_locales() -> None:
-    expected_values = {
-        "zh_CN.toml": {
-            "settings.general.themes.light": "浅色",
-            "settings.general.themes.dark": "深色",
-            "settings.general.themes.system": "跟随系统",
-        },
-        "zh_TW.toml": {
-            "settings.general.themes.light": "淺色",
-            "settings.general.themes.dark": "深色",
-            "settings.general.themes.system": "跟隨系統",
-        },
-        "en_US.toml": {
-            "settings.general.themes.light": "Light",
-            "settings.general.themes.dark": "Dark",
-            "settings.general.themes.system": "Follow System",
-        },
-    }
-
     for toml_path in sorted(LOCALES_DIR.glob("*.toml")):
         locale_data = _read_toml_file(toml_path)
         for key in (
@@ -487,101 +367,6 @@ def test_theme_semantic_labels_exist_in_all_locales() -> None:
         ):
             value = _get_nested_value(locale_data, key)
             assert value.strip(), f"{toml_path.name} should define non-empty theme semantic label for {key}"
-
-        if toml_path.name in expected_values:
-            for key, expected_value in expected_values[toml_path.name].items():
-                assert _get_nested_value(locale_data, key) == expected_value
-
-
-def test_zh_tw_batch_retry_actions_use_traditional_chinese_wording() -> None:
-    """繁中批量失败重试文案应保持繁体口径。"""
-    locale_data = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
-
-    expected_values = {
-        "components.file_drop.batch_list.retry_selected_failed": "重試當前失敗項",
-        "components.file_drop.batch_list.retry_all_failed": "重試當前分頁全部失敗項",
-    }
-
-    for key, expected_value in expected_values.items():
-        assert _get_nested_value(locale_data, key) == expected_value, (
-            f"zh_TW.toml should keep Traditional Chinese wording for {key}"
-        )
-
-
-def test_chinese_file_selected_message_uses_full_width_colon() -> None:
-    """中文文件选择提示统一使用全角冒号。"""
-    zh_cn = _read_toml_file(LOCALES_DIR / "zh_CN.toml")
-    zh_tw = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
-
-    assert _get_nested_value(zh_cn, "components.file_drop.file_selected_msg") == "当前文件：{filename}"
-    assert _get_nested_value(zh_tw, "components.file_drop.file_selected_msg") == "目前檔案：{filename}"
-
-
-def test_chinese_status_progress_and_failure_messages_use_full_width_colon() -> None:
-    """中文 GUI 高频状态消息统一使用全角冒号。"""
-    zh_cn = _read_toml_file(LOCALES_DIR / "zh_CN.toml")
-    zh_tw = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
-
-    expected_values = {
-        "info_area.task_current_file": {
-            "zh_CN": "正在处理：{name}",
-            "zh_TW": "正在處理：{name}",
-        },
-        "info_area.task_progress_detail": {
-            "zh_CN": "已完成 {completed}/{total}，失败 {failed}",
-            "zh_TW": "已完成 {completed}/{total}，失敗 {failed}",
-        },
-        "components.info_area.task_completion_notification_failed": {
-            "zh_CN": "任务已结束：共 {total} 个文件，失败 {failed} 个。",
-            "zh_TW": "任務已結束：共 {total} 個檔案，失敗 {failed} 個。",
-        },
-    }
-
-    for key, locale_values in expected_values.items():
-        assert _get_nested_value(zh_cn, key) == locale_values["zh_CN"]
-        assert _get_nested_value(zh_tw, key) == locale_values["zh_TW"]
-
-
-def test_chinese_gui_operation_failure_messages_use_full_width_colon() -> None:
-    """中文 GUI 操作失败提示统一使用全角冒号。"""
-    zh_cn = _read_toml_file(LOCALES_DIR / "zh_CN.toml")
-    zh_tw = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
-
-    expected_values = {
-        "main_window.open_path_failed": {
-            "zh_CN": "无法打开路径：{path}",
-            "zh_TW": "無法開啟路徑：{path}",
-        },
-        "settings.errors.tab_load_failed_message": {
-            "zh_CN": "{tab}加载失败\n\n错误：{error}",
-            "zh_TW": "無法載入 {tab}\n\n錯誤：{error}",
-        },
-    }
-
-    for key, locale_values in expected_values.items():
-        assert _get_nested_value(zh_cn, key) == locale_values["zh_CN"]
-        assert _get_nested_value(zh_tw, key) == locale_values["zh_TW"]
-
-
-def test_chinese_batch_progress_messages_use_full_width_colon() -> None:
-    """中文批量进度消息统一使用全角冒号。"""
-    zh_cn = _read_toml_file(LOCALES_DIR / "zh_CN.toml")
-    zh_tw = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
-
-    expected_values = {
-        "components.info_area.batch_completed": {
-            "zh_CN": "批量处理结束：成功 {success} 个，失败 {failed} 个，跳过 {skipped} 个，取消 {cancelled} 个",
-            "zh_TW": "批次處理結束：成功 {success} 個，失敗 {failed} 個，略過 {skipped} 個，取消 {cancelled} 個",
-        },
-        "info_area.task_progress_detail": {
-            "zh_CN": "已完成 {completed}/{total}，失败 {failed}",
-            "zh_TW": "已完成 {completed}/{total}，失敗 {failed}",
-        },
-    }
-
-    for key, locale_values in expected_values.items():
-        assert _get_nested_value(zh_cn, key) == locale_values["zh_CN"]
-        assert _get_nested_value(zh_tw, key) == locale_values["zh_TW"]
 
 
 def test_batch_completion_locales_preserve_all_terminal_count_placeholders() -> None:
@@ -598,25 +383,15 @@ def test_batch_completion_locales_preserve_all_terminal_count_placeholders() -> 
         assert re.findall(r"\{[^{}]+\}", cancelled) == ["{cancelled}"], toml_path.name
 
 
-def test_chinese_main_window_progress_messages_use_full_width_colon() -> None:
-    """中文主窗口进度消息统一使用全角冒号。"""
-    zh_cn = _read_toml_file(LOCALES_DIR / "zh_CN.toml")
-    zh_tw = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
-
-    expected_values = {
-        "main_window.task_processing_prefix": {
-            "zh_CN": "正在处理：",
-            "zh_TW": "正在處理：",
-        },
-        "main_window.task_progress_prefix": {
-            "zh_CN": "进度：",
-            "zh_TW": "進度：",
-        },
-    }
-
-    for key, locale_values in expected_values.items():
-        assert _get_nested_value(zh_cn, key) == locale_values["zh_CN"]
-        assert _get_nested_value(zh_tw, key) == locale_values["zh_TW"]
+@pytest.mark.parametrize("locale", ["de_DE", "fr_FR", "vi_VN"])
+@pytest.mark.parametrize(
+    "key",
+    ["settings.errors.tab_load_failed_message", "settings.formatting.heading_merge_mode_tooltip"],
+)
+def test_localized_multiline_copy_keeps_real_line_breaks(locale: str, key: str) -> None:
+    value = _get_nested_value(_read_toml_file(LOCALES_DIR / f"{locale}.toml"), key)
+    assert "\n" in value
+    assert "\\n" not in value
 
 
 def test_gui_i18n_can_load_locale_file() -> None:

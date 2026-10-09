@@ -7,6 +7,8 @@ from importlib import import_module
 
 import pytest
 
+from docwen_core.version import PRODUCT_VERSION
+
 pytestmark = pytest.mark.contract
 
 
@@ -17,7 +19,7 @@ def test_protocol_envelope_has_exact_top_level_shape() -> None:
 
     assert envelope == {
         "protocol_version": 3,
-        "product_version": "0.17.0",
+        "product_version": PRODUCT_VERSION,
         "success": True,
         "command": "info",
         "data": {"ready": True},
@@ -40,7 +42,7 @@ def test_json_presenter_emits_typed_protocol_error(capsys: pytest.CaptureFixture
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["protocol_version"] == 3
-    assert payload["product_version"] == "0.17.0"
+    assert payload["product_version"] == PRODUCT_VERSION
     assert payload["error"] == {
         "category": "unavailable",
         "code": "gui_not_running",
