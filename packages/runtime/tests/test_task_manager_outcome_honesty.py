@@ -388,10 +388,18 @@ def test_intentional_no_output_success_bypasses_finalizer_and_completes(
     )
 
 
-def test_real_proofread_disabled_result_is_an_intentional_empty_report_success(tmp_path: Path) -> None:
+@pytest.mark.parametrize("overwrite_mode", ["rename", "overwrite"])
+def test_real_proofread_disabled_result_is_an_intentional_empty_report_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, overwrite_mode: str
+) -> None:
     import json
 
     from docwen_plugin_proofread import ProofreadPlugin
+
+    def unsupported_directory(source: str, destination: str) -> None:
+        raise AtomicPublishUnavailable(errno.EINVAL, "Directory publication unavailable")
+
+    monkeypatch.setattr(OutputFinalizer, "_publish_directory_no_clobber", staticmethod(unsupported_directory))
 
     registry = PluginRegistry()
     registry.register(ProofreadPlugin())
@@ -421,7 +429,7 @@ def test_real_proofread_disabled_result_is_an_intentional_empty_report_success(t
             "enable_typos_rule": False,
             "enable_sensitive_word": False,
         },
-        output_policy=OutputPolicy(output_dir=str(tmp_path / "proofread-output")),
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "proofread-output"), overwrite_mode=overwrite_mode),
     )
     events: list[TaskEvent] = []
 

@@ -333,6 +333,16 @@ class TaskManager:
             with contextlib.suppress(Exception):
                 self._workspaces.cleanup(task_id)
 
+    @staticmethod
+    def _request_groups_outputs(state: _SingleTaskState) -> bool:
+        return state.request.output_policy.group_outputs or (
+            not state.request.action_name
+            and (
+                state.input_ref.format in {"md", "markdown"}
+                or (state.input_ref.category == "markdown" and state.input_ref.format == "txt")
+            )
+        )
+
     def _run_plugin(
         self,
         state: _SingleTaskState,
@@ -364,19 +374,10 @@ class TaskManager:
         self._finalizer.preflight(
             state.request.output_policy,
             input_path=state.input_ref.path,
-            group_outputs=(
-                not state.request.output_policy.output_path
-                and (
-                    state.request.output_policy.group_outputs
-                    or state.request.target_format in {"md", "markdown"}
-                    or (
-                        not state.request.action_name
-                        and (
-                            state.input_ref.format in {"md", "markdown"}
-                            or (state.input_ref.category == "markdown" and state.input_ref.format == "txt")
-                        )
-                    )
-                )
+            group_outputs=self._request_groups_outputs(state),
+            # Markdown validation emits a JSON report, not Markdown artifacts.
+            markdown_output=(
+                state.request.target_format in {"md", "markdown"} and state.request.action_name != "validate"
             ),
             cancellation=state.token.view(),
         )
@@ -637,16 +638,7 @@ class TaskManager:
             duration_ms=state.duration_ms,
             input_bytes=state.input_ref.size_bytes,
             cancellation=state.token.view(),
-            group_outputs=(
-                state.request.output_policy.group_outputs
-                or (
-                    not state.request.action_name
-                    and (
-                        state.input_ref.format in {"md", "markdown"}
-                        or (state.input_ref.category == "markdown" and state.input_ref.format == "txt")
-                    )
-                )
-            ),
+            group_outputs=self._request_groups_outputs(state),
             identity=state.identity,
             audit_document=OutputManifestWriter.build_for_success(
                 state.request, replace(state.plugin_result, artifacts=artifacts)

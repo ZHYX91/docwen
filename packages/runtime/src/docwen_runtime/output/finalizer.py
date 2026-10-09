@@ -118,12 +118,24 @@ class OutputFinalizer:
         """Resolve the exact final directory for trusted runtime sidecars."""
         return os.path.abspath(self._resolve_output_dir(policy, input_path))
 
+    def _uses_document_node(
+        self, policy: OutputPolicy, input_path: str, *, group_outputs: bool, markdown_output: bool
+    ) -> bool:
+        if not (group_outputs or markdown_output):
+            return False
+        if policy.output_path:
+            if input_path and self._lock_key(policy.output_path) == self._lock_key(input_path):
+                return False
+            raise ValueError("Grouped conversion output requires an output parent directory, not output_path")
+        return True
+
     def preflight(
         self,
         policy: OutputPolicy,
         *,
         input_path: str = "",
         group_outputs: bool = False,
+        markdown_output: bool = False,
         cancellation: CancellationTokenView | None = None,
     ) -> None:
         """Exercise the actual publication primitive on private, empty entries.
@@ -133,6 +145,9 @@ class OutputFinalizer:
         """
         if not policy.write_artifacts:
             return
+        group_outputs = self._uses_document_node(
+            policy, input_path, group_outputs=group_outputs, markdown_output=markdown_output
+        )
         self._check_cancellation(cancellation)
         directory = self._io_path(self.resolve_output_dir(policy, input_path))
         while not directory.exists() and directory.parent != directory:
@@ -192,22 +207,16 @@ class OutputFinalizer:
         self._check_cancellation(cancellation)
         output_dir = self._resolve_output_dir(policy, input_path)
         node_plan: DocumentNodeLayoutPlan | None = None
-        if artifacts and (group_outputs or has_markdown_artifacts(artifacts)):
-            in_place_markdown = bool(
-                policy.output_path and input_path and self._lock_key(policy.output_path) == self._lock_key(input_path)
+        if artifacts and self._uses_document_node(
+            policy, input_path, group_outputs=group_outputs, markdown_output=has_markdown_artifacts(artifacts)
+        ):
+            node_plan = plan_document_node_layout(
+                task_id=task_id,
+                artifacts=artifacts,
+                input_path=input_path,
+                identity=identity,
             )
-            if policy.output_path and not in_place_markdown:
-                raise ValueError("Grouped conversion output requires an output parent directory, not output_path")
-            if in_place_markdown:
-                artifacts = self._artifacts_for_policy(artifacts, policy)
-            else:
-                node_plan = plan_document_node_layout(
-                    task_id=task_id,
-                    artifacts=artifacts,
-                    input_path=input_path,
-                    identity=identity,
-                )
-                artifacts = list(node_plan.artifacts)
+            artifacts = list(node_plan.artifacts)
         else:
             artifacts = self._artifacts_for_policy(artifacts, policy)
         lock_paths = self._finalization_lock_paths(output_dir, artifacts)

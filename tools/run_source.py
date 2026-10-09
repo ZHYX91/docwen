@@ -3,18 +3,15 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tools.run_lease import lease_payload, transition
+from tools.run_lease import managed_run
 from tools.workspace_root import resolve_workspace_root
 
 
@@ -40,33 +37,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     repo = Path(__file__).resolve().parents[1]
     workspace = resolve_workspace_root(repo, explicit=args.workspace_root)
-    run = Path(tempfile.mkdtemp(prefix="source-", dir=workspace / "temp")).resolve()
-    (run / "temp").mkdir()
-    lease = lease_payload(run, owner="docwen.tools.run-source", kind="source-launch")
-    marker = run / ".docwen-temp-lease.json"
-    marker.write_text(json.dumps(lease), encoding="utf-8")
-    state = "retained-failure"
-    try:
+    with managed_run(
+        workspace / "temp", prefix="source-", owner="docwen.tools.run-source", kind="source-launch"
+    ) as run:
+        (run.root / "temp").mkdir()
         arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
         module = "docwen_bundle.gui_entry" if args.entry == "gui" else "docwen_bundle.cli_entry"
         result = subprocess.run(
-            [sys.executable, "-m", module, *arguments], cwd=repo, env=source_environment(repo, run), check=False
+            [sys.executable, "-m", module, *arguments], cwd=repo, env=source_environment(repo, run.root), check=False
         )
-        state = "completed-success" if result.returncode == 0 else "retained-failure"
+        run.state = "completed-success" if result.returncode == 0 else "retained-failure"
         return result.returncode
-    except KeyboardInterrupt:
-        state = "retained-interrupted"
-        raise
-    finally:
-        transition(lease, root=run, owner="docwen.tools.run-source", state=state)
-        marker.write_text(json.dumps(lease), encoding="utf-8")
-        if state == "completed-success":
-            try:
-                shutil.rmtree(run)
-            except OSError:
-                transition(lease, root=run, owner="docwen.tools.run-source", state="retained-cleanup-failure")
-                marker.write_text(json.dumps(lease), encoding="utf-8")
-                raise
 
 
 if __name__ == "__main__":

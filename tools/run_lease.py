@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import os
+import shutil
+import stat
+import sys
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -19,6 +27,99 @@ STATES = frozenset(
         "retained-manual",
     }
 )
+
+
+@dataclass
+class ManagedRun:
+    root: Path
+    state: str = "completed-success"
+
+
+@contextmanager
+def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator[ManagedRun]:
+    """Own allocation through teardown, preserving a primary failure on closeout errors."""
+    parent = parent.resolve(strict=True)
+    root = Path(tempfile.mkdtemp(prefix=prefix, dir=parent))
+    try:
+        root_identity = root.lstat()
+    except OSError as primary:
+        note = f"Cannot establish managed run identity; inspect {root} before cleanup"
+        primary.add_note(note)
+        print(note, file=sys.stderr)
+        raise
+    marker = root / ".docwen-temp-lease.json"
+    marker_identity: os.stat_result | None = None
+
+    def same_entry(path: Path, expected: os.stat_result) -> bool:
+        actual = path.lstat()
+        return (
+            (actual.st_dev, actual.st_ino) == (expected.st_dev, expected.st_ino)
+            and not stat.S_ISLNK(actual.st_mode)
+            and not (getattr(actual, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+        )
+
+    def check_root() -> None:
+        if root.parent != parent or root.resolve(strict=True) != root or not same_entry(root, root_identity):
+            raise ValueError(f"managed_run_identity_changed:{root}")
+
+    def report_secondary(primary: BaseException, secondary: BaseException) -> None:
+        note = f"Managed run closeout failed; inspect {root}: {secondary}"
+        primary.add_note(note)
+        print(note, file=sys.stderr)
+
+    try:
+        lease = lease_payload(root, owner=owner, kind=kind)
+        with marker.open("x", encoding="utf-8") as stream:
+            marker_identity = os.fstat(stream.fileno())
+            json.dump(lease, stream)
+    except BaseException as primary:
+        try:
+            check_root()
+            # Only remove our own partial marker and an otherwise empty directory.
+            # Never recursively erase an incompletely initialized run.
+            if marker_identity is not None and same_entry(marker, marker_identity):
+                marker.unlink()
+            root.rmdir()
+        except (OSError, ValueError) as secondary:
+            report_secondary(primary, secondary)
+        raise
+
+    def save(state: str) -> None:
+        nonlocal marker_identity
+        check_root()
+        if marker_identity is None or not same_entry(marker, marker_identity):
+            raise ValueError(f"managed_run_marker_changed:{marker}")
+        transition(lease, root=root, owner=owner, state=state)
+        temporary = root / ".docwen-temp-lease.next"
+        with temporary.open("x", encoding="utf-8") as stream:
+            next_identity = os.fstat(stream.fileno())
+            json.dump(lease, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(marker)
+        marker_identity = next_identity
+
+    run = ManagedRun(root)
+    try:
+        yield run
+    except BaseException as primary:
+        try:
+            save("retained-interrupted" if isinstance(primary, KeyboardInterrupt) else "retained-failure")
+        except (OSError, ValueError) as secondary:
+            report_secondary(primary, secondary)
+        raise
+    else:
+        save(run.state)
+        if run.state == "completed-success":
+            try:
+                check_root()
+                shutil.rmtree(root)
+            except (OSError, ValueError) as primary:
+                try:
+                    save("retained-cleanup-failure")
+                except (OSError, ValueError) as secondary:
+                    report_secondary(primary, secondary)
+                raise
 
 
 def lease_payload(root: Path, *, owner: str, kind: str, state: str = "active") -> dict[str, Any]:

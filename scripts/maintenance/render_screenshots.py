@@ -5,10 +5,8 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -32,18 +30,21 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     repo = args.repo.resolve(strict=True)
     sys.path.insert(0, str(tool_repo))
-    from tools.run_lease import lease_payload, transition
+    from tools.run_lease import managed_run
     from tools.workspace_root import resolve_workspace_root
 
     workspace = resolve_workspace_root(repo, explicit=args.workspace_root)
     for source in sorted((repo / "packages").rglob("src")):
         if source.is_dir():
             sys.path.insert(0, str(source))
+    with managed_run(
+        workspace / "temp", prefix="docwen-qt-media-", owner="docwen.qt-store-media", kind="real-qt-widget-render"
+    ) as run:
+        _render(args, repo, run.root)
+
+
+def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
     locale, theme = args.locale, args.theme
-    root = Path(tempfile.mkdtemp(prefix="docwen-qt-media-", dir=workspace / "temp")).resolve()
-    lease = lease_payload(root, owner="docwen.qt-store-media", kind="real-qt-widget-render")
-    marker = root / ".docwen-temp-lease.json"
-    marker.write_text(json.dumps(lease))
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
     profile = root / "profile"
@@ -187,35 +188,38 @@ def main(argv: list[str] | None = None) -> None:
 
     gui_app.create_main_window = make_window
     state = "retained-failure"
+    primary: BaseException | None = None
     try:
         code = gui_entry.main(["DocWen", str(sample)] if args.input == "file" else ["DocWen"])
         assert code == 0 and len(record["images"]) == 2 and not failed, (code, failed)
         state = "completed-success"
+    except BaseException as exc:
+        primary = exc
+        raise
     finally:
         gui_app.create_main_window = original
-        assert examples.resolve() == root / "examples" and set(examples.iterdir()) == {sample}
-        sample.unlink()
-        examples.rmdir()
         record.update(at=datetime.now(UTC).isoformat(), state=state, errors=failed)
-        (out / f"{locale}-{theme}.json").write_text(
-            json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
-        transition(lease, root=root, owner="docwen.qt-store-media", state=state)
-        marker.write_text(json.dumps(lease))
-        if state == "completed-success":
-            import logging
-
-            logging.shutdown()
-            from loguru import logger
-
-            logger.remove()
-            assert root.parent == workspace / "temp" and root.name.startswith("docwen-qt-media-")
-            try:
-                shutil.rmtree(root)
-            except OSError:
-                transition(lease, root=root, owner="docwen.qt-store-media", state="retained-cleanup-failure")
-                marker.write_text(json.dumps(lease))
+        try:
+            (out / f"{locale}-{theme}.json").write_text(
+                json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
+        except OSError as exc:
+            if primary is None:
+                primary = exc
                 raise
+            primary.add_note(f"Could not save render evidence at {out}: {exc}")
+        finally:
+            try:
+                import logging
+
+                logging.shutdown()
+                from loguru import logger
+
+                logger.remove()
+            except Exception as exc:
+                if primary is None:
+                    raise
+                primary.add_note(f"Could not close render logging: {exc}")
     print(json.dumps({key: record[key] for key in ("at", "state", "images", "errors")}, ensure_ascii=False))
 
 
