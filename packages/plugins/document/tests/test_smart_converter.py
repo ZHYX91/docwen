@@ -256,7 +256,9 @@ class TestSmartConverterRoutes:
 
         def fake_convert(input_path, output_path, **kwargs):
             candidates = kwargs["com_candidates"]
-            assert candidates["msoffice_word"].suppress_new_revisions is True
+            expected_backends = ("msoffice_word",) if target_fmt == "odt" else ("msoffice_word", "wps_writer")
+            for backend in expected_backends:
+                assert candidates[backend].suppress_new_revisions is True
             Path(output_path).write_bytes(b"converted")
             return BridgeResult(True, output_path=output_path, backend="Microsoft Word")
 

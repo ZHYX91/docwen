@@ -69,8 +69,11 @@ def test_failed_terminal_write_preserves_original_exception_and_valid_active_lea
     assert json.loads((run.root / ".docwen-temp-lease.json").read_text())["state"] == "active"
 
 
-def test_success_cleanup_failure_keeps_success_outcome(tmp_path, monkeypatch):
-    def fail(*args, **kwargs):
+@pytest.mark.parametrize("remove_marker", [False, True])
+def test_success_cleanup_failure_keeps_success_outcome(tmp_path, monkeypatch, remove_marker):
+    def fail(root, *args, **kwargs):
+        if remove_marker:
+            (root / ".docwen-temp-lease.json").unlink()
         raise OSError("busy")
 
     monkeypatch.setattr(run_lease.shutil, "rmtree", fail)
@@ -79,6 +82,40 @@ def test_success_cleanup_failure_keeps_success_outcome(tmp_path, monkeypatch):
     lease = json.loads((run.root / ".docwen-temp-lease.json").read_text())
     assert lease["state"] == "retained-cleanup-failure"
     assert lease["outcome"] == "completed-success"
+
+
+def test_cleanup_does_not_overwrite_replaced_marker_and_leaves_external_recovery(tmp_path, monkeypatch):
+    def fail(root, *args, **kwargs):
+        marker = root / ".docwen-temp-lease.json"
+        marker.rename(root / "old-marker")
+        marker.write_text('{"owner":"other"}')
+        raise OSError("cleanup failed")
+
+    monkeypatch.setattr(run_lease.shutil, "rmtree", fail)
+    with pytest.raises(OSError, match="cleanup failed"), _managed(tmp_path) as run:
+        pass
+    assert json.loads((run.root / ".docwen-temp-lease.json").read_text()) == {"owner": "other"}
+    record = json.loads((tmp_path / f"{run.root.name}.recovery.json").read_text())
+    assert record["rootIdentity"]["inode"] == run.root.stat().st_ino
+    assert record["lease"]["outcome"] == "completed-success"
+    assert record["phase"] == "cleanup-recording"
+
+
+def test_success_terminal_write_failure_keeps_active_lease_and_external_outcome(tmp_path, monkeypatch):
+    original_replace = Path.replace
+
+    def fail(self, target):
+        if self.name == ".docwen-temp-lease.next":
+            raise OSError("terminal write failed")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", fail)
+    with pytest.raises(OSError, match="terminal write failed"), _managed(tmp_path) as run:
+        pass
+    assert json.loads((run.root / ".docwen-temp-lease.json").read_text())["state"] == "active"
+    record = json.loads((tmp_path / f"{run.root.name}.recovery.json").read_text())
+    assert record["lease"]["outcome"] == "completed-success"
+    assert record["phase"] == "terminal-recording"
 
 
 @pytest.mark.parametrize("returncode", [0, 7])

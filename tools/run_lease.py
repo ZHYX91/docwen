@@ -84,10 +84,25 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
             report_secondary(primary, secondary)
         raise
 
-    def save(state: str) -> None:
+    def save(state: str, *, restore_missing: bool = False) -> None:
         nonlocal marker_identity
         check_root()
-        if marker_identity is None or not same_entry(marker, marker_identity):
+        try:
+            marker_matches = marker_identity is not None and same_entry(marker, marker_identity)
+        except FileNotFoundError:
+            if not restore_missing:
+                raise
+            # Partial recursive cleanup may have removed our marker. The root
+            # still has its original identity; exclusive creation cannot replace
+            # a new owner's marker that appears after this check.
+            transition(lease, root=root, owner=owner, state=state)
+            with marker.open("x", encoding="utf-8") as stream:
+                marker_identity = os.fstat(stream.fileno())
+                stream.write(json.dumps(lease))
+                stream.flush()
+                os.fsync(stream.fileno())
+            return
+        if not marker_matches:
             raise ValueError(f"managed_run_marker_changed:{marker}")
         transition(lease, root=root, owner=owner, state=state)
         temporary = root / ".docwen-temp-lease.next"
@@ -99,6 +114,29 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
         temporary.replace(marker)
         marker_identity = next_identity
 
+    def record_recovery(primary: BaseException, phase: str) -> None:
+        recovery = parent / f"{root.name}.recovery.json"
+        try:
+            # This compact recovery record is outside the recursively cleaned
+            # run. It is evidence for manual reconciliation, never deletion authority.
+            with recovery.open("x", encoding="utf-8") as stream:
+                stream.write(
+                    json.dumps(
+                        {
+                            "schema": "docwen.managed-run-recovery.v1",
+                            "root": str(root),
+                            "rootIdentity": {"device": root_identity.st_dev, "inode": root_identity.st_ino},
+                            "lease": lease,
+                            "phase": phase,
+                            "error": str(primary),
+                        }
+                    )
+                )
+            primary.add_note(f"Managed run recovery record: {recovery}")
+            print(f"Managed run recovery record: {recovery}", file=sys.stderr)
+        except OSError as secondary:
+            report_secondary(primary, secondary)
+
     run = ManagedRun(root)
     try:
         yield run
@@ -107,18 +145,24 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
             save("retained-interrupted" if isinstance(primary, KeyboardInterrupt) else "retained-failure")
         except (OSError, ValueError) as secondary:
             report_secondary(primary, secondary)
+            record_recovery(primary, "failure-recording")
         raise
     else:
-        save(run.state)
+        try:
+            save(run.state)
+        except (OSError, ValueError) as primary:
+            record_recovery(primary, "terminal-recording")
+            raise
         if run.state == "completed-success":
             try:
                 check_root()
                 shutil.rmtree(root)
             except (OSError, ValueError) as primary:
                 try:
-                    save("retained-cleanup-failure")
+                    save("retained-cleanup-failure", restore_missing=True)
                 except (OSError, ValueError) as secondary:
                     report_secondary(primary, secondary)
+                    record_recovery(primary, "cleanup-recording")
                 raise
 
 
