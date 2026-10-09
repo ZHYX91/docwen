@@ -23,7 +23,7 @@ from tools.housekeeping_journal import ApplyJournal, exclusive_apply
 from tools.run_lease import manual_retention_observation
 from tools.windows_short_path import ShortPathDriveError, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
-from tools.workspace_root import resolve_workspace_root
+from tools.workspace_root import registered_repositories, resolve_workspace_root
 
 LEASE_NAME = ".docwen-temp-lease.json"
 PLAN_SCHEMA = "docwen.housekeeping-plan.v1"
@@ -466,9 +466,7 @@ def _snapshot_lease(marker: Path, *, root: Path) -> dict[str, Any]:
 
 def _managed_roots(workspace: Path) -> tuple[Path, ...]:
     return tuple(workspace / name for name in MANAGED_ROOT_NAMES) + tuple(
-        workspace.parent / "repos" / name / "build"
-        for name in ("docwen", "docwen-openclaw")
-        if (workspace.parent / "repos" / name / ".git").exists()
+        repository / "build" for repository in registered_repositories(workspace) if (repository / ".git").exists()
     )
 
 
@@ -493,7 +491,7 @@ def _classify_target(
             raise HousekeepingError(f"protected_target:{absolute_target}")
     repository_root = engineering_root / "repos"
     for managed in _managed_roots(workspace):
-        if managed.parent.parent == repository_root and _is_within(absolute_target, managed):
+        if managed.parent in registered_repositories(workspace) and _is_within(absolute_target, managed):
             if not _chain_is_plain(managed, boundary=engineering_root):
                 raise HousekeepingError(f"unsafe_managed_root:{managed}")
             if absolute_target == managed:

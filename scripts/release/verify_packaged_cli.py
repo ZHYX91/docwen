@@ -2647,6 +2647,7 @@ def _run_machine_protocol_smoke_impl(
     env["DOCWEN_LOG_DIR"] = str(work_dir / "log_home")
     env["DOCWEN_LOG_TO_TEMP"] = ""
     env["DOCWEN_WORKSPACE_ROOT"] = str(physical_governed_root)
+    env["DOCWEN_RUNTIME_ROOT"] = str(physical_runtime_temp.resolve())
     env["TEMP"] = str(physical_system_temp)
     env["TMP"] = str(physical_system_temp)
     env["TMPDIR"] = str(physical_system_temp)

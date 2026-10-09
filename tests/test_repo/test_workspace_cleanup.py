@@ -16,6 +16,10 @@ def _governance_root(engineering_root: Path) -> Path:
     (governed / "README.md").write_text("# DocWen 本地工作区\n", encoding="utf-8")
     for name in workspace_root._GOVERNANCE_DIRECTORIES:
         (governed / name).mkdir()
+    (governed / "workspace.json").write_text(
+        json.dumps({"schema": "docwen.workspace.v1", "repositories": ["repos/docwen", "repos/docwen-openclaw"]}),
+        encoding="utf-8",
+    )
     return governed
 
 

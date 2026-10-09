@@ -1,5 +1,13 @@
 # Testing / 测试
 
+Engineering ownership belongs to the caller. `tools/workspace_root.py --init <parent>/.workspace
+--repository <checkout>` registers a local checkout without private planning files. Local QA and
+`tools/run_source.py` select that root explicitly or via `DOCWEN_WORKSPACE_ROOT`; linked worktrees
+can use their primary checkout's governed root. Product processes receive only `DOCWEN_RUNTIME_ROOT`,
+with no repository-layout or README dependency. CI uses its existing explicitly owned runtime.
+Workspace repository cleanup reads `workspace.json`; legacy roots without registration never grant
+cleanup access to neighboring repositories. Registration does not bypass leases, Git tracking or links.
+
 Local QA and CI use `tools/qa.py` for the same mandatory source checks: whole-repository Ruff,
 test governance, all Import-Linter dependency contracts, architecture cleanliness, and Pyright
 for Windows, Linux and macOS. `python tools/qa.py --skip-pytest` runs these checks before costly

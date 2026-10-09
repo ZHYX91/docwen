@@ -166,6 +166,8 @@ def _optional_workspace_root(repo_root: Path, workspace_root: Path | None = None
     try:
         return resolve_workspace_root(repo_root, explicit=workspace_root)
     except WorkspaceRootError:
+        if workspace_root is not None or os.environ.get(WORKSPACE_ROOT_ENV, "").strip():
+            raise
         return None
 
 
@@ -258,6 +260,7 @@ def _pytest_runtime_environment(
             "TEMP": str(system_temp),
             "TMP": str(system_temp),
             "TMPDIR": str(system_temp),
+            "DOCWEN_RUNTIME_ROOT": str(runtime_root / "r"),
         }
     )
     return runtime_root, environment, owned
@@ -530,7 +533,11 @@ def main(argv: list[str]) -> int:
 
     if not args.skip_pytest:
         print("==> pytest")
-        selected_workspace = _optional_workspace_root(repo_root, args.workspace_root)
+        try:
+            selected_workspace = _optional_workspace_root(repo_root, args.workspace_root)
+        except WorkspaceRootError as error:
+            print(f"[qa] {error}", file=sys.stderr)
+            return 2
         if selected_workspace is not None:
             try:
                 _cleanup_expired_workspace_temps(selected_workspace)
