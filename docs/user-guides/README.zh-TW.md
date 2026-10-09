@@ -275,6 +275,13 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ## 📝 Markdown 語法約定
 
+**需要識別 Obsidian 擴充語法嗎？** 新安裝 DocWen 時，四種選用擴充預設**關閉**：`structural_tables`（合併儲存格、多列表頭）、`captions_references`（Number Suite 題註與交互參照）、`extended_headings`（第七至九級標題）、`typed_endnotes`（類型化尾註）。
+
+- **Markdown → Word**：在 **設定 → Markdown 語法 → 輸入** 啟用所需擴充，或套用輸入方向的 **Obsidian 擴充**預設。未啟用時，部分標記會保留為一般文字。
+- **Word → Markdown**：另在**輸出**方向啟用對應擴充（或輸出預設），否則可能簡化結構、正規化語法並提示警告。
+
+保留原始 Markdown 並檢查輸出的 DOCX。Word 編號由 DocWen 轉換選項決定，往返轉換不保證逐字還原原始標記及空白。參閱 [Markdown 相容規範](../specs/markdown-compatibility.md)。
+
 ### 標題級別映射
 
 為方便無背景知識的同事記憶，本軟體的Markdown標題與Word標題**一一對應**：

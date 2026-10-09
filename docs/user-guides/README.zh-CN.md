@@ -278,6 +278,13 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ## 📝 Markdown 语法约定
 
+**需要识别 Obsidian 扩展语法吗？** 新安装的 DocWen 默认**关闭**四类可选扩展：`structural_tables`（合并单元格、多行表头）、`captions_references`（Number Suite 题注和交叉引用）、`extended_headings`（七至九级标题）、`typed_endnotes`（带类型的尾注）。
+
+- **Markdown → Word**：进入 **设置 → Markdown 语法 → 输入**，勾选笔记用到的扩展，或点击输入方向的**使用 Obsidian 扩展**。未启用时，部分特殊记号会保留为普通文字。
+- **Word → Markdown**：还需要在**输出**方向分别开启对应扩展（或使用输出方向的预设）；否则部分结构会降级、规范化或给出警告。
+
+请保留原始 Markdown 并检查生成的 DOCX。Word 编号由 DocWen 的转换选项决定，往返转换不保证原文标记与空白逐字一致。具体见 [Markdown 兼容规范](../specs/markdown-compatibility.md)。
+
 ### 标题级别映射
 
 为方便无背景知识的同事记忆，本软件的Markdown标题与Word标题**一一对应**：
