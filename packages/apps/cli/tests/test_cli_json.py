@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from docwen_core.version import PRODUCT_VERSION
+
 pytestmark = pytest.mark.contract
 
 REQUIRED_FIELDS = {
@@ -29,7 +31,7 @@ def test_success_envelope_exact_shape(capsys: pytest.CaptureFixture[str]) -> Non
     payload = json.loads(capsys.readouterr().out)
     assert set(payload) == REQUIRED_FIELDS
     assert payload["protocol_version"] == 3
-    assert payload["product_version"] == "0.17.0"
+    assert payload["product_version"] == PRODUCT_VERSION
     assert payload["success"] is True
     assert payload["error"] is None
     assert payload["meta"] == {}

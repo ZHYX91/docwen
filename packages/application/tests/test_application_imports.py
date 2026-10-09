@@ -4,6 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from docwen_core.version import PRODUCT_VERSION
+
 pytestmark = pytest.mark.unit
 
 
@@ -11,7 +13,7 @@ def test_application_importable() -> None:
     """docwen_application should be importable."""
     import docwen_application
 
-    assert docwen_application.__version__ == "0.17.0"
+    assert docwen_application.__version__ == PRODUCT_VERSION
 
 
 def test_application_submodules_importable() -> None:

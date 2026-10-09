@@ -6,6 +6,8 @@ import json
 
 import pytest
 
+from docwen_core.version import PRODUCT_VERSION
+
 pytestmark = pytest.mark.contract
 
 
@@ -16,7 +18,7 @@ def test_info_golden(capsys: pytest.CaptureFixture[str]) -> None:
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["protocol_version"] == 3
-    assert payload["product_version"] == "0.17.0"
+    assert payload["product_version"] == PRODUCT_VERSION
     assert payload["command"] == "info"
     assert payload["success"] is True
     assert payload["data"]["protocol"] == {"major": 3, "envelope": "docwen.cli.v3"}

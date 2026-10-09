@@ -2,6 +2,8 @@
 
 import pytest
 
+from docwen_core.version import PRODUCT_VERSION
+
 pytestmark = pytest.mark.unit
 
 
@@ -9,7 +11,7 @@ def test_core_importable() -> None:
     """docwen_core should be importable."""
     import docwen_core
 
-    assert docwen_core.__version__ == "0.17.0"
+    assert docwen_core.__version__ == PRODUCT_VERSION
 
 
 def test_core_submodules_importable() -> None:

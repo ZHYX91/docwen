@@ -2,6 +2,8 @@
 
 import pytest
 
+from docwen_core.version import PRODUCT_VERSION
+
 pytestmark = pytest.mark.unit
 
 
@@ -9,7 +11,7 @@ def test_gui_importable() -> None:
     """docwen_gui top-level package should be importable."""
     import docwen_gui
 
-    assert docwen_gui.__version__ == "0.17.0"
+    assert docwen_gui.__version__ == PRODUCT_VERSION
 
 
 def test_app_module_import() -> None:
