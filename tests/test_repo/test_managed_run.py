@@ -118,6 +118,31 @@ def test_success_terminal_write_failure_keeps_active_lease_and_external_outcome(
     assert record["phase"] == "terminal-recording"
 
 
+@pytest.mark.parametrize("body_result", ["success", "failure-state", "exception"])
+def test_replaced_terminal_marker_preserves_known_outcome_and_both_errors(tmp_path, body_result):
+    primary = RuntimeError("execution failed")
+    expected_error = RuntimeError if body_result == "exception" else ValueError
+    with pytest.raises(expected_error) as caught, _managed(tmp_path) as run:
+        marker = run.root / ".docwen-temp-lease.json"
+        marker.rename(run.root / "original-marker")
+        marker.write_text('{"owner":"other"}')
+        if body_result == "exception":
+            raise primary
+        if body_result == "failure-state":
+            run.state = "retained-failure"
+    record = json.loads((tmp_path / f"{run.root.name}.recovery.json").read_text())
+    assert record["knownOutcome"] == ("completed-success" if body_result == "success" else "retained-failure")
+    assert record["lease"]["state"] == "active"
+    assert record["recordingError"]["type"] == "ValueError"
+    assert "managed_run_marker_changed" in record["recordingError"]["message"]
+    assert json.loads(marker.read_text()) == {"owner": "other"}
+    if body_result == "exception":
+        assert caught.value is primary
+        assert record["executionError"] == {"type": "RuntimeError", "message": "execution failed"}
+    else:
+        assert record["executionError"] is None
+
+
 @pytest.mark.parametrize("returncode", [0, 7])
 def test_source_launcher_preserves_child_exit_status_and_lease(tmp_path, monkeypatch, returncode):
     (tmp_path / "temp").mkdir()

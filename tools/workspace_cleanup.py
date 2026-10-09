@@ -534,6 +534,19 @@ def _validate_target_chain(target: Path, *, boundary: Path) -> None:
         raise HousekeepingError(f"target_chain_linked_or_reparse:{target}")
 
 
+def _assert_no_pending_run_recovery(root: Path) -> None:
+    recovery = root.parent / f"{root.name}.recovery.json"
+    try:
+        recovery.lstat()
+    except FileNotFoundError:
+        return
+    except OSError as error:
+        raise HousekeepingError(f"unreadable_run_recovery:{recovery}:{error}") from error
+    # Presence is a hold, regardless of contents, identity or claimed success.
+    # Never follow a link or infer cleanup authority from a recovery record.
+    raise HousekeepingError(f"pending_run_recovery:{recovery}")
+
+
 def _entry_for_target(
     target: Path,
     *,
@@ -554,6 +567,7 @@ def _entry_for_target(
         source = classified_source
     absolute_target = _absolute(target)
     _validate_target_chain(absolute_target, boundary=boundary)
+    _assert_no_pending_run_recovery(absolute_target)
     print(f"[housekeeping] scan: {absolute_target}", file=sys.stderr)
     identity = _snapshot_tree(absolute_target)
     for lease in identity["leases"]:
@@ -770,6 +784,8 @@ def create_plan(
 
 def observation_action(reason: str) -> str:
     """Explain a refusal without weakening its boundary or mutating a lease."""
+    if "run_recovery" in reason:
+        return "Preserve the run and its sibling recovery record; reconcile them manually before retiring either."
     if "apply_progress" in reason or "apply_outcome" in reason:
         return "Inspect the saved progress and actual recovery entries; do not retry a refused or ambiguous mutation."
     if "manual_retention" in reason or reason == "state_not_terminal":
@@ -865,6 +881,7 @@ def _revalidate_entry(entry: dict[str, Any], *, workspace: Path) -> dict[str, An
     if planned_boundary != _absolute(boundary):
         raise HousekeepingError(f"allowed_boundary_mismatch:{path}")
     _validate_target_chain(path, boundary=boundary)
+    _assert_no_pending_run_recovery(path)
     current_identity = _snapshot_tree(path)
     if current_identity != entry.get("identity"):
         raise HousekeepingError(f"target_identity_changed:{path}")

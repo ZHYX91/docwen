@@ -114,7 +114,14 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
         temporary.replace(marker)
         marker_identity = next_identity
 
-    def record_recovery(primary: BaseException, phase: str) -> None:
+    def record_recovery(
+        primary: BaseException,
+        phase: str,
+        *,
+        outcome: str,
+        recording_error: BaseException,
+        execution_error: BaseException | None = None,
+    ) -> None:
         recovery = parent / f"{root.name}.recovery.json"
         try:
             # This compact recovery record is outside the recursively cleaned
@@ -127,6 +134,13 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
                             "root": str(root),
                             "rootIdentity": {"device": root_identity.st_dev, "inode": root_identity.st_ino},
                             "lease": lease,
+                            "knownOutcome": outcome,
+                            "executionError": (
+                                {"type": type(execution_error).__name__, "message": str(execution_error)}
+                                if execution_error is not None
+                                else None
+                            ),
+                            "recordingError": {"type": type(recording_error).__name__, "message": str(recording_error)},
                             "phase": phase,
                             "error": str(primary),
                         }
@@ -141,17 +155,20 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
     try:
         yield run
     except BaseException as primary:
+        outcome = "retained-interrupted" if isinstance(primary, KeyboardInterrupt) else "retained-failure"
         try:
-            save("retained-interrupted" if isinstance(primary, KeyboardInterrupt) else "retained-failure")
+            save(outcome)
         except (OSError, ValueError) as secondary:
             report_secondary(primary, secondary)
-            record_recovery(primary, "failure-recording")
+            record_recovery(
+                primary, "failure-recording", outcome=outcome, recording_error=secondary, execution_error=primary
+            )
         raise
     else:
         try:
             save(run.state)
         except (OSError, ValueError) as primary:
-            record_recovery(primary, "terminal-recording")
+            record_recovery(primary, "terminal-recording", outcome=run.state, recording_error=primary)
             raise
         if run.state == "completed-success":
             try:
@@ -162,7 +179,7 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
                     save("retained-cleanup-failure", restore_missing=True)
                 except (OSError, ValueError) as secondary:
                     report_secondary(primary, secondary)
-                    record_recovery(primary, "cleanup-recording")
+                    record_recovery(primary, "cleanup-recording", outcome=run.state, recording_error=secondary)
                 raise
 
 

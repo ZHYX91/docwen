@@ -137,6 +137,57 @@ def test_fresh_automatic_scan_does_not_bypass_recorded_refusal(tmp_path: Path, m
     assert preview["observations"]["skipped"][0]["reason"] == "previous_apply_outcome_unconfirmed"
 
 
+def test_failed_terminal_recording_holds_expired_active_run(tmp_path, monkeypatch):
+    workspace = tmp_path / ".workspace"
+    parent = workspace / "temp"
+    parent.mkdir(parents=True)
+    original_replace = Path.replace
+
+    def fail(self, target):
+        if self.name == ".docwen-temp-lease.next":
+            raise OSError("terminal write failed")
+        return original_replace(self, target)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "replace", fail)
+        with (
+            pytest.raises(OSError, match="terminal write failed"),
+            run_lease.managed_run(parent, prefix="held-", owner="docwen.test", kind="scratch") as run,
+        ):
+            pass
+    marker = run.root / workspace_cleanup.LEASE_NAME
+    assert json.loads(marker.read_text())["state"] == "active"
+    monkeypatch.setattr(workspace_cleanup, "_lease_process_alive", lambda payload: False)
+    plan = workspace_cleanup.create_plan(workspace_root=workspace, now=datetime.now(UTC) + timedelta(days=4))
+    assert not plan["entries"]
+    assert "pending_run_recovery" in plan["observations"]["skipped"][0]["reason"]
+    assert marker.exists()
+
+
+@pytest.mark.parametrize("record_form", ["success", "malformed", "directory", "unreadable"])
+def test_recovery_hold_rechecked_when_applying_saved_plan(tmp_path, monkeypatch, record_form):
+    workspace, saved, roots = _plan(tmp_path)
+    recovery = roots[0].parent / f"{roots[0].name}.recovery.json"
+    if record_form == "directory":
+        recovery.mkdir()
+    else:
+        recovery.write_text('{"knownOutcome":"completed-success"}' if record_form == "success" else "invalid")
+    if record_form == "unreadable":
+        original_lstat = Path.lstat
+
+        def refuse(self, *args, **kwargs):
+            if self == recovery:
+                raise PermissionError("record inaccessible")
+            return original_lstat(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "lstat", refuse)
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="run_recovery"):
+        workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="run_recovery"):
+        workspace_cleanup.create_plan(workspace_root=workspace, explicit_targets=[roots[0]], reason="manual target")
+    assert all((root / "input.txt").read_text() == "controlled scratch" for root in roots)
+
+
 def test_failed_atomic_lease_update_preserves_original_marker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from scripts.release import build_production_candidate as production
 
