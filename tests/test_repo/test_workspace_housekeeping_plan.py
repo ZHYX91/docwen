@@ -240,6 +240,7 @@ def test_saved_plan_applies_after_per_target_revalidation(tmp_path: Path) -> Non
         workspace_root=workspace,
         explicit_targets=(target,),
         reason="test scratch",
+        disposition="delete",
     )
     plan_path = workspace_cleanup.save_plan(plan, workspace / "diagnostics" / "plan.json")
 
@@ -268,6 +269,7 @@ def test_saved_plan_handles_an_extended_length_tree(tmp_path: Path) -> None:
         workspace_root=workspace,
         explicit_targets=(target,),
         reason="extended length scratch",
+        disposition="delete",
     )
     plan_path = workspace_cleanup.save_plan(plan, workspace / "diagnostics" / "long-tree-plan.json")
 
@@ -322,7 +324,11 @@ def test_qa_uses_shared_retention_policy_and_removes_its_saved_plan(tmp_path: Pa
     assert failures[0].is_dir()
     assert failures[1].is_dir()
     assert not failures[2].exists()
-    assert list((workspace / "diagnostics").glob("qa-housekeeping-*.json")) == []
+    records = list((workspace / "diagnostics").glob("qa-housekeeping-*.json"))
+    assert len(records) == 1 and records[0].name.endswith(".progress.json")
+    progress = json.loads(records[0].read_text(encoding="utf-8"))
+    assert progress["pending"] is None
+    assert len(progress["completed"]) == 2
 
 
 def test_plan_content_tampering_is_rejected(tmp_path: Path) -> None:
@@ -415,10 +421,10 @@ def test_managed_dependency_requires_explicit_clean_deps_and_is_not_auto_planned
     )
 
     assert all(Path(entry["path"]) != dependency.resolve() for entry in default_plan["entries"])
-    assert {
-        "path": str(dependency.resolve()),
-        "reason": "dependency_target_requires_clean_deps",
-    } in default_plan["observations"]["skipped"]
+    assert any(
+        item["path"] == str(dependency.resolve()) and item["reason"] == "dependency_target_requires_clean_deps"
+        for item in default_plan["observations"]["skipped"]
+    )
     with pytest.raises(workspace_cleanup.HousekeepingError, match="dependency_target_requires_clean_deps"):
         workspace_cleanup.create_plan(
             workspace_root=workspace,

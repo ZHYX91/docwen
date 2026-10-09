@@ -56,7 +56,7 @@ def test_recycle_failure_does_not_fall_back_to_delete(tmp_path: Path, monkeypatc
         workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
     assert (root / "keep.txt").read_text() == "original"
     (root / "keep.txt").write_text("changed")
-    with pytest.raises(workspace_cleanup.HousekeepingError, match="target_identity_changed"):
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="previous_apply_outcome_unconfirmed"):
         workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
 
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -42,5 +42,37 @@ def lease_payload(root: Path, *, owner: str, kind: str, state: str = "active") -
 def transition(payload: dict[str, Any], *, root: Path, owner: str, state: str) -> None:
     if state not in STATES or payload.get("owner") != owner or payload.get("root") != str(root.resolve(strict=True)):
         raise ValueError("run_lease_transition_identity_or_state_mismatch")
+    previous = payload.get("state")
+    now = datetime.now(UTC)
     payload["state"] = state
-    payload["updatedAt"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    payload["updatedAt"] = now.isoformat().replace("+00:00", "Z")
+    if state != "active":
+        payload.setdefault("finishedAt", payload["updatedAt"])
+        # Cleanup failure must not erase the run's actual success/failure outcome.
+        if state in {"completed-success", "retained-failure", "retained-interrupted"}:
+            payload.setdefault("outcome", state)
+        if state == "retained-cleanup-failure" and previous in {"retained-failure", "retained-interrupted"}:
+            payload.setdefault("outcome", previous)
+    if state == "retained-manual":
+        payload.setdefault(
+            "retention",
+            {
+                "owner": owner,
+                "reason": "explicit_keep_runtime_request",
+                "reviewAfter": (now + timedelta(hours=72)).isoformat().replace("+00:00", "Z"),
+            },
+        )
+
+
+def manual_retention_observation(payload: dict[str, Any], *, now: datetime) -> str:
+    """Expiry requests review, never automatic deletion of an intentional hold."""
+    retention = payload.get("retention")
+    if not isinstance(retention, dict) or not retention.get("owner") or not retention.get("reason"):
+        return "manual_retention_metadata_missing"
+    try:
+        deadline = datetime.fromisoformat(str(retention["reviewAfter"]).replace("Z", "+00:00"))
+        if deadline.tzinfo is None:
+            raise ValueError("timezone required")
+    except (KeyError, ValueError):
+        return "manual_retention_metadata_missing"
+    return "manual_retention_review_due" if now >= deadline else "manual_retention_held"

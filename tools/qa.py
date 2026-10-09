@@ -105,11 +105,10 @@ def _patch_runtime_lease(
     for field in remove_fields:
         payload.pop(field, None)
     replacement = marker.with_suffix(".tmp")
-    replacement.write_text(
-        json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
+    with replacement.open("x", encoding="utf-8", newline="\n") as stream:
+        stream.write(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
     replacement.replace(marker)
 
 
@@ -184,6 +183,8 @@ def _cleanup_expired_workspace_temps(workspace_root: Path) -> None:
     plan = workspace_cleanup.create_plan(workspace_root=workspace_root)
     for observation in plan.get("observations", {}).get("skipped", []):
         print(f"[qa] housekeeping skipped: {observation['path']}: {observation['reason']}", file=sys.stderr)
+        if observation.get("action"):
+            print(f"[qa] {observation['action']}", file=sys.stderr)
     entries = plan.get("entries", [])
     if not entries:
         return
@@ -652,11 +653,12 @@ def main(argv: list[str]) -> int:
                 print(f"[qa] compact report export failed: {error}", file=sys.stderr)
                 return_code = return_code or 2
         if return_code != 0:
-            if runtime_owned:
+            if lease_managed:
                 _update_runtime_lease(runtime_root, state="retained-failure")
                 print(f"[qa] failed pytest runtime retained: {runtime_root}", file=sys.stderr)
             return return_code
         if runtime_owned:
+            _update_runtime_lease(runtime_root, state="completed-success")
             if args.keep_pytest_runtime:
                 _update_runtime_lease(runtime_root, state="retained-manual")
                 print(f"[qa] pytest runtime retained by request: {runtime_root}")
