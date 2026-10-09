@@ -39,6 +39,7 @@ def test_windows_query_failure_preserves_uncertain_owners(
     )
     monkeypatch.setattr(ctypes, "WinDLL", Mock(return_value=kernel))
     monkeypatch.setattr(ctypes, "get_last_error", lambda: error)
+    monkeypatch.setattr(process_identity, "_cim_process_identity", lambda pid: None)
     assert process_identity._windows_observe(123).alive is expected
     kernel.WaitForSingleObject.assert_not_called()
 
@@ -71,6 +72,9 @@ def test_windows_query_closes_handle_and_preserves_uncertain_waits(
         (True, "windows-filetime:0000000000000002", "malformed", True),
         (True, "windows-filetime:0000000000000002", None, True),
         (False, None, "windows-filetime:0000000000000001", False),
+        (True, "windows-cim-filetime:0000000000000100", "windows-filetime:0000000000000109", True),
+        (True, "windows-cim-filetime:0000000000000100", "windows-filetime:00000000000000ff", True),
+        (True, "windows-cim-filetime:0000000000000200", "windows-filetime:0000000000000100", False),
     ],
 )
 def test_lease_checks_process_birth_conservatively(
@@ -88,3 +92,31 @@ def test_new_lease_binds_actual_process_creation(tmp_path: Path) -> None:
     assert workspace_cleanup._lease_process_alive(lease)
     lease["processIdentity"] = "windows-filetime:0000000000000000"
     assert not workspace_cleanup._lease_process_alive(lease)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "output,code,expected",
+    [
+        ('{"pid":42,"ticks":"256"}', 0, "windows-cim-filetime:0000000000000100"),
+        ('{"pid":43,"ticks":"256"}', 0, None),
+        ('{"pid":42,"ticks":"bad"}', 0, None),
+        ('{"pid":42,"ticks":"256"}', 1, None),
+        ("{}", 0, None),
+        ("", 0, None),
+    ],
+)
+def test_cim_identity_requires_matching_pid_and_valid_birth(
+    monkeypatch: pytest.MonkeyPatch,
+    output: str,
+    code: int,
+    expected: str | None,
+) -> None:
+    monkeypatch.setattr(subprocess, "run", Mock(return_value=SimpleNamespace(returncode=code, stdout=output)))
+    assert process_identity._cim_process_identity(42) == expected
+
+
+@pytest.mark.unit
+def test_cim_query_timeout_does_not_authorize_cleanup(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(subprocess, "run", Mock(side_effect=subprocess.TimeoutExpired("powershell", 10)))
+    assert process_identity._cim_process_identity(42) is None
