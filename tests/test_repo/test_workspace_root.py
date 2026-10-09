@@ -1,11 +1,28 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
 from tools import workspace_root
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.mark.parametrize("error", [FileNotFoundError("git"), subprocess.TimeoutExpired("git", 10)])
+def test_git_discovery_failure_does_not_grant_workspace_ownership(
+    tmp_path: Path, monkeypatch, error: Exception
+) -> None:
+    repo = tmp_path / "source"
+    repo.mkdir()
+
+    def unavailable(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(workspace_root.subprocess, "run", unavailable)
+    with pytest.raises(workspace_root.WorkspaceRootError, match="repository_identity_unavailable"):
+        workspace_root.resolve_workspace_root(repo, environment={})
+    assert list(tmp_path.iterdir()) == [repo]
 
 
 def _governance_root(engineering_root: Path) -> Path:

@@ -92,13 +92,18 @@ def resolve_workspace_root(
     if repository.parent.name.casefold() != "repos":
         # A worktree shares its registered checkout's Git directory. This is a
         # single Git-owned identity lookup, not an arbitrary ancestor search.
-        completed = subprocess.run(
-            ["git", "-C", str(repository), "rev-parse", "--path-format=absolute", "--git-common-dir"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=10,
-        )
+        try:
+            completed = subprocess.run(
+                ["git", "-C", str(repository), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            # Hermetic builds deliberately exclude Git from PATH. Discovery is
+            # unavailable there; callers must keep their existing owned runtime.
+            raise WorkspaceRootError(f"repository_identity_unavailable:{repository}") from exc
         common = Path(completed.stdout.strip())
         if completed.returncode or common.name != ".git" or common.parent.parent.name.casefold() != "repos":
             raise WorkspaceRootError(f"unsupported_repository_layout:{repository}")

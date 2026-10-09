@@ -26,6 +26,26 @@ def _use_compact_pymupdf_layout_manifest(monkeypatch: pytest.MonkeyPatch) -> Non
     use_compact_pymupdf_layout_manifest(monkeypatch)
 
 
+def test_git_free_build_keeps_packaged_verifier_runtime_owned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from scripts.release import verify_packaged_gui
+
+    source = tmp_path / "source"
+    source.mkdir()
+    monkeypatch.setattr(verify_packaged_gui, "__file__", str(source / "scripts" / "release" / "verify_packaged_gui.py"))
+    monkeypatch.delenv("DOCWEN_WORKSPACE_ROOT", raising=False)
+    monkeypatch.setenv("PATH", "")
+    monkeypatch.setattr(verify_packaged_gui.tempfile, "tempdir", str(tmp_path))
+
+    assert verify_packaged_gui._optional_workspace_root(None) is None
+    runtime = verify_packaged_gui._create_verification_dir(None)
+    assert runtime.parent == tmp_path.resolve()
+    lease = json.loads((runtime / ".docwen-temp-lease.json").read_text(encoding="utf-8"))
+    assert lease["owner"] == "docwen.release.verify-packaged-gui"
+    assert lease["root"] == str(runtime)
+    verify_packaged_gui._cleanup_verification_dir(runtime)
+    assert not runtime.exists()
+
+
 def _packaged_gui(tmp_path: Path) -> tuple[Path, str]:
     binary_dir = tmp_path / "dist"
     binary_dir.mkdir()
