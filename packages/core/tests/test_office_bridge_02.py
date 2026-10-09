@@ -68,14 +68,18 @@ def test_try_com_conversion_suppresses_new_word_revisions_only_when_requested(
     monkeypatch.setattr(office_bridge, "_import_win32", lambda: (_PythonCom, _Win32Client))
     _mock_owned_process(monkeypatch)
 
-    options = {} if suppression is None else {"suppress_new_revisions": suppression}
-    result = office_bridge._try_com_conversion(
-        str(input_path),
-        str(output_path),
-        prog_id="Word.Application",
-        save_format=6,
-        app_type="word",
-        **options,
-    )
+    if suppression is None:
+        result = office_bridge._try_com_conversion(
+            str(input_path), str(output_path), prog_id="Word.Application", save_format=6, app_type="word"
+        )
+    else:
+        result = office_bridge._try_com_conversion(
+            str(input_path),
+            str(output_path),
+            prog_id="Word.Application",
+            save_format=6,
+            app_type="word",
+            suppress_new_revisions=suppression,
+        )
 
     assert result == str(output_path.resolve())
