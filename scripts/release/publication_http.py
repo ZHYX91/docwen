@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import math
 import os
 import re
 import subprocess
@@ -49,8 +50,8 @@ def retry_after_seconds(value: str | None) -> float:
 def env_seconds(name: str, default: float, *, minimum: float = 1.0) -> float:
     """Read a transfer budget override from the environment.
 
-    Defaults keep the fast datacenter budgets; slow self-hosted transports raise
-    them explicitly instead of monkey-patching this module.
+    Each caller supplies its own default; slow transports can override finite
+    budgets explicitly instead of monkey-patching this module.
     """
 
     value = os.environ.get(name)
@@ -60,7 +61,7 @@ def env_seconds(name: str, default: float, *, minimum: float = 1.0) -> float:
         seconds = float(value)
     except ValueError as error:
         raise PublicationError(f"{name} must be a number of seconds") from error
-    if seconds < minimum:
+    if not math.isfinite(seconds) or seconds < minimum:
         raise PublicationError(f"{name} must be at least {minimum:g} seconds")
     return seconds
 
@@ -99,6 +100,11 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         # JSON endpoints never require redirecting the bearer token.
         raise PublicationError("unexpected authenticated API redirect")
+
+
+class _ArtifactRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 class GitHub:
@@ -149,6 +155,39 @@ class GitHub:
 
     def get(self, path: str, *, allow_missing: bool = False) -> Any:
         return read_with_retry(lambda timeout: self.request("GET", path, timeout=timeout), allow_missing=allow_missing)
+
+    def artifact_url(self, artifact_id: int, *, timeout: float) -> str:
+        """Resolve a fresh signed URL without following the authenticated redirect."""
+        if type(artifact_id) is not int or artifact_id <= 0:
+            raise PublicationError("positive artifact ID required")
+        request = urllib.request.Request(
+            f"https://api.github.com/repos/{self.repository}/actions/artifacts/{artifact_id}/zip",
+            headers={
+                "Authorization": f"Bearer {self._token}",
+                "User-Agent": "DocWen-release",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2026-03-10",
+            },
+        )
+        opener = urllib.request.build_opener(_ArtifactRedirect())
+        try:
+            with opener.open(request, timeout=timeout):
+                raise PublicationError("artifact API did not return a signed redirect")
+        except urllib.error.HTTPError as error:
+            try:
+                if error.code == 302:
+                    location = error.headers.get("Location")
+                    if not location:
+                        raise PublicationError("artifact redirect missing") from None
+                    return location
+                delay = retry_after_seconds(error.headers.get("Retry-After"))
+                limited = bool(delay) or error.headers.get("X-RateLimit-Remaining") == "0"
+                if limited and not delay:
+                    with suppress(ValueError):
+                        delay = max(0, float(error.headers.get("X-RateLimit-Reset", "0")) - time.time())
+                raise ApiError(error.code, retry_after=delay, limited=limited) from None
+            finally:
+                error.close()
 
     def download_identity(self, path: str, *, timeout: float) -> dict[str, Any]:
         import hashlib

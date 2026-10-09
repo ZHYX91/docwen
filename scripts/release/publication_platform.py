@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
 import re
 import shutil
 import stat
-import subprocess
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -23,21 +24,21 @@ from scripts.release.publication_contract import (
     verify_manifest,
     verify_origin,
 )
-from scripts.release.publication_http import GitHub, env_seconds
+from scripts.release.publication_download import (
+    atomic_record,
+    download_artifact,
+    finish_download,
+    pending_record,
+    regular_file,
+    require_record_filesystem,
+)
+from scripts.release.publication_http import GitHub
 from scripts.release.publication_session import verify_candidate_jobs, verify_provenance
 
 
-def _download(artifact: dict[str, Any], output: Path, names: set[str], *, repository: str, limit: int) -> None:
+def _download(api: GitHub, artifact: dict[str, Any], output: Path, names: set[str], *, limit: int) -> None:
     archive = output / f"download-{artifact['id']}.zip"
-    with archive.open("xb") as stream:
-        result = subprocess.run(
-            ["gh", "api", f"/repos/{repository}/actions/artifacts/{artifact['id']}/zip"],
-            stdout=stream,
-            stderr=subprocess.PIPE,
-            timeout=env_seconds("DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT", 600),
-        )
-    require(result.returncode == 0, "platform artifact download failed")
-    require(f"sha256:{file_identity(archive)['sha256']}" == artifact["digest"], "downloaded artifact digest mismatch")
+    download_artifact(api, artifact, archive)
     with zipfile.ZipFile(archive) as bundle:
         entries = bundle.infolist()
         require(
@@ -52,9 +53,32 @@ def _download(artifact: dict[str, Any], output: Path, names: set[str], *, reposi
             "unexpected artifact member",
         )
         for entry in entries:
-            with bundle.open(entry) as source, (output / entry.filename).open("xb") as target:
+            destination = output / entry.filename
+            if destination.exists():
+                regular_file(destination)
+                with bundle.open(entry) as source:
+                    require(
+                        file_identity(destination)
+                        == {"bytes": entry.file_size, "sha256": hashlib.file_digest(source, "sha256").hexdigest()},
+                        "previous extraction differs from verified archive",
+                    )
+                temporary = output / (entry.filename + ".extracting")
+                if temporary.exists():
+                    regular_file(temporary)
+                    temporary.unlink()
+                continue
+            temporary = output / (entry.filename + ".extracting")
+            if temporary.exists():
+                regular_file(temporary)
+                temporary.unlink()
+            # The verified transfer sidecar owns this scratch name. Never expose
+            # a partially written member under its final candidate filename.
+            with bundle.open(entry) as source, temporary.open("xb") as target:
                 shutil.copyfileobj(source, target)
-    archive.unlink()
+            require(temporary.stat().st_size == entry.file_size, "incomplete extracted member")
+            os.link(temporary, destination)
+            temporary.unlink()
+    finish_download(archive)
 
 
 def _sibling(artifacts: list[dict[str, Any]], name: str, run_id: int) -> dict[str, Any]:
@@ -106,14 +130,58 @@ def fetch_platform(
     require(output.parent.is_dir() and not output.is_symlink(), "candidate directory must be inside an owned directory")
     require(receipt.parent.is_dir() and not receipt.is_symlink(), "receipt must be inside an owned directory")
     require(not receipt.resolve().is_relative_to(output.resolve()), "receipt must be outside candidate inventory")
+    if not receipt.exists():
+        require_record_filesystem(receipt.parent)
     reused = output.exists()
+    marker = output / "transfer.json"
+    transfer = {
+        "artifactId": artifact_id,
+        "digest": digest,
+        "repository": repository,
+        "version": version,
+        "commit": commit,
+        "platform": platform,
+        "siblings": {
+            "metadata": {key: metadata[key] for key in ("id", "digest", "size_in_bytes")},
+            "package": {key: package[key] for key in ("id", "digest", "size_in_bytes")},
+        },
+    }
     if not reused:
         output.mkdir()
-        _download(metadata, output, {MANIFEST_NAME, CHECKSUM_NAME}, repository=repository, limit=1024**2)
+
     require(
         output.is_dir() and not getattr(output.stat(), "st_file_attributes", 0) & 0x400,
         "reparse candidate directory rejected",
     )
+    transfer_bytes = canonical_json(transfer)
+    pending_transfer = pending_record(marker, transfer_bytes)
+    if (
+        not reused
+        or (not marker.exists() and {path.name for path in output.iterdir()} == {pending_transfer.name})
+        or marker.exists()
+    ):
+        atomic_record(marker, transfer_bytes)
+    recovering = marker.exists()
+    require(recovering or receipt.is_file(), "candidate cache has no identity receipt or transfer journal")
+    if recovering:
+        regular_file(marker)
+        require(read_object(marker) == transfer, "candidate transfer identity mismatch")
+        allowed = selected | {MANIFEST_NAME, CHECKSUM_NAME, marker.name}
+        allowed |= {name + ".extracting" for name in selected | {MANIFEST_NAME, CHECKSUM_NAME}}
+        for item in (metadata, package):
+            state = output / f"download-{item['id']}.json"
+            identity = {
+                "repository": repository,
+                "id": item["id"],
+                "digest": item["digest"],
+                "bytes": item["size_in_bytes"],
+            }
+            allowed |= {f"download-{item['id']}.zip", state.name, pending_record(state, canonical_json(identity)).name}
+        require({path.name for path in output.iterdir()} <= allowed, "unexpected candidate recovery files")
+        if (output / f"download-{metadata['id']}.json").exists() or not all(
+            (output / name).is_file() for name in (MANIFEST_NAME, CHECKSUM_NAME)
+        ):
+            _download(api, metadata, output, {MANIFEST_NAME, CHECKSUM_NAME}, limit=1024**2)
     for name in (MANIFEST_NAME, CHECKSUM_NAME):
         require(file_identity(output / name)["bytes"] <= 1024**2, "candidate metadata too large")
     manifest = read_object(output / MANIFEST_NAME)
@@ -121,10 +189,13 @@ def fetch_platform(
     verify_origin(manifest, run, publication, digest=digest)
     require((output / CHECKSUM_NAME).read_bytes() == checksum_bytes(manifest["assets"]), "checksum inventory mismatch")
     verify_provenance(output, manifest, (MANIFEST_NAME, CHECKSUM_NAME))
-    if not reused:
-        _download(package, output, selected, repository=repository, limit=2 * 1024**3)
+    if recovering and (
+        (output / f"download-{package['id']}.json").exists() or not all((output / name).is_file() for name in selected)
+    ):
+        _download(api, package, output, selected, limit=2 * 1024**3)
     require(
-        {path.name for path in output.iterdir()} == selected | {MANIFEST_NAME, CHECKSUM_NAME},
+        {path.name for path in output.iterdir()}
+        == selected | {MANIFEST_NAME, CHECKSUM_NAME} | ({marker.name} if recovering else set()),
         "unexpected platform candidate files",
     )
     for name in selected:
@@ -141,16 +212,14 @@ def fetch_platform(
         "artifactDigest": digest,
         "origin": manifest["origin"],
         "manifestSha256": file_identity(output / MANIFEST_NAME)["sha256"],
-        "metadataArtifact": {key: metadata[key] for key in ("id", "digest")},
-        "platformArtifact": {key: package[key] for key in ("id", "digest")},
+        "metadataArtifact": {key: metadata[key] for key in ("id", "digest", "size_in_bytes")},
+        "platformArtifact": {key: package[key] for key in ("id", "digest", "size_in_bytes")},
         "assets": {name: manifest["assets"][name] for name in sorted(selected)},
         "provenance": "verified",
         "scope": "Selected platform bytes only; no native acceptance, other-platform download or publication claim.",
     }
     content = canonical_json(result)
-    if receipt.exists():
-        require(receipt.read_bytes() == content, "platform receipt identity mismatch")
-    else:
-        with receipt.open("xb") as stream:
-            stream.write(content)
+    atomic_record(receipt, content)
+    if recovering:
+        marker.unlink()
     return {**result, "reused": reused}
