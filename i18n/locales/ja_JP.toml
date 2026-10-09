@@ -1664,6 +1664,7 @@ subtitle = "サブタイトル"
 
 
 [main_window]
+output_filesystem_unsupported = "このフォルダーには安全に保存できません。既存の結果を上書きせずにアトミックに保存できないファイルシステムです。別の出力先を選択してください。WSL では Linux ネイティブのファイルシステムを使用してください。"
 ocr_quality_notice = "OCR 結果には誤りや抜けが含まれる場合があります。原文と照合してください。"
 file_admission_missing = "入力ファイルが存在しないか、移動されています：{path}"
 file_admission_unreadable = "入力ファイルを読み取れません：{path}"

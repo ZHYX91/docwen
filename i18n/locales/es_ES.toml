@@ -15,6 +15,7 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+output_filesystem_unsupported = "No se puede guardar de forma segura en esta carpeta: el sistema de archivos no permite una publicación atómica sin sobrescritura. Elija otra ubicación de salida; en WSL, use un sistema de archivos nativo de Linux."
 ocr_quality_notice = "Los resultados OCR pueden contener errores u omisiones; compárelos con el original."
 file_admission_missing = "El archivo de entrada ya no existe: {path}"
 file_admission_unreadable = "No se puede leer el archivo de entrada: {path}"

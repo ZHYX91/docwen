@@ -11,6 +11,7 @@ template_name = "English General Template"
 # Main Window
 # =============================================================================
 [main_window]
+output_filesystem_unsupported = "Cannot safely save to this folder: the filesystem cannot publish atomically without overwriting existing results. Choose another output location; in WSL, use a native Linux filesystem."
 ocr_quality_notice = "OCR results may contain errors or omissions; verify them against the source."
 file_admission_missing = "The input file no longer exists: {path}"
 file_admission_unreadable = "The input file cannot be read: {path}"

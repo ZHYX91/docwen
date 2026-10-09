@@ -1663,6 +1663,7 @@ subtitle = "副標題"
 
 
 [main_window]
+output_filesystem_unsupported = "無法安全儲存到此資料夾：所在檔案系統不支援原子防覆寫儲存。請選擇其他輸出位置；WSL 中請選擇 Linux 原生檔案系統。"
 ocr_quality_notice = "OCR 結果可能有錯漏，請對照原文校對。"
 file_admission_missing = "輸入檔案不存在或已移走：{path}"
 file_admission_unreadable = "無法讀取輸入檔案：{path}"

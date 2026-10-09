@@ -5,6 +5,13 @@
 
 ## Unreleased / 未发布
 
+- Check the destination filesystem before conversion and explain when another output folder is required for atomic publication without overwriting existing results.
+- Use the platform cache for default runtime work; keep explicit runtime directories independent of maintainer workspace layouts. Improve managed source launches, candidate cleanup and MSIX payload verification.
+- Explain the opt-in Markdown input/output extensions and Word numbering boundaries.
+- 转换前探测输出文件系统能力；无法保证原子不覆盖时提前失败并提示更换目录，不静默降级。
+- 运行时默认采用平台缓存目录，与维护者工作区布局解耦；完善源码启动、候选清理及 MSIX 载荷核验。
+- 补充 Markdown 输入/输出扩展及 Word 编号的配置边界说明。
+
 ## 0.17.0 (2026-10-07)
 
 - Protect source files from implicit replacement and bind preconverted inputs to their actual bytes; align batch planning, results and source-backed warning diagnostics.
