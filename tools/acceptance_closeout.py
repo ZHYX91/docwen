@@ -76,7 +76,7 @@ def close_run(
     limitations: tuple[str, ...] = (),
     result: str = "passed",
     reason: str = "",
-    disposition: str = "delete",
+    disposition: str | None = None,
     evidence_files: tuple[str, ...] = (),
 ) -> Path:
     workspace = resolve_workspace_root(Path(__file__).resolve().parents[1], explicit=workspace_root)
@@ -109,7 +109,6 @@ def close_run(
     if workspace_cleanup._lease_process_alive(lease):
         raise AcceptanceCloseoutError(f"run_owner_still_alive:{run}:{lease.get('pid')}")
 
-    identity = workspace_cleanup._snapshot_tree(run)
     if len(evidence_files) > 8:
         raise AcceptanceCloseoutError("too_many_evidence_files")
     evidence: list[dict[str, Any]] = []
@@ -142,13 +141,7 @@ def close_run(
         "evidence": evidence,
         "generatedAt": generated_at,
         "subject": subject,
-        "runSummary": {
-            "bytes": identity["bytes"],
-            "files": identity["files"],
-            "directories": identity["directories"],
-            "contentSha256": identity["contentSha256"],
-            "metadataSha256": identity["metadataSha256"],
-        },
+        "runSummary": None,
         "limitations": list(limitations),
         "rawRunRemoved": False,
     }
@@ -158,15 +151,22 @@ def close_run(
     provisional = diagnostics / f"acceptance-closeout-{candidate}-{gate_name}-{stamp}.json"
     plan_path = diagnostics / f"acceptance-closeout-plan-{candidate}-{gate_name}-{stamp}.json"
     _atomic_json(provisional, payload)
-    plan = workspace_cleanup.create_plan(
-        workspace_root=workspace,
-        explicit_targets=(run,),
-        reason=f"acceptance closeout {candidate}/{gate_name}: {result} {reason}",
-        disposition=disposition,
-    )
-    workspace_cleanup.save_plan(plan, plan_path)
     _atomic_json(receipt, payload)
     try:
+        payload["cleanupStage"] = "preflight"
+        plan = workspace_cleanup.create_plan(
+            workspace_root=workspace,
+            explicit_targets=(run,),
+            reason=f"acceptance closeout {candidate}/{gate_name}: {result} {reason}",
+            disposition=disposition,
+        )
+        identity = plan["entries"][0]["identity"]
+        payload["runSummary"] = {
+            key: identity[key] for key in ("bytes", "files", "directories", "contentSha256", "metadataSha256")
+        }
+        workspace_cleanup.save_plan(plan, plan_path)
+        payload["cleanupStage"] = "apply"
+        _atomic_json(receipt, payload)
         payload["cleanup"] = workspace_cleanup.apply_saved_plan(plan_path, workspace_root=workspace)
     except Exception as error:
         payload["cleanupError"] = f"{type(error).__name__}: {error}"
@@ -174,6 +174,7 @@ def close_run(
         _atomic_json(receipt, payload)
         raise
     payload["rawRunRemoved"] = True
+    payload["cleanupStage"] = "complete"
     _atomic_json(receipt, payload)
     plan_path.unlink()
     provisional.unlink()
@@ -192,7 +193,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--limitation", action="append", default=[])
     result.add_argument("--result", choices=["passed", "failed", "superseded"], default="passed")
     result.add_argument("--reason", default="")
-    result.add_argument("--disposition", choices=["delete", "recycle"], default="delete")
+    result.add_argument("--disposition", choices=["delete", "recycle"], default=None)
     result.add_argument(
         "--evidence",
         action="append",

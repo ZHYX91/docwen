@@ -287,8 +287,22 @@ def retention_decision(
 
 def _resolve_reparse_target(path: Path) -> Path:
     try:
+        from tools.lx_symlink import LX_SYMLINK_TAG, read_target
+
+        metadata = path.lstat()
+        tag = getattr(metadata, "st_reparse_tag", 0)
+        if tag == LX_SYMLINK_TAG:
+            relative = read_target(path)
+            target = path.parent / relative
+            # Support only a fully plain, existing relative destination. Nested
+            # reparse chains and unknown guest namespaces remain fail-closed.
+            if not _chain_is_plain(target, boundary=path.parent):
+                raise HousekeepingError(f"unsupported_lx_target_chain:{path}")
+            return _absolute(target)
+        if tag not in {0, 0xA000000C, 0xA0000003}:
+            raise HousekeepingError(f"unsupported_reparse_tag:{path}:{tag:#x}")
         return _absolute(path.resolve(strict=True))
-    except (OSError, RuntimeError) as error:
+    except (OSError, RuntimeError, ValueError) as error:
         raise HousekeepingError(f"unresolved_reparse_target:{path}:{error}") from error
 
 

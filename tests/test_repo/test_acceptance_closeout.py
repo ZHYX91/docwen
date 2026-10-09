@@ -170,3 +170,31 @@ def test_closeout_rejects_unsafe_evidence_before_cleanup(tmp_path: Path, relativ
         )
     assert run.exists()
     assert not list((workspace / "acceptance").iterdir())
+
+
+def test_preflight_failure_keeps_evidence_and_stage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    workspace = _workspace(tmp_path)
+    run = _leased_run(workspace, state="completed-success")
+
+    def fail(**kwargs: object) -> None:
+        assert kwargs["disposition"] is None  # Delegate platform default to housekeeping.
+        raise workspace_cleanup.HousekeepingError("unsupported_reparse_tag")
+
+    monkeypatch.setattr(workspace_cleanup, "create_plan", fail)
+    with pytest.raises(workspace_cleanup.HousekeepingError):
+        acceptance_closeout.close_run(
+            workspace_root=workspace,
+            run_root=run,
+            candidate_id="preflight",
+            gate="test",
+            subject_name="candidate.zip",
+            subject_sha256="0" * 64,
+            subject_bytes=0,
+            evidence_files=("summary.log",),
+        )
+    payload = json.loads((workspace / "acceptance/preflight--test.json").read_text())
+    assert payload["cleanupStage"] == "preflight"
+    assert payload["rawRunRemoved"] is False
+    assert payload["runSummary"] is None
+    assert payload["evidence"][0]["text"] == "passed\n"
+    assert run.exists()
