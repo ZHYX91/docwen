@@ -336,6 +336,16 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
         onerror=_raise_walk_error,
     ):
         current_path = _logical_path(current)
+        inside_owned_run = LEASE_NAME in files or any(
+            lease_root == current_path or lease_root in current_path.parents for lease_root in lease_roots
+        )
+        if not inside_owned_run:
+            # A grouping directory can contain recovery evidence even when a
+            # child's marker was lost. Inspect names without following links or
+            # trusting record contents; fixtures inside an owned run stay data.
+            for name in sorted(directories + files):
+                if name.endswith(".recovery.json"):
+                    raise HousekeepingError(f"pending_run_recovery:{current_path / name}")
         safe_directories: list[str] = []
         for name in sorted(directories):
             child = current_path / name

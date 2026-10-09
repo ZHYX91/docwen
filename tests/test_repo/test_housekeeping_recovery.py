@@ -188,6 +188,38 @@ def test_recovery_hold_rechecked_when_applying_saved_plan(tmp_path, monkeypatch,
     assert all((root / "input.txt").read_text() == "controlled scratch" for root in roots)
 
 
+@pytest.mark.parametrize("marker_present", [True, False])
+@pytest.mark.parametrize("record_form", ["malformed", "directory"])
+def test_parent_cleanup_holds_child_recovery(tmp_path, marker_present, record_form):
+    workspace = tmp_path / ".workspace"
+    (workspace / "diagnostics").mkdir(parents=True)
+    group = workspace / "temp" / "group"
+    child = group / "child-run"
+    child.mkdir(parents=True)
+    (child / "output.txt").write_text("preserve result")
+    if marker_present:
+        payload = run_lease.lease_payload(child, owner="docwen.test", kind="scratch")
+        payload.update(pid=999999999, state="completed-success")
+        payload.pop("processIdentity", None)
+        (child / workspace_cleanup.LEASE_NAME).write_text(json.dumps(payload))
+    plan = workspace_cleanup.create_plan(
+        workspace_root=workspace, explicit_targets=[group], reason="parent cleanup", disposition="delete"
+    )
+    saved = workspace_cleanup.save_plan(plan, workspace / "diagnostics" / "parent.json")
+    recovery = group / "child-run.recovery.json"
+    if record_form == "directory":
+        recovery.mkdir()
+    else:
+        recovery.write_text("invalid")
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="pending_run_recovery"):
+        workspace_cleanup.create_plan(workspace_root=workspace, explicit_targets=[group], reason="parent cleanup")
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="pending_run_recovery"):
+        workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
+    assert (child / "output.txt").read_text() == "preserve result"
+    assert (child / workspace_cleanup.LEASE_NAME).exists() == marker_present
+    assert recovery.exists()
+
+
 def test_failed_atomic_lease_update_preserves_original_marker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from scripts.release import build_production_candidate as production
 
