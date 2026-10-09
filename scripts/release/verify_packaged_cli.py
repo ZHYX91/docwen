@@ -26,6 +26,8 @@ from xml.etree import ElementTree
 
 import openpyxl
 
+from docwen_runtime.output.finalizer import OutputFinalizer
+
 try:
     from scripts.release import packaged_resources as _packaged_resources
 except ModuleNotFoundError:
@@ -1055,6 +1057,20 @@ def _write_ocr_png(path: Path) -> None:
         font = ImageFont.load_default()
     draw.text((36, 72), "HELLO DOCWEN OCR", fill="black", font=font)
     image.save(path)
+
+
+def _prepare_physical_page_fault(parent: Path, ordinal: int) -> Path:
+    images = parent / f"physical-fault-{ordinal}"
+    images.mkdir()
+    _write_ocr_png(images / "unresolved.png")
+    return images
+
+
+def _publish_physical_page_fault(prepared: Path, destination: Path) -> None:
+    # The converter takes a baseline of existing valid images. Publish the
+    # complete directory before that baseline; never expose an unfinished PNG
+    # or replace a directory the converter already created.
+    OutputFinalizer._publish_directory_no_clobber(str(prepared), str(destination))
 
 
 def _write_proofread_report_fixture(path: Path) -> bytes:
@@ -3286,6 +3302,9 @@ def _run_machine_protocol_smoke_impl(
         armed = threading.Event()
         injected = threading.Event()
         stop = threading.Event()
+        prepared_images = (
+            _prepare_physical_page_fault(physical_system_temp, ordinal) if inject_unresolved_resource else None
+        )
 
         def inject_controlled_fault() -> None:
             armed.set()
@@ -3297,11 +3316,9 @@ def _run_machine_protocol_smoke_impl(
                     if materialized is None or not staging_dir.is_dir():
                         continue
                     try:
-                        if inject_unresolved_resource:
+                        if prepared_images is not None:
                             image_dir = staging_dir / f"{materialized.stem}_images"
-                            image_dir.mkdir(exist_ok=False)
-                            unresolved = image_dir / "unresolved.png"
-                            _write_ocr_png(unresolved)
+                            _publish_physical_page_fault(prepared_images, image_dir)
                     except FileExistsError:
                         continue
                     injected.set()
