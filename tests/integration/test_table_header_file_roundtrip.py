@@ -18,6 +18,7 @@ from docwen_core.models.request import ConversionRequest
 from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 from docwen_plugin_markdown.document_semantics import analyze_document_semantics
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
+from docwen_plugin_markdown.renderer_inlines import extract_text_content
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 from docwen_runtime.config.document_styles import build_document_style_catalog
 from tests.support.cancellation import FakeCancellationTokenView
@@ -293,6 +294,10 @@ def test_direct_file_multilevel_header_borders_survive_style_edits_without_seman
         (3, 1, "never"),
     ]
     for before, after in zip(expected, actual, strict=True):
-        assert [(cell["row"], cell["column"], cell["row_span"], cell["column_span"]) for cell in before["anchors"]] == [
-            (cell["row"], cell["column"], cell["row_span"], cell["column_span"]) for cell in after["anchors"]
+        assert [
+            (cell["row"], cell["column"], cell["row_span"], cell["column_span"], extract_text_content(cell["children"]))
+            for cell in before["anchors"]
+        ] == [
+            (cell["row"], cell["column"], cell["row_span"], cell["column_span"], extract_text_content(cell["children"]))
+            for cell in after["anchors"]
         ]

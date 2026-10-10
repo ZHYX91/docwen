@@ -17,22 +17,42 @@ def table_header_separator(style: Any) -> dict[str, str] | None:
     to the other or advertised as equivalent native border suppression.
     A missing rule may inherit through basedOn; an unresolved/cyclic chain or
     ambiguous conditional rule grants no permission to add a separator.
+    Other authored horizontal cell edges, insideH or nonzero cell spacing
+    opt out: nil must not suppress an independent template border intent.
     """
     seen: set[str] = set()
+    separator = None
     while style is not None:
         if style.style_id in seen:
             return None
         seen.add(style.style_id)
+        scopes = [style.element, *style.element.findall(qn("w:tblStylePr"))]
+        for scope in scopes:
+            if scope.find(f"{qn('w:tblPr')}/{qn('w:tblBorders')}/{qn('w:insideH')}") is not None:
+                return None
+            spacing = scope.find(f"{qn('w:tblPr')}/{qn('w:tblCellSpacing')}")
+            if spacing is not None and spacing.get(qn("w:w")) != "0":
+                return None
+            borders = scope.find(f"{qn('w:tcPr')}/{qn('w:tcBorders')}")
+            if borders is not None:
+                allowed_bottom = scope.get(qn("w:type")) == "firstRow"
+                if any(
+                    borders.find(qn(f"w:{edge}")) is not None
+                    for edge in (("top", "insideH") if allowed_bottom else ("top", "bottom", "insideH"))
+                ):
+                    return None
         rules = [rule for rule in style.element.findall(qn("w:tblStylePr")) if rule.get(qn("w:type")) == "firstRow"]
         if len(rules) > 1:
             return None
-        if rules:
+        if rules and separator is None:
             bottom = rules[0].find(f"{qn('w:tcPr')}/{qn('w:tcBorders')}/{qn('w:bottom')}")
             if bottom is not None:
                 value = bottom.get(qn("w:val"), "")
-                return dict(bottom.attrib) if value and value not in {"none", "nil"} else None
+                if not value or value in {"none", "nil"}:
+                    return None
+                separator = dict(bottom.attrib)
         style = style.base_style
-    return None
+    return separator
 
 
 def apply_multirow_header_borders(

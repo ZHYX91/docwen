@@ -133,6 +133,21 @@ def test_other_style_or_name_alone_does_not_authorize_header_projection(key):
     assert _bottoms(document.tables[0]) == {}
 
 
+@pytest.mark.parametrize("template_style", [False, True])
+def test_unmanaged_name_only_multirow_table_keeps_legacy_header_borders(template_style):
+    source = "| A |\n| B |\n| --- |\n| data |\n"
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+    assert not analysis.has_errors
+    document = Document()
+    if template_style:
+        document.styles.add_style("Three Line Table", WD_STYLE_TYPE.TABLE)
+    MdToDocxRenderer(document, table_style_name="Three Line Table").render(analysis.ast)
+    assert {key: value["val"] for key, value in _bottoms(document.tables[0]).items()} == {
+        (0, 0, 1): "single",
+        (1, 0, 1): "single",
+    }
+
+
 def test_known_docwen_direct_fallback_also_projects_merged_header_edges():
     analysis = analyze_document_semantics(parse_markdown_text(_STAGGERED), current_v3=True)
     assert not analysis.has_errors
@@ -216,6 +231,61 @@ def test_template_missing_or_explicitly_disabled_separator_is_not_replaced(value
             .get(qn("w:val"))
             == value
         )
+
+
+@pytest.mark.parametrize("inherit", [False, True])
+@pytest.mark.parametrize("value", ["double", "none", "nil"])
+@pytest.mark.parametrize("location", ["insideH", "cell-top", "conditional-top"])
+def test_template_other_horizontal_border_intent_opts_out_of_projection(inherit, value, location):
+    template = Document()
+    style = template.styles.add_style("Three Line Table", WD_STYLE_TYPE.TABLE)
+    parent = template.styles.add_style("Parent Table", WD_STYLE_TYPE.TABLE) if inherit else style
+    if inherit:
+        style.base_style = parent
+    _rule(style, val="single", sz="4")
+    if location == "insideH":
+        properties = OxmlElement("w:tblPr")
+        borders = OxmlElement("w:tblBorders")
+        edge = "insideH"
+        scope = parent.element
+    else:
+        properties = OxmlElement("w:tcPr")
+        borders = OxmlElement("w:tcBorders")
+        edge = "top"
+        scope = parent.element
+        if location == "conditional-top":
+            scope = OxmlElement("w:tblStylePr")
+            scope.set(qn("w:type"), "firstCol")
+            parent.element.append(scope)
+    border = OxmlElement(f"w:{edge}")
+    border.attrib.update({qn("w:val"): value, qn("w:sz"): "8", qn("w:color"): "AB1234"})
+    borders.append(border)
+    properties.append(borders)
+    scope.append(properties)
+    original = etree.tostring(properties)
+    document, _ = _render(_STAGGERED, document=template)
+    assert _bottoms(document.tables[0]) == {}
+    assert table_header_separator(document.tables[0].style) is None
+    assert etree.tostring(properties) == original
+
+
+@pytest.mark.parametrize("inherit", [False, True])
+@pytest.mark.parametrize("width", ["0", "20"])
+def test_template_cell_spacing_does_not_claim_zero_spacing_border_suppression(inherit, width):
+    template = Document()
+    style = template.styles.add_style("Three Line Table", WD_STYLE_TYPE.TABLE)
+    parent = template.styles.add_style("Parent Table", WD_STYLE_TYPE.TABLE) if inherit else style
+    if inherit:
+        style.base_style = parent
+    _rule(style, val="single", sz="4")
+    properties = OxmlElement("w:tblPr")
+    spacing = OxmlElement("w:tblCellSpacing")
+    spacing.attrib.update({qn("w:w"): width, qn("w:type"): "dxa"})
+    properties.append(spacing)
+    parent.element.append(properties)
+    document, _ = _render(_STAGGERED, document=template)
+    assert bool(_bottoms(document.tables[0])) == (width == "0")
+    assert spacing.get(qn("w:w")) == width
 
 
 @pytest.mark.parametrize("value", ["none", "nil", "double"])

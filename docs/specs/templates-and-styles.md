@@ -172,6 +172,10 @@ must resolve to a style of the correct type.
   ([Microsoft's cell-border behavior](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/7c791c5d-44c3-4fe8-abdd-8f136761bb93)).
   Template/style definitions and outer borders remain intact. Zero/one-row headers, other table styles and selection
   by visible name alone keep their existing behavior. Header roles and native `tblHeader` repetition are unchanged.
+  Projection also opts out when the resolved style or its `basedOn` chain declares other horizontal cell edges
+  (including conditional rules), table `insideH`, or nonzero/unknown cell spacing. Those declarations, including
+  explicit `none`/`nil`, express independent template intent that a new direct `nil` could suppress; keeping the
+  style XML alone would not protect its appearance. Outer table top/bottom borders do not prevent projection.
 - Existing compatible custom formatting wins over DocWen defaults. Defaults are applied only when a style is
   newly created.
 
@@ -182,6 +186,9 @@ must resolve to a style of the correct type.
 `nil` 以屏蔽首行条件误线，跨行合并内部边缘不改。Word 的直接 `none` 会回退样式，`nil` 表示抑制，不能互换。
 模板样式定义和外框不变；零／单行表头、其他表格样式、仅按可见名称选择的路径保持既有行为。表头角色与跨页重复策略
 仍独立于这些边框。
+若已解析样式或 `basedOn` 链另有横向单元格边框（包括条件规则）、表级 `insideH` 或非零／未知单元格间距，
+则保守跳过投射。这些声明包括显式 `none`/`nil`，不能由新增直接 `nil` 抑制；仅保留样式 XML 不足以保护其外观。
+表级外框上／下边不阻止投射。
 
 ## Existing note parts / 既有注释部件
 

@@ -1234,7 +1234,11 @@ class MdToDocxRenderer:
         if header_row_count > 0:
             if semantics is None:
                 enable_table_header_row_formatting(table)
-            if is_three_line_table and self._managed_styles is None and (semantics is None or header_row_count == 1):
+            if (
+                is_three_line_table
+                and self._managed_styles is None
+                and (self._table_style_key != "three_line_table" or semantics is None or header_row_count == 1)
+            ):
                 for header_row_idx in range(min(header_row_count, len(table.rows))):
                     apply_header_row_bottom_border(table.rows[header_row_idx])
 

@@ -29,7 +29,8 @@ Use the same candidate for the affected native Word scenarios, including turning
 and checking repeated headers across a real page break. Clipboard and neutral-port tests do not replace this file lane.
 
 `packages/plugins/markdown/tests/test_table_borders.py` checks physical multi-row three-line borders, nested and
-staggered group spans, template separator inheritance/attributes and explicit `none`/`nil` protection. The direct
+staggered group spans, unmanaged name-only compatibility, template separator inheritance/attributes and explicit
+`none`/`nil` protection. Conflicting inherited `insideH`/cell-top rules and nonzero cell spacing opt out. The direct
 file lane also converts `tests/fixtures/markdown/multirow-three-line.md`, covering two/three-row headers, two-dimensional
 groups and data merges without changing role/repetition metadata. Native acceptance must check residual internal
 lines in row-spanning headings and complete lower borders after Word save/reopen; OOXML assertions alone cannot
