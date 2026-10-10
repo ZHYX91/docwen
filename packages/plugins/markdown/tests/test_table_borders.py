@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from functools import cache
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.styles.style import _TableStyle
 from lxml import etree
 
 from docwen_plugin_markdown.document_semantics import analyze_document_semantics
@@ -56,11 +57,13 @@ def _render(source: str, *, document: Any = None, key: str | None = "three_line_
     analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
     assert not analysis.has_errors, analysis.diagnostics
     document, bindings = complete_managed_styles(document or Document(), _catalog())
+    name = bindings.get(key or "three_line_table").name
+    assert name is not None
     MdToDocxRenderer(
         document,
         managed_styles=bindings,
         table_style_key=key,
-        table_style_name=bindings.get(key or "three_line_table").name,
+        table_style_name=name,
     ).render(analysis.ast)
     return document, analysis.ast[0]["_document_semantics_table"]
 
@@ -183,11 +186,39 @@ def _rule(style, **attributes):
     return bottom
 
 
+def _add_table_style(document, name: str) -> _TableStyle:
+    return cast(_TableStyle, document.styles.add_style(name, WD_STYLE_TYPE.TABLE))
+
+
+@pytest.mark.parametrize("intent", ["insideH", "top", "none", "nil"])
+def test_direct_fallback_keeps_default_template_border_intent(intent):
+    document = Document()
+    style = cast(_TableStyle, document.styles.default(WD_STYLE_TYPE.TABLE))
+    if intent in {"none", "nil"}:
+        _rule(style, val=intent)
+    else:
+        properties = OxmlElement("w:tblPr" if intent == "insideH" else "w:tcPr")
+        borders = OxmlElement("w:tblBorders" if intent == "insideH" else "w:tcBorders")
+        border = OxmlElement(f"w:{intent}")
+        border.attrib.update({qn("w:val"): "double", qn("w:sz"): "8", qn("w:color"): "AB1234"})
+        borders.append(border)
+        properties.append(borders)
+        style.element.append(properties)
+    original = etree.tostring(style.element)
+    analysis = analyze_document_semantics(parse_markdown_text(_STAGGERED), current_v3=True)
+    assert not analysis.has_errors
+    MdToDocxRenderer(document, table_style_key="three_line_table", table_style_name="Three Line Table").render(
+        analysis.ast
+    )
+    assert _bottoms(document.tables[0]) == {}
+    assert etree.tostring(style.element) == original
+
+
 @pytest.mark.parametrize("inherit", [False, True])
 def test_template_separator_attributes_and_based_on_are_preserved(inherit):
     template = Document()
-    style = template.styles.add_style("Three Line Table", WD_STYLE_TYPE.TABLE)
-    parent = template.styles.add_style("Parent Table", WD_STYLE_TYPE.TABLE) if inherit else style
+    style = _add_table_style(template, "Three Line Table")
+    parent = _add_table_style(template, "Parent Table") if inherit else style
     if inherit:
         style.base_style = parent
     attributes = {"val": "double", "sz": "8", "color": "AB1234", "space": "1", "shadow": "1"}
@@ -214,9 +245,9 @@ def test_template_separator_attributes_and_based_on_are_preserved(inherit):
 @pytest.mark.parametrize("value", [None, "none", "nil"])
 def test_template_missing_or_explicitly_disabled_separator_is_not_replaced(value):
     template = Document()
-    parent = template.styles.add_style("Parent Table", WD_STYLE_TYPE.TABLE)
+    parent = _add_table_style(template, "Parent Table")
     _rule(parent, val="double", sz="8", color="AB1234")
-    style = template.styles.add_style("Three Line Table", WD_STYLE_TYPE.TABLE)
+    style = _add_table_style(template, "Three Line Table")
     if value is not None:
         style.base_style = parent
         original = _rule(style, val=value)
@@ -238,8 +269,8 @@ def test_template_missing_or_explicitly_disabled_separator_is_not_replaced(value
 @pytest.mark.parametrize("location", ["insideH", "cell-top", "conditional-top"])
 def test_template_other_horizontal_border_intent_opts_out_of_projection(inherit, value, location):
     template = Document()
-    style = template.styles.add_style("Three Line Table", WD_STYLE_TYPE.TABLE)
-    parent = template.styles.add_style("Parent Table", WD_STYLE_TYPE.TABLE) if inherit else style
+    style = _add_table_style(template, "Three Line Table")
+    parent = _add_table_style(template, "Parent Table") if inherit else style
     if inherit:
         style.base_style = parent
     _rule(style, val="single", sz="4")
@@ -273,8 +304,8 @@ def test_template_other_horizontal_border_intent_opts_out_of_projection(inherit,
 @pytest.mark.parametrize("width", ["0", "20"])
 def test_template_cell_spacing_does_not_claim_zero_spacing_border_suppression(inherit, width):
     template = Document()
-    style = template.styles.add_style("Three Line Table", WD_STYLE_TYPE.TABLE)
-    parent = template.styles.add_style("Parent Table", WD_STYLE_TYPE.TABLE) if inherit else style
+    style = _add_table_style(template, "Three Line Table")
+    parent = _add_table_style(template, "Parent Table") if inherit else style
     if inherit:
         style.base_style = parent
     _rule(style, val="single", sz="4")

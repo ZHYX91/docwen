@@ -9,7 +9,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 
-def table_header_separator(style: Any) -> dict[str, str] | None:
+def table_header_separator(style: Any, *, fallback: Mapping[str, str] | None = None) -> dict[str, str] | None:
     """Read the selected style's header rule without inventing template defaults.
 
     An explicit none/nil opts out of this projection and is preserved as
@@ -19,6 +19,8 @@ def table_header_separator(style: Any) -> dict[str, str] | None:
     ambiguous conditional rule grants no permission to add a separator.
     Other authored horizontal cell edges, insideH or nonzero cell spacing
     opt out: nil must not suppress an independent template border intent.
+    Only a caller-owned direct fallback may supply a missing separator; it
+    still respects every authored rule and conflict in the default style.
     """
     seen: set[str] = set()
     separator = None
@@ -52,7 +54,7 @@ def table_header_separator(style: Any) -> dict[str, str] | None:
                     return None
                 separator = dict(bottom.attrib)
         style = style.base_style
-    return separator
+    return separator if separator is not None else (dict(fallback) if fallback is not None else None)
 
 
 def apply_multirow_header_borders(
@@ -102,5 +104,6 @@ def apply_multirow_header_borders(
             if borders.find(qn("w:bottom")) is not None:
                 continue
             bottom = OxmlElement("w:bottom")
-            bottom.attrib.update(separator if edges[key] else {qn("w:val"): "nil"})
+            for name, value in (separator if edges[key] else {qn("w:val"): "nil"}).items():
+                bottom.set(name, value)
             borders.append(bottom)

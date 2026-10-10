@@ -1311,10 +1311,13 @@ class MdToDocxRenderer:
                     table_header_separator,
                 )
 
-                separator = (
-                    {qn("w:val"): "single", qn("w:sz"): "4", qn("w:space"): "0", qn("w:color"): "000000"}
-                    if direct_three_line
-                    else table_header_separator(table.style)
+                separator = table_header_separator(
+                    table.style,
+                    fallback=(
+                        {qn("w:val"): "single", qn("w:sz"): "4", qn("w:space"): "0", qn("w:color"): "000000"}
+                        if direct_three_line
+                        else None
+                    ),
                 )
                 apply_multirow_header_borders(
                     table._tbl,

@@ -176,6 +176,8 @@ must resolve to a style of the correct type.
   (including conditional rules), table `insideH`, or nonzero/unknown cell spacing. Those declarations, including
   explicit `none`/`nil`, express independent template intent that a new direct `nil` could suppress; keeping the
   style XML alone would not protect its appearance. Outer table top/bottom borders do not prevent projection.
+  The known DocWen direct fallback can supply its own separator only when the selected style is unavailable;
+  the actual default table style still undergoes the same conflict and explicit opt-out checks.
 - Existing compatible custom formatting wins over DocWen defaults. Defaults are applied only when a style is
   newly created.
 
@@ -189,6 +191,7 @@ must resolve to a style of the correct type.
 若已解析样式或 `basedOn` 链另有横向单元格边框（包括条件规则）、表级 `insideH` 或非零／未知单元格间距，
 则保守跳过投射。这些声明包括显式 `none`/`nil`，不能由新增直接 `nil` 抑制；仅保留样式 XML 不足以保护其外观。
 表级外框上／下边不阻止投射。
+仅目标样式不可用时，已知的 DocWen 直接回退可提供自身分隔线；实际默认表格样式仍接受相同的冲突与显式禁用检查。
 
 ## Existing note parts / 既有注释部件
 
