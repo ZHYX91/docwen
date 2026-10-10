@@ -22,8 +22,9 @@ Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry po
 
 `tests/integration/test_table_header_file_roundtrip.py` is a direct `.md` → `.docx` → `.md` file
 integration regression for complex header roles, native merges and independent repetition policy. It removes the
-source before importing the DOCX and covers conditional-style edits, changed cell text, moved tables and stale
-geometry/bindings. OOXML edits model recovery boundaries; they do not prove Word save/reopen or physical pagination.
+source before importing the DOCX and covers conditional-style edits, changed cell text, moved tables, stale
+geometry/bindings and ordinary tables whose only extension is repetition. OOXML edits model recovery boundaries;
+they do not prove Word save/reopen or physical pagination.
 Use the same candidate for the affected native Word scenarios, including turning first-row/first-column styles off
 and checking repeated headers across a real page break. Clipboard and neutral-port tests do not replace this file lane.
 

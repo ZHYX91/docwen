@@ -229,3 +229,27 @@ def test_direct_file_disabled_output_dialect_keeps_explicit_flattening_warning(t
     ]
     assert "repeat-header" not in markdown
     assert "||" not in markdown
+
+
+@pytest.mark.parametrize("repeat, expected", [("true", "always"), ("false", "never"), (None, "inherit")])
+@pytest.mark.parametrize("structural", [False, True])
+def test_direct_file_ordinary_table_repeat_only_output_policy(
+    tmp_path: Path, repeat: str | None, expected: str, structural: bool
+) -> None:
+    source = "| Name | Value |\n| --- | --- |\n| A | 1 |\n"
+    if repeat is not None:
+        source += f"{{repeat-header={repeat}}}\n"
+    path = _export(tmp_path, source)
+
+    result, markdown = _import(tmp_path, path, structural=structural)
+
+    assert result.success, result.error
+    [metadata] = _metadata(markdown)
+    assert (metadata["header_rows"], metadata["header_columns"]) == (1, 0)
+    assert all(anchor["row_span"] == anchor["column_span"] == 1 for anchor in metadata["anchors"])
+    assert metadata["repeat_header"] == (expected if structural else "inherit")
+    assert [item.code for item in result.diagnostics] == (
+        ["docwen.conversion.markdown_extension.structural_tables.flattened"]
+        if not structural and repeat == "true"
+        else []
+    )

@@ -98,7 +98,7 @@ objects and overrides only explicitly supplied booleans. The four keys are `stru
 
 | Extension | Disabled input recognition | Disabled Markdown output |
 |---|---|---|
-| Structural Tables | Ordinary pipe tables; merge-marker cells stay literal | Ordinary tables; merged cells and header roles are flattened with a warning |
+| Structural Tables | Ordinary pipe tables; merge-marker cells stay literal | Ordinary tables; merged cells, header roles and enabled repeating-header policy are flattened with a warning |
 | Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
 | H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
 | Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
@@ -157,6 +157,9 @@ row layout remain the document editor's pagination behavior and require native-h
 and omitted `inherit` both request no repetition. Direct file conversion can preserve an existing disabled marker,
 but Word may normalize `tblHeader` with `val=0` to absence when saving. After that normalization, import uses the
 omitted policy; it does not promise to recover the former three-state spelling or let that distinction affect roles.
+With Structural Tables output disabled, an enabled repeating-header policy is omitted with the same visible loss
+warning as flattened header roles/merges, even for an ordinary unmerged table. Disabled and omitted repeat policies
+both mean no repetition; omitting the disabled spelling alone does not add a semantic-loss warning.
 
 DOCX import emits the canonical
 Structural Tables spelling when native table metadata requires zero or multiple column-header rows, or row-header
@@ -199,6 +202,8 @@ Structural Tables 输出时，有无题注的表都输出对应的 `true`/`false
 文档编辑器处理，需要真实宿主验收。显式 `false` 与省略的 `inherit` 都不请求重复；直接文件转换可保留已有关闭
 标记，但 Word 保存可能把 `tblHeader val=0` 规范化为缺失，此时回转采用省略策略，不承诺恢复此前三态的字面写法，
 也不让这种区别影响表头角色。
+关闭 Structural Tables 输出时，启用的重复表头策略会被省略，并提示与表头角色/合并展平相同的表达损失，即使表格
+只有一行列表头且没有合并。关闭与省略策略都表示不重复，仅省略关闭的字面写法不增加语义损失警告。
 
 普通转换中的 Number Suite 方言由 Markdown 源码本身
 定义：DocWen 识别标题、题注、引用语法，并按本次显式转换编号策略输出；Obsidian 适配器可声明图片资源，

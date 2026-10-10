@@ -2648,9 +2648,14 @@ class DocxToMarkdownConverter:
         )
         structural = table_metadata.header_rows != 1 or table_metadata.header_columns > 0
         if not self._extensions.structural_tables:
-            if structural or any(node.tag.rsplit("}", 1)[-1] in {"gridSpan", "vMerge"} for node in tbl_element.iter()):
+            if (
+                structural
+                or table_metadata.repeat_header == "always"
+                or any(node.tag.rsplit("}", 1)[-1] in {"gridSpan", "vMerge"} for node in tbl_element.iter())
+            ):
                 self._record_extension_loss(
-                    "structural_tables", "Merged cells and header roles were flattened to a standard Markdown table."
+                    "structural_tables",
+                    "Merged cells, header roles or repeating-header policy were flattened to a standard Markdown table.",
                 )
             structural = False
             if table_merge_strategy == "marker":
