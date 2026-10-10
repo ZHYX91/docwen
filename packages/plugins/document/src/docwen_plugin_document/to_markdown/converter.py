@@ -875,23 +875,25 @@ class DocxToMarkdownConverter:
                         para_by_element,
                         table_merge_strategy=effective_table_merge_strategy,
                     )
-                if semantic_caption is not None:
+                if semantic_caption is not None or self._extensions.structural_tables:
                     metadata = extract_semantic_table_metadata(
                         child, verified_roles=self._table_role_overrides.get(child)
                     )
-                    attributes = [
-                        f"header-rows={metadata.header_rows}",
-                        f"header-cols={metadata.header_columns}",
-                    ]
+                    attributes = (
+                        [f"header-rows={metadata.header_rows}", f"header-cols={metadata.header_columns}"]
+                        if semantic_caption is not None
+                        else []
+                    )
                     if metadata.repeat_header == "always":
                         attributes.append("repeat-header=true")
                     elif metadata.repeat_header == "never":
                         attributes.append("repeat-header=false")
-                    attribute_line = "{" + " ".join(attributes) + "}"
-                    if tbl_lines and tbl_lines[-1] == "":
-                        tbl_lines.insert(-1, attribute_line)
-                    else:
-                        tbl_lines.extend([attribute_line, ""])
+                    if attributes:
+                        attribute_line = "{" + " ".join(attributes) + "}"
+                        if tbl_lines and tbl_lines[-1] == "":
+                            tbl_lines.insert(-1, attribute_line)
+                        else:
+                            tbl_lines.extend([attribute_line, ""])
                 if table_list_context_level is not None:
                     table_indent = " " * self._list_indent_spaces * (table_list_context_level + 1)
                     tbl_lines = [f"{table_indent}{line}" if line else line for line in tbl_lines]

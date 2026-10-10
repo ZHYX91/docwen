@@ -1337,7 +1337,10 @@ def apply_semantic_table_roles(
     header_columns: int,
     repeat_header: str,
 ) -> None:
-    """Encode explicit header roles and repeat policy with standard OOXML."""
+    """Write header presentation hints and independent native repeat policy.
+
+    Complex authored roles are separately bound by ``prepare_table_roles``.
+    """
 
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn

@@ -20,6 +20,13 @@ Tests are grouped by primary behavior family and execution cost. The default rep
 
 Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry point pins the repository's pytest configuration and root fixtures even when every selected path belongs to a single workspace package.
 
+`tests/integration/test_table_header_file_roundtrip.py` is a direct `.md` → `.docx` → `.md` file
+integration regression for complex header roles, native merges and independent repetition policy. It removes the
+source before importing the DOCX and covers conditional-style edits, changed cell text, moved tables and stale
+geometry/bindings. OOXML edits model recovery boundaries; they do not prove Word save/reopen or physical pagination.
+Use the same candidate for the affected native Word scenarios, including turning first-row/first-column styles off
+and checking repeated headers across a real page break. Clipboard and neutral-port tests do not replace this file lane.
+
 测试按主要行为族和执行成本分层。默认仓库测试只选择非 slow 的 unit 与 contract；GUI、integration、端到端及环境所有型检查进入各自显式门禁。
 
 ## Common commands / 常用命令
