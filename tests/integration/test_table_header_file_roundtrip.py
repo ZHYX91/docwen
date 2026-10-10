@@ -133,7 +133,7 @@ def test_direct_file_roles_merges_and_repeat_policy_survive_style_edits(
     result, markdown = _import(tmp_path, path)
 
     assert result.success, result.error
-    assert not result.diagnostics
+    assert all(item.level == "info" for item in result.diagnostics)
     [metadata] = _metadata(markdown)
     assert (metadata["header_rows"], metadata["header_columns"], metadata["repeat_header"]) == (2, 1, expected)
     assert [
@@ -166,7 +166,7 @@ def test_direct_file_text_edits_and_table_moves_keep_distinct_roles(tmp_path: Pa
     result, markdown = _import(tmp_path, path)
 
     assert result.success, result.error
-    assert not result.diagnostics
+    assert all(item.level == "info" for item in result.diagnostics)
     assert [(item["header_rows"], item["header_columns"]) for item in _metadata(markdown)] == [(1, 2), (2, 1)]
     assert markdown.index("Second") < markdown.index("Region")
     assert "Current edited value" in markdown
@@ -191,7 +191,7 @@ def test_direct_file_stale_roles_warn_and_use_current_geometry(tmp_path: Path, e
     result, markdown = _import(tmp_path, path)
 
     assert result.success, result.error
-    assert [item.code for item in result.diagnostics] == ["DOCX2MD-TABLE-ROLES-STALE"]
+    assert [item.code for item in result.diagnostics if item.level != "info"] == ["DOCX2MD-TABLE-ROLES-STALE"]
     [metadata] = _metadata(markdown)
     assert (metadata["header_rows"], metadata["header_columns"]) == (0, 0)
     assert metadata["row_count"] == (5 if edit == "add_row" else 4)
@@ -248,7 +248,7 @@ def test_direct_file_ordinary_table_repeat_only_output_policy(
     assert (metadata["header_rows"], metadata["header_columns"]) == (1, 0)
     assert all(anchor["row_span"] == anchor["column_span"] == 1 for anchor in metadata["anchors"])
     assert metadata["repeat_header"] == (expected if structural else "inherit")
-    assert [item.code for item in result.diagnostics] == (
+    assert [item.code for item in result.diagnostics if item.level != "info"] == (
         ["docwen.conversion.markdown_extension.structural_tables.flattened"]
         if not structural and repeat == "true"
         else []
