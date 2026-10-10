@@ -28,6 +28,13 @@ they do not prove Word save/reopen or physical pagination.
 Use the same candidate for the affected native Word scenarios, including turning first-row/first-column styles off
 and checking repeated headers across a real page break. Clipboard and neutral-port tests do not replace this file lane.
 
+`packages/plugins/markdown/tests/test_table_borders.py` checks physical multi-row three-line borders, nested and
+staggered group spans, template separator inheritance/attributes and explicit `none`/`nil` protection. The direct
+file lane also converts `tests/fixtures/markdown/multirow-three-line.md`, covering two/three-row headers, two-dimensional
+groups and data merges without changing role/repetition metadata. Native acceptance must check residual internal
+lines in row-spanning headings and complete lower borders after Word save/reopen; OOXML assertions alone cannot
+establish border-conflict rendering.
+
 测试按主要行为族和执行成本分层。默认仓库测试只选择非 slow 的 unit 与 contract；GUI、integration、端到端及环境所有型检查进入各自显式门禁。
 
 ## Common commands / 常用命令

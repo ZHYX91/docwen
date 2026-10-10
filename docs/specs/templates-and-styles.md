@@ -160,8 +160,28 @@ must resolve to a style of the correct type.
   OMML is a separately frozen interoperability contract, inline math inside a link is preserved visibly as
   `$...$` text rather than silently flattened or emitted as an ambiguous hyperlink/math structure.
 - Table header paragraphs use `DocWenTableHeader`; table body paragraphs use `DocWenTableContent`.
+- For the explicitly selected built-in `three_line_table` key, multi-row column headers project their complete
+  lower boundary and wide group headings' lower edges after native merges are finished. A group ends above the
+  complete header boundary and spans more than one column; single-column intermediate headings get no added line.
+  The renderer walks physical `w:tc` cells, including the last `vMerge` continuation, rather than merged proxy aliases.
+  It copies all separator attributes from the resolved style's `firstRow` cell-bottom rule, following `basedOn`
+  when needed. A missing, ambiguous or cyclic rule grants no fallback line; explicit template `none`/`nil` opts out
+  of this projection and keeps its exact declaration. Existing direct bottom edges win. Only non-boundary rectangle
+  bottoms receive `nil` to suppress an inherited first-row line; interior vertical-merge edges remain untouched.
+  Word treats direct `none` as style fallback and `nil` as suppression, so these spellings are not interchangeable
+  ([Microsoft's cell-border behavior](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/7c791c5d-44c3-4fe8-abdd-8f136761bb93)).
+  Template/style definitions and outer borders remain intact. Zero/one-row headers, other table styles and selection
+  by visible name alone keep their existing behavior. Header roles and native `tblHeader` repetition are unchanged.
 - Existing compatible custom formatting wins over DocWen defaults. Defaults are applied only when a style is
   newly created.
+
+显式选择内置 `three_line_table` 时，多行列表头在完成原生合并后绘制完整下边界；提前结束且跨多列的分组标题另有
+底线，单列中间标题不新增线。边框落到实际物理单元格的矩形底边，包括 `vMerge` 的末行续格，不使用合并代理别名。
+线型、颜色、粗细及其他属性来自已解析样式的 `firstRow` 单元格底线，并按需沿 `basedOn` 继承；规则缺失、歧义或
+循环时不猜测默认线。模板显式 `none`/`nil` 不参与本次投射，原声明保留；已有直接底边优先。仅非边界矩形底部写入
+`nil` 以屏蔽首行条件误线，跨行合并内部边缘不改。Word 的直接 `none` 会回退样式，`nil` 表示抑制，不能互换。
+模板样式定义和外框不变；零／单行表头、其他表格样式、仅按可见名称选择的路径保持既有行为。表头角色与跨页重复策略
+仍独立于这些边框。
 
 ## Existing note parts / 既有注释部件
 

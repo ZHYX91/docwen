@@ -253,3 +253,46 @@ def test_direct_file_ordinary_table_repeat_only_output_policy(
         if not structural and repeat == "true"
         else []
     )
+
+
+def test_direct_file_multilevel_header_borders_survive_style_edits_without_semantic_changes(tmp_path: Path) -> None:
+    source = (Path(__file__).resolve().parents[1] / "fixtures/markdown/multirow-three-line.md").read_text(
+        encoding="utf-8"
+    )
+    expected = _metadata(source)
+    path = _export(tmp_path, source)
+    document: Any = Document(str(path))
+    expected_lines = [
+        {(0, 2, 2), (1, 0, 1), (1, 1, 1), (1, 2, 1), (1, 3, 1)},
+        {(0, 1, 4), (1, 1, 2), (1, 3, 2), *((2, col, 1) for col in range(5))},
+        {(1, 1, 2), *((2, col, 1) for col in range(4))},
+    ]
+    for table, wanted in zip(document.tables, expected_lines, strict=True):
+        actual = set()
+        for row_index, row in enumerate(table._tbl.findall(qn("w:tr"))):
+            column = 0
+            for cell in row.findall(qn("w:tc")):
+                span = cell.find(f"{qn('w:tcPr')}/{qn('w:gridSpan')}")
+                width = int(span.get(qn("w:val"))) if span is not None else 1
+                bottom = cell.find(f"{qn('w:tcPr')}/{qn('w:tcBorders')}/{qn('w:bottom')}")
+                if bottom is not None and bottom.get(qn("w:val")) == "single":
+                    actual.add((row_index, column, width))
+                column += width
+        assert actual == wanted
+    _disable_styles(document)
+    document.save(str(path))
+
+    result, markdown = _import(tmp_path, path)
+
+    assert result.success, result.error
+    assert all(item.level == "info" for item in result.diagnostics)
+    actual = _metadata(markdown)
+    assert [(item["header_rows"], item["header_columns"], item["repeat_header"]) for item in actual] == [
+        (2, 2, "inherit"),
+        (3, 1, "always"),
+        (3, 1, "never"),
+    ]
+    for before, after in zip(expected, actual, strict=True):
+        assert [(cell["row"], cell["column"], cell["row_span"], cell["column_span"]) for cell in before["anchors"]] == [
+            (cell["row"], cell["column"], cell["row_span"], cell["column_span"]) for cell in after["anchors"]
+        ]

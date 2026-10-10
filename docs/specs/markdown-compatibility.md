@@ -161,6 +161,11 @@ With Structural Tables output disabled, an enabled repeating-header policy is om
 warning as flattened header roles/merges, even for an ordinary unmerged table. Disabled and omitted repeat policies
 both mean no repetition; omitting the disabled spelling alone does not add a semantic-loss warning.
 
+The built-in three-line table presentation also uses the complete header region for its lower separator, including
+row-spanning corner headings. Wide group headings ending earlier receive a separate line; native cell borders use
+the selected template's separator attributes. See [template/style rules](templates-and-styles.md) for source,
+inheritance and explicit no-border protection. This presentation does not enable repeating headers.
+
 DOCX import emits the canonical
 Structural Tables spelling when native table metadata requires zero or multiple column-header rows, or row-header
 columns; a one-row column header without row headers remains ordinary GFM. Number Suite dialect interoperation is

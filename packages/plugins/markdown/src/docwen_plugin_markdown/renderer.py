@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.image.image import Image as DocxImage
+from docx.oxml.ns import qn
 from docx.shared import Pt
 
 from docwen_core.docx_semantics import (
@@ -1223,7 +1224,7 @@ class MdToDocxRenderer:
 
         table = self._doc.add_table(rows=rows, cols=cols)
         is_three_line_table = self._is_three_line_table()
-        self._apply_table_style(table)
+        direct_three_line = self._apply_table_style(table)
 
         if self._list_depth > 0:
             indent_twips = 360 * self._list_depth
@@ -1233,7 +1234,7 @@ class MdToDocxRenderer:
         if header_row_count > 0:
             if semantics is None:
                 enable_table_header_row_formatting(table)
-            if is_three_line_table and self._managed_styles is None:
+            if is_three_line_table and self._managed_styles is None and (semantics is None or header_row_count == 1):
                 for header_row_idx in range(min(header_row_count, len(table.rows))):
                     apply_header_row_bottom_border(table.rows[header_row_idx])
 
@@ -1296,6 +1297,27 @@ class MdToDocxRenderer:
                 row = int(anchor["row"])
                 column = int(anchor["column"])
                 table.cell(row, column).merge(table.cell(row + row_span - 1, column + column_span - 1))
+
+            # Only the explicit built-in semantic key authorizes geometry
+            # projection. The resolved template/managed style owns every
+            # border attribute; a similar visible name grants no authority.
+            if self._table_style_key == "three_line_table" and header_row_count > 1:
+                from docwen_plugin_markdown.table_borders import (
+                    apply_multirow_header_borders,
+                    table_header_separator,
+                )
+
+                separator = (
+                    {qn("w:val"): "single", qn("w:sz"): "4", qn("w:space"): "0", qn("w:color"): "000000"}
+                    if direct_three_line
+                    else table_header_separator(table.style)
+                )
+                apply_multirow_header_borders(
+                    table._tbl,
+                    header_rows=header_row_count,
+                    anchors=semantics["anchors"],
+                    separator=separator,
+                )
 
         from docwen_core.docx_table_roles import prepare_table_roles
 
@@ -1483,35 +1505,37 @@ class MdToDocxRenderer:
             return True
         return self._table_style_name.strip().lower() in {"three line table", "三线表"}
 
-    def _apply_table_style(self, table) -> None:
+    def _apply_table_style(self, table) -> bool:
+        """Apply the selected style; report only a DocWen direct fallback."""
         if self._template_table_style is not None:
             table.style = self._template_table_style
-            return
+            return False
 
         try:
             table.style = self._table_style_name
-            return
+            return False
         except KeyError:
             logger.warning("Table style %r is unavailable; using a compatible fallback.", self._table_style_name)
 
         if self._is_three_line_table():
             apply_three_line_table_borders(table)
-            return
+            return True
 
         if self._table_grid_style is not None:
             table.style = self._table_grid_style
-            return
+            return False
 
         stable_grid = resolve_table_style(self._doc, "table_grid")
         if stable_grid is not None:
             table.style = stable_grid
-            return
+            return False
 
         try:
             table.style = "Table Grid"
         except KeyError:
             logger.warning("Table Grid style is unavailable; applying direct grid borders.")
             apply_table_grid_borders(table)
+        return False
 
     def _apply_body_font_to_runs(
         self,
