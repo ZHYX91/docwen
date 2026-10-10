@@ -623,8 +623,8 @@ def test_verified_table_roles_are_independent_of_repeat_headers(tmp_path: Path, 
         for line in Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8").splitlines()
         if line.startswith("|")
     ]
-    assert next(index for index, line in enumerate(lines) if "---" in line) == (0 if edit == "disable" else 2)
-    assert "||" in lines[0 if edit == "disable" else 2]
+    assert next(index for index, line in enumerate(lines) if "---" in line) == 2
+    assert "||" in lines[2]
     saved = Document(isolated)
     assert len(list(saved.element.iter(qn("w:tblHeader")))) >= (2 if edit == "disable" else 3)
 

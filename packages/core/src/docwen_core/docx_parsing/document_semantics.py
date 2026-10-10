@@ -595,7 +595,11 @@ def extract_semantic_table_metadata(
     default_first_row: bool = True,
     verified_roles: tuple[int, int] | None = None,
 ) -> DocxSemanticTableMetadata:
-    """Read the standard ``cnfStyle``/``tblHeader`` metadata written by DocWen."""
+    """Read pagination and verified roles, or infer roles from native hints.
+
+    Without a carrier, conditional style and repeating rows retain the existing
+    compatibility inference; neither is an independent authored role record.
+    """
 
     from docx.oxml.ns import qn
 

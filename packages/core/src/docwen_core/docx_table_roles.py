@@ -2,7 +2,7 @@
 
 Conditional style flags are presentation hints: Word rewrites them on save.
 This private custom XML carrier preserves the authored role counts while native
-text, merge geometry, repeat policy and explicit table-look edits remain live.
+text, merge geometry, repeat policy and table-look presentation remain live.
 """
 
 from __future__ import annotations
@@ -286,13 +286,9 @@ def recover_table_roles(
         validated.append((table, rows, columns))
 
     for table, header_rows, header_columns in validated:
-        look = table.find(f"{qn('w:tblPr')}/{qn('w:tblLook')}")
-        # A native explicit disable wins over the authored carrier.
-        if look is not None:
-            if (look.get(qn("w:firstRow")) or "").casefold() in {"0", "false", "off"}:
-                header_rows = 0
-            if (look.get(qn("w:firstColumn")) or "").casefold() in {"0", "false", "off"}:
-                header_columns = 0
+        # tblLook selects conditional formatting, not authored header roles.
+        # Keep those presentation flags intact; only the validated carrier
+        # supplies roles, while native tblHeader still supplies pagination.
         if role_overrides is not None:
             role_overrides[table] = (header_rows, header_columns)
         for row_index, row in enumerate(table.findall(qn("w:tr"))):

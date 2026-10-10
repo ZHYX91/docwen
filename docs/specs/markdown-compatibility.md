@@ -98,7 +98,7 @@ objects and overrides only explicitly supplied booleans. The four keys are `stru
 
 | Extension | Disabled input recognition | Disabled Markdown output |
 |---|---|---|
-| Structural Tables | Ordinary pipe tables; merge-marker cells stay literal | Ordinary tables; merged cells and header roles are flattened with a warning |
+| Structural Tables | Ordinary pipe tables; merge-marker cells stay literal | Ordinary tables; merged cells, header roles and enabled repeating-header policy are flattened with a warning |
 | Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
 | H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
 | Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
@@ -128,14 +128,16 @@ DOCX 不呈现其正文，表格提取忽略其中的表格；关闭该输入方
 围栏代码中的 `%%` 仍由代码语法处理。此边界不承诺
 完整 Obsidian 注释呈现或链接笔记内容转置。
 
-DOCX export maps merge rectangles to native table geometry and writes native role/style hints. Because Word
+DOCX export maps merge rectangles to native table geometry and writes conditional style hints. Because Word
 recalculates `cnfStyle` on save, tables with multiple column-header rows or any row-header columns also use a
 private `urn:docwen:table-roles:v1` custom XML map; ordinary one-row headers keep their native representation. Each record binds a unique balanced `_DWT_` bookmark inside its physical table and a SHA-256 of the
 normalized merge geometry; table position and cell text are not identities. Text edits and table moves preserve
 the binding. Changed geometry or deleted bindings produce a warning and use native information; ambiguous
-bookmarks or malformed metadata fail explicitly. Native explicit role disabling and repeat-header policy remain
-authoritative: verified role counts cannot be enlarged or re-enabled by `tblHeader` pagination markers.
-Without a verified carrier, existing native-header inference remains unchanged. Ordinary-anchor bookmark
+bookmarks or malformed metadata fail explicitly. With a verified carrier, its authored role counts are independent
+of `tblLook` first-row/first-column formatting: turning either style option off does not delete the corresponding
+header role. Native `tblHeader` pagination markers remain live and cannot enlarge verified role counts.
+Without a verified carrier, existing compatibility inference from native conditional-style/repeat hints and the
+first-row fallback remains unchanged; this inference is not a native authored header-role record. Ordinary-anchor bookmark
 exceptions require a declared, globally unique, balanced pair in the exact first-cell slot; a matching name
 alone grants no exception, and undeclared auxiliary pairs in a document with a role map are rejected.
 This carrier does not retain Markdown source or restore old cell content. It is implemented in
@@ -143,6 +145,26 @@ both Markdown export routes and structured clipboard DOCX export; final candidat
 recorded separately from source regression results. When Structural Tables is enabled, both source analyzers
 recognize multi-row headers and row-header delimiters within their actual quote/list container before binding
 captions or standalone anchors. Disabling the dialect does not activate this ownership rule.
+
+Header roles and repeating rows on later pages are separate choices. A table's following attribute line may use
+`{repeat-header=true}` to write enabled native `tblHeader` markers for its column-header rows, or
+`{repeat-header=false}` to write disabled markers. Omitting the attribute uses the internal `inherit` policy:
+DocWen writes no `tblHeader` markers and does not request repetition by default. There is no separate global
+repeat-header setting. These choices do not change the header-role counts or merge rectangles. DOCX import reads
+the current native repeat policy independently and, with Structural Tables output enabled, writes `true`/`false`
+attributes for tables with or without captions; the omitted policy stays omitted. Actual page breaks and repeated
+row layout remain the document editor's pagination behavior and require native-host acceptance. Explicit `false`
+and omitted `inherit` both request no repetition. Direct file conversion can preserve an existing disabled marker,
+but Word may normalize `tblHeader` with `val=0` to absence when saving. After that normalization, import uses the
+omitted policy; it does not promise to recover the former three-state spelling or let that distinction affect roles.
+With Structural Tables output disabled, an enabled repeating-header policy is omitted with the same visible loss
+warning as flattened header roles/merges, even for an ordinary unmerged table. Disabled and omitted repeat policies
+both mean no repetition; omitting the disabled spelling alone does not add a semantic-loss warning.
+
+The built-in three-line table presentation also uses the complete header region for its lower separator, including
+row-spanning corner headings. Wide group headings ending earlier receive a separate line; native cell borders use
+the selected template's separator attributes. See [template/style rules](templates-and-styles.md) for source,
+inheritance and explicit no-border protection. This presentation does not enable repeating headers.
 
 DOCX import emits the canonical
 Structural Tables spelling when native table metadata requires zero or multiple column-header rows, or row-header
@@ -171,8 +193,23 @@ continues to use the selected input dialect and is not globally made literal.
 分隔行也可以直接作为第一行，此时表示零行列表头；
 分隔行内唯一相邻的 `||` 标记其左侧为行表头且不增加列；严格匹配的 `<` 向左合并、`^` 向上合并，`\<` 与
 `\^` 表示字面量；转义管道和代码跨度中的管道不会切分单元格；无效宽度或结构保持为可见源码而不猜测。
-DOCX 导出把这些角色与矩形合并映射为原生表格语义；导入在原生表格元数据要求零行或多行列表头、或存在
+DOCX 导出把矩形合并映射为原生表格几何，并写入条件样式提示；复杂表格的表头角色另由绑定物理表格及合并几何的
+可读 custom XML 保存。载体有效时，关闭 Word 的首行或首列样式不删除列表头或行表头角色，原生 `tblHeader`
+分页标记也不能扩大角色计数。文字编辑、整体移动表格保留角色；几何变化或绑定删除会警告并回退，绑定歧义或载体损坏
+明确失败。缺少有效载体时保留现有原生提示推断及首行兼容回退，这种推断不是原生的作者表头角色记录。
+导入在已验证角色或原生兼容推断要求零行或多行列表头、或存在
 行表头列时输出规范 Structural Tables 写法；只有一行列表头且没有行表头列的普通表格继续输出普通 GFM。
+
+表头角色与后续页重复显示是独立选择。表后属性行 `{repeat-header=true}` 为列表头行写入启用的原生 `tblHeader`；
+`{repeat-header=false}` 写入关闭标记。省略属性使用内部 `inherit` 策略：不写 `tblHeader`，默认不请求跨页重复；
+没有另设全局重复表头设置。这些选择不改变表头角色和合并矩形。DOCX 导入独立读取当前原生重复策略，开启
+Structural Tables 输出时，有无题注的表都输出对应的 `true`/`false` 属性，省略策略仍省略。实际分页与重复行布局由
+文档编辑器处理，需要真实宿主验收。显式 `false` 与省略的 `inherit` 都不请求重复；直接文件转换可保留已有关闭
+标记，但 Word 保存可能把 `tblHeader val=0` 规范化为缺失，此时回转采用省略策略，不承诺恢复此前三态的字面写法，
+也不让这种区别影响表头角色。
+关闭 Structural Tables 输出时，启用的重复表头策略会被省略，并提示与表头角色/合并展平相同的表达损失，即使表格
+只有一行列表头且没有合并。关闭与省略策略都表示不重复，仅省略关闭的字面写法不增加语义损失警告。
+
 普通转换中的 Number Suite 方言由 Markdown 源码本身
 定义：DocWen 识别标题、题注、引用语法，并按本次显式转换编号策略输出；Obsidian 适配器可声明图片资源，
 但 Number Suite 插件安装状态或私有配置不是转换 authority。完整 resolved plan 仍可通过独立 provider route

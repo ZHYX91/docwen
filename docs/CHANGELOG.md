@@ -5,6 +5,17 @@
 
 ## Unreleased / 未发布
 
+## 0.17.2 (2026-10-10)
+
+- Preserve authored complex table header roles when Word's Header Row or First Column formatting is disabled, while reading edited text and native merge geometry from the current document.
+- Render the complete multi-row three-line header boundary and nested group separators after native merges, using the resolved template's separator attributes and protecting independent custom borders.
+- Keep table header roles separate from page repetition. Preserve explicit repeat-header choices in direct Markdown/DOCX conversion and warn when plain Markdown output drops enabled repetition; Word may normalize explicit false to omission.
+- Harden managed cleanup and acceptance closeout for WSL links and reused protected Windows process IDs.
+- Word 关闭标题行或第一列格式后，保留已绑定的复杂表格标题角色；文字与原生合并几何仍读取当前文档。
+- 原生合并完成后绘制完整多行三线表表头底线及多层分组底线，沿用已解析模板的分隔线属性，保护独立自定义边框。
+- 标题角色与跨页重复保持独立；直接 Markdown/DOCX 转换保留显式重复选择，普通 Markdown 输出丢失已启用重复时给出警告。Word 可能将显式 false 规范化为省略。
+- 完善 WSL 链接、受保护 Windows 进程 PID 重用及受管验收收尾的安全清理。
+
 ## 0.17.1 (2026-10-09)
 
 - Check the destination filesystem before conversion and explain when another output folder is required for atomic publication without overwriting existing results.

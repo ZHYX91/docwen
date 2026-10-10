@@ -95,19 +95,22 @@ def test_ambiguous_bookmarks_are_rejected(tmp_path: Path, edit: str) -> None:
         recover_table_roles(path, Document(str(path)))
 
 
-def test_native_disabling_roles_and_repeat_policy_is_respected(tmp_path: Path) -> None:
+@pytest.mark.parametrize("disabled", ["0", "false", "off"])
+def test_disabling_conditional_styles_preserves_authored_roles(tmp_path: Path, disabled: str) -> None:
     path = _candidate(tmp_path)
     document: Any = Document(str(path))
     _normalize(document)
     table = document.tables[0]
     look = table._tbl.tblPr.find(qn("w:tblLook"))
-    look.set(qn("w:firstRow"), "0")
-    look.set(qn("w:firstColumn"), "0")
+    look.set(qn("w:firstRow"), disabled)
+    look.set(qn("w:firstColumn"), disabled)
     document.save(str(path))
     readback: Any = Document(str(path))
     assert recover_table_roles(path, readback) == ()
     roles = extract_semantic_table_metadata(readback.tables[0]._tbl)
-    assert (roles.header_rows, roles.header_columns) == (0, 0)
+    assert (roles.header_rows, roles.header_columns, roles.repeat_header) == (2, 1, "never")
+    look = readback.tables[0]._tbl.tblPr.find(qn("w:tblLook"))
+    assert (look.get(qn("w:firstRow")), look.get(qn("w:firstColumn"))) == (disabled, disabled)
 
 
 def test_repeated_preparation_is_stable_and_duplicate_injection_is_rejected(tmp_path: Path) -> None:

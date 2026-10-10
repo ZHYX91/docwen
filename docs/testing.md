@@ -20,6 +20,22 @@ Tests are grouped by primary behavior family and execution cost. The default rep
 
 Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry point pins the repository's pytest configuration and root fixtures even when every selected path belongs to a single workspace package.
 
+`tests/integration/test_table_header_file_roundtrip.py` is a direct `.md` → `.docx` → `.md` file
+integration regression for complex header roles, native merges and independent repetition policy. It removes the
+source before importing the DOCX and covers conditional-style edits, changed cell text, moved tables, stale
+geometry/bindings and ordinary tables whose only extension is repetition. OOXML edits model recovery boundaries;
+they do not prove Word save/reopen or physical pagination.
+Use the same candidate for the affected native Word scenarios, including turning first-row/first-column styles off
+and checking repeated headers across a real page break. Clipboard and neutral-port tests do not replace this file lane.
+
+`packages/plugins/markdown/tests/test_table_borders.py` checks physical multi-row three-line borders, nested and
+staggered group spans, unmanaged name-only compatibility, template separator inheritance/attributes and explicit
+`none`/`nil` protection. Conflicting inherited `insideH`/cell-top rules and nonzero cell spacing opt out. The direct
+file lane also converts `tests/fixtures/markdown/multirow-three-line.md`, covering two/three-row headers, two-dimensional
+groups and data merges without changing role/repetition metadata. Native acceptance must check residual internal
+lines in row-spanning headings and complete lower borders after Word save/reopen; OOXML assertions alone cannot
+establish border-conflict rendering.
+
 测试按主要行为族和执行成本分层。默认仓库测试只选择非 slow 的 unit 与 contract；GUI、integration、端到端及环境所有型检查进入各自显式门禁。
 
 ## Common commands / 常用命令
@@ -84,7 +100,7 @@ Primary-marker debt is closed rather than hidden by mass edits. Existing `gui` t
 
 Repository tests named `*_projection_contract.py` are current unit/contract/golden guards over checked-in projections or fixtures. They are not live candidate, package, Office, Store, or host evidence. Real acceptance is executed by the owning packaged or host verifier and may emit a compact receipt under `.workspace/acceptance`; source test success cannot substitute for that receipt.
 
-For an acceptance tool that owns a leased raw run but does not integrate receipt generation, first mark the lease `completed-success` after all selected gates pass and the owner process exits, then run `tools/acceptance_closeout.py` with the exact candidate, gate, subject name, subject byte count, and subject SHA-256. The closeout refuses live or non-success runs, writes a recoverable provisional record, deletes the raw run through the saved-plan housekeeping path, and publishes one compact receipt below `.workspace/acceptance`.
+For an acceptance tool that owns a leased raw run but does not integrate receipt generation, first mark the lease `completed-success` after all selected gates pass and the owner process exits, then run `tools/acceptance_closeout.py` with the exact candidate, gate, subject name, subject byte count, and subject SHA-256. The closeout refuses live or non-success runs, writes a recoverable provisional record, retires the raw run through the saved-plan housekeeping path, and publishes one compact receipt below `.workspace/acceptance`.
 
 Test-file size governance reads the same configured `testpaths` roots and rejects every test module above 700 lines. There is no oversized-file baseline or exception list. Shared fixtures and non-test helpers live in focused support modules, while collected test modules remain independently reviewable. Legacy monolith path names are collection errors rather than ignored paths, so a reverted large test cannot disappear from CI.
 
@@ -126,6 +142,10 @@ Build once per platform, accept those bytes, publish them, then perform one inde
 Cleanup also discovers leased runs under the registered `repos/docwen/build` and `repos/docwen-openclaw/build` directories. It never selects either build root itself, unleased repository directories or tracked files. Source directories such as `scripts/build` remain outside this boundary. Existing owner, retention and content identity checks still apply.
 
 `tools/acceptance_closeout.py` accepts `--result passed|failed|superseded`. Nonpassing closeout requires `--reason` explaining the original failure and, when applicable, its replacement. Original leases remain in the receipt; live owners and active/nonterminal runs are rejected. `--disposition recycle` retains verified recovery locations on Windows. Recycling uses the same implementation for files and directories, fails when unavailable, and never falls back to permanent deletion.
+
+Manual closeout defaults to recycling on Windows (the same platform default as housekeeping). Automated owners that require deletion must select it explicitly. Once run identity and evidence are validated, preflight failures also leave a compact receipt with the failure stage and original result. WSL links are inspected without following them; only relative targets with a plain, existing destination are supported. Absolute guest paths, parent traversal, nested reparse targets and unknown reparse types stop cleanup.
+
+For Linux acceptance, extract packages inside a leased native ext4 filesystem, not directly into a Windows-mounted directory. Export compact evidence, stop guest processes, verify the mount is detached, then retire the owned backing image through the managed cleanup entry point. A mounted image is not eligible for recycling.
 
 Add repeated `--evidence <relative-file>` arguments to preserve UTF-8 failure summaries before raw cleanup (at most eight files, 64 KiB each). Files must be plain files inside the owned run; credential files are excluded. The formal receipt is written before cleanup and records cleanup errors without changing the original result.
 
