@@ -129,6 +129,26 @@ other paragraph properties and all template style definitions retain their
 inheritance. Semantic structures (lists, tables,
 quotes, etc.) retain their own indentation and numbering contracts.
 
+The standalone `{{body}}` run may author direct font/character overrides
+separate from its paragraph style. Ordinary body text receives only these
+explicit run properties (including script-specific fonts and sizes), not
+fully resolved/inherited defaults; Markdown's explicit run properties win
+per attribute, including child runs inside hyperlinks and semantic wrappers.
+Dedicated character styles, including inline code and Hyperlink, retain
+control over the properties they explicitly declare; an undefined character-style
+property may inherit the anchor's direct property. Script font names and their
+theme alternatives are treated as one attribute source. Block semantics retain their separate paragraph
+styles; the body anchor does not restyle headings/tables/code blocks.
+
+Body text appended to a Heading uses the same effective font source as an
+ordinary body paragraph: the selected body style (including its `basedOn` chain
+and document defaults), followed by the anchor's authored direct overrides.
+That font is materialized only on the appended runs, preserving explicit inline
+properties and character-style declarations. Style emphasis toggles are resolved
+before materialization; an undeclared body color uses `auto`, and absent body
+emphasis/strike toggles reset Heading inheritance. An unselected-template fallback authors no direct body
+font overrides, allowing the request locale's managed body defaults to apply.
+
 Before any Markdown renderer writes content, it completes all 43 styles for the exact request locale. It does not
 limit completion to styles observed in the source. Every resulting `w:pStyle`, `w:rStyle`, and `w:tblStyle` reference
 must resolve to a style of the correct type.

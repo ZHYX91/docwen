@@ -21,7 +21,11 @@ from docwen_plugin_markdown.renderer_inlines import (
     project_character_style_properties,
 )
 from docwen_plugin_markdown.template_filler import fill_template
-from docwen_plugin_markdown.template_utils import BodyParagraphFormat, extract_body_paragraph_format
+from docwen_plugin_markdown.template_utils import (
+    BodyParagraphFormat,
+    extract_body_paragraph_format,
+    extract_body_run_format,
+)
 from docwen_plugin_markdown.to_docx.managed_styles import (
     complete_managed_styles,
     validate_managed_style_package,
@@ -601,3 +605,65 @@ code
         "DocWenHorizontalRule3",
     ]
     assert all(paragraph._p.find(f"{qn('w:pPr')}/{qn('w:pBdr')}") is None for paragraph in rendered_rules)
+
+
+def test_explicit_body_run_properties_preserve_inline_style_attributes(tmp_path: Path) -> None:
+    template = Document()
+    body_style = template.styles.add_style("UserRunBody", WD_STYLE_TYPE.PARAGRAPH)
+    assert isinstance(body_style, ParagraphStyle)
+    body_style.font.size = Pt(10.5)
+    anchor = template.add_paragraph(style=body_style)
+    run = anchor.add_run("{{正文}}")
+    run.font.size = Pt(16)
+    run.font.name = "TestLatin"
+    run.bold = False
+    run._r.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), "TestCJK")
+    template, bindings = complete_managed_styles(template, _catalog())
+    anchor = next(p for p in template.paragraphs if p.text == "{{正文}}")
+    authored_run_format = extract_body_run_format(template)
+    assert authored_run_format is not None
+    rendered = MdToDocxRenderer(
+        template,
+        body_style=anchor.style,
+        body_run_format=authored_run_format,
+        managed_styles=bindings,
+    ).render(parse_markdown_text("Plain **bold** and `code`.\n"))
+    fill_template(template, {}, rendered, anchor)
+    _, reopened = _save_reopen(template, tmp_path, "body-run-direct.docx")
+    paragraph = next(p for p in reopened.paragraphs if p.text.startswith("Plain bold"))
+    plain = next(run for run in paragraph.runs if run.text == "Plain ")
+    bold = next(run for run in paragraph.runs if run.text == "bold")
+    code = next(run for run in paragraph.runs if run.text == "code")
+    assert isinstance(paragraph.style, ParagraphStyle)
+    assert paragraph.style.style_id == "UserRunBody"
+    assert plain.font.size == Pt(16)
+    assert plain.font.name == "TestLatin"
+    assert plain.bold is False
+    plain_properties = plain._r.rPr
+    assert plain_properties is not None
+    fonts = plain_properties.find(qn("w:rFonts"))
+    assert fonts is not None and fonts.get(qn("w:eastAsia")) == "TestCJK"
+    assert bold.bold is True  # Markdown emphasis wins over anchor direct False.
+    assert code.style.style_id == bindings.style_id("inline_code")
+    assert code.font.size == Pt(16)  # No code size is authored, so the anchor size applies.
+    assert code.font.name is None  # The inline-code character style still owns its font.
+
+
+def test_inherited_body_run_font_does_not_become_direct_formatting() -> None:
+    template = Document()
+    body_style = template.styles.add_style("UserInheritedFont", WD_STYLE_TYPE.PARAGRAPH)
+    assert isinstance(body_style, ParagraphStyle)
+    body_style.font.size = Pt(12)
+    template.add_paragraph("{{正文}}", style=body_style)
+    template, bindings = complete_managed_styles(template, _catalog())
+    assert extract_body_run_format(template) is None
+    anchor = next(p for p in template.paragraphs if p.text == "{{正文}}")
+    rendered = MdToDocxRenderer(
+        template,
+        body_style=anchor.style,
+        body_run_format=extract_body_run_format(template),
+        managed_styles=bindings,
+    ).render(parse_markdown_text("Style inherited.\n"))
+    plain = next(run for run in rendered[0].runs if run.text == "Style inherited.")
+    assert plain.font.size is None
+    assert rendered[0].style.font.size == Pt(12)
