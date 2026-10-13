@@ -512,7 +512,7 @@ class MdToDocxRenderer:
         image_only = self._is_image_only_paragraph(children)
         body_style = self._paragraph_style(image_only=image_only)
         p = self._doc.add_paragraph(style=body_style)
-        if not image_only and self._body_paragraph_format is not None:
+        if not image_only and self._quote_depth == 0 and self._body_paragraph_format is not None:
             self._body_paragraph_format.apply_to(p)
 
         if children:
