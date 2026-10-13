@@ -614,9 +614,11 @@ def test_quote_prose_does_not_inherit_body_direct_paragraph_format(tmp_path: Pat
     anchor = next(p for p in template.paragraphs if p.text == "{{正文}}")
     body_format = extract_body_paragraph_format(template)
     rendered = MdToDocxRenderer(
-        template, body_style=anchor.style, body_paragraph_format=body_format,
+        template,
+        body_style=anchor.style,
+        body_paragraph_format=body_format,
         managed_styles=bindings,
-    ).render(parse_markdown_text("> Quoted prose.\\n"))
+    ).render(parse_markdown_text("> Quoted prose.\n"))
     fill_template(template, {}, rendered, anchor)
     _, reopened = _save_reopen(template, tmp_path, "quote-isolation.docx")
     quoted = next(p for p in reopened.paragraphs if p.text == "Quoted prose.")
@@ -628,9 +630,11 @@ def test_quote_prose_does_not_inherit_body_direct_paragraph_format(tmp_path: Pat
 def test_quote_keeps_semantic_heading_code_and_list_styles_with_accent(tmp_path: Path) -> None:
     template, bindings = complete_managed_styles(Document(), _catalog())
     renderer = MdToDocxRenderer(template, managed_styles=bindings)
-    rendered = renderer.render(parse_markdown_text(
-        "> A quote paragraph.\\n>\\n> ## Nested heading\\n>\\n> ```python\\n> print('ok')\\n> ```\\n>\\n> - list child\\n"
-    ))
+    renderer.render(
+        parse_markdown_text(
+            "> A quote paragraph.\n>\n> ## Nested heading\n>\n> ```python\n> print('ok')\n> ```\n>\n> - list child\n"
+        )
+    )
     _, reopened = _save_reopen(template, tmp_path, "quote-semantic.docx")
     expected = {
         "A quote paragraph.": bindings.style_id("quote_1"),

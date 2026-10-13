@@ -331,7 +331,6 @@ def resolve_table_style(doc, semantic_key: str):
     return None
 
 
-
 def apply_quote_container_accent(paragraph, *, style=None) -> None:
     """Carry only the quote left border onto a semantic child paragraph.
 
@@ -351,8 +350,15 @@ def apply_quote_container_accent(paragraph, *, style=None) -> None:
     if borders is None:
         borders = OxmlElement("w:pBdr")
         p_pr.insert_element_before(
-            borders, "w:shd", "w:tabs", "w:spacing", "w:ind",
-            "w:jc", "w:outlineLvl", "w:rPr", "w:sectPr",
+            borders,
+            "w:shd",
+            "w:tabs",
+            "w:spacing",
+            "w:ind",
+            "w:jc",
+            "w:outlineLvl",
+            "w:rPr",
+            "w:sectPr",
         )
     if borders.find(qn("w:left")) is None:
         borders.append(deepcopy(source_left))
