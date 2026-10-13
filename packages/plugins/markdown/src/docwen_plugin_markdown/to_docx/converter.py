@@ -88,6 +88,7 @@ from docwen_plugin_markdown.template_utils import (
     body_content_extent,
     extract_body_font,
     extract_body_paragraph_format,
+    extract_body_run_format,
     extract_body_style,
     find_body_placeholder,
     resolve_template,
@@ -1026,6 +1027,7 @@ class MdToDocxConverter:
             body_font = extract_body_font(doc)
             body_style = extract_body_style(doc)
             body_paragraph_format = extract_body_paragraph_format(doc)
+            body_run_format = extract_body_run_format(doc)
 
             # Resolve formatting options
             heading_formatting_mode = _option_or_config(
@@ -1117,6 +1119,7 @@ class MdToDocxConverter:
                     body_font=body_font,
                     body_style=body_style,
                     body_paragraph_format=body_paragraph_format,
+                    body_run_format=body_run_format,
                     code_font=code_font,
                     code_bg_color=code_background_color,
                     heading_formatting_mode=heading_formatting_mode,

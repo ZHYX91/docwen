@@ -10,6 +10,7 @@ template was selected.
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -115,6 +116,71 @@ class BodyParagraphFormat:
             value = getattr(self, name)
             if value is not None:
                 setattr(paragraph_format, name, value)
+
+
+
+# Only user-authored direct text properties are eligible for projection into
+# regular Markdown body runs. In particular never project rStyle or structural
+# field/anchor properties from the placeholder.
+_BODY_RUN_DIRECT_TAGS = frozenset(
+    qn(f"w:{name}")
+    for name in ("rFonts", "b", "bCs", "i", "iCs", "strike", "dstrike", "color", "sz", "szCs", "u")
+)
+# CT_RPr successor order: insert copied children before their next known peer
+# to preserve WordprocessingML schema order even for mixed Markdown runs.
+_RUN_PROPERTY_ORDER = (
+    "rStyle", "rFonts", "b", "bCs", "i", "iCs", "caps", "smallCaps",
+    "strike", "dstrike", "outline", "shadow", "emboss", "imprint",
+    "noProof", "snapToGrid", "vanish", "webHidden", "color", "spacing",
+    "w", "kern", "position", "sz", "szCs", "highlight", "u",
+    "effect", "bdr", "shd", "fitText", "vertAlign", "rtl", "cs",
+    "em", "lang", "eastAsianLayout", "specVanish", "oMath",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class BodyRunFormat:
+    """Authored direct character properties of the body anchor's first run."""
+
+    properties: tuple[Any, ...]
+
+    def apply_to(self, paragraph: Any, *, start_index: int = 0) -> None:
+        # Character styles (inline code, hyperlink, etc.) remain authoritative.
+        # Preserve Markdown's explicit run properties when the same attribute
+        # is already present; a source bold=True must not become bold=False.
+        for run in paragraph.runs[start_index:]:
+            if not run.text:
+                continue
+            r_pr = run._r.get_or_add_rPr()
+            if r_pr.find(qn("w:rStyle")) is not None:
+                continue
+            for source in self.properties:
+                existing = r_pr.find(source.tag)
+                if existing is not None:
+                    if source.tag == qn("w:rFonts"):
+                        for name, value in source.attrib.items():
+                            if name not in existing.attrib:
+                                existing.set(name, value)
+                    continue
+                name = source.tag.rsplit("}", 1)[-1]
+                successors = tuple(f"w:{part}" for part in _RUN_PROPERTY_ORDER[_RUN_PROPERTY_ORDER.index(name) + 1 :])
+                r_pr.insert_element_before(deepcopy(source), *successors)
+
+
+def extract_body_run_format(doc: Document) -> BodyRunFormat | None:
+    """Capture direct run formatting only, never inherited style defaults."""
+    placeholder = find_body_placeholder(doc)
+    if placeholder is None:
+        return None
+    for run in placeholder.runs:
+        if not run.text.strip():
+            continue
+        r_pr = run._r.rPr
+        if r_pr is None:
+            return None
+        properties = tuple(deepcopy(part) for part in r_pr if part.tag in _BODY_RUN_DIRECT_TAGS)
+        return BodyRunFormat(properties) if properties else None
+    return None
 
 
 def _create_builtin_template() -> Document:

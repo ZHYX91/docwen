@@ -110,6 +110,14 @@ headings have separate owners.
 
 ## Completion and rendering / 注入与渲染
 
+The standalone `{{body}}` run may author direct font/character overrides
+separate from its paragraph style. Ordinary body text receives only these
+explicit run properties (including script-specific fonts and sizes), not
+fully resolved/inherited defaults; Markdown's explicit run properties win
+per attribute. Dedicated character styles, including inline code, retain
+control over their runs. Block semantics retain their separate paragraph
+styles; the body anchor does not restyle headings/tables/code blocks.
+
 Before any Markdown renderer writes content, it completes all 43 styles for the exact request locale. It does not
 limit completion to styles observed in the source. Every resulting `w:pStyle`, `w:rStyle`, and `w:tblStyle` reference
 must resolve to a style of the correct type.

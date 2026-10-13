@@ -8,6 +8,8 @@ import pytest
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from docwen_plugin_markdown.field_processors.gongwen import (
     process_attachment_placeholder,
@@ -354,3 +356,22 @@ def test_placeholder_inside_hyperlink_is_replaced_without_flattening_ooxml() -> 
     assert hyperlink.find(qn("w:r")) is run
     assert run.find(qn("w:rPr")) is run_properties
     assert "".join(item.text or "" for item in paragraph._p.iter(qn("w:t"))) == "prefix  suffix"
+
+
+def test_any_yaml_key_preserves_each_placeholder_location_format() -> None:
+    document = Document()
+    first = document.add_paragraph()
+    first.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    first_run = first.add_run("{{任意")
+    first_run.font.size = Pt(16)
+    first.add_run("键}}")
+    second = document.add_paragraph()
+    second.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    second_run = second.add_run("{{任意键}}")
+    second_run.font.size = Pt(10.5)
+    fill_yaml_placeholders(document, {"任意键": "真实内容"}, scan_placeholders(document))
+    assert first.text == second.text == "真实内容"
+    assert first.runs[0].font.size == Pt(16)
+    assert second.runs[0].font.size == Pt(10.5)
+    assert first.alignment == WD_ALIGN_PARAGRAPH.CENTER
+    assert second.alignment == WD_ALIGN_PARAGRAPH.RIGHT

@@ -71,6 +71,7 @@ from docwen_plugin_markdown.template_utils import (
     TemplatePackageError,
     extract_body_font,
     extract_body_paragraph_format,
+    extract_body_run_format,
     extract_body_style,
     find_body_placeholder,
     resolve_template,
@@ -591,6 +592,7 @@ def _renderer(
         body_font=extract_body_font(doc),
         body_style=extract_body_style(doc),
         body_paragraph_format=extract_body_paragraph_format(doc),
+        body_run_format=extract_body_run_format(doc),
         code_font=code_font,
         code_bg_color=code_background_color,
         heading_formatting_mode=_option_or_config(

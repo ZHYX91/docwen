@@ -64,7 +64,7 @@ from docwen_plugin_markdown.renderer_utils import (
     resolve_table_style,
     set_table_left_indent,
 )
-from docwen_plugin_markdown.template_utils import BodyParagraphFormat
+from docwen_plugin_markdown.template_utils import BodyParagraphFormat, BodyRunFormat
 from docwen_plugin_markdown.to_docx.numbering import (
     DocxListNumbering,
     apply_list_to_paragraph,
@@ -143,6 +143,7 @@ class MdToDocxRenderer:
         mermaid_work_dir: str | None = None,
         mermaid_render: Any = None,
         content_extent: tuple[int, int] | None = None,
+        body_run_format: BodyRunFormat | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -196,6 +197,7 @@ class MdToDocxRenderer:
         }
         self._body_style = body_style
         self._body_paragraph_format = body_paragraph_format
+        self._body_run_format = body_run_format
         self._code_font = code_font
         self._code_bg_color = code_bg_color
         self._heading_formatting_mode = heading_formatting_mode
@@ -515,6 +517,8 @@ class MdToDocxRenderer:
 
         if children:
             self._render_body_inline_children(p, children)
+            if not image_only and self._quote_depth == 0 and self._body_run_format is not None:
+                self._body_run_format.apply_to(p)
         resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             self._bind_v3_ordinary_anchor((p._p,), node)
@@ -635,6 +639,8 @@ class MdToDocxRenderer:
                 if heading.text.rstrip().endswith(tuple(HALFWIDTH_HEADING_MERGE_PUNCTUATION)):
                     heading.add_run(" ")
                 self._render_body_inline_children(heading, body_children)
+                if self._body_run_format is not None:
+                    self._body_run_format.apply_to(heading, start_index=body_run_start)
                 self._apply_body_font_to_runs(
                     heading,
                     start_index=body_run_start,
