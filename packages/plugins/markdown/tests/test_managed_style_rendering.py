@@ -610,6 +610,7 @@ code
 def test_explicit_body_run_properties_override_style_only_for_plain_runs(tmp_path: Path) -> None:
     template = Document()
     body_style = template.styles.add_style("UserRunBody", WD_STYLE_TYPE.PARAGRAPH)
+    assert isinstance(body_style, ParagraphStyle)
     body_style.font.size = Pt(10.5)
     anchor = template.add_paragraph(style=body_style)
     run = anchor.add_run("{{正文}}")
@@ -633,11 +634,14 @@ def test_explicit_body_run_properties_override_style_only_for_plain_runs(tmp_pat
     plain = next(run for run in paragraph.runs if run.text == "Plain ")
     bold = next(run for run in paragraph.runs if run.text == "bold")
     code = next(run for run in paragraph.runs if run.text == "code")
+    assert isinstance(paragraph.style, ParagraphStyle)
     assert paragraph.style.style_id == "UserRunBody"
     assert plain.font.size == Pt(16)
     assert plain.font.name == "TestLatin"
     assert plain.bold is False
-    fonts = plain._r.rPr.find(qn("w:rFonts"))
+    plain_properties = plain._r.rPr
+    assert plain_properties is not None
+    fonts = plain_properties.find(qn("w:rFonts"))
     assert fonts is not None and fonts.get(qn("w:eastAsia")) == "TestCJK"
     assert bold.bold is True  # Markdown emphasis wins over anchor direct False.
     assert code.style.style_id == bindings.style_id("inline_code")
@@ -647,6 +651,7 @@ def test_explicit_body_run_properties_override_style_only_for_plain_runs(tmp_pat
 def test_inherited_body_run_font_does_not_become_direct_formatting() -> None:
     template = Document()
     body_style = template.styles.add_style("UserInheritedFont", WD_STYLE_TYPE.PARAGRAPH)
+    assert isinstance(body_style, ParagraphStyle)
     body_style.font.size = Pt(12)
     template.add_paragraph("{{正文}}", style=body_style)
     template, bindings = complete_managed_styles(template, _catalog())
