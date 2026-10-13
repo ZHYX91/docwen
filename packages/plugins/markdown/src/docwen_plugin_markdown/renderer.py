@@ -635,7 +635,7 @@ class MdToDocxRenderer:
         if next_node and next_node.get("_merged_into_heading"):
             body_children = next_node.get("children", [])
             if body_children:
-                body_run_start = len(heading.runs)
+                body_run_start = len(list(heading._p.iter(qn("w:r"))))
                 if heading.text.rstrip().endswith(tuple(HALFWIDTH_HEADING_MERGE_PUNCTUATION)):
                     heading.add_run(" ")
                 self._render_body_inline_children(heading, body_children)
@@ -1563,6 +1563,14 @@ class MdToDocxRenderer:
         unformatted body runs do not inherit the Heading style's bold/italic/
         underline values.  Explicit Markdown emphasis remains untouched.
         """
+        if reset_inherited_emphasis:
+            # A Normal anchor renders ordinary text with the managed body
+            # style. Resolve that same source rather than the anchor's older
+            # Normal/theme fallback, including script-specific font properties.
+            BodyRunFormat.from_style(
+                self._paragraph_style(image_only=False), document=self._doc, fallback_font=self._body_font
+            ).apply_to(paragraph, start_index=start_index, resolve_character_toggles=True)
+            return
         inline_code_style_id = self.inline_code_style.style_id if self.inline_code_style is not None else None
         for run in paragraph.runs[start_index:]:
             if inline_code_style_id and run.style is not None and run.style.style_id == inline_code_style_id:
@@ -1574,13 +1582,6 @@ class MdToDocxRenderer:
                     apply_run_east_asian_font(run, east_asia)
             if run.font.size is None:
                 run.font.size = self._body_font.get("size")
-            if reset_inherited_emphasis:
-                if run.bold is None:
-                    run.bold = self._body_font.get("bold", False)
-                if run.italic is None:
-                    run.italic = self._body_font.get("italic", False)
-                if run.underline is None:
-                    run.underline = self._body_font.get("underline", False)
 
     def _handle_table_head(self, node: dict[str, Any]):
         return None  # handled inside _handle_table

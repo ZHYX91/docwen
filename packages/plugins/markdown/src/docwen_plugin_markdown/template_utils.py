@@ -13,13 +13,15 @@ import re
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from zipfile import BadZipFile, ZipFile
 
 from docx import Document
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.section import Section
 from docx.shared import Emu, Mm, Pt
+from docx.text.run import Run
 
 from docwen_plugin_markdown.yaml_processor import BODY_PLACEHOLDER_ALIASES
 
@@ -168,6 +170,60 @@ _RUN_PROPERTY_ORDER = (
     "oMath",
 )
 
+_FONT_ATTRIBUTE_PEERS = {
+    qn(f"w:{name}"): qn(f"w:{peer}")
+    for explicit, theme in (
+        ("ascii", "asciiTheme"),
+        ("hAnsi", "hAnsiTheme"),
+        ("eastAsia", "eastAsiaTheme"),
+        ("cs", "cstheme"),
+    )
+    for name, peer in ((explicit, theme), (theme, explicit))
+}
+_BODY_RUN_TOGGLE_TAGS = frozenset(qn(f"w:{name}") for name in ("b", "bCs", "i", "iCs", "strike", "dstrike"))
+
+
+def _on_off_value(element: Any) -> bool:
+    return element is not None and str(element.get(qn("w:val"), "1")).lower() not in {"0", "false", "off", "no"}
+
+
+def _apply_style_toggles(style: Any, tag: str, value: bool) -> bool:
+    seen: set[str] = set()
+    while style is not None and style.style_id not in seen:
+        seen.add(style.style_id)
+        r_pr = style.element.find(qn("w:rPr"))
+        if r_pr is not None and _on_off_value(r_pr.find(tag)):
+            value = not value
+        style = style.base_style
+    return value
+
+
+def _merge_missing_font_attributes(target: Any, source: Any, *protected: Any) -> None:
+    """Treat a script's explicit font and theme font as one property."""
+    owned_names = set().union(*(set(part.attrib) for part in (target, *protected)))
+    for name, value in source.attrib.items():
+        names = (name, _FONT_ATTRIBUTE_PEERS.get(name, name))
+        if not any(key in owned_names for key in names):
+            target.set(name, value)
+
+
+def _style_run_properties(style: Any) -> dict[str, Any]:
+    properties: dict[str, Any] = {}
+    seen: set[str] = set()
+    while style is not None and style.style_id not in seen:
+        seen.add(style.style_id)
+        r_pr = style.element.find(qn("w:rPr"))
+        for source in r_pr if r_pr is not None else ():
+            if source.tag not in _BODY_RUN_DIRECT_TAGS:
+                continue
+            existing = properties.get(source.tag)
+            if existing is None:
+                properties[source.tag] = deepcopy(source)
+            elif source.tag == qn("w:rFonts"):
+                _merge_missing_font_attributes(existing, source)
+        style = style.base_style
+    return properties
+
 
 @dataclass(frozen=True, slots=True)
 class BodyRunFormat:
@@ -175,27 +231,85 @@ class BodyRunFormat:
 
     properties: tuple[Any, ...]
 
-    def apply_to(self, paragraph: Any, *, start_index: int = 0) -> None:
-        # Character styles (inline code, hyperlink, etc.) remain authoritative.
-        # Preserve Markdown's explicit run properties when the same attribute
-        # is already present; a source bold=True must not become bold=False.
-        for run in paragraph.runs[start_index:]:
+    @classmethod
+    def from_style(cls, style: Any, *, document: Any, fallback_font: dict[str, Any]) -> BodyRunFormat:
+        """Materialize the ordinary body's effective style for mixed Headings."""
+        properties = _style_run_properties(style)
+        defaults = document.styles.element.find(f"{qn('w:docDefaults')}/{qn('w:rPrDefault')}/{qn('w:rPr')}")
+        for source in defaults if defaults is not None else ():
+            if source.tag not in _BODY_RUN_DIRECT_TAGS:
+                continue
+            existing = properties.get(source.tag)
+            if existing is None:
+                properties[source.tag] = deepcopy(source)
+            elif source.tag == qn("w:rFonts"):
+                _merge_missing_font_attributes(existing, source)
+        fallback = Run(cast(Any, OxmlElement("w:r")), document._body)
+        fallback.font.name = fallback_font.get("name")
+        fallback.font.size = fallback_font.get("size")
+        fallback.bold = fallback_font.get("bold", False)
+        fallback.italic = fallback_font.get("italic", False)
+        fallback.underline = fallback_font.get("underline", False)
+        fallback_properties = fallback._r.get_or_add_rPr()
+        fonts = fallback_properties.get_or_add_rFonts()
+        if fallback_font.get("east_asia"):
+            fonts.set(qn("w:eastAsia"), fallback_font["east_asia"])
+        for source in fallback_properties:
+            existing = properties.get(source.tag)
+            if existing is None:
+                properties[source.tag] = deepcopy(source)
+            elif source.tag == qn("w:rFonts"):
+                _merge_missing_font_attributes(existing, source)
+        if qn("w:color") not in properties:
+            color = OxmlElement("w:color")
+            color.set(qn("w:val"), "auto")
+            properties[color.tag] = color
+        # In styles, true toggles the inherited value and false leaves it alone.
+        # Materialize the effective body result, including explicit resets, so
+        # the appended text cannot inherit the Heading's emphasis instead.
+        for tag in _BODY_RUN_TOGGLE_TAGS:
+            value = _on_off_value(defaults.find(tag)) if defaults is not None else False
+            value = _apply_style_toggles(style, tag, value)
+            toggle = OxmlElement(f"w:{tag.rsplit('}', 1)[-1]}")
+            if not value:
+                toggle.set(qn("w:val"), "0")
+            properties[tag] = toggle
+        return cls(tuple(properties.values()))
+
+    def apply_to(self, paragraph: Any, *, start_index: int = 0, resolve_character_toggles: bool = False) -> None:
+        # Include child runs in hyperlinks and semantic wrappers. Each direct
+        # or character-style property keeps its own authority; an rStyle alone
+        # must not prevent unrelated body font attributes from being inherited.
+        for element in list(paragraph._p.iter(qn("w:r")))[start_index:]:
+            run = Run(element, paragraph)
             if not run.text:
                 continue
             r_pr = run._r.get_or_add_rPr()
-            if r_pr.find(qn("w:rStyle")) is not None:
-                continue
+            styled = _style_run_properties(run.style) if r_pr.find(qn("w:rStyle")) is not None else {}
             for source in self.properties:
                 existing = r_pr.find(source.tag)
-                if existing is not None:
-                    if source.tag == qn("w:rFonts"):
-                        for name, value in source.attrib.items():
-                            if name not in existing.attrib:
-                                existing.set(name, value)
+                protected = styled.get(source.tag)
+                if source.tag == qn("w:rFonts"):
+                    merged = deepcopy(existing) if existing is not None else OxmlElement("w:rFonts")
+                    _merge_missing_font_attributes(merged, source, *((protected,) if protected is not None else ()))
+                    if not merged.attrib:
+                        continue
+                    if existing is not None:
+                        existing.attrib.update(merged.attrib)
+                        continue
+                    source = merged
+                elif existing is not None:
                     continue
+                elif protected is not None:
+                    if not resolve_character_toggles or source.tag not in _BODY_RUN_TOGGLE_TAGS:
+                        continue
+                    value = _apply_style_toggles(run.style, source.tag, _on_off_value(source))
+                    source = OxmlElement(f"w:{source.tag.rsplit('}', 1)[-1]}")
+                    if not value:
+                        source.set(qn("w:val"), "0")
                 name = source.tag.rsplit("}", 1)[-1]
                 successors = tuple(f"w:{part}" for part in _RUN_PROPERTY_ORDER[_RUN_PROPERTY_ORDER.index(name) + 1 :])
-                r_pr.insert_element_before(deepcopy(source), *successors)
+                r_pr.insert_element_before(deepcopy(cast(Any, source)), *successors)
 
 
 def extract_body_run_format(doc: Document) -> BodyRunFormat | None:
@@ -203,7 +317,8 @@ def extract_body_run_format(doc: Document) -> BodyRunFormat | None:
     placeholder = find_body_placeholder(doc)
     if placeholder is None:
         return None
-    for run in placeholder.runs:
+    for element in placeholder._p.iter(qn("w:r")):
+        run = Run(element, placeholder)
         if not run.text.strip():
             continue
         r_pr = run._r.rPr
@@ -238,12 +353,9 @@ def _create_builtin_template() -> Document:
 
     # ── Placeholder paragraph ───────────────────────────────────────
     p = doc.add_paragraph()
-    run = p.add_run(_BUILTIN_PLACEHOLDER)
-
-    # Set default font properties on the run
-    run.font.name = "Calibri"
-    run.font.size = Pt(10.5)
-    _set_run_east_asian_font(run, "宋体")
+    # Locale-aware managed body defaults own the unselected-template case.
+    # Generated direct overrides would incorrectly mask those style defaults.
+    p.add_run(_BUILTIN_PLACEHOLDER)
 
     return doc
 
@@ -369,7 +481,8 @@ def extract_body_font(doc: Document) -> dict[str, Any]:
     if placeholder is None:
         return dict(_DEFAULT_BODY_FONT)
 
-    for run in placeholder.runs:
+    for element in placeholder._p.iter(qn("w:r")):
+        run = Run(element, placeholder)
         if run.text and run.text.strip():
             font = run.font
             style = placeholder.style

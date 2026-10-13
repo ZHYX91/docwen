@@ -607,7 +607,7 @@ code
     assert all(paragraph._p.find(f"{qn('w:pPr')}/{qn('w:pBdr')}") is None for paragraph in rendered_rules)
 
 
-def test_explicit_body_run_properties_override_style_only_for_plain_runs(tmp_path: Path) -> None:
+def test_explicit_body_run_properties_preserve_inline_style_attributes(tmp_path: Path) -> None:
     template = Document()
     body_style = template.styles.add_style("UserRunBody", WD_STYLE_TYPE.PARAGRAPH)
     assert isinstance(body_style, ParagraphStyle)
@@ -645,7 +645,8 @@ def test_explicit_body_run_properties_override_style_only_for_plain_runs(tmp_pat
     assert fonts is not None and fonts.get(qn("w:eastAsia")) == "TestCJK"
     assert bold.bold is True  # Markdown emphasis wins over anchor direct False.
     assert code.style.style_id == bindings.style_id("inline_code")
-    assert code.font.size is None  # The inline-code character style remains owner.
+    assert code.font.size == Pt(16)  # No code size is authored, so the anchor size applies.
+    assert code.font.name is None  # The inline-code character style still owns its font.
 
 
 def test_inherited_body_run_font_does_not_become_direct_formatting() -> None:

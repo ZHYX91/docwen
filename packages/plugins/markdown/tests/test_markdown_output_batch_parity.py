@@ -118,11 +118,11 @@ def test_heading_merge_restores_one_mixed_style_word_paragraph(tmp_path: Path) -
     assert mixed_paragraph.style.name == "Heading 2"
     assert len(mixed_paragraph.runs) >= 2
     assert mixed_paragraph.runs[-1].text == "坚持全局眼光，加强前瞻性思考、全局性谋划。"
-    assert mixed_paragraph.runs[-1].font.name == "Calibri"
+    assert mixed_paragraph.runs[-1].font.name == "Times New Roman"
     assert mixed_paragraph.runs[-1].font.size is not None
-    assert mixed_paragraph.runs[-1].font.size.pt == pytest.approx(10.5)
+    assert mixed_paragraph.runs[-1].font.size.pt == pytest.approx(16)
     mixed_body_fonts = mixed_paragraph.runs[-1]._r.get_or_add_rPr().get_or_add_rFonts()
-    assert mixed_body_fonts.get(qn("w:eastAsia")) == "宋体"
+    assert mixed_body_fonts.get(qn("w:eastAsia")) == "仿宋_GB2312"
     assert mixed_paragraph.runs[-1].bold is False
 
 
