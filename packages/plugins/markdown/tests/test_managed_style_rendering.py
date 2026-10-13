@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 from docx import Document
@@ -605,14 +606,16 @@ code
 
 def test_managed_style_ui_children_obey_ct_style_order() -> None:
     _document, bindings = complete_managed_styles(Document(), _catalog())
+    style_root = ElementTree.fromstring(_document.styles.element.xml)
     # Newly completed style definitions must be schema-ordered, not just
     # readable by python-docx (which does not repair child order on save).
     rank = {"uiPriority": 0, "semiHidden": 1, "unhideWhenUsed": 2, "qFormat": 3}
     for semantic_key, style in bindings.styles:
         if not style.style_id.startswith("DocWen"):
             continue
-        style_element = style._element
-        assert style_element is not None
+        style_element = next(
+            item for item in style_root if item.get(qn("w:styleId")) == style.style_id
+        )
         ordered = [
             rank[child.tag.rsplit("}", 1)[-1]] for child in style_element if child.tag.rsplit("}", 1)[-1] in rank
         ]
