@@ -601,3 +601,34 @@ code
         "DocWenHorizontalRule3",
     ]
     assert all(paragraph._p.find(f"{qn('w:pPr')}/{qn('w:pBdr')}") is None for paragraph in rendered_rules)
+
+
+def test_managed_style_ui_children_obey_ct_style_order() -> None:
+    document, bindings = complete_managed_styles(Document(), _catalog())
+    # Newly completed style definitions must be schema-ordered, not just
+    # readable by python-docx (which does not repair child order on save).
+    rank = {"uiPriority": 0, "semiHidden": 1, "unhideWhenUsed": 2, "qFormat": 3}
+    for semantic_key, style in bindings.styles:
+        if not style.style_id.startswith("DocWen"):
+            continue
+        ordered = [
+            rank[child.tag.rsplit("}", 1)[-1]]
+            for child in style._element
+            if child.tag.rsplit("}", 1)[-1] in rank
+        ]
+        assert ordered == sorted(ordered), semantic_key
+
+
+def test_host_specific_normal_id_uses_resolved_foundation_identity() -> None:
+    template = Document()
+    normal = template.styles["Normal"]
+    normal._element.set(qn("w:styleId"), "HostNormal42")
+    template, bindings = complete_managed_styles(template, _catalog())
+    assert dict(bindings.foundation_style_ids)["normal"] == "HostNormal42"
+    actual_normal = next(style for style in template.styles if style.style_id == "HostNormal42")
+    placeholder = template.add_paragraph("{{body}}", style=actual_normal)
+    rendered = MdToDocxRenderer(
+        template, body_style=placeholder.style, managed_styles=bindings
+    ).render(parse_markdown_text("Body text.\\n"))
+    assert len(rendered) == 1
+    assert rendered[0].style.style_id == bindings.style_id("body_paragraph")
