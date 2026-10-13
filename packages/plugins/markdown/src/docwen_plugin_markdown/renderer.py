@@ -1492,7 +1492,14 @@ class MdToDocxRenderer:
             return self._image_paragraph_style
         if self._body_managed_style is None:
             return self._body_style
-        if self._body_style is None or self._body_style.style_id in {"Normal", "normal"}:
+        # Normal can have a host-specific styleId. Resolve identity once
+        # during managed-style completion, rather than checking literal IDs.
+        normal_id = (
+            dict(self._managed_styles.foundation_style_ids).get("normal", "Normal")
+            if self._managed_styles is not None
+            else "Normal"
+        )
+        if self._body_style is None or self._body_style.style_id == normal_id:
             return self._body_managed_style
         return self._body_style
 
