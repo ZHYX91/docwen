@@ -5,6 +5,15 @@
 
 ## Unreleased / 未发布
 
+## 0.17.3 (2026-10-13)
+
+- Resolve template body formatting against the actual Normal style identity and emit managed style properties in schema order.
+- Preserve authored paragraph indentation units and explicit zero overrides when managed body styles supply inherited character indentation.
+- Apply body-placeholder character formatting by property, keeping explicit inline formatting and aligning ordinary body text with body text merged into headings. Let the built-in fallback template inherit the managed body defaults.
+- 按模板实际 Normal 样式身份解析正文映射，并按 OOXML 顺序输出受管样式属性。
+- 保留正文占位符的缩进单位及显式零值，正确覆盖受管正文样式继承的字符缩进。
+- 按属性继承正文占位符字符格式，保护显式行内格式，统一普通正文与标题合并正文的字体来源；内置回退模板沿用受管正文默认值。
+
 ## 0.17.2 (2026-10-10)
 
 - Preserve authored complex table header roles when Word's Header Row or First Column formatting is disabled, while reading edited text and native merge geometry from the current document.
