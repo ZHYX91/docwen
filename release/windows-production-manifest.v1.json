@@ -3,7 +3,7 @@
   "manifestId": "docwen-windows-production",
   "product": {
     "name": "DocWen",
-    "version": "0.17.2",
+    "version": "0.17.3",
     "stableSemverOnly": true,
     "cliJsonProtocolVersion": 3,
     "releaseTagFormat": "{version}"
@@ -275,8 +275,8 @@
   },
   "releaseAssetAllowlist": [
     "DocWen-windows-x64.zip",
-    "DocWenCLI-0.17.2-linux-x64.tar.gz",
-    "DocWen-0.17.2-linux-x64.tar.gz",
+    "DocWenCLI-0.17.3-linux-x64.tar.gz",
+    "DocWen-0.17.3-linux-x64.tar.gz",
     "SHA256SUMS.txt"
   ]
 }
