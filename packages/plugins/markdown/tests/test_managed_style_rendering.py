@@ -606,6 +606,7 @@ code
 def test_quote_prose_does_not_inherit_body_direct_paragraph_format(tmp_path: Path) -> None:
     template = Document()
     body_style = template.styles.add_style("CustomQuotedSource", WD_STYLE_TYPE.PARAGRAPH)
+    assert isinstance(body_style, ParagraphStyle)
     anchor = template.add_paragraph("{{正文}}", style=body_style)
     anchor.alignment = WD_ALIGN_PARAGRAPH.CENTER
     anchor.paragraph_format.left_indent = Inches(0.9)
@@ -622,6 +623,7 @@ def test_quote_prose_does_not_inherit_body_direct_paragraph_format(tmp_path: Pat
     fill_template(template, {}, rendered, anchor)
     _, reopened = _save_reopen(template, tmp_path, "quote-isolation.docx")
     quoted = next(p for p in reopened.paragraphs if p.text == "Quoted prose.")
+    assert isinstance(quoted.style, ParagraphStyle)
     assert quoted.style.style_id == bindings.style_id("quote_1")
     assert quoted.alignment is None
     assert quoted._p.find(f"{qn('w:pPr')}/{qn('w:ind')}") is None
@@ -644,9 +646,11 @@ def test_quote_keeps_semantic_heading_code_and_list_styles_with_accent(tmp_path:
     }
     for text, style_id in expected.items():
         paragraph = next(p for p in reopened.paragraphs if p.text == text)
+        assert isinstance(paragraph.style, ParagraphStyle)
         assert paragraph.style.style_id == style_id, text
         if text != "A quote paragraph.":
             border = paragraph._p.find(f"{qn('w:pPr')}/{qn('w:pBdr')}/{qn('w:left')}")
             assert border is not None, text
     heading = next(p for p in reopened.paragraphs if p.text == "Nested heading")
+    assert isinstance(heading.style, ParagraphStyle)
     assert heading.style.paragraph_format is not None
