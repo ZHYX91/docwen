@@ -6,10 +6,10 @@ from typing import Any
 
 import pytest
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from docwen_plugin_markdown.field_processors.gongwen import (
     process_attachment_placeholder,
