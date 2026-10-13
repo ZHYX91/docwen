@@ -604,7 +604,7 @@ code
 
 
 def test_managed_style_ui_children_obey_ct_style_order() -> None:
-    document, bindings = complete_managed_styles(Document(), _catalog())
+    _document, bindings = complete_managed_styles(Document(), _catalog())
     # Newly completed style definitions must be schema-ordered, not just
     # readable by python-docx (which does not repair child order on save).
     rank = {"uiPriority": 0, "semiHidden": 1, "unhideWhenUsed": 2, "qFormat": 3}
