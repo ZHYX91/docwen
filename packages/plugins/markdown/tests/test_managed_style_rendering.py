@@ -622,9 +622,11 @@ def test_explicit_body_run_properties_override_style_only_for_plain_runs(tmp_pat
     authored_run_format = extract_body_run_format(template)
     assert authored_run_format is not None
     rendered = MdToDocxRenderer(
-        template, body_style=anchor.style, body_run_format=authored_run_format,
+        template,
+        body_style=anchor.style,
+        body_run_format=authored_run_format,
         managed_styles=bindings,
-    ).render(parse_markdown_text("Plain **bold** and `code`.\\n"))
+    ).render(parse_markdown_text("Plain **bold** and `code`.\n"))
     fill_template(template, {}, rendered, anchor)
     _, reopened = _save_reopen(template, tmp_path, "body-run-direct.docx")
     paragraph = next(p for p in reopened.paragraphs if p.text.startswith("Plain bold"))
@@ -651,9 +653,11 @@ def test_inherited_body_run_font_does_not_become_direct_formatting() -> None:
     assert extract_body_run_format(template) is None
     anchor = next(p for p in template.paragraphs if p.text == "{{正文}}")
     rendered = MdToDocxRenderer(
-        template, body_style=anchor.style,
-        body_run_format=extract_body_run_format(template), managed_styles=bindings,
-    ).render(parse_markdown_text("Style inherited.\\n"))
+        template,
+        body_style=anchor.style,
+        body_run_format=extract_body_run_format(template),
+        managed_styles=bindings,
+    ).render(parse_markdown_text("Style inherited.\n"))
     plain = next(run for run in rendered[0].runs if run.text == "Style inherited.")
     assert plain.font.size is None
     assert rendered[0].style.font.size == Pt(12)

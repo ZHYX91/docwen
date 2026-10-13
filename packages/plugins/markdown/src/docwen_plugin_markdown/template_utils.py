@@ -118,23 +118,54 @@ class BodyParagraphFormat:
                 setattr(paragraph_format, name, value)
 
 
-
 # Only user-authored direct text properties are eligible for projection into
 # regular Markdown body runs. In particular never project rStyle or structural
 # field/anchor properties from the placeholder.
 _BODY_RUN_DIRECT_TAGS = frozenset(
-    qn(f"w:{name}")
-    for name in ("rFonts", "b", "bCs", "i", "iCs", "strike", "dstrike", "color", "sz", "szCs", "u")
+    qn(f"w:{name}") for name in ("rFonts", "b", "bCs", "i", "iCs", "strike", "dstrike", "color", "sz", "szCs", "u")
 )
 # CT_RPr successor order: insert copied children before their next known peer
 # to preserve WordprocessingML schema order even for mixed Markdown runs.
 _RUN_PROPERTY_ORDER = (
-    "rStyle", "rFonts", "b", "bCs", "i", "iCs", "caps", "smallCaps",
-    "strike", "dstrike", "outline", "shadow", "emboss", "imprint",
-    "noProof", "snapToGrid", "vanish", "webHidden", "color", "spacing",
-    "w", "kern", "position", "sz", "szCs", "highlight", "u",
-    "effect", "bdr", "shd", "fitText", "vertAlign", "rtl", "cs",
-    "em", "lang", "eastAsianLayout", "specVanish", "oMath",
+    "rStyle",
+    "rFonts",
+    "b",
+    "bCs",
+    "i",
+    "iCs",
+    "caps",
+    "smallCaps",
+    "strike",
+    "dstrike",
+    "outline",
+    "shadow",
+    "emboss",
+    "imprint",
+    "noProof",
+    "snapToGrid",
+    "vanish",
+    "webHidden",
+    "color",
+    "spacing",
+    "w",
+    "kern",
+    "position",
+    "sz",
+    "szCs",
+    "highlight",
+    "u",
+    "effect",
+    "bdr",
+    "shd",
+    "fitText",
+    "vertAlign",
+    "rtl",
+    "cs",
+    "em",
+    "lang",
+    "eastAsianLayout",
+    "specVanish",
+    "oMath",
 )
 
 
