@@ -613,9 +613,7 @@ def test_managed_style_ui_children_obey_ct_style_order() -> None:
     for semantic_key, style in bindings.styles:
         if not style.style_id.startswith("DocWen"):
             continue
-        style_element = next(
-            item for item in style_root if item.get(qn("w:styleId")) == style.style_id
-        )
+        style_element = next(item for item in style_root if item.get(qn("w:styleId")) == style.style_id)
         ordered = [
             rank[child.tag.rsplit("}", 1)[-1]] for child in style_element if child.tag.rsplit("}", 1)[-1] in rank
         ]
