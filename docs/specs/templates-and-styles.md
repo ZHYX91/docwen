@@ -110,6 +110,14 @@ headings have separate owners.
 
 ## Completion and rendering / 注入与渲染
 
+Ordinary Markdown body paragraphs carry only explicitly authored direct
+paragraph properties from the standalone `{{body}}` anchor. Indentation is
+projected from its complete direct `w:ind` attribute set, including
+`hangingChars` / `firstLineChars` / `leftChars` / `rightChars`, without
+converting character units to fixed lengths. Inherited style indentation is
+left unset on the generated paragraph. Semantic structures (lists, tables,
+quotes, etc.) retain their own indentation and numbering contracts.
+
 Before any Markdown renderer writes content, it completes all 43 styles for the exact request locale. It does not
 limit completion to styles observed in the source. Every resulting `w:pStyle`, `w:rStyle`, and `w:tblStyle` reference
 must resolve to a style of the correct type.

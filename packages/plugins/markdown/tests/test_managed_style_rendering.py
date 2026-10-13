@@ -601,3 +601,60 @@ code
         "DocWenHorizontalRule3",
     ]
     assert all(paragraph._p.find(f"{qn('w:pPr')}/{qn('w:pBdr')}") is None for paragraph in rendered_rules)
+
+
+@pytest.mark.parametrize(
+    "indent_attributes",
+    [
+        {"hangingChars": "200"},
+        {"hanging": "480", "hangingChars": "200", "left": "720", "leftChars": "300"},
+        {"firstLineChars": "200", "firstLine": "0", "rightChars": "150"},
+        {"firstLineChars": "0", "leftChars": "0"},
+    ],
+)
+def test_body_placeholder_preserves_word_character_indent_units(tmp_path: Path, indent_attributes: dict[str, str]) -> None:
+    template = Document()
+    custom = template.styles.add_style("UserBodyIndent", WD_STYLE_TYPE.PARAGRAPH)
+    custom.paragraph_format.first_line_indent = Inches(0.2)
+    placeholder = template.add_paragraph("{{正文}}", style=custom)
+    source_indent = placeholder._p.get_or_add_pPr().get_or_add_ind()
+    for name, value in indent_attributes.items():
+        source_indent.set(qn(f"w:{name}"), value)
+    template, bindings = complete_managed_styles(template, _catalog())
+    body_format = extract_body_paragraph_format(template)
+    assert body_format is not None
+    rendered = MdToDocxRenderer(
+        template,
+        body_style=next(p.style for p in template.paragraphs if p.text == "{{正文}}"),
+        body_paragraph_format=body_format,
+        managed_styles=bindings,
+    ).render(parse_markdown_text("An ordinary paragraph.\\n"))
+    fill_template(template, {}, rendered, next(p for p in template.paragraphs if p.text == "{{正文}}"))
+    _, reopened = _save_reopen(template, tmp_path, "chars-indent.docx")
+    body = next(p for p in reopened.paragraphs if p.text == "An ordinary paragraph.")
+    output_indent = body._p.find(f"{qn('w:pPr')}/{qn('w:ind')}")
+    assert output_indent is not None
+    assert dict(output_indent.attrib) == {
+        qn(f"w:{name}"): value for name, value in indent_attributes.items()
+    }
+    assert body.style.style_id == custom.style_id
+
+
+def test_body_indent_with_only_style_inheritance_keeps_output_unset(tmp_path: Path) -> None:
+    template = Document()
+    body_style = template.styles.add_style("StyleOnlyIndent", WD_STYLE_TYPE.PARAGRAPH)
+    body_style.paragraph_format.left_indent = Inches(0.3)
+    template.add_paragraph("{{正文}}", style=body_style)
+    template, bindings = complete_managed_styles(template, _catalog())
+    body_format = extract_body_paragraph_format(template)
+    assert body_format is not None
+    assert not body_format.indent_attributes
+    placeholder = next(p for p in template.paragraphs if p.text == "{{正文}}")
+    rendered = MdToDocxRenderer(
+        template, body_style=placeholder.style, body_paragraph_format=body_format, managed_styles=bindings
+    ).render(parse_markdown_text("Inherited indentation.\\n"))
+    fill_template(template, {}, rendered, placeholder)
+    _, reopened = _save_reopen(template, tmp_path, "inherited-indent.docx")
+    body = next(p for p in reopened.paragraphs if p.text == "Inherited indentation.")
+    assert body._p.find(f"{qn('w:pPr')}/{qn('w:ind')}") is None
+    assert body.style.paragraph_format.left_indent == Inches(0.3)

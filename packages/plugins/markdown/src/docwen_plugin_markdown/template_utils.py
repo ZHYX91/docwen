@@ -95,6 +95,9 @@ class BodyParagraphFormat:
     keep_with_next: bool | None
     page_break_before: bool | None
     widow_control: bool | None
+    # Preserve the authored w:ind payload, including character-width units
+    # such as hangingChars/firstLineChars that python-docx's Length API drops.
+    indent_attributes: tuple[tuple[str, str], ...] = ()
 
     def apply_to(self, paragraph: Any) -> None:
         paragraph_format = paragraph.paragraph_format
@@ -112,9 +115,19 @@ class BodyParagraphFormat:
             "page_break_before",
             "widow_control",
         ):
+            # A direct w:ind snapshot is the authoritative source for all
+            # indentation attributes. Do not first round character units to
+            # lengths or synthesize an incompatible firstLine/hanging pair.
+            if self.indent_attributes and name in {"left_indent", "right_indent", "first_line_indent"}:
+                continue
             value = getattr(self, name)
             if value is not None:
                 setattr(paragraph_format, name, value)
+        if self.indent_attributes:
+            indent = paragraph._p.get_or_add_pPr().get_or_add_ind()
+            indent.attrib.clear()
+            for name, value in self.indent_attributes:
+                indent.set(name, value)
 
 
 def _create_builtin_template() -> Document:
@@ -305,6 +318,9 @@ def extract_body_paragraph_format(doc: Document) -> BodyParagraphFormat | None:
     if placeholder is None:
         return None
     paragraph_format = placeholder.paragraph_format
+    p_pr = placeholder._p.pPr
+    source_indent = p_pr.find(qn("w:ind")) if p_pr is not None else None
+    authored_indent = tuple(source_indent.attrib.items()) if source_indent is not None else ()
     return BodyParagraphFormat(
         alignment=paragraph_format.alignment,
         left_indent=paragraph_format.left_indent,
@@ -318,6 +334,7 @@ def extract_body_paragraph_format(doc: Document) -> BodyParagraphFormat | None:
         keep_with_next=paragraph_format.keep_with_next,
         page_break_before=paragraph_format.page_break_before,
         widow_control=paragraph_format.widow_control,
+        indent_attributes=authored_indent,
     )
 
 
