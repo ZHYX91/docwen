@@ -617,6 +617,7 @@ def test_body_placeholder_preserves_word_character_indent_units(
 ) -> None:
     template = Document()
     custom = template.styles.add_style("UserBodyIndent", WD_STYLE_TYPE.PARAGRAPH)
+    assert isinstance(custom, ParagraphStyle)
     custom.paragraph_format.first_line_indent = Inches(0.2)
     placeholder = template.add_paragraph("{{正文}}", style=custom)
     source_indent = placeholder._p.get_or_add_pPr().get_or_add_ind()
@@ -637,12 +638,14 @@ def test_body_placeholder_preserves_word_character_indent_units(
     output_indent = body._p.find(f"{qn('w:pPr')}/{qn('w:ind')}")
     assert output_indent is not None
     assert dict(output_indent.attrib) == {qn(f"w:{name}"): value for name, value in indent_attributes.items()}
+    assert isinstance(body.style, ParagraphStyle)
     assert body.style.style_id == custom.style_id
 
 
 def test_body_indent_with_only_style_inheritance_keeps_output_unset(tmp_path: Path) -> None:
     template = Document()
     body_style = template.styles.add_style("StyleOnlyIndent", WD_STYLE_TYPE.PARAGRAPH)
+    assert isinstance(body_style, ParagraphStyle)
     body_style.paragraph_format.left_indent = Inches(0.3)
     template.add_paragraph("{{正文}}", style=body_style)
     template, bindings = complete_managed_styles(template, _catalog())
@@ -657,4 +660,5 @@ def test_body_indent_with_only_style_inheritance_keeps_output_unset(tmp_path: Pa
     _, reopened = _save_reopen(template, tmp_path, "inherited-indent.docx")
     body = next(p for p in reopened.paragraphs if p.text == "Inherited indentation.")
     assert body._p.find(f"{qn('w:pPr')}/{qn('w:ind')}") is None
+    assert isinstance(body.style, ParagraphStyle)
     assert body.style.paragraph_format.left_indent == Inches(0.3)
