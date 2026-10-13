@@ -648,22 +648,22 @@ def _apply_new_style_defaults(
     key = definition.semantic_key
     if key == "normal":
         style.set(qn("w:default"), "1")
-        style.append(OxmlElement("w:qFormat"))
         _append_ui_priority(style, 0)
+        style.append(OxmlElement("w:qFormat"))
         return
     if key == "default_paragraph_font":
         style.set(qn("w:default"), "1")
-        _append_flags(style, "semiHidden", "unhideWhenUsed")
         _append_ui_priority(style, 1)
+        _append_flags(style, "semiHidden", "unhideWhenUsed")
         return
     if key == "table_normal":
         style.set(qn("w:default"), "1")
-        _append_flags(style, "semiHidden", "unhideWhenUsed")
         _append_ui_priority(style, 99)
+        _append_flags(style, "semiHidden", "unhideWhenUsed")
         return
     if key in {"footnote_text", "endnote_text"}:
-        _append_flags(style, "semiHidden" if key == "footnote_text" else None, "unhideWhenUsed")
         _append_ui_priority(style, 99)
+        _append_flags(style, "semiHidden" if key == "footnote_text" else None, "unhideWhenUsed")
         p_pr = _child(style, "pPr")
         _set_empty_value(p_pr, "snapToGrid", "0")
         _set_attributes(p_pr, "ind", firstLine="0")
@@ -671,8 +671,8 @@ def _apply_new_style_defaults(
         _set_attributes(r_pr, "sz", val="18")
         _set_attributes(r_pr, "szCs", val="18")
     elif key in {"footnote_reference", "endnote_reference"}:
-        _append_flags(style, "semiHidden", "unhideWhenUsed")
         _append_ui_priority(style, 99)
+        _append_flags(style, "semiHidden", "unhideWhenUsed")
         _set_attributes(_child(style, "rPr"), "vertAlign", val="superscript")
     elif key in {"caption", "bibliography", "hyperlink"} or key.endswith("_caption"):
         return
@@ -789,8 +789,9 @@ def _apply_locale_format(style: etree._Element, value: DocumentStyleFormat, *, h
 
 
 def _append_common_custom(style: etree._Element, *, priority: int) -> None:
-    style.append(OxmlElement("w:qFormat"))
+    # CT_Style sequences uiPriority before quick-style flags.
     _append_ui_priority(style, priority)
+    style.append(OxmlElement("w:qFormat"))
 
 
 def _append_ui_priority(style: etree._Element, value: int) -> None:

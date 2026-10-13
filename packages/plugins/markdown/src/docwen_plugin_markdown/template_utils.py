@@ -10,15 +10,18 @@ template was selected.
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from zipfile import BadZipFile, ZipFile
 
 from docx import Document
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.section import Section
 from docx.shared import Emu, Mm, Pt
+from docx.text.run import Run
 
 from docwen_plugin_markdown.yaml_processor import BODY_PLACEHOLDER_ALIASES
 
@@ -95,6 +98,13 @@ class BodyParagraphFormat:
     keep_with_next: bool | None
     page_break_before: bool | None
     widow_control: bool | None
+    # Preserve the authored w:ind payload, including character-width units
+    # such as hangingChars/firstLineChars that python-docx's Length API drops.
+    indent_attributes: tuple[tuple[str, str], ...] = ()
+    # A style mapping can introduce competing indentation that the anchor did
+    # not inherit. Retain its original style context only for those direct axes.
+    source_style_id: str | None = None
+    source_indent_attributes: tuple[tuple[str, str], ...] = ()
 
     def apply_to(self, paragraph: Any) -> None:
         paragraph_format = paragraph.paragraph_format
@@ -112,9 +122,325 @@ class BodyParagraphFormat:
             "page_break_before",
             "widow_control",
         ):
+            # A direct w:ind snapshot is the authoritative source for all
+            # indentation attributes. Do not first round character units to
+            # lengths or synthesize an incompatible firstLine/hanging pair.
+            if self.indent_attributes and name in {"left_indent", "right_indent", "first_line_indent"}:
+                continue
             value = getattr(self, name)
             if value is not None:
                 setattr(paragraph_format, name, value)
+        if self.indent_attributes:
+            indent = paragraph._p.get_or_add_pPr().get_or_add_ind()
+            indent.attrib.clear()
+            for name, value in self.indent_attributes:
+                indent.set(name, value)
+        target_style = paragraph.style
+        if (
+            self.source_style_id is not None
+            and target_style is not None
+            and target_style.style_id != self.source_style_id
+        ):
+            indent = paragraph._p.pPr.ind if paragraph._p.pPr is not None else None
+            if indent is not None:
+                _preserve_mapped_indentation(paragraph, indent, dict(self.source_indent_attributes))
+
+
+def _inherited_indent_attributes(paragraph: Any) -> dict[str, str]:
+    """Read indentation only, without flattening any other style properties."""
+    inherited: dict[str, str] = {}
+    first_line_characters = (qn("w:firstLineChars"), qn("w:hangingChars"))
+
+    def inherit(source: Any) -> None:
+        # A nearer character declaration selects/cancels the related group;
+        # an older opposite-direction character value cannot revive it.
+        owns_first_line = any(name in inherited for name in first_line_characters)
+        for name, value in source.attrib.items():
+            if name not in first_line_characters or not owns_first_line:
+                inherited.setdefault(name, value)
+
+    style = paragraph.style
+    seen: set[Any] = set()
+    while style is not None and style._element not in seen:
+        seen.add(style._element)
+        properties = style._element.find(qn("w:pPr"))
+        source = properties.find(qn("w:ind")) if properties is not None else None
+        if source is not None:
+            inherit(source)
+        style = style.base_style
+    defaults = paragraph.part.styles.element.find(
+        f"{qn('w:docDefaults')}/{qn('w:pPrDefault')}/{qn('w:pPr')}/{qn('w:ind')}"
+    )
+    if defaults is not None:
+        inherit(defaults)
+    return inherited
+
+
+def _preserve_mapped_indentation(paragraph: Any, indent: Any, source: dict[str, str]) -> None:
+    """Protect direct anchor axes from newly introduced output-style values.
+
+    Inherited character units outrank later lengths in Word. Character zero
+    cancels earlier related character units, but leaves inherited lengths in
+    effect (MS-OI29500, 2.1.44). Restore only a changed related source value;
+    an unchanged custom body style keeps its original inheritance verbatim.
+    """
+    target = _inherited_indent_attributes(paragraph)
+    for length_name, character_name in (
+        ("left", "leftChars"),
+        ("right", "rightChars"),
+        ("start", "startChars"),
+        ("end", "endChars"),
+    ):
+        length, characters = qn(f"w:{length_name}"), qn(f"w:{character_name}")
+        if length in indent.attrib and characters not in indent.attrib:
+            if int(source.get(characters, "0")) != int(target.get(characters, "0")):
+                indent.set(characters, source.get(characters, "0"))
+        elif (
+            characters in indent.attrib
+            and int(indent.get(characters, "0")) == 0
+            and length not in indent.attrib
+            and source.get(length, "0") != target.get(length, "0")
+        ):
+            indent.set(length, source.get(length, "0"))
+
+    lengths = (qn("w:firstLine"), qn("w:hanging"))
+    characters = (qn("w:firstLineChars"), qn("w:hangingChars"))
+
+    def character_value(attributes: Any) -> tuple[str | None, int]:
+        for name in reversed(characters):
+            value = int(attributes.get(name, "0"))
+            if value:
+                return name, value
+        return None, 0
+
+    if any(name in indent.attrib for name in lengths) and not any(name in indent.attrib for name in characters):
+        source_name, source_value = character_value(source)
+        if (source_name, source_value) != character_value(target):
+            if source_name is not None:
+                indent.set(source_name, source[source_name])
+            else:
+                cancellation = characters[1] if lengths[1] in indent.attrib else characters[0]
+                indent.set(cancellation, "0")
+    elif (
+        any(name in indent.attrib for name in characters)
+        and character_value(indent.attrib)[1] == 0
+        and not any(name in indent.attrib for name in lengths)
+    ):
+        # A character zero is a cancellation, not an unconditional zero length.
+        # Preserve the original length fallback if the mapped style changes it.
+        source_length = lengths[1] if lengths[1] in source else lengths[0]
+        target_length = lengths[1] if lengths[1] in target else lengths[0]
+        if (source_length, source.get(source_length, "0")) != (target_length, target.get(target_length, "0")):
+            indent.set(source_length, source.get(source_length, "0"))
+
+
+# Only user-authored direct text properties are eligible for projection into
+# regular Markdown body runs. In particular never project rStyle or structural
+# field/anchor properties from the placeholder.
+_BODY_RUN_DIRECT_TAGS = frozenset(
+    qn(f"w:{name}") for name in ("rFonts", "b", "bCs", "i", "iCs", "strike", "dstrike", "color", "sz", "szCs", "u")
+)
+# CT_RPr successor order: insert copied children before their next known peer
+# to preserve WordprocessingML schema order even for mixed Markdown runs.
+_RUN_PROPERTY_ORDER = (
+    "rStyle",
+    "rFonts",
+    "b",
+    "bCs",
+    "i",
+    "iCs",
+    "caps",
+    "smallCaps",
+    "strike",
+    "dstrike",
+    "outline",
+    "shadow",
+    "emboss",
+    "imprint",
+    "noProof",
+    "snapToGrid",
+    "vanish",
+    "webHidden",
+    "color",
+    "spacing",
+    "w",
+    "kern",
+    "position",
+    "sz",
+    "szCs",
+    "highlight",
+    "u",
+    "effect",
+    "bdr",
+    "shd",
+    "fitText",
+    "vertAlign",
+    "rtl",
+    "cs",
+    "em",
+    "lang",
+    "eastAsianLayout",
+    "specVanish",
+    "oMath",
+)
+
+_FONT_ATTRIBUTE_PEERS = {
+    qn(f"w:{name}"): qn(f"w:{peer}")
+    for explicit, theme in (
+        ("ascii", "asciiTheme"),
+        ("hAnsi", "hAnsiTheme"),
+        ("eastAsia", "eastAsiaTheme"),
+        ("cs", "cstheme"),
+    )
+    for name, peer in ((explicit, theme), (theme, explicit))
+}
+_BODY_RUN_TOGGLE_TAGS = frozenset(qn(f"w:{name}") for name in ("b", "bCs", "i", "iCs", "strike", "dstrike"))
+
+
+def _on_off_value(element: Any) -> bool:
+    return element is not None and str(element.get(qn("w:val"), "1")).lower() not in {"0", "false", "off", "no"}
+
+
+def _apply_style_toggles(style: Any, tag: str, value: bool) -> bool:
+    seen: set[str] = set()
+    while style is not None and style.style_id not in seen:
+        seen.add(style.style_id)
+        r_pr = style.element.find(qn("w:rPr"))
+        if r_pr is not None and _on_off_value(r_pr.find(tag)):
+            value = not value
+        style = style.base_style
+    return value
+
+
+def _merge_missing_font_attributes(target: Any, source: Any, *protected: Any) -> None:
+    """Treat a script's explicit font and theme font as one property."""
+    owned_names = set().union(*(set(part.attrib) for part in (target, *protected)))
+    for name, value in source.attrib.items():
+        names = (name, _FONT_ATTRIBUTE_PEERS.get(name, name))
+        if not any(key in owned_names for key in names):
+            target.set(name, value)
+
+
+def _style_run_properties(style: Any) -> dict[str, Any]:
+    properties: dict[str, Any] = {}
+    seen: set[str] = set()
+    while style is not None and style.style_id not in seen:
+        seen.add(style.style_id)
+        r_pr = style.element.find(qn("w:rPr"))
+        for source in r_pr if r_pr is not None else ():
+            if source.tag not in _BODY_RUN_DIRECT_TAGS:
+                continue
+            existing = properties.get(source.tag)
+            if existing is None:
+                properties[source.tag] = deepcopy(source)
+            elif source.tag == qn("w:rFonts"):
+                _merge_missing_font_attributes(existing, source)
+        style = style.base_style
+    return properties
+
+
+@dataclass(frozen=True, slots=True)
+class BodyRunFormat:
+    """Authored direct character properties of the body anchor's first run."""
+
+    properties: tuple[Any, ...]
+
+    @classmethod
+    def from_style(cls, style: Any, *, document: Any, fallback_font: dict[str, Any]) -> BodyRunFormat:
+        """Materialize the ordinary body's effective style for mixed Headings."""
+        properties = _style_run_properties(style)
+        defaults = document.styles.element.find(f"{qn('w:docDefaults')}/{qn('w:rPrDefault')}/{qn('w:rPr')}")
+        for source in defaults if defaults is not None else ():
+            if source.tag not in _BODY_RUN_DIRECT_TAGS:
+                continue
+            existing = properties.get(source.tag)
+            if existing is None:
+                properties[source.tag] = deepcopy(source)
+            elif source.tag == qn("w:rFonts"):
+                _merge_missing_font_attributes(existing, source)
+        fallback = Run(cast(Any, OxmlElement("w:r")), document._body)
+        fallback.font.name = fallback_font.get("name")
+        fallback.font.size = fallback_font.get("size")
+        fallback.bold = fallback_font.get("bold", False)
+        fallback.italic = fallback_font.get("italic", False)
+        fallback.underline = fallback_font.get("underline", False)
+        fallback_properties = fallback._r.get_or_add_rPr()
+        fonts = fallback_properties.get_or_add_rFonts()
+        if fallback_font.get("east_asia"):
+            fonts.set(qn("w:eastAsia"), fallback_font["east_asia"])
+        for source in fallback_properties:
+            existing = properties.get(source.tag)
+            if existing is None:
+                properties[source.tag] = deepcopy(source)
+            elif source.tag == qn("w:rFonts"):
+                _merge_missing_font_attributes(existing, source)
+        if qn("w:color") not in properties:
+            color = OxmlElement("w:color")
+            color.set(qn("w:val"), "auto")
+            properties[color.tag] = color
+        # In styles, true toggles the inherited value and false leaves it alone.
+        # Materialize the effective body result, including explicit resets, so
+        # the appended text cannot inherit the Heading's emphasis instead.
+        for tag in _BODY_RUN_TOGGLE_TAGS:
+            value = _on_off_value(defaults.find(tag)) if defaults is not None else False
+            value = _apply_style_toggles(style, tag, value)
+            toggle = OxmlElement(f"w:{tag.rsplit('}', 1)[-1]}")
+            if not value:
+                toggle.set(qn("w:val"), "0")
+            properties[tag] = toggle
+        return cls(tuple(properties.values()))
+
+    def apply_to(self, paragraph: Any, *, start_index: int = 0, resolve_character_toggles: bool = False) -> None:
+        # Include child runs in hyperlinks and semantic wrappers. Each direct
+        # or character-style property keeps its own authority; an rStyle alone
+        # must not prevent unrelated body font attributes from being inherited.
+        for element in list(paragraph._p.iter(qn("w:r")))[start_index:]:
+            run = Run(element, paragraph)
+            if not run.text:
+                continue
+            r_pr = run._r.get_or_add_rPr()
+            styled = _style_run_properties(run.style) if r_pr.find(qn("w:rStyle")) is not None else {}
+            for source in self.properties:
+                existing = r_pr.find(source.tag)
+                protected = styled.get(source.tag)
+                if source.tag == qn("w:rFonts"):
+                    merged = deepcopy(existing) if existing is not None else OxmlElement("w:rFonts")
+                    _merge_missing_font_attributes(merged, source, *((protected,) if protected is not None else ()))
+                    if not merged.attrib:
+                        continue
+                    if existing is not None:
+                        existing.attrib.update(merged.attrib)
+                        continue
+                    source = merged
+                elif existing is not None:
+                    continue
+                elif protected is not None:
+                    if not resolve_character_toggles or source.tag not in _BODY_RUN_TOGGLE_TAGS:
+                        continue
+                    value = _apply_style_toggles(run.style, source.tag, _on_off_value(source))
+                    source = OxmlElement(f"w:{source.tag.rsplit('}', 1)[-1]}")
+                    if not value:
+                        source.set(qn("w:val"), "0")
+                name = source.tag.rsplit("}", 1)[-1]
+                successors = tuple(f"w:{part}" for part in _RUN_PROPERTY_ORDER[_RUN_PROPERTY_ORDER.index(name) + 1 :])
+                r_pr.insert_element_before(deepcopy(cast(Any, source)), *successors)
+
+
+def extract_body_run_format(doc: Document) -> BodyRunFormat | None:
+    """Capture direct run formatting only, never inherited style defaults."""
+    placeholder = find_body_placeholder(doc)
+    if placeholder is None:
+        return None
+    for element in placeholder._p.iter(qn("w:r")):
+        run = Run(element, placeholder)
+        if not run.text.strip():
+            continue
+        r_pr = run._r.rPr
+        if r_pr is None:
+            return None
+        properties = tuple(deepcopy(part) for part in r_pr if part.tag in _BODY_RUN_DIRECT_TAGS)
+        return BodyRunFormat(properties) if properties else None
+    return None
 
 
 def _create_builtin_template() -> Document:
@@ -141,12 +467,9 @@ def _create_builtin_template() -> Document:
 
     # ── Placeholder paragraph ───────────────────────────────────────
     p = doc.add_paragraph()
-    run = p.add_run(_BUILTIN_PLACEHOLDER)
-
-    # Set default font properties on the run
-    run.font.name = "Calibri"
-    run.font.size = Pt(10.5)
-    _set_run_east_asian_font(run, "宋体")
+    # Locale-aware managed body defaults own the unselected-template case.
+    # Generated direct overrides would incorrectly mask those style defaults.
+    p.add_run(_BUILTIN_PLACEHOLDER)
 
     return doc
 
@@ -272,7 +595,8 @@ def extract_body_font(doc: Document) -> dict[str, Any]:
     if placeholder is None:
         return dict(_DEFAULT_BODY_FONT)
 
-    for run in placeholder.runs:
+    for element in placeholder._p.iter(qn("w:r")):
+        run = Run(element, placeholder)
         if run.text and run.text.strip():
             font = run.font
             style = placeholder.style
@@ -305,6 +629,9 @@ def extract_body_paragraph_format(doc: Document) -> BodyParagraphFormat | None:
     if placeholder is None:
         return None
     paragraph_format = placeholder.paragraph_format
+    p_pr = placeholder._p.pPr
+    source_indent = p_pr.find(qn("w:ind")) if p_pr is not None else None
+    authored_indent = tuple(source_indent.attrib.items()) if source_indent is not None else ()
     return BodyParagraphFormat(
         alignment=paragraph_format.alignment,
         left_indent=paragraph_format.left_indent,
@@ -318,6 +645,9 @@ def extract_body_paragraph_format(doc: Document) -> BodyParagraphFormat | None:
         keep_with_next=paragraph_format.keep_with_next,
         page_break_before=paragraph_format.page_break_before,
         widow_control=paragraph_format.widow_control,
+        indent_attributes=authored_indent,
+        source_style_id=placeholder.style.style_id if placeholder.style is not None else None,
+        source_indent_attributes=tuple(_inherited_indent_attributes(placeholder).items()),
     )
 
 

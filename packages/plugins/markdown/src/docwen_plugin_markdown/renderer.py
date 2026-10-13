@@ -64,7 +64,7 @@ from docwen_plugin_markdown.renderer_utils import (
     resolve_table_style,
     set_table_left_indent,
 )
-from docwen_plugin_markdown.template_utils import BodyParagraphFormat
+from docwen_plugin_markdown.template_utils import BodyParagraphFormat, BodyRunFormat
 from docwen_plugin_markdown.to_docx.numbering import (
     DocxListNumbering,
     apply_list_to_paragraph,
@@ -143,6 +143,7 @@ class MdToDocxRenderer:
         mermaid_work_dir: str | None = None,
         mermaid_render: Any = None,
         content_extent: tuple[int, int] | None = None,
+        body_run_format: BodyRunFormat | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -196,6 +197,7 @@ class MdToDocxRenderer:
         }
         self._body_style = body_style
         self._body_paragraph_format = body_paragraph_format
+        self._body_run_format = body_run_format
         self._code_font = code_font
         self._code_bg_color = code_bg_color
         self._heading_formatting_mode = heading_formatting_mode
@@ -510,11 +512,13 @@ class MdToDocxRenderer:
         image_only = self._is_image_only_paragraph(children)
         body_style = self._paragraph_style(image_only=image_only)
         p = self._doc.add_paragraph(style=body_style)
-        if not image_only and self._body_paragraph_format is not None:
+        if not image_only and self._quote_depth == 0 and self._body_paragraph_format is not None:
             self._body_paragraph_format.apply_to(p)
 
         if children:
             self._render_body_inline_children(p, children)
+            if not image_only and self._quote_depth == 0 and self._body_run_format is not None:
+                self._body_run_format.apply_to(p)
         resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             self._bind_v3_ordinary_anchor((p._p,), node)
@@ -631,10 +635,12 @@ class MdToDocxRenderer:
         if next_node and next_node.get("_merged_into_heading"):
             body_children = next_node.get("children", [])
             if body_children:
-                body_run_start = len(heading.runs)
+                body_run_start = len(list(heading._p.iter(qn("w:r"))))
                 if heading.text.rstrip().endswith(tuple(HALFWIDTH_HEADING_MERGE_PUNCTUATION)):
                     heading.add_run(" ")
                 self._render_body_inline_children(heading, body_children)
+                if self._body_run_format is not None:
+                    self._body_run_format.apply_to(heading, start_index=body_run_start)
                 self._apply_body_font_to_runs(
                     heading,
                     start_index=body_run_start,
@@ -1492,7 +1498,14 @@ class MdToDocxRenderer:
             return self._image_paragraph_style
         if self._body_managed_style is None:
             return self._body_style
-        if self._body_style is None or self._body_style.style_id in {"Normal", "normal"}:
+        # Normal can have a host-specific styleId. Resolve identity once
+        # during managed-style completion, rather than checking literal IDs.
+        normal_id = (
+            dict(self._managed_styles.foundation_style_ids).get("normal", "Normal")
+            if self._managed_styles is not None
+            else "Normal"
+        )
+        if self._body_style is None or self._body_style.style_id == normal_id:
             return self._body_managed_style
         return self._body_style
 
@@ -1557,6 +1570,14 @@ class MdToDocxRenderer:
         unformatted body runs do not inherit the Heading style's bold/italic/
         underline values.  Explicit Markdown emphasis remains untouched.
         """
+        if reset_inherited_emphasis:
+            # A Normal anchor renders ordinary text with the managed body
+            # style. Resolve that same source rather than the anchor's older
+            # Normal/theme fallback, including script-specific font properties.
+            BodyRunFormat.from_style(
+                self._paragraph_style(image_only=False), document=self._doc, fallback_font=self._body_font
+            ).apply_to(paragraph, start_index=start_index, resolve_character_toggles=True)
+            return
         inline_code_style_id = self.inline_code_style.style_id if self.inline_code_style is not None else None
         for run in paragraph.runs[start_index:]:
             if inline_code_style_id and run.style is not None and run.style.style_id == inline_code_style_id:
@@ -1568,13 +1589,6 @@ class MdToDocxRenderer:
                     apply_run_east_asian_font(run, east_asia)
             if run.font.size is None:
                 run.font.size = self._body_font.get("size")
-            if reset_inherited_emphasis:
-                if run.bold is None:
-                    run.bold = self._body_font.get("bold", False)
-                if run.italic is None:
-                    run.italic = self._body_font.get("italic", False)
-                if run.underline is None:
-                    run.underline = self._body_font.get("underline", False)
 
     def _handle_table_head(self, node: dict[str, Any]):
         return None  # handled inside _handle_table
