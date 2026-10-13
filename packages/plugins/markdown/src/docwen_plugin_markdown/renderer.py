@@ -50,6 +50,7 @@ from docwen_plugin_markdown.renderer_utils import (
     apply_list_indent,
     apply_paragraph_shading,
     apply_quote_style,
+    apply_quote_container_accent,
     apply_run_east_asian_font,
     apply_table_grid_borders,
     apply_three_line_table_borders,
@@ -510,7 +511,9 @@ class MdToDocxRenderer:
         image_only = self._is_image_only_paragraph(children)
         body_style = self._paragraph_style(image_only=image_only)
         p = self._doc.add_paragraph(style=body_style)
-        if not image_only and self._body_paragraph_format is not None:
+        # Quoted prose belongs to the quote style, not to the body anchor's
+        # direct paragraph alignment/indentation/spacing overrides.
+        if not image_only and self._quote_depth == 0 and self._body_paragraph_format is not None:
             self._body_paragraph_format.apply_to(p)
 
         if children:
@@ -866,11 +869,25 @@ class MdToDocxRenderer:
                 if child.get("type") != "block_quote" and self._quote_depth <= 9:
                     style_level = self._quote_style_levels.get(self._quote_depth, self._quote_depth)
                     style = self._quote_styles.get(style_level)
+                    body_style = self._paragraph_style(image_only=False)
                     for item in items:
-                        if hasattr(item, "_p"):
+                        if not hasattr(item, "_p"):
+                            continue
+                        # The quote style owns ordinary quoted prose only.
+                        # Headings, code, list items and captions retain their
+                        # distinct semantic styles; project the quote border
+                        # without replacing their pStyle or geometry.
+                        if (
+                            child.get("type") == "paragraph"
+                            and body_style is not None
+                            and item.style is not None
+                            and item.style.style_id == body_style.style_id
+                        ):
                             apply_quote_style(item, style=style, level=style_level)
                             if self._managed_styles is None:
                                 self._apply_body_font_to_runs(item)
+                        else:
+                            apply_quote_container_accent(item, style=style)
                 paragraphs.extend(items)
         finally:
             self._quote_depth -= 1

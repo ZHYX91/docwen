@@ -10,6 +10,7 @@ Provides:
 from __future__ import annotations
 
 import logging
+from copy import deepcopy
 
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -328,6 +329,33 @@ def resolve_table_style(doc, semantic_key: str):
         ):
             return style
     return None
+
+
+
+def apply_quote_container_accent(paragraph, *, style=None) -> None:
+    """Carry only the quote left border onto a semantic child paragraph.
+
+    Preserve the child's heading/code/list/caption pStyle and its own shading,
+    indentation, alignment and existing direct borders. A quote style is the
+    source of the border attributes; never infer them from localized names.
+    """
+    if style is None:
+        return
+    source_p_pr = style._element.find(qn("w:pPr"))
+    source_borders = source_p_pr.find(qn("w:pBdr")) if source_p_pr is not None else None
+    source_left = source_borders.find(qn("w:left")) if source_borders is not None else None
+    if source_left is None:
+        return
+    p_pr = paragraph._p.get_or_add_pPr()
+    borders = p_pr.find(qn("w:pBdr"))
+    if borders is None:
+        borders = OxmlElement("w:pBdr")
+        p_pr.insert_element_before(
+            borders, "w:shd", "w:tabs", "w:spacing", "w:ind",
+            "w:jc", "w:outlineLvl", "w:rPr", "w:sectPr",
+        )
+    if borders.find(qn("w:left")) is None:
+        borders.append(deepcopy(source_left))
 
 
 def apply_quote_style(paragraph, *, style=None, level: int = 1) -> None:

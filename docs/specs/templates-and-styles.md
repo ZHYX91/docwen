@@ -159,6 +159,7 @@ must resolve to a style of the correct type.
   no compatible style exists. Until clickable
   OMML is a separately frozen interoperability contract, inline math inside a link is preserved visibly as
   `$...$` text rather than silently flattened or emitted as an ambiguous hyperlink/math structure.
+- Ordinary quoted prose uses the resolved level-specific DocWenQuote paragraph style, not direct body-placeholder paragraph formatting. Other semantic children of a quote (Heading, code, list, captions) keep their own paragraph style and geometry; the quote left-border accent can be projected without rewriting their pStyle or explicit borders. Nested quote levels retain their own level style.
 - Table header paragraphs use `DocWenTableHeader`; table body paragraphs use `DocWenTableContent`.
 - For the explicitly selected built-in `three_line_table` key, multi-row column headers project their complete
   lower boundary and wide group headings' lower edges after native merges are finished. A group ends above the

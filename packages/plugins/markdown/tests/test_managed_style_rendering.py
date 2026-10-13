@@ -601,3 +601,48 @@ code
         "DocWenHorizontalRule3",
     ]
     assert all(paragraph._p.find(f"{qn('w:pPr')}/{qn('w:pBdr')}") is None for paragraph in rendered_rules)
+
+
+def test_quote_prose_does_not_inherit_body_direct_paragraph_format(tmp_path: Path) -> None:
+    template = Document()
+    body_style = template.styles.add_style("CustomQuotedSource", WD_STYLE_TYPE.PARAGRAPH)
+    anchor = template.add_paragraph("{{正文}}", style=body_style)
+    anchor.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    anchor.paragraph_format.left_indent = Inches(0.9)
+    anchor.paragraph_format.first_line_indent = Inches(-0.2)
+    template, bindings = complete_managed_styles(template, _catalog())
+    anchor = next(p for p in template.paragraphs if p.text == "{{正文}}")
+    body_format = extract_body_paragraph_format(template)
+    rendered = MdToDocxRenderer(
+        template, body_style=anchor.style, body_paragraph_format=body_format,
+        managed_styles=bindings,
+    ).render(parse_markdown_text("> Quoted prose.\\n"))
+    fill_template(template, {}, rendered, anchor)
+    _, reopened = _save_reopen(template, tmp_path, "quote-isolation.docx")
+    quoted = next(p for p in reopened.paragraphs if p.text == "Quoted prose.")
+    assert quoted.style.style_id == bindings.style_id("quote_1")
+    assert quoted.alignment is None
+    assert quoted._p.find(f"{qn('w:pPr')}/{qn('w:ind')}") is None
+
+
+def test_quote_keeps_semantic_heading_code_and_list_styles_with_accent(tmp_path: Path) -> None:
+    template, bindings = complete_managed_styles(Document(), _catalog())
+    renderer = MdToDocxRenderer(template, managed_styles=bindings)
+    rendered = renderer.render(parse_markdown_text(
+        "> A quote paragraph.\\n>\\n> ## Nested heading\\n>\\n> ```python\\n> print('ok')\\n> ```\\n>\\n> - list child\\n"
+    ))
+    _, reopened = _save_reopen(template, tmp_path, "quote-semantic.docx")
+    expected = {
+        "A quote paragraph.": bindings.style_id("quote_1"),
+        "Nested heading": bindings.style_id("heading_2"),
+        "print('ok')": bindings.style_id("code_block"),
+        "list child": bindings.style_id("list_block"),
+    }
+    for text, style_id in expected.items():
+        paragraph = next(p for p in reopened.paragraphs if p.text == text)
+        assert paragraph.style.style_id == style_id, text
+        if text != "A quote paragraph.":
+            border = paragraph._p.find(f"{qn('w:pPr')}/{qn('w:pBdr')}/{qn('w:left')}")
+            assert border is not None, text
+    heading = next(p for p in reopened.paragraphs if p.text == "Nested heading")
+    assert heading.style.paragraph_format is not None
