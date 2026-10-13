@@ -98,6 +98,10 @@ class BodyParagraphFormat:
     # Preserve the authored w:ind payload, including character-width units
     # such as hangingChars/firstLineChars that python-docx's Length API drops.
     indent_attributes: tuple[tuple[str, str], ...] = ()
+    # A style mapping can introduce competing indentation that the anchor did
+    # not inherit. Retain its original style context only for those direct axes.
+    source_style_id: str | None = None
+    source_indent_attributes: tuple[tuple[str, str], ...] = ()
 
     def apply_to(self, paragraph: Any) -> None:
         paragraph_format = paragraph.paragraph_format
@@ -128,6 +132,103 @@ class BodyParagraphFormat:
             indent.attrib.clear()
             for name, value in self.indent_attributes:
                 indent.set(name, value)
+        target_style = paragraph.style
+        if (
+            self.source_style_id is not None
+            and target_style is not None
+            and target_style.style_id != self.source_style_id
+        ):
+            indent = paragraph._p.pPr.ind if paragraph._p.pPr is not None else None
+            if indent is not None:
+                _preserve_mapped_indentation(paragraph, indent, dict(self.source_indent_attributes))
+
+
+def _inherited_indent_attributes(paragraph: Any) -> dict[str, str]:
+    """Read indentation only, without flattening any other style properties."""
+    inherited: dict[str, str] = {}
+    first_line_characters = (qn("w:firstLineChars"), qn("w:hangingChars"))
+
+    def inherit(source: Any) -> None:
+        # A nearer character declaration selects/cancels the related group;
+        # an older opposite-direction character value cannot revive it.
+        owns_first_line = any(name in inherited for name in first_line_characters)
+        for name, value in source.attrib.items():
+            if name not in first_line_characters or not owns_first_line:
+                inherited.setdefault(name, value)
+
+    style = paragraph.style
+    seen: set[Any] = set()
+    while style is not None and style._element not in seen:
+        seen.add(style._element)
+        properties = style._element.find(qn("w:pPr"))
+        source = properties.find(qn("w:ind")) if properties is not None else None
+        if source is not None:
+            inherit(source)
+        style = style.base_style
+    defaults = paragraph.part.styles.element.find(
+        f"{qn('w:docDefaults')}/{qn('w:pPrDefault')}/{qn('w:pPr')}/{qn('w:ind')}"
+    )
+    if defaults is not None:
+        inherit(defaults)
+    return inherited
+
+
+def _preserve_mapped_indentation(paragraph: Any, indent: Any, source: dict[str, str]) -> None:
+    """Protect direct anchor axes from newly introduced output-style values.
+
+    Inherited character units outrank later lengths in Word. Character zero
+    cancels earlier related character units, but leaves inherited lengths in
+    effect (MS-OI29500, 2.1.44). Restore only a changed related source value;
+    an unchanged custom body style keeps its original inheritance verbatim.
+    """
+    target = _inherited_indent_attributes(paragraph)
+    for length_name, character_name in (
+        ("left", "leftChars"),
+        ("right", "rightChars"),
+        ("start", "startChars"),
+        ("end", "endChars"),
+    ):
+        length, characters = qn(f"w:{length_name}"), qn(f"w:{character_name}")
+        if length in indent.attrib and characters not in indent.attrib:
+            if int(source.get(characters, "0")) != int(target.get(characters, "0")):
+                indent.set(characters, source.get(characters, "0"))
+        elif (
+            characters in indent.attrib
+            and int(indent.get(characters, "0")) == 0
+            and length not in indent.attrib
+            and source.get(length, "0") != target.get(length, "0")
+        ):
+            indent.set(length, source.get(length, "0"))
+
+    lengths = (qn("w:firstLine"), qn("w:hanging"))
+    characters = (qn("w:firstLineChars"), qn("w:hangingChars"))
+
+    def character_value(attributes: Any) -> tuple[str | None, int]:
+        for name in reversed(characters):
+            value = int(attributes.get(name, "0"))
+            if value:
+                return name, value
+        return None, 0
+
+    if any(name in indent.attrib for name in lengths) and not any(name in indent.attrib for name in characters):
+        source_name, source_value = character_value(source)
+        if (source_name, source_value) != character_value(target):
+            if source_name is not None:
+                indent.set(source_name, source[source_name])
+            else:
+                cancellation = characters[1] if lengths[1] in indent.attrib else characters[0]
+                indent.set(cancellation, "0")
+    elif (
+        any(name in indent.attrib for name in characters)
+        and character_value(indent.attrib)[1] == 0
+        and not any(name in indent.attrib for name in lengths)
+    ):
+        # A character zero is a cancellation, not an unconditional zero length.
+        # Preserve the original length fallback if the mapped style changes it.
+        source_length = lengths[1] if lengths[1] in source else lengths[0]
+        target_length = lengths[1] if lengths[1] in target else lengths[0]
+        if (source_length, source.get(source_length, "0")) != (target_length, target.get(target_length, "0")):
+            indent.set(source_length, source.get(source_length, "0"))
 
 
 def _create_builtin_template() -> Document:
@@ -335,6 +436,8 @@ def extract_body_paragraph_format(doc: Document) -> BodyParagraphFormat | None:
         page_break_before=paragraph_format.page_break_before,
         widow_control=paragraph_format.widow_control,
         indent_attributes=authored_indent,
+        source_style_id=placeholder.style.style_id if placeholder.style is not None else None,
+        source_indent_attributes=tuple(_inherited_indent_attributes(placeholder).items()),
     )
 
 

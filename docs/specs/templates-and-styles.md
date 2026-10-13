@@ -115,7 +115,18 @@ paragraph properties from the standalone `{{body}}` anchor. Indentation is
 projected from its complete direct `w:ind` attribute set, including
 `hangingChars` / `firstLineChars` / `leftChars` / `rightChars`, without
 converting character units to fixed lengths. Inherited style indentation is
-left unset on the generated paragraph. Semantic structures (lists, tables,
+left unset on the generated paragraph. A custom body style keeps the original
+direct attributes and their existing inheritance rules. When Normal maps to
+the managed body style, only axes explicitly declared by the anchor are
+protected against newly introduced competing style values. This may add a
+related source character value, a zero character-unit cancellation, or the
+source length fallback for an authored character zero. Character zero cancels
+earlier character indentation; it does not unconditionally erase inherited
+length indentation. These rules follow
+[Office's documented style hierarchy](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/138732dc-507a-4164-af66-808c2fd9f2f9).
+The authored attributes remain intact. Unspecified axes keep managed defaults;
+other paragraph properties and all template style definitions retain their
+inheritance. Semantic structures (lists, tables,
 quotes, etc.) retain their own indentation and numbering contracts.
 
 Before any Markdown renderer writes content, it completes all 43 styles for the exact request locale. It does not
