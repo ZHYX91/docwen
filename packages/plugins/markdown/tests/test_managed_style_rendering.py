@@ -611,8 +611,10 @@ def test_managed_style_ui_children_obey_ct_style_order() -> None:
     for semantic_key, style in bindings.styles:
         if not style.style_id.startswith("DocWen"):
             continue
+        style_element = style._element
+        assert style_element is not None
         ordered = [
-            rank[child.tag.rsplit("}", 1)[-1]] for child in style._element if child.tag.rsplit("}", 1)[-1] in rank
+            rank[child.tag.rsplit("}", 1)[-1]] for child in style_element if child.tag.rsplit("}", 1)[-1] in rank
         ]
         assert ordered == sorted(ordered), semantic_key
 
@@ -620,10 +622,13 @@ def test_managed_style_ui_children_obey_ct_style_order() -> None:
 def test_host_specific_normal_id_uses_resolved_foundation_identity() -> None:
     template = Document()
     normal = template.styles["Normal"]
-    normal._element.set(qn("w:styleId"), "HostNormal42")
+    normal_element = normal._element
+    assert normal_element is not None
+    normal_element.set(qn("w:styleId"), "HostNormal42")
     template, bindings = complete_managed_styles(template, _catalog())
     assert dict(bindings.foundation_style_ids)["normal"] == "HostNormal42"
     actual_normal = next(style for style in template.styles if style.style_id == "HostNormal42")
+    assert isinstance(actual_normal, ParagraphStyle)
     placeholder = template.add_paragraph("{{body}}", style=actual_normal)
     rendered = MdToDocxRenderer(template, body_style=placeholder.style, managed_styles=bindings).render(
         parse_markdown_text("Body text.\n")
