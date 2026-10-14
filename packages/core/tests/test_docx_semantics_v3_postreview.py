@@ -268,6 +268,58 @@ def test_duplicate_targetmode_internal_relationship_and_owned_tails_fail_closed(
             tail_session.prove_package(tail_output)
 
 
+@pytest.mark.parametrize("part_name", ["word/_rels/document.xml.rels", "[Content_Types].xml"])
+def test_package_relationship_and_content_type_whitespace_is_lexical_only(tmp_path: Path, part_name: str) -> None:
+    session, output = _write_paragraph_anchor(tmp_path)
+
+    def add_whitespace(root) -> None:
+        root.text = "\r\n  "
+        for node in root:
+            node.tail = "\r\n  "
+
+    _mutate_xml_member(output, part_name, add_whitespace)
+    session.prove_package(output)
+
+    def add_payload(root) -> None:
+        root.text = "JUNK"
+
+    _mutate_xml_member(output, part_name, add_payload)
+    with pytest.raises(DocxSemanticsV3Error, match="root is invalid"):
+        session.prove_package(output)
+
+
+@pytest.mark.parametrize(
+    "corruption", ["none", "wrong-uuid", "wrong-uri", "duplicate-ref", "extra-child", "wrong-root-namespace"]
+)
+def test_host_empty_schema_refs_retain_complete_independent_package_proof(tmp_path: Path, corruption: str) -> None:
+    session, output = _write_paragraph_anchor(tmp_path)
+    _item_name, props_name = _owned_item_and_props(output, "document-target-map")
+    namespace = "{http://schemas.openxmlformats.org/officeDocument/2006/customXml}"
+
+    def change_properties(root) -> None:
+        refs = root.find(f"{namespace}schemaRefs")
+        assert refs is not None
+        for child in list(refs):
+            refs.remove(child)
+        if corruption == "wrong-uuid":
+            root.set(f"{namespace}itemID", "{00000000-0000-0000-0000-000000000001}")
+        elif corruption in {"wrong-uri", "duplicate-ref"}:
+            etree.SubElement(refs, f"{namespace}schemaRef", {f"{namespace}uri": "urn:wrong"})
+            if corruption == "duplicate-ref":
+                etree.SubElement(refs, f"{namespace}schemaRef", {f"{namespace}uri": "urn:other"})
+        elif corruption == "extra-child":
+            etree.SubElement(root, f"{namespace}extra")
+        elif corruption == "wrong-root-namespace":
+            root.tag = "{urn:wrong}datastoreItem"
+
+    _mutate_xml_member(output, props_name, change_properties)
+    if corruption == "none":
+        session.prove_package(output)
+    else:
+        with pytest.raises(DocxSemanticsV3Error):
+            session.prove_package(output)
+
+
 def test_ordinary_anchor_group_reports_exact_group_and_member_index(tmp_path: Path) -> None:
     document = Document()
     session = DocxSemanticsV3Session(document, source_sha256=hashlib.sha256(b"- A\n- B\n\n^list\n").hexdigest())

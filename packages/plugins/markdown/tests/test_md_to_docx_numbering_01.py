@@ -493,8 +493,12 @@ class TestMdToDocxNestedList:
         assert lvl1_fmt is not None, "Level 1 missing numFmt"
         assert lvl1_fmt.get(f"{{{WML_NS}}}val") == "decimal"
 
-    def test_same_depth_mixed_list_conflict_deterministically_prefers_ordered(self) -> None:
-        """F-F1-018: ordered numbering wins when one list tree mixes types at a depth."""
+    def test_same_depth_mixed_lists_keep_each_native_marker_type(self) -> None:
+        """Different branches use their own definition when native formats conflict."""
+        from docx import Document
+
+        from docwen_core.docx_parsing.numbering_index import NumberingIndex
+
         md = "- Parent A\n  - bullet child\n- Parent B\n  1. ordered child\n"
         md_path = write_temp_md(md)
         ctx, _ = make_context(md_path, target_format="docx")
@@ -502,17 +506,26 @@ class TestMdToDocxNestedList:
         result = MdToDocxConverter().convert(ctx)
 
         assert result.success
-        num_root = _get_numbering_xml(str(Path(result.artifacts[0].staging_path)))
-        assert num_root is not None
-        abstract_num_id = _our_abstract_num_id(num_root)
-        level_one = num_root.find(
-            f'{{{WML_NS}}}abstractNum[@{{{WML_NS}}}abstractNumId="{abstract_num_id}"]/'
-            f'{{{WML_NS}}}lvl[@{{{WML_NS}}}ilvl="1"]'
-        )
-        assert level_one is not None
-        number_format = level_one.find(f"{{{WML_NS}}}numFmt")
-        assert number_format is not None
-        assert number_format.get(f"{{{WML_NS}}}val") == "decimal"
+        document = Document(str(Path(result.artifacts[0].staging_path)))
+        index = NumberingIndex(document)
+        actual = []
+        for paragraph in document.paragraphs:
+            properties = paragraph._p.find(f"{{{WML_NS}}}pPr/{{{WML_NS}}}numPr")
+            assert properties is not None
+            number = properties.find(f"{{{WML_NS}}}numId")
+            level = properties.find(f"{{{WML_NS}}}ilvl")
+            assert number is not None and level is not None
+            num_id, ilvl = number.get(f"{{{WML_NS}}}val"), level.get(f"{{{WML_NS}}}val")
+            assert num_id is not None and ilvl is not None
+            definition = index.lookup(num_id, int(ilvl))
+            assert definition is not None
+            actual.append((paragraph.text, definition.num_fmt))
+        assert actual == [
+            ("Parent A", "bullet"),
+            ("bullet child", "bullet"),
+            ("Parent B", "bullet"),
+            ("ordered child", "decimal"),
+        ]
 
 
 class TestMdToDocxMultipleLists:

@@ -2,6 +2,13 @@
 
 本目录只存放需要随仓库长期维护的测试资产。目标不是把所有测试输入都外置，而是让需要复用、需要文件语义、或需要整份结果比对的资产有清晰边界。
 
+`files/quote-content.md` is the minimal anonymous quote/list content-mapping corpus:
+mixed Heading/Code/Table/List blocks, continuation paragraphs, list–quote–list nesting,
+table-only quote and surrounding outside prose. It is a source regression input;
+native Office save/reopen and exact candidate evidence remain separate gates.
+It checks content, order, literal code and native child styles, rather than source
+container-tree or Markdown-spelling equality. Normal mapping changes produce no loss warning.
+
 `old_system_*` 只记录测试证据的历史来源，不构成旧实现或旧缺陷的兼容承诺。当前行为必须单独裁定；旧缺陷不会因为出现在 golden 中而被保留。
 
 - `golden/current_fa01_complete_matrix_semantics.json`

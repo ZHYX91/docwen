@@ -420,6 +420,50 @@ def test_visible_body_and_complete_payload_tampering_fail_closed(tmp_path: Path)
         second_session.prove_package(second)
 
 
+@pytest.mark.parametrize(
+    "mutation", ["equivalent", "changed-body", "format-payload", "page-break", "clear-break", "tab-type"]
+)
+def test_equivalent_empty_run_properties_and_text_wrapping_break_keep_literal_proof(
+    tmp_path: Path, mutation: str
+) -> None:
+    session, output = _simple_package(tmp_path)
+
+    def change_runs(root: etree._Element) -> None:
+        carrier = next(
+            item for item in root.iter(qn("w:sdt")) if (_sdt_tag(item) or "").startswith(FENCED_SOURCE_TAG_PREFIX)
+        )
+        content = carrier.find(qn("w:sdtContent"))
+        assert content is not None
+        properties = etree.Element(qn("w:rPr"))
+        content[0].insert(0, properties)
+        empty = etree.Element(qn("w:r"))
+        etree.SubElement(empty, qn("w:rPr"))
+        content.insert(0, empty)
+        line_break = next(content.iter(qn("w:br")))
+        line_break.set(qn("w:type"), "textWrapping")
+        if mutation == "changed-body":
+            next(content.iter(qn("w:t"))).text = "tampered"
+        elif mutation == "format-payload":
+            etree.SubElement(properties, qn("w:vanish"))
+        elif mutation == "page-break":
+            line_break.set(qn("w:type"), "page")
+        elif mutation == "clear-break":
+            line_break.set(qn("w:clear"), "all")
+        elif mutation == "tab-type":
+            line_break.tag = qn("w:tab")
+
+    _mutate_document_xml(output, change_runs)
+    if mutation == "equivalent":
+        recovery = session.prove_package(output)
+        loaded = Document(str(output))
+        recovery = DocxSemanticsV3Recovery.load(output, loaded)
+        paragraph = next(cast(Any, loaded.element).body.iter(qn("w:p")))
+        assert recovery.render_fenced_source(paragraph) == "```rust\nbody\n```\n"
+    else:
+        with pytest.raises(DocxSemanticsV3Error):
+            session.prove_package(output)
+
+
 def test_unmapped_carrier_and_overlapping_source_ranges_fail_closed(tmp_path: Path) -> None:
     source = "```rust\nbody\n```\n"
     identity = _identity(

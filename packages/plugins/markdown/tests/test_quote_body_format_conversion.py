@@ -82,6 +82,22 @@ def test_body_anchor_properties_leave_quote_and_quoted_list_ownership_intact(
             continue
         level = 2 if text.startswith("Nested") else 1
         style = paragraph.style
+        if text.startswith("Quoted"):
+            assert style is not None and style.style_id == "DocWenListBlock"
+            assert paragraph._p.find(f"{qn('w:pPr')}/{qn('w:pBdr')}/{qn('w:left')}") is not None
+            assert paragraph.alignment is None and paragraph.paragraph_format.space_after is None
+            indent = _indent(paragraph)
+            assert indent is None or (
+                "firstLineChars" not in indent and indent.get("firstLine", "0") == "0" and "right" not in indent
+            )
+            number = paragraph._p.find(f"{qn('w:pPr')}/{qn('w:numPr')}")
+            if "continuation" in text:
+                assert number is not None
+                number_id = number.find(qn("w:numId"))
+                assert number_id is not None and number_id.get(qn("w:val")) == "0"
+            else:
+                assert number is not None and number.find(qn("w:numId")) is not None
+            continue
         assert style is not None and style.style_id == f"DocWenQuote{level}"
         assert _indent(paragraph) is None
         assert paragraph.alignment is None and paragraph.paragraph_format.space_after is None

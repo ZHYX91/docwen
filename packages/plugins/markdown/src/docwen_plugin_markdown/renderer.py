@@ -49,6 +49,7 @@ from docwen_plugin_markdown.renderer_utils import (
     apply_header_row_bottom_border,
     apply_list_indent,
     apply_paragraph_shading,
+    apply_quote_container_accent,
     apply_quote_style,
     apply_run_east_asian_font,
     apply_table_grid_borders,
@@ -282,6 +283,7 @@ class MdToDocxRenderer:
             if 1 <= level <= 9
         }
         self._quote_depth = 0
+        self._list_types_by_num_id: dict[str, dict[int, str]] = {}
         self._cancellation = cancellation
         self._note_ctx = note_ctx
         self._formatting_mode = formatting_mode
@@ -874,7 +876,12 @@ class MdToDocxRenderer:
                     style = self._quote_styles.get(style_level)
                     for item in items:
                         if hasattr(item, "_p"):
-                            apply_quote_style(item, style=style, level=style_level)
+                            if child.get("type") in {"paragraph", "block_text"} and not self._is_image_only_paragraph(
+                                child.get("children", [])
+                            ):
+                                apply_quote_style(item, style=style, level=style_level)
+                            else:
+                                apply_quote_container_accent(item, style=style)
                             if self._managed_styles is None:
                                 self._apply_body_font_to_runs(item)
                 paragraphs.extend(items)
@@ -907,7 +914,9 @@ class MdToDocxRenderer:
         self._analyze_list_levels(node, level_types, depth=0)
 
         # 2. Create numbering definition → numId
-        num_id = self._list_numbering.create_list_definition(level_types)
+        start = node.get("attrs", {}).get("start", 1)
+        num_id = self._list_numbering.create_list_definition(level_types, start_by_level={0: int(start or 0)})
+        self._list_types_by_num_id[num_id] = level_types
 
         # 3. Render items with numId context
         children = node.get("children", [])
@@ -972,6 +981,7 @@ class MdToDocxRenderer:
         """
         ntype = node.get("type", "")
         paragraphs: list = []
+        continuation_indent = self._list_numbering.continuation_indent(num_id, depth)
 
         if ntype == "list_item":
             children = node.get("children", [])
@@ -979,8 +989,11 @@ class MdToDocxRenderer:
                 ctype = child.get("type", "")
                 if ctype in ("paragraph", "block_text"):
                     p = self._doc.add_paragraph(style=self._list_block_style)
-                    if num_id is not None:
+                    if num_id is not None and not paragraphs:
                         apply_list_to_paragraph(p, num_id, depth)
+                    elif paragraphs:
+                        apply_list_to_paragraph(p, "0", depth)
+                        apply_list_indent(p, depth, left_twips=continuation_indent)
                     render_inlines(
                         p,
                         child.get("children", []),
@@ -990,25 +1003,44 @@ class MdToDocxRenderer:
                     )
                     if self._managed_styles is None:
                         self._apply_body_font_to_runs(p)
+                    if self._source_carrier_session is not None and child.get("_docwen_v3_ordinary_anchor") is not None:
+                        self._bind_v3_ordinary_anchor((p._p,), child)
                     paragraphs.append(p)
                 elif ctype in ("list", "bullet_list", "ordered_list"):
-                    sub_items = self._render_list_item(child, depth + 1, num_id=num_id)
+                    nested_id = num_id
+                    nested_type = "ordered" if child.get("attrs", {}).get("ordered", False) else "unordered"
+                    nested_start = int(child.get("attrs", {}).get("start", 1) or 0)
+                    if (
+                        nested_start != 1
+                        or self._list_types_by_num_id.get(num_id or "", {}).get(depth + 1) != nested_type
+                    ):
+                        nested_types: dict[int, str] = {}
+                        self._analyze_list_levels(child, nested_types, depth + 1)
+                        nested_id = self._list_numbering.create_list_definition(
+                            nested_types, start_by_level={depth + 1: nested_start}
+                        )
+                        self._list_types_by_num_id[nested_id] = nested_types
+                    sub_items = self._render_list_item(child, depth + 1, num_id=nested_id)
                     paragraphs.extend(sub_items)
                 elif ctype == "block_code":
                     rendered = self._handle_block_code(child)
                     if rendered is not None:
                         items = rendered if isinstance(rendered, list) else [rendered]
-                        for item in items:
-                            apply_list_indent(item, depth)
+                        for index, item in enumerate(items):
+                            if index == 0 and not paragraphs and num_id is not None:
+                                apply_list_to_paragraph(item, num_id, depth)
+                            apply_list_indent(item, depth, left_twips=continuation_indent)
                         paragraphs.extend(items)
                 elif ctype == "block_quote":
                     items = self._handle_block_quote(child)
                     if items:
                         for item_index, item in enumerate(items):
-                            if item_index == 0 and num_id is not None and hasattr(item, "_p"):
+                            if item_index == 0 and not paragraphs and num_id is not None and hasattr(item, "_p"):
                                 apply_list_to_paragraph(item, num_id, depth)
+                            elif hasattr(item, "_p"):
+                                apply_list_indent(item, depth, left_twips=continuation_indent)
                             else:
-                                apply_list_indent(item, depth)
+                                set_table_left_indent(item, 360 * (depth + 1))
                         paragraphs.extend(items)
                 elif ctype == "table":
                     table = self._handle_table(child)
@@ -1025,27 +1057,35 @@ class MdToDocxRenderer:
                         if result is not None:
                             if isinstance(result, list):
                                 for r in result:
-                                    apply_list_indent(r, depth) if hasattr(r, "_p") else None
+                                    apply_list_indent(r, depth, left_twips=continuation_indent) if hasattr(
+                                        r, "_p"
+                                    ) else None
                                 paragraphs.extend(result)
                             else:
-                                apply_list_indent(result, depth) if hasattr(result, "_p") else None
+                                apply_list_indent(result, depth, left_twips=continuation_indent) if hasattr(
+                                    result, "_p"
+                                ) else None
                                 paragraphs.append(result)
                     finally:
                         self._list_depth = prev_depth
-            if (
-                self._source_carrier_session is not None
-                and node.get("_docwen_v3_ordinary_anchor") is not None
-                and paragraphs
-            ):
-                self._bind_v3_ordinary_anchor(
-                    tuple(item._p if hasattr(item, "_p") else item._element for item in paragraphs),
-                    node,
-                )
         elif ntype in ("list", "bullet_list", "ordered_list"):
             for child in node.get("children", []):
                 sub_items = self._render_list_item(child, depth, num_id=num_id)
                 paragraphs.extend(sub_items)
 
+        if ntype == "list_item":
+            if paragraphs and not hasattr(paragraphs[0], "_p"):
+                marker = self._doc.add_paragraph(style=self._list_block_style)
+                paragraphs[0]._element.addprevious(marker._p)
+                paragraphs.insert(0, marker)
+            if not paragraphs:
+                return paragraphs
+            if num_id is not None and paragraphs[0]._p.find(f"{qn('w:pPr')}/{qn('w:numPr')}") is None:
+                apply_list_to_paragraph(paragraphs[0], num_id, depth)
+            if self._source_carrier_session is not None and node.get("_docwen_v3_ordinary_anchor") is not None:
+                self._bind_v3_ordinary_anchor(
+                    tuple(item._p if hasattr(item, "_p") else item._element for item in paragraphs), node
+                )
         return paragraphs
 
     def _handle_thematic_break(self, node: dict[str, Any]):

@@ -106,6 +106,15 @@ def plugin_single_line_block_math(md: mistune.Markdown) -> None:
         parse_single_line_block_math,
         before="block_math",
     )
+    # Both display spellings are blocks inside native quote/list containers.
+    # Otherwise Mistune emits block_math as a paragraph's inline child, which
+    # has no block owner and is silently skipped by the inline renderer.
+    for rules_name in ("block_quote_rules", "list_rules"):
+        rules = getattr(md.block, rules_name)
+        if "block_math" not in rules:
+            md.block.insert_rule(rules, "block_math", before="list")
+        if "single_line_block_math" not in rules:
+            md.block.insert_rule(rules, "single_line_block_math", before="block_math")
 
 
 def plugin_extended_atx_headings(md: mistune.Markdown) -> None:

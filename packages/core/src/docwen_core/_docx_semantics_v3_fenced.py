@@ -365,6 +365,14 @@ def _prove_and_read_body_runs(content: Any) -> str:
         if run.tag != qn("w:r") or run.attrib or run.xpath("text()") or run.tail is not None:
             raise DocxSemanticsV3Error("fenced-source content contains a non-canonical run")
         payload = list(run)
+        if payload and payload[0].tag == qn("w:rPr"):
+            properties = payload.pop(0)
+            if properties.attrib or properties.text is not None or properties.tail is not None or len(properties):
+                raise DocxSemanticsV3Error("fenced-source run properties are not empty")
+            # Empty run properties, including a properties-only run, carry
+            # no characters. LibreOffice emits both shapes during save.
+            if not payload:
+                continue
         if not payload or any(item.tag not in {qn("w:t"), qn("w:br"), qn("w:cr"), qn("w:tab")} for item in payload):
             raise DocxSemanticsV3Error("fenced-source run has non-text payload")
         payload_items.extend(payload)
@@ -372,7 +380,13 @@ def _prove_and_read_body_runs(content: Any) -> str:
     # Authenticate that stream and the reconstructed block against their hashes.
     for item in payload_items:
         if item.tag in {qn("w:br"), qn("w:cr"), qn("w:tab")}:
-            if item.attrib or item.text is not None or item.tail is not None or len(item) != 0:
+            allowed_attributes = ((), ((qn("w:type"), "textWrapping"),)) if item.tag == qn("w:br") else ((),)
+            if (
+                tuple(item.attrib.items()) not in allowed_attributes
+                or item.text is not None
+                or item.tail is not None
+                or len(item) != 0
+            ):
                 raise DocxSemanticsV3Error("fenced-source break/tab is not canonical")
             output.append("\n" if item.tag == qn("w:br") else "\r\n" if item.tag == qn("w:cr") else "\t")
             continue

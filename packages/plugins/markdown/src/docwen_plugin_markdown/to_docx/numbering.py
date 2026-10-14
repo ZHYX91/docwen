@@ -141,6 +141,7 @@ class DocxListNumbering:
         # Format tables keyed by level (0‑8)
         self._ordered_formats: dict[int, dict[str, Any]] = {}
         self._unordered_formats: dict[int, dict[str, Any]] = {}
+        self._continuation_indents: dict[str, dict[int, int]] = {}
 
         # Monotonic ID allocators start high but also inspect the actual
         # template. A fixed starting point alone is not collision-safe for
@@ -154,7 +155,9 @@ class DocxListNumbering:
 
     # ── Public methods ─────────────────────────────────────────────────
 
-    def create_list_definition(self, level_types: dict[int, str]) -> str:
+    def create_list_definition(
+        self, level_types: dict[int, str], *, start_by_level: dict[int, int] | None = None
+    ) -> str:
         """Create a numbering definition for one list group.
 
         Args:
@@ -172,6 +175,11 @@ class DocxListNumbering:
             type_ = level_types.get(lvl, "ordered")
             fmt = self._unordered_formats[lvl] if type_ == "unordered" else self._ordered_formats[lvl]
             levels.append(dict(fmt))
+            if start_by_level is not None and lvl in start_by_level:
+                start = start_by_level[lvl]
+                if not 0 <= start <= 999_999_999:
+                    raise ValueError("Markdown list start is outside its native numbering range")
+                levels[-1]["start"] = str(start)
 
         # -- abstractNum --
         abstract_num_id = self._next_abstract_num_id
@@ -184,6 +192,10 @@ class DocxListNumbering:
         self._next_num_id += 1
         num_elem = _create_num(num_id, abstract_num_id)
         self._num_elements.append(num_elem)
+        self._continuation_indents[str(num_id)] = {
+            level: int(definition.get("ind_left", BASE_INDENT + INDENT_INCREMENT * level))
+            for level, definition in enumerate(levels)
+        }
 
         logger.debug(
             "Created list def: numId=%s → abstractNumId=%s",
@@ -191,6 +203,10 @@ class DocxListNumbering:
             abstract_num_id,
         )
         return str(num_id)
+
+    def continuation_indent(self, num_id: str | None, level: int) -> int:
+        """Return the text column of this request's emitted native level."""
+        return self._continuation_indents.get(num_id or "", {}).get(level, BASE_INDENT + INDENT_INCREMENT * level)
 
     @property
     def has_definitions(self) -> bool:
@@ -300,10 +316,7 @@ def apply_list_to_paragraph(paragraph, num_id: str, level: int) -> None:
     p_elem = paragraph._p
 
     # Get or create w:pPr
-    pPr = p_elem.find(f"{{{WML_NS}}}pPr")
-    if pPr is None:
-        pPr = OxmlElement("w:pPr")
-        p_elem.insert(0, pPr)
+    pPr = p_elem.get_or_add_pPr()
 
     # Remove existing numPr if present
     existing = pPr.find(f"{{{WML_NS}}}numPr")
@@ -321,7 +334,11 @@ def apply_list_to_paragraph(paragraph, num_id: str, level: int) -> None:
     numId_elem.set(qn("w:val"), num_id)
     numPr.append(numId_elem)
 
-    pPr.insert(0, numPr)
+    # python-docx owns CT_PPr ordering (pStyle precedes numPr; borders and
+    # indentation follow it). Inserting at zero makes styled lists invalid.
+    ordered_num_pr = pPr.get_or_add_numPr()
+    for child in numPr:
+        ordered_num_pr.append(child)
 
 
 # ═══════════════════════════════════════════════════════════════════════════

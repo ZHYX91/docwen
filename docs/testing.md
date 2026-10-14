@@ -20,6 +20,13 @@ Tests are grouped by primary behavior family and execution cost. The default rep
 
 Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry point pins the repository's pytest configuration and root fixtures even when every selected path belongs to a single workspace package.
 
+`tests/integration/test_quote_content_mapping.py` validates quote child styles, current native list starts,
+continuations, literal code, body order and table data. Markdown spelling and reasonable quote/list nesting
+changes are normal mappings and do not require a loss warning. Authored IDs, links and fenced literal sources
+retain their separate integrity tests. Native acceptance uses the same candidate with representative mixed
+content in the relevant installed Word, WPS and LibreOffice hosts; it checks useful visible content after
+save/reopen rather than requiring reconstruction of the source container tree.
+
 `tests/integration/test_table_header_file_roundtrip.py` is a direct `.md` → `.docx` → `.md` file
 integration regression for complex header roles, native merges and independent repetition policy. It removes the
 source before importing the DOCX and covers conditional-style edits, changed cell text, moved tables, stale

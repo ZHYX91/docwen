@@ -35,6 +35,7 @@ class NumberingIndex:
         self._num_to_abstract: dict[str, str] = {}  # numId → abstractNumId
         self._abstract_levels: dict[str, dict[int, dict]] = {}  # abstractNumId → {ilvl: lvl_elem_attrs}
         self._abstract_num_style_links: dict[str, str] = {}  # abstractNumId → numStyleLink pStyle
+        self._num_level_overrides: dict[str, dict[int, dict]] = {}
 
         try:
             numbering_part = doc.part.numbering_part
@@ -52,6 +53,30 @@ class NumberingIndex:
                 abs_id = abs_ref.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val")
                 if abs_id is not None:
                     self._num_to_abstract[str(num_id)] = str(abs_id)
+                    overrides = {}
+                    namespace = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+                    for override in num_elem.findall(f"{namespace}lvlOverride"):
+                        raw_level = override.get(f"{namespace}ilvl")
+                        if raw_level is None:
+                            continue
+                        values = {}
+                        native_level = override.find(f"{namespace}lvl")
+                        if native_level is not None:
+                            for child_name, key in (
+                                ("numFmt", "numFmt"),
+                                ("lvlText", "lvlText"),
+                                ("start", "start"),
+                                ("suff", "suff"),
+                                ("pStyle", "pStyle"),
+                            ):
+                                child = native_level.find(f"{namespace}{child_name}")
+                                if child is not None and (value := child.get(f"{namespace}val")) is not None:
+                                    values[key] = int(value) if key == "start" else value
+                        start_override = override.find(f"{namespace}startOverride")
+                        if start_override is not None and (value := start_override.get(f"{namespace}val")) is not None:
+                            values["start"] = int(value)
+                        overrides[int(raw_level)] = values
+                    self._num_level_overrides[str(num_id)] = overrides
 
         # abstractNum levels
         for abs_elem in numbering_xml.findall(
@@ -117,6 +142,7 @@ class NumberingIndex:
         lvl = levels.get(ilvl)
         if lvl is None:
             return None
+        lvl = {**lvl, **self._num_level_overrides.get(str(num_id), {}).get(ilvl, {})}
         return NumberingLevel(
             num_id=str(num_id),
             abstract_num_id=abs_id,
@@ -135,16 +161,7 @@ class NumberingIndex:
                     # Find a numId that references this abstractNumId
                     for num_id, aid in self._num_to_abstract.items():
                         if aid == abs_id:
-                            return NumberingLevel(
-                                num_id=num_id,
-                                abstract_num_id=abs_id,
-                                ilvl=ilvl,
-                                num_fmt=lvl.get("numFmt", ""),
-                                lvl_text=lvl.get("lvlText", ""),
-                                start=lvl.get("start", 1),
-                                suff=lvl.get("suff", "tab"),
-                                p_style=style_id,
-                            )
+                            return self.lookup(num_id, ilvl)
         return None
 
     def lookup_by_num_id(self, num_id: str, ilvl: int) -> NumberingLevel | None:

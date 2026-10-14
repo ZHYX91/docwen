@@ -318,13 +318,18 @@ def verify_custom_xml_support(package: ZipFile, item_number: int, namespace: str
         or props_children[0].attrib
         or props_children[0].text is not None
         or props_children[0].tail is not None
-        or len(props_children[0]) != 1
-        or len(schema_refs) != 1
-        or tuple(schema_refs[0].attrib) != (f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}uri",)
-        or schema_refs[0].text is not None
-        or schema_refs[0].tail is not None
-        or len(schema_refs[0]) != 0
-        or schema_refs[0].get(f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}uri") != namespace
+        or len(props_children[0]) not in {0, 1}
+        or (
+            len(props_children[0]) == 1
+            and (
+                len(schema_refs) != 1
+                or tuple(schema_refs[0].attrib) != (f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}uri",)
+                or schema_refs[0].text is not None
+                or schema_refs[0].tail is not None
+                or len(schema_refs[0]) != 0
+                or schema_refs[0].get(f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}uri") != namespace
+            )
+        )
     ):
         raise DocxSemanticsV3Error("custom XML properties do not bind the expected schema")
     expected_uuid = (
@@ -600,6 +605,7 @@ def _rewrite_zip(
 
 def _verify_document_relationship(package: ZipFile, item_number: int, parser: Any) -> None:
     rels = etree.fromstring(package.read("word/_rels/document.xml.rels"), parser)
+    _normalize_owned_xml(rels)
     _validate_relationships_root(rels, context="document")
     target = f"../customXml/item{item_number}.xml"
     matching = [item for item in rels if item.get("Target") == target]
@@ -618,7 +624,13 @@ def _verify_document_relationship(package: ZipFile, item_number: int, parser: An
 
 def _verify_content_types(package: ZipFile, item_number: int, parser: Any) -> None:
     types = etree.fromstring(package.read("[Content_Types].xml"), parser)
-    if types.tag != f"{{{_CONTENT_TYPES_NAMESPACE}}}Types" or types.attrib:
+    _normalize_owned_xml(types)
+    if (
+        types.tag != f"{{{_CONTENT_TYPES_NAMESPACE}}}Types"
+        or types.attrib
+        or types.text is not None
+        or types.tail is not None
+    ):
         raise DocxSemanticsV3Error("content-types root is invalid")
     item_part = f"/customXml/item{item_number}.xml"
     props_part = f"/customXml/itemProps{item_number}.xml"
@@ -653,7 +665,12 @@ def _verify_content_types(package: ZipFile, item_number: int, parser: Any) -> No
 
 def _validate_relationships_root(root: Any, *, context: str) -> None:
     relationship_tag = f"{{{_RELATIONSHIPS_NAMESPACE}}}Relationship"
-    if root.tag != f"{{{_RELATIONSHIPS_NAMESPACE}}}Relationships" or root.attrib:
+    if (
+        root.tag != f"{{{_RELATIONSHIPS_NAMESPACE}}}Relationships"
+        or root.attrib
+        or (root.text and root.text.strip())
+        or (root.tail and root.tail.strip())
+    ):
         raise DocxSemanticsV3Error(f"{context} relationships root is invalid")
     identifiers: list[str] = []
     for relation in root:
