@@ -199,6 +199,17 @@ must resolve to a style of the correct type.
   OMML is a separately frozen interoperability contract, inline math inside a link is preserved visibly as
   `$...$` text rather than silently flattened or emitted as an ambiguous hyperlink/math structure.
 - Table header paragraphs use `DocWenTableHeader`; table body paragraphs use `DocWenTableContent`.
+- Markdown quotes use Quote styles for prose. Heading, Code Block, List Block and Table children retain their
+  semantic styles and native numbering; an optional left-border accent on paragraph children follows the
+  effective Quote style inheritance and respects the child's direct or inherited border, including `none`/`nil`.
+  A list item has one native marker; continuation paragraphs explicitly disable inherited numbering.
+  Ordered starts and native numbering overrides determine their visible ordinals.
+  Nested branches with conflicting marker formats receive independent native definitions.
+- Markdown and DOCX structures are not one-to-one. DOCX-to-Markdown uses currently recognizable paragraphs,
+  numbering, tables and code to produce readable content. Quote/list nesting and Markdown spelling may change;
+  this normal mapping needs no conversion-loss warning. Body content, order, literal code and list/table data
+  remain meaningful validation targets. Existing authored-ID, navigation and fenced-source contracts keep their
+  independent integrity checks; ordinary quotes add no container ledger or mechanical bookmark protocol.
 - For the explicitly selected built-in `three_line_table` key, multi-row column headers project their complete
   lower boundary and wide group headings' lower edges after native merges are finished. A group ends above the
   complete header boundary and spans more than one column; single-column intermediate headings get no added line.

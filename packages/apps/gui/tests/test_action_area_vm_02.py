@@ -233,7 +233,7 @@ class TestCollectOptions:
         vm.setup_for_md_to_document("/test.md")
         opts = vm.collect_options()
         assert opts[SYMBOL_PAIRING] is True
-        assert opts[SENSITIVE_WORD] is False
+        assert opts[SENSITIVE_WORD] is True
 
     def test_render_mode_in_collect_options(self, vm: ActionAreaViewModel) -> None:
         vm.setup_for_md_to_document("/test.md")
@@ -460,5 +460,11 @@ class TestOptionConstants:
         assert len(PROOFREAD_OPTION_KEYS) == 4
 
     def test_default_proofread_sensible(self) -> None:
-        assert DEFAULT_PROOFREAD_OPTIONS[SENSITIVE_WORD] is False
-        assert DEFAULT_PROOFREAD_OPTIONS[SYMBOL_PAIRING] is True
+        from docwen_core.options import PROOFREAD_OPTIONS_SCHEMA
+
+        schema_defaults = {
+            key.removeprefix("enable_"): spec["default"]
+            for key, spec in PROOFREAD_OPTIONS_SCHEMA["properties"].items()
+            if key.startswith("enable_")
+        }
+        assert schema_defaults == DEFAULT_PROOFREAD_OPTIONS

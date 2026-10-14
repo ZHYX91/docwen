@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 from zipfile import ZipFile
@@ -24,11 +23,17 @@ from docwen_core.docx_semantics_v3 import (
     DocxSemanticsV3Error,
     DocxSemanticsV3Recovery,
     DocxSemanticsV3Session,
-    FencedSourceIdentityV3,
     append_complex_field,
-    derive_fenced_source_identity_v3,
     fenced_source_identity_from_mapping_v3,
     fenced_source_mapping_v3,
+)
+
+from ._docx_semantics_v3_fenced_source_support import (
+    _identity,
+    _map_part,
+    _mutate_document_xml,
+    _sdt_tag,
+    _write,
 )
 
 pytestmark = pytest.mark.contract
@@ -420,6 +425,50 @@ def test_visible_body_and_complete_payload_tampering_fail_closed(tmp_path: Path)
         second_session.prove_package(second)
 
 
+@pytest.mark.parametrize(
+    "mutation", ["equivalent", "changed-body", "format-payload", "page-break", "clear-break", "tab-type"]
+)
+def test_equivalent_empty_run_properties_and_text_wrapping_break_keep_literal_proof(
+    tmp_path: Path, mutation: str
+) -> None:
+    session, output = _simple_package(tmp_path)
+
+    def change_runs(root: etree._Element) -> None:
+        carrier = next(
+            item for item in root.iter(qn("w:sdt")) if (_sdt_tag(item) or "").startswith(FENCED_SOURCE_TAG_PREFIX)
+        )
+        content = carrier.find(qn("w:sdtContent"))
+        assert content is not None
+        properties = etree.Element(qn("w:rPr"))
+        content[0].insert(0, properties)
+        empty = etree.Element(qn("w:r"))
+        etree.SubElement(empty, qn("w:rPr"))
+        content.insert(0, empty)
+        line_break = next(content.iter(qn("w:br")))
+        line_break.set(qn("w:type"), "textWrapping")
+        if mutation == "changed-body":
+            next(content.iter(qn("w:t"))).text = "tampered"
+        elif mutation == "format-payload":
+            etree.SubElement(properties, qn("w:vanish"))
+        elif mutation == "page-break":
+            line_break.set(qn("w:type"), "page")
+        elif mutation == "clear-break":
+            line_break.set(qn("w:clear"), "all")
+        elif mutation == "tab-type":
+            line_break.tag = qn("w:tab")
+
+    _mutate_document_xml(output, change_runs)
+    if mutation == "equivalent":
+        recovery = session.prove_package(output)
+        loaded = Document(str(output))
+        recovery = DocxSemanticsV3Recovery.load(output, loaded)
+        paragraph = next(cast(Any, loaded.element).body.iter(qn("w:p")))
+        assert recovery.render_fenced_source(paragraph) == "```rust\nbody\n```\n"
+    else:
+        with pytest.raises(DocxSemanticsV3Error):
+            session.prove_package(output)
+
+
 def test_unmapped_carrier_and_overlapping_source_ranges_fail_closed(tmp_path: Path) -> None:
     source = "```rust\nbody\n```\n"
     identity = _identity(
@@ -512,45 +561,6 @@ def _simple_package(tmp_path: Path, *, name: str = "simple.docx") -> tuple[DocxS
     return session, _write(session, document, tmp_path / name)
 
 
-def _identity(
-    block: str,
-    logical_body: str,
-    *,
-    fence_character: str,
-    opening_length: int,
-    opening_prefix: str,
-    info: str,
-    opening_eol: str,
-    body_prefixes: tuple[str, ...],
-    closing_state: Literal["present", "omitted_eof"],
-    closing_length: int,
-    closing_prefix: str,
-    closing_suffix: str,
-    closing_eol: str,
-    source_document: str | None = None,
-    source_start: int = 0,
-) -> FencedSourceIdentityV3:
-    source = block if source_document is None else source_document
-    return derive_fenced_source_identity_v3(
-        source_sha256=hashlib.sha256(source.encode()).hexdigest(),
-        source_start=source_start,
-        source_end=source_start + len(block),
-        block_sha256=hashlib.sha256(block.encode()).hexdigest(),
-        body_sha256=hashlib.sha256(logical_body.encode()).hexdigest(),
-        fence_character=fence_character,
-        opening_length=opening_length,
-        opening_prefix=opening_prefix,
-        info=info,
-        opening_eol=opening_eol,
-        body_prefixes=body_prefixes,
-        closing_state=closing_state,
-        closing_length=closing_length,
-        closing_prefix=closing_prefix,
-        closing_suffix=closing_suffix,
-        closing_eol=closing_eol,
-    )
-
-
 def _body_paragraph(document: Any, logical_body: str):
     paragraph = document.add_paragraph()
     lines = logical_body.split("\n")
@@ -579,45 +589,3 @@ def _caption_styles(document: Any):
             code_style = style
     assert code_style is not None
     return tuple(bindings), code_style
-
-
-def _write(session: DocxSemanticsV3Session, document: Any, output: Path) -> Path:
-    session.finalize_document()
-    document.save(str(output))
-    session.write_package(output)
-    session.prove_package(output)
-    return output
-
-
-def _map_part(package: ZipFile) -> str:
-    return next(
-        name
-        for name in package.namelist()
-        if name.startswith("customXml/item")
-        and name.endswith(".xml")
-        and FENCED_SOURCE_MAP_NAMESPACE.encode() in package.read(name)
-    )
-
-
-def _sdt_tag(sdt: etree._Element) -> str | None:
-    tag = sdt.find(f"./{qn('w:sdtPr')}/{qn('w:tag')}")
-    return None if tag is None else tag.get(qn("w:val"))
-
-
-def _mutate_document_xml(path: Path, mutate) -> None:
-    with ZipFile(path) as package:
-        infos = package.infolist()
-        payloads = {item.filename: package.read(item.filename) for item in infos}
-    root = etree.fromstring(payloads["word/document.xml"])
-    mutate(root)
-    payloads["word/document.xml"] = etree.tostring(
-        root,
-        encoding="UTF-8",
-        xml_declaration=True,
-        standalone=True,
-    )
-    temporary = path.with_suffix(".mutated.docx")
-    with ZipFile(temporary, "w") as output:
-        for info in infos:
-            output.writestr(info, payloads[info.filename])
-    temporary.replace(path)

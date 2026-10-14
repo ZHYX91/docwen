@@ -330,6 +330,86 @@ def resolve_table_style(doc, semantic_key: str):
     return None
 
 
+def apply_quote_container_accent(paragraph, *, style=None) -> None:
+    """Project only an effective quote left border, preserving child intent."""
+    from copy import deepcopy
+
+    def left_border(current):
+        seen = set()
+        while current is not None:
+            if current.style_id in seen:
+                return None, False
+            seen.add(current.style_id)
+            element = current._element.find(f"{qn('w:pPr')}/{qn('w:pBdr')}/{qn('w:left')}")
+            if element is not None:
+                return element, True
+            parent = current.base_style
+            if current._element.find(qn("w:basedOn")) is not None and parent is None:
+                return None, False
+            current = parent
+        return None, True
+
+    if style is None:
+        return
+    source, proved = left_border(style)
+    if source is None or not proved:
+        return
+    properties = paragraph._p.get_or_add_pPr()
+    if properties.find(f"{qn('w:pBdr')}/{qn('w:left')}") is not None:
+        return
+    inherited, child_proved = left_border(paragraph.style)
+    if inherited is not None or not child_proved:
+        return
+    defaults = paragraph.part.document.styles._element.find(
+        f"{qn('w:docDefaults')}/{qn('w:pPrDefault')}/{qn('w:pPr')}/{qn('w:pBdr')}/{qn('w:left')}"
+    )
+    if defaults is not None:
+        return
+    borders = properties.find(qn("w:pBdr"))
+    if borders is None:
+        borders = OxmlElement("w:pBdr")
+        properties.insert_element_before(
+            borders,
+            "w:shd",
+            "w:tabs",
+            "w:suppressAutoHyphens",
+            "w:kinsoku",
+            "w:wordWrap",
+            "w:overflowPunct",
+            "w:topLinePunct",
+            "w:autoSpaceDE",
+            "w:autoSpaceDN",
+            "w:bidi",
+            "w:adjustRightInd",
+            "w:snapToGrid",
+            "w:spacing",
+            "w:ind",
+            "w:contextualSpacing",
+            "w:mirrorIndents",
+            "w:suppressOverlap",
+            "w:jc",
+            "w:textDirection",
+            "w:textAlignment",
+            "w:textboxTightWrap",
+            "w:outlineLvl",
+            "w:divId",
+            "w:cnfStyle",
+            "w:rPr",
+            "w:sectPr",
+            "w:pPrChange",
+        )
+    left = deepcopy(source)
+    # CT_PBdr order is top,left,bottom,right,between,bar.
+    next_edge = next(
+        (edge for edge in borders if edge.tag in {qn(f"w:{name}") for name in ("bottom", "right", "between", "bar")}),
+        None,
+    )
+    if next_edge is None:
+        borders.append(left)
+    else:
+        next_edge.addprevious(left)
+
+
 def apply_quote_style(paragraph, *, style=None, level: int = 1) -> None:
     """Apply a template quote style or its visible direct-format fallback.
 
@@ -376,7 +456,7 @@ def apply_quote_style(paragraph, *, style=None, level: int = 1) -> None:
     pPr.append(borders)
 
 
-def apply_list_indent(paragraph, level: int = 0) -> None:
+def apply_list_indent(paragraph, level: int = 0, *, left_twips: int | None = None) -> None:
     """Apply nested list contextual indent to a paragraph.
 
     Uses ``w:ind`` with left offset based on nesting depth.
@@ -385,12 +465,16 @@ def apply_list_indent(paragraph, level: int = 0) -> None:
         paragraph: A python-docx ``Paragraph`` object.
         level: Zero-based nesting depth (0 = top-level list).
     """
-    indent_twips = 360 * (level + 1)
+    indent_twips = 360 * (level + 1) if left_twips is None else left_twips
     pPr = paragraph._p.get_or_add_pPr()
-    ind = OxmlElement("w:ind")
+    marker = pPr.find(f"{qn('w:numPr')}/{qn('w:numId')}")
+    if marker is not None and marker.get(qn("w:val")) != "0":
+        return
+    ind = pPr.get_or_add_ind()
     ind.set(qn("w:left"), str(indent_twips))
-    ind.set(qn("w:hanging"), "360")
-    pPr.append(ind)
+    for attribute in ("hanging", "hangingChars", "firstLineChars"):
+        ind.attrib.pop(qn(f"w:{attribute}"), None)
+    ind.set(qn("w:firstLine"), "0")
 
 
 def set_table_left_indent(table, indent_twips: int) -> None:

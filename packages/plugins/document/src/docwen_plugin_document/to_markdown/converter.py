@@ -22,6 +22,8 @@ from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, Any
 
+from docx.oxml.ns import qn
+
 from docwen_core.errors import CancellationRequested
 from docwen_core.text.ocr import report_ocr_outcome
 
@@ -898,6 +900,15 @@ class DocxToMarkdownConverter:
                     table_indent = " " * self._list_indent_spaces * (table_list_context_level + 1)
                     tbl_lines = [f"{table_indent}{line}" if line else line for line in tbl_lines]
                 anchor_groups = self._semantic_v3_recovery.ordinary_anchor_groups(child)
+                quote_prefix = _nested_ordinary_anchor_marker_prefix(
+                    tuple(
+                        group
+                        for group in anchor_groups
+                        if group.anchor.block_kind in {"block_quote", "callout", "list", "list_item"}
+                    )
+                )
+                if ">" in quote_prefix:
+                    tbl_lines = [f"{quote_prefix}{line}" if line else quote_prefix.rstrip() for line in tbl_lines]
                 for group_position, group in enumerate(anchor_groups):
                     if group.index == len(group.elements) - 1:
                         marker_prefix = _nested_ordinary_anchor_marker_prefix(
@@ -1438,6 +1449,17 @@ class DocxToMarkdownConverter:
         style_type, style_value = (
             detect_paragraph_style_type(para, config=style_detector_config) if para is not None else (None, None)
         )
+        # Existing authenticated ordinary-anchor groups can reliably identify
+        # quote prose and list continuations with retained semantic styles.
+        # Anonymous documents continue through the ordinary style mapper.
+        if style_type is None and para is not None:
+            owners = self._semantic_v3_recovery.ordinary_anchor_groups(para_element)
+            quote_depth = sum(group.anchor.block_kind in {"block_quote", "callout"} for group in owners)
+            if quote_depth:
+                from docwen_core.docx_parsing.format_features import extract_outline_level
+
+                if extract_outline_level(para) is None:
+                    style_type, style_value = "quote", quote_depth
         paragraph_list_context_level = self._paragraph_list_context_level(para, numbering_index)
         if paragraph_list_context_level == 0 and continuation_list_level is not None:
             paragraph_list_context_level = continuation_list_level + 1
@@ -1535,8 +1557,10 @@ class DocxToMarkdownConverter:
                     preserve_formatting=self._preserve_formatting,
                     style_detector_config=style_detector_config,
                 )
-                if has_page_break and para is not None
-                else [("text", paragraph_text)]
+                if para is not None and (has_page_break or semantic_reference_text is None)
+                else [
+                    ("text", semantic_reference_text.strip() if semantic_reference_text is not None else paragraph_text)
+                ]
             )
             level = style_value if isinstance(style_value, int) else 1
             prefix = ">" * max(level, 1)
@@ -1554,7 +1578,8 @@ class DocxToMarkdownConverter:
             nested_num_id: str | None = None
             nested_level = 0
             nested_list_type: str | None = None
-            if list_inside_quote or quote_inside_list:
+            has_quote_owner = any(kind in {"block_quote", "callout"} for kind in owner_kinds)
+            if list_inside_quote or quote_inside_list or has_quote_owner:
                 from docwen_core.docx_parsing.list_processing import (
                     detect_list_item,
                     format_list_marker,
@@ -1562,12 +1587,24 @@ class DocxToMarkdownConverter:
 
                 nested_num_id, nested_ilvl, nested_list_type = detect_list_item(para, numbering_index)
                 nested_level = nested_ilvl if isinstance(nested_ilvl, int) else 0
+                number = para_element.find(f"{qn('w:pPr')}/{qn('w:numPr')}/{qn('w:numId')}")
+                disabled_marker = number is not None and number.get(qn("w:val")) == "0"
+                if has_quote_owner and not quote_inside_list:
+                    list_inside_quote = list_inside_quote or nested_list_type is not None or disabled_marker
+                    quote_indent = ""
 
                 def _nested_list_marker() -> str:
                     if nested_list_type == "ordered" and nested_num_id is not None and list_counter is not None:
+                        native_level = (
+                            numbering_index.lookup_by_abstract(nested_num_id[4:], nested_level)
+                            if nested_num_id.startswith("abs_")
+                            else numbering_index.lookup(nested_num_id, nested_level)
+                        )
                         return format_list_marker(
                             "ordered",
-                            list_counter.next(nested_num_id, nested_level),
+                            list_counter.next(
+                                nested_num_id, nested_level, start=native_level.start if native_level else 1
+                            ),
                         )
                     return format_list_marker("bullet", 0, self._unordered_list_marker_type)
 
@@ -1579,7 +1616,7 @@ class DocxToMarkdownConverter:
                     continue
                 for line_index, qline in enumerate(part.splitlines()):
                     if list_inside_quote:
-                        marker = _nested_list_marker() if line_index == 0 else ""
+                        marker = _nested_list_marker() if line_index == 0 and nested_list_type is not None else ""
                         list_indent = " " * self._list_indent_spaces * nested_level
                         list_prefix = f"{list_indent}{marker} " if marker else f"{list_indent}  "
                         lines.append(f"{prefix} {list_prefix}{qline}".rstrip())
@@ -1665,6 +1702,15 @@ class DocxToMarkdownConverter:
             if heading_level > 6 and not self._extensions.extended_headings:
                 self._record_extension_loss("extended_headings", "Heading levels 7–9 were exported at level 6.")
             prefix = "#" * (heading_level if self._extensions.extended_headings else min(heading_level, 6))
+            quote_prefix = _nested_ordinary_anchor_marker_prefix(
+                tuple(
+                    group
+                    for group in self._semantic_v3_recovery.ordinary_anchor_groups(para_element)
+                    if group.anchor.block_kind in {"block_quote", "callout", "list", "list_item"}
+                )
+            )
+            if ">" in quote_prefix:
+                prefix = f"{quote_prefix}{prefix}"
             if _formula_text is not None:
                 display_text = _formula_text
             elif self._preserve_heading_formatting and para is not None:
@@ -1760,7 +1806,14 @@ class DocxToMarkdownConverter:
                 if heading_formatter is not None:
                     display_text = heading_formatter.format_heading(display_text, heading_level)
 
-            if source_anchor is not None:
+            structural_owner = (
+                source_anchor is not None
+                and source_anchor.owner_kind == "ordinary_anchor"
+                and source_anchor.block_kind in {"block_quote", "callout", "list"}
+            )
+            # Whole-block IDs are emitted after their final native child by
+            # the body walker; they do not become a Heading's own target ID.
+            if source_anchor is not None and not structural_owner:
                 if source_anchor.owner_kind != "semantic_target" or source_anchor.block_kind != "heading":
                     raise ValueError("a v3 Heading paragraph has non-Heading source ownership")
                 display_text = f"{display_text} ^{source_anchor.source_id}"
@@ -1842,10 +1895,12 @@ class DocxToMarkdownConverter:
                         else level_info.start
                     )
                     parent_counters = list_counter.snapshot(num_id_key) if list_counter else None
-                    pstyle_prefix = numbering_index.render_numbering_text(
-                        level_info,
-                        counter_val,
-                        parent_counters=parent_counters,
+                    pstyle_prefix = (
+                        format_list_marker("bullet", 0, self._unordered_list_marker_type) + " "
+                        if level_info.num_fmt == "bullet"
+                        else numbering_index.render_numbering_text(
+                            level_info, counter_val, parent_counters=parent_counters
+                        )
                     )
                     first_prefix = pstyle_prefix
                 else:
@@ -1872,7 +1927,8 @@ class DocxToMarkdownConverter:
                 level = ilvl if isinstance(ilvl, int) else 0
                 indent = " " * self._list_indent_spaces * level
                 if list_type == "ordered":
-                    ordinal = list_counter.next(num_id, level)
+                    native_level = numbering_index.lookup(num_id, level)
+                    ordinal = list_counter.next(num_id, level, start=native_level.start if native_level else 1)
                     marker = format_list_marker("ordered", ordinal)
                 else:
                     marker = format_list_marker("bullet", 0, self._unordered_list_marker_type)

@@ -105,6 +105,70 @@ class TestSetupDocumentFile:
 
 
 class TestSetupMdToDocumentDefaults:
+    def test_reads_all_proofread_switches_from_saved_defaults(self) -> None:
+        vm = ActionAreaViewModel(
+            FakeMainWindowViewModel(  # type: ignore[arg-type]
+                {
+                    "proofread.engine.enable_symbol_pairing": False,
+                    "proofread.engine.enable_symbol_correction": True,
+                    "proofread.engine.enable_typos_rule": False,
+                    "proofread.engine.enable_sensitive_word": False,
+                }
+            )
+        )
+        vm.setup_for_md_to_document("/test.md")
+        assert vm.proofread_options == {
+            SYMBOL_PAIRING: False,
+            SYMBOL_CORRECTION: True,
+            TYPOS_RULE: False,
+            SENSITIVE_WORD: False,
+        }
+        assert all(vm.collect_options()[key] == value for key, value in vm.proofread_options.items())
+
+    def test_committed_refresh_preserves_each_manual_choice_until_new_context(self) -> None:
+        keys = (SYMBOL_PAIRING, SYMBOL_CORRECTION, TYPOS_RULE, SENSITIVE_WORD)
+        main_vm = FakeMainWindowViewModel({f"proofread.engine.enable_{key}": False for key in keys})
+        vm = ActionAreaViewModel(main_vm)  # type: ignore[arg-type]
+        vm.setup_for_md_to_document("/first.md")
+        vm.set_proofread_option(SYMBOL_PAIRING, True)
+        # A deliberate round trip to the saved value remains a user choice.
+        vm.set_proofread_option(TYPOS_RULE, True)
+        vm.set_proofread_option(TYPOS_RULE, False)
+        vm.set_md_to_doc_option("remove_numbering", False)
+        main_vm.controller.config_port._values.update({f"proofread.engine.enable_{key}": True for key in keys})
+        vm.refresh_proofread_defaults()
+        assert vm.proofread_options == {
+            SYMBOL_PAIRING: True,
+            SYMBOL_CORRECTION: True,
+            TYPOS_RULE: False,
+            SENSITIVE_WORD: True,
+        }
+        assert vm.md_remove_numbering is False
+        vm.target_format = "pdf"
+        vm.refresh_proofread_defaults()
+        vm.target_format = "docx"
+        assert vm.proofread_options[TYPOS_RULE] is False
+        vm.setup_for_md_to_document("/second.md")
+        assert all(vm.proofread_options.values())
+
+    def test_explicit_unchanged_choice_is_also_preserved(self) -> None:
+        main_vm = FakeMainWindowViewModel({"proofread.engine.enable_symbol_pairing": False})
+        vm = ActionAreaViewModel(main_vm)  # type: ignore[arg-type]
+        vm.setup_for_md_to_document("/test.md")
+        vm.set_proofread_option(SYMBOL_PAIRING, False)
+        main_vm.controller.config_port._values["proofread.engine.enable_symbol_pairing"] = True
+        vm.refresh_proofread_defaults()
+        assert vm.proofread_options[SYMBOL_PAIRING] is False
+
+    def test_new_single_batch_context_reinitializes_saved_defaults(self) -> None:
+        vm = ActionAreaViewModel(FakeMainWindowViewModel())  # type: ignore[arg-type]
+        vm.setup_for_md_to_document("/test.md")
+        vm.set_proofread_option(SYMBOL_PAIRING, False)
+        vm.set_mode("single")
+        assert vm.proofread_options[SYMBOL_PAIRING] is False
+        vm.set_mode("batch")
+        assert vm.proofread_options[SYMBOL_PAIRING] is True
+
     def test_reads_defaults_from_config_port(self) -> None:
         vm = ActionAreaViewModel(
             FakeMainWindowViewModel(  # type: ignore[arg-type]
@@ -480,7 +544,7 @@ class TestSetupMdToDocument:
         assert opts[SYMBOL_PAIRING] is True
         assert opts[SYMBOL_CORRECTION] is True
         assert opts[TYPOS_RULE] is True
-        assert opts[SENSITIVE_WORD] is False
+        assert opts[SENSITIVE_WORD] is True
 
     def test_target_format_default(self, vm: ActionAreaViewModel) -> None:
         vm.setup_for_md_to_document("/test.md")

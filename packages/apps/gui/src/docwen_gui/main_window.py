@@ -1444,6 +1444,7 @@ class MainWindow(QWidget):
             right_visible=projection.right_panel_visible,
         )
         self._restore_main_template_default()
+        self._action_area_vm.refresh_proofread_defaults()
         self._sync_execution_context()
 
     def _finish_geometry_source_transition_settling(self) -> None:

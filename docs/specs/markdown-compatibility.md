@@ -1033,6 +1033,30 @@ retain their relative order; the new document relationship is inserted without r
 Overrides are inserted in `PartName` lexical order without reordering unrelated entries, and the item relationship
 has no other siblings.
 
+On import, equivalent host serialization may use ASCII XML whitespace and a
+unique `Default Extension="xml" ContentType="application/xml"` in place of a
+redundant item Override. A host may also preserve exactly one empty
+`ds:schemaRefs` element. That shape is accepted only with the actual closed
+owned-map root namespace, its canonical content and recomputed deterministic
+UUID, the exact properties envelope, unique document/item relationships and
+correct content types. A wrong URI, multiple schema references, missing parts,
+extra properties content or mismatched UUID still fails. This serialization
+compatibility does not bypass authored-ID, navigation or fenced-source proofs.
+
+Fenced-source character streams also accept a single leading empty `w:rPr`, including a run containing only
+that empty properties element, and `w:br w:type="textWrapping"` as the default line break. These nodes add no
+different source characters. Non-empty run properties, page/column/clear breaks and attributed tabs or carriage
+returns remain outside this lexical compatibility; visible-body and reconstructed-block hashes are still required.
+
+Hosts may also normalize CRLF and LF in the fenced carrier's break nodes or its two framing EOL attributes.
+The reader first proves the complete closed carrier and physical inventory. If the visible body already matches
+its original hash, that exact body is authoritative; otherwise only the two uniform LF/CRLF spellings are tried.
+Non-empty framing EOLs have the same two candidates, with at most eight combinations per record. Exactly one
+combination must match the original body hash, reconstructed-block hash and source length. Its recovered framing
+is used on the parsed map copy before the original deterministic customXML UUID check, followed by the normal
+document binding. Text, indentation, tabs, line count, final-EOL state and other map fields are never repaired.
+A host-normalized mixed-EOL body that cannot pass these hashes remains outside this compatibility.
+
 ```xml
 <!-- in /word/_rels/document.xml.rels -->
 <Relationship Id="rIdK" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml" Target="../customXml/itemN.xml"/>

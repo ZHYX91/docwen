@@ -14,7 +14,7 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import lxml.etree as etree
 
-from docwen_core._docx_semantics_v3_fenced import FENCED_SOURCE_MAP_NAMESPACE
+from docwen_core._docx_semantics_v3_fenced import FENCED_SOURCE_MAP_NAMESPACE, bind_fenced_source_document_v3
 from docwen_core._docx_semantics_v3_fenced_map import fenced_source_map_xml, parse_fenced_source_map
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -264,6 +264,8 @@ def read_owned_map_parts(package: ZipFile) -> dict[str, tuple[int, Any]]:
             continue
         _normalize_owned_xml(root)
         _canonical_owned_map_bytes(namespace, root)
+        if namespace == FENCED_SOURCE_MAP_NAMESPACE:
+            _project_proven_fenced_source_eols(package, root, parser)
         if namespace in output:
             raise DocxSemanticsV3Error(f"duplicate custom XML map namespace: {namespace}")
         output[namespace] = (int(match.group("number")), root)
@@ -279,6 +281,9 @@ def verify_custom_xml_support(package: ZipFile, item_number: int, namespace: str
         raise DocxSemanticsV3Error("custom XML map lacks properties or item relationship")
     item_root = etree.fromstring(package.read(f"customXml/item{item_number}.xml"), parser)
     _normalize_owned_xml(item_root)
+    if namespace == FENCED_SOURCE_MAP_NAMESPACE:
+        _canonical_owned_map_bytes(namespace, item_root)
+        _project_proven_fenced_source_eols(package, item_root, parser)
     item_bytes = _canonical_owned_map_bytes(namespace, item_root)
     props_bytes = package.read(props_name)
     item_rels_bytes = package.read(item_rels_name)
@@ -318,13 +323,18 @@ def verify_custom_xml_support(package: ZipFile, item_number: int, namespace: str
         or props_children[0].attrib
         or props_children[0].text is not None
         or props_children[0].tail is not None
-        or len(props_children[0]) != 1
-        or len(schema_refs) != 1
-        or tuple(schema_refs[0].attrib) != (f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}uri",)
-        or schema_refs[0].text is not None
-        or schema_refs[0].tail is not None
-        or len(schema_refs[0]) != 0
-        or schema_refs[0].get(f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}uri") != namespace
+        or len(props_children[0]) not in {0, 1}
+        or (
+            len(props_children[0]) == 1
+            and (
+                len(schema_refs) != 1
+                or tuple(schema_refs[0].attrib) != (f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}uri",)
+                or schema_refs[0].text is not None
+                or schema_refs[0].tail is not None
+                or len(schema_refs[0]) != 0
+                or schema_refs[0].get(f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}uri") != namespace
+            )
+        )
     ):
         raise DocxSemanticsV3Error("custom XML properties do not bind the expected schema")
     expected_uuid = (
@@ -531,6 +541,23 @@ def _reject_malformed_owned_signals(existing: dict[str, bytes], parser: Any) -> 
             raise DocxSemanticsV3Error("owned custom XML properties point to a non-owned root")
 
 
+def _project_proven_fenced_source_eols(package: ZipFile, root: Any, parser: Any) -> None:
+    """Restore hash-proven framing on the parsed copy before UUID proof."""
+
+    from docx.oxml.ns import qn
+
+    document = etree.fromstring(package.read("word/document.xml"), parser)
+    bodies = document.findall(qn("w:body"))
+    if document.tag != qn("w:document") or len(bodies) != 1:
+        raise DocxSemanticsV3Error("fenced-source document body is not unique")
+    bound = bind_fenced_source_document_v3(bodies[0], parse_fenced_source_map(root))
+    # This binding has proved every tag, complete SDT/run payload, source
+    # order, and original body/block hash. UUID validation still follows.
+    for element, (identity, _authored) in zip(root, bound.values(), strict=True):
+        element.set("opening_eol", identity.opening_eol)
+        element.set("closing_eol", identity.closing_eol)
+
+
 def _canonical_owned_map_bytes(namespace: str, root: Any) -> bytes:
     if namespace == TABLE_ROLES_NAMESPACE:
         expected = canonical_table_roles_xml(root)
@@ -600,6 +627,7 @@ def _rewrite_zip(
 
 def _verify_document_relationship(package: ZipFile, item_number: int, parser: Any) -> None:
     rels = etree.fromstring(package.read("word/_rels/document.xml.rels"), parser)
+    _normalize_owned_xml(rels)
     _validate_relationships_root(rels, context="document")
     target = f"../customXml/item{item_number}.xml"
     matching = [item for item in rels if item.get("Target") == target]
@@ -618,7 +646,13 @@ def _verify_document_relationship(package: ZipFile, item_number: int, parser: An
 
 def _verify_content_types(package: ZipFile, item_number: int, parser: Any) -> None:
     types = etree.fromstring(package.read("[Content_Types].xml"), parser)
-    if types.tag != f"{{{_CONTENT_TYPES_NAMESPACE}}}Types" or types.attrib:
+    _normalize_owned_xml(types)
+    if (
+        types.tag != f"{{{_CONTENT_TYPES_NAMESPACE}}}Types"
+        or types.attrib
+        or types.text is not None
+        or types.tail is not None
+    ):
         raise DocxSemanticsV3Error("content-types root is invalid")
     item_part = f"/customXml/item{item_number}.xml"
     props_part = f"/customXml/itemProps{item_number}.xml"
@@ -653,7 +687,12 @@ def _verify_content_types(package: ZipFile, item_number: int, parser: Any) -> No
 
 def _validate_relationships_root(root: Any, *, context: str) -> None:
     relationship_tag = f"{{{_RELATIONSHIPS_NAMESPACE}}}Relationship"
-    if root.tag != f"{{{_RELATIONSHIPS_NAMESPACE}}}Relationships" or root.attrib:
+    if (
+        root.tag != f"{{{_RELATIONSHIPS_NAMESPACE}}}Relationships"
+        or root.attrib
+        or (root.text and root.text.strip())
+        or (root.tail and root.tail.strip())
+    ):
         raise DocxSemanticsV3Error(f"{context} relationships root is invalid")
     identifiers: list[str] = []
     for relation in root:

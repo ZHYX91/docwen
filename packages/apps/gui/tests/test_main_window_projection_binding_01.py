@@ -402,6 +402,30 @@ class TestTemplateCatalogBinding:
         finally:
             window.close()
 
+    def test_committed_settings_refreshes_only_untouched_proofread_options(self, qapp) -> None:
+        values = {"gui.template.md_default_template": "docx", "proofread.engine.enable_typos_rule": True}
+        window = _make_window_with_config(qapp, values)
+        try:
+            window._view_model.set_selected_file(
+                FileRef(path="C:/test/source.md", format="markdown", category="markdown")
+            )
+            action = window._action_area_vm
+            action.set_proofread_option("symbol_pairing", False)
+            action.set_md_to_doc_option("remove_numbering", False)
+            values["proofread.engine.enable_typos_rule"] = False
+            window._apply_runtime_window_settings()
+            assert action.file_path == "C:/test/source.md"
+            assert action.proofread_options["typos_rule"] is False
+            assert action.proofread_options["symbol_pairing"] is False
+            assert action.md_remove_numbering is False
+            window._apply_runtime_window_settings()
+            assert action.proofread_options["symbol_pairing"] is False
+            window._view_model.set_selected_file(FileRef(path="C:/test/new.md", format="markdown", category="markdown"))
+            assert action.proofread_options["symbol_pairing"] is True
+            assert action.proofread_options["typos_rule"] is False
+        finally:
+            window.close()
+
     def test_main_window_loads_template_lists_and_details_from_registry(self, window, tmp_path):
         from docx import Document
 

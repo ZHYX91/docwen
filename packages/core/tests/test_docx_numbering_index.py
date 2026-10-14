@@ -96,6 +96,7 @@ def _make_index() -> NumberingIndex:
     idx = NumberingIndex.__new__(NumberingIndex)
     idx._num_to_abstract = {"10": "0", "20": "1"}
     idx._abstract_num_style_links = {}
+    idx._num_level_overrides = {}
     idx._abstract_levels = {
         "0": {
             0: {"numFmt": "chineseCountingThousand", "lvlText": "%1、", "pStyle": ""},
@@ -448,6 +449,6 @@ def test_real_numbering_xml_drives_exact_markdown_sequence(tmp_path: Path) -> No
         "4.4) Child",
         "4.5) Child again",
         "4.5.5) Deep",
-        "    1. Direct list",
+        "    4. Direct list",
     ]
     assert rendered[1::2] == [""] * 6
