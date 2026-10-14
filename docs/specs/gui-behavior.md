@@ -115,7 +115,16 @@ The initial main-window client size is 476×720 Qt logical pixels, with a 420×5
 - Regular controls have a 32 logical-pixel minimum height; execution buttons have a 36 logical-pixel minimum height and fill their card's content width. Short text buttons have an 80 logical-pixel minimum width. Font metrics may increase these dimensions.
 - Related controls and form rows use an 8-pixel gap; cards use 12 pixels. These are 100% design values. Application zoom scales them once in Qt logical coordinates; Qt independently handles physical screen DPI.
 - Checkbox labels follow the indicator on its right. Form fields align within a settings page; narrow rows and long localized text reflow without clipping. Proofreading choices use one column when two do not fit.
-- Markdown target selection occupies a separate form row above the full-width generation action. The action names its target format. Batch conversion buttons show the same category count used by request dispatch; merge buttons show their own matching-input count.
+- Markdown target selection is the first generation form row, before target-dependent options and the full-width generation action. The action names its target format. Batch conversion buttons show the same category count used by request dispatch; merge buttons show their own matching-input count.
+
+Markdown-to-document proofreading switches initialize from the injected configuration port's saved
+`proofread.engine.enable_*` values, falling back to the Core proofreading option schema. Each explicit temporary
+choice belongs to the current operation, including a toggle back to its initial value. Committed settings changes
+refresh only switches the user has not changed; widget projection blocks signals and does not count as a manual
+choice. Unsaved or canceled settings drafts have no effect. Changing only the target format retains these choices;
+a new input or operation context initializes again from saved defaults. Only DOCX requests carry these switches,
+and disabling all four creates no post-conversion proofreading stage. Existing request-over-config priority stays
+unchanged. Source/model and Qt regressions cover this policy; final packaged GUI verification remains separate.
 - The workspace previews committed output-directory settings. Template selection has a persistent check marker and a visible selected name. Idle feedback shows a compact ready-state card header; its body expands when work starts and remains open for results. Existing activity and non-default output hints remain reachable while idle.
 - Light and dark themes use identical geometry, with readable hover, pressed, disabled and keyboard-focus states.
 - Theme-independent design tokens and shared control geometry own dimensions and spacing. Theme colour changes reuse the same complete button box model; new themes do not redeclare padding or minimum sizes.

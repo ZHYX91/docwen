@@ -916,6 +916,7 @@ class ActionArea(QWidget):
         format_combo.currentIndexChanged.connect(lambda index: self._set_target_format_from_combo(format_combo, index))
         self.md_document_format_combo = format_combo
         format_row = FormRow(_t("conversion_panel.target_format", "Target format"), format_combo, self)
+        self._content_layout.addWidget(format_row)
 
         generate_btn = self._make_button(self._generate_label(), parent=gen_row)
         generate_btn.setEnabled(self._vm.generation_ready)
@@ -941,7 +942,6 @@ class ActionArea(QWidget):
         # Proofread grid
         self._build_proofread_grid()
         self._add_target_route_notice()
-        self._content_layout.addWidget(format_row)
         self._content_layout.addWidget(gen_row)
 
     def _build_md_numbering_rows(self) -> None:

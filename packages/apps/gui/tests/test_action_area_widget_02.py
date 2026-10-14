@@ -27,6 +27,33 @@ from ._action_area_widget_support import (
 
 
 class TestMdToDocument:
+    @pytest.mark.parametrize("target", ["document", "spreadsheet"])
+    def test_target_format_is_the_first_generation_control(self, widget, vm, target) -> None:
+        if target == "document":
+            vm.setup_for_md_to_document("/test.md")
+            combo = widget.md_document_format_combo
+        else:
+            vm.setup_for_md_to_spreadsheet("/test.md")
+            combo = widget.md_spreadsheet_format_combo
+        row = combo.parentWidget()
+        assert row is not None
+        assert widget._content_layout.itemAt(0).widget() is row
+
+    def test_committed_default_projection_keeps_controls_and_does_not_mark_user_overrides(self, widget, vm) -> None:
+        vm.setup_for_md_to_document("/test.md")
+        checkboxes = dict(widget.checkbox_vars)
+        port = vm._main_vm.controller.config_port
+        port._values["proofread.engine.enable_typos_rule"] = False
+        vm.refresh_proofread_defaults()
+        assert widget.checkbox_vars == checkboxes
+        assert not checkboxes["typos_rule"].isChecked()
+        port._values["proofread.engine.enable_typos_rule"] = True
+        vm.refresh_proofread_defaults()
+        assert checkboxes["typos_rule"].isChecked()
+        checkboxes["typos_rule"].setChecked(False)
+        vm.refresh_proofread_defaults()
+        assert not checkboxes["typos_rule"].isChecked()
+
     def test_has_format_combo(self, widget: ActionArea, vm: ActionAreaViewModel) -> None:
         vm.setup_for_md_to_document("/test.md")
         assert widget.md_document_format_combo is not None

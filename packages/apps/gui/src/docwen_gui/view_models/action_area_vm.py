@@ -27,6 +27,7 @@ from PySide6.QtCore import QObject, Signal
 from docwen_application.optimization_selection import OptimizationSource
 from docwen_cli.options.to_markdown import build_to_markdown_options
 from docwen_core.formats.categories import CATEGORY_DOCUMENT, CATEGORY_SPREADSHEET, get_category
+from docwen_core.options import PROOFREAD_OPTIONS_SCHEMA
 from docwen_gui.i18n import t as _t
 
 from ._optimization_filter import (
@@ -56,10 +57,7 @@ PROOFREAD_OPTION_KEYS = [SYMBOL_PAIRING, SYMBOL_CORRECTION, TYPOS_RULE, SENSITIV
 
 # Canonical proofread defaults.
 DEFAULT_PROOFREAD_OPTIONS: dict[str, bool] = {
-    SYMBOL_PAIRING: True,
-    SYMBOL_CORRECTION: True,
-    TYPOS_RULE: True,
-    SENSITIVE_WORD: False,
+    key: bool(PROOFREAD_OPTIONS_SCHEMA["properties"][f"enable_{key}"]["default"]) for key in PROOFREAD_OPTION_KEYS
 }
 
 # ── Mode constants ───────────────────────────────────────────────────────
@@ -170,6 +168,7 @@ class ActionAreaViewModel(QObject):
 
         # Proofread options
         self._proofread_options: dict[str, bool] = dict(DEFAULT_PROOFREAD_OPTIONS)
+        self._proofread_overrides: set[str] = set()
         self._show_proofread: bool = False
 
         # Aggregate actions and optimization actions are mutually exclusive.
@@ -478,8 +477,27 @@ class ActionAreaViewModel(QObject):
         """Set a proofread option value."""
         if key not in PROOFREAD_OPTION_KEYS:
             raise ValueError(f"Unknown proofread option: {key!r}")
+        self._proofread_overrides.add(key)
         if self._proofread_options.get(key) != checked:
             self._proofread_options[key] = checked
+            self.state_changed.emit()
+
+    def _read_proofread_defaults(self) -> dict[str, bool]:
+        return {
+            key: bool(self._read_config_default(f"proofread.engine.enable_{key}", default))
+            for key, default in DEFAULT_PROOFREAD_OPTIONS.items()
+        }
+
+    def refresh_proofread_defaults(self) -> None:
+        """Apply committed defaults to untouched options in the current operation."""
+        if self._file_type != MODE_MD_TO_DOCUMENT:
+            return
+        changed = False
+        for key, value in self._read_proofread_defaults().items():
+            if key not in self._proofread_overrides and self._proofread_options[key] != value:
+                self._proofread_options[key] = value
+                changed = True
+        if changed:
             self.state_changed.emit()
 
     @property
@@ -644,7 +662,8 @@ class ActionAreaViewModel(QObject):
             preferred=self._last_document_format,
             source_inputs=source_inputs,
         )
-        self._proofread_options = dict(DEFAULT_PROOFREAD_OPTIONS)
+        self._proofread_options = self._read_proofread_defaults()
+        self._proofread_overrides.clear()
         self._visible = True
         self._cancel_visible = False
         self.state_changed.emit()
@@ -1086,7 +1105,12 @@ class ActionAreaViewModel(QObject):
         """Set the UI mode (single/batch)."""
         if mode not in ("single", "batch"):
             raise ValueError(f"Invalid mode: {mode!r}")
+        changed = self._mode != mode
         self._mode = mode
+        if changed and self._file_type == MODE_MD_TO_DOCUMENT:
+            self._proofread_options = self._read_proofread_defaults()
+            self._proofread_overrides.clear()
+            self.state_changed.emit()
 
     def reset(self) -> None:
         """Reset all state to defaults and hide."""
@@ -1114,6 +1138,7 @@ class ActionAreaViewModel(QObject):
         self._target_format = "docx"
         self._available_target_formats = []
         self._proofread_options = dict(DEFAULT_PROOFREAD_OPTIONS)
+        self._proofread_overrides.clear()
         self._show_proofread = False
         # Clear aggregate-specific state
         self._aggregate_action_name = ""
