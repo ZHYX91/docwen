@@ -30,6 +30,58 @@ def _code_bodies(nodes: list) -> list[str]:
     return output
 
 
+def _inline_code_bodies(nodes: list) -> list[str]:
+    output = []
+    for node in nodes:
+        if node["type"] == "codespan":
+            output.append(node["raw"])
+        output.extend(_inline_code_bodies(node.get("children", [])))
+    return output
+
+
+def test_quote_inline_code_stays_literal_in_current_document_order(tmp_path: Path, round_trip_runtime) -> None:
+    source = tmp_path / "quote-literal.md"
+    source.write_text(
+        "> 引用中的 `**粗体代码**` 测试。\n>\n"
+        ">> Nested `*literal italic*` and ``a ` b`` end.\n\n"
+        "- Item.\n\n  > Quoted `~~literal strike~~` after item.\n",
+        encoding="utf-8",
+    )
+    docx = md_to_docx(round_trip_runtime, source, tmp_path / "forward")
+    returned = _body(docx_to_md(round_trip_runtime, docx, tmp_path / "reverse"))
+    assert _inline_code_bodies(parse_markdown_text(returned)) == [
+        "**粗体代码**",
+        "*literal italic*",
+        "a ` b",
+        "~~literal strike~~",
+    ]
+    excerpts = ["引用中的", "粗体代码", "Nested", "literal italic", "a ` b", "Item.", "literal strike"]
+    assert all(returned.count(text) == 1 for text in excerpts)
+    assert [returned.index(text) for text in excerpts] == sorted(returned.index(text) for text in excerpts)
+
+
+@pytest.mark.parametrize("emit_references", [False, True])
+def test_quote_keeps_the_authenticated_reference_output_policy(
+    tmp_path: Path, round_trip_runtime, emit_references: bool
+) -> None:
+    source = tmp_path / "quote-reference.md"
+    source.write_text("# Target ^target\n\n> See @[[#^target|Target label]].\n", encoding="utf-8")
+    docx = md_to_docx(round_trip_runtime, source, tmp_path / "forward")
+    returned = _body(
+        docx_to_md(
+            round_trip_runtime,
+            docx,
+            tmp_path / "reverse",
+            options={"markdown_extensions": {"output": {"captions_references": emit_references}}},
+        )
+    )
+    assert returned.count("@[[#^target|Target label]]") == int(emit_references)
+    expected = "> See @[[#^target|Target label]]." if emit_references else "> See Target label."
+    assert expected in returned
+    analysis = analyze_markdown_semantics_v3(returned, input_id="quote-reference-returned.md")
+    assert not analysis.has_errors
+
+
 def test_mixed_quote_children_keep_native_styles_and_readable_content(tmp_path: Path, round_trip_runtime) -> None:
     source = Path(__file__).parents[1] / "fixtures/files/quote-content.md"
     original = source.read_bytes()

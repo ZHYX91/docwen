@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from itertools import product
 from typing import Any, Literal
 
 from docwen_core._docx_semantics_v3_model import (
@@ -227,6 +228,13 @@ def prove_fenced_source_paragraph(
 ) -> str:
     """Authenticate the inline carrier and return the exact authored block."""
 
+    return _prove_fenced_source_paragraph(paragraph_element, identity)[1]
+
+
+def _prove_fenced_source_paragraph(
+    paragraph_element: Any,
+    identity: FencedSourceIdentityV3,
+) -> tuple[FencedSourceIdentityV3, str]:
     from docx.oxml.ns import qn
 
     children = list(paragraph_element)
@@ -244,13 +252,7 @@ def prove_fenced_source_paragraph(
     if content.attrib or content.text is not None or content.tail is not None:
         raise DocxSemanticsV3Error("fenced-source SDT content is not canonical")
     logical_body = _prove_and_read_body_runs(content)
-    if hashlib.sha256(logical_body.encode("utf-8")).hexdigest() != identity.body_sha256:
-        raise DocxSemanticsV3Error("fenced-source visible body hash does not match its map record")
-    authored = reconstruct_fenced_source_v3(identity, logical_body)
-    if len(authored) != identity.source_end - identity.source_start:
-        raise DocxSemanticsV3Error("fenced-source block length does not match its source range")
-    if hashlib.sha256(authored.encode("utf-8")).hexdigest() != identity.block_sha256:
-        raise DocxSemanticsV3Error("fenced-source reconstructed block hash does not match its map record")
+    identity, authored = _prove_body_and_framing_eols(identity, logical_body)
     if (
         paragraph_element.find(f".//{qn('w:bookmarkStart')}") is not None
         or paragraph_element.find(f".//{qn('w:bookmarkEnd')}") is not None
@@ -258,7 +260,41 @@ def prove_fenced_source_paragraph(
         or paragraph_element.find(f".//{qn('w:fldChar')}") is not None
     ):
         raise DocxSemanticsV3Error("fenced-source carrier must not contain bookmark, SEQ, or REF machinery")
-    return authored
+    return identity, authored
+
+
+def _prove_body_and_framing_eols(
+    identity: FencedSourceIdentityV3, logical_body: str
+) -> tuple[FencedSourceIdentityV3, str]:
+    """Accept only an EOL projection authenticated by both original hashes."""
+
+    if hashlib.sha256(logical_body.encode("utf-8")).hexdigest() == identity.body_sha256:
+        bodies = {logical_body}
+    else:
+        # Hosts can rewrite w:cr as w:br. Do not enumerate each break or
+        # change text: only the two uniform EOL spellings are candidates.
+        lf_body = logical_body.replace("\r\n", "\n")
+        bodies = {
+            body
+            for body in (lf_body, lf_body.replace("\n", "\r\n"))
+            if hashlib.sha256(body.encode("utf-8")).hexdigest() == identity.body_sha256
+        }
+    if not bodies:
+        raise DocxSemanticsV3Error("fenced-source visible body hash does not match its map record")
+    opening_eols = ("\n", "\r\n") if identity.opening_eol else ("",)
+    closing_eols = ("\n", "\r\n") if identity.closing_eol else ("",)
+    matches = []
+    for body, opening_eol, closing_eol in product(bodies, opening_eols, closing_eols):
+        candidate = replace(identity, opening_eol=opening_eol, closing_eol=closing_eol)
+        authored = reconstruct_fenced_source_v3(candidate, body)
+        if (
+            len(authored) == identity.source_end - identity.source_start
+            and hashlib.sha256(authored.encode("utf-8")).hexdigest() == identity.block_sha256
+        ):
+            matches.append((candidate, authored))
+    if len(matches) != 1:
+        raise DocxSemanticsV3Error("fenced-source reconstructed block hash does not uniquely match its map record")
+    return matches[0]
 
 
 def bind_fenced_source_document_v3(
@@ -284,8 +320,8 @@ def bind_fenced_source_document_v3(
         if paragraph is None or paragraph.tag != qn("w:p"):
             raise DocxSemanticsV3Error("fenced-source SDT must be a direct paragraph child")
         physical_tags.append(tag)
-        authored = prove_fenced_source_paragraph(paragraph, record)
-        output[paragraph] = (record, authored)
+        recovered, authored = _prove_fenced_source_paragraph(paragraph, record)
+        output[paragraph] = (recovered, authored)
         seen.add(tag)
     if seen != set(by_tag):
         raise DocxSemanticsV3Error("fenced-source map record is missing its exact inline SDT")

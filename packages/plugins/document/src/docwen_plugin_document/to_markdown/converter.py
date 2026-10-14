@@ -1557,8 +1557,10 @@ class DocxToMarkdownConverter:
                     preserve_formatting=self._preserve_formatting,
                     style_detector_config=style_detector_config,
                 )
-                if has_page_break and para is not None
-                else [("text", paragraph_text)]
+                if para is not None and (has_page_break or semantic_reference_text is None)
+                else [
+                    ("text", semantic_reference_text.strip() if semantic_reference_text is not None else paragraph_text)
+                ]
             )
             level = style_value if isinstance(style_value, int) else 1
             prefix = ">" * max(level, 1)

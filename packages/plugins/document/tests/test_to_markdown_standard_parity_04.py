@@ -170,6 +170,34 @@ def test_multiline_quote_applies_level_marker_to_every_line():
     assert lines == [">> first line", ">> second line", ""]
 
 
+@pytest.mark.parametrize("page_break", [False, True])
+@pytest.mark.parametrize("preserve_formatting", [False, True])
+def test_quote_renders_inline_code_and_rich_text_with_the_shared_policy(page_break, preserve_formatting):
+    from docwen_core.docx_parsing.format_features import StyleDetectorConfig
+
+    doc = Document()
+    character_style = "Literal Code"
+    doc.styles.add_style(character_style, WD_STYLE_TYPE.CHARACTER)
+    para = doc.add_paragraph()
+    para.add_run("Quoted ")
+    para.add_run("bold").bold = True
+    para.add_run(" and ")
+    para.add_run("**literal**").style = character_style
+    if page_break:
+        para.add_run().add_break(WD_BREAK.PAGE)
+    para.add_run(" after")
+    converter = DocxToMarkdownConverter()
+    converter._preserve_formatting = preserve_formatting
+    with _mock_para_style(para, "Quote 2"):
+        lines, _stats = converter._process_paragraph(
+            para._element,
+            para_by_element={id(para._element): para},
+            style_detector_config=StyleDetectorConfig(code_character_style_names=frozenset({character_style})),
+        )
+    first = ">> Quoted **bold** and `**literal**`" if preserve_formatting else ">> Quoted bold and **literal**"
+    assert lines == ([first, "", "---", "", ">> after", ""] if page_break else [first + " after", ""])
+
+
 def test_quote_style_inside_list_uses_list_context_indent():
     """Quote paragraphs that are themselves list paragraphs keep list-context indentation."""
     doc = Document()
