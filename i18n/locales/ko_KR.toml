@@ -236,6 +236,7 @@ pt_BR = "포르투갈어(브라질)"
 ru_RU = "러시아어"
 vi_VN = "베트남어"
 zh_TW = "중국어(번체)"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]

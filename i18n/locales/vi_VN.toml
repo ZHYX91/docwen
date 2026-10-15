@@ -290,6 +290,7 @@ pt_BR = "Tiếng Bồ Đào Nha (Brasil)"
 ru_RU = "Tiếng Nga"
 vi_VN = "Tiếng Việt"
 zh_TW = "Tiếng Trung (Phồn thể)"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]

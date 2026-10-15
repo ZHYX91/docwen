@@ -290,6 +290,7 @@ pt_BR = "葡萄牙语（巴西）"
 ru_RU = "俄语"
 vi_VN = "越南语"
 zh_TW = "繁体中文"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]
