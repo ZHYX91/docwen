@@ -33,9 +33,13 @@ Phần mềm được tạo ra để giải quyết các vấn đề thường g
 
 ## 📸 Ảnh chụp màn hình
 
-| Tạo tài liệu từ Markdown | Quản lý mẫu |
-| --- | --- |
-| ![Tạo tài liệu từ Markdown](../assets/screenshots/markdown-generation-en.png) | ![Quản lý mẫu](../assets/screenshots/template-management-en.png) |
+Chọn mẫu và các tùy chọn tạo tài liệu từ Markdown.
+
+![Tạo tài liệu từ Markdown](../assets/screenshots/markdown-generation-en.png)
+
+Nhập, bật, sắp xếp và sao chép mẫu trong phần cài đặt.
+
+![Quản lý mẫu](../assets/screenshots/template-management-en.png)
 
 Nhật ký thay đổi: xem [CHANGELOG.md](../CHANGELOG.md)
 

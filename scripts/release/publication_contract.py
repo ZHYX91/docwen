@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import stat
@@ -18,6 +19,36 @@ WORKFLOW = ".github/workflows/release.yml"
 
 class PublicationError(RuntimeError):
     """A failed source, package, or publication boundary."""
+
+
+def command_diagnostic(subject: str, exit_code: int | str, stderr: str | bytes | None) -> str:
+    """Keep a bounded failure reason without credentials or transport URLs."""
+    message = stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else (stderr or "")
+    # Redact before truncating: a secret may cross the final length boundary.
+    for key in (
+        "GH_TOKEN",
+        "GITHUB_TOKEN",
+        "GH_ENTERPRISE_TOKEN",
+        "GITHUB_ENTERPRISE_TOKEN",
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "ALL_PROXY",
+    ):
+        if secret := os.environ.get(key):
+            message = message.replace(secret, "[redacted]")
+    message = re.sub(r"(?i)\b[a-z][a-z0-9+.-]*://[^\s<>\"']+", "[redacted-url]", message)
+    message = re.sub(r"(?i)\b(?:bearer|basic)\s+\S+", "[redacted-authorization]", message)
+    message = re.sub(r"\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)", "[redacted-token]", message)
+    message = re.sub(
+        r"""(?i)(["']?)\b((?:access[_-]?)?token|authorization|password|client[_-]?secret|signature|sig)\1\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)""",
+        r"\2=[redacted]",
+        message,
+    )
+    # Escape control characters through JSON, including terminal escapes/newlines.
+    message = "".join(character if character.isprintable() else " " for character in message)
+    if len(message) > 1024:
+        message = message[:1024] + " [truncated]"
+    return f"{subject}; exit_code={exit_code}; stderr={json.dumps(message, ensure_ascii=True)}"
 
 
 def require(condition: bool, message: str) -> None:

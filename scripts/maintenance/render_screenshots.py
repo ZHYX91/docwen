@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -26,6 +27,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--height", type=int, default=820)
     parser.add_argument("--settings-width", type=int, default=960)
     parser.add_argument("--settings-height", type=int, default=880)
+    parser.add_argument("--device-pixel-ratio", type=int, choices=(1, 2), default=1)
     parser.add_argument("--output", type=Path, required=True, help="Dedicated directory for reviewed media")
     args = parser.parse_args(argv)
     repo = args.repo.resolve(strict=True)
@@ -53,8 +55,6 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
     for k, v in {
         "locale": f'"{locale}"',
         "default_theme": f'"{theme}"',
-        "center_panel_width": "620",
-        "default_height": "900",
         "scale_percent": str(args.scale),
         "size_preset": f'"{args.font}"',
     }.items():
@@ -72,8 +72,8 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
                         "name": "media",
                         "x": 0,
                         "y": 0,
-                        "width": max(1280, args.width + 80, args.settings_width + 80),
-                        "height": max(1024, args.height + 80, args.settings_height + 80),
+                        "width": max(1280, args.width + 80, args.settings_width + 80) * args.device_pixel_ratio,
+                        "height": max(1024, args.height + 80, args.settings_height + 80) * args.device_pixel_ratio,
                         "logicalDpi": 96,
                         "logicalBaseDpi": 96,
                         "dpr": 1.0,
@@ -97,7 +97,7 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
     os.environ.update(
         DOCWEN_RUNTIME_ROOT=str(root / "runtime"),
         DOCWEN_DATA_DIR=str(profile),
-        QT_SCALE_FACTOR="1",
+        QT_SCALE_FACTOR=str(args.device_pixel_ratio),
         QT_QPA_PLATFORM="offscreen:configfile=" + os.path.relpath(screen_config, repo).replace("\\", "/"),
         PYTHONDONTWRITEBYTECODE="1",
         DOCWEN_GUI_DISABLE_STATE_SAVE="1",
@@ -119,6 +119,12 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
         "scale": args.scale,
         "font": args.font,
         "input": args.input,
+        "devicePixelRatio": args.device_pixel_ratio,
+        "requestedSizes": {
+            "markdown": {"width": args.width, "height": args.height},
+            args.section: {"width": args.settings_width, "height": args.settings_height},
+        },
+        "runtimeRoot": str(root),
         "sourceWorkingFiles": {},
         "method": "Real source application startup, QWidget.grab; original widgets, theme, controlled sample and actual template discovery. Clipboard input uses the isolated offscreen Qt clipboard and shipping paste handler, not native interaction evidence. No cursor or OS border; no image retouching.",
         "images": [],
@@ -138,12 +144,27 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
         widget.repaint()
         path = out / f"{locale}-{theme}-{label}.png"
         pix = widget.grab()
+        requested = record["requestedSizes"][label]
+        assert (widget.width(), widget.height()) == (requested["width"], requested["height"]), (
+            label,
+            "Requested widget size was not applied",
+            requested,
+            (widget.width(), widget.height()),
+        )
+        assert (pix.width(), pix.height(), pix.devicePixelRatio()) == (
+            requested["width"] * args.device_pixel_ratio,
+            requested["height"] * args.device_pixel_ratio,
+            args.device_pixel_ratio,
+        ), (label, "Unexpected captured pixels", pix.size(), pix.devicePixelRatio())
         assert pix.save(str(path), "PNG")
         record["images"].append(
             {
                 "path": str(path),
+                "logicalWidth": widget.width(),
+                "logicalHeight": widget.height(),
                 "width": pix.width(),
                 "height": pix.height(),
+                "devicePixelRatio": pix.devicePixelRatio(),
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             }
         )
@@ -175,13 +196,43 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
                 window.close()
 
         def size():
-            if args.input == "clipboard":
-                assert window._clipboard_store is None
-                window._clipboard_input_root = root / "clipboard"
-                QApplication.clipboard().setText(sample.read_text(encoding="utf-8"))
-                window._on_paste_requested(plain_text_only=True)
-            window.resize(args.width, args.height)
-            QTimer.singleShot(1500, settings)
+            try:
+                if args.input == "clipboard":
+                    assert window._clipboard_store is None
+                    window._clipboard_input_root = root / "clipboard"
+                    QApplication.clipboard().setText(sample.read_text(encoding="utf-8"))
+                    window._on_paste_requested(plain_text_only=True)
+                deadline = time.monotonic() + 30
+                ready_ticks = 0
+
+                def wait_for_input():
+                    nonlocal ready_ticks
+                    try:
+                        projection = window._view_model.ui_projection
+                        ready = (
+                            not window._view_model.inspection_busy
+                            and projection.right_panel_visible
+                            and window._template_selector.get_selected_template_resource() is not None
+                        )
+                        ready_ticks = ready_ticks + 1 if ready else 0
+                        if ready_ticks >= 3:
+                            # Input inspection reveals the template panel and expands the
+                            # normal window. Resize only after that transition settles;
+                            # an earlier resize would become the collapsed-window width.
+                            window.resize(args.width, args.height)
+                            QTimer.singleShot(1500, settings)
+                        elif time.monotonic() < deadline:
+                            QTimer.singleShot(100, wait_for_input)
+                        else:
+                            raise TimeoutError("Input inspection and template projection did not settle")
+                    except Exception as e:
+                        failed.append(repr(e))
+                        window.close()
+
+                wait_for_input()
+            except Exception as e:
+                failed.append(repr(e))
+                window.close()
 
         QTimer.singleShot(2500, size)
         return window

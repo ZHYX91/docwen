@@ -22,6 +22,7 @@ from scripts.release.publication_contract import (
     assemble,
     canonical_digest,
     canonical_json,
+    command_diagnostic,
     file_identity,
     package_names,
     require,
@@ -63,10 +64,18 @@ def restore_progress(api: GitHub, *, artifact_id: int, digest: str, receipt: Pat
         and run.get("path") == ".github/workflows/release.yml",
         "progress owner is active or has different source",
     )
-    response = subprocess.run(
-        ["gh", "api", f"{prefix}/actions/artifacts/{artifact_id}/zip"], capture_output=True, timeout=60
+    try:
+        response = subprocess.run(
+            ["gh", "api", f"{prefix}/actions/artifacts/{artifact_id}/zip"], capture_output=True, timeout=60
+        )
+    except subprocess.TimeoutExpired as error:
+        raise PublicationError(
+            command_diagnostic(f"progress artifact download timed out: {artifact_id}", "timeout", error.stderr)
+        ) from None
+    require(
+        response.returncode == 0,
+        command_diagnostic(f"progress artifact download failed: {artifact_id}", response.returncode, response.stderr),
     )
-    require(response.returncode == 0, "progress artifact download failed")
     import hashlib
 
     require(f"sha256:{hashlib.sha256(response.stdout).hexdigest()}" == digest, "progress archive digest mismatch")
@@ -110,13 +119,21 @@ def fetch_candidate(
     output.mkdir()
     archive = output / "download.zip"
     with archive.open("xb") as stream:
-        result = subprocess.run(
-            ["gh", "api", f"/repos/{repository}/actions/artifacts/{artifact_id}/zip"],
-            stdout=stream,
-            stderr=subprocess.PIPE,
-            timeout=env_seconds("DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT", 600),
-        )
-    require(result.returncode == 0, "candidate artifact download failed")
+        try:
+            result = subprocess.run(
+                ["gh", "api", f"/repos/{repository}/actions/artifacts/{artifact_id}/zip"],
+                stdout=stream,
+                stderr=subprocess.PIPE,
+                timeout=env_seconds("DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT", 600),
+            )
+        except subprocess.TimeoutExpired as error:
+            raise PublicationError(
+                command_diagnostic(f"candidate artifact download timed out: {artifact_id}", "timeout", error.stderr)
+            ) from None
+    require(
+        result.returncode == 0,
+        command_diagnostic(f"candidate artifact download failed: {artifact_id}", result.returncode, result.stderr),
+    )
     require(f"sha256:{file_identity(archive)['sha256']}" == digest, "downloaded artifact digest mismatch")
     expected = set(package_names(version)) | {MANIFEST_NAME, CHECKSUM_NAME}
     with zipfile.ZipFile(archive) as bundle:

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 import pytest
+from tests.support.recycle_scenarios import fake_bin
 from tools import recycle
 
 pytestmark = [pytest.mark.unit, pytest.mark.skipif(os.name != "nt", reason="Windows Recycle Bin")]
@@ -62,10 +63,18 @@ def test_shell_permanent_delete_is_vetoed_before_mutation(tmp_path: Path, monkey
 def test_recycle_waits_for_new_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     target = tmp_path / "source"
     target.write_text("keep")
+    _, calls = fake_bin(tmp_path, monkeypatch)
+    perform = recycle._perform_recycle
+    original_entries = recycle._recovery_entries
     old = {"metadata": "old", "payload": "old-payload"}
-    new = {"metadata": "new", "payload": "new-payload"}
-    observations = iter([[old], [old], [old, new]])
-    monkeypatch.setattr(recycle, "_recovery_entries", lambda path: next(observations))
-    monkeypatch.setattr(recycle, "_perform_recycle", lambda path: path.rename(tmp_path / "moved"))
+    observations = iter([[old], [old]])
+
+    def entries(path):
+        return next(observations, [old, *original_entries(path)])
+
+    monkeypatch.setattr(recycle, "_recovery_entries", entries)
+    monkeypatch.setattr(recycle, "_perform_recycle", perform)
     monkeypatch.setattr(recycle.time, "sleep", lambda seconds: None)
-    assert recycle.recycle_path(target) == [new]
+    result = recycle.recycle_path(target)
+    assert result[0]["metadata"] == calls[0]["metadata"]
+    assert result[0]["verification"] == "identity-and-content-confirmed"

@@ -33,9 +33,13 @@ DocWen 最初面向文印室等日常文件整理情境，主要解決這些問�
 
 ## 📸 介面截圖
 
-| Markdown 產生文件 | 範本管理 |
-| --- | --- |
-| ![Markdown 產生文件](../assets/screenshots/markdown-generation-en.png) | ![範本管理](../assets/screenshots/template-management-en.png) |
+為 Markdown 文件選擇範本和產生選項。
+
+![Markdown 產生文件](../assets/screenshots/markdown-generation-en.png)
+
+在設定中匯入、啟用、排序和複製範本。
+
+![範本管理](../assets/screenshots/template-management-en.png)
 
 更新日誌：見 [CHANGELOG.md](../CHANGELOG.md)
 

@@ -33,9 +33,13 @@ DocWen was originally built for everyday document-preparation work, where teams 
 
 ## 📸 Screenshots
 
-| Markdown to document | Template management |
-| --- | --- |
-| ![Markdown to document](docs/assets/screenshots/markdown-generation-en.png) | ![Template management](docs/assets/screenshots/template-management-en.png) |
+Select a template and generation options for Markdown documents.
+
+![Markdown to document](docs/assets/screenshots/markdown-generation-en.png)
+
+Import, enable, reorder, and copy templates in settings.
+
+![Template management](docs/assets/screenshots/template-management-en.png)
 
 Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
 

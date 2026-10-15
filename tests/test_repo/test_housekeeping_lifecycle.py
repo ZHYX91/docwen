@@ -48,7 +48,7 @@ def test_recycle_failure_does_not_fall_back_to_delete(tmp_path: Path, monkeypatc
     )
     saved = workspace_cleanup.save_plan(plan, diagnostics / "plan.json")
 
-    def fail(path: Path) -> None:
+    def fail(path: Path, **kwargs) -> None:
         raise OSError("recycle unavailable")
 
     monkeypatch.setattr(recycle, "recycle_directory", fail)
@@ -100,3 +100,46 @@ def test_publication_retirement_requires_verified_receipt_and_exact_bytes(tmp_pa
     (candidate / "windows.zip").write_bytes(b"other")
     with pytest.raises(workspace_cleanup.HousekeepingError, match="publication_asset_changed"):
         workspace_cleanup.plan_published_candidate(candidate, receipt)
+
+
+@pytest.mark.parametrize("change", ["missing", "interpreter", "prefix", "toolSha256"])
+def test_apply_requires_the_recorded_execution_environment_before_any_mutation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change: str
+) -> None:
+    workspace = tmp_path / ".workspace"
+    root = workspace / "temp" / "scratch"
+    root.mkdir(parents=True)
+    (root / "keep.txt").write_bytes(b"preserve")
+    (workspace / "diagnostics").mkdir()
+    plan = workspace_cleanup.create_plan(
+        workspace_root=workspace, explicit_targets=[root], reason="environment fixture", disposition="delete"
+    )
+    if change == "missing":
+        del plan["executionEnvironment"]
+    else:
+        plan["executionEnvironment"][change] = "different environment"
+    plan["planFingerprint"] = workspace_cleanup._plan_fingerprint(plan)
+    saved = workspace_cleanup.save_plan(plan, workspace / "diagnostics" / "environment.json")
+
+    def unexpected(*args, **kwargs):
+        pytest.fail("environment mismatch reached filesystem mutation")
+
+    monkeypatch.setattr(workspace_cleanup.shutil, "rmtree", unexpected)
+    with pytest.raises(ValueError, match="plan_execution_environment"):
+        workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
+    assert (root / "keep.txt").read_bytes() == b"preserve"
+    assert not saved.with_suffix(".progress.json").exists()
+
+
+def test_cleanup_result_keeps_the_same_execution_environment_as_the_plan(tmp_path: Path) -> None:
+    workspace = tmp_path / ".workspace"
+    root = workspace / "temp" / "scratch"
+    root.mkdir(parents=True)
+    (workspace / "diagnostics").mkdir()
+    plan = workspace_cleanup.create_plan(
+        workspace_root=workspace, explicit_targets=[root], reason="environment fixture", disposition="delete"
+    )
+    saved = workspace_cleanup.save_plan(plan, workspace / "diagnostics" / "environment.json")
+    result = workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
+    assert result["executionEnvironment"] == plan["executionEnvironment"]
+    assert Path(result["executionEnvironment"]["interpreter"]).is_absolute()

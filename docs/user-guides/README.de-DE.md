@@ -33,9 +33,13 @@ DocWen entstand für alltägliche Dokumentaufbereitung, bei der typischerweise:
 
 ## 📸 Screenshots
 
-| Markdown in Dokumente umwandeln | Vorlagenverwaltung |
-| --- | --- |
-| ![Markdown in Dokumente umwandeln](../assets/screenshots/markdown-generation-en.png) | ![Vorlagenverwaltung](../assets/screenshots/template-management-en.png) |
+Vorlage und Erstellungsoptionen für Markdown-Dokumente auswählen.
+
+![Markdown in Dokumente umwandeln](../assets/screenshots/markdown-generation-en.png)
+
+Vorlagen in den Einstellungen importieren, aktivieren, sortieren und kopieren.
+
+![Vorlagenverwaltung](../assets/screenshots/template-management-en.png)
 
 Changelog: siehe [CHANGELOG.md](../CHANGELOG.md)
 
