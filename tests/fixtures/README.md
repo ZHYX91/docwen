@@ -9,6 +9,18 @@ native Office save/reopen and exact candidate evidence remain separate gates.
 It checks content, order, literal code and native child styles, rather than source
 container-tree or Markdown-spelling equality. Normal mapping changes produce no loss warning.
 
+`files/word-fenced-proofing-content.xml` is the minimal `w:sdtContent` extracted
+from a Word 16.0.20430.20146 save of the mixed quote/code sample. Only unused
+namespace declarations were removed; the grammar anchors, split text runs and
+line break are unchanged. Original DOCX SHA-256:
+`b242ab801c921ba33d7c2474cd5bfd2de7b973425681262f4608e3f1d25e56b0`;
+saved DOCX SHA-256:
+`12157845cd436ecf7215cfe00f358d639f9fee20272e881b312cbc95660b6fe1`.
+Both visible fenced bodies have SHA-256
+`7cf7f14b89e3e2011b313ae705ba80424a1c1fd0b7095d4b440c92ab7afc5f5a`.
+The fixture tests source-level lexical compatibility and rejection boundaries;
+it does not replace acceptance of a subsequently built package in Word.
+
 `old_system_*` 只记录测试证据的历史来源，不构成旧实现或旧缺陷的兼容承诺。当前行为必须单独裁定；旧缺陷不会因为出现在 golden 中而被保留。
 
 - `golden/current_fa01_complete_matrix_semantics.json`

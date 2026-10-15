@@ -1047,6 +1047,10 @@ Fenced-source character streams also accept a single leading empty `w:rPr`, incl
 that empty properties element, and `w:br w:type="textWrapping"` as the default line break. These nodes add no
 different source characters. Non-empty run properties, page/column/clear breaks and attributed tabs or carriage
 returns remain outside this lexical compatibility; visible-body and reconstructed-block hashes are still required.
+Empty `w:proofErr` grammar/spelling anchors between runs also contribute no source characters. They must have
+exactly one `w:type` attribute, with value `gramStart`, `gramEnd`, `spellStart` or `spellEnd`, and no text, tail or
+children. Unknown types, extra attributes and payload-bearing proofing markers remain invalid. Run splitting and
+these zero-character anchors do not bypass the body/block hashes, source length, package identity or carrier proof.
 
 Hosts may also normalize CRLF and LF in the fenced carrier's break nodes or its two framing EOL attributes.
 The reader first proves the complete closed carrier and physical inventory. If the visible body already matches

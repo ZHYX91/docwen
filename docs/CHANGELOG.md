@@ -5,6 +5,19 @@
 
 ## Unreleased / 未发布
 
+## 0.17.4 (2026-10-14)
+
+- Preserve heading, code and list styles within quotes, native list starting numbers and continuation paragraphs, and template border overrides.
+- Keep inline code and authenticated reference tokens when exporting quotes to Markdown. Accept equivalent Office newline and custom XML serialization while retaining literal-content and identity checks.
+- Keep fenced code readable after Word inserts spelling or grammar markers during save, without changing its authenticated literal content.
+- Initialize document-generation proofreading switches from saved defaults. Keep per-task manual choices when settings are applied, and reload defaults for a new input.
+- Place the output format before dependent generation options; keep the existing format-specific controls and Generate label.
+- 保留引用内标题、代码和列表的语义样式、原生列表起始编号与续段，以及模板边框的显式覆盖。
+- 引用导出 Markdown 时保留行内代码及已认证引用；兼容 Office 等价换行与 custom XML 序列化，继续校验代码字面内容和身份。
+- 修复 Word 保存时加入拼写或语法校对标记后代码段无法回读的问题，继续严格校验代码字面内容。
+- 文档生成的校对开关读取已保存默认值；应用设置时保留当前任务的手动选择，新输入重新读取默认值。
+- 将目标格式放在依赖选项之前，保留按格式显示的控件和生成按钮文字。
+
 ## 0.17.3 (2026-10-13)
 
 - Resolve template body formatting against the actual Normal style identity and emit managed style properties in schema order.
