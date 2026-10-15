@@ -17,6 +17,7 @@ from scripts.release.publication_contract import (
     WORKFLOW,
     PublicationError,
     canonical_json,
+    command_diagnostic,
     file_identity,
     publication_assets,
     read_object,
@@ -64,27 +65,35 @@ def verify_candidate_jobs(payload: dict[str, Any]) -> None:
 def verify_provenance(directory: Path, manifest: dict[str, Any], names: tuple[str, ...]) -> None:
     """Check provenance for the bytes actually being consumed."""
     for name in names:
-        result = subprocess.run(
-            [
-                "gh",
-                "attestation",
-                "verify",
-                str(directory / name),
-                "--repo",
-                manifest["repository"],
-                "--signer-workflow",
-                f"{manifest['repository']}/{WORKFLOW}",
-                "--source-digest",
-                manifest["sourceCommit"],
-                "--source-ref",
-                manifest["origin"]["sourceRef"],
-                "--deny-self-hosted-runners",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=60,
+        try:
+            result = subprocess.run(
+                [
+                    "gh",
+                    "attestation",
+                    "verify",
+                    str(directory / name),
+                    "--repo",
+                    manifest["repository"],
+                    "--signer-workflow",
+                    f"{manifest['repository']}/{WORKFLOW}",
+                    "--source-digest",
+                    manifest["sourceCommit"],
+                    "--source-ref",
+                    manifest["origin"]["sourceRef"],
+                    "--deny-self-hosted-runners",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise PublicationError(
+                command_diagnostic(f"build provenance verification timed out: {name}", "timeout", error.stderr)
+            ) from None
+        require(
+            result.returncode == 0,
+            command_diagnostic(f"build provenance verification failed: {name}", result.returncode, result.stderr),
         )
-        require(result.returncode == 0, f"build provenance verification failed: {name}")
 
 
 class ReleaseSession:

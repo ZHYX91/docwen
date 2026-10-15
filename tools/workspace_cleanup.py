@@ -20,6 +20,7 @@ if __package__ in {None, ""}:
 
 from tools import process_identity
 from tools.housekeeping_journal import ApplyJournal, exclusive_apply
+from tools.recycle_payload import require_payload_identity, snapshot_payload
 from tools.run_lease import manual_retention_observation
 from tools.windows_short_path import ShortPathDriveError, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
@@ -737,8 +738,45 @@ def _plan_without_fingerprint(plan: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in plan.items() if key != "planFingerprint"}
 
 
+def _bind_recycle_payload(identity: dict[str, Any], root: Path) -> None:
+    proof = snapshot_payload(root)
+    for field in ("rootDevice", "rootInode", "bytes", "files", "directories", "contentSha256"):
+        if proof[field] != identity[field]:
+            raise HousekeepingError(f"recycle_source_changed_during_binding:{root}:{field}")
+    if len(proof["reparsePoints"]) != len(identity["reparsePoints"]):
+        raise HousekeepingError(f"recycle_source_links_changed_during_binding:{root}")
+    identity["recyclePayload"] = proof
+
+
 def _plan_fingerprint(plan: dict[str, Any]) -> str:
     return _sha256_bytes(_canonical_json(_plan_without_fingerprint(plan)))
+
+
+def _execution_environment() -> dict[str, Any]:
+    """Bind plans to the existing interpreter and cleanup implementation."""
+    executable = Path(sys.executable).resolve(strict=True)
+    tool_root = Path(__file__).resolve().parent
+    sources = (
+        "workspace_cleanup.py",
+        "housekeeping_journal.py",
+        "process_identity.py",
+        "recycle.py",
+        "recycle_payload.py",
+        "run_lease.py",
+        "windows_short_path.py",
+        "workspace_root.py",
+    )
+    return {
+        "schema": "docwen.housekeeping-environment.v1",
+        "interpreter": str(executable),
+        "interpreterSha256": _sha256_bytes(executable.read_bytes()),
+        "prefix": str(Path(sys.prefix).resolve(strict=True)),
+        "basePrefix": str(Path(sys.base_prefix).resolve(strict=True)),
+        "pythonVersion": sys.version,
+        "platform": sys.platform,
+        "toolRoot": str(tool_root),
+        "toolSha256": {name: _sha256_bytes((tool_root / name).read_bytes()) for name in sources},
+    }
 
 
 def create_plan(
@@ -787,9 +825,13 @@ def create_plan(
         entries.extend(automatic_entries)
     entries.sort(key=lambda entry: os.path.normcase(str(entry["path"])))
     _assert_non_overlapping(entries)
+    if disposition == "recycle":
+        for entry in entries:
+            _bind_recycle_payload(entry["identity"], Path(entry["path"]))
     plan: dict[str, Any] = {
         "disposition": disposition,
         "schema": PLAN_SCHEMA,
+        "executionEnvironment": _execution_environment(),
         "createdAt": current_time.isoformat().replace("+00:00", "Z"),
         "workspaceRoot": str(workspace),
         "engineeringRoot": str(workspace.parent),
@@ -914,6 +956,8 @@ def _revalidate_entry(entry: dict[str, Any], *, workspace: Path) -> dict[str, An
     _validate_target_chain(path, boundary=boundary)
     _assert_no_pending_run_recovery(path)
     current_identity = _snapshot_tree(path)
+    if "recyclePayload" in entry.get("identity", {}):
+        _bind_recycle_payload(current_identity, path)
     if current_identity != entry.get("identity"):
         raise HousekeepingError(f"target_identity_changed:{path}")
     for lease in current_identity["leases"]:
@@ -979,8 +1023,11 @@ def plan_published_candidate(directory: Path, receipt: Path) -> Path | None:
     identity = _snapshot_tree(target)
     if any(_lease_process_alive(lease) for lease in identity["leases"]):
         raise HousekeepingError("publication_candidate_still_owned")
+    if os.name == "nt":
+        _bind_recycle_payload(identity, target)
     plan = {
         "schema": PLAN_SCHEMA,
+        "executionEnvironment": _execution_environment(),
         "workspaceRoot": str(workspace),
         "createdAt": datetime.now(UTC).isoformat(),
         "disposition": "recycle" if os.name == "nt" else "delete",
@@ -1005,6 +1052,10 @@ def apply_saved_plan(plan_path: Path, *, workspace_root: Path) -> dict[str, Any]
     """Apply one saved plan after a full preflight and per-target revalidation."""
 
     plan = load_plan(plan_path, workspace_root=workspace_root)
+    if "executionEnvironment" not in plan:
+        raise HousekeepingError("plan_execution_environment_missing_regenerate_plan")
+    if plan["executionEnvironment"] != _execution_environment():
+        raise HousekeepingError("plan_execution_environment_changed_use_original_environment_or_regenerate_plan")
     workspace = _absolute(Path(str(plan["workspaceRoot"])))
     progress = _absolute(plan_path).with_suffix(".progress.json")
     lock = workspace / "diagnostics" / "housekeeping-apply.lock"
@@ -1026,20 +1077,43 @@ def _apply_with_journal(plan: dict[str, Any], *, plan_path: Path, journal: Apply
     if not isinstance(entries, list):
         raise HousekeepingError("plan_entries_must_be_list")
     _assert_non_overlapping(entries)
+    if disposition == "recycle":
+        for entry in entries:
+            try:
+                require_payload_identity(entry.get("identity", {}).get("recyclePayload"))
+            except ValueError as error:
+                raise HousekeepingError(f"recycle_plan_missing_payload_proof_regenerate:{entry.get('path')}") from error
     completed = journal.payload["completed"]
     completed_paths = [item["path"] for item in completed]
     if completed_paths != [item["path"] for item in entries[: len(completed)]]:
         raise HousekeepingError("housekeeping_journal_entry_mismatch")
     for item, entry in zip(completed, entries, strict=False):
         path = Path(item["path"])
-        if path.exists() or path.is_symlink() or item.get("bytes") != entry["identity"]["bytes"]:
+        try:
+            path.lstat()
+        except FileNotFoundError:
+            present = False
+        else:
+            present = True
+        if present or item.get("bytes") != entry["identity"]["bytes"]:
             raise HousekeepingError(f"completed_target_changed:{path}")
         if disposition == "recycle":
-            from tools.recycle import recovery_entries
+            from tools.recycle import recovery_entries, verify_recovery_entry
 
             recovered = recovery_entries(path)
-            if not item.get("recovery") or any(record not in recovered for record in item["recovery"]):
+            if not item.get("recovery") or any(
+                not any(
+                    record.get("metadata") == candidate["metadata"] and record.get("payload") == candidate["payload"]
+                    for candidate in recovered
+                )
+                for record in item["recovery"]
+            ):
                 raise HousekeepingError(f"completed_recovery_unverified:{path}")
+            for record in item["recovery"]:
+                try:
+                    verify_recovery_entry(path, record, entry["identity"]["recyclePayload"])
+                except (OSError, ValueError, KeyError) as error:
+                    raise HousekeepingError(f"completed_recovery_unverified:{path}:{error}") from error
     remaining = entries[len(completed) :]
     if journal.payload.get("pending") is not None:
         raise HousekeepingError(f"previous_apply_outcome_unconfirmed_review_journal:{journal.path}")
@@ -1058,7 +1132,7 @@ def _apply_with_journal(plan: dict[str, Any], *, plan_path: Path, journal: Apply
             if disposition == "recycle":
                 from tools.recycle import recycle_directory
 
-                recovery = recycle_directory(path)
+                recovery = recycle_directory(path, expected_identity=entry["identity"]["recyclePayload"])
             else:
                 shutil.rmtree(_windows_extended_path(path), onexc=_remove_owned_readonly_path)
             journal.complete(
@@ -1072,6 +1146,17 @@ def _apply_with_journal(plan: dict[str, Any], *, plan_path: Path, journal: Apply
             # The durable pending record survives even if saving the error fails.
             if journal.payload.get("pending") is not None:
                 try:
+                    from tools.recycle import RecycleUnconfirmedError
+
+                    if isinstance(error, RecycleUnconfirmedError):
+                        journal.payload["pending"]["recycle"] = {
+                            "sourceAbsent": error.source_absent,
+                            "candidates": error.recovery,
+                            "expectedPayloadIdentity": error.expected_identity,
+                            "verification": "unconfirmed",
+                            "observationErrors": error.observation_errors,
+                            "operationError": error.operation_error,
+                        }
                     journal.failed(error)
                 except OSError as journal_error:
                     error.add_note(f"housekeeping error receipt failed: {journal_error}")
@@ -1082,6 +1167,7 @@ def _apply_with_journal(plan: dict[str, Any], *, plan_path: Path, journal: Apply
         "spaceReclaimed": disposition == "delete",
         "planPath": str(_absolute(plan_path)),
         "planFingerprint": plan["planFingerprint"],
+        "executionEnvironment": plan["executionEnvironment"],
         "removed": [item["path"] for item in journal.payload["completed"]],
         "removedEntries": journal.payload["completed"],
         "removedBytes": sum(item["bytes"] for item in journal.payload["completed"]),

@@ -34,9 +34,13 @@ DocWen 最初面向文印室等日常文档整理场景，主要解决这些问�
 
 ## 📸 界面截图
 
-| Markdown 生成文档 | 模板管理 |
-| --- | --- |
-| ![Markdown 生成文档](../assets/screenshots/markdown-generation-en.png) | ![模板管理](../assets/screenshots/template-management-en.png) |
+为 Markdown 文档选择模板和生成选项。
+
+![Markdown 生成文档](../assets/screenshots/markdown-generation-en.png)
+
+在设置中导入、启用、排序和复制模板。
+
+![模板管理](../assets/screenshots/template-management-en.png)
 
 更新日志：见 [CHANGELOG.md](../CHANGELOG.md)
 

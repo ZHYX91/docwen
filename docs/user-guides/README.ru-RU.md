@@ -33,9 +33,13 @@ DocWen создавался для повседневной подготовки
 
 ## 📸 Скриншоты
 
-| Из Markdown в документ | Управление шаблонами |
-| --- | --- |
-| ![Из Markdown в документ](../assets/screenshots/markdown-generation-en.png) | ![Управление шаблонами](../assets/screenshots/template-management-en.png) |
+Выберите шаблон и параметры создания документов из Markdown.
+
+![Из Markdown в документ](../assets/screenshots/markdown-generation-en.png)
+
+Импортируйте, включайте, упорядочивайте и копируйте шаблоны в настройках.
+
+![Управление шаблонами](../assets/screenshots/template-management-en.png)
 
 Журнал изменений: см. [CHANGELOG.md](../CHANGELOG.md)
 

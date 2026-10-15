@@ -33,9 +33,13 @@ Este software se diseñó originalmente para resolver problemas comunes en entor
 
 ## 📸 Capturas de pantalla
 
-| De Markdown a documento | Gestión de plantillas |
-| --- | --- |
-| ![De Markdown a documento](../assets/screenshots/markdown-generation-en.png) | ![Gestión de plantillas](../assets/screenshots/template-management-en.png) |
+Seleccione una plantilla y las opciones de generación de documentos Markdown.
+
+![De Markdown a documento](../assets/screenshots/markdown-generation-en.png)
+
+Importe, active, ordene y copie plantillas en la configuración.
+
+![Gestión de plantillas](../assets/screenshots/template-management-en.png)
 
 Registro de cambios: ver [CHANGELOG.md](../CHANGELOG.md)
 

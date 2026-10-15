@@ -33,9 +33,13 @@ DocWen은 Word, Markdown, Excel 등 업무용 형식을 위한 로컬 문서·�
 
 ## 📸 스크린샷
 
-| Markdown에서 문서 생성 | 템플릿 관리 |
-| --- | --- |
-| ![Markdown에서 문서 생성](../assets/screenshots/markdown-generation-en.png) | ![템플릿 관리](../assets/screenshots/template-management-en.png) |
+Markdown 문서의 템플릿과 생성 옵션을 선택합니다.
+
+![Markdown에서 문서 생성](../assets/screenshots/markdown-generation-en.png)
+
+설정에서 템플릿을 가져오고, 활성화하고, 순서를 바꾸고, 복사합니다.
+
+![템플릿 관리](../assets/screenshots/template-management-en.png)
 
 변경 이력: [CHANGELOG.md](../CHANGELOG.md) 참고
 

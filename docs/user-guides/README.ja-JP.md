@@ -33,9 +33,13 @@ DocWen は、日常の文書整理でよく発生する次のような課題を�
 
 ## 📸 スクリーンショット
 
-| Markdown から文書を生成 | テンプレート管理 |
-| --- | --- |
-| ![Markdown から文書を生成](../assets/screenshots/markdown-generation-en.png) | ![テンプレート管理](../assets/screenshots/template-management-en.png) |
+Markdown 文書のテンプレートと生成オプションを選択します。
+
+![Markdown から文書を生成](../assets/screenshots/markdown-generation-en.png)
+
+設定でテンプレートをインポート、有効化、並べ替え、コピーできます。
+
+![テンプレート管理](../assets/screenshots/template-management-en.png)
 
 更新履歴： [CHANGELOG.md](../CHANGELOG.md) を参照
 

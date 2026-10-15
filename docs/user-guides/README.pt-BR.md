@@ -33,9 +33,13 @@ O DocWen nasceu para tarefas cotidianas de preparação de documentos, nas quais
 
 ## 📸 Capturas de tela
 
-| Markdown para documento | Gerenciamento de modelos |
-| --- | --- |
-| ![Markdown para documento](../assets/screenshots/markdown-generation-en.png) | ![Gerenciamento de modelos](../assets/screenshots/template-management-en.png) |
+Selecione um modelo e as opções de geração de documentos Markdown.
+
+![Markdown para documento](../assets/screenshots/markdown-generation-en.png)
+
+Importe, ative, reordene e copie modelos nas configurações.
+
+![Gerenciamento de modelos](../assets/screenshots/template-management-en.png)
 
 Registro de alterações: veja [CHANGELOG.md](../CHANGELOG.md)
 

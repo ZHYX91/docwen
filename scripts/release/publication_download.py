@@ -16,7 +16,14 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from urllib.request import getproxies, proxy_bypass
 
-from scripts.release.publication_contract import PublicationError, canonical_json, file_identity, read_object, require
+from scripts.release.publication_contract import (
+    PublicationError,
+    canonical_json,
+    command_diagnostic,
+    file_identity,
+    read_object,
+    require,
+)
 from scripts.release.publication_http import ApiError, GitHub, env_seconds, retry_after_seconds
 
 
@@ -252,7 +259,14 @@ def download_artifact(api: GitHub, artifact: dict, archive: Path) -> None:
         # subprocess.run kills and waits for this single worker; there are no
         # background readers still writing the partial archive after return.
         raise PublicationError("artifact total download deadline exceeded; partial retained") from None
-    require(result.returncode == 0, "artifact transfer failed; identity-bound partial retained")
+    require(
+        result.returncode == 0,
+        command_diagnostic(
+            f"artifact transfer failed: {artifact.get('id')}; identity-bound partial retained",
+            result.returncode,
+            getattr(result, "stdout", ""),
+        ),
+    )
 
 
 def _worker_main() -> None:
@@ -264,7 +278,15 @@ def _worker_main() -> None:
         download_artifact_in_process(api, request["artifact"], Path(request["archive"]))
     except Exception as error:
         # Never render transport exceptions: they can contain signed URLs.
-        print(str(error) if isinstance(error, PublicationError) else "artifact transport failed", file=sys.stderr)
+        message = command_diagnostic(
+            f"artifact download failed: {request['artifact'].get('id')}",
+            1,
+            str(error) if isinstance(error, PublicationError) else f"artifact transport failed: {type(error).__name__}",
+        )
+        print(message, file=sys.stderr)
+        # Only the final sanitized failure goes to the captured result channel;
+        # byte progress continues to stream on stderr during long downloads.
+        print(message)
         raise SystemExit(1) from None
 
 

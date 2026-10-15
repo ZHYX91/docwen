@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from typing import Any
 
-from scripts.release.publication_contract import PublicationError
+from scripts.release.publication_contract import PublicationError, command_diagnostic
 
 
 class PendingRead(PublicationError):
@@ -27,8 +27,8 @@ class PendingRead(PublicationError):
 
 
 class ApiError(PublicationError):
-    def __init__(self, status: int, *, retry_after: float = 0, limited: bool = False) -> None:
-        super().__init__(f"GitHub request failed: HTTP {status}")
+    def __init__(self, status: int, *, retry_after: float = 0, limited: bool = False, diagnostic: str = "") -> None:
+        super().__init__(f"GitHub request failed: HTTP {status}" + (f"; {diagnostic}" if diagnostic else ""))
         self.status = status
         self.retry_after = retry_after
         self.limited = limited
@@ -91,7 +91,10 @@ def read_with_retry[T](
             remaining = deadline - clock()
             delay = max(min(2 ** (attempt + 1), 16), getattr(error, "retry_after", 0))
             if delay >= remaining:
-                raise PublicationError("read recovery budget exhausted") from error
+                raise PublicationError(
+                    "read recovery budget exhausted; "
+                    + command_diagnostic("last read failure", type(error).__name__, str(error))
+                ) from error
             sleep(delay)
             attempt += 1
 
@@ -199,10 +202,13 @@ class GitHub:
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired as error:
-            raise PendingRead("asset download timed out") from error
+            raise PendingRead(
+                command_diagnostic(f"asset download timed out: {path}", "timeout", error.stderr)
+            ) from None
         if result.returncode:
+            diagnostic = command_diagnostic(f"asset download failed: {path}", result.returncode, result.stderr)
             match = re.search(rb"HTTP (\d{3})", result.stderr)
             if match:
-                raise ApiError(int(match[1]))
-            raise PendingRead("asset download failed")
+                raise ApiError(int(match[1]), diagnostic=diagnostic)
+            raise PendingRead(diagnostic)
         return {"bytes": len(result.stdout), "sha256": hashlib.sha256(result.stdout).hexdigest()}
