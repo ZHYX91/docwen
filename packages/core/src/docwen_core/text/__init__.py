@@ -37,6 +37,8 @@ LOCALE_TO_OCR_LANGUAGE: dict[str, str] = {
     "es_ES": OCR_LANGUAGE_LATIN,
     "vi_VN": OCR_LANGUAGE_LATIN,
     "ru_RU": OCR_LANGUAGE_CYRILLIC,
+    # The Arabic interface does not yet imply Arabic OCR support. Avoid defaulting to Chinese.
+    "ar_SA": OCR_LANGUAGE_ENGLISH,
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
