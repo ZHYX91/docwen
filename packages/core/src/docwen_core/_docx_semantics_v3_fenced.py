@@ -398,6 +398,18 @@ def _prove_and_read_body_runs(content: Any) -> str:
     output: list[str] = []
     payload_items: list[Any] = []
     for run in content:
+        if run.tag == qn("w:proofErr"):
+            if (
+                set(run.attrib) != {qn("w:type")}
+                or run.get(qn("w:type")) not in {"gramStart", "gramEnd", "spellStart", "spellEnd"}
+                or run.text is not None
+                or run.tail is not None
+                or len(run) != 0
+            ):
+                raise DocxSemanticsV3Error("fenced-source proofing marker is not canonical")
+            # Word inserts empty proofing anchors between split runs. They
+            # contribute no characters to the hash-authenticated source body.
+            continue
         if run.tag != qn("w:r") or run.attrib or run.xpath("text()") or run.tail is not None:
             raise DocxSemanticsV3Error("fenced-source content contains a non-canonical run")
         payload = list(run)
