@@ -142,20 +142,29 @@ def test_docx_to_md_convert_uses_every_bundled_locale_template_style(tmp_path):
     repo_root = Path(__file__).resolve().parents[4]
     locale_paths = sorted((repo_root / "i18n" / "locales").glob("*.toml"))
     template_paths = sorted((repo_root / "templates").glob("*.docx"))
-    assert len(locale_paths) == 11
+    assert len(locale_paths) == 12  # Arabic has a UI catalog but no dedicated DOCX template yet.
     assert len(template_paths) == 11
 
     template_style_names = {path: {style.name for style in Document(str(path)).styles} for path in template_paths}
     for locale_path in locale_paths:
         styles = tomllib.loads(locale_path.read_text(encoding="utf-8"))["styles"]
         code_name = styles["code_block"]
-        matching_templates = [path for path, names in template_style_names.items() if code_name in names]
-        assert len(matching_templates) == 1, (locale_path.name, code_name, matching_templates)
-
         locale_id = locale_path.stem
+        if locale_id == "ar_SA":
+            # A language-specific UI catalog does not imply a bundled Arabic Word template.
+            assert tomllib.loads(locale_path.read_text(encoding="utf-8"))["meta"]["template_name"] == (
+                "English General Template"
+            )
+            document = Document()
+            document.styles.add_style(code_name, WD_STYLE_TYPE.PARAGRAPH)
+            document.styles.add_style(styles["quote_3"], WD_STYLE_TYPE.PARAGRAPH)
+        else:
+            matching_templates = [path for path, names in template_style_names.items() if code_name in names]
+            assert len(matching_templates) == 1, (locale_path.name, code_name, matching_templates)
+            document = Document(str(matching_templates[0]))
+
         code_text = f"print('{locale_id}')"
         quote_text = f"quote-{locale_id}"
-        document = Document(str(matching_templates[0]))
         document.add_paragraph(code_text, style=code_name)
         document.add_paragraph(quote_text, style=styles["quote_3"])
 

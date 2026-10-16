@@ -54,8 +54,29 @@ def discover_locale_template_names() -> dict[str, str]:
         else:
             logger.debug("Skipping %s: [meta].template_name is missing", path.name)
 
-    logger.info("Discovered %d locale templates: %s", len(result), ", ".join(result))
-    return result
+    # Multiple interface locales can deliberately point to one shipped default
+    # template. Never regenerate a shared filename on behalf of an alias:
+    # doing so could overwrite the canonical template's contents.
+    template_owners: dict[str, str] = {}
+    for locale in sorted(result, key=lambda code: (code != "en_US", code)):
+        template_name = result[locale]
+        if template_name in template_owners:
+            logger.info(
+                "Skipping locale %s for template generation: %s reuses %s's template",
+                locale,
+                template_name,
+                template_owners[template_name],
+            )
+            continue
+        template_owners[template_name] = locale
+
+    unique = {
+        locale: template_name
+        for locale, template_name in result.items()
+        if template_owners[template_name] == locale
+    }
+    logger.info("Discovered %d dedicated locale templates: %s", len(unique), ", ".join(unique))
+    return unique
 
 
 def get_locale_placeholders(locale: str) -> dict[str, str]:
