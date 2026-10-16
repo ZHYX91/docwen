@@ -320,7 +320,9 @@ def test_arabic_initial_default_uses_shipped_english_template(qapp):
         model = TemplateViewModel()
         model.refresh()
         assert model.error is None
-        chosen = model.find(model.defaults["docx"])
+        selected = model.defaults["docx"]
+        assert selected is not None
+        chosen = model.find(selected)
         assert chosen is not None
         assert chosen.name == "English General Template"
         model.refresh()
