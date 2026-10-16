@@ -171,6 +171,7 @@ def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
     arabic = _flatten_string_values(_read_toml_file(LOCALES_DIR / "ar_SA.toml"))
     exempt = {
         "common.app_name",
+        "meta.template_name",  # Existing English DOCX template is deliberately reused.
         "settings.general.languages.ar_SA",
         "settings.document.software.wps_writer",
         "settings.document.software.msoffice_word",
