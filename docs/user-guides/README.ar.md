@@ -83,7 +83,7 @@ docwen convert sample.docx --to md --output-dir output
 
 للتفاصيل راجع [دليل سطر الأوامر](../cli.md) و[عقد البروتوكول](../specs/machine-protocol-v2.md).
 
-## Markdown وObsidian
+## صيغة Markdown والامتدادات
 
 يمكن استخدام DocWen مع ملفات Markdown العادية دون إضافات. أما صيغة Structural Tables والجداول المدمجة وتسميات Number Suite والعناوين H7–H9 والحواشي الختامية المميزة فهي **امتدادات اختيارية معطّلة افتراضيًا**.
 
