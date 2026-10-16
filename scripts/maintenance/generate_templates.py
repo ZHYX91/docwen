@@ -70,11 +70,10 @@ def discover_locale_template_names() -> dict[str, str]:
             continue
         template_owners[template_name] = locale
 
-    unique = {
-        locale: template_name
-        for locale, template_name in result.items()
-        if template_owners[template_name] == locale
-    }
+    unique: dict[str, str] = {}
+    for locale, template_name in result.items():
+        if template_owners[template_name] == locale:
+            unique[locale] = template_name
     logger.info("Discovered %d dedicated locale templates: %s", len(unique), ", ".join(unique))
     return unique
 
