@@ -1269,13 +1269,13 @@ format_combo_tooltip = "اختيار تنسيق الجدول الناتج"
 
 # 序号新增编辑器
 [editors.numbering_add]
-window_title = "Numbering Scheme Editor"
-scheme_list = "Scheme List"
-default_scheme = "Default Scheme:"
-level_format_config = "Level Format Configuration"
-realtime_preview = "Real-time Preview"
-format_help = "📖 Format Help"
-format_help_title = "Format Placeholder Help"
+window_title = "محرر أنماط ترقيم العناوين"
+scheme_list = "قائمة أنماط الترقيم"
+default_scheme = "النمط الافتراضي:"
+level_format_config = "تنسيق مستويات العناوين"
+realtime_preview = "معاينة مباشرة"
+format_help = "📖 شرح صيغة الترقيم"
+format_help_title = "شرح العناصر البديلة في صيغة الترقيم"
 format_help_text = """Format Placeholder Usage
 
 占位符格式：{级别.样式}
@@ -1298,156 +1298,156 @@ format_help_text = """Format Placeholder Usage
   {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
 
 # 级别名称
-level_1 = "Level 1 Heading"
-level_2 = "Level 2 Heading"
-level_3 = "Level 3 Heading"
-level_4 = "Level 4 Heading"
-level_5 = "Level 5 Heading"
-level_6 = "Level 6 Heading"
-level_7 = "Level 7 Heading"
-level_8 = "Level 8 Heading"
-level_9 = "Level 9 Heading"
+level_1 = "عنوان من المستوى 1"
+level_2 = "عنوان من المستوى 2"
+level_3 = "عنوان من المستوى 3"
+level_4 = "عنوان من المستوى 4"
+level_5 = "عنوان من المستوى 5"
+level_6 = "عنوان من المستوى 6"
+level_7 = "عنوان من المستوى 7"
+level_8 = "عنوان من المستوى 8"
+level_9 = "عنوان من المستوى 9"
 
 # 创建和复制
-new_scheme = "New Scheme"
-copy_suffix = "(Copy)"
+new_scheme = "نمط ترقيم جديد"
+copy_suffix = "(نسخة)"
 
 # 预览
-preview_sample = "Sample {level_name}"
-no_format = "No format defined"
+preview_sample = "مثال {level_name}"
+no_format = "لم يُحدّد تنسيق"
 
 # 占位符菜单
-menu_current_level = "── Current Level ({level}) ──"
-menu_decorations = "── Common Decorations ──"
-menu_hierarchical = "── Hierarchical Format ──"
+menu_current_level = "── المستوى الحالي ({level}) ──"
+menu_decorations = "── علامات شائعة ──"
+menu_hierarchical = "── تنسيق متسلسل ──"
 
 # 数字样式
-style_chinese_lower = "Chinese Lower (一二三)"
-style_chinese_upper = "Chinese Upper (壹贰叁)"
-style_arabic_half = "Arabic Numerals (123)"
-style_arabic_circled = "Circled Numbers (①②③)"
-style_letter_upper = "Uppercase Letters (ABC)"
-style_roman_upper = "Roman Numerals (I II III)"
+style_chinese_lower = "أرقام صينية بسيطة (一二三)"
+style_chinese_upper = "أرقام صينية رسمية (壹贰叁)"
+style_arabic_half = "أرقام عشرية (123)"
+style_arabic_circled = "أرقام داخل دوائر (①②③)"
+style_letter_upper = "حروف لاتينية كبيرة (ABC)"
+style_roman_upper = "أرقام رومانية (I II III)"
 
 # 装饰
-decoration_dun = "Chinese Comma"
-decoration_dot_space = "Dot + Space"
-decoration_bracket = "Full-width Brackets"
-decoration_chapter = "Chapter Format"
+decoration_dun = "فاصلة تعداد صينية"
+decoration_dot_space = "نقطة ومسافة"
+decoration_bracket = "أقواس صينية عريضة"
+decoration_chapter = "تنسيق الفصول"
 
 # 验证消息
-validation_ok = "Format is valid"
-validation_fixed_text = "No placeholder found. This level will display fixed text only."
-validation_invalid_level = "Level '{level}' is not a valid number."
-validation_level_out_of_range = "Level {level} is out of range. Use 1-9."
-validation_unknown_style = "Unknown style '{style}'."
-word_native_unavailable = "Word native compatibility: (unable to check)"
-word_native_full = "Word native compatibility: fully compatible"
-word_native_approximate = "Word native compatibility: approximately compatible ({reason})"
-word_native_incompatible = "Word native compatibility: incompatible ({reason})"
+validation_ok = "صيغة الترقيم صالحة"
+validation_fixed_text = "لا يوجد عنصر بديل؛ سيعرض هذا المستوى نصًا ثابتًا فقط."
+validation_invalid_level = "القيمة «{level}» ليست رقم مستوى صالحًا."
+validation_level_out_of_range = "المستوى {level} خارج النطاق؛ اختر من 1 إلى 9."
+validation_unknown_style = "نمط غير معروف: «{style}»."
+word_native_unavailable = "التوافق مع ترقيم Word الأصلي: تعذّر التحقق"
+word_native_full = "التوافق مع ترقيم Word الأصلي: كامل"
+word_native_approximate = "التوافق مع ترقيم Word الأصلي: جزئي ({reason})"
+word_native_incompatible = "غير متوافق مع ترقيم Word الأصلي ({reason})"
 
 
 # 错误消息
-cannot_delete_default_scheme = "Cannot delete the default scheme"
+cannot_delete_default_scheme = "لا يمكن حذف نمط الترقيم الافتراضي"
 
 # 方案名称
 [editors.numbering_add.names]
-hierarchical_standard = "Hierarchical Number Standard"
-hierarchical_h2_start = "Hierarchical (H2 Start)"
+hierarchical_standard = "الترقيم المتسلسل المعتاد"
+hierarchical_h2_start = "الترقيم المتسلسل بدءًا من H2"
 
 # 方案描述（用于编辑器中显示）
 [editors.numbering_add.descriptions]
-hierarchical_standard_desc = "Hierarchical format: 1, 1.1, 1.1.1... (with space after number)"
-hierarchical_h2_start_desc = "Hierarchical format (skip H1/Level 1 Heading): Start from H2/Level 2 Heading with 1, 1.1, 1.1.1..."
+hierarchical_standard_desc = "ترقيم متسلسل: 1، 1.1، 1.1.1… مع مسافة بعد الرقم"
+hierarchical_h2_start_desc = "يبدأ الترقيم من العنوان H2 ويتجاوز H1: ‏1، 1.1، 1.1.1…"
 
 # 通用编辑器文本（所有编辑器共用）
 [editors.common]
-name = "Name:"
-description = "Description:"
-copy = "Copy"
-delete = "Delete"
-move_up = "Move Up"
-move_down = "Move Down"
-save = "Save"
-cancel = "Cancel"
-prompt = "Info"
-select_item_first = "Please select an item first"
-cannot_delete = "Cannot Delete"
-system_item_hint = "System items cannot be deleted, only disabled"
-confirm_delete = "Confirm Delete"
-confirm_delete_message = "Are you sure you want to delete '{name}'?"
-confirm_close = "Confirm Close"
-unsaved_changes_hint = "Unsaved changes"
-unsaved_close_message = "There are unsaved changes. Are you sure you want to close?"
+name = "الاسم:"
+description = "الوصف:"
+copy = "نسخ"
+delete = "حذف"
+move_up = "تحريك لأعلى"
+move_down = "تحريك لأسفل"
+save = "حفظ"
+cancel = "إلغاء"
+prompt = "معلومات"
+select_item_first = "اختر عنصرًا أولًا"
+cannot_delete = "لا يمكن الحذف"
+system_item_hint = "لا يمكن حذف عناصر النظام، ولكن يمكن تعطيلها"
+confirm_delete = "تأكيد الحذف"
+confirm_delete_message = "هل تريد حذف «{name}»؟"
+confirm_close = "تأكيد الإغلاق"
+unsaved_changes_hint = "تغييرات غير محفوظة"
+unsaved_close_message = "توجد تغييرات لم تُحفظ. هل تريد الإغلاق؟"
 
 # 序号清理编辑器
 [editors.numbering_clean]
-level = "Heading level:"
-disabled = "Disabled"
-window_title = "Cleanup Rules Editor"
-rule_list = "Rule List"
-description = "Description:"
-enabled = "Enabled"
-regex = "Regex:"
-regex_test = "Regex Test"
-input = "Input:"
-result = "Result:"
-new_rule = "New Rule"
-copy_suffix = "(Copy)"
-match_success = "Match Success"
-no_match = "No Match"
-regex_error = "Regex Error"
-prompt = "Info"
+level = "مستوى العنوان:"
+disabled = "معطّل"
+window_title = "محرر قواعد إزالة الترقيم"
+rule_list = "قائمة القواعد"
+description = "الوصف:"
+enabled = "مفعّل"
+regex = "تعبير نمطي:"
+regex_test = "اختبار التعبير النمطي"
+input = "الإدخال:"
+result = "النتيجة:"
+new_rule = "قاعدة جديدة"
+copy_suffix = "(نسخة)"
+match_success = "تم العثور على تطابق"
+no_match = "لا يوجد تطابق"
+regex_error = "خطأ في التعبير النمطي"
+prompt = "معلومات"
 
 # 清理规则名称
 [editors.numbering_clean.names]
-chinese_unit_suffix = "Chinese [Di-X-Unit] Format"
-chinese_unit_prefix = "Chinese [Unit-X] Format"
-circled_numbers = "Circled Numbers"
-bracket_number = "Bracket Numbers"
-hierarchical = "Hierarchical Numbers"
-number_separator = "Number with Separator"
-legal_english = "English Chapter Format"
-letter_number = "Letter Numbers"
+chinese_unit_suffix = "صيغة صينية مع بادئة «第»"
+chinese_unit_prefix = "صيغة صينية يبدأ فيها اسم الوحدة"
+circled_numbers = "أرقام داخل دوائر"
+bracket_number = "أرقام بين أقواس"
+hierarchical = "أرقام متسلسلة"
+number_separator = "رقم يتبعه فاصل"
+legal_english = "ترقيم فصول باللغة الإنجليزية"
+letter_number = "ترقيم بالحروف"
 
 # 清理规则描述（用于编辑器中显示）
 [editors.numbering_clean.descriptions]
-chinese_unit_suffix_desc = "Match: 第X回/篇/册/卷/部/集/期/编/章/节/条/款/项/目 + space"
-chinese_unit_prefix_desc = "Match: 卷/篇/册/部/集/期/编/章/节/回 + number + space"
-circled_numbers_desc = "Match: ①-㊿, ❶-⓴, ⓵-⓾, ㈠-㈩ circled numbers + optional separator"
-bracket_number_desc = "Match: (1), （一）, 1), 一） etc. + optional separator"
-hierarchical_desc = "Match: 1.1 / 1.1.1 / 1.1.1.1 etc. + optional separator"
-number_separator_desc = "Match: 1. / 2、/ 一、/ 二, etc. + optional space"
-legal_english_desc = "Match: Chapter/Part/Volume/Book/Section + number/roman numeral"
-letter_number_desc = "Match: A. / A) / (A) / a. / a) letter numbering"
+chinese_unit_suffix_desc = "مطابقة الصيغة الصينية 第X回/篇/册/卷/部/集/期/编/章/节/条/款/项/目 يليها فراغ"
+chinese_unit_prefix_desc = "مطابقة وحدة صينية مثل 卷/篇/册/部/集/期/编/章/节/回 يتبعها رقم وفراغ"
+circled_numbers_desc = "مطابقة الأرقام المحاطة بدائرة مثل ①-㊿ و❶-⓴ و⓵-⓾ و㈠-㈩ مع فاصل اختياري"
+bracket_number_desc = "مطابقة الأرقام بين أقواس مثل (1) و（一） و1) و一） مع فاصل اختياري"
+hierarchical_desc = "مطابقة أرقام المستويات مثل 1.1 و1.1.1 و1.1.1.1 مع فاصل اختياري"
+number_separator_desc = "مطابقة رقم يتبعه فاصل مثل 1. أو 2、 أو 一、 أو 二, مع فراغ اختياري"
+legal_english_desc = "مطابقة كلمات Chapter وPart وVolume وBook وSection متبوعة برقم عادي أو روماني"
+letter_number_desc = "مطابقة ترقيم بالحروف مثل A. أو A) أو (A) أو a. أو a)"
 
 # 映射编辑器
 [editors.mapping]
 # 对话框标题
-symbol_editor_title = "Punctuation pairing rules"
-typo_editor_title = "Typo Dictionary Editor"
-sensitive_editor_title = "Flagged Terms Editor"
+symbol_editor_title = "قواعد مطابقة علامات الترقيم"
+typo_editor_title = "محرر قاموس الأخطاء الإملائية"
+sensitive_editor_title = "محرر الكلمات المطلوب التنبيه لها"
 # 下拉选择标签
-search_placeholder = "Search key, value, or comment"
-correct_word = "Correct Word"
-misspellings = "Misspellings"
-multi_value_hint = "Tip: use | to separate multiple values (for example: value1|value2|value3)"
-save_typos_failed = "Could not save typos dictionary."
-save_symbol_correction_failed = "Could not save symbol correction entries."
-save_sensitive_words_failed = "Could not save sensitive words dictionary."
+search_placeholder = "ابحث عن مفتاح أو قيمة أو تعليق"
+correct_word = "الكلمة الصحيحة"
+misspellings = "الأخطاء الإملائية"
+multi_value_hint = "استخدم الرمز | للفصل بين قيم متعددة، مثل value1|value2|value3"
+save_typos_failed = "تعذّر حفظ قاموس الأخطاء الإملائية."
+save_symbol_correction_failed = "تعذّر حفظ قواعد تصحيح الرموز."
+save_sensitive_words_failed = "تعذّر حفظ قائمة الكلمات الحساسة."
 
 # 列头
-symbol_correct_symbol = "Correct Symbol"
-symbol_error_symbols = "Error Symbol List"
-sensitive_sensitive_word = "Flagged Term"
-sensitive_exceptions = "Exception List"
-comment = "Comment"
+symbol_correct_symbol = "الرمز الصحيح"
+symbol_error_symbols = "قائمة الرموز الخاطئة"
+sensitive_sensitive_word = "كلمة للتنبيه"
+sensitive_exceptions = "قائمة الاستثناءات"
+comment = "تعليق"
 
 # 说明文本
 
 # 按钮
-add_entry = "Add Entry"
-delete_entry = "Delete Entry"
+add_entry = "إضافة عنصر"
+delete_entry = "حذف عنصر"
 
 # 提示消息
 
@@ -1460,17 +1460,17 @@ delete_entry = "Delete Entry"
 # 验证消息
 
 # 键重复处理
-duplicate_key_title = "Key Already Exists"
-duplicate_key_message = "Key \"{entry_key}\" already exists\n\nCurrent values: {current_values}\nCurrent comment: {current_comment}\n\nPlease select an action:"
-duplicate_key_no_comment = "(none)"
-overwrite = "Overwrite"
-merge = "Merge"
+duplicate_key_title = "المفتاح موجود بالفعل"
+duplicate_key_message = "المفتاح «{entry_key}» موجود بالفعل. القيم الحالية: {current_values}. التعليق الحالي: {current_comment}. اختر كيفية المتابعة."
+duplicate_key_no_comment = "(لا يوجد)"
+overwrite = "استبدال"
+merge = "دمج"
 
 # =============================================================================
 # 文件类型分类
 # =============================================================================
-opening_symbol = "Opening punctuation"
-closing_symbol = "Closing punctuation"
+opening_symbol = "علامة الفتح"
+closing_symbol = "علامة الإغلاق"
 [file_types]
 document = "Document"
 spreadsheet = "Spreadsheet"
