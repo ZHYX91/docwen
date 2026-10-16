@@ -318,11 +318,10 @@ _QUOTE_GENERIC_NAMES = {
     "intensequote",
 }
 
-# Exact names emitted by every bundled locale template.  Keep these separate
-# from the fuzzy third-party aliases above: a localized product style is an
-# exact contract, while broad substring matching can misclassify ordinary
-# user-created styles.  The real-template regression test verifies this table
-# against both ``i18n/locales/*.toml`` and the bundled DOCX templates.
+# Exact localized DocWen style names, including languages that do not yet
+# ship a dedicated DOCX template.  Keep these separate from fuzzy third-party
+# aliases so ordinary custom styles are not misclassified.  The regressions
+# check existing templates and also construct Arabic-named styles in memory.
 _LOCALIZED_CODE_BLOCK_STYLE_NAMES = frozenset(
     (
         "Codeblock",
