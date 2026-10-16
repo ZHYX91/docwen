@@ -121,17 +121,17 @@ window_topmost_disabled = "أُلغي تثبيت النافذة. اضغط Ctrl+S
 # CLI 命令行界面
 # =============================================================================
 [cli]
-description = "DocWen CLI - Supports document/spreadsheet/image/layout file conversion"
-example = "Example"
+description = "أداة DocWen لسطر الأوامر لتحويل المستندات والجداول والصور وملفات التخطيط"
+example = "مثال"
 
 # CLI帮助文本
 [cli.help]
-settings = "Settings management"
-settings_reset = "Reset settings to defaults"
-files = "Input file path(s) (supports wildcards like *.docx)"
-template = "Template resource ID from resources list templates; use the returned ID instead of a display name, filename, or path"
-inspect = "Inspect the file type, format, and available operations"
-doctor = "Run diagnostics"
+settings = "إدارة الإعدادات"
+settings_reset = "إعادة الإعدادات الافتراضية"
+files = "مسارات ملفات الإدخال (تقبل الأنماط مثل *.docx)"
+template = "معرّف القالب من قائمة القوالب؛ استخدم المعرّف لا اسم القالب أو مساره"
+inspect = "فحص نوع الملف وتنسيقه والعمليات المتاحة له"
+doctor = "فحص المشكلات"
 
 # CLI参数组标题
 [cli.groups]
@@ -158,10 +158,10 @@ doctor = "Run diagnostics"
 
 # 优化类型
 [cli.interactive.optimization_types]
-gongwen = "Official Document"
+gongwen = "مستند رسمي"
 
 # 校对选项
-invoice_cn = "Chinese Invoice"
+invoice_cn = "فاتورة صينية"
 [cli.interactive.proofread]
 
 # 提示文本
@@ -169,12 +169,12 @@ invoice_cn = "Chinese Invoice"
 
 # CLI消息
 [cli.messages]
-error_aggregate_need_two = "At least two matching files are required (found: {count})."
-error_no_valid_files = "Error: No valid files"
-error_file_not_found = "Error: No valid files found"
-warning_invalid_files = "Warning: {count} file(s) invalid"
-error_prefix = "Error"
-invalid_tab = "Unknown settings tab: {tab}"
+error_aggregate_need_two = "مطلوب ملفان متوافقان على الأقل (العدد الحالي: {count})."
+error_no_valid_files = "خطأ: لا توجد ملفات صالحة"
+error_file_not_found = "خطأ: لم يُعثر على ملفات صالحة"
+warning_invalid_files = "تحذير: {count} ملفات غير صالحة"
+error_prefix = "خطأ"
+invalid_tab = "صفحة إعدادات غير معروفة: {tab}"
 
 # 批处理模式
 [cli.batch]
@@ -388,43 +388,43 @@ edit = "تعديل"
 
 save_boundary_hint = "يسري حفظ القواميس واستيراد القواعد فورًا. لن يلغي زر «إلغاء» هذه التغييرات، أما مفاتيح التفعيل فتحتاج إلى «تطبيق» أو «موافق»."
 [settings.extraction]
-image_extraction_mode_label = "Image extraction mode:"
-image_extraction_mode_tooltip = "Choose how images are embedded in Markdown.\n\n• Image files: save as separate images and reference in MD\n• Base64 inline: encode images as Base64 and embed directly in MD"
-image_extraction_mode_file = "Image files"
-image_extraction_mode_base64 = "Base64 inline"
-ocr_placement_mode_label = "OCR placement:"
-ocr_placement_mode_tooltip = "Choose where image + OCR output is stored. Image MD creates one Markdown file per image; Main document writes the image and OCR into the main Markdown. Base64 inline requires Main document, so this control is disabled and forced to Main document until image-file mode is restored; the previous choice is then restored."
-ocr_placement_mode_image_md = "Image MD"
-ocr_placement_mode_main_md = "Main document"
-ocr_blockquote_title_enabled_label = "Main MD OCR title line"
-ocr_blockquote_title_enabled_tooltip = "Global setting: when OCR placement is \"Main document\", show a title line at the top of the OCR blockquote. The title text comes from the current locale."
-ocr_blockquote_title_text_label = "Title text (current language):"
-ocr_blockquote_title_text_tooltip = "Only affects the current UI language.\nLeave empty or equal to the default to use the locale text."
-ocr_blockquote_title_text_reset = "Reset"
+image_extraction_mode_label = "طريقة استخراج الصور:"
+image_extraction_mode_tooltip = "اختر كيفية حفظ الصور في Markdown: يمكنك حفظ كل صورة منفصلة والإشارة إليها برابط، أو تضمين بياناتها مباشرة بصيغة Base64."
+image_extraction_mode_file = "ملفات صور منفصلة"
+image_extraction_mode_base64 = "تضمين Base64"
+ocr_placement_mode_label = "موضع نص OCR:"
+ocr_placement_mode_tooltip = "اختر مكان حفظ الصور والنص المستخرج منها: في ملف Markdown لكل صورة أو داخل المستند الرئيسي. عند استخدام Base64 يجب اختيار المستند الرئيسي؛ ويعود الاختيار السابق عند الرجوع إلى وضع ملفات الصور."
+ocr_placement_mode_image_md = "ملف Markdown لكل صورة"
+ocr_placement_mode_main_md = "المستند الرئيسي"
+ocr_blockquote_title_enabled_label = "عنوان كتلة النص المستخرج في المستند الرئيسي"
+ocr_blockquote_title_enabled_tooltip = "عند وضع نص OCR في المستند الرئيسي، أضف سطر عنوان أعلى كتلة الاقتباس. نص العنوان يعتمد على لغة الواجهة."
+ocr_blockquote_title_text_label = "نص العنوان (اللغة الحالية):"
+ocr_blockquote_title_text_tooltip = "ينطبق على لغة الواجهة الحالية فقط. اتركه فارغًا أو استخدم القيمة الافتراضية لاعتماد نص اللغة."
+ocr_blockquote_title_text_reset = "إعادة تعيين"
 
 [settings.export]
-md_export_section = "Export to Markdown (Images/OCR)"
-md_export_desc = "Configure how images and OCR text are handled in Markdown output."
-base64_compress_section = "Base64 compatibility (Base64 inline only)"
-base64_compress_desc = "Compress images before base64 embedding."
-base64_compress_tooltip = "Base64 increases size and may not render in some editors.\nWhen enabled: images over the threshold will be compressed to JPG before embedding."
-base64_compress_enabled = "Auto-compress large images"
-base64_compress_threshold_label = "Threshold"
-base64_compress_threshold_tooltip = "Size threshold in KB. Images above this size are compressed before embedding."
+md_export_section = "التصدير إلى Markdown (الصور والتعرف على النص)"
+md_export_desc = "حدد طريقة حفظ الصور والنص المستخرج منها عند التصدير إلى Markdown."
+base64_compress_section = "ضغط الصور المضمنة بصيغة Base64"
+base64_compress_desc = "ضغط الصور قبل تضمينها في نص Base64."
+base64_compress_tooltip = "يزيد تضمين Base64 حجم الملف وقد لا تعرضه بعض المحررات. عند التفعيل تُضغط الصور التي تتجاوز الحد إلى JPG قبل التضمين."
+base64_compress_enabled = "ضغط الصور الكبيرة تلقائيًا"
+base64_compress_threshold_label = "حد الحجم"
+base64_compress_threshold_tooltip = "الحجم بالكيلوبايت (KB). تُضغط الصور الأكبر منه قبل التضمين."
 
 
 [settings.optimization_types]
 
 
 [settings.table_export]
-section = "Merge Cell Export"
-desc = "Controls how merged cells are represented in Markdown output."
-merge_strategy_label = "Merge Cell Export Strategy:"
+section = "تصدير الخلايا المدمجة"
+desc = "حدد كيفية تمثيل الخلايا المدمجة في Markdown الناتج."
+merge_strategy_label = "طريقة تصدير الخلايا المدمجة:"
 
-merge_strategy_help = "For ordinary Markdown only: Fill repeats the merged anchor text (for example, Title | Title); Empty leaves covered cells blank (Title | ). When Structural Tables output is enabled, merged cells use < and ^ structure markers instead."
+merge_strategy_help = "في Markdown العادي: «تعبئة» تكرر نص الخلية المدمجة؛ و«فارغ» يترك الخلايا التابعة بلا نص. عند تفعيل Structural Tables تُستخدم علامتا البنية < و^ بدلًا منهما."
 [settings.table_export.strategies]
-fill = "Fill"
-empty = "Empty"
+fill = "تعبئة"
+empty = "تركها فارغة"
 
 [settings.document]
 # 内容提取设置
