@@ -198,7 +198,7 @@ invalid_tab = "صفحة إعدادات غير معروفة: {tab}"
 # 设置对话框
 # =============================================================================
 [settings]
-title = "Settings"
+title = "الإعدادات"
 
 # 选项卡标题
 [settings.tabs]
@@ -751,30 +751,30 @@ table_grid = "جدول شبكي"
 # -----------------------------------------------------------------------------
 [settings.output]
 # 中间文件区域
-intermediate_section = "Intermediate Files"
-save_intermediate_label = "Save intermediate files to output directory"
-save_intermediate_tooltip = "Enabled: Save all intermediate step files\nDisabled: Save only the final result file\n\nExample (XLS→XLSX→ODS):\n• Enabled: Save both XLSX and ODS\n• Disabled: Save only ODS"
-save_intermediate_desc = "Whether to save intermediate files like XLSX during multi-step conversion (e.g., XLS→XLSX→ODS)"
+intermediate_section = "الملفات الوسيطة"
+save_intermediate_label = "حفظ الملفات الوسيطة مع النتائج"
+save_intermediate_tooltip = "عند التفعيل تُحفظ ملفات الخطوات الوسيطة والنتيجة النهائية. عند التعطيل تُحفظ النتيجة النهائية فقط. مثال: في التحويل XLS إلى XLSX إلى ODS يُحتفظ بالملفين XLSX وODS عند التفعيل، وبملف ODS فقط عند التعطيل."
+save_intermediate_desc = "الاحتفاظ بالملفات الوسيطة أثناء التحويل المتعدد الخطوات، مثل XLS إلى XLSX إلى ODS."
 
 # 输出目录区域
-directory_section = "Output Directory"
-output_mode_label = "Output location:"
-output_mode_tooltip = "Source location: Output to the same folder as the source file\nCustom location: Output to a specified folder"
-custom_path_label = "Custom path:"
-browse_title = "Select Output Directory"
+directory_section = "مجلد النتائج"
+output_mode_label = "مكان حفظ النتائج:"
+output_mode_tooltip = "يمكن حفظ الملفات الناتجة بجوار الملفات الأصلية أو في مجلد تختاره."
+custom_path_label = "المسار المخصّص:"
+browse_title = "اختر مجلد النتائج"
 
 # 输出模式选项
-validation_custom_path_required = "File saving: choose a non-empty custom output directory, or switch the output location back to the source folder."
+validation_custom_path_required = "اختر مجلد نتائج مخصّصًا أو ارجع إلى الحفظ بجوار الملف الأصلي."
 [settings.output.output_modes]
-source = "Source file directory"
-custom = "Custom directory"
+source = "مجلد الملف الأصلي"
+custom = "مجلد مخصّص"
 
 # 日期子文件夹区域
 [settings.output.date_folder]
-section = "Date Subfolder"
-create_label = "Create date subfolder"
-create_tooltip = "Create a date subfolder in the output directory\nExample: Output Directory/2025-01-06/file.pdf\nThis option works for both output modes"
-format_label = "Date format:"
+section = "مجلد فرعي بتاريخ اليوم"
+create_label = "إنشاء مجلد فرعي حسب التاريخ"
+create_tooltip = "ينشئ مجلدًا باسم التاريخ داخل مجلد النتائج، مثل output/2025-01-06/file.pdf. ينطبق على طريقتي الحفظ."
+format_label = "صيغة التاريخ:"
 
 # 日期格式选项
 [settings.output.date_formats]
@@ -784,85 +784,85 @@ chinese = "2025年01月06日"
 
 # 输出行为区域
 [settings.output.behavior]
-section = "Output Behavior"
-auto_open_folder_label = "Auto-open output folder after conversion"
-auto_open_folder_tooltip = "Automatically open the output folder and select the final file after successful conversion or proofreading\nConvenient for quickly viewing the result"
+section = "سلوك حفظ النتائج"
+auto_open_folder_label = "فتح مجلد النتائج تلقائيًا بعد التحويل"
+auto_open_folder_tooltip = "افتح مجلد النتائج وحدد الملف النهائي بعد نجاح التحويل أو التدقيق."
 
 # -----------------------------------------------------------------------------
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
 # 日志系统区域
-system_section = "Logging System"
-system_desc = "Enable or disable logging and set log level."
-enable_logging_label = "Enable logging system"
-enable_logging_tooltip = "Enable or disable the entire logging system.\nWhen disabled, the application will not record any log information.\nRecommended to keep enabled in production."
-log_level_label = "Log level:"
-log_level_tooltip = "Set the verbosity of logging.\nLevels from low to high: debug > info > warning > error > critical\nHigher levels record less information."
+system_section = "نظام السجلات"
+system_desc = "فعّل السجلات واختر مستوى التفاصيل المسجلة."
+enable_logging_label = "تفعيل السجلات"
+enable_logging_tooltip = "عند التعطيل لا يسجل البرنامج معلومات التشغيل. يُفضّل إبقاء السجلات مفعّلة لتسهيل حل المشكلات."
+log_level_label = "مستوى السجل:"
+log_level_tooltip = "حدد مقدار التفاصيل المسجلة. من الأكثر تفصيلًا إلى الأقل: التصحيح، المعلومات، التحذيرات، الأخطاء، الأخطاء الحرجة."
 
 # 文件输出区域
-file_section = "File Output"
-file_desc = "Configure log file naming and retention."
-file_prefix_label = "Log file prefix:"
-file_prefix_tooltip = "Set the prefix for log file names"
-retention_days_label = "Log retention days:"
-retention_days_tooltip = "Set how many days to keep log files. Logs older than this will be automatically deleted."
+file_section = "ملفات السجل"
+file_desc = "اضبط أسماء ملفات السجل ومدة الاحتفاظ بها."
+file_prefix_label = "بادئة اسم ملف السجل:"
+file_prefix_tooltip = "النص الذي تبدأ به أسماء ملفات السجل."
+retention_days_label = "أيام الاحتفاظ بالسجل:"
+retention_days_tooltip = "عدد الأيام التي تُحفظ خلالها ملفات السجل. تُحذف الملفات الأقدم تلقائيًا."
 
 # 控制台输出区域
-console_section = "Console Output"
-console_desc = "Control console log output and formatting."
-enable_console_label = "Show logs in console"
-enable_console_tooltip = "When enabled, logs will also be output to the console window"
-console_level_label = "Console log level:"
-console_level_tooltip = "Set the log level for console output, can be different from file log level"
-validation_custom_directory_required = "Logging: Custom directory mode requires a non-empty directory path."
-validation_prefix_invalid = "Logging: the file-name prefix cannot contain \\ / : * ? \" < > |."
-validation_prefix_required = "Logging: enter a file-name prefix."
-directory_auto_notice = "Directory is auto-determined by mode; custom input is disabled."
-directory_env_override_notice = "Log directory is controlled by an environment variable; directory controls are disabled."
-console_format_tooltip = "Console format string (empty = reuse file format)"
-console_format_label = "Console format:"
-console_colorize_label = "Console color:"
-console_colorize_tooltip = "Control console log color policy."
-open_directory = "Open Directory"
-directory_notice_label = "Directory notice:"
-override_source_label = "Override source:"
-fallback_reason_label = "Fallback reason:"
-actual_log_file_label = "Actual log file:"
-custom_directory_tooltip = "Custom log directory (only used in Custom mode)"
-custom_directory_label = "Custom directory:"
-directory_mode_tooltip = "Directory mode"
-directory_mode_label = "Directory mode:"
-location_desc = "Control where log files are written."
-location_section = "Output Location"
+console_section = "إخراج الطرفية"
+console_desc = "اضبط عرض السجلات في الطرفية وتنسيقها."
+enable_console_label = "عرض السجلات في الطرفية"
+enable_console_tooltip = "اعرض رسائل السجل في نافذة الطرفية أيضًا عند التفعيل."
+console_level_label = "مستوى سجل الطرفية:"
+console_level_tooltip = "يمكن أن يختلف مستوى سجل الطرفية عن مستوى سجل الملفات."
+validation_custom_directory_required = "اختر مسارًا غير فارغ للمجلد المخصّص للسجلات."
+validation_prefix_invalid = "بادئة اسم ملف السجل تتضمن رمزًا غير مسموح به في أسماء الملفات."
+validation_prefix_required = "أدخل بادئة لاسم ملف السجل."
+directory_auto_notice = "يُختار المجلد تلقائيًا بحسب الوضع، لذلك تعذّر تعديل هذا الحقل."
+directory_env_override_notice = "يحدد متغير بيئة مجلد السجل، لذلك لا يمكن تغييره من هنا."
+console_format_tooltip = "صيغة رسائل الطرفية؛ اتركها فارغة لاستخدام صيغة ملف السجل."
+console_format_label = "تنسيق الطرفية:"
+console_colorize_label = "ألوان الطرفية:"
+console_colorize_tooltip = "اختر متى تُستخدم الألوان في سجل الطرفية."
+open_directory = "فتح المجلد"
+directory_notice_label = "تنبيه المجلد:"
+override_source_label = "مصدر الإعداد البديل:"
+fallback_reason_label = "سبب استخدام البديل:"
+actual_log_file_label = "ملف السجل الحالي:"
+custom_directory_tooltip = "مجلد السجلات المخصّص، ويُستخدم عند اختيار الوضع المخصّص فقط."
+custom_directory_label = "مجلد مخصّص:"
+directory_mode_tooltip = "طريقة اختيار مجلد السجلات."
+directory_mode_label = "طريقة اختيار المجلد:"
+location_desc = "حدد مكان حفظ ملفات السجل."
+location_section = "مكان السجلات"
 
 # 日志级别
 
 [settings.logging.dir_modes]
-user = "System Default"
-temp = "Temp Directory"
-custom = "Custom Directory"
+user = "المجلد الافتراضي للنظام"
+temp = "المجلد المؤقت"
+custom = "مجلد مخصّص"
 
 [settings.logging.console_colorize]
-auto = "Auto"
-always = "Always"
-never = "Never"
+auto = "تلقائي"
+always = "دائمًا"
+never = "أبدًا"
 
 [settings.logging.levels]
-debug = "Debug (DEBUG)"
-info = "Info (INFO)"
-warning = "Warning (WARNING)"
-error = "Error (ERROR)"
-critical = "Critical (CRITICAL)"
+debug = "تصحيح (DEBUG)"
+info = "معلومات (INFO)"
+warning = "تحذير (WARNING)"
+error = "خطأ (ERROR)"
+critical = "خطأ حرج (CRITICAL)"
 
 # =============================================================================
 # 关于对话框
 # =============================================================================
 
 [settings.software]
-priority = "Software priority"
-description = "Try installed software in this order. Availability also depends on the conversion format."
-presentation_processors = "Presentation software"
+priority = "أولوية البرامج"
+description = "جرّب البرامج المثبّتة بهذا الترتيب. يتوقف توفرها أيضًا على نوع الملف المطلوب تحويله."
+presentation_processors = "برامج العروض التقديمية"
 wps_presentation = "WPS Presentation"
 powerpoint = "PowerPoint"
 
@@ -881,31 +881,31 @@ section = "التعرف على النص"
 
 recognize_tables_tooltip = "ينطبق هذا الخيار على OCR فقط. يحاول تحديد بنية الجداول، وإذا تعذر ذلك يحتفظ بالنص العادي. لا يتعرف على الصيغ الرياضية."
 [settings.rule_transfer]
-read_failed = "Unable to read the current rule configuration."
-added = "Added"
-unchanged = "Unchanged"
-conflict = "Different"
-existing_only = "Existing only"
-change = "Change"
-rule = "Rule"
-current = "Current"
-incoming = "Incoming"
-preview = "Preview rule import"
-summary = "Added {added} · Different {conflict} · Unchanged {unchanged} · Existing only {existing_only}"
-strategy = "Import strategy"
-merge = "Merge with existing rules"
-replace = "Replace all rules"
-strategy_hint = "Merge keeps existing entries and combines values and notes for matching keys. Replace removes entries absent from the imported file."
-merge_unavailable = "Conflicting punctuation pairs cannot be merged. Cancel to adjust the file, or choose replacement."
-confirm = "Confirm import"
-source_changed = "Rules changed during preview. Import again to review the latest differences."
-save_failed = "Save failed. Original rules were preserved."
-import = "Import…"
-import_failed = "Import failed"
-imported = "Rules imported."
-export = "Export…"
-export_failed = "Export failed"
-exported = "Complete rules exported."
+read_failed = "تعذّر قراءة قواعد التدقيق الحالية."
+added = "أُضيفت"
+unchanged = "بلا تغيير"
+conflict = "مختلفة"
+existing_only = "موجودة سابقًا فقط"
+change = "التغيير"
+rule = "القاعدة"
+current = "الحالي"
+incoming = "الوارد"
+preview = "معاينة استيراد القواعد"
+summary = "أُضيفت {added} · مختلفة {conflict} · بلا تغيير {unchanged} · موجودة سابقًا فقط {existing_only}"
+strategy = "طريقة الاستيراد"
+merge = "دمج مع القواعد الحالية"
+replace = "استبدال جميع القواعد"
+strategy_hint = "الدمج يحتفظ بالقواعد الموجودة ويجمع القيم والملاحظات عند تطابق المفاتيح. الاستبدال يحذف القواعد غير الموجودة في الملف المستورد."
+merge_unavailable = "لا يمكن دمج أزواج علامات الترقيم المتعارضة. ألغِ الاستيراد لتعديل الملف أو اختر الاستبدال."
+confirm = "تأكيد الاستيراد"
+source_changed = "تغيّرت القواعد منذ المعاينة. أعد الاستيراد لمراجعة أحدث الفروق."
+save_failed = "تعذّر الحفظ. احتُفظ بالقواعد الأصلية."
+import = "استيراد…"
+import_failed = "فشل الاستيراد"
+imported = "استُوردت القواعد."
+export = "تصدير…"
+export_failed = "فشل التصدير"
+exported = "صُدّرت كل القواعد."
 [about]
 title = "About"
 subtitle = "Document and Spreadsheet Format Conversion Tool (Official Document Converter)"
