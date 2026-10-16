@@ -241,6 +241,8 @@ def _stop_gui_control_and_release_instance_lock(
 
 
 def _main_with_guard_active(argv: list[str] | None = None) -> int:
+    from PySide6.QtCore import Qt
+
     from docwen_application.controller import ApplicationController
     from docwen_bundle.config_port import ConfigPortAdapter
     from docwen_bundle.gui_bootstrap import bootstrap_gui
@@ -255,7 +257,6 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
         create_qapplication,
     )
     from docwen_gui.i18n import set_locale
-    from PySide6.QtCore import Qt
     from docwen_gui.qt_bridge.task_event_bridge import TaskEventBridge
     from docwen_gui.release_smoke import _schedule_test_conversion_report
     from docwen_gui.settings_smoke import _schedule_test_settings_report
