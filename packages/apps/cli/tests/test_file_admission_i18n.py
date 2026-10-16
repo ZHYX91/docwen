@@ -13,8 +13,9 @@ from packages.apps.cli.tests.capability_fixtures import bundled_available_runtim
 from docwen_cli.commands.execution_v3 import execute_execution
 from docwen_cli.commands.inspect import execute_inspect
 from docwen_cli.file_admission_i18n import render_file_admission_code
-from docwen_cli.i18n import get_cli_locale, init_cli_locale
+from docwen_cli.i18n import cli_t, get_cli_locale, init_cli_locale
 from docwen_cli.main import _build_parser
+from docwen_cli.parser import get_available_locale_codes
 from docwen_cli.utils import validate_files
 
 pytestmark = pytest.mark.unit
@@ -153,3 +154,14 @@ def test_json_warning_localizes_message_and_keeps_stable_code(
         "relation": "cross_family_mismatch",
     }
     assert "Der Dateiname gibt DOCX an" in envelope["warnings"][0]["message"]
+
+
+@pytest.mark.parametrize("locale", get_available_locale_codes())
+def test_every_parser_locale_initializes_the_cli_catalog(locale: str) -> None:
+    init_cli_locale(locale)
+    assert get_cli_locale() == locale
+
+
+def test_arabic_cli_help_uses_the_bundled_catalog() -> None:
+    init_cli_locale("ar_SA")
+    assert cli_t("cli.description") == "أداة DocWen لسطر الأوامر لتحويل المستندات والجداول والصور وملفات التخطيط"
