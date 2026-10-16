@@ -4,33 +4,24 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
 
-DocWen 是面向 Word、Markdown、Excel 等办公格式的本地文档与表格转换工具，强调离线可用、流程清晰，并将文档处理留在用户设备上。
+DocWen 在本机转换办公文件。它能把 Word 转成 Markdown、把 Markdown 导出为 Word、从 PDF 中提取文字和表格，也能处理电子表格、图片和常见的文件整理任务。日常操作用图形界面；需要批量自动化时用命令行。
 
-## 📖 项目背景
+## 适合做什么
 
-DocWen 最初面向文印室等日常文档整理场景，主要解决这些问题：
+- **Word 与 Markdown 互转**：处理标题、表格和公式；特殊的 Obsidian 语法需要按需开启对应扩展。
+- **表格转换**：把 Excel 等表格导出为 Markdown，或从 Markdown 生成表格文件。
+- **PDF 与版式文件**：从 PDF、XPS、OFD 提取文字或转换文件，也能合并、拆分 PDF。
+- **图片与 OCR**：转换常见图片格式，离线识别图片中的文字和部分表格；识别结果需要人工复核。
+- **模板与校对**：用自定义模板生成文档，按自己的词库检查错别字、标点与符号。
+- **单文件或批量处理**：桌面界面适合日常操作，CLI 适合重复任务。
 
-- 不同部门提供的文档格式不统一，需要整理为规范格式
-- 文件类型多，不同类型有各自的格式要求
-- 需要在内网、离线环境和较旧设备上稳定工作
+DocWen 支持 DOCX、XLSX、PDF 和一些旧版办公、图片格式，但**并非所有格式之间都能互转**。具体取决于操作、系统平台及安装的转换软件，参见[能力说明](../capabilities.md)。
 
-**设计理念**：DocWen 优先提供低门槛、开箱即用的日常办公转换与整理流程。它不以替代 LaTeX、Pandoc 等专业排版或转换系统为目标，而是把常见文档任务做得直接、清晰，同时保留明确的技术边界。
+## 离线处理与安全边界
 
-## ✨ 核心功能
-
-- **📄 文档格式转换** - Word ↔ Markdown 互转，支持数学公式转换、分隔符双向转换（Markdown的三种分隔线与文档中的分页符、分节符、分隔线），以及 Markdown 表格显式 `<` / `^` 合并标记到 Word 矩形合并的恢复。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
-- **📊 表格格式转换** - Excel ↔ Markdown 互转，支持 XLSX/XLS/ET/ODS/CSV/TSV 等格式；支持合并单元格导出策略（`fill / empty / marker`）、模板字段和表格汇总工具。
-- **📑 PDF与版式文件** - PDF/XPS/OFD 转 Markdown 或 DOCX，支持 PDF 合并、拆分等操作。
-- **🖼️ 图片处理** - 支持 JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC 等格式互转和压缩。
-- **📥 其他格式导入** - 支持 HTML/MHTML/ENEX/EPUB/PPTX/PPT 单向转换为 Markdown。
-- **🔍 OCR文字识别** - 集成 RapidOCR，从图片和 PDF 中提取文字。
-- **✏️ 文本校对** - 基于自定义词库检查错别字、标点、符号和敏感词。支持 Word (.docx) 和 Markdown (.md) 文件。可在设置界面编辑规则。
-- **📝 模板系统** - 灵活的模板机制，支持自定义文档和报表格式。
-- **💻 双模式操作** - 图形界面 + 命令行界面。
-- **🔒 本地处理与依赖出站保护** - 转换不依赖在线服务。DocWen 运行期间会阻止其 Python 进程内依赖使用 DNS 和 IPv4/IPv6；外部启动的 Office/WPS/LibreOffice 仍遵循自身及系统网络策略。
-- **🔗 单实例运行** - 自动管理程序实例，支持与配套 Obsidian 插件集成。
+文件由本机处理，不需要上传到在线转换服务。DocWen 限制自身 Python 进程内依赖的网络访问；外部启动的 Office、WPS、LibreOffice 仍遵循它们自身及系统的网络策略。处理敏感文件时，也应检查这些外部软件的配置。
 
 ## 📸 界面截图
 

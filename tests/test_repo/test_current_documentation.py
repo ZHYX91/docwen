@@ -40,6 +40,7 @@ REQUIRED_DOCS = {
 }
 
 LOCALIZED_READMES = (
+    "README.ar.md",
     "README.de-DE.md",
     "README.es-ES.md",
     "README.fr-FR.md",
@@ -64,6 +65,7 @@ LANGUAGE_NAV = (
     " · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md)"
     " · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md)"
     " · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)"
+    " · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)"
 )
 LOGO_BLOCK = (
     '<p align="center">\n'
@@ -73,6 +75,7 @@ LOGO_BLOCK = (
 )
 
 NETWORK_GUARD_DNS_MARKERS = {
+    "README.ar.md": "جميع عمليات DNS وحل الأسماء",
     "README.md": "all DNS/name resolution",
     "README.de-DE.md": "sämtliche DNS-/Namensauflösung",
     "README.es-ES.md": "toda resolución DNS/de nombres",
@@ -89,6 +92,7 @@ NETWORK_GUARD_DNS_MARKERS = {
 NETWORK_GUARD_IP_OPERATIONS = ("bind", "connect", "connect_ex", "sendto", "sendmsg")
 
 NETWORK_GUARD_HELPER_MARKERS = {
+    "README.ar.md": "عملية Office مساعدة مخصّصة",
     "README.md": "dedicated Office helper",
     "README.de-DE.md": "Office-Helfers",
     "README.es-ES.md": "ayudante de Office",
@@ -103,6 +107,7 @@ NETWORK_GUARD_HELPER_MARKERS = {
 }
 
 NETWORK_GUARD_SANDBOX_MARKERS = {
+    "README.ar.md": "عزل على مستوى نظام التشغيل",
     "README.md": "operating-system sandbox",
     "README.de-DE.md": "Betriebssystem-Sandbox",
     "README.es-ES.md": "sandbox del sistema operativo",
@@ -190,6 +195,7 @@ def _public_readme_paths() -> list[Path]:
 
 
 CLI_SECTION_HEADING_MARKERS = {
+    "README.ar.md": "استخدام سطر الأوامر",
     "README.md": "Command Line Usage",
     "README.de-DE.md": "CLI-Verwendung",
     "README.es-ES.md": "Uso de la CLI",
@@ -230,6 +236,7 @@ def test_public_readmes_keep_cli_integration_anchors() -> None:
 
 
 ASSISTANT_PLATFORM_SUPPORT_MARKERS = {
+    "README.ar.md": "يدعم ملحق DocWen Assistant سطح المكتب على Windows وLinux",
     "README.md": "supports Windows and Linux desktop hosts",
     "README.de-DE.md": "unterstützt Windows- und Linux-Desktop-Hosts",
     "README.es-ES.md": "admite hosts de escritorio Windows y Linux",
@@ -244,6 +251,7 @@ ASSISTANT_PLATFORM_SUPPORT_MARKERS = {
 }
 
 ASSISTANT_MACOS_UNSUPPORTED_MARKERS = {
+    "README.ar.md": "لا يدعم DocWen Assistant نظام macOS حاليًا",
     "README.md": "does not currently support macOS",
     "README.de-DE.md": "macOS wird vom Assistant derzeit nicht unterstützt",
     "README.es-ES.md": "Assistant no admite macOS actualmente",

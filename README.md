@@ -4,32 +4,26 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
 
-A local document and table conversion tool for Word, Markdown, Excel, and related office formats. It is designed for reliable offline workflows and keeps document processing on the user's machine.
+DocWen converts office files locally. Use it to turn Word files into Markdown, export Markdown to Word, extract text and tables from PDFs, or clean up files for a report. It has a desktop interface for everyday work and a command line for repeatable tasks.
 
-## 📖 Project Background
+## What DocWen is for
 
-DocWen was originally built for everyday document-preparation work, where teams commonly need to:
-- normalize documents received in inconsistent formats;
-- handle many file types with different formatting requirements;
-- work offline in intranet environments and on older equipment.
+Documents arrive in different formats, and reformatting them by hand takes time. DocWen helps when you need to:
 
-**Design philosophy**: DocWen prioritizes low-friction, ready-to-use workflows for everyday office conversion and cleanup. It is not intended to replace specialized publishing or conversion systems such as LaTeX or Pandoc; instead, it focuses on making common document tasks straightforward while preserving clear technical boundaries.
+- Convert Word and Markdown in either direction, including headings, tables and formulas where the selected route supports them.
+- Turn Excel spreadsheets into Markdown tables, or produce spreadsheets from Markdown.
+- Extract text and images from PDFs, XPS and OFD files; use offline OCR where available. OCR can make mistakes, so check the original.
+- Merge or split PDFs, convert common image formats, and use your own Word or spreadsheet templates.
+- Check Markdown or Word text with your own spelling, symbol and punctuation rules.
+- Process one file in the desktop app, or script a batch using the CLI.
 
-## ✨ Core Features
+DocWen handles DOCX, XLSX, PDF and several older office and image formats. Availability depends on the operation, platform and installed conversion software: not every format converts to every other format. Check [the capability reference](docs/capabilities.md) for details.
 
-- **📄 Document Format Conversion** - Bidirectional Word ↔ Markdown conversion. Supports mathematical formula conversion, bidirectional separator conversion (Markdown's three types of separators vs. Word's page breaks, section breaks, and horizontal lines), and restoring explicit Markdown table `<` / `^` markers to rectangular Word table merges. Supports formats like DOCX/DOC/WPS/RTF/ODT.
-- **📊 Spreadsheet Format Conversion** - Bidirectional Excel ↔ Markdown conversion. Supports XLSX/XLS/ET/ODS/CSV/TSV formats, configurable merged-cell export strategies (`fill / empty / marker`), table summary tools, and the template placeholder surface described below.
-- **📑 PDF and Layout Files** - PDF/XPS/OFD to Markdown or DOCX conversion. Supports PDF merging, splitting, and other operations.
-- **🖼️ Image Processing** - Supports bidirectional conversion and compression of JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC formats.
-- **📥 Other Format Import** - Supports one-way conversion of HTML/MHTML/ENEX/EPUB/PPTX/PPT to Markdown.
-- **🔍 OCR Text & Table Recognition** - Integrated RapidOCR for offline text recognition plus a lightweight RapidTable/SLANet table-structure path. Table-dominant images and OCR pages can be emitted as Markdown tables; successful OCR is reported as normal completion, while blank or degraded recognition remains explicit. Formula OCR is not included.
-- **✏️ Text Proofreading** - Checks for typos, punctuation, symbols, and sensitive words based on custom dictionaries. Supports Word (.docx) and Markdown (.md) files. Rules can be edited in the settings interface.
-- **📝 Template System** - Flexible template mechanism supporting custom document and report formats.
-- **💻 Dual Mode Operation** - Graphical User Interface (GUI) + Command Line Interface (CLI).
-- **🔒 Local processing with dependency egress protection** - Conversion does not depend on online services. While DocWen runs, its Python process blocks DNS and IPv4/IPv6 use by in-process dependencies; externally launched Office suites keep their own system network policy.
-- **🔗 Single Instance Operation** - Automatically manages program instances and supports integration with the accompanying Obsidian plugin.
+## Working offline
+
+DocWen processes files on your computer rather than uploading them to a conversion service. Its Python process blocks dependency network calls, while external Office, WPS and LibreOffice processes follow their own system network policies. For sensitive work, keep those programs and your operating system configured accordingly.
 
 ## 📸 Screenshots
 
