@@ -428,21 +428,21 @@ empty = "تركها فارغة"
 
 [settings.document]
 # 内容提取设置
-extraction_section = "Image Extraction/OCR Settings"
-keep_images = "Check \"Extract images\" by default"
-keep_images_tooltip = "Check \"Extract images\" by default when converting document to MD"
-enable_ocr = "Check \"Image OCR\" by default"
-enable_ocr_tooltip = "Check \"Image OCR\" by default when converting document to MD"
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+keep_images_tooltip = "تفعيل استخراج الصور تلقائيًا عند تحويل المستند إلى Markdown"
+enable_ocr = "تفعيل «التعرف على النص في الصور» افتراضيًا"
+enable_ocr_tooltip = "تفعيل OCR تلقائيًا عند تحويل المستند إلى Markdown"
 
 # 优化设置
-optimization_section = "Optimization Settings (Document to Markdown)"
-enable_optimization = "Enable \"Optimize for document type\" by default"
-optimization_type_label = "Default optimization type:"
+optimization_section = "تحسين تحويل المستندات إلى Markdown"
+enable_optimization = "تفعيل «تحسين حسب نوع المستند» افتراضيًا"
+optimization_type_label = "نوع التحسين الافتراضي:"
 
 # 软件优先级
-word_processors_label = "Document Processing Software Priority"
-odt_conversion_label = "ODT Format Conversion"
-document_to_pdf_label = "Document to PDF"
+word_processors_label = "ترتيب أولوية برامج معالجة المستندات"
+odt_conversion_label = "تحويل تنسيق ODT"
+document_to_pdf_label = "تحويل المستند إلى PDF"
 
 # 软件名称
 [settings.document.software]
@@ -452,34 +452,34 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
-section = "Heading Numbering (Document to Markdown)"
-remove = "Remove original document heading numbering by default"
-remove_tooltip = "Remove existing heading numbering in document when converting DOCX to MD"
-add = "Add heading numbering to Markdown by default"
-scheme_label = "Default numbering scheme:"
+section = "ترقيم العناوين (من مستند إلى Markdown)"
+remove = "إزالة أرقام عناوين المستند افتراضيًا"
+remove_tooltip = "إزالة أرقام العناوين الموجودة عند تحويل DOCX إلى Markdown"
+add = "إضافة ترقيم للعناوين في Markdown افتراضيًا"
+scheme_label = "نمط الترقيم الافتراضي:"
 
 # -----------------------------------------------------------------------------
 # 表格设置选项卡
 # -----------------------------------------------------------------------------
 [settings.spreadsheet]
-extraction_section = "Image Extraction/OCR Settings"
-keep_images = "Check \"Extract images\" by default"
-keep_images_tooltip = "Check \"Extract images\" by default when converting spreadsheet to MD"
-enable_ocr = "Check \"Image OCR\" by default"
-enable_ocr_tooltip = "Check \"Image OCR\" by default when converting spreadsheet to MD"
-merge_mode_section = "Merge Mode Settings"
-merge_mode_desc = "Choose the default aggregation strategy when combining tables."
-default_merge_mode_label = "Default Merge Mode:"
-spreadsheet_processors_label = "Spreadsheet Processing Software Priority"
-ods_conversion_label = "ODS Format Conversion"
-spreadsheet_to_pdf_label = "Spreadsheet to PDF"
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+keep_images_tooltip = "تفعيل استخراج الصور عند تحويل الجداول إلى Markdown"
+enable_ocr = "تفعيل OCR للصور افتراضيًا"
+enable_ocr_tooltip = "تفعيل التعرف على النص في الصور عند تحويل الجداول إلى Markdown"
+merge_mode_section = "إعدادات دمج الجداول"
+merge_mode_desc = "اختر طريقة الدمج الافتراضية عند جمع الجداول."
+default_merge_mode_label = "طريقة الدمج الافتراضية:"
+spreadsheet_processors_label = "ترتيب أولوية برامج معالجة الجداول"
+ods_conversion_label = "تحويل تنسيق ODS"
+spreadsheet_to_pdf_label = "تحويل الجدول إلى PDF"
 
 # 汇总模式选项
-merge_mode_help = "By row/column matches incoming rows/columns against the base: a covering incoming item replaces the base item, a covered incoming item keeps the base, otherwise it is inserted near the closest match. By cell ignores incoming blanks, keeps the nonblank value, adds numbers, keeps equal text once, and joins differing nonnumeric text with a comma."
+merge_mode_help = "الدمج بحسب الصف أو العمود يقارن العناصر الواردة بالجدول الأساسي: يستبدل العنصر الوارد العنصر الأساسي إن كان يغطيه؛ ويُحتفظ بالأساسي إذا كان يغطي الوارد؛ وإلا يُدرج الوارد قرب أقرب تطابق. الدمج بحسب الخلية يتجاهل الفراغات، ويحتفظ بالقيم غير الفارغة، ويجمع الأرقام، ويحتفظ بالنص المتطابق مرة واحدة، ويصل النصوص المختلفة بفاصلة."
 [settings.spreadsheet.merge_modes]
-by_row = "Merge by Row"
-by_column = "Merge by Column"
-by_cell = "Merge by Cell"
+by_row = "دمج بحسب الصف"
+by_column = "دمج بحسب العمود"
+by_cell = "دمج بحسب الخلية"
 
 # 软件名称
 [settings.spreadsheet.software]
@@ -490,112 +490,112 @@ excel = "Excel"
 # 图片设置选项卡
 # -----------------------------------------------------------------------------
 [settings.image]
-extraction_section = "Image Extraction/OCR Settings"
-keep_images = "Check \"Extract images\" by default"
-enable_ocr = "Check \"Image OCR\" by default"
-size_unit_label = "Unit:"
-optimization_section = "Optimization (Image to Markdown)"
-enable_optimization = "Enable \"Optimize for image type\" by default"
-optimization_type_label = "Default optimization type:"
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+enable_ocr = "تفعيل OCR للصور افتراضيًا"
+size_unit_label = "الوحدة:"
+optimization_section = "تحسين تحويل الصور إلى Markdown"
+enable_optimization = "تفعيل «تحسين حسب نوع الصورة» افتراضيًا"
+optimization_type_label = "نوع التحسين الافتراضي:"
 
 # OCR语言设置
 
-compress_section = "Compression Options Settings"
-compress_desc = "Set the default compression mode for image format conversion"
-compress_mode_label = "Compression Mode:"
-compress_lossless = "Highest Quality"
-compress_limit_size = "Limit File Size"
-size_limit_label = "Default size limit:"
+compress_section = "إعدادات ضغط الصور"
+compress_desc = "اختر طريقة الضغط الافتراضية عند تحويل الصور."
+compress_mode_label = "طريقة الضغط:"
+compress_lossless = "أعلى جودة"
+compress_limit_size = "تحديد حجم الملف"
+size_limit_label = "الحد الافتراضي للحجم:"
 
-pdf_tiff_section = "PDF/TIFF Options Settings"
-pdf_size_label = "Default size for image to PDF"
-pdf_original = "Original Embed"
-pdf_a4 = "Fit A4"
-pdf_a3 = "Fit A3"
-tiff_mode_label = "Default mode for merge to TIFF"
-tiff_keep_alpha = "Preserve Transparency"
-tiff_no_alpha = "No Transparency"
+pdf_tiff_section = "إعدادات PDF وTIFF"
+pdf_size_label = "الحجم الافتراضي عند تحويل صورة إلى PDF"
+pdf_original = "إدراج بالحجم الأصلي"
+pdf_a4 = "ملاءمة صفحة A4"
+pdf_a3 = "ملاءمة صفحة A3"
+tiff_mode_label = "طريقة دمج الصور في TIFF"
+tiff_keep_alpha = "الحفاظ على الشفافية"
+tiff_no_alpha = "دون شفافية"
 
 # -----------------------------------------------------------------------------
 # 版式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.layout]
-extraction_section = "Image Extraction/OCR Settings"
-keep_images = "Check \"Extract images\" by default"
-enable_ocr = "Check \"Image OCR\" by default"
-optimization_section = "Optimization (Layout to Markdown)"
-enable_optimization = "Enable \"Optimize for layout type\" by default"
-optimization_type_label = "Default optimization type:"
-dpi_section = "Rendering DPI Settings"
-dpi_desc = "Set the default DPI (resolution) when converting layout files to images"
-render_dpi_label = "Render DPI:"
-dpi_min = "Minimum (150)"
-dpi_medium = "Medium (300)"
-dpi_high = "High Quality (600)"
-pdf_to_doc_label = "PDF to Document"
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+enable_ocr = "تفعيل OCR للصور افتراضيًا"
+optimization_section = "تحسين تحويل ملفات التخطيط إلى Markdown"
+enable_optimization = "تفعيل «تحسين حسب نوع الملف» افتراضيًا"
+optimization_type_label = "نوع التحسين الافتراضي:"
+dpi_section = "إعدادات دقة العرض"
+dpi_desc = "اضبط دقة عرض ملفات التخطيط عند تحويلها إلى صور."
+render_dpi_label = "دقة العرض (DPI):"
+dpi_min = "منخفضة (150)"
+dpi_medium = "متوسطة (300)"
+dpi_high = "عالية (600)"
+pdf_to_doc_label = "تحويل PDF إلى مستند"
 
 # -----------------------------------------------------------------------------
 # 其他文件设置选项卡
 # -----------------------------------------------------------------------------
 [settings.other]
-extraction_section = "Image Extraction/OCR Settings"
-keep_images = "Check \"Extract images\" by default"
-keep_images_tooltip = "Check \"Extract images\" by default when converting other files to MD"
-enable_ocr = "Check \"Image OCR\" by default"
-enable_ocr_tooltip = "Check \"Image OCR\" by default when converting other files to MD"
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+keep_images_tooltip = "تفعيل استخراج الصور عند تحويل ملفات أخرى إلى Markdown"
+enable_ocr = "تفعيل OCR للصور افتراضيًا"
+enable_ocr_tooltip = "تفعيل التعرف على النص عند تحويل ملفات أخرى إلى Markdown"
 
 # -----------------------------------------------------------------------------
 # 链接设置选项卡
 # -----------------------------------------------------------------------------
 [settings.link]
 # Markdown链接格式区域
-format_section = "Markdown Link Format"
-format_desc = "Choose the link syntax used when DocWen generates Markdown."
-image_link_style_label = "Image link format:"
-image_link_style_tooltip = "Set the link format for images in MD files\n\n• Markdown embed: ![alt](image.png)\n• Markdown link: [alt](image.png)\n• Wiki embed: ![[image.png]] (Obsidian)\n• Wiki link: [[image.png]] (Obsidian)"
-md_file_link_style_label = "MD file link format:"
-md_file_link_style_tooltip = "Set the link format for MD files in MD files\n\n• Markdown link: [file.md](file.md)\n• Wiki embed: ![[file.md]] (Obsidian)\n• Wiki link: [[file.md]] (Obsidian)\n\nNote: Markdown format does not support embedding MD file content"
+format_section = "صيغة الروابط في Markdown"
+format_desc = "اختر شكل الروابط التي ينشئها DocWen في Markdown."
+image_link_style_label = "صيغة رابط الصورة:"
+image_link_style_tooltip = "اختر كيفية كتابة روابط الصور: رابط Markdown عادي، أو تضمين صورة Markdown، أو رابط Wiki، أو تضمين Wiki الخاص بـ Obsidian."
+md_file_link_style_label = "صيغة رابط ملف Markdown:"
+md_file_link_style_tooltip = "اختر طريقة كتابة روابط ملفات Markdown: روابط Markdown عادية أو روابط Wiki الخاصة بـ Obsidian. لا تدعم صيغة Markdown العادية تضمين محتوى ملف Markdown آخر."
 
 # 非嵌入链接处理区域
-non_embed_section = "Non-Embed Link Processing"
-non_embed_desc = "Choose how ordinary links in Markdown input are handled when generating documents or spreadsheets."
-wiki_link_mode = "Wiki link processing:"
-wiki_link_tooltip = "Process [[link]] or [[link|text]]. Keep keeps the source markup; Extract text keeps only display text; Hyperlink keeps display text and target and creates a clickable link when the target format supports it; Remove deletes the link."
-markdown_link_mode = "Markdown link processing:"
-markdown_link_tooltip = "Process [text](url). Keep keeps the source markup; Extract text keeps only text; Hyperlink keeps text and target and creates a clickable link when the target format supports it; Remove deletes the link."
+non_embed_section = "معالجة الروابط غير المضمنة"
+non_embed_desc = "حدد كيفية تحويل الروابط العادية عند إنشاء المستندات أو الجداول من Markdown."
+wiki_link_mode = "معالجة روابط Wiki:"
+wiki_link_tooltip = "للروابط [[link]] و[[link|text]]: احتفظ بالمصدر، أو استخرج النص الظاهر، أو أنشئ رابطًا قابلًا للنقر إذا كان التنسيق يدعمه، أو احذف الرابط."
+markdown_link_mode = "معالجة روابط Markdown:"
+markdown_link_tooltip = "للروابط [text](url): احتفظ بالمصدر، أو استخرج النص، أو أنشئ رابطًا قابلًا للنقر إذا كان التنسيق يدعمه، أو احذف الرابط."
 
 # 嵌入链接处理区域
-embed_section = "Embed Link Processing"
-embed_desc = "Choose how embedded links and images in Markdown input are handled when generating documents or spreadsheets."
-wiki_embed_image_mode = "Wiki embed image processing:"
-wiki_embed_image_tooltip = "Process ![[image.png]] format\n\nKeep as-is: ![[image.png]]\nExtract text: image.png\nRemove: Delete link\nEmbed content: Insert image into document"
-markdown_embed_image_mode = "Markdown embed image processing:"
-markdown_embed_image_tooltip = "Process ![alt](image.png). Keep preserves the markup; Extract text uses the alt/display text when present and falls back to the file name only when no alt text is present; Remove deletes the link; Embed content inserts the image."
-embed_md_file_mode = "Wiki embed MD file processing:"
-embed_md_file_tooltip = "Process ![[file.md]] format (Wiki only)\n\nKeep as-is: ![[file.md]]\nExtract text: file.md\nRemove: Delete link\nEmbed content: Recursively process and insert"
-max_depth_label = "Max embed depth:"
-max_depth_tooltip = "Maximum recursion depth for MD file embedding\nPrevent infinite recursion and performance issues\n\nExample: A embeds B, B embeds C, C embeds D...\nRecommended: 3-5"
+embed_section = "معالجة المحتوى المضمن"
+embed_desc = "اختر كيفية التعامل مع الصور والملفات المضمنة عند إنشاء مستندات أو جداول من Markdown."
+wiki_embed_image_mode = "معالجة صورة مضمنة بصيغة Wiki:"
+wiki_embed_image_tooltip = "للصيغة ![[image.png]]: احتفظ بالصيغة، أو اعرض اسم الملف، أو احذف الرابط، أو أدرج الصورة الفعلية."
+markdown_embed_image_mode = "معالجة صور Markdown المضمنة:"
+markdown_embed_image_tooltip = "للصيغة ![alt](image.png): احتفظ بالصيغة، أو اعرض النص البديل (أو اسم الملف عند غيابه)، أو احذف الرابط، أو أدرج الصورة."
+embed_md_file_mode = "معالجة ملف Markdown مضمن:"
+embed_md_file_tooltip = "للصيغة ![[file.md]]: احتفظ بالصيغة، أو اعرض اسم الملف، أو احذف الرابط، أو أدرج محتوى الملف بشكل متداخل."
+max_depth_label = "الحد الأقصى لعمق التضمين:"
+max_depth_tooltip = "الحد الأقصى لتضمين ملفات Markdown داخل بعضها، لتجنب الحلقات اللانهائية والتباطؤ. القيمة المقترحة: من 3 إلى 5."
 
 # 子节点：图片链接格式选项
 [settings.link.image_styles]
-wiki_embed = "Wiki Embed"
-wiki_link = "Wiki Link"
-md_embed = "Markdown Embed"
-md_link = "Markdown Link"
+wiki_embed = "تضمين Wiki"
+wiki_link = "رابط Wiki"
+md_embed = "تضمين Markdown"
+md_link = "رابط Markdown"
 
 # 子节点：MD文件链接格式选项
 [settings.link.md_file_styles]
-wiki_embed = "Wiki Embed"
-wiki_link = "Wiki Link"
-md_link = "Markdown Link"
+wiki_embed = "تضمين Wiki"
+wiki_link = "رابط Wiki"
+md_link = "رابط Markdown"
 
 # 子节点：链接处理模式
 [settings.link.modes]
-keep = "Keep as-is"
-extract_text = "Extract text"
-remove = "Remove"
-hyperlink = "Hyperlink"
-embed = "Embed content"
+keep = "الإبقاء كما هو"
+extract_text = "استخراج النص"
+remove = "إزالة"
+hyperlink = "رابط قابل للنقر"
+embed = "تضمين المحتوى"
 
 # -----------------------------------------------------------------------------
 # 格式设置选项卡
@@ -868,7 +868,7 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "لغة التعرف على النص (OCR):"
-language_tooltip = "يُستخدم إعداد واحد للغة التعرف على النص لجميع الملفات. «اتباع لغة الواجهة» لا يكتشف لغة الصورة تلقائيًا."
+language_tooltip = "يُستخدم إعداد OCR نفسه لجميع الملفات. عند اتباع لغة الواجهة يُختار نموذج بحسب لغة التطبيق، ولا تُكتشف لغة الصورة تلقائيًا."
 language_auto = "اتباع لغة الواجهة"
 language_chinese = "الصينية والإنجليزية"
 language_japanese = "اليابانية"
@@ -877,9 +877,9 @@ language_english = "الإنجليزية فقط"
 language_korean = "الكورية"
 language_latin = "الحروف اللاتينية"
 language_cyrillic = "الحروف السيريلية"
-section = "التعرف على النص من الصور"
+section = "التعرف على النص"
 
-recognize_tables_tooltip = "يؤثر هذا الخيار في التعرف على النص فقط. يحاول البرنامج التعرف على بنية الجداول، وإذا فشل يحتفظ بالنص العادي. لا يدعم التعرف على الصيغ الرياضية."
+recognize_tables_tooltip = "ينطبق هذا الخيار على OCR فقط. يحاول تحديد بنية الجداول، وإذا تعذر ذلك يحتفظ بالنص العادي. لا يتعرف على الصيغ الرياضية."
 [settings.rule_transfer]
 read_failed = "Unable to read the current rule configuration."
 added = "Added"
