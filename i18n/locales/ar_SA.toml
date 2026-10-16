@@ -907,39 +907,39 @@ export = "تصدير…"
 export_failed = "فشل التصدير"
 exported = "صُدّرت كل القواعد."
 [about]
-title = "About"
-subtitle = "Document and Spreadsheet Format Conversion Tool (Official Document Converter)"
-version_info = "Version {version}"
-version_tooltip = "This software is offline-only. Please check for updates manually."
-contact = "Contact: {email}"
+title = "حول البرنامج"
+subtitle = "تحويل المستندات والجداول"
+version_info = "الإصدار {version}"
+version_tooltip = "يعمل هذا البرنامج دون اتصال. تحقق من وجود تحديثات يدويًا."
+contact = "التواصل: {email}"
 copyright = "© {year} {author}"
-acknowledgments = "Acknowledgments"
-acknowledgments_intro = "This project uses the following excellent open source projects and tools. Special thanks to:"
+acknowledgments = "شكر وتقدير"
+acknowledgments_intro = "يستفيد المشروع من البرامج والأدوات المفتوحة المصدر التالية. شكرًا لمطوريها:"
 
 # 开源工具描述
 [about.tools]
-python_docx = "For bidirectional conversion between docx and markdown, handling document styles and structure"
-openpyxl = "For bidirectional conversion between xlsx and markdown, processing spreadsheet data"
-pymupdf = "For PDF/XPS document content extraction and format conversion"
-pymupdf4llm = "For intelligent PDF extraction and conversion to Markdown format"
-pdf2docx = "For converting PDF documents to editable Word format"
-easyofd = "For reading and converting Chinese OFD format documents"
-rapidocr = "For OCR text recognition in images and PDFs, supports offline use"
-paddleocr = "Source of OCR models, PP-OCRv3/v4 models trained by PaddleOCR project"
-onnxruntime = "As the inference engine for RapidOCR"
-pyside6 = "Qt GUI framework (GUI)"
-pillow = "For image format conversion and icon resource processing"
-pillow_heif = "Provides HEIF image format support for Pillow"
-img2pdf = "For batch converting image files to PDF documents"
-pywin32 = "For calling WPS and Office via COM interface for document format conversion"
-lxml = "For processing XML structure of Office documents"
-latex2mathml = "For converting LaTeX formulas to MathML format"
-pyyaml = "For processing Markdown frontmatter metadata"
-tomlkit = "For reading and saving configuration files"
-pandas = "For spreadsheet data processing and analysis"
-numpy = "For basic support of numerical computation and data processing"
-olefile = "For identifying and processing legacy Office document formats"
-emoji = "Emoji detection and processing library"
+python_docx = "تحويل DOCX وMarkdown في الاتجاهين مع قراءة أنماط المستندات وبنيتها"
+openpyxl = "قراءة بيانات جداول XLSX وكتابتها عند التحويل من وإلى Markdown"
+pymupdf = "استخراج محتوى PDF وXPS وتحويل هذه الملفات"
+pymupdf4llm = "استخراج محتوى PDF وتحويله إلى Markdown"
+pdf2docx = "تحويل PDF إلى ملف Word قابل للتحرير"
+easyofd = "قراءة ملفات OFD الصينية وتحويلها"
+rapidocr = "التعرف على النص في الصور وملفات PDF دون اتصال"
+paddleocr = "نماذج التعرف على النص PP-OCRv3/v4 التي طوّرها مشروع PaddleOCR"
+onnxruntime = "محرك تشغيل نماذج RapidOCR"
+pyside6 = "مكتبة إنشاء الواجهة الرسومية باستخدام Qt"
+pillow = "تحويل الصور ومعالجة الأيقونات"
+pillow_heif = "دعم صور HEIF في Pillow"
+img2pdf = "جمع الصور وتحويلها إلى ملفات PDF"
+pywin32 = "التحكم في Office وWPS عبر واجهة COM لتحويل المستندات"
+lxml = "معالجة بنية XML في ملفات Office"
+latex2mathml = "تحويل صيغ LaTeX إلى MathML"
+pyyaml = "قراءة بيانات YAML الوصفية في ملفات Markdown"
+tomlkit = "قراءة ملفات الإعدادات وحفظها"
+pandas = "تحليل بيانات الجداول ومعالجتها"
+numpy = "عمليات الحساب والمعالجة الرقمية الأساسية"
+olefile = "التعرف على تنسيقات Office القديمة ومعالجتها"
+emoji = "التعرف على رموز Emoji ومعالجتها"
 
 [core.theme_manager]
 
@@ -1472,38 +1472,38 @@ merge = "دمج"
 opening_symbol = "علامة الفتح"
 closing_symbol = "علامة الإغلاق"
 [file_types]
-document = "Document"
-spreadsheet = "Spreadsheet"
-image = "Image"
-layout = "Layout"
-other = "Other"
-text = "Text"
+document = "مستند"
+spreadsheet = "جدول بيانات"
+image = "صورة"
+layout = "ملف تخطيط"
+other = "أخرى"
+text = "نص"
 
 # 带"类"后缀的版本（用于选项卡标签）
 
 [file_category]
-text_short = "Text"
-document_short = "Doc"
-spreadsheet_short = "Sheet"
-layout_short = "Layout"
-image_short = "Img"
-other_short = "Other"
+text_short = "نص"
+document_short = "مستند"
+spreadsheet_short = "جدول"
+layout_short = "تخطيط"
+image_short = "صورة"
+other_short = "أخرى"
 
 [file_format_validation]
 
 [file_admission]
-actual_format = "Actual format: {detected_format}"
-compatible_text = "The filename declares {declared_format}, while the content was detected as {detected_format}; both use the same text workflow."
-same_family_mismatch = "The filename declares {declared_format}, while the content was detected as {detected_format}. Both formats use the same processing family, so the detected format will be used."
-cross_family_mismatch = "The filename declares {declared_format}, while the content was detected as {detected_format}. The formats use different processing families; confirm processing as the detected format."
-unknown_extension = "The filename extension declares unsupported format {declared_format}, while the content was detected as {detected_format}. Confirm processing as the detected format."
-empty = "The selected file is empty."
-container_invalid = "The file container is corrupt or structurally invalid (declared {declared_format}, detected {detected_format})."
-container_unsupported = "The detected {detected_format} container is not a supported document package (declared {declared_format})."
-container_unrecognized = "The file container could not be recognized (declared {declared_format}, detected {detected_format})."
-content_unrecognized = "The file content could not be recognized (declared {declared_format}, detected {detected_format})."
-read_error = "The file could not be read (declared {declared_format}, detected {detected_format})."
-unsupported_format = "The detected content format {detected_format} is not supported (declared {declared_format})."
+actual_format = "التنسيق الفعلي: {detected_format}"
+compatible_text = "يشير الامتداد إلى {declared_format}، لكن المحتوى من نوع {detected_format}. كلاهما يُعالج بوصفه نصًا."
+same_family_mismatch = "يشير امتداد الملف إلى {declared_format}، لكن المحتوى من نوع {detected_format}. سيُستخدم التنسيق المكتشف لأنهما من الفئة نفسها."
+cross_family_mismatch = "يشير امتداد الملف إلى {declared_format}، لكن المحتوى من نوع {detected_format}. تختلف طريقة المعالجة؛ أكّد استخدام التنسيق المكتشف."
+unknown_extension = "امتداد الملف يشير إلى تنسيق غير مدعوم ({declared_format})، لكن المحتوى من نوع {detected_format}. أكّد استخدام التنسيق المكتشف."
+empty = "الملف المحدد فارغ."
+container_invalid = "بنية الملف تالفة أو غير صالحة (الامتداد: {declared_format}، المكتشف: {detected_format})."
+container_unsupported = "حاوية {detected_format} ليست حزمة مستندات مدعومة (الامتداد: {declared_format})."
+container_unrecognized = "تعذّر التعرف على بنية الملف (الامتداد: {declared_format}، المكتشف: {detected_format})."
+content_unrecognized = "تعذّر التعرف على محتوى الملف (الامتداد: {declared_format}، المكتشف: {detected_format})."
+read_error = "تعذّر قراءة الملف (الامتداد: {declared_format}، المكتشف: {detected_format})."
+unsupported_format = "التنسيق المكتشف {detected_format} غير مدعوم (الامتداد: {declared_format})."
 
 # =============================================================================
 # 转换操作
@@ -1519,7 +1519,7 @@ unsupported_format = "The detected content format {detected_format} is not suppo
 [conversion.filenames]
 
 [conversion.ocr_output]
-blockquote_prefix = "🖼️ **Image OCR**:"
+blockquote_prefix = "🖼️ **النص المستخرج من الصورة**:"
 
 # =============================================================================
 # 转换进度消息
@@ -1567,7 +1567,7 @@ blockquote_prefix = "🖼️ **Image OCR**:"
 # 确认对话框
 
 # 文件拖拽和选择
-no_folder_in_single_mode = "Folders are not allowed in single file mode"
+no_folder_in_single_mode = "لا يمكن إضافة مجلد في وضع الملف الواحد"
 
 # 错误消息
 [messages.errors]
@@ -1600,45 +1600,45 @@ no_folder_in_single_mode = "Folders are not allowed in single file mode"
 # =============================================================================
 [styles]
 # 段落样式
-body_paragraph = "Body Paragraph"
-image_paragraph = "Image Paragraph"
+body_paragraph = "فقرة متن"
+image_paragraph = "فقرة صورة"
 
 # 代码样式
-code_block = "Code Block"
-inline_code = "Inline Code"
+code_block = "كتلة كود"
+inline_code = "كود ضمن النص"
 
 # 公式样式
-formula_block = "Formula Block"
-inline_formula = "Inline Formula"
+formula_block = "كتلة معادلة"
+inline_formula = "معادلة ضمن النص"
 
 # 列表样式
-list_block = "List Block"
+list_block = "فقرة قائمة"
 
 # 分隔线样式
-horizontal_rule_1 = "Horizontal Rule 1"
-horizontal_rule_2 = "Horizontal Rule 2"
-horizontal_rule_3 = "Horizontal Rule 3"
+horizontal_rule_1 = "خط أفقي 1"
+horizontal_rule_2 = "خط أفقي 2"
+horizontal_rule_3 = "خط أفقي 3"
 
 # 表格样式
-table_content = "Table Content"
-table_header = "Table Header"
-three_line_table = "Three Line Table"
-table_grid = "Table Grid"
+table_content = "متن الجدول"
+table_header = "رأس الجدول"
+three_line_table = "جدول بثلاثة خطوط"
+table_grid = "جدول شبكي"
 
 # 引用样式（9 级）
-quote_1 = "Quote 1"
-quote_2 = "Quote 2"
-quote_3 = "Quote 3"
-quote_4 = "Quote 4"
-quote_5 = "Quote 5"
-quote_6 = "Quote 6"
-quote_7 = "Quote 7"
-quote_8 = "Quote 8"
-quote_9 = "Quote 9"
-figure_caption = "Figure Caption"
-table_caption = "Table Caption"
-equation_caption = "Equation Caption"
-code_block_caption = "Code Block Caption"
+quote_1 = "اقتباس 1"
+quote_2 = "اقتباس 2"
+quote_3 = "اقتباس 3"
+quote_4 = "اقتباس 4"
+quote_5 = "اقتباس 5"
+quote_6 = "اقتباس 6"
+quote_7 = "اقتباس 7"
+quote_8 = "اقتباس 8"
+quote_9 = "اقتباس 9"
+figure_caption = "تسمية شكل توضيحي"
+table_caption = "تسمية جدول"
+equation_caption = "تسمية معادلة"
+code_block_caption = "تسمية مقطع كود"
 
 # =============================================================================
 # 样式格式配置（用于样式注入时的格式属性）
@@ -1722,34 +1722,34 @@ typed_endnotes = "التمييز بين الحواشي السفلية والخت
 obsidian_preset = "استخدام امتدادات Obsidian"
 
 [activity]
-not_started = "Not started"
-record_unavailable = "This activity record has been cleared or is unavailable."
-title = "Activity records"
-search = "Search filenames or activity"
-all_statuses = "All statuses"
-all_operations = "All operations"
-time = "Time"
-status = "Status"
-file = "File"
-operation = "Operation"
-details = "Details"
-select_record = "Select a record to view details"
-clear_finished = "Clear finished records"
-info = "Notice"
-warning = "Warning"
-merge = "Merge"
-split = "Split"
-numbering = "Numbering"
-validate = "Validate"
-input = "Input"
-output = "Output"
-failed_count = "Activity · {count} failed"
+not_started = "لم تبدأ بعد"
+record_unavailable = "مُسح سجل هذه العملية أو لم يعد متاحًا."
+title = "سجل العمليات"
+search = "البحث باسم الملف أو العملية"
+all_statuses = "كل الحالات"
+all_operations = "كل العمليات"
+time = "الوقت"
+status = "الحالة"
+file = "الملف"
+operation = "العملية"
+details = "التفاصيل"
+select_record = "اختر سجلًا لعرض تفاصيله"
+clear_finished = "مسح العمليات المكتملة"
+info = "تنبيه"
+warning = "تحذير"
+merge = "دمج"
+split = "تقسيم"
+numbering = "ترقيم"
+validate = "فحص"
+input = "الإدخال"
+output = "النتيجة"
+failed_count = "العمليات · فشل {count}"
 
 [file_locations]
-input = "Locate input file"
-output = "Locate output file"
-multiple = "{count} files"
-show_outputs = "View all output files"
+input = "تحديد موقع الملف الأصلي"
+output = "تحديد موقع الملف الناتج"
+multiple = "{count} ملفات"
+show_outputs = "عرض كل الملفات الناتجة"
 
 [settings.templates]
 import_summary = "نجح استيراد {succeeded}؛ فشل {failed}؛ أُلغي {cancelled}."
@@ -1785,17 +1785,17 @@ keep_both = "الاحتفاظ بالنسختين"
 replace = "استبدال"
 
 [diagnostics]
-local_details = "Local details"
-preview = "Redacted diagnostics"
-copy = "Copy diagnostics"
-redacted_hint = "Copied diagnostics contain only status, categories and counts. Document content, paths, raw errors, commands and settings are excluded."
+local_details = "التفاصيل المحلية"
+preview = "معاينة بيانات التشخيص المنقّحة"
+copy = "نسخ بيانات التشخيص"
+redacted_hint = "تتضمن البيانات المنسوخة الحالات والفئات والأعداد فقط؛ ولا تتضمن نصوص المستندات أو المسارات أو الأخطاء الخام أو الأوامر أو الإعدادات."
 
 [clipboard]
-structured_plain_fallback = "Rich table/image structure could not be matched reliably to plain text; the complete plain text was kept."
-structured_html_only = "The clipboard had no plain-text body; validated HTML was used as the content source."
-structured_invalid = "Clipboard table/image structure is invalid and was not imported."
-image_invalid = "Clipboard image data is invalid or exceeds the supported size."
-images_omitted = "{count} clipboard image(s) had no verifiable embedded data; placeholders and available text were kept."
+structured_plain_fallback = "تعذّر مطابقة بنية الجدول أو الصور مع النص المنسوخ بثقة، لذا احتُفظ بالنص العادي كاملًا."
+structured_html_only = "لم تتضمن الحافظة نصًا عاديًا؛ استُخدم HTML بعد التحقق منه."
+structured_invalid = "بنية الجدول أو الصور المنسوخة غير صالحة ولم تُستورد."
+image_invalid = "بيانات الصورة المنسوخة غير صالحة أو تتجاوز الحجم المدعوم."
+images_omitted = "لا تتوفر بيانات صور قابلة للتحقق لـ {count} صور من الحافظة؛ احتُفظ بالمواضع والنصوص المتاحة."
 
 [settings.markdown_extensions.input_help]
 structural_tables = "التعرف على صفوف رؤوس متعددة وأعمدة رؤوس للصفوف وجداول بلا صف عنوان وخلايا مدمجة. تُفسر علامتا < و^ عند التفعيل، وتُعامل كنص Markdown عادي عند التعطيل."
