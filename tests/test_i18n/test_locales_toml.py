@@ -164,9 +164,9 @@ def test_all_locale_string_keys_and_placeholders_match_zh_cn() -> None:
         assert mismatches == []
 
 
-
 def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
     """Protocol tokens, examples and Office defaults are not prose."""
+
     english = _flatten_string_values(_read_toml_file(LOCALES_DIR / "en_US.toml"))
     arabic = _flatten_string_values(_read_toml_file(LOCALES_DIR / "ar_SA.toml"))
     exempt = {
@@ -193,12 +193,12 @@ def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
         "yaml_keys.title",
         "yaml_keys.subtitle",
     }
-    duplicated = {
-        key for key, value in english.items()
-        if arabic.get(key) == value
-        and key not in exempt
-        and not key.startswith("style_formats.")
-    }
+    duplicated: set[str] = set()
+    for key, value in english.items():
+        if key in exempt or key.startswith("style_formats."):
+            continue
+        if arabic.get(key) == value:
+            duplicated.add(key)
     assert not duplicated, f"Arabic UI still contains English prose: {sorted(duplicated)}"
 
 
