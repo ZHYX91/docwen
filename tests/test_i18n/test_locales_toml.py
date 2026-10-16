@@ -24,6 +24,7 @@ NON_EN_UI_LOCALES = (
     "pt_BR",
     "ru_RU",
     "vi_VN",
+    "ar_SA",
 )
 
 # These are ordinary user-facing phrases, not product names, file formats,
@@ -161,6 +162,44 @@ def test_all_locale_string_keys_and_placeholders_match_zh_cn() -> None:
         assert set(actual) == set(reference)
         mismatches = [key for key, source in reference.items() if _placeholders(actual[key]) != _placeholders(source)]
         assert mismatches == []
+
+
+
+def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
+    """Protocol tokens, examples and Office defaults are not prose."""
+    english = _flatten_string_values(_read_toml_file(LOCALES_DIR / "en_US.toml"))
+    arabic = _flatten_string_values(_read_toml_file(LOCALES_DIR / "ar_SA.toml"))
+    exempt = {
+        "common.app_name",
+        "settings.general.languages.ar_SA",
+        "settings.document.software.wps_writer",
+        "settings.document.software.msoffice_word",
+        "settings.document.software.libreoffice",
+        "settings.spreadsheet.software.wps_spreadsheets",
+        "settings.spreadsheet.software.excel",
+        "settings.formatting.separators.dash",
+        "settings.formatting.separators.asterisk",
+        "settings.formatting.separators.underscore",
+        "settings.output.date_formats.iso",
+        "settings.output.date_formats.compact",
+        "settings.output.date_formats.chinese",
+        "settings.software.wps_presentation",
+        "settings.software.powerpoint",
+        "about.copyright",
+        "conversion_panel.layout.page_range_placeholder",
+        "editors.numbering_add.format_help_text",
+        "placeholders.title",
+        "placeholders.body",
+        "yaml_keys.title",
+        "yaml_keys.subtitle",
+    }
+    duplicated = {
+        key for key, value in english.items()
+        if arabic.get(key) == value
+        and key not in exempt
+        and not key.startswith("style_formats.")
+    }
+    assert not duplicated, f"Arabic UI still contains English prose: {sorted(duplicated)}"
 
 
 def test_locales_dir_exists() -> None:

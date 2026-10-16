@@ -11,7 +11,7 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
-output_filesystem_unsupported = "无法安全保存到此文件夹：所在文件系统不支持原子防覆盖保存。请选择其他输出位置；WSL 中请选择 Linux 原生文件系统。"
+output_filesystem_unsupported = "无法安全地将结果保存到这个文件夹，继续可能覆盖已有文件。请选择其他输出文件夹；在 WSL 中可改用 Linux 原生文件夹。"
 ocr_quality_notice = "OCR 结果可能存在错漏，请对照原文校对。"
 file_admission_missing = "输入文件不存在或已移走：{path}"
 file_admission_unreadable = "无法读取输入文件：{path}"
@@ -53,7 +53,7 @@ system_tray_quit = "退出"
 batch_add_failed_title = "批量添加失败"
 batch_add_failed_message = "{count} 个文件无法添加到批量列表。"
 batch_add_failed_reason = "原因"
-file_admission_invalid = "文件检查数据无效。"
+file_admission_invalid = "无法完成文件检查。请从列表中移除文件后重新添加。"
 file_admission_changed = "文件在添加后发生了变化。请从列表中移除该文件并重新添加，以便重新检查，然后再重试。"
 file_admission_blocked = "所选文件无法处理。"
 file_admission_confirm_title = "确认检测到的文件格式"

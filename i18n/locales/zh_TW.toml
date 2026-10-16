@@ -1664,7 +1664,7 @@ subtitle = "副標題"
 
 
 [main_window]
-output_filesystem_unsupported = "無法安全儲存到此資料夾：所在檔案系統不支援原子防覆寫儲存。請選擇其他輸出位置；WSL 中請選擇 Linux 原生檔案系統。"
+output_filesystem_unsupported = "無法安全地將結果儲存到這個資料夾，繼續可能覆寫既有檔案。請選擇其他輸出資料夾；在 WSL 中可改用 Linux 原生資料夾。"
 ocr_quality_notice = "OCR 結果可能有錯漏，請對照原文校對。"
 file_admission_missing = "輸入檔案不存在或已移走：{path}"
 file_admission_unreadable = "無法讀取輸入檔案：{path}"
@@ -1694,7 +1694,7 @@ system_tray_quit = "退出"
 batch_add_failed_title = "批次新增失敗"
 batch_add_failed_message = "{count} 個檔案無法新增至批次清單。"
 batch_add_failed_reason = "原因"
-file_admission_invalid = "檔案檢查資料無效。"
+file_admission_invalid = "無法完成檔案檢查。請從清單中移除檔案後重新加入。"
 file_admission_changed = "檔案在加入後發生了變更。請從清單中移除該檔案並重新加入，以便重新檢查，然後再重試。"
 file_admission_blocked = "所選檔案無法處理。"
 file_admission_confirm_title = "確認偵測到的檔案格式"
