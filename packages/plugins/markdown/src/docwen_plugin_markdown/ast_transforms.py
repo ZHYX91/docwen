@@ -73,6 +73,11 @@ def split_plain_paragraph_lines(ast: list[dict[str, Any]]) -> list[dict[str, Any
             node.get("type") != "paragraph"
             or not isinstance(children, list)
             or any(key.startswith("_docwen_") for key in node)
+            or any(
+                str(item.get("type", "")).startswith(("_docwen_", "semantic_"))
+                or item.get("type") in {"inline_html", "footnote_ref"}
+                for item in children
+            )
             or not any(item.get("type") == "softbreak" for item in children)
         ):
             output.append(node)

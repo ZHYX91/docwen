@@ -8,6 +8,9 @@ from docx import Document
 from docwen_plugin_markdown.ast_transforms import split_plain_paragraph_lines
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
+from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
+
+from .conftest import make_context
 
 pytestmark = pytest.mark.unit
 
@@ -51,4 +54,41 @@ def test_semantic_owner_does_not_split() -> None:
         ],
         "_docwen_v3_ordinary_anchor": {"id": "p"},
     }
+    assert split_plain_paragraph_lines([node]) == [node]
+
+
+@pytest.mark.parametrize(
+    ("enabled", "expected"),
+    [
+        (False, ["First\\nSecond\\nThird"]),
+        (True, ["First", "Second", "Third"]),
+    ],
+)
+def test_exported_docx_respects_request_paragraph_policy(
+    tmp_path, enabled: bool, expected: list[str]
+) -> None:
+    source = tmp_path / "three-lines.md"
+    source.write_text("First\\nSecond\\nThird", encoding="utf-8")
+    template = tmp_path / "body.docx"
+    document = Document()
+    document.add_paragraph("{{body}}")
+    document.save(template)
+
+    context, _workspace = make_context(
+        str(source),
+        options={"template_name": str(template), "each_line_paragraph": enabled},
+    )
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    rendered = Document(result.artifacts[0].staging_path)
+    assert [paragraph.text for paragraph in rendered.paragraphs] == expected
+
+
+def test_protected_inline_semantics_are_not_split() -> None:
+    children = [
+        {"type": "text", "raw": "Before"},
+        {"type": "softbreak"},
+        {"type": "semantic_citation", "raw": "[@smith2020]"},
+    ]
+    node = {"type": "paragraph", "children": children}
     assert split_plain_paragraph_lines([node]) == [node]
