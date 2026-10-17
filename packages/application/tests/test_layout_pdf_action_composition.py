@@ -157,9 +157,7 @@ def test_first_layout_input_sets_public_output_root_before_preconversion(
 
 
 @pytest.mark.parametrize("format_name", ["ofd", "xps"])
-def test_cancelled_layout_normalization_never_reads_or_publishes(
-    tmp_path: Path, format_name: str
-) -> None:
+def test_cancelled_layout_normalization_never_reads_or_publishes(tmp_path: Path, format_name: str) -> None:
     from docwen_application.preconversion.layout_actions import pre_convert_layout
     from docwen_core.cancellation import CancellationToken
 
@@ -169,9 +167,7 @@ def test_cancelled_layout_normalization_never_reads_or_publishes(
     staging.mkdir()
     owner = CancellationToken()
     owner.cancel()
-    result = pre_convert_layout(
-        str(source), format_name, staging_dir=str(staging), cancel=owner.view()
-    )
+    result = pre_convert_layout(str(source), format_name, staging_dir=str(staging), cancel=owner.view())
     assert isinstance(result, PreConversionFailure)
     assert result.cancelled and result.error_type == "cancelled"
     assert list(staging.iterdir()) == []
@@ -179,7 +175,8 @@ def test_cancelled_layout_normalization_never_reads_or_publishes(
 
 
 def test_ofd_normalization_uses_protective_input_and_produces_valid_pdf(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import hashlib
     import sys
@@ -209,9 +206,7 @@ def test_ofd_normalization_uses_protective_input_and_produces_valid_pdf(
     monkeypatch.setitem(sys.modules, "easyofd", SimpleNamespace(OFD=SafeFakeOFD))
     monkeypatch.setattr(layout_actions, "easyofd_import_boundary", nullcontext)
     monkeypatch.setattr(layout_actions, "apply_easyofd_patches", lambda: None)
-    result = layout_actions.pre_convert_layout(
-        str(source), "ofd", staging_dir=str(staging)
-    )
+    result = layout_actions.pre_convert_layout(str(source), "ofd", staging_dir=str(staging))
     assert isinstance(result, PreConversionResult)
     assert result.original_source_format == "ofd"
     assert Path(result.pre_converted_path).name == "original.pdf"
