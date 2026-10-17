@@ -29,6 +29,7 @@ from docwen_gui.spreadsheet_protection import SpreadsheetProtectionInfo
 from ._runtime_route_filter import (
     RuntimeRouteChoicesResult,
     RuntimeRouteSource,
+    discover_composed_action_route_choices,
     discover_runtime_route_choices,
 )
 from .spreadsheet_analysis import SpreadsheetAnalysis
@@ -783,10 +784,10 @@ class ConversionPanelViewModel(QObject):
             ),
         )
         return all(
-            discover_runtime_route_choices(
+            discover_composed_action_route_choices(
                 controller,
                 sources=source,
-                operation="action",
+                target="pdf",
                 action_name=action,
             ).get("pdf")
             is not None

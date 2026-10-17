@@ -742,7 +742,7 @@ class BatchListViewModel(QObject):
         "merge_images_to_tiff": frozenset({"image"}),
     }
     _AGGREGATE_ACTION_FORMATS: dict[str, frozenset[str]] = {  # noqa: RUF012
-        "merge_pdfs": frozenset({"pdf"}),
+        "merge_pdfs": frozenset({"pdf", "ofd", "xps"}),
     }
 
     def get_aggregate_file_list(self, action_name: str) -> list[str]:

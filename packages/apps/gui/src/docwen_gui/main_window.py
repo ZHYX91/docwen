@@ -1963,7 +1963,7 @@ class MainWindow(QWidget):
                 return
             self._workflow.aggregate(
                 file_paths=file_paths,
-                target_format="",
+                target_format="pdf" if action_name == "merge_pdfs" else "",
                 action_name=action_name,
                 options=dict(options or {}),
             )
@@ -1971,7 +1971,7 @@ class MainWindow(QWidget):
 
         self._workflow.single(
             file_path=file_path,
-            target_format="",
+            target_format="pdf" if action_name == "split_pdf" else "",
             action_name=action_name,
             options=dict(options or {}),
         )

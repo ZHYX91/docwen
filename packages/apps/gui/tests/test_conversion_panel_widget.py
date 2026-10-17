@@ -256,14 +256,14 @@ class TestWidgetRebuild:
         assert widget._conversion_group.isHidden()
         assert not widget._saveas_group.isHidden()
 
-    def test_layout_ofd_shows_pdf_conversion_but_not_pdf_tools(
+    def test_layout_ofd_shows_pdf_conversion_and_composed_pdf_split(
         self, widget: ConversionPanel, vm: ConversionPanelViewModel
     ) -> None:
         vm.set_file_info("layout", "ofd", file_path="/test.ofd")
         assert widget.conversion_combo is not None
         assert [widget.conversion_combo.itemText(i) for i in range(widget.conversion_combo.count())] == ["PDF"]
         assert widget._merge_pdfs_button is None
-        assert widget._split_pdf_button is None
+        assert widget._split_pdf_button is not None
 
     def test_layout_extra_has_merge_split(self, widget: ConversionPanel, vm: ConversionPanelViewModel) -> None:
         vm.set_file_info("layout", "pdf", file_path="/test.pdf", ui_mode="batch")

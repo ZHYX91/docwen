@@ -298,10 +298,10 @@ class TestAggregateFileCollection:
         assert "/test/b.pdf" in files
         assert "/test/doc.docx" not in files
 
-    def test_merge_pdfs_excludes_non_pdf_layout_files(self, vm: BatchListViewModel) -> None:
+    def test_merge_pdfs_includes_layout_files_with_composed_pdf_normalization(self, vm: BatchListViewModel) -> None:
         _add_synthetic(vm, ["/test/a.pdf", "/test/b.ofd", "/test/c.pdf"])
 
-        assert vm.get_aggregate_file_list("merge_pdfs") == ["/test/a.pdf", "/test/c.pdf"]
+        assert vm.get_aggregate_file_list("merge_pdfs") == ["/test/a.pdf", "/test/b.ofd", "/test/c.pdf"]
 
     def test_merge_pdfs_respects_manual_order(self, vm: BatchListViewModel) -> None:
         _add_synthetic(vm, ["/test/a.pdf", "/test/b.pdf", "/test/c.pdf"])
