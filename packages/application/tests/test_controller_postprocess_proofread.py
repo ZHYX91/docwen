@@ -276,7 +276,9 @@ def test_generated_legacy_document_is_proofread_before_final_bridge(
             assert stage.target_format == target and not stage.action_name
         private = Path(stage.output_policy.output_dir or "")
         private.mkdir(parents=True, exist_ok=True)
-        filename = private / ("final.rtf" if len(calls) == 3 else "note_checked.docx" if len(calls) == 2 else "note.docx")
+        filename = private / (
+            f"final.{target}" if len(calls) == 3 else "note_checked.docx" if len(calls) == 2 else "note.docx"
+        )
         filename.write_bytes(b"result")
         return ConversionResult(
             task_id=stage.request_id,
