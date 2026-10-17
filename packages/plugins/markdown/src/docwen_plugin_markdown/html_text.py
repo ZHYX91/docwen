@@ -6,19 +6,14 @@ import re
 from html.parser import HTMLParser
 
 _BLOCK_TAGS = frozenset(
-    {
-        "article", "aside", "blockquote", "div", "dl", "dt", "dd",
-        "h1", "h2", "h3", "h4", "h5", "h6", "header", "footer", "li",
-        "main", "ol", "p", "pre", "section", "table", "tbody", "thead",
-        "tfoot", "tr", "ul",
-    }
+    "article aside blockquote div dl dt dd h1 h2 h3 h4 h5 h6 "
+    "header footer li main ol p pre section table tbody thead "
+    "tfoot tr ul"
+    .split()
 )
 _IGNORED_TAGS = frozenset({"script", "style", "iframe", "object", "svg", "template"})
-_SIMPLE_INLINE_TAGS = frozenset(
-    {"a", "b", "em", "i", "mark", "s", "small", "span", "strong", "sub", "sup", "u"}
-)
-_WHITESPACE = re.compile(r"[ 	
-]+")
+_SIMPLE_INLINE_TAGS = frozenset("a b em i mark s small span strong sub sup u".split())
+_WHITESPACE = re.compile(r"[ \t\r\n]+")
 
 
 class _VisibleHtml(HTMLParser):
@@ -54,8 +49,11 @@ class _VisibleHtml(HTMLParser):
             self.lossy = True
             self.pre_depth += 1
             self._boundary()
+        elif tag in {"td", "th"}:
+            self.lossy = True
+            self._boundary()
         elif tag in _BLOCK_TAGS:
-            if tag in {"table", "td", "th"}:
+            if tag == "table":
                 self.lossy = True
             self._boundary()
         elif tag not in _SIMPLE_INLINE_TAGS:

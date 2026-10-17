@@ -15,14 +15,14 @@ def test_simple_html_block_keeps_visible_text() -> None:
 def test_html_paragraphs_render_as_word_paragraphs() -> None:
     document = Document()
     renderer = MdToDocxRenderer(document)
-    paragraphs = renderer._handle_block_html(
-        {"type": "block_html", "raw": "<p>First</p><p>Second</p>"}
-    )
+    node = {"type": "block_html", "raw": "<p>First</p><p>Second</p>"}
+    paragraphs = renderer._handle_block_html(node)
     assert [paragraph.text for paragraph in paragraphs] == ["First", "Second"]
 
 
 def test_unsafe_script_and_external_image_are_not_processed() -> None:
-    raw = "<div>Visible</div><script>secret()</script><img src='http://example.test' alt='Image'>"
+    raw = "<div>Visible</div><script>secret()</script>"
+    raw += "<img src='http://example.test' alt='Image'>"
     lines, lossy = project_html_block_text(raw)
     assert lines == ["Visible", "Image"]
     assert lossy
@@ -31,11 +31,11 @@ def test_unsafe_script_and_external_image_are_not_processed() -> None:
 def test_table_flattening_reports_loss_without_dropping_cell_values() -> None:
     document = Document()
     renderer = MdToDocxRenderer(document)
-    renderer._handle_block_html(
-        {"type": "block_html", "raw": "<table><tr><td>0012</td><td>North</td></tr></table>"}
-    )
-    assert "0012" in "\n".join(p.text for p in document.paragraphs)
-    assert "North" in "\n".join(p.text for p in document.paragraphs)
+    raw = "<table><tr><td>0012</td><td>North</td></tr></table>"
+    renderer._handle_block_html({"type": "block_html", "raw": raw})
+    visible = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    assert "0012" in visible
+    assert "North" in visible
     assert any(code == "MD2DOCX-HTML-FLATTENED" for code, _ in renderer.warnings)
 
 
