@@ -75,9 +75,7 @@ def test_aggregate_normalization_preserves_order_and_source_output_root(
     assert not Path(request.input_refs[2].path).exists()
 
 
-def test_failed_layout_normalization_does_not_run_aggregate(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_failed_layout_normalization_does_not_run_aggregate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("docwen_core.detection.enforce_file_admission", lambda request: request)
     first = tmp_path / "first.pdf"
     second = tmp_path / "second.ofd"
