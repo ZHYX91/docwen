@@ -57,6 +57,7 @@ def annotate_ast_with_merges(
             node["_merge"] = True
             following["_merged_into_heading"] = True
 
+
 def split_plain_paragraph_lines(ast: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Make ordinary Markdown soft-separated lines independent Word paragraphs.
 
@@ -83,7 +84,10 @@ def split_plain_paragraph_lines(ast: list[dict[str, Any]]) -> list[dict[str, Any
             else:
                 parts[-1].append(child)
         # Do not invent empty Word paragraphs from an invalid/empty segment.
-        if not all(part and any(item.get("type") != "text" or str(item.get("raw", "")).strip() for item in part) for part in parts):
+        if not all(
+            part and any(item.get("type") != "text" or str(item.get("raw", "")).strip() for item in part)
+            for part in parts
+        ):
             output.append(node)
             continue
         output.extend({**node, "children": part} for part in parts)

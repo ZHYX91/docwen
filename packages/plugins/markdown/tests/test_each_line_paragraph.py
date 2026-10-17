@@ -23,16 +23,25 @@ def test_each_line_creates_distinct_word_paragraphs_without_losing_styles() -> N
 
 
 def test_explicit_break_and_containers_remain_intact() -> None:
-    text = "First  \nSecond\n\n> Quote one\n> Quote two\n\n- Item one\n- Item two\n\n```\nA\nB\n```"
+    text = (
+        "First  \\nSecond\\n\\n> Quote one\\n> Quote two\\n\\n"
+        "- Item one\\n- Item two\\n\\n```\\nA\\nB\\n```"
+    )
     original = parse_markdown_text(text)
     transformed = split_plain_paragraph_lines(original)
     assert transformed == original
 
 
 def test_semantic_owner_does_not_split() -> None:
-    source = {"type": "paragraph", "children": [
-        {"type": "text", "raw": "First"}, {"type": "softbreak"}, {"type": "text", "raw": "Second"}
-    ], "_docwen_v3_ordinary_anchor": {"id": "p"}}
+    source = {
+        "type": "paragraph",
+        "children": [
+            {"type": "text", "raw": "First"},
+            {"type": "softbreak"},
+            {"type": "text", "raw": "Second"},
+        ],
+        "_docwen_v3_ordinary_anchor": {"id": "p"},
+    }
     assert split_plain_paragraph_lines([source]) == [source]
 
 
