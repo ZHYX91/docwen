@@ -13,6 +13,7 @@ from docwen_core.options import PROOFREAD_OPTIONS_SCHEMA
 
 _PROOFREAD_OPTION_KEYS = frozenset(PROOFREAD_OPTIONS_SCHEMA.get("properties", {}))
 _MARKDOWN_SOURCE_FORMATS = frozenset({"md", "markdown", "txt"})
+_PROOFREAD_DOCUMENT_TARGETS = frozenset({"docx", "doc", "odt", "rtf", "wps"})
 
 
 def prepare_postprocess_options(
@@ -35,13 +36,15 @@ def prepare_postprocess_options(
     prepared = dict(options)
     source = source_format.strip().lower()
     target = target_format.strip().lower()
-    if proofread_requested and (action_name or source not in _MARKDOWN_SOURCE_FORMATS or target != "docx"):
-        raise ValueError("--proofread requires an ordinary Markdown-to-DOCX conversion")
+    if proofread_requested and (
+        action_name or source not in _MARKDOWN_SOURCE_FORMATS or target not in _PROOFREAD_DOCUMENT_TARGETS
+    ):
+        raise ValueError("--proofread requires an ordinary Markdown-to-document conversion")
     if action_name:
         return prepared
     if source not in _MARKDOWN_SOURCE_FORMATS:
         return prepared
-    if target != "docx":
+    if target not in _PROOFREAD_DOCUMENT_TARGETS:
         return prepared
 
     proofread: dict[str, bool] = {}
@@ -63,8 +66,11 @@ def postprocess_proofread_options(request: Any) -> dict[str, bool] | None:
     raw = getattr(request, "options", {}).get(POSTPROCESS_PROOFREAD_OPTION)
     if raw is None:
         return None
-    if getattr(request, "action_name", "") or str(getattr(request, "target_format", "")).lower() != "docx":
-        raise ValueError("Post-conversion proofreading is supported only for ordinary DOCX conversion")
+    if (
+        getattr(request, "action_name", "")
+        or str(getattr(request, "target_format", "")).lower() not in _PROOFREAD_DOCUMENT_TARGETS
+    ):
+        raise ValueError("Post-conversion proofreading is supported only for ordinary document conversion")
     source = next(
         (ref for ref in getattr(request, "input_refs", ()) if getattr(ref, "input_role", "") == "source"),
         None,

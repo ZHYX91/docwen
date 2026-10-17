@@ -71,7 +71,7 @@ Conversions from or to Markdown publish a result folder inside the parent select
 - Write commands require an explicit destination.
 - `validate` is read-only unless `--report PATH` is present. A Markdown input writes a structured JSON
   report; DOCX and pre-converted DOC/WPS/RTF/ODT inputs write an annotated DOCX report.
-- `convert --proofread` is a different intent: only Markdown→DOCX is accepted, the generated DOCX is proofread before publication, and a proofreading failure prevents the generated document from being published as a successful result.
+- `convert --proofread` is a different intent: Markdown→DOCX/DOC/ODT/RTF/WPS is accepted, the generated DOCX is proofread before the selected document is published, and a proofreading failure prevents the generated document from being published as a successful result.
 - Existing targets are rejected by default; `--overwrite` is required to replace one intentionally.
 - Single-file commands never silently rename a requested output.
 - On Windows, every public input and output path must use ordinary absolute syntax and be at most 259 UTF-16 code units. DocWen rejects `\\?\` / `\\.\` extended-length syntax before a backend starts because the supported conversion backends do not share one reliable extended-path contract. Runtime-generated artifact names may cross that boundary internally; DocWen keeps reported paths ordinary while adapting only its own filesystem calls.
