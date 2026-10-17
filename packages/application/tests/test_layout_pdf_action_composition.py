@@ -8,9 +8,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from docwen_application.controller import ApplicationController
+from docwen_application.ports.runtime import RuntimePort
 from docwen_application.preconversion.chain_resolver import resolve_chain
 from docwen_application.preconversion.pre_converter import PreConversionFailure, PreConversionResult
-from docwen_application.ports.runtime import RuntimePort
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import ConversionRequest, OutputPolicy
 from docwen_core.models.result import ConversionResult
