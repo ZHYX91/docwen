@@ -194,7 +194,7 @@ Other pages cover incoming files, proofreading, Markdown syntax and resources, t
 
 -   **Drag External File**: Drag directly into the window to import.
 -   **Open Output**: Click the "Open Output" action on the right side of the status bar to open the output location.
--   **Right-click Template Item**: Open template file location.
+-   **Right-click Template Item**: Choose **Open file location** to show the template in its folder.
 
 ---
 

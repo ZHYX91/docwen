@@ -35,6 +35,7 @@ class TabbedTemplateSelector(QWidget):
 
     template_selected = Signal(str, str)
     tab_changed = Signal(str, str)
+    location_requested = Signal(str)
 
     def __init__(
         self,
@@ -83,6 +84,7 @@ class TabbedTemplateSelector(QWidget):
                 on_manage_templates=on_manage_templates,
             )
             selector.template_error.connect(self._forward_template_error)
+            selector.location_requested.connect(self.location_requested.emit)
             self._selectors[template_type] = selector
             self._stack.addWidget(selector)
             self._pivot.addItem(
