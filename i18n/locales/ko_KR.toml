@@ -546,6 +546,9 @@ embed = "콘텐츠 임베드"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "각 줄을 별도 문단으로"
+each_line_paragraph_help = "일반 Markdown 본문의 각 줄을 독립된 Word 문단으로 만듭니다. 제목, 목록, 인용, 표, 코드 및 명시적 줄바꿈은 유지됩니다."
+line_paragraph_section = "Markdown에서 Word로"
 mermaid_auto = "자동 검색"
 mermaid_browse = "Mermaid CLI 선택"
 mermaid_path = "CLI 경로:"

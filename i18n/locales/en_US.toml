@@ -600,6 +600,9 @@ embed = "Embed content"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "Each line as a paragraph"
+each_line_paragraph_help = "Write each ordinary Markdown text line as a separate Word paragraph. Headings, lists, quotes, tables, code and explicit line breaks are unaffected."
+line_paragraph_section = "Markdown to Word"
 mermaid_auto = "Automatic discovery"
 mermaid_browse = "Select Mermaid CLI"
 mermaid_path = "CLI path:"

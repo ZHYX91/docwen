@@ -117,6 +117,7 @@ class FormattingTab(BaseSettingsTab):
     def __init__(self, view_model: SettingsViewModel) -> None:
         self._vm = view_model
         self._extension_checks: dict[tuple[str, str], QCheckBox] = {}
+        self._each_line_paragraph: QCheckBox = _cast(QCheckBox, None)
         # All combo refs — initialized in _create_interface()
         self._page_break: QComboBox = _cast(QComboBox, None)
         self._section_break: QComboBox = _cast(QComboBox, None)
@@ -164,6 +165,25 @@ class FormattingTab(BaseSettingsTab):
             preset.setObjectName(f"markdownExtensions{direction.title()}Preset")
             preset.clicked.connect(lambda _checked=False, selected=direction: self._apply_extension_preset(selected))
             form.addRow(preset)
+        # ── MD → Word: ordinary prose paragraph policy ────────────────
+        _paragraph_card, paragraph_form = self.add_settings_card(
+            t("settings.formatting.line_paragraph_section", "Markdown to Word"),
+            object_name="formattingLineParagraphCard",
+        )
+        self._each_line_paragraph = self.create_settings_toggle(
+            t("settings.formatting.each_line_paragraph", "Each line as a paragraph"),
+            t(
+                "settings.formatting.each_line_paragraph_help",
+                "Create separate Word paragraphs for consecutive ordinary Markdown text lines. "
+                "Explicit hard breaks, headings, lists, quotes, tables and code remain unchanged.",
+            ),
+        )
+        self._each_line_paragraph.setObjectName("formattingEachLineParagraph")
+        self.add_form_row(paragraph_form, "", self._each_line_paragraph)
+        self._each_line_paragraph.toggled.connect(
+            lambda checked: self._vm.set_field(SECTION_FORMATTING, "each_line_paragraph", checked)
+        )
+
         # ── DOCX → MD: Separator Mapping ───────────────────────────────
         _c2, f2 = self.add_settings_card(
             f"{t('settings.formatting.docx_to_md_section', 'DOCX to MD')} — {t('settings.formatting.separator_mapping', 'Separator Mapping')}",
@@ -320,6 +340,9 @@ class FormattingTab(BaseSettingsTab):
 
     def _load_values(self) -> None:
         fmt = self._vm.config.formatting
+        self._each_line_paragraph.blockSignals(True)
+        self._each_line_paragraph.setChecked(fmt.each_line_paragraph)
+        self._each_line_paragraph.blockSignals(False)
         for (direction, name), checkbox in self._extension_checks.items():
             checkbox.blockSignals(True)
             checkbox.setChecked(fmt.markdown_extensions[direction][name])

@@ -35,6 +35,14 @@ MD_TO_DOCX_OPTIONS_SCHEMA: dict = {
     "additionalProperties": False,
     "properties": {
         "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
+        "each_line_paragraph": {
+            "type": "boolean",
+            "default": False,
+            "description": (
+                "Render soft-separated lines in ordinary Markdown prose as separate "
+                "Word paragraphs; explicit hard breaks and nested structures remain unchanged."
+            ),
+        },
         "markdown_resource_bindings": MARKDOWN_RESOURCE_BINDINGS_SCHEMA,
         "locale": {
             "type": "string",

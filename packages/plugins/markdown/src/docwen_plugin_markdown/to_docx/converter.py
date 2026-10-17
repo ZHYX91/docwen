@@ -55,7 +55,7 @@ from docwen_core.text.heading_numbering import (
     NumberingSchemeResolutionError,
     resolve_heading_numbering_scheme,
 )
-from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges
+from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges, split_plain_paragraph_lines
 from docwen_plugin_markdown.common_utils import (
     add_md_numbering,
     conversion_error_text,
@@ -905,6 +905,15 @@ class MdToDocxConverter:
                         [],
                         input_bytes=input_bytes,
                     )
+
+                # The paragraph policy applies only to ordinary authored prose.
+                # Semantic source owners and nested containers are not split.
+                default_line_paragraph = _config_value(
+                    context.config, "conversion.md_to_docx.each_line_paragraph", False
+                )
+                each_line_paragraph = options.get("each_line_paragraph", default_line_paragraph)
+                if each_line_paragraph is True:
+                    raw_ast = split_plain_paragraph_lines(raw_ast)
 
                 # 2h. Annotate AST with merge info
                 cancellable.check()

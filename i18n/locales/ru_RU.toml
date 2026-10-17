@@ -546,6 +546,9 @@ embed = "Вставить контент"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "Каждая строка — отдельный абзац"
+each_line_paragraph_help = "Преобразовывать каждую строку обычного текста Markdown в отдельный абзац Word. Заголовки, списки, цитаты, таблицы, код и явные разрывы строк не меняются."
+line_paragraph_section = "Markdown в Word"
 mermaid_auto = "Автоматический поиск"
 mermaid_browse = "Выбрать Mermaid CLI"
 mermaid_path = "Путь к CLI:"

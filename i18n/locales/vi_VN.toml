@@ -600,6 +600,9 @@ embed = "Nhúng nội dung"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "Mỗi dòng thành một đoạn"
+each_line_paragraph_help = "Tạo đoạn Word riêng cho mỗi dòng văn bản Markdown thông thường. Không thay đổi tiêu đề, danh sách, trích dẫn, bảng, mã hay ngắt dòng tường minh."
+line_paragraph_section = "Markdown sang Word"
 mermaid_auto = "Tự động tìm"
 mermaid_browse = "Chọn Mermaid CLI"
 mermaid_path = "Đường dẫn CLI:"
