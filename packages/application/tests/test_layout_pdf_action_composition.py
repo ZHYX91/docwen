@@ -154,3 +154,68 @@ def test_first_layout_input_sets_public_output_root_before_preconversion(
     assert result.success
     assert len(observed) == 1
     assert not Path(observed[0].input_refs[0].path).exists()
+
+
+@pytest.mark.parametrize("format_name", ["ofd", "xps"])
+def test_cancelled_layout_normalization_never_reads_or_publishes(
+    tmp_path: Path, format_name: str
+) -> None:
+    from docwen_application.preconversion.layout_actions import pre_convert_layout
+    from docwen_core.cancellation import CancellationToken
+
+    source = tmp_path / f"source.{format_name}"
+    source.write_bytes(b"unchanged")
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    owner = CancellationToken()
+    owner.cancel()
+    result = pre_convert_layout(
+        str(source), format_name, staging_dir=str(staging), cancel=owner.view()
+    )
+    assert isinstance(result, PreConversionFailure)
+    assert result.cancelled and result.error_type == "cancelled"
+    assert list(staging.iterdir()) == []
+    assert source.read_bytes() == b"unchanged"
+
+
+def test_ofd_normalization_uses_protective_input_and_produces_valid_pdf(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import hashlib
+    import sys
+    from contextlib import nullcontext
+    from types import SimpleNamespace
+
+    import fitz
+
+    from docwen_application.preconversion import layout_actions
+
+    source = tmp_path / "original.ofd"
+    source.write_bytes(b"source ofd payload")
+    staging = tmp_path / "staging"
+    staging.mkdir()
+
+    class SafeFakeOFD:
+        def read(self, input_path: str, *, fmt: str) -> None:
+            assert fmt == "path"
+            assert Path(input_path) == staging / "input.ofd"
+            assert Path(input_path).read_bytes() == source.read_bytes()
+
+        def to_pdf(self) -> bytes:
+            with fitz.open() as document:
+                document.new_page(width=400, height=600)
+                return document.tobytes()
+
+    monkeypatch.setitem(sys.modules, "easyofd", SimpleNamespace(OFD=SafeFakeOFD))
+    monkeypatch.setattr(layout_actions, "easyofd_import_boundary", nullcontext)
+    monkeypatch.setattr(layout_actions, "apply_easyofd_patches", lambda: None)
+    result = layout_actions.pre_convert_layout(
+        str(source), "ofd", staging_dir=str(staging)
+    )
+    assert isinstance(result, PreConversionResult)
+    assert result.original_source_format == "ofd"
+    assert Path(result.pre_converted_path).name == "original.pdf"
+    assert result.source_sha256 == hashlib.sha256(source.read_bytes()).hexdigest()
+    with fitz.open(result.pre_converted_path) as pdf:
+        assert pdf.page_count == 1
+    assert source.read_bytes() == b"source ofd payload"
