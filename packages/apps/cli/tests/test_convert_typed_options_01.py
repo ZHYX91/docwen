@@ -54,7 +54,7 @@ class TestCanonicalRouteOptionProjection:
     def test_explicit_proofread_rejects_non_markdown_source(self) -> None:
         from docwen_cli.commands.execution_request import project_route_options
 
-        with pytest.raises(ValueError, match="Markdown-to-DOCX"):
+        with pytest.raises(ValueError, match="Markdown-to-document"):
             project_route_options(
                 {},
                 route_id="convert.docx.to_docx",
