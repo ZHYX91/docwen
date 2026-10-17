@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
-from docwen_core.models.artifact import ARTIFACT_KIND_PRIMARY, ArtifactManifest
+from docwen_core.models.artifact import ARTIFACT_KIND_AUXILIARY, ARTIFACT_KIND_PRIMARY, ArtifactManifest
 from docwen_core.models.result import ConversionDiagnostic, ConversionErrorInfo, ConversionMetrics, ConversionResult
 from docwen_core.office_bridge import BridgeCandidate, convert_with_backend_priority
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
@@ -73,6 +74,29 @@ _PRIORITY_KEYS = {
     "document_to_pdf": "software.special_conversions.document_to_pdf",
 }
 
+class _StageProgress:
+    """Give the intermediate document only the first 70% of the full task."""
+
+    def __init__(self, delegate: Any) -> None:
+        self._delegate = delegate
+
+    def report_progress(self, percent: float, message: str = "") -> None:
+        self._delegate.report_progress(max(0.0, min(70.0, float(percent) * 0.70)), message)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._delegate, name)
+
+
+class _StageContext:
+    """Delegate the same request/ownership while scoping progress to one stage."""
+
+    def __init__(self, delegate: Any) -> None:
+        self._delegate = delegate
+        self.progress = _StageProgress(delegate.progress)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._delegate, name)
+
 
 class MarkdownOfficeBridgeConverter:
     """Convert Markdown to legacy Office formats via DOCX/XLSX intermediates."""
@@ -112,7 +136,9 @@ class MarkdownOfficeBridgeConverter:
         t_start = time.monotonic()
         task_id = context.request.request_id
         try:
-            intermediate_result = intermediate_converter(context)
+            intermediate_result = intermediate_converter(
+                cast("PluginExecutionContext", _StageContext(context))
+            )
             if not intermediate_result.success or not intermediate_result.artifacts:
                 return intermediate_result
 
@@ -122,6 +148,7 @@ class MarkdownOfficeBridgeConverter:
             output_path = Path(context.workspace.create_artifact_path(input_stem, f".{target_format}"))
             bridge_output_path = output_path.with_suffix(".doc") if target_format == "wps" else output_path
 
+            context.progress.report_progress(72.0, f"Converting intermediate {intermediate_format.upper()} to {target_format.upper()}")
             priority_category = self._priority_category(target_format)
             bridge_result = convert_with_backend_priority(
                 str(intermediate_path),
@@ -134,9 +161,11 @@ class MarkdownOfficeBridgeConverter:
                 failure_subject=f"Configured Markdown→{target_format.upper()} backends",
             )
             if not bridge_result.success:
-                return self._bridge_error_result(context, target_format, bridge_result.message, t_start)
+                failed = self._bridge_error_result(context, target_format, bridge_result.message, t_start)
+                return replace(failed, diagnostics=[*intermediate_result.diagnostics, *failed.diagnostics])
             if target_format == "wps" and bridge_output_path.exists():
                 bridge_output_path.replace(output_path)
+            context.progress.report_progress(85.0, "Preparing final output")
 
             output_bytes = output_path.stat().st_size if output_path.exists() else 0
             artifact = ArtifactManifest(
@@ -155,13 +184,25 @@ class MarkdownOfficeBridgeConverter:
                 },
             )
             context.workspace.add_artifact(artifact)
+            published_artifacts = [artifact]
+            if context.config.get("output.intermediate_files.save_to_output", False) is True:
+                # Publish only the explicit intermediate; never scan the work directory.
+                published_artifacts.append(
+                    replace(
+                        intermediate_artifact,
+                        kind=ARTIFACT_KIND_AUXILIARY,
+                        is_primary=False,
+                        suggested_name=f"{input_stem}.{intermediate_format}",
+                        metadata={**intermediate_artifact.metadata, "intermediate_for": target_format},
+                    )
+                )
 
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
             input_bytes = Path(context.workspace.input_path).stat().st_size
             return ConversionResult(
                 task_id=task_id,
                 success=True,
-                artifacts=[artifact],
+                artifacts=published_artifacts,
                 metrics=ConversionMetrics(
                     duration_ms=elapsed_ms,
                     input_bytes=input_bytes,
@@ -169,11 +210,12 @@ class MarkdownOfficeBridgeConverter:
                     extra={"engine": "office_bridge", "backend": bridge_result.backend},
                 ),
                 diagnostics=[
+                    *intermediate_result.diagnostics,
                     ConversionDiagnostic(
                         level="info",
                         message=f"Markdown→{target_format.upper()} conversion successful via Office bridge",
                         code="MD-OFFICE-BRIDGE-OK",
-                    )
+                    ),
                 ],
             )
         except Exception as exc:
