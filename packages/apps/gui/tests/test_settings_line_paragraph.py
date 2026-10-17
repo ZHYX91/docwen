@@ -1,7 +1,8 @@
 """The line-per-paragraph setting is a typed, persistent GUI choice."""
 
-from docwen_gui.models.settings_config import FormattingConfig
+import pytest
 
+from docwen_gui.models.settings_config import FormattingConfig
 
 pytestmark = pytest.mark.unit
 
