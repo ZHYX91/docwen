@@ -251,5 +251,71 @@ def test_postprocess_proofread_rejects_non_docx_target(tmp_path: Path) -> None:
         options={POSTPROCESS_PROOFREAD_OPTION: {"enable_symbol_pairing": True}},
     )
 
-    with pytest.raises(ValueError, match="only for ordinary DOCX"):
+    with pytest.raises(ValueError, match="only for ordinary document"):
         controller.execute_single(request)
+
+
+@pytest.mark.parametrize("target", ["doc", "odt", "rtf", "wps"])
+def test_generated_legacy_document_is_proofread_before_final_bridge(
+    target: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr("docwen_core.detection.enforce_file_admission", lambda request: request)
+    source = tmp_path / "note.md"
+    source.write_text("Source text.", encoding="utf-8")
+    public = tmp_path / "public"
+    runtime = MagicMock(spec=RuntimePort)
+    calls: list[ConversionRequest] = []
+
+    def execute(stage: ConversionRequest) -> ConversionResult:
+        calls.append(stage)
+        if len(calls) == 1:
+            assert stage.target_format == "docx" and not stage.action_name
+        elif len(calls) == 2:
+            assert stage.target_format == "docx" and stage.action_name == "validate"
+        else:
+            assert stage.target_format == target and not stage.action_name
+        private = Path(stage.output_policy.output_dir or "")
+        private.mkdir(parents=True, exist_ok=True)
+        filename = private / ("final." + target if len(calls) == 3 else "note.docx")
+        filename.write_bytes(b"result")
+        return ConversionResult(
+            task_id=stage.request_id,
+            success=True,
+            artifacts=[
+                ArtifactManifest(
+                    artifact_id=f"artifact-{len(calls)}",
+                    kind="primary",
+                    staging_path=str(filename),
+                    suggested_name=filename.name,
+                    media_type=_DOCX_MEDIA_TYPE if len(calls) < 3 else "application/octet-stream",
+                    size_bytes=filename.stat().st_size,
+                    is_primary=True,
+                )
+            ],
+            diagnostics=[ConversionDiagnostic(level="info", code=f"STEP-{len(calls)}", message="Stage completed")],
+        )
+
+    runtime.execute.side_effect = execute
+    controller = ApplicationController(runtime_port=runtime)
+    result = controller.execute_single(
+        ConversionRequest(
+            request_id="proofread-legacy",
+            input_refs=[FileRef(path=str(source), format="markdown", category="markdown")],
+            target_format=target,
+            options={POSTPROCESS_PROOFREAD_OPTION: {"enable_symbol_pairing": True}},
+            output_policy=OutputPolicy(output_dir=str(public)),
+        )
+    )
+    assert result.success
+    assert len(calls) == 3
+    assert calls[0].output_policy.output_dir != str(public)
+    assert calls[1].output_policy.output_dir != str(public)
+    assert calls[2].output_policy.output_dir == str(public)
+    assert [item.code for item in result.diagnostics] == [
+        "STEP-1",
+        "STEP-2",
+        "STEP-3",
+        "POSTPROCESS_PROOFREAD_APPLIED",
+    ]
+    assert not Path(calls[0].output_policy.output_dir or "").exists()
+    assert not Path(calls[1].output_policy.output_dir or "").exists()
