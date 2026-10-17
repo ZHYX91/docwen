@@ -1,7 +1,10 @@
 """Request-owned ordinary Markdown prose paragraph boundaries."""
 
+from __future__ import annotations
+
 import pytest
 from docx import Document
+
 from docwen_plugin_markdown.ast_transforms import split_plain_paragraph_lines
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
