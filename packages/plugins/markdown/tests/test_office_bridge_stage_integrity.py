@@ -9,8 +9,8 @@ from typing import cast
 import pytest
 
 from docwen_core.models.artifact import ARTIFACT_KIND_AUXILIARY, ArtifactManifest
-from docwen_core.protocols.execution_context import PluginExecutionContext
 from docwen_core.models.result import ConversionDiagnostic, ConversionMetrics, ConversionResult
+from docwen_core.protocols.execution_context import PluginExecutionContext
 from docwen_plugin_markdown.office_bridge import converter as bridge_module
 
 
