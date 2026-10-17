@@ -798,7 +798,7 @@ system_desc = "Ativar ou desativar o registro e definir o nível."
 enable_logging_label = "Ativar log"
 enable_logging_tooltip = "Ativa o sistema de log."
 log_level_label = "Nível de log:"
-log_level_tooltip = "Nível de detalhe dos logs."
+log_level_tooltip = "Escolha o nível de detalhe dos logs.\nDo mais detalhado ao menos detalhado: DEBUG, INFO, WARNING, ERROR, CRITICAL."
 
 # 文件输出区域
 file_section = "Arquivo"
@@ -1277,22 +1277,23 @@ level_format_config = "Formato de nível"
 realtime_preview = "Visualização"
 format_help = "📖 Ajuda"
 format_help_title = "Espaços reservados"
-format_help_text = """Uso de placeholders de formato
+format_help_text = """Espaços reservados para numeração
 
-占位符格式：{级别.样式}
+Sintaxe: {level.style}
+level é o nível do título (1–9); style é um nome da lista abaixo.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+Estilos disponíveis:
+  chinese_lower  - Numerais chineses (一、二、三)
+  chinese_upper  - Numerais chineses formais (壹、贰、叁)
+  arabic_half    - Dígitos decimais (1, 2, 3)
+  arabic_full    - Dígitos decimais de largura completa (１、２、３)
+  arabic_circled - Números circulados (①②③)
+  letter_upper   - Letras maiúsculas (A, B, C)
+  letter_lower   - Letras minúsculas (a, b, c)
+  roman_upper    - Numerais romanos maiúsculos (I, II, III)
+  roman_lower    - Numerais romanos minúsculos (i, ii, iii)
 
-示例：
+Exemplos:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

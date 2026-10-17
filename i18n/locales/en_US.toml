@@ -95,7 +95,7 @@ activity_count = "Activity ({count})"
 notice_title = "Notice"
 task_state_cancelling = "Cancelling"
 copy_path = "Copy path"
-ipc_file_missing = "IPC file not found: {path}"
+ipc_file_missing = "The file sent to DocWen was not found: {path}"
 font_size_applied = "Text size: {label}"
 
 transient_title = "Current status"
@@ -798,7 +798,7 @@ system_desc = "Enable or disable logging and set log level."
 enable_logging_label = "Enable logging system"
 enable_logging_tooltip = "Enable or disable the entire logging system.\nWhen disabled, the application will not record any log information.\nRecommended to keep enabled in production."
 log_level_label = "Log level:"
-log_level_tooltip = "Set the verbosity of logging.\nLevels from low to high: debug > info > warning > error > critical\nHigher levels record less information."
+log_level_tooltip = "Choose how much detail to record.\nFrom most to least detailed: DEBUG, INFO, WARNING, ERROR, CRITICAL."
 
 # 文件输出区域
 file_section = "File Output"
@@ -996,7 +996,7 @@ unsupported_type_msg = "Unsupported file type: {filename}"
 single_mode_only_one = "Single mode supports only one file."
 drag_preview_single = "Will select: {filename}"
 drag_preview_summary = "Will add {added}, skip {skipped}"
-drag_preview_summary_recursive = "{summary}, including recursive folder scan"
+drag_preview_summary_recursive = "{summary}, including files in subfolders"
 drag_preview_summary_degraded = "{summary}; large batch preview is summarized"
 drag_preview_skipped_title = "Will skip:"
 drag_preview_skipped_unsupported = "Unsupported: {name}"
@@ -1111,7 +1111,7 @@ spreadsheet_templates = "Sheet"
 [conversion_panel]
 no_common_target = "These files have no common target format. Switch to single-file mode to convert them separately."
 target_format = "Target format"
-route_options_unavailable = "Available operations could not be loaded; actions are disabled to avoid an incorrect request."
+route_options_unavailable = "Conversion options could not be loaded. Conversion is unavailable."
 no_compatible_operation = "No compatible operation is available for this file."
 format_conversion = "Format Conversion"
 save_as = "Layout Output"
@@ -1189,12 +1189,12 @@ split_mode_single_page_warning = "⚠️ This file has only 1 page; no split nee
 protection_checking = "Checking workbook protection…"
 reference_table = "Reference table: {name}"
 protection_password_required = "Password (required)"
-ods_delivery_options = "ODS Delivery Options"
-ods_delivery_hint = "External formulas use cached values. Publishing protected files as ODS requires explicit consent."
+ods_delivery_options = "ODS Save Options"
+ods_delivery_hint = "Formulas that refer to other files use their last saved results. Saving a protected file as ODS requires your confirmation to remove its protection."
 protection_password = "Protection password (optional)"
-allow_protection_loss = "I understand the delivered ODS will not retain password protection"
+allow_protection_loss = "I understand that the saved ODS file will not retain password protection"
 protected_batch_single_only = "Passwords are not reused across a batch. Convert protected files individually."
-protection_status_unknown = "The file's protection status could not be inspected reliably. Conversion is blocked to prevent an unprotected delivery."
+protection_status_unknown = "The file's protection status could not be checked. Conversion has stopped to avoid saving an unprotected file."
 convert_to_other_formats = "Convert to other spreadsheet formats"
 convert_to_layout = "Convert to layout format"
 merge_tables = "Merge Tables"
@@ -1212,7 +1212,7 @@ no_table_selected = "No table selected"
 [action_area]
 recognize_tables = "Recognize table structure"
 table_model_unavailable = "Table models unavailable; plain OCR text will be retained."
-route_options_unavailable = "Available operations could not be loaded; generation is disabled to avoid an incorrect request."
+route_options_unavailable = "Generation options could not be loaded. File generation is unavailable."
 no_compatible_output = "No compatible output is available for this file."
 export_options = "Export Options"
 generation_options = "Generation Options"
@@ -1229,8 +1229,8 @@ optimization_unavailable = "Optimization options are unavailable; standard conve
 export_markdown = "Export Markdown"
 export_markdown_tooltip = "Convert document to Markdown format"
 optimize_for_type = "Optimize for document type"
-remove_existing_numbering = "Remove original document heading num"
-add_new_numbering = "Add heading numbering"
+remove_existing_numbering = "Remove existing heading numbers"
+add_new_numbering = "Add heading numbers"
 
 # 表格转MD面板
 [action_area.spreadsheet]
@@ -1254,8 +1254,8 @@ optimize_for_type = "Optimize for layout type"
 [action_area.md_to_document]
 generate_tooltip = "Generate document in selected format"
 format_combo_tooltip = "Choose target document format"
-remove_existing_numbering = "Remove existing heading numbering"
-add_new_numbering = "Add heading numbering"
+remove_existing_numbering = "Remove existing heading numbers"
+add_new_numbering = "Add heading numbers"
 
 # MD转表格面板
 [action_area.md_to_spreadsheet]
@@ -1276,22 +1276,23 @@ level_format_config = "Level Format Configuration"
 realtime_preview = "Real-time Preview"
 format_help = "📖 Format Help"
 format_help_title = "Format Placeholder Help"
-format_help_text = """Format Placeholder Usage
+format_help_text = """Numbering format placeholders
 
-占位符格式：{级别.样式}
+Syntax: {level.style}
+level is the heading level (1–9); style is a name from the list below.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+Available styles:
+  chinese_lower  - Chinese numerals (一、二、三)
+  chinese_upper  - Formal Chinese numerals (壹、贰、叁)
+  arabic_half    - Decimal digits (1, 2, 3)
+  arabic_full    - Full-width decimal digits (１、２、３)
+  arabic_circled - Circled digits (①②③)
+  letter_upper   - Uppercase letters (A, B, C)
+  letter_lower   - Lowercase letters (a, b, c)
+  roman_upper    - Uppercase Roman numerals (I, II, III)
+  roman_lower    - Lowercase Roman numerals (i, ii, iii)
 
-示例：
+Examples:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.
@@ -1812,6 +1813,6 @@ extended_headings = "Generate H7–H9 headings. When disabled, those headings be
 typed_endnotes = "Preserve the footnote/endnote distinction with typed note labels. When disabled, endnotes are exported as ordinary footnotes and the loss is reported."
 
 [settings.optimization]
-availability_help = "Optimization types come from the current runtime. If none apply to this input category, these controls are disabled; discovery failures are reported separately."
+availability_help = "Only optimizations available for this file type can be selected. If none are available, the options are disabled. Loading errors appear separately."
 
 none_available = "No optimization types are available for this input category in the current runtime."

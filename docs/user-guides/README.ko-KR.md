@@ -20,7 +20,7 @@ DocWen은 Word, Markdown, Excel 등 업무용 형식을 위한 로컬 문서·�
 ## ✨ 핵심 기능
 
 - **📄 문서 변환** - Word ↔ Markdown 양방향 변환. 수식 변환, 구분선(---/***/___)과 페이지/구역/가로선 매핑을 지원하며, Markdown 표의 명시적 `<` / `^` 병합 표시를 Word의 직사각형 셀 병합으로 복원할 수 있습니다. DOCX/DOC/WPS/RTF/ODT 지원.
-- **📊 스프레드시트 변환** - Excel ↔ Markdown 양방향 변환. XLSX/XLS/ET/ODS/CSV/TSV, 병합 셀 내보내기 전략(`fill / empty / marker`), 표 요약 도구와 아래에 설명된 템플릿 플레이스홀더를 지원합니다.
+- **📊 스프레드시트 변환** – Excel ↔ Markdown 양방향 변환으로 XLSX/XLS/ET/ODS/CSV/TSV를 지원합니다. 병합 셀은 내용을 반복하거나, 빈칸으로 두거나, 병합 표시를 사용해 내보낼 수 있습니다. XLSX 템플릿에서 YAML 필드, 표의 행과 열, 이미지, 병합 셀을 다룰 수 있으며 여러 표를 합칠 수도 있습니다.
 - **📑 PDF/레이아웃 파일** - PDF/XPS/OFD → Markdown 또는 DOCX. PDF 병합/분할 등 지원.
 - **🖼️ 이미지 처리** - JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC 변환 및 압축.
 - **📥 기타 형식 가져오기** - HTML/MHTML/ENEX/EPUB/PPTX/PPT에서 Markdown으로의 단방향 변환을 지원합니다.
@@ -118,10 +118,10 @@ pip install pillow-heif
     - 프로그램을 실행합니다.
     - `.md` 파일을 창으로 드래그합니다.
     - 템플릿을 선택합니다.
-    - "DOCX로 변환"을 클릭합니다.
+    - "생성 DOCX"을 클릭합니다.
 
 3.  **결과 확인**:
-    - 동일한 디렉터리에 표준화된 Word 문서가 생성됩니다.
+    - Word 문서는 설정한 출력 위치의 결과 폴더에 저장됩니다. 상태 표시줄에서 출력 위치를 열어 확인하세요.
 
 **팁**: `samples/` 디렉터리의 샘플 파일을 사용하면 기능을 빠르게 체험할 수 있습니다.
 
@@ -147,7 +147,7 @@ pip install pillow-heif
     -   방법 2: 드래그 영역의 "추가" 버튼을 눌러 파일을 선택합니다.
 3.  **템플릿 선택**(변환이 필요한 경우): 오른쪽 템플릿 패널이 자동으로 확장되며, 적절한 템플릿을 선택합니다.
 4.  **옵션 설정**: 작업 패널에서 필요한 변환/내보내기 옵션을 체크합니다.
-5.  **작업 실행**: 해당 기능 버튼(예: "MD 내보내기", "DOCX로 변환")을 클릭합니다.
+5.  **작업 실행**: 해당 기능 버튼(예: "MD 내보내기", "생성 DOCX")을 클릭합니다.
 6.  **결과 확인**: 상태 표시줄에 진행 상황과 결과가 표시되며, 오른쪽의 "출력 열기" 동작을 클릭하면 출력 위치를 열 수 있습니다.
 
 ### 단일 파일 모드 vs 배치 모드
@@ -192,11 +192,11 @@ pip install pillow-heif
 
 ## 🔧 명령줄 사용
 
-DocWen은 GUI 외에도 자동화 스크립트, 배치 처리, 외부 연동을 위한 명령줄 인터페이스(CLI)를 제공합니다.
+명령줄(CLI)에서는 터미널에서 파일을 확인하고 변환하거나 로컬 작업을 스크립트로 자동화할 수 있습니다. 다른 앱과 연동할 때는 아래의 Machine Protocol 인터페이스를 사용하세요.
 
 ### 자동화 권장 호출 순서
 
-스크립트, Agent, 플러그인 연동에서는 다음 순서를 권장합니다.
+로컬 자동화 스크립트에서는 다음 순서로 변환을 확인하고 실행할 수 있습니다:
 
 1. `inspect <file> [--json]`: 먼저 실제 파일 범주, 형식, 지원 동작을 확인합니다.
 2. `resources list formats --json`: 현재 DocWen에서 실제로 사용할 수 있는 경로와 의존성 조건을 확인합니다.
@@ -204,7 +204,7 @@ DocWen은 GUI 외에도 자동화 스크립트, 배치 처리, 외부 연동을 
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: 결과를 쓰지 않고 탐지, 정규화, 라우팅을 미리 확인합니다.
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: 확인 후 실제 변환을 실행합니다.
 
-외부 콘텐츠 통합은 `serve --stdio`와 Machine Protocol v2를 사용하여 기능을 확인하고 작업을 계획한 뒤 실행합니다. CLI의 `--json`은 터미널 표시 형식일 뿐 제품 간 호환성 경계가 아닙니다. 로컬 데스크톱 제어에는 별도의 안정적인 `gui open|activate|status` 인터페이스를 사용합니다.
+앱과 플러그인은 `serve --stdio`와 Machine Protocol v2로 연결하여 가능한 작업을 확인하고, 작업을 계획하고 실행합니다. 이는 외부 연동을 위한 안정적인 인터페이스이며 CLI `--json`은 터미널 스크립트용입니다. 데스크톱 앱에서 파일을 열거나 창을 앞으로 가져오려면 `gui open|activate|status`를 사용하세요.
 
 ### 자주 쓰는 예시
 
@@ -254,9 +254,9 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | 명령 / 옵션 | 설명 |
 | --- | --- |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 변환의 통합 진입점입니다. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | 변환의 통합 진입점입니다. |
 | `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 뒤 생성된 DOCX를 교정합니다. `convert`의 `--check`는 `--proofread`와 함께 사용해야 하며, `--check`를 생략하면 구성된 교정 기본값을 사용합니다. |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 실제 변환 없이 탐지, 정규화, 라우팅, 적용 옵션만 미리 확인합니다. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>) --dry-run --json` | 실제 변환 없이 탐지, 정규화, 라우팅, 적용 옵션만 미리 확인합니다. |
 | `schema convert` | `convert` 의 기계 판독 가능한 계약, 기본값, 조건, 정규 키를 내보냅니다. |
 | `validate <file> --check ...` | 문서 교정(`typo/punct/symbol/sensitive/all/none`). CLI envelope에는 `--json`을 사용합니다. `--report`는 선택적 보고서 파일 경로입니다. |
 | `inspect <file> [--json]` | 파일 범주/형식, 권장 동작, 확장자와 내용 불일치 경고를 확인합니다. |
@@ -268,12 +268,12 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 별도의 로컬 GUI 제어로 DocWen을 시작하거나 활성화하고 필요하면 절대 경로 파일 하나를 엽니다. |
 | `--template <id>` | `resources list templates`가 반환한 정규 리소스 ID를 그대로 사용합니다. 표시 이름·파일명·경로는 거부됩니다. DOCX ID는 `docx/doc/odt/rtf/wps/pdf`, XLSX ID는 `xlsx/xls/ods/csv`에 적용됩니다. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 용 이미지 추출 및 OCR 옵션입니다. |
-| `--image-mode file|base64|embed|omit` | Markdown 내보내기 시 이미지 출력 방식을 제어합니다. |
-| `--ocr-placement image_md|main_md` | OCR 텍스트를 이미지용 Markdown 에 쓸지 메인 Markdown 에 쓸지 제어합니다. |
-| `--heading-merge-mode punct_required|always|never` | `convert --to docx` 시 "제목 + 본문" 병합 전략을 제어합니다. |
+| `--image-mode file\|base64\|embed\|omit` | Markdown 내보내기 시 이미지 출력 방식을 제어합니다. |
+| `--ocr-placement image_md\|main_md` | OCR 텍스트를 이미지용 Markdown 에 쓸지 메인 Markdown 에 쓸지 제어합니다. |
+| `--heading-merge-mode punct_required\|always\|never` | `convert --to docx` 시 "제목 + 본문" 병합 전략을 제어합니다. |
 | `--optimization <id>` | 최적화 프로필을 명시적으로 활성화합니다 (`resources list optimizations` 참고). |
-| `batch convert|validate ... --jobs <n> [--continue-on-error]` | 배치 처리 제어 옵션입니다. |
-| `--json` / `--quiet` / `--timing` | 스크립트나 플러그인을 위한 구조화 출력, 로그 축소, 시간 정보입니다。 |
+| `batch convert\|validate ... --jobs <n> [--continue-on-error]` | 배치 처리 제어 옵션입니다. |
+| `--json` / `--quiet` / `--timing` | 터미널 스크립트에서 JSON을 출력하거나 로그를 줄이거나 소요 시간을 표시합니다. |
 
 `punct_required` 모드의 정확한 기본값은 `。：！？.:!?`입니다. 서식 설정에서 수정할 수 있으며, 값을 비우면 이 모드에서 병합하지 않습니다. 쉼표, 세미콜론, 열거 쉼표, 대시 및 줄임표는 기본값에 포함되지 않습니다.
 
@@ -316,7 +316,7 @@ This meeting requires all units to earnestly implement...
 **주의**:
 - 소제목과 본문 사이에 빈 줄이 있으면 별도 단락으로 인식됩니다.
 - 기본(“문장부호 필요” 모드)에서는 소제목이 종결 문장부호로 끝나지 않으면 빈 줄이 없어도 다음 줄과 병합되지 않습니다.
-- 이 동작은 설정 → 서식 → “MarkDown→문서” → “Heading + body merge mode”에서 변경할 수 있습니다.
+- **설정 → 입력 텍스트 → 마크다운 → 문서 — 서식 처리 → 제목+본문 병합 모드**에서 병합 모드와 병합을 시작하는 문자를 변경할 수 있습니다.
 
 ### 구분선 양방향 변환
 
@@ -379,12 +379,12 @@ Markdown -> DOCX 변환 시 클릭 가능한 링크를 지원합니다:
 ### Word → Markdown
 
 1.  `.docx` 파일을 프로그램 창으로 드래그합니다.
-2.  프로그램이 문서 구조를 자동 분석합니다.
+2. 내보내기 옵션을 선택하고 **Markdown 내보내기**를 클릭합니다.
 3.  YAML 메타데이터가 포함된 `.md` 파일을 생성합니다.
 
 **지원 형식**:
 -   `.docx` - 표준 Word 문서
--   `.doc` - 자동으로 DOCX로 변환 후 처리
+-   `.doc` - 자동으로 생성 DOCX 후 처리
 -   `.wps` - WPS 문서를 자동 변환 후 처리
 
 **내보내기 옵션**:
@@ -392,25 +392,25 @@ Markdown -> DOCX 변환 시 클릭 가능한 링크를 지원합니다:
 | 옵션 | 설명 |
 | :--- | :--- |
 | **이미지 추출** | 체크 시 문서의 이미지를 출력 폴더로 추출하고, MD에 이미지 링크를 삽입합니다. |
-| **이미지 OCR** | 체크 시 이미지에 OCR을 수행하고, 인식 텍스트를 담은 이미지 `.md` 파일을 생성합니다. |
-| **고급 필드 최적화** | 체크 시 더 풍부한 구조화 메타데이터를 추출합니다. 체크하지 않으면 제목과 부제목만 포함하는 간소화 모드를 사용합니다. |
-| **소제목 번호 제거** | 체크 시 소제목 앞 번호(예: "一、", "（一）", "1." 등)를 제거하고 순수 제목 텍스트로 변환합니다. |
-| **소제목 번호 추가** | 체크 시 제목 레벨에 따라 자동 번호를 추가합니다(번호 스킴은 설정에서 구성 가능). |
+| **이미지 OCR** | 이미지의 텍스트를 인식합니다. OCR 출력 위치 설정에 따라 이미지별 Markdown 파일 또는 기본 Markdown 파일에 저장합니다. |
+| **문서 유형 최적화** | 선택한 문서 유형에 맞는 최적화를 적용합니다. 예를 들어 중국 공문서에서 필드를 추출할 수 있습니다. 끄면 표준 변환을 사용합니다. |
+| **원본 제목 번호 제거** | 체크 시 소제목 앞 번호(예: "一、", "（一）", "1." 등)를 제거하고 순수 제목 텍스트로 변환합니다. |
+| **새 제목 번호 추가** | 체크 시 제목 레벨에 따라 자동 번호를 추가합니다(번호 스킴은 설정에서 구성 가능). |
 
-참고: DOCX -> MD는 이제 numbering.xml 에서 단락 스타일(pStyle)로 연결된 다단계 번호도 복원합니다. 따라서 Word/WPS의 다단계 목록으로 만든 제목 접두사(예: "一、", "（一）", "1．", "（1）", "①")가 단순 모드와 고급 필드 모드 모두에서 유지되며, "소제목 번호 제거"를 켜도 제목 수준을 올바르게 인식합니다.
+Word/WPS 다단계 목록의 제목 번호는 내보낼 때 유지됩니다. **원본 제목 번호 제거**를 켜면 제목 수준은 유지하면서 번호를 제거할 수 있습니다.
 
 ### Markdown → Word
 
 1.  YAML 헤더가 포함된 `.md` 파일을 준비합니다.
 2.  프로그램 창으로 드래그하고 해당 Word 템플릿을 선택합니다.
-3.  프로그램이 템플릿을 자동으로 채우고 문서를 생성합니다.
+3. 대상 형식을 DOCX로 설정하고 **생성 DOCX**를 클릭하면 템플릿을 채워 문서를 저장합니다.
 
 **변환 옵션**:
 
 | 옵션 | 설명 |
 | :--- | :--- |
-| **소제목 번호 제거** | 체크 시 소제목 앞 번호를 제거합니다. |
-| **소제목 번호 추가** | 체크 시 제목 레벨에 따라 자동 번호를 추가합니다. |
+| **원본 제목 번호 제거** | 체크 시 소제목 앞 번호를 제거합니다. |
+| **새 제목 번호 추가** | 체크 시 제목 레벨에 따라 자동 번호를 추가합니다. |
 
 **주의**: 소제목과 본문이 같은 단락으로 섞이는 문장이 있다면, MD 파일에서 줄바꿈 규칙을 엄격히 유지해야 합니다(위 "줄바꿈과 단락" 참고).
 
@@ -463,7 +463,7 @@ Markdown → DOCX 변환 시 변환기는 템플릿 스타일을 자동으로 �
 
 ### 스프레드시트 파일 처리
 
-1.  **Excel/CSV → Markdown**: `.xlsx` 또는 `.csv` 파일을 드래그하면 Markdown 표로 자동 변환합니다.
+1. **Excel/CSV → Markdown**: `.xlsx` 또는 `.csv` 파일을 추가하고 **Markdown 내보내기**를 클릭합니다.
 2.  **Markdown → Excel**: Markdown 표를 XLSX로 내보낼 수 있습니다. 템플릿은 YAML 필드, 표 열·이미지 플레이스홀더와 병합/보호 셀을 지원합니다.
 
 **지원 형식**:
@@ -595,7 +595,7 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 
 ### 동작 원리
 
-DocWen Core는 Windows의 로컬 제어에 named pipe를, Linux/macOS에서는 AF_UNIX 소켓을 사용합니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령을 파일로 전달하지 않습니다. 이는 Core 경계에 대한 설명입니다. DocWen Assistant 3.1은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
+DocWen Core는 Windows의 로컬 제어에 named pipe를, Linux/macOS에서는 AF_UNIX 소켓을 사용합니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령을 파일로 전달하지 않습니다. 이는 Core 경계에 대한 설명입니다. DocWen Assistant 3.3은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
 
 1.  **첫 클릭** → 변환기를 실행하고 현재 파일을 전달
 2.  **다시 클릭(파일 있음)** → 새 파일로 교체(단일 파일 모드)
@@ -603,7 +603,7 @@ DocWen Core는 Windows의 로컬 제어에 named pipe를, Linux/macOS에서는 A
 
 ### 설치
 
-DocWen Assistant 3.1에는 DocWen 0.13.0 이상이 필요합니다. 변환·교정 같은 콘텐츠 작업은 Machine Protocol v2와 Artifact Bundle v3를 사용하고, 데스크톱 앱 실행/열기는 독립된 로컬 GUI 제어를 사용합니다. 소스
+DocWen Assistant 3.3에는 DocWen 0.17.0 이상이 필요합니다. 변환·교정 같은 콘텐츠 작업은 Machine Protocol v2와 Artifact Bundle v3를 사용하고, 데스크톱 앱 실행/열기는 독립된 로컬 GUI 제어를 사용합니다. 소스
 버전만으로 게시 여부를 증명할 수 없습니다. 호환되는 게시된 DocWen 릴리스를 명시한 숫자 형식의 릴리스만
 설치하세요.
 

@@ -95,7 +95,7 @@ activity_count = "سجل العمليات ({count})"
 notice_title = "تنبيه"
 task_state_cancelling = "جارٍ الإلغاء"
 copy_path = "نسخ المسار"
-ipc_file_missing = "ملف الاتصال غير موجود: {path}"
+ipc_file_missing = "لم يُعثر على الملف المرسل إلى DocWen: {path}"
 font_size_applied = "حجم النص: {label}"
 
 transient_title = "الحالة الحالية"
@@ -868,7 +868,7 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "لغة التعرف على النص (OCR):"
-language_tooltip = "OCR 使用 الإعداد نفسه لجميع الملفات. عند اختيار واجهة عربية، يُستخدم نموذج الإنجليزية حاليًا؛ لا يتوفر التعرف على النص العربي بعد. لا يُكتشف نص الصورة تلقائيًا."
+language_tooltip = "يُستخدم إعداد OCR نفسه لجميع الملفات. عند اختيار «اتباع لغة الواجهة» مع واجهة عربية، يُستخدم نموذج الإنجليزية حاليًا؛ التعرف على النص العربي غير متاح بعد. لا تُكتشف لغة الصورة تلقائيًا."
 language_auto = "اتباع لغة الواجهة"
 language_chinese = "الصينية والإنجليزية"
 language_japanese = "اليابانية"
@@ -1276,22 +1276,23 @@ level_format_config = "تنسيق مستويات العناوين"
 realtime_preview = "معاينة مباشرة"
 format_help = "📖 شرح صيغة الترقيم"
 format_help_title = "شرح العناصر البديلة في صيغة الترقيم"
-format_help_text = """Format Placeholder Usage
+format_help_text = """العناصر النائبة لتنسيق الترقيم
 
-占位符格式：{级别.样式}
+الصيغة: {level.style}
+level هو مستوى العنوان من 1 إلى 9، وstyle هو اسم النمط من القائمة التالية.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+الأنماط المتاحة:
+  chinese_lower  - أرقام صينية بسيطة (一、二、三)
+  chinese_upper  - أرقام صينية رسمية (壹、贰、叁)
+  arabic_half    - أرقام عشرية (1, 2, 3)
+  arabic_full    - أرقام عشرية كاملة العرض (１、２、３)
+  arabic_circled - أرقام داخل دوائر (①②③)
+  letter_upper   - أحرف لاتينية كبيرة (A, B, C)
+  letter_lower   - أحرف لاتينية صغيرة (a, b, c)
+  roman_upper    - أرقام رومانية كبيرة (I, II, III)
+  roman_lower    - أرقام رومانية صغيرة (i, ii, iii)
 
-示例：
+أمثلة:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

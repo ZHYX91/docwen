@@ -745,7 +745,7 @@ system_desc = "ログ記録の有効・無効とログレベルを設定しま�
 enable_logging_label = "ログシステムを有効にする"
 enable_logging_tooltip = "ログシステム全体を有効または無効にします。\n無効にすると、アプリケーションはログ情報を記録しません。\n本番環境では有効にしておくことをお勧めします。"
 log_level_label = "ログレベル："
-log_level_tooltip = "ログの詳細度を設定します。\nレベル（低から高）：debug > info > warning > error > critical\nレベルが高いほど、記録される情報は少なくなります。"
+log_level_tooltip = "ログに記録する詳しさを選びます。\n最も詳しい順：DEBUG、INFO、WARNING、ERROR、CRITICAL。"
 
 # 文件输出区域
 file_section = "ファイル出力"
@@ -1227,22 +1227,23 @@ level_format_config = "レベルフォーマット構成"
 realtime_preview = "リアルタイムプレビュー"
 format_help = "📖 フォーマットヘルプ"
 format_help_title = "フォーマットプレースホルダーヘルプ"
-format_help_text = """フォーマットプレースホルダーの使用法
+format_help_text = """番号書式のプレースホルダー
 
-占位符格式：{级别.样式}
+書式：{level.style}
+level は見出しレベル（1～9）、style は下の一覧にある名前です。
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+使用できる書式：
+  chinese_lower  - 漢数字 (一、二、三)
+  chinese_upper  - 大字の漢数字 (壹、贰、叁)
+  arabic_half    - 半角数字 (1, 2, 3)
+  arabic_full    - 全角数字 (１、２、３)
+  arabic_circled - 丸囲み数字 (①②③)
+  letter_upper   - 大文字のアルファベット (A, B, C)
+  letter_lower   - 小文字のアルファベット (a, b, c)
+  roman_upper    - 大文字のローマ数字 (I, II, III)
+  roman_lower    - 小文字のローマ数字 (i, ii, iii)
 
-示例：
+使用例：
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

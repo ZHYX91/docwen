@@ -20,7 +20,7 @@ Phần mềm được tạo ra để giải quyết các vấn đề thường g
 ## ✨ Tính năng chính
 
 - **📄 Chuyển đổi tài liệu** - Word ↔ Markdown, hỗ trợ công thức, ánh xạ dấu phân cách (---/***/___) với ngắt trang/ngắt mục/dòng kẻ và khôi phục dấu gộp `<` / `^` trong bảng Markdown thành gộp ô hình chữ nhật trong Word. DOCX/DOC/WPS/RTF/ODT.
-- **📊 Chuyển đổi bảng tính** - Excel ↔ Markdown. XLSX/XLS/ET/ODS/CSV/TSV. Có chiến lược xuất ô gộp cấu hình được (`fill / empty / marker`), công cụ tóm tắt bảng và các placeholder template được mô tả bên dưới.
+- **📊 Chuyển đổi bảng tính** – Excel ↔ Markdown với XLSX/XLS/ET/ODS/CSV/TSV. Khi xuất ô gộp, có thể lặp lại nội dung, để trống các ô bị gộp hoặc giữ cấu trúc bằng ký hiệu. Mẫu XLSX hỗ trợ trường YAML, hàng và cột của bảng, hình ảnh và ô gộp. Có thể tổng hợp nhiều bảng với nhau.
 - **📑 PDF & file bố cục** - PDF/XPS/OFD → Markdown hoặc DOCX. Hỗ trợ gộp/tách PDF.
 - **🖼️ Ảnh** - Chuyển đổi và nén JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC.
 - **📥 Nhập định dạng khác** - Hỗ trợ chuyển đổi một chiều HTML/MHTML/ENEX/EPUB/PPTX/PPT sang Markdown.
@@ -118,10 +118,10 @@ không mở rộng cam kết sang bản phân phối hoặc kiến trúc khác.
     - Khởi chạy chương trình.
     - Kéo file `.md` vào cửa sổ.
     - Chọn template.
-    - Nhấn "Convert to DOCX".
+    - Nhấn "Tạo DOCX".
 
 3.  **Nhận kết quả**:
-    - Tài liệu Word chuẩn hoá sẽ được tạo trong cùng thư mục.
+    - Tài liệu Word được lưu trong thư mục kết quả tại vị trí đầu ra đã chọn. Có thể mở vị trí này từ thanh trạng thái.
 
 **Mẹo**: Có thể dùng các file mẫu trong thư mục `samples/` để trải nghiệm nhanh.
 
@@ -147,7 +147,7 @@ Chương trình dùng **bố cục 3 cột thích ứng**:
     -   Cách 2: Nhấn nút "Add" trong vùng kéo thả để chọn file.
 3.  **Chọn template** (nếu cần): Panel template bên phải tự mở, chọn template phù hợp.
 4.  **Chọn tuỳ chọn**: Tick các tuỳ chọn xuất/chuyển đổi trong panel thao tác.
-5.  **Thực thi**: Nhấn nút chức năng tương ứng (ví dụ: "Export MD", "Convert to DOCX", ...).
+5.  **Thực thi**: Nhấn nút chức năng tương ứng (ví dụ: "Export MD", "Tạo DOCX", ...).
 6.  **Xem kết quả**: Thanh trạng thái hiển thị tiến độ và kết quả; nhấn thao tác "Mở đầu ra" ở bên phải để mở vị trí đầu ra.
 
 ### Chế độ 1 file vs chế độ theo lô
@@ -193,11 +193,11 @@ Cài đặt được tổ chức theo tab: **Chung**, **Văn bản**, **Soát l�
 
 ## 🔧 Sử dụng CLI
 
-Ngoài giao diện đồ họa, DocWen còn cung cấp giao diện dòng lệnh (CLI) cho tự động hóa, xử lý hàng loạt và tích hợp bên ngoài.
+Giao diện dòng lệnh (CLI) cho phép kiểm tra và chuyển đổi file từ terminal hoặc tự động hóa công việc cục bộ bằng script. Để tích hợp DocWen với ứng dụng khác, hãy dùng giao diện Machine Protocol bên dưới.
 
 ### Luồng gọi khuyến nghị cho tự động hóa
 
-Đối với script, agent hoặc plugin, nên dùng thứ tự sau:
+Với script tự động hóa cục bộ, có thể kiểm tra và thực hiện chuyển đổi theo thứ tự sau:
 
 1. `inspect <file> [--json]`: trước tiên nhận diện loại tệp thực tế, định dạng và các thao tác được hỗ trợ.
 2. `resources list formats --json`: đọc các tuyến thực sự khả dụng trong DocWen và các điều kiện phụ thuộc.
@@ -205,7 +205,7 @@ Ngoài giao diện đồ họa, DocWen còn cung cấp giao diện dòng lệnh 
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
 
-Tích hợp nội dung bên ngoài dùng `serve --stdio` với Machine Protocol v2: khám phá khả năng, lập kế hoạch tác vụ rồi thực thi. `--json` của CLI chỉ là định dạng trình bày cho terminal, không phải ranh giới tương thích giữa các sản phẩm. Điều khiển ứng dụng desktop cục bộ dùng riêng giao diện ổn định `gui open|activate|status`.
+Ứng dụng và plugin kết nối qua `serve --stdio` với Machine Protocol v2 để xem thao tác khả dụng, lập kế hoạch rồi thực hiện tác vụ. Đây là giao diện ổn định dành cho tích hợp; CLI `--json` dành cho script terminal. Dùng `gui open|activate|status` để mở file trong ứng dụng máy tính hoặc đưa cửa sổ ra phía trước.
 
 ### Ví dụ thường dùng
 
@@ -255,9 +255,9 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 
 | Lệnh / tùy chọn | Mô tả |
 | --- | --- |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Điểm vào thống nhất cho chuyển đổi. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | Điểm vào thống nhất cho chuyển đổi. |
 | `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Soát lỗi DOCX được tạo sau Markdown→DOCX; `--check` trong `convert` yêu cầu `--proofread`. Nếu bỏ `--check`, các mặc định soát lỗi đã cấu hình sẽ được dùng. |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Xem trước nhận diện, chuẩn hóa, định tuyến và các tùy chọn hiệu lực mà không thực hiện chuyển đổi thật. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>) --dry-run --json` | Xem trước nhận diện, chuẩn hóa, định tuyến và các tùy chọn hiệu lực mà không thực hiện chuyển đổi thật. |
 | `schema convert` | Xuất hợp đồng máy đọc được, giá trị mặc định, điều kiện và khóa chuẩn của `convert`. |
 | `validate <file> --check ...` | Soát lỗi tài liệu (`typo/punct/symbol/sensitive/all/none`). Dùng `--json` cho envelope của CLI; `--report` là đường dẫn tệp báo cáo tùy chọn. |
 | `inspect <file> [--json]` | Kiểm tra loại/định dạng tệp, hành động gợi ý và cảnh báo khi phần mở rộng không khớp nội dung. |
@@ -269,12 +269,12 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Khởi chạy hoặc kích hoạt DocWen qua đường điều khiển GUI cục bộ riêng và tùy chọn mở một tệp bằng đường dẫn tuyệt đối. |
 | `--template <id>` | ID tài nguyên chuẩn chính xác từ `resources list templates`; tên hiển thị, tên tệp và đường dẫn đều bị từ chối. ID DOCX dùng cho `docx/doc/odt/rtf/wps/pdf`, ID XLSX cho `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Tùy chọn trích ảnh và OCR cho `convert --to md`. |
-| `--image-mode file|base64|embed|omit` | Kiểm soát cách ảnh được xuất ra khi xuất Markdown. |
-| `--ocr-placement image_md|main_md` | Kiểm soát việc ghi văn bản OCR vào Markdown phụ của ảnh hay Markdown chính. |
-| `--heading-merge-mode punct_required|always|never` | Kiểm soát chiến lược gộp "tiêu đề + nội dung" cho `convert --to docx`. |
+| `--image-mode file\|base64\|embed\|omit` | Kiểm soát cách ảnh được xuất ra khi xuất Markdown. |
+| `--ocr-placement image_md\|main_md` | Kiểm soát việc ghi văn bản OCR vào Markdown phụ của ảnh hay Markdown chính. |
+| `--heading-merge-mode punct_required\|always\|never` | Kiểm soát chiến lược gộp "tiêu đề + nội dung" cho `convert --to docx`. |
 | `--optimization <id>` | Bật rõ ràng một hồ sơ tối ưu hóa (xem `resources list optimizations`). |
-| `batch convert|validate ... --jobs <n> [--continue-on-error]` | Điều khiển xử lý hàng loạt. |
-| `--json` / `--quiet` / `--timing` | Đầu ra có cấu trúc, giảm log và dữ liệu thời gian cho script hoặc plugin. |
+| `batch convert\|validate ... --jobs <n> [--continue-on-error]` | Điều khiển xử lý hàng loạt. |
+| `--json` / `--quiet` / `--timing` | Xuất JSON, giảm nhật ký hoặc hiển thị thời gian chạy trong script terminal. |
 
 Trong chế độ `punct_required`, danh sách mặc định chính xác là `。：！？.:!?`. Có thể chỉnh sửa danh sách này trong phần cài đặt định dạng; để trống sẽ tắt việc gộp trong chế độ này. Dấu phẩy, dấu chấm phẩy, dấu liệt kê, dấu gạch ngang và dấu chấm lửng không được bật mặc định.
 
@@ -317,7 +317,7 @@ Hai dòng trên sẽ được gộp thành một đoạn: "I. Work Requirements.
 **Lưu ý**:
 - Không được có dòng trống giữa tiêu đề phụ và nội dung; nếu có sẽ bị nhận diện thành hai đoạn riêng.
 - Theo mặc định (chế độ "Cần dấu kết câu"), nếu tiêu đề phụ không kết thúc bằng dấu kết câu, sẽ không gộp với dòng kế tiếp dù không có dòng trống.
-- Bạn có thể đổi trong Cài đặt → Định dạng → "MarkDown sang Word" → "Heading + body merge mode".
+- Đổi chế độ và các ký tự kích hoạt gộp tại **Cài đặt → Văn bản đầu vào → Markdown → Tài liệu — Xử lý định dạng → Chế độ gộp tiêu đề và nội dung**.
 
 ### Chuyển đổi dấu phân cách hai chiều
 
@@ -380,7 +380,7 @@ Hỗ trợ liên kết có thể bấm trong Markdown -> DOCX:
 ### Word sang Markdown
 
 1.  Kéo file `.docx` vào cửa sổ chương trình.
-2.  Chương trình tự phân tích cấu trúc tài liệu.
+2. Chọn các tùy chọn xuất rồi nhấn **Xuất Markdown**.
 3.  Tạo file `.md` có chứa YAML metadata.
 
 **Định dạng hỗ trợ**:
@@ -393,25 +393,25 @@ Hỗ trợ liên kết có thể bấm trong Markdown -> DOCX:
 | Tuỳ chọn | Mô tả |
 | :--- | :--- |
 | **Trích xuất ảnh** | Nếu bật, ảnh trong tài liệu sẽ được xuất ra thư mục và chèn link ảnh vào file MD. |
-| **OCR ảnh** | Nếu bật, chạy OCR trên ảnh và tạo file ảnh `.md` (chứa văn bản nhận dạng). |
-| **Tối ưu trường nâng cao** | Nếu bật, trích xuất siêu dữ liệu có cấu trúc phong phú hơn; nếu không sẽ sử dụng chế độ đơn giản chỉ có tiêu đề và phụ đề. |
-| **Dọn số tiêu đề phụ** | Nếu bật, xoá số trước tiêu đề phụ (ví dụ: "一、", "（一）", "1.", ...). |
-| **Thêm số tiêu đề phụ** | Nếu bật, tự thêm số theo cấp tiêu đề (có thể cấu hình). |
+| **OCR ảnh** | Nhận dạng chữ trong ảnh. Tùy cài đặt vị trí đầu ra OCR, lưu vào file Markdown riêng cho mỗi ảnh hoặc file Markdown chính. |
+| **Tối ưu theo loại tài liệu** | Áp dụng tối ưu cho loại tài liệu đã chọn, chẳng hạn trích xuất trường từ công văn tiếng Trung. Tắt tùy chọn này để dùng chuyển đổi tiêu chuẩn. |
+| **Xóa số tiêu đề gốc** | Nếu bật, xoá số trước tiêu đề phụ (ví dụ: "一、", "（一）", "1.", ...). |
+| **Thêm số tiêu đề mới** | Nếu bật, tự thêm số theo cấp tiêu đề (có thể cấu hình). |
 
-Lưu ý: DOCX -> MD hiện cũng khôi phục đánh số đa cấp được liên kết trong numbering.xml thông qua kiểu đoạn (pStyle). Vì vậy, các tiền tố tiêu đề do danh sách đa cấp của Word/WPS tạo ra như "一、", "（一）", "1．", "（1）" và "①" đều được giữ lại trong cả chế độ đơn giản lẫn chế độ trường nâng cao; cấp độ tiêu đề vẫn được nhận diện chính xác khi bật tuỳ chọn "Dọn số tiêu đề phụ".
+Số tiêu đề từ danh sách đa cấp của Word/WPS được giữ lại khi xuất. Bật **Xóa số tiêu đề gốc** để xóa số nhưng vẫn giữ nguyên cấp tiêu đề.
 
 ### Markdown sang Word
 
 1.  Chuẩn bị file `.md` có YAML header.
 2.  Kéo vào cửa sổ và chọn template Word tương ứng.
-3.  Chương trình tự điền template và tạo tài liệu.
+3. Chọn DOCX làm định dạng đích rồi nhấn **Tạo DOCX** để điền mẫu và lưu tài liệu.
 
 **Tuỳ chọn chuyển đổi**:
 
 | Tuỳ chọn | Mô tả |
 | :--- | :--- |
-| **Dọn số tiêu đề phụ** | Nếu bật, xoá số trước tiêu đề phụ. |
-| **Thêm số tiêu đề phụ** | Nếu bật, tự thêm số theo cấp tiêu đề. |
+| **Xóa số tiêu đề gốc** | Nếu bật, xoá số trước tiêu đề phụ. |
+| **Thêm số tiêu đề mới** | Nếu bật, tự thêm số theo cấp tiêu đề. |
 
 **Lưu ý**: Nếu có đoạn trộn giữa tiêu đề phụ và nội dung, cần giữ xuống dòng nghiêm ngặt trong file MD (xem "Xuống dòng và đoạn văn").
 
@@ -463,7 +463,7 @@ Trong quá trình Markdown → DOCX, chương trình tự phát hiện và xử 
 
 ### Xử lý file bảng tính
 
-1.  **Excel/CSV sang Markdown**: Kéo file `.xlsx` hoặc `.csv` để tự chuyển sang bảng Markdown.
+1. **Excel/CSV sang Markdown**: Thêm file `.xlsx` hoặc `.csv` rồi nhấn **Xuất Markdown**.
 2.  **Markdown sang Excel**: Bảng Markdown có thể xuất sang XLSX. Template hỗ trợ trường YAML, placeholder cột và ảnh, cùng ô gộp hoặc ô được bảo vệ.
 
 **Định dạng hỗ trợ**:
@@ -597,7 +597,7 @@ Plugin Obsidian đồng hành được phát hành ở repo riêng và hoạt đ
 
 ### Nguyên lý hoạt động
 
-DocWen Core dùng named pipe để điều khiển cục bộ trên Windows và socket AF_UNIX trên Linux/macOS. Khóa tệp chỉ xác lập quyền sở hữu một phiên bản chạy; lệnh điều khiển không được truyền qua tệp. Nội dung này chỉ mô tả ranh giới Core. DocWen Assistant 3.1 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
+DocWen Core dùng named pipe để điều khiển cục bộ trên Windows và socket AF_UNIX trên Linux/macOS. Khóa tệp chỉ xác lập quyền sở hữu một phiên bản chạy; lệnh điều khiển không được truyền qua tệp. Nội dung này chỉ mô tả ranh giới Core. DocWen Assistant 3.3 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
 
 1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và truyền file hiện tại.
 2.  **Nhấn lại (có file)** → Thay file mới (chế độ 1 file).
@@ -605,7 +605,7 @@ DocWen Core dùng named pipe để điều khiển cục bộ trên Windows và 
 
 ### Cài đặt
 
-DocWen Assistant 3.1 yêu cầu DocWen 0.13.0 trở lên. Các thao tác nội dung dùng Machine Protocol v2 và Artifact Bundle v3; việc khởi chạy/mở ứng dụng desktop dùng đường điều khiển GUI cục bộ độc lập. Phiên bản mã nguồn
+DocWen Assistant 3.3 yêu cầu DocWen 0.17.0 trở lên. Các thao tác nội dung dùng Machine Protocol v2 và Artifact Bundle v3; việc khởi chạy/mở ứng dụng desktop dùng đường điều khiển GUI cục bộ độc lập. Phiên bản mã nguồn
 không chứng minh rằng sản phẩm đã được phát hành; chỉ cài bản phát hành dạng số xác định rõ một bản DocWen đã phát
 hành và tương thích.
 

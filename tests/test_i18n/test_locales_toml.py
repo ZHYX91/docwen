@@ -188,7 +188,6 @@ def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
         "settings.software.powerpoint",
         "about.copyright",
         "conversion_panel.layout.page_range_placeholder",
-        "editors.numbering_add.format_help_text",
         "placeholders.title",
         "placeholders.body",
         "yaml_keys.title",
