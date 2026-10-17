@@ -214,3 +214,48 @@ def test_ofd_normalization_uses_protective_input_and_produces_valid_pdf(
     with fitz.open(result.pre_converted_path) as pdf:
         assert pdf.page_count == 1
     assert source.read_bytes() == b"source ofd payload"
+
+
+def test_single_ofd_split_is_normalized_before_pdf_action(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("docwen_core.detection.enforce_file_admission", lambda request: request)
+    source = tmp_path / "five.ofd"
+    source.write_bytes(b"original")
+    runtime = MagicMock(spec=RuntimePort)
+    captured: list[ConversionRequest] = []
+
+    def normalize(source_path: str, fmt: str, *, staging_dir: str, cancel=None):
+        assert source_path == str(source) and fmt == "ofd"
+        staged = Path(staging_dir) / "five.pdf"
+        staged.write_bytes(b"%PDF-mocked")
+        return PreConversionResult(
+            pre_converted_path=str(staged),
+            original_source_format="ofd",
+            backend="fixture",
+        )
+
+    def execute(request: ConversionRequest) -> ConversionResult:
+        captured.append(request)
+        assert request.target_format == "pdf" and request.action_name == "split_pdf"
+        assert request.input_refs[0].format == "pdf"
+        assert request.output_policy.output_dir == str(tmp_path)
+        return ConversionResult(task_id=request.request_id, success=True)
+
+    monkeypatch.setattr("docwen_application.preconversion.layout_actions.pre_convert_layout", normalize)
+    runtime.execute.side_effect = execute
+    result = ApplicationController(runtime_port=runtime).execute_single(
+        ConversionRequest(
+            request_id="single-ofd-split",
+            input_refs=[FileRef(path=str(source), format="ofd", category="layout")],
+            target_format="pdf",
+            action_name="split_pdf",
+            options={"split_mode": "every_page"},
+            output_policy=OutputPolicy(),
+        )
+    )
+    assert result.success
+    assert len(captured) == 1
+    assert not Path(captured[0].input_refs[0].path).exists()
+    assert source.read_bytes() == b"original"
