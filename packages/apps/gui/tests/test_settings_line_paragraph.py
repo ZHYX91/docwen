@@ -3,6 +3,9 @@
 from docwen_gui.models.settings_config import FormattingConfig
 
 
+pytestmark = pytest.mark.unit
+
+
 def test_new_setting_defaults_off() -> None:
     config = FormattingConfig()
     assert config.each_line_paragraph is False

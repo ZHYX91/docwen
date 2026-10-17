@@ -908,10 +908,10 @@ class MdToDocxConverter:
 
                 # The paragraph policy applies only to ordinary authored prose.
                 # Semantic source owners and nested containers are not split.
-                each_line_paragraph = options.get(
-                    "each_line_paragraph",
-                    _config_value(context.config, "conversion.md_to_docx.each_line_paragraph", False),
+                default_line_paragraph = _config_value(
+                    context.config, "conversion.md_to_docx.each_line_paragraph", False
                 )
+                each_line_paragraph = options.get("each_line_paragraph", default_line_paragraph)
                 if each_line_paragraph is True:
                     raw_ast = split_plain_paragraph_lines(raw_ast)
 

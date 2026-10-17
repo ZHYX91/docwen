@@ -1,10 +1,14 @@
 """Request-owned ordinary Markdown prose paragraph boundaries."""
 
+import pytest
 from docx import Document
 
 from docwen_plugin_markdown.ast_transforms import split_plain_paragraph_lines
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
+
+
+pytestmark = pytest.mark.unit
 
 
 def test_off_by_default_keeps_soft_breaks() -> None:
