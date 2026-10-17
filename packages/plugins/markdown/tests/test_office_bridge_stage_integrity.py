@@ -25,7 +25,7 @@ class _Workspace:
         self.root = root
         self.input_path = str(root / "input.md")
         Path(self.input_path).write_text("Input", encoding="utf-8")
-        self.added = []
+        self.added: list[ArtifactManifest] = []
 
     def create_artifact_path(self, name: str, suffix: str) -> str:
         return str(self.root / f"{name}{suffix}")
@@ -51,7 +51,11 @@ def test_bridge_propagates_stage_warnings_and_retains_only_requested_artifact(
     )
     warning = ConversionDiagnostic(level="warning", message="Fallback preserved as code", code="MERMAID-FALLBACK")
     stage = ConversionResult(
-        task_id="task", success=True, artifacts=[upstream], diagnostics=[warning], metrics=ConversionMetrics()
+        task_id="task",
+        success=True,
+        artifacts=[upstream],
+        diagnostics=[warning],
+        metrics=ConversionMetrics(),
     )
 
     def write_target(_source: str, destination: str, **_kwargs):
@@ -67,11 +71,12 @@ def test_bridge_propagates_stage_warnings_and_retains_only_requested_artifact(
         config={"output.intermediate_files.save_to_output": save_intermediate},
     )
     converter = bridge_module.MarkdownOfficeBridgeConverter()
-    result = converter._convert_with_intermediate(
-        ctx, "rtf", lambda stage_context: (
-            stage_context.progress.report_progress(100, "Intermediate finished") or stage
-        ), "docx"
-    )
+
+    def intermediate(stage_context):
+        stage_context.progress.report_progress(100, "Intermediate finished")
+        return stage
+
+    result = converter._convert_with_intermediate(ctx, "rtf", intermediate, "docx")
     assert result.success
     assert "MERMAID-FALLBACK" in {item.code for item in result.diagnostics}
     assert [item.kind for item in result.artifacts] == (
@@ -88,20 +93,30 @@ def test_bridge_failure_keeps_upstream_warning(tmp_path: Path, monkeypatch: pyte
     docx = tmp_path / "source.docx"
     docx.write_bytes(b"data")
     stage = ConversionResult(
-        task_id="task", success=True,
-        artifacts=[ArtifactManifest(
-            artifact_id="intermediate", kind="primary", staging_path=str(docx),
-            suggested_name="source.docx", is_primary=True
-        )],
+        task_id="task",
+        success=True,
+        artifacts=[
+            ArtifactManifest(
+                artifact_id="intermediate",
+                kind="primary",
+                staging_path=str(docx),
+                suggested_name="source.docx",
+                is_primary=True,
+            )
+        ],
         diagnostics=[ConversionDiagnostic(level="warning", message="style conflict", code="STYLE-WARN")],
     )
     monkeypatch.setattr(
-        bridge_module, "convert_with_backend_priority",
+        bridge_module,
+        "convert_with_backend_priority",
         lambda *_args, **_kwargs: SimpleNamespace(success=False, backend=None, message="office failed"),
     )
     ctx = SimpleNamespace(
-        request=SimpleNamespace(request_id="task"), workspace=workspace, progress=_Progress(),
-        cancellation=None, config={},
+        request=SimpleNamespace(request_id="task"),
+        workspace=workspace,
+        progress=_Progress(),
+        cancellation=None,
+        config={},
     )
     result = bridge_module.MarkdownOfficeBridgeConverter()._convert_with_intermediate(
         ctx, "rtf", lambda _stage_context: stage, "docx"

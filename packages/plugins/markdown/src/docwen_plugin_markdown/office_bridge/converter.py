@@ -74,6 +74,7 @@ _PRIORITY_KEYS = {
     "document_to_pdf": "software.special_conversions.document_to_pdf",
 }
 
+
 class _StageProgress:
     """Give the intermediate document only the first 70% of the full task."""
 
@@ -136,9 +137,7 @@ class MarkdownOfficeBridgeConverter:
         t_start = time.monotonic()
         task_id = context.request.request_id
         try:
-            intermediate_result = intermediate_converter(
-                cast("PluginExecutionContext", _StageContext(context))
-            )
+            intermediate_result = intermediate_converter(cast("PluginExecutionContext", _StageContext(context)))
             if not intermediate_result.success or not intermediate_result.artifacts:
                 return intermediate_result
 
@@ -148,7 +147,9 @@ class MarkdownOfficeBridgeConverter:
             output_path = Path(context.workspace.create_artifact_path(input_stem, f".{target_format}"))
             bridge_output_path = output_path.with_suffix(".doc") if target_format == "wps" else output_path
 
-            context.progress.report_progress(72.0, f"Converting intermediate {intermediate_format.upper()} to {target_format.upper()}")
+            context.progress.report_progress(
+                72.0, f"Converting intermediate {intermediate_format.upper()} to {target_format.upper()}"
+            )
             priority_category = self._priority_category(target_format)
             bridge_result = convert_with_backend_priority(
                 str(intermediate_path),
