@@ -1,9 +1,12 @@
 """Catalog-backed template file location action avoids guessing filesystem paths."""
 
+import pytest
 from PySide6.QtCore import QPoint
 from PySide6.QtWidgets import QMenu
 
 from docwen_gui.widgets.template_selector import TemplateItemDetails, TemplateSelector
+
+pytestmark = pytest.mark.unit
 
 
 def test_context_menu_location_uses_catalog_path(qapp, monkeypatch) -> None:
