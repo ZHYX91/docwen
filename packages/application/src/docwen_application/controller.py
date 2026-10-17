@@ -533,6 +533,14 @@ class ApplicationController:
         managed: _ManagedPreconversion | None = None
         try:
             if action_name == "merge_pdfs":
+                # The Runtime's first input may become a private OFD/XPS→PDF
+                # staging path. Fix the public output root to the first
+                # original source before any input is materialized elsewhere.
+                first_source = next(ref for ref in request.input_refs if ref.input_role == "source")
+                request = replace(
+                    request,
+                    output_policy=self._source_anchored_output_policy(request.output_policy, first_source.path),
+                )
                 prepared = self._maybe_preconvert(request, cancellation=scope.token.view(), batch=False)
                 managed = prepared if isinstance(prepared, _ManagedPreconversion) else None
                 request = prepared.payload if managed is not None else prepared

@@ -106,3 +106,51 @@ def test_failed_layout_normalization_does_not_run_aggregate(tmp_path: Path, monk
     assert not result.success
     assert result.error is not None
     runtime.execute.assert_not_called()
+
+
+def test_first_layout_input_sets_public_output_root_before_preconversion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("docwen_core.detection.enforce_file_admission", lambda request: request)
+    source = tmp_path / "source.xps"
+    other = tmp_path / "other.pdf"
+    source.write_bytes(b"xps")
+    other.write_bytes(b"%PDF-")
+    runtime = MagicMock(spec=RuntimePort)
+    observed: list[ConversionRequest] = []
+
+    def execute(request: ConversionRequest) -> ConversionResult:
+        observed.append(request)
+        assert request.output_policy.output_dir == str(tmp_path)
+        assert request.input_refs[0].path != str(source)
+        assert request.input_refs[0].format == "pdf"
+        return ConversionResult(task_id=request.request_id, success=True)
+
+    runtime.execute.side_effect = execute
+
+    def normalize(path: str, fmt: str, *, staging_dir: str, cancel=None):
+        output = Path(staging_dir) / "source.pdf"
+        output.write_bytes(b"%PDF-mocked")
+        return PreConversionResult(
+            pre_converted_path=str(output),
+            original_source_format=fmt,
+            backend="fixture",
+        )
+
+    monkeypatch.setattr("docwen_application.preconversion.layout_actions.pre_convert_layout", normalize)
+    result = ApplicationController(runtime_port=runtime).execute_aggregate(
+        ConversionRequest(
+            request_id="first-layout",
+            input_refs=[
+                FileRef(path=str(source), format="xps", category="layout"),
+                FileRef(path=str(other), format="pdf", category="layout"),
+            ],
+            target_format="pdf",
+            action_name="merge_pdfs",
+            output_policy=OutputPolicy(),
+        ),
+        "merge_pdfs",
+    )
+    assert result.success
+    assert len(observed) == 1
+    assert not Path(observed[0].input_refs[0].path).exists()
