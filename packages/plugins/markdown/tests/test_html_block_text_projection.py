@@ -17,6 +17,7 @@ def test_html_paragraphs_render_as_word_paragraphs() -> None:
     renderer = MdToDocxRenderer(document)
     node = {"type": "block_html", "raw": "<p>First</p><p>Second</p>"}
     paragraphs = renderer._handle_block_html(node)
+    assert paragraphs is not None
     assert [paragraph.text for paragraph in paragraphs] == ["First", "Second"]
 
 
