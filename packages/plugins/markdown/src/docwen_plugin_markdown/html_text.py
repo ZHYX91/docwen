@@ -37,7 +37,7 @@ _BLOCK_TAGS = frozenset(
     }
 )
 _IGNORED_TAGS = frozenset({"script", "style", "iframe", "object", "svg", "template"})
-_SIMPLE_INLINE_TAGS = frozenset("a b em i mark s small span strong sub sup u".split())
+_SIMPLE_INLINE_TAGS = frozenset({"a", "b", "em", "i", "mark", "s", "small", "span", "strong", "sub", "sup", "u"})
 _WHITESPACE = re.compile(r"[ \t\r\n]+")
 
 
