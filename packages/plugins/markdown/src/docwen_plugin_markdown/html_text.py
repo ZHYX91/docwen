@@ -6,10 +6,35 @@ import re
 from html.parser import HTMLParser
 
 _BLOCK_TAGS = frozenset(
-    "article aside blockquote div dl dt dd h1 h2 h3 h4 h5 h6 "
-    "header footer li main ol p pre section table tbody thead "
-    "tfoot tr ul"
-    .split()
+    {
+        "article",
+        "aside",
+        "blockquote",
+        "div",
+        "dl",
+        "dt",
+        "dd",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "header",
+        "footer",
+        "li",
+        "main",
+        "ol",
+        "p",
+        "pre",
+        "section",
+        "table",
+        "tbody",
+        "thead",
+        "tfoot",
+        "tr",
+        "ul",
+    }
 )
 _IGNORED_TAGS = frozenset({"script", "style", "iframe", "object", "svg", "template"})
 _SIMPLE_INLINE_TAGS = frozenset("a b em i mark s small span strong sub sup u".split())
