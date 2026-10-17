@@ -590,28 +590,25 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 
 -   **🚀 원클릭 실행** - 사이드바 아이콘으로 변환기 빠르게 실행
 -   **📂 자동 전달** - 현재 열려 있는 파일 경로를 자동으로 전달
--   **🔄 단일 인스턴스 관리** - 이미 실행 중이면 파일만 전송하고 재시작 불필요
--   **🔒 안전한 로컬 제어** - 프로세스 이름 탐색이나 명령/상태 파일 없이 구조화된 `status`, `open`, `activate` 요청을 사용
+-   **🔄 열린 창 사용** - 변환기를 다시 시작하지 않고 다른 파일을 엽니다.
 
-### 동작 원리
+### 플러그인 사용 방법
 
-DocWen Core는 Windows의 로컬 제어에 named pipe를, Linux/macOS에서는 AF_UNIX 소켓을 사용합니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령을 파일로 전달하지 않습니다. 이는 Core 경계에 대한 설명입니다. DocWen Assistant 3.3은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
+DocWen Assistant 3.3은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
 
-1.  **첫 클릭** → 변환기를 실행하고 현재 파일을 전달
-2.  **다시 클릭(파일 있음)** → 새 파일로 교체(단일 파일 모드)
-3.  **다시 클릭(파일 없음)** → 변환기 창을 활성화
+1.  **처음 클릭** → 변환기를 실행하고 현재 파일을 엽니다.
+2.  **파일을 연 상태에서 다시 클릭** → 현재 입력 파일을 해당 파일로 바꿉니다(단일 파일 모드).
+3.  **열린 파일 없이 다시 클릭** → 변환기 창을 앞으로 가져옵니다.
 
 ### 설치
 
-DocWen Assistant 3.3에는 DocWen 0.17.0 이상이 필요합니다. 변환·교정 같은 콘텐츠 작업은 Machine Protocol v2와 Artifact Bundle v3를 사용하고, 데스크톱 앱 실행/열기는 독립된 로컬 GUI 제어를 사용합니다. 소스
-버전만으로 게시 여부를 증명할 수 없습니다. 호환되는 게시된 DocWen 릴리스를 명시한 숫자 형식의 릴리스만
-설치하세요.
+먼저 호환되는 DocWen 버전을 설치한 다음 [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant)를 설치하세요. Assistant 3.3에는 DocWen 0.17.0 이상이 필요하며, 플러그인은 DocWen 본체를 대신 설치하지 않습니다. 릴리스 안내에서 호환되는 버전을 확인하고 공개된 설치 파일을 다운로드하세요.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 3.0은 DocWen Machine Protocol v2과 단일 Artifact Bundle v3 계약을 사용합니다. 소스 버전만으로
-게시 여부를 증명할 수 없습니다. 숫자 형식의 릴리스 페이지를 확인하고 변경 불가능한 릴리스 게이트가 성공한
-후에만 설치하세요.
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw)를 사용하면 OpenClaw가 컴퓨터에 설치된 DocWen으로 파일을 변환하고 교정할 수 있습니다. DocWen을 별도로 설치하고, 릴리스 안내에 호환되는 DocWen 버전이 명시된 플러그인 버전을 선택하세요. 공개된 릴리스 페이지에서 파일을 다운로드하세요. 소스 코드에 버전 번호가 있다고 해서 해당 버전을 바로 다운로드할 수 있는 것은 아닙니다.
+
+플러그인 3.0과 연동하는 기능을 개발하려면 [Machine Protocol v2 및 Artifact Bundle v3](../specs/machine-protocol-v2.md)를 참고하세요.
 
 ## ❓ 자주 묻는 질문 (FAQ)
 
@@ -656,11 +653,11 @@ OpenClaw 3.0은 DocWen Machine Protocol v2과 단일 Artifact Bundle v3 계약�
 
 ## 🔒 보안 기능
 
--   **완전한 로컬 실행**: 처리는 기본적으로 로컬에서 수행되며 온라인 서비스에 의존하지 않습니다.
--   **종속성 송신 보호**: 지원되는 GUI/CLI 진입점은 Python 주 프로세스 전체 수명 동안 CPython 감사 가드를 활성화합니다. 모든 DNS/이름 확인과 AF_INET/AF_INET6 `bind`, `connect`, `connect_ex`, `sendto`, `sendmsg` 작업을 차단하면서 Windows 명명된 파이프와 Unix 도메인 소켓은 유지합니다.
--   **명확한 경계**: Office/WPS/LibreOffice 및 전용 Office 헬퍼를 포함해 별도로 실행된 프로세스는 관리하지 않습니다. 이는 종속성의 우발적 통신을 막는 심층 방어이며 운영체제 샌드박스가 아닙니다.
--   **데이터 업로드 없음**: 기본적으로 사용자 파일을 외부 서버로 적극 업로드하지 않습니다.
--   **엄격 보안 모드**: 기본 활성화되며, 핵심 보안 검사에 실패하면 프로그램이 종료됩니다. 자세한 내용은 [Troubleshooting](../maintenance/troubleshooting.md) 참고.
+DocWen은 사용자 컴퓨터에서 파일을 처리하며 파일 업로드, 원격 측정, 온라인 다운로드 또는 네트워크 서비스 기능을 제공하지 않습니다. 자체 Python 구성 요소의 네트워크 접근을 제한합니다. 이 보호 기능을 시작할 수 없으면 DocWen은 실행을 계속하지 않습니다.
+
+별도로 실행되는 Word/Office, WPS, LibreOffice 등의 프로그램과 관련 보조 프로세스는 각 프로그램과 시스템의 네트워크 설정을 따르며 이 제한의 적용 대상이 아닙니다. 민감한 파일을 처리할 때는 해당 프로그램의 설정도 확인하세요.
+
+보호 기능의 구현과 한계는 [아키텍처 설명](../architecture.md)을 참고하세요. 프로그램이 시작되지 않거나 변환에 실패하면 [문제 해결 안내](../maintenance/troubleshooting.md)를 확인할 수 있습니다.
 
 ## 📜 라이선스
 

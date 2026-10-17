@@ -592,28 +592,25 @@ Hay un plugin complementario de Obsidian publicado por separado que funciona jun
 
 -   **🚀 Inicio con un clic** - Icono lateral para iniciar rápidamente el convertidor.
 -   **📂 Transferencia automática** - Pasa automáticamente la ruta del archivo abierto.
--   **🔄 Gestión de instancia única** - Si ya está en ejecución, envía el archivo sin reiniciar.
--   **🔒 Control local seguro** - Usa solicitudes estructuradas `status`, `open` y `activate` sin buscar procesos por nombre ni usar archivos de comandos o estado.
+-   **🔄 Reutiliza la ventana abierta** - Abre otro archivo en el convertidor sin reiniciarlo.
 
-### Principio de funcionamiento
+### Cómo usar el plugin
 
-DocWen Core usa una canalización con nombre para el control local en Windows y un socket AF_UNIX en Linux/macOS. El bloqueo de archivo solo establece la propiedad de instancia única; los comandos de control no se transportan mediante archivos. Esto describe únicamente el límite de Core. DocWen Assistant 3.3 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
+DocWen Assistant 3.3 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
 
-1.  **Primer clic** → Inicia el convertidor y pasa el archivo actual.
-2.  **Clic de nuevo (con archivo)** → Sustituye el archivo (modo de archivo único).
-3.  **Clic de nuevo (sin archivo)** → Activa la ventana del convertidor.
+1.  **Primer clic** → Inicia el convertidor y abre el archivo actual.
+2.  **Otro clic con un archivo abierto** → Sustituye el archivo de entrada actual por ese archivo (modo de archivo único).
+3.  **Otro clic sin un archivo abierto** → Trae la ventana del convertidor al frente.
 
 ### Instalación
 
-DocWen Assistant 3.3 requiere DocWen 0.17.0 o posterior. Las operaciones de contenido usan Machine Protocol v2 y Artifact Bundle v3; iniciar/abrir la aplicación de escritorio usa el control GUI local independiente. La versión del código
-fuente no demuestra que esté publicada; instala solo una versión numérica que identifique explícitamente una versión
-publicada y compatible de DocWen.
+Instala primero una versión compatible de DocWen y después [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant). Assistant 3.3 requiere DocWen 0.17.0 o posterior; el plugin no instala el programa principal. Consulta las notas de la versión para elegir versiones compatibles y descarga los archivos de instalación publicados.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 3.0 usa DocWen Machine Protocol v2 y el único contrato Artifact Bundle v3. La versión del código fuente no
-demuestra que esté publicada; consulta la página de la versión numérica e instala solo después de que supere su
-control de publicación inmutable.
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) permite que OpenClaw use DocWen en tu equipo para convertir y revisar archivos. Instala DocWen por separado y elige una versión del plugin que indique con qué versiones de DocWen es compatible. Descarga los archivos de la página de versiones publicadas; que aparezca un número de versión en el código fuente no significa que esa versión ya esté disponible para descargar.
+
+Para desarrollar integraciones con el plugin 3.0, consulta [Machine Protocol v2 y Artifact Bundle v3](../specs/machine-protocol-v2.md).
 
 ## ❓ Preguntas frecuentes
 
@@ -656,13 +653,13 @@ Esto es un comportamiento esperado. El programa lee los **valores en caché** de
 3.  Guarda el archivo.
 4.  Convierte de nuevo.
 
-## 🔒 Funcionalidades de seguridad
+## 🔒 Funciones de seguridad
 
--   **Funcionamiento completamente local**: El procesamiento se realiza localmente por defecto y no depende de servicios en linea.
--   **Protección de salida de dependencias**: Las entradas GUI/CLI compatibles activan un guardián de auditoría CPython durante toda la vida del proceso Python principal. Bloquea toda resolución DNS/de nombres y las operaciones AF_INET/AF_INET6 `bind`, `connect`, `connect_ex`, `sendto` y `sendmsg`, conservando canalizaciones con nombre de Windows y sockets de dominio Unix.
--   **Límite explícito**: Los procesos iniciados por separado, incluidos Office/WPS/LibreOffice y el ayudante de Office, no se administran. Es una defensa ante conexiones accidentales de dependencias, no un sandbox del sistema operativo.
--   **Sin subida de datos**: Por defecto, los archivos del usuario no se suben de forma activa a servidores externos.
--   **Modo de seguridad estricto**: activado por defecto; la aplicacion se cierra si fallan las comprobaciones de seguridad centrales. Ver [Troubleshooting](../maintenance/troubleshooting.md).
+DocWen procesa los archivos en tu equipo y no ofrece subida de archivos, telemetría, descargas en línea ni un servicio de red. Restringe el acceso a la red de sus propios componentes Python. Si no puede activar esta protección, DocWen no continúa ejecutándose.
+
+Los programas iniciados por separado, como Word/Office, WPS y LibreOffice, incluidos sus procesos auxiliares, siguen su propia configuración de red y la del sistema. Esta restricción no los cubre. Revisa también su configuración al trabajar con archivos sensibles.
+
+La [documentación de arquitectura](../architecture.md) explica cómo funciona esta protección y sus límites. Si el programa no se inicia o una conversión falla, consulta la [solución de problemas](../maintenance/troubleshooting.md).
 
 ## 📜 Licencia
 

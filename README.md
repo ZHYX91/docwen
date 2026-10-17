@@ -603,16 +603,15 @@ A companion Obsidian plugin is published separately and works in tandem with the
 
 -   **🚀 One-Click Launch** - Sidebar icon to quickly launch the converter.
 -   **📂 Automatic Handover** - Automatically passes the currently open file path.
--   **🔄 Single Instance Management** - Automatically sends file if the program is already running, no need to restart.
--   **🔒 Safe Local Control** - Uses structured `status`, `open`, and `activate` requests without process-name probing or command/status files.
+-   **🔄 Reuse the open window** - Open another file in the running converter without restarting it.
 
-### Working Principle
+### Using the plugin
 
-DocWen Core uses a Windows named pipe for local control on Windows and an AF_UNIX socket on Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport control commands. This describes the Core transport only. DocWen Assistant 3.3 supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
+DocWen Assistant 3.3 supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
 
-1.  **First Click** → Launch converter and pass current file.
-2.  **Click Again (With File)** → Replace with new file (Single File Mode).
-3.  **Click Again (No File)** → Activate converter window.
+1.  **First click** → Launch the converter and open the current file.
+2.  **Click again with a file open** → Replace the current input with that file (single-file mode).
+3.  **Click again without a file open** → Bring the converter window to the front.
 
 ### Installation
 
@@ -660,11 +659,11 @@ DocWen exports the **last saved calculation result** of a formula cell. If the s
 
 ## 🔒 Security Features
 
--   **Completely Local Operation**: Processing runs locally by default and does not depend on online services.
--   **Dependency Egress Protection**: Supported GUI/CLI entry points fail closed unless a process-lifetime CPython audit guard is active. It blocks all DNS/name resolution and AF_INET/AF_INET6 `bind`, `connect`, `connect_ex`, `sendto`, and `sendmsg` operations from in-process Python dependencies while preserving Windows named pipes and Unix-domain sockets.
--   **Explicit Boundary**: Separately launched processes, including Office/WPS/LibreOffice and the dedicated Office helper, are not managed. This protection is defense in depth against accidental dependency egress, not an operating-system sandbox.
--   **No Data Upload**: DocWen has no upload, telemetry, online-download, or network-service feature.
--   **Strict Security Mode**: Enabled by default; the app exits if core security checks fail. See [开发调试与故障排查.md](docs/maintenance/troubleshooting.md).
+DocWen processes files on your computer and has no file-upload, telemetry, online-download or network-service feature. It restricts network access by its own Python components. If this protection cannot start, DocWen does not continue running.
+
+Separately launched programs such as Word/Office, WPS and LibreOffice, including helper processes, follow their own and the operating system's network settings. They are outside this restriction, so check their settings as well when working with sensitive files.
+
+See [how network protection works](docs/architecture.md) for its implementation and limits, or [troubleshooting](docs/maintenance/troubleshooting.md) if the program cannot start or a conversion fails.
 
 ## 📜 License
 

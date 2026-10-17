@@ -592,28 +592,25 @@ Plugin Obsidian đồng hành được phát hành ở repo riêng và hoạt đ
 
 -   **🚀 Khởi chạy 1 lần nhấn** - Icon ở sidebar để mở nhanh bộ chuyển đổi.
 -   **📂 Bàn giao tự động** - Tự truyền đường dẫn file đang mở.
--   **🔄 Quản lý đơn phiên bản** - Nếu chương trình đang chạy, chỉ gửi file, không cần khởi chạy lại.
--   **🔒 Điều khiển cục bộ an toàn** - Dùng các yêu cầu có cấu trúc `status`, `open`, `activate`, không dò tên tiến trình và không dùng tệp lệnh/trạng thái.
+-   **🔄 Dùng cửa sổ đang mở** - Mở file khác trong bộ chuyển đổi mà không cần khởi động lại.
 
-### Nguyên lý hoạt động
+### Cách dùng plugin
 
-DocWen Core dùng named pipe để điều khiển cục bộ trên Windows và socket AF_UNIX trên Linux/macOS. Khóa tệp chỉ xác lập quyền sở hữu một phiên bản chạy; lệnh điều khiển không được truyền qua tệp. Nội dung này chỉ mô tả ranh giới Core. DocWen Assistant 3.3 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
+DocWen Assistant 3.3 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
 
-1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và truyền file hiện tại.
-2.  **Nhấn lại (có file)** → Thay file mới (chế độ 1 file).
-3.  **Nhấn lại (không có file)** → Kích hoạt cửa sổ bộ chuyển đổi.
+1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và mở file hiện tại.
+2.  **Nhấn lại khi có file đang mở** → Thay file đầu vào hiện tại bằng file đó (chế độ một file).
+3.  **Nhấn lại khi không có file đang mở** → Đưa cửa sổ bộ chuyển đổi lên trước.
 
 ### Cài đặt
 
-DocWen Assistant 3.3 yêu cầu DocWen 0.17.0 trở lên. Các thao tác nội dung dùng Machine Protocol v2 và Artifact Bundle v3; việc khởi chạy/mở ứng dụng desktop dùng đường điều khiển GUI cục bộ độc lập. Phiên bản mã nguồn
-không chứng minh rằng sản phẩm đã được phát hành; chỉ cài bản phát hành dạng số xác định rõ một bản DocWen đã phát
-hành và tương thích.
+Cài một phiên bản DocWen tương thích trước, sau đó cài [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant). Assistant 3.3 yêu cầu DocWen 0.17.0 trở lên; plugin không tự cài chương trình DocWen. Xem ghi chú phát hành để chọn các phiên bản tương thích và tải các file cài đặt đã được công bố.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 3.0 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn không chứng
-minh rằng sản phẩm đã được phát hành; hãy theo dõi trang phát hành dạng số và chỉ cài sau khi cổng phát hành bất biến
-thành công.
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) cho phép OpenClaw dùng DocWen trên máy tính của bạn để chuyển đổi và soát lỗi file. Cài DocWen riêng và chọn phiên bản plugin có ghi rõ phiên bản DocWen tương thích trong ghi chú phát hành. Tải file từ trang phát hành đã công bố; số phiên bản trong mã nguồn không có nghĩa là phiên bản đó đã có sẵn để tải xuống.
+
+Để phát triển tính năng tích hợp với plugin 3.0, xem [Machine Protocol v2 và Artifact Bundle v3](../specs/machine-protocol-v2.md).
 
 ## ❓ Câu hỏi thường gặp (FAQ)
 
@@ -656,13 +653,13 @@ thành công.
 3.  Lưu file.
 4.  Chuyển đổi lại.
 
-## 🔒 Tính năng bảo mật
+## 🔒 Bảo mật và quyền riêng tư
 
--   **Chạy hoàn toàn cục bộ**: Việc xử lý mặc định diễn ra trên máy và không phụ thuộc dịch vụ trực tuyến.
--   **Bảo vệ kết nối đi của thư viện**: Điểm vào GUI/CLI được hỗ trợ bật bộ bảo vệ audit của CPython trong toàn bộ vòng đời tiến trình Python chính. Bộ bảo vệ chặn mọi hoạt động phân giải DNS/tên và các thao tác AF_INET/AF_INET6 `bind`, `connect`, `connect_ex`, `sendto`, `sendmsg`, đồng thời giữ nguyên named pipe của Windows và Unix-domain socket.
--   **Ranh giới rõ ràng**: Tiến trình khởi chạy riêng, gồm Office/WPS/LibreOffice và Office helper chuyên dụng, không bị quản lý. Đây là lớp phòng thủ trước kết nối ngoài ý muốn của thư viện, không phải sandbox của hệ điều hành.
--   **Không upload dữ liệu**: Mặc định không chủ động tải file người dùng lên máy chủ bên ngoài.
--   **Chế độ bảo mật nghiêm ngặt**: bật mặc định; ứng dụng sẽ thoát nếu các kiểm tra bảo mật cốt lõi thất bại. Xem [Troubleshooting](../maintenance/troubleshooting.md).
+DocWen xử lý file trên máy tính của bạn và không cung cấp tính năng tải file lên, thu thập dữ liệu đo lường, tải xuống trực tuyến hay dịch vụ mạng. Chương trình hạn chế truy cập mạng của các thành phần Python trong chính DocWen. Nếu không bật được lớp bảo vệ này, DocWen sẽ không tiếp tục chạy.
+
+Các chương trình được khởi chạy riêng như Word/Office, WPS và LibreOffice, kể cả tiến trình hỗ trợ, vẫn tuân theo cài đặt mạng của từng chương trình và hệ thống. Hạn chế này không áp dụng cho chúng. Khi xử lý file nhạy cảm, hãy kiểm tra cả các cài đặt đó.
+
+Xem [tài liệu kiến trúc](../architecture.md) để biết cách bảo vệ hoạt động và giới hạn của nó. Nếu chương trình không khởi động hoặc chuyển đổi thất bại, hãy xem [hướng dẫn khắc phục sự cố](../maintenance/troubleshooting.md).
 
 ## 📜 Giấy phép
 
