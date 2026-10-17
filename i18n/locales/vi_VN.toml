@@ -290,6 +290,7 @@ pt_BR = "Tiếng Bồ Đào Nha (Brasil)"
 ru_RU = "Tiếng Nga"
 vi_VN = "Tiếng Việt"
 zh_TW = "Tiếng Trung (Phồn thể)"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]
@@ -798,7 +799,7 @@ system_desc = "Bật hoặc tắt ghi nhật ký và đặt mức nhật ký."
 enable_logging_label = "Bật hệ thống log"
 enable_logging_tooltip = "Bật hoặc tắt toàn bộ hệ thống log.\nKhi tắt, ứng dụng sẽ không ghi lại thông tin log.\nKhuyến nghị giữ bật khi chạy thực tế."
 log_level_label = "Mức log:"
-log_level_tooltip = "Đặt mức chi tiết của log.\nTừ thấp đến cao: debug > info > warning > error > critical\nMức càng cao ghi càng ít thông tin."
+log_level_tooltip = "Chọn mức chi tiết của nhật ký.\nTừ chi tiết nhất đến ít chi tiết nhất: DEBUG, INFO, WARNING, ERROR, CRITICAL."
 
 # 文件输出区域
 file_section = "Ghi ra tệp"
@@ -1278,22 +1279,23 @@ level_format_config = "Cấu hình định dạng cấp"
 realtime_preview = "Xem trước thời gian thực"
 format_help = "📖 Trợ giúp định dạng"
 format_help_title = "Trợ giúp placeholder định dạng"
-format_help_text = """Cách dùng placeholder định dạng
+format_help_text = """Ký hiệu giữ chỗ cho định dạng đánh số
 
-占位符格式：{级别.样式}
+Cú pháp: {level.style}
+level là cấp tiêu đề (1–9); style là tên trong danh sách bên dưới.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+Các kiểu có thể dùng:
+  chinese_lower  - Chữ số Hán thông thường (一、二、三)
+  chinese_upper  - Chữ số Hán dạng tài chính (壹、贰、叁)
+  arabic_half    - Chữ số thập phân (1, 2, 3)
+  arabic_full    - Chữ số thập phân toàn chiều rộng (１、２、３)
+  arabic_circled - Chữ số trong vòng tròn (①②③)
+  letter_upper   - Chữ cái viết hoa (A, B, C)
+  letter_lower   - Chữ cái viết thường (a, b, c)
+  roman_upper    - Số La Mã viết hoa (I, II, III)
+  roman_lower    - Số La Mã viết thường (i, ii, iii)
 
-示例：
+Ví dụ:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

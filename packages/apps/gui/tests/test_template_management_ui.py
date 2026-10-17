@@ -308,3 +308,24 @@ def test_template_import_success_is_inline_and_total_failure_has_details(
         assert "Import.docx" in reports[0]["details"]
         assert reports[0]["copyable"] is True
     page.deleteLater()
+
+
+def test_arabic_initial_default_uses_shipped_english_template(qapp):
+    from docwen_gui.i18n import get_locale, set_locale
+    from docwen_gui.view_models.template_vm import TemplateViewModel
+
+    previous = get_locale()
+    try:
+        set_locale("ar_SA")
+        model = TemplateViewModel()
+        model.refresh()
+        assert model.error is None
+        selected = model.defaults["docx"]
+        assert selected is not None
+        chosen = model.find(selected)
+        assert chosen is not None
+        assert chosen.name == "English General Template"
+        model.refresh()
+        assert model.defaults["docx"] == chosen.id
+    finally:
+        set_locale(previous)

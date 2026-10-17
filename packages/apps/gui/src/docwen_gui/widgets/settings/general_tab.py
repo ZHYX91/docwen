@@ -86,6 +86,7 @@ class GeneralTab(BaseSettingsTab):
         lang_combo.addItem(t("settings.general.languages.ru_RU", "Russian"), "ru_RU")
         lang_combo.addItem(t("settings.general.languages.vi_VN", "Vietnamese"), "vi_VN")
         lang_combo.addItem(t("settings.general.languages.zh_TW", "Chinese (Traditional)"), "zh_TW")
+        lang_combo.addItem(t("settings.general.languages.ar_SA", "العربية"), "ar_SA")
         lang_container_layout.addWidget(lang_combo)
 
         self.add_form_row(

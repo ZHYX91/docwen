@@ -236,6 +236,7 @@ pt_BR = "포르투갈어(브라질)"
 ru_RU = "러시아어"
 vi_VN = "베트남어"
 zh_TW = "중국어(번체)"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]
@@ -744,7 +745,7 @@ system_desc = "로그 기록을 켜거나 끄고 로그 수준을 설정합니�
 enable_logging_label = "로그 시스템 사용"
 enable_logging_tooltip = "전체 로그 시스템을 사용/해제합니다.\n해제 시 애플리케이션은 로그를 기록하지 않습니다.\n실사용 환경에서는 사용을 권장합니다."
 log_level_label = "로그 레벨:"
-log_level_tooltip = "로그 출력의 자세함 수준을 설정합니다.\n낮음→높음: debug > info > warning > error > critical\n레벨이 높을수록 기록되는 정보가 적습니다."
+log_level_tooltip = "로그에 기록할 상세 수준을 선택합니다.\n가장 자세한 순서: DEBUG, INFO, WARNING, ERROR, CRITICAL."
 
 # 文件输出区域
 file_section = "파일 출력"
@@ -1226,22 +1227,23 @@ level_format_config = "레벨별 형식 설정"
 realtime_preview = "실시간 미리보기"
 format_help = "📖 형식 도움말"
 format_help_title = "형식 플레이스홀더 도움말"
-format_help_text = """형식 플레이스홀더 사용법
+format_help_text = """번호 형식 자리표시자
 
-占位符格式：{级别.样式}
+구문: {level.style}
+level은 제목 수준(1–9)이고 style은 아래 목록의 이름입니다.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+사용 가능한 스타일:
+  chinese_lower  - 한자 숫자 (一、二、三)
+  chinese_upper  - 갖은자 숫자 (壹、贰、叁)
+  arabic_half    - 반각 숫자 (1, 2, 3)
+  arabic_full    - 전각 숫자 (１、２、３)
+  arabic_circled - 동그라미 숫자 (①②③)
+  letter_upper   - 알파벳 대문자 (A, B, C)
+  letter_lower   - 알파벳 소문자 (a, b, c)
+  roman_upper    - 로마 숫자 대문자 (I, II, III)
+  roman_lower    - 로마 숫자 소문자 (i, ii, iii)
 
-示例：
+예시:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

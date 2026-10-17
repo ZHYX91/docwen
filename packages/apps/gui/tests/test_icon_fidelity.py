@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from PySide6.QtCore import QSize
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QFont, QIcon
 
 pytestmark = pytest.mark.gui
 
@@ -131,12 +131,23 @@ def test_action_icons_use_disabled_palette_for_disabled_controls(qapp, asset: st
         button.deleteLater()
 
 
-def test_narrow_action_button_keeps_icon_separate_from_wrapped_caption(qapp, qtbot) -> None:
+@pytest.mark.parametrize(
+    "direction", [Qt.LayoutDirection.LeftToRight, Qt.LayoutDirection.RightToLeft], ids=["ltr", "rtl"]
+)
+def test_narrow_action_button_keeps_icon_separate_from_wrapped_caption(
+    qapp, qtbot, direction: Qt.LayoutDirection
+) -> None:
     from docwen_gui.resources import load_svg_icon
     from docwen_gui.widgets.action_button import ActionButton
 
     button = ActionButton("Copy and edit this template")
     qtbot.addWidget(button)
+    button.setLayoutDirection(direction)
+    # LCD text fringes can satisfy the red-icon mask on some font backends.
+    # Keep caption antialiasing grayscale for this color-separation assertion.
+    font = button.font()
+    font.setStyleStrategy(font.styleStrategy() | QFont.StyleStrategy.NoSubpixelAntialias)
+    button.setFont(font)
     icon = load_svg_icon("copy.svg", color="#ff0000")
     assert isinstance(icon, QIcon)
     button.setIcon(icon)
@@ -152,5 +163,8 @@ def test_narrow_action_button_keeps_icon_separate_from_wrapped_caption(qapp, qtb
         if (color := raster.pixelColor(x, y)).red() - max(color.green(), color.blue()) > 80
     ]
     assert red_pixels
-    assert max(x for x, _y in red_pixels) < raster.width() // 3
+    if direction == Qt.LayoutDirection.LeftToRight:
+        assert max(x for x, _y in red_pixels) < raster.width() // 3
+    else:
+        assert min(x for x, _y in red_pixels) > raster.width() * 2 // 3
     assert button.height() >= button.heightForWidth(button.width())

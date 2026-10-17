@@ -79,3 +79,32 @@ missing or unavailable Office bridge routes cannot be hidden by an available fin
 These rules are enforced by Import Linter, repository guards and Pyright.
 
 这些规则由 Import Linter、仓库门禁和 Pyright 持续检查。
+
+## Network protection and local control / 网络防护与本机控制
+
+### English
+
+DocWen does not provide file upload, telemetry, online downloads or a network service. Its supported GUI/CLI entry points install and verify a **CPython audit hook** before importing the product components, then enforce it throughout their execution. Packaged applications activate the same guard from a PyInstaller runtime hook and keep it active until process exit. If installation or verification fails, startup stops before normal application work begins; execution does not continue without the guard.
+
+While active, the guard blocks **all DNS/name resolution** and the audited `AF_INET/AF_INET6` operations `bind`, `connect`, `connect_ex`, `sendto` and `sendmsg` from in-process Python dependencies. This includes local IP destinations. Non-IP local communication through **Windows named pipes** and **Unix-domain sockets** remains available.
+
+This is protection against accidental dependency network access, **not an operating-system sandbox**. Native code and separately launched processes, including Word/Office, WPS, LibreOffice and the **dedicated Office helper**, are outside its coverage and follow their own and the operating system's network policies. The guard is not automatically inherited as protection for those processes. CPython also does not emit an audit event for an ordinary payload write on an already-connected or inherited socket; those writes are outside the guarantee. Supported entry points activate the guard before product imports and do not intentionally establish such sockets.
+
+For local desktop control, the Core runtime uses a Windows named pipe on Windows and an `AF_UNIX` socket on Linux/macOS. A file lock establishes single-instance ownership; files do not carry control commands. These transport capabilities do not by themselves establish which operating systems a companion plugin supports.
+
+### 中文
+
+DocWen 不提供文件上传、遥测、在线下载或网络服务功能。受支持的 GUI/CLI 入口在导入产品组件前安装并验证 **CPython 审计钩子**，随后在整个执行期间启用防护。打包程序通过 PyInstaller 运行时钩子提前启用相同防护，并保持到进程退出。如果安装或验证失败，程序会在开始正常工作前停止，不会在缺少防护的情况下继续运行。
+
+防护启用时，会阻止进程内 Python 依赖的**所有 DNS/名称解析**，以及 `AF_INET/AF_INET6` 的 `bind`、`connect`、`connect_ex`、`sendto`、`sendmsg` 受审计操作；本机 IP 地址也在限制范围内。**Windows 命名管道**和 **Unix 域套接字**等不使用 IP 的本机通信仍然可用。
+
+这项防护用于防止依赖意外联网，**不是操作系统级沙箱**。原生代码，以及单独启动的 Word/Office、WPS、LibreOffice、**专用 Office 辅助进程（dedicated Office helper）**等进程不在覆盖范围内，仍遵循自身和操作系统的网络策略；这些进程不会自动继承这项防护。CPython 对已连接或继承的套接字进行普通数据写入时，也不会触发相应的审计事件，因此这类写入不在保证范围内。受支持的入口会在导入产品组件前启用防护，不会主动建立此类套接字。
+
+本机桌面控制由 Core runtime 在 Windows 上使用命名管道，在 Linux/macOS 上使用 `AF_UNIX` 套接字。文件锁只负责确认单实例归属，文件不用于传送控制命令。这些底层通信能力不等于配套插件的平台支持范围。
+
+Implementation references / 实现参考：
+
+- [Network guard / 网络防护](../packages/runtime/src/docwen_runtime/security/network.py)
+- [GUI entry point / 图形界面入口](../packages/bundle/src/docwen_bundle/gui_entry.py) and [CLI entry point / 命令行入口](../packages/bundle/src/docwen_bundle/cli_entry.py)
+- [Packaged startup hook / 打包启动钩子](../packages/bundle/src/docwen_bundle/pyi_runtime_egress_guard.py)
+- [Local desktop control / 本机桌面控制](../packages/runtime/src/docwen_runtime/ipc/single_instance.py)

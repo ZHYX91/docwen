@@ -40,6 +40,7 @@ REQUIRED_DOCS = {
 }
 
 LOCALIZED_READMES = (
+    "README.ar.md",
     "README.de-DE.md",
     "README.es-ES.md",
     "README.fr-FR.md",
@@ -64,6 +65,7 @@ LANGUAGE_NAV = (
     " · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md)"
     " · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md)"
     " · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)"
+    " · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)"
 )
 LOGO_BLOCK = (
     '<p align="center">\n'
@@ -72,48 +74,21 @@ LOGO_BLOCK = (
     "</p>"
 )
 
-NETWORK_GUARD_DNS_MARKERS = {
-    "README.md": "all DNS/name resolution",
-    "README.de-DE.md": "sämtliche DNS-/Namensauflösung",
-    "README.es-ES.md": "toda resolución DNS/de nombres",
-    "README.fr-FR.md": "toute résolution DNS/de noms",
-    "README.ja-JP.md": "すべての DNS／名前解決",
-    "README.ko-KR.md": "모든 DNS/이름 확인",
-    "README.pt-BR.md": "toda resolução DNS/de nomes",
-    "README.ru-RU.md": "любое разрешение DNS/имён",
-    "README.vi-VN.md": "mọi hoạt động phân giải DNS/tên",
-    "README.zh-CN.md": "所有 DNS/名称解析",
-    "README.zh-TW.md": "所有 DNS／名稱解析",
-}
-
 NETWORK_GUARD_IP_OPERATIONS = ("bind", "connect", "connect_ex", "sendto", "sendmsg")
 
-NETWORK_GUARD_HELPER_MARKERS = {
-    "README.md": "dedicated Office helper",
-    "README.de-DE.md": "Office-Helfers",
-    "README.es-ES.md": "ayudante de Office",
-    "README.fr-FR.md": "assistant Office",
-    "README.ja-JP.md": "専用 Office ヘルパー",
-    "README.ko-KR.md": "전용 Office 헬퍼",
-    "README.pt-BR.md": "auxiliar do Office",
-    "README.ru-RU.md": "служебный процесс Office",
-    "README.vi-VN.md": "Office helper chuyên dụng",
-    "README.zh-CN.md": "专用 Office helper",
-    "README.zh-TW.md": "專用 Office helper",
-}
-
-NETWORK_GUARD_SANDBOX_MARKERS = {
-    "README.md": "operating-system sandbox",
-    "README.de-DE.md": "Betriebssystem-Sandbox",
-    "README.es-ES.md": "sandbox del sistema operativo",
-    "README.fr-FR.md": "bac à sable du système",
-    "README.ja-JP.md": "OS サンドボックス",
-    "README.ko-KR.md": "운영체제 샌드박스",
-    "README.pt-BR.md": "sandbox do sistema operacional",
-    "README.ru-RU.md": "песочница операционной системы",
-    "README.vi-VN.md": "sandbox của hệ điều hành",
-    "README.zh-CN.md": "操作系统级沙箱",
-    "README.zh-TW.md": "作業系統級沙箱",
+NETWORK_GUARD_EXTERNAL_PROCESS_MARKERS = {
+    "README.ar.md": "هذا القيد لا يشملها",
+    "README.md": "They are outside this restriction",
+    "README.de-DE.md": "Sie fallen nicht unter diese Beschränkung",
+    "README.es-ES.md": "Esta restricción no los cubre",
+    "README.fr-FR.md": "Cette restriction ne les couvre pas",
+    "README.ja-JP.md": "この制限の対象ではないため",
+    "README.ko-KR.md": "이 제한의 적용 대상이 아닙니다",
+    "README.pt-BR.md": "Essa restrição não se aplica a eles",
+    "README.ru-RU.md": "Это ограничение на них не распространяется",
+    "README.vi-VN.md": "Hạn chế này không áp dụng cho chúng",
+    "README.zh-CN.md": "不受这项限制",
+    "README.zh-TW.md": "不受這項限制",
 }
 
 SCREENSHOTS = {"markdown-generation-en.png", "template-management-en.png"}
@@ -190,6 +165,7 @@ def _public_readme_paths() -> list[Path]:
 
 
 CLI_SECTION_HEADING_MARKERS = {
+    "README.ar.md": "استخدام سطر الأوامر",
     "README.md": "Command Line Usage",
     "README.de-DE.md": "CLI-Verwendung",
     "README.es-ES.md": "Uso de la CLI",
@@ -230,6 +206,7 @@ def test_public_readmes_keep_cli_integration_anchors() -> None:
 
 
 ASSISTANT_PLATFORM_SUPPORT_MARKERS = {
+    "README.ar.md": "يدعم ملحق DocWen Assistant سطح المكتب على Windows وLinux",
     "README.md": "supports Windows and Linux desktop hosts",
     "README.de-DE.md": "unterstützt Windows- und Linux-Desktop-Hosts",
     "README.es-ES.md": "admite hosts de escritorio Windows y Linux",
@@ -244,6 +221,7 @@ ASSISTANT_PLATFORM_SUPPORT_MARKERS = {
 }
 
 ASSISTANT_MACOS_UNSUPPORTED_MARKERS = {
+    "README.ar.md": "لا يدعم DocWen Assistant نظام macOS حاليًا",
     "README.md": "does not currently support macOS",
     "README.de-DE.md": "macOS wird vom Assistant derzeit nicht unterstützt",
     "README.es-ES.md": "Assistant no admite macOS actualmente",
@@ -291,11 +269,20 @@ def test_public_readmes_describe_current_assistant_platform_boundary() -> None:
         assert not any(marker in text for marker in STALE_ASSISTANT_PLATFORM_MARKERS), path.name
 
 
-def test_public_readmes_describe_the_exact_network_guard_boundary() -> None:
+def test_public_readmes_and_architecture_describe_the_network_guard_boundary() -> None:
     public_readmes = [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
-    assert {path.name for path in public_readmes} == set(NETWORK_GUARD_DNS_MARKERS)
-    assert set(NETWORK_GUARD_SANDBOX_MARKERS) == set(NETWORK_GUARD_DNS_MARKERS)
-    assert set(NETWORK_GUARD_HELPER_MARKERS) == set(NETWORK_GUARD_DNS_MARKERS)
+    assert {path.name for path in public_readmes} == set(NETWORK_GUARD_EXTERNAL_PROCESS_MARKERS)
+
+    # Public guides explain the user-visible scope and link to one technical
+    # description that retains the exact operations and implementation limits.
+    architecture = (DOCS / "architecture.md").read_text(encoding="utf-8")
+    assert "CPython audit hook" in architecture
+    assert "all DNS/name resolution" in architecture
+    assert "AF_INET/AF_INET6" in architecture
+    assert all(f"`{operation}`" in architecture for operation in NETWORK_GUARD_IP_OPERATIONS)
+    assert "Windows named pipes" in architecture and "Unix-domain sockets" in architecture
+    assert "dedicated Office helper" in architecture
+    assert "not an operating-system sandbox" in architecture
 
     stale_scope_markers = (
         "non-local DNS",
@@ -309,15 +296,15 @@ def test_public_readmes_describe_the_exact_network_guard_boundary() -> None:
         "DNS không cục bộ",
         "非本地 DNS",
     )
+    assert not any(marker in architecture for marker in stale_scope_markers)
     for path in public_readmes:
         text = path.read_text(encoding="utf-8")
-        assert NETWORK_GUARD_DNS_MARKERS[path.name] in text
-        assert "AF_INET/AF_INET6" in text
-        assert all(f"`{operation}`" in text for operation in NETWORK_GUARD_IP_OPERATIONS)
-        assert "Windows" in text and "Unix" in text
-        assert "Office" in text and "WPS" in text and "LibreOffice" in text
-        assert NETWORK_GUARD_HELPER_MARKERS[path.name] in text
-        assert NETWORK_GUARD_SANDBOX_MARKERS[path.name] in text
+        assert "Python" in text
+        external_processes = next(line for line in text.splitlines() if "Word/Office" in line)
+        assert "WPS" in external_processes and "LibreOffice" in external_processes
+        assert NETWORK_GUARD_EXTERNAL_PROCESS_MARKERS[path.name] in external_processes, path.name
+        architecture_link = "docs/architecture.md" if path.parent == ROOT else "../architecture.md"
+        assert f"({architecture_link})" in text, path.name
         assert not any(marker in text for marker in stale_scope_markers)
 
 

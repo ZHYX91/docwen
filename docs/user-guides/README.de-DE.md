@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
 
 DocWen ist ein lokales Werkzeug zur Konvertierung von Dokumenten und Tabellen für Word, Markdown, Excel und verwandte Büroformate. Es ist für zuverlässige Offline-Arbeitsabläufe ausgelegt und verarbeitet Dokumente auf dem Gerät des Benutzers.
 
@@ -20,7 +20,7 @@ DocWen entstand für alltägliche Dokumentaufbereitung, bei der typischerweise:
 ## ✨ Kernfunktionen
 
 - **📄 Dokumentformatkonvertierung** - Bidirektionale Word ↔ Markdown Konvertierung. Unterstützt mathematische Formelkonvertierung, bidirektionale Trennzeichenkonvertierung (Markdowns drei Arten von Trennlinien vs. Words Seitenumbrüche, Abschnittswechsel und horizontale Linien) sowie die Wiederherstellung expliziter Markdown-Tabellenmarker `<` / `^` zu rechteckigen Word-Zellzusammenführungen. Unterstützt Formate wie DOCX/DOC/WPS/RTF/ODT.
-- **📊 Tabellenformatkonvertierung** - Bidirektionale Excel ↔ Markdown Konvertierung. Unterstützt XLSX/XLS/ET/ODS/CSV/TSV Formate, konfigurierbare Exportstrategien für zusammengeführte Zellen (`fill / empty / marker`) und Tabellenzusammenfassungswerkzeuge. Markdown→XLSX-Vorlagen unterstützen wieder YAML-Felder sowie vertikale und horizontale Spaltenplatzhalter; die vollständige Wiederherstellung von Excel-Vorlagen, Bildern und Zellzusammenführungen bleibt ein nachverfolgtes Ziel zur Funktionsgleichheit.
+- **📊 Tabellenkonvertierung** – Excel ↔ Markdown für XLSX/XLS/ET/ODS/CSV/TSV. Zusammengeführte Zellen lassen sich beim Export ausfüllen, leer lassen oder mit Markierungen erhalten. XLSX-Vorlagen unterstützen YAML-Felder, Tabellenzeilen und -spalten, Bilder und zusammengeführte Zellen; mehrere Tabellen können zusammengefasst werden.
 - **📑 PDF und Layoutdateien** - PDF/XPS/OFD zu Markdown oder DOCX Konvertierung. Unterstützt PDF-Zusammenführung, -Teilung und andere Operationen.
 - **🖼️ Bildverarbeitung** - Unterstützt bidirektionale Konvertierung und Komprimierung von JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC Formaten.
 - **📥 Import anderer Formate** - Unterstützt die einseitige Konvertierung von HTML/MHTML/ENEX/EPUB/PPTX/PPT nach Markdown.
@@ -121,10 +121,10 @@ Voraussetzungen erweitern die Zusage nicht auf andere Distributionen oder Archit
     - Starten Sie das Programm.
     - Ziehen Sie die `.md`-Datei in das Fenster.
     - Wählen Sie eine Vorlage.
-    - Klicken Sie auf "In DOCX konvertieren".
+    - Klicken Sie auf "Generieren DOCX".
 
 3.  **Ergebnis erhalten**:
-    - Ein standardisiertes Word-Dokument wird im selben Verzeichnis generiert.
+    - Das Word-Dokument wird in einem Ergebnisordner am eingestellten Ausgabeort gespeichert. Öffnen Sie den Ausgabeort über die Statusleiste.
 
 **Tipp**: Sie können die Beispieldateien im Verzeichnis `samples/` verwenden, um die Funktionen der Software schnell auszuprobieren.
 
@@ -150,7 +150,7 @@ Das Programm verwendet ein **adaptives dreispaltiges Layout**:
     -   Methode 2: Klicken Sie auf die Schaltfläche "Hinzufügen" im Drag-and-Drop-Bereich, um Dateien auszuwählen.
 3.  **Vorlage auswählen** (falls Konvertierung erforderlich): Das rechte Vorlagenpanel erweitert sich automatisch; wählen Sie eine geeignete Vorlage.
 4.  **Optionen konfigurieren**: Wählen Sie im Bedienfeld die erforderlichen Konvertierungs-/Exportoptionen aus.
-5.  **Operation ausführen**: Klicken Sie auf die entsprechende Funktionstaste (z.B. "Export MD", "In DOCX konvertieren" usw.).
+5.  **Operation ausführen**: Klicken Sie auf die entsprechende Funktionstaste (z.B. "Export MD", "Generieren DOCX" usw.).
 6.  **Ergebnis anzeigen**: Die Statusleiste zeigt Fortschritt und Ergebnisse an; klicken Sie rechts auf die Aktion „Ausgabe öffnen“, um den Ausgabeort zu öffnen.
 
 ### Einzeldateimodus vs. Stapelmodus
@@ -196,11 +196,11 @@ Die Einstellungen sind in Tabs organisiert: **Allgemein**, **Text**, **Korrektur
 
 ## 🔧 CLI-Verwendung
 
-Zusätzlich zur grafischen Oberfläche bietet DocWen eine Kommandozeilenschnittstelle (CLI) für Automatisierung, Stapelverarbeitung und externe Integrationen.
+Die Kommandozeile (CLI) eignet sich zum Prüfen und Konvertieren von Dateien im Terminal sowie für lokale Automatisierungsskripte. Für die Einbindung in andere Apps verwenden Sie die unten beschriebene Machine-Protocol-Schnittstelle.
 
 ### Empfohlener Ablauf für Automatisierung
 
-Für Skripte, Agents oder Plugin-Integrationen wird diese Reihenfolge empfohlen:
+Für lokale Automatisierungsskripte können Sie die Konvertierung in dieser Reihenfolge prüfen und ausführen:
 
 1. `inspect <file> [--json]`: zuerst den tatsächlichen Dateityp, das Format und die unterstützten Aktionen erkennen.
 2. `resources list formats --json`: die in DocWen tatsächlich verfügbaren Routen und Abhängigkeitsbedingungen lesen.
@@ -208,7 +208,7 @@ Für Skripte, Agents oder Plugin-Integrationen wird diese Reihenfolge empfohlen:
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: die echte Konvertierung erst danach ausführen.
 
-Externe Inhaltsintegrationen verwenden `serve --stdio` mit Machine Protocol v2: Fähigkeiten ermitteln, eine Aufgabe planen und anschließend ausführen. Das CLI-Format `--json` dient nur der Terminaldarstellung und ist nicht die produktübergreifende Kompatibilitätsgrenze. Für lokale Desktop-Steuerung gibt es getrennt die stabile Oberfläche `gui open|activate|status`.
+Apps und Plugins verbinden sich über `serve --stdio` mit Machine Protocol v2, um verfügbare Aktionen abzufragen, Aufgaben zu planen und sie auszuführen. Dies ist die stabile Integrationsschnittstelle; CLI `--json` ist für Terminalskripte gedacht. Mit `gui open|activate|status` öffnen Sie Dateien in der Desktop-App oder holen ihr Fenster in den Vordergrund.
 
 ### Häufige Beispiele
 
@@ -258,9 +258,9 @@ Die folgende Tabelle zeigt nur haeufige Befehle. Fuer die vollstaendige Befehlsf
 
 | Befehl / Option | Beschreibung |
 | --- | --- |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Einheitlicher Einstiegspunkt für Konvertierungen. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | Einheitlicher Einstiegspunkt für Konvertierungen. |
 | `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Korrektur nach Markdown→DOCX; `--check` ist bei `convert` nur zusammen mit `--proofread` gültig. Ohne `--check` gelten die konfigurierten Korrektur-Standardwerte. |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Prüft Erkennung, Normalisierung, Routing und wirksame Optionen, ohne die Konvertierung wirklich auszuführen. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>) --dry-run --json` | Prüft Erkennung, Normalisierung, Routing und wirksame Optionen, ohne die Konvertierung wirklich auszuführen. |
 | `schema convert` | Exportiert den maschinenlesbaren Vertrag, Standardwerte, Bedingungen und die kanonischen Schlüssel von `convert`. |
 | `validate <file> --check ...` | Dokumentprüfung (`typo/punct/symbol/sensitive/all/none`). Verwenden Sie `--json` für die CLI-Hülle; `--report` ist ein optionaler Bericht-Dateipfad. |
 | `inspect <file> [--json]` | Dateikategorie/-format, empfohlene Aktionen und Warnungen bei Erweiterungs-/Inhaltsabweichungen anzeigen. |
@@ -272,12 +272,12 @@ Die folgende Tabelle zeigt nur haeufige Befehle. Fuer die vollstaendige Befehlsf
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | DocWen über die getrennte lokale GUI-Steuerung starten oder aktivieren und optional eine absolute Datei öffnen. |
 | `--template <id>` | Exakte kanonische Ressourcen-ID aus `resources list templates`; Anzeigenamen, Dateinamen und Pfade werden abgelehnt. DOCX-IDs gelten für `docx/doc/odt/rtf/wps/pdf`, XLSX-IDs für `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Bildextraktion und OCR für `convert --to md`. |
-| `--image-mode file|base64|embed|omit` | Steuert, wie Bilder beim Markdown-Export ausgegeben werden. |
-| `--ocr-placement image_md|main_md` | Legt fest, ob OCR-Text in begleitendes Bild-Markdown oder in die Haupt-Markdown-Datei geschrieben wird. |
-| `--heading-merge-mode punct_required|always|never` | Steuert die Strategie für die Zusammenführung von Überschrift + Text bei `convert --to docx`. |
+| `--image-mode file\|base64\|embed\|omit` | Steuert, wie Bilder beim Markdown-Export ausgegeben werden. |
+| `--ocr-placement image_md\|main_md` | Legt fest, ob OCR-Text in begleitendes Bild-Markdown oder in die Haupt-Markdown-Datei geschrieben wird. |
+| `--heading-merge-mode punct_required\|always\|never` | Steuert die Strategie für die Zusammenführung von Überschrift + Text bei `convert --to docx`. |
 | `--optimization <id>` | Aktiviert explizit ein Optimierungsprofil (siehe `resources list optimizations`). |
-| `batch convert|validate ... --jobs <n> [--continue-on-error]` | Steuerung der Stapelverarbeitung. |
-| `--json` / `--quiet` / `--timing` | Strukturierte Ausgabe, reduzierte Logs und Zeitdaten für Skripte oder Plugins. |
+| `batch convert\|validate ... --jobs <n> [--continue-on-error]` | Steuerung der Stapelverarbeitung. |
+| `--json` / `--quiet` / `--timing` | JSON ausgeben, Protokolle reduzieren oder die Laufzeit in Terminalskripten anzeigen. |
 
 Im Modus `punct_required` lautet die genaue Standardliste `。：！？.:!?`. Sie kann in den Formatierungseinstellungen bearbeitet werden; ein leerer Wert deaktiviert die Zusammenführung in diesem Modus. Komma, Semikolon, Aufzählungskomma, Gedankenstrich und Auslassungspunkte sind standardmäßig ausgeschlossen.
 
@@ -320,7 +320,7 @@ Die obigen zwei Zeilen werden zu einem Absatz zusammengeführt, wobei "I. Arbeit
 **Hinweis**:
 - Zwischen Untertitel und Fließtext darf keine Leerzeile stehen; andernfalls werden sie als separate Absätze erkannt.
 - Standardmäßig (Modus „Satzzeichen erforderlich“): Wenn der Untertitel nicht mit einem abschließenden Satzzeichen endet, wird er auch ohne Leerzeile nicht mit der nächsten Zeile zusammengeführt.
-- Sie können dies in Einstellungen → Formatierung → „Markdown zu Dokument“ → „Heading + body merge mode“ ändern.
+- Ändern Sie den Modus und die auslösenden Zeichen unter **Einstellungen → Texteingabe → Markdown zu Dokument — Formatverarbeitung → Modus zum Zusammenführen von Überschrift und Text**.
 
 ### Bidirektionale Trennzeichenkonvertierung
 
@@ -383,7 +383,7 @@ Unterstützt klickbare Links bei Markdown -> DOCX:
 ### Word zu Markdown
 
 1.  Ziehen Sie die `.docx`-Datei in das Programmfenster.
-2.  Das Programm analysiert automatisch die Dokumentstruktur.
+2. Wählen Sie die Exportoptionen und klicken Sie auf **Markdown Export**.
 3.  Generiert eine `.md`-Datei mit YAML-Metadaten.
 
 **Unterstützte Formate**:
@@ -396,25 +396,25 @@ Unterstützt klickbare Links bei Markdown -> DOCX:
 | Option | Beschreibung |
 | :--- | :--- |
 | **Bilder extrahieren** | Wenn aktiviert, werden Bilder im Dokument in den Ausgabeordner extrahiert und Bildlinks in die MD-Datei eingefügt. |
-| **Bild-OCR** | Wenn aktiviert, wird OCR auf Bildern durchgeführt und eine Bild-.md-Datei erstellt (mit erkanntem Text). |
-| **Erweiterte Feldoptimierung** | Wenn aktiviert, werden umfangreichere strukturierte Metadaten extrahiert; andernfalls wird der vereinfachte Modus nur mit Titel und Untertitel verwendet. |
-| **Untertitelnummern bereinigen** | Wenn aktiviert, werden Nummern vor Untertiteln entfernt (z.B. "一、", "（一）", "1." usw.) und in reinen Titeltext konvertiert. |
-| **Untertitelnummern hinzufügen** | Wenn aktiviert, werden Nummern basierend auf Überschriftenebenen automatisch hinzugefügt (Nummerierungsschema kann in den Einstellungen konfiguriert werden). |
+| **OCR** | Text in Bildern erkennen. Je nach OCR-Ausgabeeinstellung wird er in einer Markdown-Datei pro Bild oder in der Hauptdatei gespeichert. |
+| **Optimierung** | Wenden Sie eine Optimierung für den gewählten Dokumenttyp an, etwa zum Extrahieren von Feldern aus chinesischen Amtsdokumenten. Ohne diese Option wird die Standardkonvertierung verwendet. |
+| **Nr. entfernen** | Wenn aktiviert, werden Nummern vor Untertiteln entfernt (z.B. "一、", "（一）", "1." usw.) und in reinen Titeltext konvertiert. |
+| **Nr. hinzufügen** | Wenn aktiviert, werden Nummern basierend auf Überschriftenebenen automatisch hinzugefügt (Nummerierungsschema kann in den Einstellungen konfiguriert werden). |
 
-Hinweis: DOCX -> MD stellt jetzt auch mehrstufige Nummerierungen wieder her, die in numbering.xml über Absatzstile (pStyle) verknüpft sind. Dadurch bleiben Überschriftspräfixe aus Word/WPS-Mehrstufenlisten wie „一、“, „（一）“, „1．“, „（1）“ und „①“ sowohl im vereinfachten Modus als auch im erweiterten Feldmodus erhalten; die Überschriftenebene wird auch mit aktivierter Option „Untertitelnummern bereinigen“ korrekt erkannt.
+Überschriftsnummern aus mehrstufigen Word/WPS-Listen bleiben beim Export erhalten. Mit **Nr. entfernen** entfernen Sie die Nummern, ohne die Überschriftenebenen zu ändern.
 
 ### Markdown zu Word
 
 1.  Bereiten Sie eine `.md`-Datei mit einem YAML-Header vor.
 2.  Ziehen Sie sie in das Programmfenster und wählen Sie die entsprechende Word-Vorlage.
-3.  Das Programm füllt die Vorlage automatisch und generiert das Dokument.
+3. Wählen Sie DOCX als Zielformat und klicken Sie auf **Generieren DOCX**, um die Vorlage auszufüllen und das Dokument zu speichern.
 
 **Konvertierungsoptionen**:
 
 | Option | Beschreibung |
 | :--- | :--- |
-| **Untertitelnummern bereinigen** | Wenn aktiviert, werden Nummern vor Untertiteln entfernt. |
-| **Untertitelnummern hinzufügen** | Wenn aktiviert, werden Nummern basierend auf Überschriftenebenen automatisch hinzugefügt. |
+| **Nr. entfernen** | Wenn aktiviert, werden Nummern vor Untertiteln entfernt. |
+| **Nr. hinzufügen** | Wenn aktiviert, werden Nummern basierend auf Überschriftenebenen automatisch hinzugefügt. |
 
 **Hinweis**: Wenn es Absätze gibt, in denen Untertitel und Fließtext im Dokument gemischt sind, müssen strenge Zeilenumbrüche in der MD-Datei eingehalten werden (siehe "Zeilenumbrüche und Absätze" oben).
 
@@ -468,7 +468,7 @@ Der Konverter erkennt und verarbeitet Vorlagenstile automatisch während der Mar
 
 ### Tabellendateiverarbeitung
 
-1.  **Excel/CSV zu Markdown**: Ziehen Sie `.xlsx` oder `.csv` Dateien, um sie automatisch in Markdown-Tabellen zu konvertieren.
+1. **Excel/CSV zu Markdown**: Fügen Sie eine `.xlsx`- oder `.csv`-Datei hinzu und klicken Sie auf **Markdown Export**.
 2.  **Markdown zu Excel**: Markdown-Tabellen können nach XLSX exportiert werden. XLSX-Vorlagen unterstützen YAML-Felder, vertikale/horizontale Tabellenspalten-Platzhalter, Bildplatzhalter sowie verbundene und geschützte Zellen.
 
 **Unterstützte Formate**:
@@ -595,28 +595,25 @@ Ein begleitendes Obsidian-Plugin wird separat veröffentlicht und arbeitet mit d
 
 -   **🚀 Ein-Klick-Start** - Seitenleistensymbol zum schnellen Starten des Konverters.
 -   **📂 Automatische Übergabe** - Übergibt automatisch den aktuell geöffneten Dateipfad.
--   **🔄 Einzelinstanzverwaltung** - Sendet Datei automatisch, wenn das Programm bereits läuft, kein Neustart erforderlich.
--   **🔒 Sichere lokale Steuerung** - Verwendet strukturierte `status`-, `open`- und `activate`-Anfragen ohne Prozessnamensuche oder Befehls-/Statusdateien.
+-   **🔄 Geöffnetes Fenster weiterverwenden** - Öffnet eine weitere Datei im laufenden Konverter, ohne ihn neu zu starten.
 
-### Funktionsprinzip
+### Bedienung
 
-DocWen Core verwendet für die lokale Steuerung unter Windows eine Named Pipe und unter Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur die Einzelinstanz-Eigentümerschaft her; Steuerbefehle werden nicht über Dateien transportiert. Dies beschreibt nur die Core-Grenze. DocWen Assistant 3.1 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
+DocWen Assistant 3.3 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
 
-1.  **Erster Klick** → Konverter starten und aktuelle Datei übergeben.
-2.  **Klick erneut (Mit Datei)** → Durch neue Datei ersetzen (Einzeldateimodus).
-3.  **Klick erneut (Keine Datei)** → Konverterfenster aktivieren.
+1.  **Erster Klick** → Konverter starten und die aktuelle Datei öffnen.
+2.  **Erneuter Klick mit geöffneter Datei** → Die bisherige Eingabedatei durch diese Datei ersetzen (Einzeldateimodus).
+3.  **Erneuter Klick ohne geöffnete Datei** → Das Konverterfenster in den Vordergrund holen.
 
 ### Installation
 
-DocWen Assistant 3.1 erfordert DocWen 0.13.0 oder neuer. Inhaltsoperationen verwenden Machine Protocol v2 und Artifact Bundle v3; Starten/Öffnen der Desktop-App nutzt die separate lokale GUI-Steuerung. Die
-Quellversion belegt keine Veröffentlichung; installieren Sie nur einen numerischen Release, der ausdrücklich einen
-kompatiblen veröffentlichten DocWen-Release nennt.
+Installieren Sie zuerst eine kompatible DocWen-Version und anschließend [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant). Assistant 3.3 erfordert DocWen 0.17.0 oder neuer; das Plugin installiert DocWen nicht mit. Prüfen Sie die Versionshinweise und laden Sie die passenden veröffentlichten Installationsdateien herunter.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 3.0 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v3-Vertrag. Die Quellversion
-belegt keine Veröffentlichung; folgen Sie der numerischen Release-Seite und installieren Sie erst, nachdem das
-unveränderliche Release-Gate erfolgreich war.
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) ermöglicht OpenClaw, mit DocWen lokale Dateien zu konvertieren und zu prüfen. Installieren Sie DocWen separat und wählen Sie eine Plugin-Version, deren Versionshinweise Ihre DocWen-Version als kompatibel nennen. Laden Sie die Dateien von der jeweiligen Release-Seite herunter; eine Versionsnummer im Quellcode bedeutet nicht, dass diese Version bereits zum Download verfügbar ist.
+
+Für die Entwicklung von Integrationen mit Plugin 3.0 siehe [Machine Protocol v2 und Artifact Bundle v3](../specs/machine-protocol-v2.md).
 
 ## ❓ Häufig gestellte Fragen (FAQ)
 
@@ -661,11 +658,11 @@ Dies ist ein erwartetes Verhalten. Das Programm liest die **zwischengespeicherte
 
 ## 🔒 Sicherheitsfunktionen
 
--   **Vollstaendig lokaler Betrieb**: Die Verarbeitung laeuft standardmaessig lokal und haengt nicht von Onlinediensten ab.
--   **Abfluss-Schutz für Abhängigkeiten**: Unterstützte GUI/CLI-Einstiege aktivieren für die gesamte Lebensdauer des Python-Hauptprozesses einen CPython-Audit-Guard. Er blockiert sämtliche DNS-/Namensauflösung sowie AF_INET/AF_INET6-Operationen `bind`, `connect`, `connect_ex`, `sendto` und `sendmsg` und lässt Windows Named Pipes sowie Unix-Domain-Sockets zu.
--   **Klare Grenze**: Separat gestartete Prozesse, einschließlich Office/WPS/LibreOffice und des Office-Helfers, werden nicht verwaltet. Der Guard schützt vor versehentlichem Netzwerkzugriff von Abhängigkeiten und ist keine Betriebssystem-Sandbox.
--   **Kein Daten-Upload**: Benutzerdateien werden standardmaessig nicht aktiv an externe Server uebertragen.
--   **Strikter Sicherheitsmodus**: Standardmäßig aktiviert; das Programm beendet sich, wenn die Kern-Sicherheitsprüfungen fehlschlagen. Siehe [Troubleshooting](../maintenance/troubleshooting.md).
+DocWen verarbeitet Dateien auf Ihrem Computer und bietet weder Datei-Uploads noch Telemetrie, Online-Downloads oder einen Netzwerkdienst. Es beschränkt den Netzwerkzugriff seiner eigenen Python-Komponenten. Kann dieser Schutz nicht aktiviert werden, wird DocWen nicht weiter ausgeführt.
+
+Separat gestartete Programme wie Word/Office, WPS und LibreOffice, einschließlich ihrer Hilfsprozesse, folgen ihren eigenen und den systemweiten Netzwerkeinstellungen. Sie fallen nicht unter diese Beschränkung. Prüfen Sie bei sensiblen Dateien daher auch deren Einstellungen.
+
+Die [Architekturbeschreibung](../architecture.md) erklärt die Umsetzung und Grenzen des Schutzes. Bei Start- oder Konvertierungsfehlern hilft die [Fehlerbehebung](../maintenance/troubleshooting.md).
 
 ## 📜 Lizenz
 

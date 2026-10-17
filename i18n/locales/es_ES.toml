@@ -290,6 +290,7 @@ pt_BR = "Portugués (Brasil)"
 ru_RU = "Ruso"
 vi_VN = "Vietnamita"
 zh_TW = "Chino (tradicional)"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]
@@ -798,7 +799,7 @@ system_desc = "Activar o desactivar el registro y establecer su nivel."
 enable_logging_label = "Activar sistema de registros"
 enable_logging_tooltip = "Activa o desactiva todo el sistema de registros.\nSi se desactiva, la aplicación no guardará información de registro.\nSe recomienda mantenerlo activado en producción."
 log_level_label = "Nivel de registro:"
-log_level_tooltip = "Ajusta el nivel de detalle.\nDe menor a mayor: debug > info > warning > error > critical\nNiveles más altos registran menos información."
+log_level_tooltip = "Elige cuánto detalle registrar.\nDe mayor a menor detalle: DEBUG, INFO, WARNING, ERROR, CRITICAL."
 
 # 文件输出区域
 file_section = "Salida a archivo"
@@ -1285,22 +1286,23 @@ level_format_config = "Configuración de formato por nivel"
 realtime_preview = "Vista previa en tiempo real"
 format_help = "📖 Ayuda de formato"
 format_help_title = "Ayuda de marcadores de formato"
-format_help_text = """Uso de marcadores de formato
+format_help_text = """Marcadores del formato de numeración
 
-占位符格式：{级别.样式}
+Sintaxis: {level.style}
+level es el nivel del encabezado (1–9); style es un nombre de la lista siguiente.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+Estilos disponibles:
+  chinese_lower  - Números chinos (一、二、三)
+  chinese_upper  - Números chinos formales (壹、贰、叁)
+  arabic_half    - Dígitos decimales (1, 2, 3)
+  arabic_full    - Dígitos decimales de ancho completo (１、２、３)
+  arabic_circled - Números dentro de círculos (①②③)
+  letter_upper   - Letras mayúsculas (A, B, C)
+  letter_lower   - Letras minúsculas (a, b, c)
+  roman_upper    - Números romanos en mayúsculas (I, II, III)
+  roman_lower    - Números romanos en minúsculas (i, ii, iii)
 
-示例：
+Ejemplos:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

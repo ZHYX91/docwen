@@ -25,6 +25,7 @@ SHIPPED_STYLE_LOCALES: tuple[str, ...] = (
     "ru_RU",
     "vi_VN",
     "zh_TW",
+    "ar_SA",
 )
 
 

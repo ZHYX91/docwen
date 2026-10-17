@@ -39,6 +39,7 @@ def test_general_language_codes_equal_packaged_locale_stems(qapp, tmp_path: Path
 
     assert len(codes) == len(set(codes))
     assert set(codes) == set(PACKAGED_LOCALES)
+    assert "ar_SA" in codes
 
 
 @pytest.mark.parametrize("active_locale", PACKAGED_LOCALES)

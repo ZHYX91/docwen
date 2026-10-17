@@ -241,6 +241,8 @@ def _stop_gui_control_and_release_instance_lock(
 
 
 def _main_with_guard_active(argv: list[str] | None = None) -> int:
+    from PySide6.QtCore import Qt
+
     from docwen_application.controller import ApplicationController
     from docwen_bundle.config_port import ConfigPortAdapter
     from docwen_bundle.gui_bootstrap import bootstrap_gui
@@ -273,7 +275,12 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
     config_loader = ConfigLoader()
     config_port = ConfigPortAdapter(config_loader)
     configured_locale = config_port.get("gui.language.locale", "zh_CN")
-    set_locale(configured_locale if isinstance(configured_locale, str) else "zh_CN")
+    active_locale = configured_locale if isinstance(configured_locale, str) else "zh_CN"
+    set_locale(active_locale)
+    # Changing the interface language already requires a restart; apply RTL at startup.
+    app.setLayoutDirection(
+        Qt.LayoutDirection.RightToLeft if active_locale == "ar_SA" else Qt.LayoutDirection.LeftToRight
+    )
     runtime_port = create_runtime_port(
         config_loader=config_loader,
         event_callback=_make_event_callback(task_event_bridge.enqueue),

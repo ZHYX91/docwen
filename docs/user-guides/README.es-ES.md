@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
 
 DocWen es una herramienta local de conversión de documentos y tablas para Word, Markdown, Excel y otros formatos de oficina. Está pensada para flujos de trabajo fiables sin conexión y mantiene el procesamiento de los documentos en el equipo del usuario.
 
@@ -20,7 +20,7 @@ Este software se diseñó originalmente para resolver problemas comunes en entor
 ## ✨ Funciones principales
 
 - **📄 Conversión de documentos** - Word ↔ Markdown, con conversión de fórmulas, mapeo de separadores (---/***/___) a saltos de página/sección/líneas horizontales y restauración de marcadores explícitos `<` / `^` de tablas Markdown como combinaciones rectangulares en Word. DOCX/DOC/WPS/RTF/ODT.
-- **📊 Conversión de hojas de cálculo** - Excel ↔ Markdown. XLSX/XLS/ET/ODS/CSV/TSV. Incluye estrategias configurables de exportación de celdas combinadas (`fill / empty / marker`) y herramientas de resumen de tablas. Las plantillas Markdown→XLSX vuelven a admitir campos YAML y placeholders verticales y horizontales de columna; la restauración completa de plantillas Excel, imágenes y combinaciones sigue siendo un objetivo de paridad.
+- **📊 Conversión de hojas de cálculo** – Excel ↔ Markdown para XLSX/XLS/ET/ODS/CSV/TSV. Al exportar celdas combinadas puedes repetir su contenido, dejar huecos o conservar las combinaciones con marcadores. Las plantillas XLSX admiten campos YAML, filas y columnas de tablas, imágenes y celdas combinadas. También puedes combinar varias tablas.
 - **📑 PDF y archivos de maquetación** - PDF/XPS/OFD → Markdown o DOCX. Soporta unir/dividir PDF.
 - **🖼️ Imágenes** - Conversión y compresión JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC.
 - **📥 Importación de otros formatos** - Soporta la conversión unidireccional de HTML/MHTML/ENEX/EPUB/PPTX/PPT a Markdown.
@@ -120,10 +120,10 @@ x64. Estos requisitos no amplían ese compromiso a otras distribuciones o arquit
     - Inicia el programa.
     - Arrastra el archivo `.md` a la ventana.
     - Selecciona una plantilla.
-    - Haz clic en "Convert to DOCX".
+    - Haz clic en "Generar DOCX".
 
 3.  **Obtén el resultado**:
-    - Se generará un documento Word estandarizado en el mismo directorio.
+    - El documento Word se guarda en una carpeta de resultados dentro de la ubicación de salida configurada. Puedes abrirla desde la barra de estado.
 
 **Consejo**: Puedes usar los archivos de ejemplo del directorio `samples/` para probar rápidamente las funciones.
 
@@ -149,7 +149,7 @@ El programa utiliza un **diseño adaptativo de tres columnas**:
     -   Método 2: Pulsa "Add" en la zona de arrastre para seleccionar archivos.
 3.  **Selecciona plantilla** (si es necesario): El panel derecho se expande; selecciona una plantilla adecuada.
 4.  **Configura opciones**: Marca las opciones necesarias en el panel de operaciones.
-5.  **Ejecuta**: Pulsa el botón correspondiente (p. ej., "Export MD", "Convert to DOCX", etc.).
+5.  **Ejecuta**: Pulsa el botón correspondiente (p. ej., "Export MD", "Generar DOCX", etc.).
 6.  **Ver resultado**: La barra de estado muestra el progreso y el resultado; pulsa la acción «Abrir salida» a la derecha para abrir la ubicación de salida.
 
 ### Modo de archivo único vs modo por lotes
@@ -193,11 +193,11 @@ La configuración está organizada en pestañas: **General**, **Texto**, **Corre
 
 ## 🔧 Uso de la CLI
 
-Además de la interfaz gráfica, DocWen ofrece una interfaz de línea de comandos (CLI) para automatización, procesamiento por lotes e integraciones externas.
+La línea de comandos (CLI) permite revisar y convertir archivos desde el terminal y automatizar tareas locales. Para integrar DocWen con otras aplicaciones, usa la interfaz Machine Protocol descrita a continuación.
 
 ### Flujo recomendado para automatización
 
-Para scripts, agentes o plugins, se recomienda este orden:
+Para los scripts de automatización local, puedes revisar y ejecutar una conversión en este orden:
 
 1. `inspect <file> [--json]`: detectar primero la categoría real del archivo, el formato y las acciones disponibles.
 2. `resources list formats --json`: leer las rutas realmente disponibles en DocWen y sus requisitos de dependencias.
@@ -205,7 +205,7 @@ Para scripts, agentes o plugins, se recomienda este orden:
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: previsualizar detección, normalización y enrutamiento sin escribir archivos.
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: ejecutar la conversión real después de validar la previsualización.
 
-Las integraciones externas de contenido usan `serve --stdio` con Machine Protocol v2: descubren capacidades, planifican una tarea y después la ejecutan. La salida CLI `--json` es una presentación para terminal, no el límite de compatibilidad entre productos. El control local de escritorio usa por separado la interfaz estable `gui open|activate|status`.
+Las aplicaciones y los complementos se conectan mediante `serve --stdio` con Machine Protocol v2 para consultar las operaciones, planificar tareas y ejecutarlas. Esta es la interfaz estable para integraciones; CLI `--json` está pensado para scripts de terminal. Usa `gui open|activate|status` para abrir archivos en la aplicación de escritorio o traer su ventana al frente.
 
 ### Ejemplos comunes
 
@@ -255,9 +255,9 @@ La tabla siguiente solo enumera los comandos mas habituales. Para la superficie 
 
 | Comando / opción | Descripción |
 | --- | --- |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Punto de entrada unificado para conversiones. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | Punto de entrada unificado para conversiones. |
 | `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Revisa el DOCX generado tras Markdown→DOCX; `--check` en `convert` requiere `--proofread`. Sin `--check` se usan los valores predeterminados configurados. |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Previsualiza detección, normalización, enrutamiento y opciones efectivas sin ejecutar la conversión real. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>) --dry-run --json` | Previsualiza detección, normalización, enrutamiento y opciones efectivas sin ejecutar la conversión real. |
 | `schema convert` | Exporta el contrato legible por máquina, los valores por defecto, las condiciones y las claves canónicas de `convert`. |
 | `validate <file> --check ...` | Revisión documental (`typo/punct/symbol/sensitive/all/none`). Use `--json` para la envoltura de la CLI; `--report` es una ruta de archivo de informe opcional. |
 | `inspect <file> [--json]` | Inspecciona categoría/formato del archivo, acciones recomendadas y advertencias por desajuste entre extensión y contenido. |
@@ -269,12 +269,12 @@ La tabla siguiente solo enumera los comandos mas habituales. Para la superficie 
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Iniciar o activar DocWen mediante el control GUI local independiente y, opcionalmente, abrir un archivo absoluto. |
 | `--template <id>` | ID canónico exacto devuelto por `resources list templates`; se rechazan nombres visibles, nombres de archivo y rutas. Los ID DOCX se aplican a `docx/doc/odt/rtf/wps/pdf` y los ID XLSX a `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Extracción de imágenes y OCR para `convert --to md`. |
-| `--image-mode file|base64|embed|omit` | Controla cómo se emiten las imágenes durante la exportación a Markdown. |
-| `--ocr-placement image_md|main_md` | Controla si el texto OCR se escribe en el Markdown auxiliar de la imagen o en el Markdown principal. |
-| `--heading-merge-mode punct_required|always|never` | Controla la estrategia de combinación de encabezado + cuerpo para `convert --to docx`. |
+| `--image-mode file\|base64\|embed\|omit` | Controla cómo se emiten las imágenes durante la exportación a Markdown. |
+| `--ocr-placement image_md\|main_md` | Controla si el texto OCR se escribe en el Markdown auxiliar de la imagen o en el Markdown principal. |
+| `--heading-merge-mode punct_required\|always\|never` | Controla la estrategia de combinación de encabezado + cuerpo para `convert --to docx`. |
 | `--optimization <id>` | Activa explícitamente un perfil de optimización (vea `resources list optimizations`). |
-| `batch convert|validate ... --jobs <n> [--continue-on-error]` | Controles de procesamiento por lotes. |
-| `--json` / `--quiet` / `--timing` | Salida estructurada, menos logs y datos de tiempo para scripts o plugins. |
+| `batch convert\|validate ... --jobs <n> [--continue-on-error]` | Controles de procesamiento por lotes. |
+| `--json` / `--quiet` / `--timing` | Muestra JSON, reduce los registros o incluye el tiempo empleado en scripts de terminal. |
 
 En el modo `punct_required`, la lista predeterminada exacta es `。：！？.:!?`. Puede editarse en la configuración de formato; un valor vacío desactiva la combinación en este modo. Las comas, los puntos y coma, las comas de enumeración, los guiones y los puntos suspensivos se excluyen de forma predeterminada.
 
@@ -317,7 +317,7 @@ Las dos líneas anteriores se fusionarán en un solo párrafo: "I. Work Requirem
 **Nota**:
 - No puede haber una línea vacía entre el subencabezado y el cuerpo; de lo contrario, se reconocerán como párrafos separados.
 - De forma predeterminada (modo "Se requiere puntuación"), si el subencabezado no termina con un signo de puntuación final, no se fusionará con la línea siguiente aunque no haya línea en blanco.
-- Puedes cambiarlo en Configuración → Formato → "MarkDown a documento" → "Heading + body merge mode".
+- Cambia el modo y los signos que activan la unión en **Configuración → Texto de entrada → Markdown → Documento — Procesamiento de formato → Modo de fusion de titulo y cuerpo**.
 
 ### Conversión bidireccional de separadores
 
@@ -380,7 +380,7 @@ Soporta enlaces clicables en Markdown -> DOCX:
 ### Word a Markdown
 
 1.  Arrastra el archivo `.docx` a la ventana del programa.
-2.  El programa analiza automáticamente la estructura del documento.
+2. Elige las opciones de exportación y haz clic en **Exportar Markdown**.
 3.  Genera un archivo `.md` que incluye metadatos YAML.
 
 **Formatos compatibles**:
@@ -393,25 +393,25 @@ Soporta enlaces clicables en Markdown -> DOCX:
 | Opción | Descripción |
 | :--- | :--- |
 | **Extraer imágenes** | Si se activa, las imágenes se extraen a la carpeta de salida y se insertan enlaces en el archivo MD. |
-| **OCR de imágenes** | Si se activa, realiza OCR sobre imágenes y crea un archivo `.md` de imagen (con el texto reconocido). |
-| **Optimización avanzada de campos** | Si se activa, extrae metadatos estructurados más completos; de lo contrario, utiliza el modo simplificado con solo título y subtítulo. |
-| **Limpiar números de subtítulos** | Si se activa, elimina números antes de subtítulos (p. ej., "一、", "（一）", "1.", etc.). |
-| **Añadir números de subtítulos** | Si se activa, añade números automáticamente según los niveles de encabezado (configurable). |
+| **OCR de imagen** | Reconoce el texto de las imágenes. Según el ajuste de salida de OCR, lo guarda en un archivo Markdown por imagen o en el archivo Markdown principal. |
+| **Optimizar según tipo de documento** | Aplica una optimización para el tipo de documento elegido, como extraer campos de documentos oficiales chinos. Si se desactiva, se usa la conversión estándar. |
+| **Eliminar numeración original** | Si se activa, elimina números antes de subtítulos (p. ej., "一、", "（一）", "1.", etc.). |
+| **Añadir nueva numeración** | Si se activa, añade números automáticamente según los niveles de encabezado (configurable). |
 
-Nota: DOCX -> MD ahora restaura también la numeración multinivel vinculada en numbering.xml mediante estilos de párrafo (pStyle). Así, los prefijos de encabezado creados con listas multinivel de Word/WPS como "一、", "（一）", "1．", "（1）" y "①" se conservan tanto en el modo simplificado como en el modo avanzado de campos; el nivel del encabezado sigue detectándose correctamente cuando está activada la opción "Limpiar números de subtítulos".
+Los números de encabezado de listas multinivel de Word/WPS se conservan al exportar. Activa **Eliminar numeración original** para quitarlos sin cambiar los niveles de encabezado.
 
 ### Markdown a Word
 
 1.  Prepara un archivo `.md` con cabecera YAML.
 2.  Arrástralo a la ventana y selecciona la plantilla Word correspondiente.
-3.  El programa rellena la plantilla y genera el documento.
+3. Selecciona DOCX como formato de destino y haz clic en **Generar DOCX** para rellenar la plantilla y guardar el documento.
 
 **Opciones de conversión**:
 
 | Opción | Descripción |
 | :--- | :--- |
-| **Limpiar números de subtítulos** | Si se activa, elimina números antes de subtítulos. |
-| **Añadir números de subtítulos** | Si se activa, añade números automáticamente según el nivel de encabezado. |
+| **Eliminar numeración original** | Si se activa, elimina números antes de subtítulos. |
+| **Añadir nueva numeración** | Si se activa, añade números automáticamente según el nivel de encabezado. |
 
 **Nota**: Si hay párrafos donde se mezclan subtítulos y cuerpo, deben mantenerse estrictamente los saltos de línea en el archivo MD (consulta "Saltos de línea y párrafos" arriba).
 
@@ -463,7 +463,7 @@ El convertidor detecta y procesa automáticamente los estilos de la plantilla du
 
 ### Procesamiento de archivos de hoja de cálculo
 
-1.  **Excel/CSV a Markdown**: Arrastra archivos `.xlsx` o `.csv` para convertirlos automáticamente a tablas Markdown.
+1. **Excel/CSV a Markdown**: Añade un archivo `.xlsx` o `.csv` y haz clic en **Exportar Markdown**.
 2.  **Markdown a Excel**: Las tablas Markdown pueden exportarse a XLSX. Las plantillas admiten campos YAML, placeholders de columna e imagen y celdas combinadas o protegidas.
 
 **Formatos compatibles**:
@@ -592,28 +592,25 @@ Hay un plugin complementario de Obsidian publicado por separado que funciona jun
 
 -   **🚀 Inicio con un clic** - Icono lateral para iniciar rápidamente el convertidor.
 -   **📂 Transferencia automática** - Pasa automáticamente la ruta del archivo abierto.
--   **🔄 Gestión de instancia única** - Si ya está en ejecución, envía el archivo sin reiniciar.
--   **🔒 Control local seguro** - Usa solicitudes estructuradas `status`, `open` y `activate` sin buscar procesos por nombre ni usar archivos de comandos o estado.
+-   **🔄 Reutiliza la ventana abierta** - Abre otro archivo en el convertidor sin reiniciarlo.
 
-### Principio de funcionamiento
+### Cómo usar el plugin
 
-DocWen Core usa una canalización con nombre para el control local en Windows y un socket AF_UNIX en Linux/macOS. El bloqueo de archivo solo establece la propiedad de instancia única; los comandos de control no se transportan mediante archivos. Esto describe únicamente el límite de Core. DocWen Assistant 3.1 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
+DocWen Assistant 3.3 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
 
-1.  **Primer clic** → Inicia el convertidor y pasa el archivo actual.
-2.  **Clic de nuevo (con archivo)** → Sustituye el archivo (modo de archivo único).
-3.  **Clic de nuevo (sin archivo)** → Activa la ventana del convertidor.
+1.  **Primer clic** → Inicia el convertidor y abre el archivo actual.
+2.  **Otro clic con un archivo abierto** → Sustituye el archivo de entrada actual por ese archivo (modo de archivo único).
+3.  **Otro clic sin un archivo abierto** → Trae la ventana del convertidor al frente.
 
 ### Instalación
 
-DocWen Assistant 3.1 requiere DocWen 0.13.0 o posterior. Las operaciones de contenido usan Machine Protocol v2 y Artifact Bundle v3; iniciar/abrir la aplicación de escritorio usa el control GUI local independiente. La versión del código
-fuente no demuestra que esté publicada; instala solo una versión numérica que identifique explícitamente una versión
-publicada y compatible de DocWen.
+Instala primero una versión compatible de DocWen y después [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant). Assistant 3.3 requiere DocWen 0.17.0 o posterior; el plugin no instala el programa principal. Consulta las notas de la versión para elegir versiones compatibles y descarga los archivos de instalación publicados.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 3.0 usa DocWen Machine Protocol v2 y el único contrato Artifact Bundle v3. La versión del código fuente no
-demuestra que esté publicada; consulta la página de la versión numérica e instala solo después de que supere su
-control de publicación inmutable.
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) permite que OpenClaw use DocWen en tu equipo para convertir y revisar archivos. Instala DocWen por separado y elige una versión del plugin que indique con qué versiones de DocWen es compatible. Descarga los archivos de la página de versiones publicadas; que aparezca un número de versión en el código fuente no significa que esa versión ya esté disponible para descargar.
+
+Para desarrollar integraciones con el plugin 3.0, consulta [Machine Protocol v2 y Artifact Bundle v3](../specs/machine-protocol-v2.md).
 
 ## ❓ Preguntas frecuentes
 
@@ -656,13 +653,13 @@ Esto es un comportamiento esperado. El programa lee los **valores en caché** de
 3.  Guarda el archivo.
 4.  Convierte de nuevo.
 
-## 🔒 Funcionalidades de seguridad
+## 🔒 Funciones de seguridad
 
--   **Funcionamiento completamente local**: El procesamiento se realiza localmente por defecto y no depende de servicios en linea.
--   **Protección de salida de dependencias**: Las entradas GUI/CLI compatibles activan un guardián de auditoría CPython durante toda la vida del proceso Python principal. Bloquea toda resolución DNS/de nombres y las operaciones AF_INET/AF_INET6 `bind`, `connect`, `connect_ex`, `sendto` y `sendmsg`, conservando canalizaciones con nombre de Windows y sockets de dominio Unix.
--   **Límite explícito**: Los procesos iniciados por separado, incluidos Office/WPS/LibreOffice y el ayudante de Office, no se administran. Es una defensa ante conexiones accidentales de dependencias, no un sandbox del sistema operativo.
--   **Sin subida de datos**: Por defecto, los archivos del usuario no se suben de forma activa a servidores externos.
--   **Modo de seguridad estricto**: activado por defecto; la aplicacion se cierra si fallan las comprobaciones de seguridad centrales. Ver [Troubleshooting](../maintenance/troubleshooting.md).
+DocWen procesa los archivos en tu equipo y no ofrece subida de archivos, telemetría, descargas en línea ni un servicio de red. Restringe el acceso a la red de sus propios componentes Python. Si no puede activar esta protección, DocWen no continúa ejecutándose.
+
+Los programas iniciados por separado, como Word/Office, WPS y LibreOffice, incluidos sus procesos auxiliares, siguen su propia configuración de red y la del sistema. Esta restricción no los cubre. Revisa también su configuración al trabajar con archivos sensibles.
+
+La [documentación de arquitectura](../architecture.md) explica cómo funciona esta protección y sus límites. Si el programa no se inicia o una conversión falla, consulta la [solución de problemas](../maintenance/troubleshooting.md).
 
 ## 📜 Licencia
 
