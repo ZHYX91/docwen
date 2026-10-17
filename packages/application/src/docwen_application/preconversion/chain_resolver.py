@@ -57,6 +57,14 @@ def resolve_chain(
     if source_format == target_format:
         return []
 
+    # Compose non-PDF layout normalization before the existing PDF-only action.
+    if (
+        source_format in {"ofd", "xps"}
+        and target_format == "pdf"
+        and action_name in {"merge_pdfs", "split_pdf"}
+    ):
+        return ["pdf", "pdf"]
+
     for _category, (hub, sources) in _CATEGORY_RULES.items():
         if source_format in sources or source_format == hub:
             if source_format == hub:
