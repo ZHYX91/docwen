@@ -37,6 +37,7 @@ from docwen_core.models.semantic_document import (
     SemanticReference,
 )
 from docwen_core.text.heading_merge import HALFWIDTH_HEADING_MERGE_PUNCTUATION
+from docwen_plugin_markdown.html_text import project_html_block_text
 from docwen_plugin_markdown.renderer_inlines import (
     extract_text_content,
     project_character_style_properties,
@@ -1181,8 +1182,28 @@ class MdToDocxRenderer:
         return self._hr_actions.get(marker, "horizontal_rule_1")
 
     def _handle_block_html(self, node: dict[str, Any]):
-        """Skip raw HTML blocks in DOCX output."""
-        return None
+        """Keep safe visible HTML text instead of silently dropping the block."""
+        lines, lossy = project_html_block_text(str(node.get("raw", "")))
+        if lossy:
+            self._warnings.append(
+                (
+                    "MD2DOCX-HTML-FLATTENED",
+                    "HTML block structure was converted to readable text; "
+                    "unsupported HTML content or layout was not imported.",
+                )
+            )
+        if not lines:
+            return None
+        paragraphs = []
+        for line in lines:
+            paragraph = self._doc.add_paragraph(style=self._paragraph_style())
+            paragraph.add_run(line)
+            if self._body_paragraph_format is not None:
+                self._body_paragraph_format.apply_to(paragraph)
+            if self._body_run_format is not None:
+                self._body_run_format.apply_to(paragraph)
+            paragraphs.append(paragraph)
+        return paragraphs
 
     def _handle_block_latex(self, node: dict[str, Any]):
         """Render block LaTeX as OMML equation."""
