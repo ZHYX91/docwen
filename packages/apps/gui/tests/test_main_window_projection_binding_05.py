@@ -186,7 +186,7 @@ class TestRuntimeRequestBinding:
         assert calls == [
             {
                 "file_path": str(source),
-                "target_format": "",
+                "target_format": "pdf",
                 "action_name": "split_pdf",
                 "options": {"split_mode": "custom", "pages": [1]},
             }
@@ -214,7 +214,7 @@ class TestRuntimeRequestBinding:
         assert calls == [
             {
                 "file_paths": [str(second).replace("\\", "/"), str(first).replace("\\", "/")],
-                "target_format": "",
+                "target_format": "pdf",
                 "action_name": "merge_pdfs",
                 "options": {},
             }
@@ -238,7 +238,7 @@ class TestRuntimeRequestBinding:
         assert calls == [
             {
                 "file_paths": [str(second).replace("\\", "/"), str(first).replace("\\", "/")],
-                "target_format": "",
+                "target_format": "pdf",
                 "action_name": "merge_pdfs",
                 "options": {},
             }
