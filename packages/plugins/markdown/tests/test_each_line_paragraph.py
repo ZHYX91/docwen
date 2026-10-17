@@ -60,15 +60,13 @@ def test_semantic_owner_does_not_split() -> None:
 @pytest.mark.parametrize(
     ("enabled", "expected"),
     [
-        (False, ["First\\nSecond\\nThird"]),
+        (False, ["First\nSecond\nThird"]),
         (True, ["First", "Second", "Third"]),
     ],
 )
-def test_exported_docx_respects_request_paragraph_policy(
-    tmp_path, enabled: bool, expected: list[str]
-) -> None:
+def test_exported_docx_respects_request_paragraph_policy(tmp_path, enabled: bool, expected: list[str]) -> None:
     source = tmp_path / "three-lines.md"
-    source.write_text("First\\nSecond\\nThird", encoding="utf-8")
+    source.write_text("First\nSecond\nThird", encoding="utf-8")
     template = tmp_path / "body.docx"
     document = Document()
     document.add_paragraph("{{body}}")
