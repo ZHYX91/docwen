@@ -735,6 +735,7 @@ class MainWindow(QWidget):
             on_tab_changed=self._on_main_window_template_tab_changed,
             on_manage_templates=self._manage_templates,
         )
+        self._template_selector.location_requested.connect(lambda path: self._open_path(path, open_parent=True))
         self._template_selector.setObjectName("mainWindowTemplateSelector")
 
         self._right_stack = QStackedWidget(self._right_panel_frame)
@@ -1580,6 +1581,7 @@ class MainWindow(QWidget):
                 resource_id=info.id,
                 usage_hint=info.description,
                 source_label=(_t("settings.templates.custom") if custom else _t("settings.templates.builtin")),
+                source_path=str(info.path),
                 updated_label=_format_template_modified_label(info.modified_ns),
             )
         previous_target = selector.current_tab
