@@ -599,6 +599,9 @@ embed = "Inserir conteúdo"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "Cada linha como um parágrafo"
+each_line_paragraph_help = "Cria um parágrafo do Word para cada linha de texto comum em Markdown. Títulos, listas, citações, tabelas, código e quebras explícitas não mudam."
+line_paragraph_section = "Markdown para Word"
 mermaid_auto = "Detecção automática"
 mermaid_browse = "Selecionar Mermaid CLI"
 mermaid_path = "Caminho da CLI:"

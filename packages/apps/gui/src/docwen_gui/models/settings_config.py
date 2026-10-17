@@ -174,6 +174,9 @@ class FormattingConfig:
         default_factory=lambda: {direction: MarkdownExtensions().to_dict() for direction in ("input", "output")}
     )
 
+    # MD -> Word: ordinary prose paragraph boundaries
+    each_line_paragraph: bool = False
+
     # DOCX -> MD: separators
     page_break_sep: str = "---"
     section_break_sep: str = "***"

@@ -1142,6 +1142,7 @@ class SettingsViewModel(QObject):
                 table_m2d.get("custom_style_name", "") if isinstance(table_m2d, dict) else ""
             )
             config.formatting = FormattingConfig(
+                each_line_paragraph=m2d.get("each_line_paragraph", False) is True if isinstance(m2d, dict) else False,
                 markdown_extensions={
                     direction: {
                         name: (extension_settings.get(direction, {}).get(name) is True)
@@ -1425,6 +1426,7 @@ class SettingsViewModel(QObject):
         put("conversion.syntax.subscript", fmt.subscript_syntax)
         put("conversion.syntax.unordered_list", fmt.unordered_list_syntax)
         put("conversion.syntax.indent_spaces", int(fmt.indent_spaces))
+        put("conversion.md_to_docx.each_line_paragraph", fmt.each_line_paragraph)
         put("conversion.md_to_docx.mermaid_mode", fmt.mermaid_mode)
         put("conversion.md_to_docx.mermaid_cli_path", fmt.mermaid_cli_path)
         put("conversion.md_to_docx.formatting_mode", text.md_body_format)

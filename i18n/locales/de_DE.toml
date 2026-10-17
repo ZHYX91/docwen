@@ -546,6 +546,9 @@ embed = "Inhalt einfügen"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "Jede Zeile als eigener Absatz"
+each_line_paragraph_help = "Jede gewöhnliche Markdown-Textzeile als eigenen Word-Absatz ausgeben. Überschriften, Listen, Zitate, Tabellen, Code und explizite Zeilenumbrüche bleiben unverändert."
+line_paragraph_section = "Markdown zu Word"
 mermaid_auto = "Automatisch suchen"
 mermaid_browse = "Mermaid CLI auswählen"
 mermaid_path = "CLI-Pfad:"

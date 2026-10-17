@@ -546,6 +546,9 @@ embed = "コンテンツ埋め込み"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "1 行ずつ独立した段落にする"
+each_line_paragraph_help = "通常の Markdown 本文の各行を Word の独立した段落にします。見出し、リスト、引用、表、コード、明示的な改行は変更しません。"
+line_paragraph_section = "Markdown から Word"
 mermaid_auto = "自動検出"
 mermaid_browse = "Mermaid CLI を選択"
 mermaid_path = "CLI のパス:"

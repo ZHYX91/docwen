@@ -546,6 +546,9 @@ embed = "插入內容"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "每行獨立成段"
+each_line_paragraph_help = "將一般 Markdown 正文的每一行轉為獨立的 Word 段落。清單、標題、引言、表格、程式碼及明確換行不受影響。"
+line_paragraph_section = "Markdown 轉為 Word"
 mermaid_auto = "自動尋找"
 mermaid_browse = "選擇 Mermaid CLI"
 mermaid_path = "CLI 路徑："

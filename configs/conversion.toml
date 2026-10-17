@@ -23,6 +23,10 @@ preserve_table_header_formatting = false
 
 # MD → DOCX 格式设置
 [md_to_docx]
+# 每行独立成段：仅普通 Markdown 正文中的软换行创建新的 Word 段落；
+# 显式硬换行、标题、列表、引用、表格、代码及带语义锚点的内容保持原有结构。
+each_line_paragraph = false
+
 # 正文非小标题格式标记处理模式:
 # "apply"  - 应用格式（**粗体** → 真正的粗体）
 # "keep"   - 保留标记（**粗体** → 显示为 **粗体**）
