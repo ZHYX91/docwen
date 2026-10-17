@@ -276,9 +276,12 @@ def test_generated_legacy_document_is_proofread_before_final_bridge(
             assert stage.target_format == target and not stage.action_name
         private = Path(stage.output_policy.output_dir or "")
         private.mkdir(parents=True, exist_ok=True)
-        filename = private / (
-            f"final.{target}" if len(calls) == 3 else "note_checked.docx" if len(calls) == 2 else "note.docx"
-        )
+        if len(calls) == 3:
+            filename = private / f"final.{target}"
+        elif len(calls) == 2:
+            filename = private / "note_checked.docx"
+        else:
+            filename = private / "note.docx"
         filename.write_bytes(b"result")
         return ConversionResult(
             task_id=stage.request_id,
@@ -327,9 +330,15 @@ def test_generated_legacy_document_is_proofread_before_final_bridge(
     assert not Path(calls[1].output_policy.output_dir or "").exists()
 
 
-@pytest.mark.parametrize(("failed_phase", "expected_calls"), [("render", 1), ("proofread", 2), ("office", 3)])
+@pytest.mark.parametrize(
+    ("failed_phase", "expected_calls"),
+    [("render", 1), ("proofread", 2), ("office", 3)],
+)
 def test_legacy_document_pipeline_failure_does_not_expose_private_stages(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failed_phase: str, expected_calls: int
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_phase: str,
+    expected_calls: int,
 ) -> None:
     monkeypatch.setattr("docwen_core.detection.enforce_file_admission", lambda request: request)
     source = tmp_path / "original.md"
@@ -349,9 +358,7 @@ def test_legacy_document_pipeline_failure_does_not_expose_private_stages(
             return ConversionResult(
                 task_id=stage.request_id,
                 success=False,
-                error=ConversionErrorInfo(
-                    error_type="conversion_failed", message=f"{phase} failed"
-                ),
+                error=ConversionErrorInfo(error_type="conversion_failed", message=f"{phase} failed"),
             )
         parent = Path(stage.output_policy.output_dir or "")
         parent.mkdir(parents=True, exist_ok=True)
