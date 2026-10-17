@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
 from docwen_core.models.artifact import ARTIFACT_KIND_AUXILIARY, ArtifactManifest
+from docwen_core.protocols.execution_context import PluginExecutionContext
 from docwen_core.models.result import ConversionDiagnostic, ConversionMetrics, ConversionResult
 from docwen_plugin_markdown.office_bridge import converter as bridge_module
 
@@ -76,7 +78,7 @@ def test_bridge_propagates_stage_warnings_and_retains_only_requested_artifact(
         stage_context.progress.report_progress(100, "Intermediate finished")
         return stage
 
-    result = converter._convert_with_intermediate(ctx, "rtf", intermediate, "docx")
+    result = converter._convert_with_intermediate(cast(PluginExecutionContext, ctx), "rtf", intermediate, "docx")
     assert result.success
     assert "MERMAID-FALLBACK" in {item.code for item in result.diagnostics}
     assert [item.kind for item in result.artifacts] == (
@@ -119,7 +121,7 @@ def test_bridge_failure_keeps_upstream_warning(tmp_path: Path, monkeypatch: pyte
         config={},
     )
     result = bridge_module.MarkdownOfficeBridgeConverter()._convert_with_intermediate(
-        ctx, "rtf", lambda _stage_context: stage, "docx"
+        cast(PluginExecutionContext, ctx), "rtf", lambda _stage_context: stage, "docx"
     )
     assert not result.success
     assert "STYLE-WARN" in {item.code for item in result.diagnostics}
