@@ -13,6 +13,8 @@ from docwen_core.models.result import ConversionDiagnostic, ConversionMetrics, C
 from docwen_core.protocols.execution_context import PluginExecutionContext
 from docwen_plugin_markdown.office_bridge import converter as bridge_module
 
+pytestmark = pytest.mark.unit
+
 
 class _Progress:
     def __init__(self) -> None:
