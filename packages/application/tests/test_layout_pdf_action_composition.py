@@ -13,7 +13,7 @@ from docwen_application.preconversion.pre_converter import PreConversionFailure,
 from docwen_application.ports.runtime import RuntimePort
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import ConversionRequest, OutputPolicy
-from docwen_core.models.result import ConversionDiagnostic, ConversionResult
+from docwen_core.models.result import ConversionResult
 
 pytestmark = pytest.mark.unit
 
@@ -52,9 +52,7 @@ def test_aggregate_normalization_preserves_order_and_source_output_root(
             backend="fixture",
         )
 
-    monkeypatch.setattr(
-        "docwen_application.preconversion.layout_actions.pre_convert_layout", prepare
-    )
+    monkeypatch.setattr("docwen_application.preconversion.layout_actions.pre_convert_layout", prepare)
     controller = ApplicationController(runtime_port=runtime)
     result = controller.execute_aggregate(
         ConversionRequest(
@@ -70,9 +68,7 @@ def test_aggregate_normalization_preserves_order_and_source_output_root(
     assert len(executed) == 1
     request = executed[0]
     assert [ref.format for ref in request.input_refs] == ["pdf", "pdf", "pdf"]
-    assert [Path(ref.path).stem for ref in request.input_refs] == [
-        "first", "second", "third"
-    ]
+    assert [Path(ref.path).stem for ref in request.input_refs] == ["first", "second", "third"]
     assert request.output_policy.output_dir == str(tmp_path)
     assert request.input_refs[0].path == str(tmp_path / "first.pdf")
     assert not Path(request.input_refs[1].path).exists()
@@ -91,8 +87,9 @@ def test_failed_layout_normalization_does_not_run_aggregate(
     monkeypatch.setattr(
         "docwen_application.preconversion.layout_actions.pre_convert_layout",
         lambda *_args, **_kwargs: PreConversionFailure(
-            message="malformed OFD", error_type="conversion_failed",
-            diagnostic_code="LAYOUT-ACTION-PRECONVERSION-FAILED"
+            message="malformed OFD",
+            error_type="conversion_failed",
+            diagnostic_code="LAYOUT-ACTION-PRECONVERSION-FAILED",
         ),
     )
     controller = ApplicationController(runtime_port=runtime)
