@@ -1,9 +1,12 @@
 """Raw HTML blocks must not disappear or trigger external resource access."""
 
+import pytest
 from docx import Document
 
 from docwen_plugin_markdown.html_text import project_html_block_text
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
+
+pytestmark = pytest.mark.unit
 
 
 def test_simple_html_block_keeps_visible_text() -> None:
