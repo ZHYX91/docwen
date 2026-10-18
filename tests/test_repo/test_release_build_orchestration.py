@@ -278,6 +278,9 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     assert "--portable-zip" in msix and "publication.py fetch-platform" in msix
     assert "--platform windows" in msix and "--receipt" in msix
     assert "build_production_candidate" not in msix
+    assert '--commit "${{ steps.identity.outputs.portable_commit }}"' in msix
+    assert '--packaging-commit "$env:GITHUB_SHA"' in msix
+    assert "^[0-9a-f]{40}$" in msix
     assert "DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-macos" not in workflow
