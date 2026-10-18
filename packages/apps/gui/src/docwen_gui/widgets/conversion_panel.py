@@ -1580,7 +1580,7 @@ class ConversionPanel(QWidget):
             split_mode, pages = self._vm.parse_split_input(text)
         except ValueError:
             return
-        if split_mode != "custom" and self._vm.pdf_total_pages <= 1:
+        if split_mode != "custom" and 0 < self._vm.pdf_total_pages <= 1:
             if self._page_warning_label:
                 self._page_warning_label.setText(
                     _t(
