@@ -252,7 +252,7 @@ class TestRuntimeRequestBinding:
         assert request.options["remove_numbering"] is True
         assert context["options"]["template_name"] == _DOCX_TEMPLATE_ID
 
-    def test_document_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
+    def test_document_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
 
         previous_locale = get_locale()
@@ -269,13 +269,13 @@ class TestRuntimeRequestBinding:
                 options={"to_md_keep_images": True},
             )
 
-            assert request.options["locale"] == "de_DE"
-            assert request.options["yaml_key_labels"] == {"title": "Titel", "subtitle": "Untertitel"}
-            assert context["options"]["yaml_key_labels"]["title"] == "Titel"
+            assert "locale" not in request.options
+            assert "yaml_key_labels" not in request.options
+            assert "yaml_key_labels" not in context["options"]
         finally:
             set_locale(previous_locale)
 
-    def test_spreadsheet_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
+    def test_spreadsheet_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
 
         previous_locale = get_locale()
@@ -292,9 +292,9 @@ class TestRuntimeRequestBinding:
                 options={"to_md_keep_images": True},
             )
 
-            assert request.options["locale"] == "de_DE"
-            assert request.options["yaml_key_labels"]["title"] == "Titel"
-            assert context["options"]["yaml_key_labels"]["subtitle"] == "Untertitel"
+            assert "locale" not in request.options
+            assert "yaml_key_labels" not in request.options
+            assert "yaml_key_labels" not in context["options"]
         finally:
             set_locale(previous_locale)
 
@@ -321,7 +321,7 @@ class TestRuntimeRequestBinding:
         }
         assert "pw-SECRET-879" not in str(context)
 
-    def test_image_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
+    def test_image_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
         from docwen_gui.path_identity import normalize_path
 
@@ -339,9 +339,9 @@ class TestRuntimeRequestBinding:
                 options={"to_md_keep_images": True},
             )
 
-            assert request.options["locale"] == "ja_JP"
-            assert request.options["yaml_key_labels"] == {"title": "タイトル", "subtitle": "サブタイトル"}
-            assert context["options"]["locale"] == "ja_JP"
+            assert "locale" not in request.options
+            assert "yaml_key_labels" not in request.options
+            assert "locale" not in context["options"]
         finally:
             set_locale(previous_locale)
 
@@ -375,7 +375,7 @@ class TestRuntimeRequestBinding:
         finally:
             window.close()
 
-    def test_markup_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
+    def test_markup_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
         from docwen_gui.path_identity import normalize_path
 
@@ -398,13 +398,13 @@ class TestRuntimeRequestBinding:
 
             assert request.input_refs[0].format == "html"
             assert request.input_refs[0].category == "markup"
-            assert request.options["locale"] == "de_DE"
-            assert request.options["yaml_key_labels"]["title"] == "Titel"
-            assert context["options"]["yaml_key_labels"]["subtitle"] == "Untertitel"
+            assert "locale" not in request.options
+            assert "yaml_key_labels" not in request.options
+            assert "yaml_key_labels" not in context["options"]
         finally:
             set_locale(previous_locale)
 
-    def test_layout_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
+    def test_layout_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
         from docwen_gui.path_identity import normalize_path
 
@@ -424,13 +424,13 @@ class TestRuntimeRequestBinding:
 
             assert request.input_refs[0].format == "pdf"
             assert request.input_refs[0].category == "layout"
-            assert request.options["locale"] == "de_DE"
-            assert request.options["yaml_key_labels"]["title"] == "Titel"
-            assert context["options"]["locale"] == "de_DE"
+            assert "locale" not in request.options
+            assert "yaml_key_labels" not in request.options
+            assert "locale" not in context["options"]
         finally:
             set_locale(previous_locale)
 
-    def test_invoice_cn_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
+    def test_invoice_cn_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
         from docwen_gui.path_identity import normalize_path
 
@@ -453,13 +453,13 @@ class TestRuntimeRequestBinding:
             assert request.input_refs[0].category == "layout"
             assert request.action_name == "invoice_cn"
             assert request.target_format == "md"
-            assert request.options["locale"] == "de_DE"
-            assert request.options["yaml_key_labels"] == {"title": "Titel", "subtitle": "Untertitel"}
-            assert context["options"]["yaml_key_labels"]["subtitle"] == "Untertitel"
+            assert "locale" not in request.options
+            assert "yaml_key_labels" not in request.options
+            assert "yaml_key_labels" not in context["options"]
         finally:
             set_locale(previous_locale)
 
-    def test_gongwen_to_markdown_request_carries_locale_without_yaml_labels(self, window, tmp_path) -> None:
+    def test_gongwen_to_markdown_request_does_not_derive_task_locale_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
 
         previous_locale = get_locale()
@@ -480,9 +480,9 @@ class TestRuntimeRequestBinding:
             assert request.input_refs[0].format == "docx"
             assert request.input_refs[0].category == "document"
             assert request.action_name == "gongwen"
-            assert request.options["locale"] == "de_DE"
+            assert "locale" not in request.options
             assert "yaml_key_labels" not in request.options
-            assert context["options"]["locale"] == "de_DE"
+            assert "locale" not in context["options"]
         finally:
             set_locale(previous_locale)
 

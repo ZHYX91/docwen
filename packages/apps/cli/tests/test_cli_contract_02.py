@@ -195,7 +195,7 @@ class TestExecuteConvertActionPath:
         assert results[2]["success"] is False
         assert results[2]["output"] == ""
 
-    def test_document_to_markdown_request_carries_cli_locale_yaml_labels(self, tmp_path) -> None:
+    def test_document_to_markdown_request_does_not_derive_task_language_from_cli_display(self, tmp_path) -> None:
         from unittest.mock import patch
 
         from docwen_cli.commands.convert import execute_convert
@@ -220,8 +220,8 @@ class TestExecuteConvertActionPath:
             init_cli_locale("zh_CN")
 
         request = mock_controller.execute_single.call_args[0][0]
-        assert request.options["locale"] == "de_DE"
-        assert request.options["yaml_key_labels"] == {"title": "Titel", "subtitle": "Untertitel"}
+        assert "locale" not in request.options
+        assert "yaml_key_labels" not in request.options
         assert "render_dpi" not in request.options
 
     def test_document_to_markdown_rejects_undeclared_layout_dpi_option(self, tmp_path) -> None:
@@ -246,7 +246,7 @@ class TestExecuteConvertActionPath:
         assert exit_code == int(ExitCode.INVALID_INPUT)
         mock_controller.execute_single.assert_not_called()
 
-    def test_spreadsheet_to_markdown_request_carries_cli_locale_yaml_labels(self, tmp_path) -> None:
+    def test_spreadsheet_to_markdown_request_does_not_derive_task_language_from_cli_display(self, tmp_path) -> None:
         from unittest.mock import patch
 
         from docwen_cli.commands.convert import execute_convert
@@ -271,10 +271,10 @@ class TestExecuteConvertActionPath:
             init_cli_locale("zh_CN")
 
         request = mock_controller.execute_single.call_args[0][0]
-        assert request.options["locale"] == "de_DE"
-        assert request.options["yaml_key_labels"]["title"] == "Titel"
+        assert "locale" not in request.options
+        assert "yaml_key_labels" not in request.options
 
-    def test_image_to_markdown_request_carries_cli_locale_yaml_labels(self, tmp_path) -> None:
+    def test_image_to_markdown_request_does_not_derive_task_language_from_cli_display(self, tmp_path) -> None:
         from unittest.mock import patch
 
         from docwen_cli.commands.convert import execute_convert
@@ -299,10 +299,10 @@ class TestExecuteConvertActionPath:
             init_cli_locale("zh_CN")
 
         request = mock_controller.execute_single.call_args[0][0]
-        assert request.options["locale"] == "ja_JP"
-        assert request.options["yaml_key_labels"] == {"title": "タイトル", "subtitle": "サブタイトル"}
+        assert "locale" not in request.options
+        assert "yaml_key_labels" not in request.options
 
-    def test_markup_to_markdown_request_carries_cli_locale_yaml_labels(self, tmp_path) -> None:
+    def test_markup_to_markdown_request_does_not_derive_task_language_from_cli_display(self, tmp_path) -> None:
         from unittest.mock import patch
 
         from docwen_cli.commands.convert import execute_convert
@@ -332,10 +332,10 @@ class TestExecuteConvertActionPath:
         request = mock_controller.execute_single.call_args[0][0]
         assert request.input_refs[0].format == "html"
         assert request.input_refs[0].category == "markup"
-        assert request.options["locale"] == "de_DE"
-        assert request.options["yaml_key_labels"]["title"] == "Titel"
+        assert "locale" not in request.options
+        assert "yaml_key_labels" not in request.options
 
-    def test_layout_to_markdown_request_carries_cli_locale_yaml_labels(self, tmp_path) -> None:
+    def test_layout_to_markdown_request_does_not_derive_task_language_from_cli_display(self, tmp_path) -> None:
         from unittest.mock import patch
 
         from docwen_cli.commands.convert import execute_convert
@@ -362,8 +362,8 @@ class TestExecuteConvertActionPath:
         request = mock_controller.execute_single.call_args[0][0]
         assert request.input_refs[0].format == "pdf"
         assert request.input_refs[0].category == "layout"
-        assert request.options["locale"] == "de_DE"
-        assert request.options["yaml_key_labels"]["title"] == "Titel"
+        assert "locale" not in request.options
+        assert "yaml_key_labels" not in request.options
 
     def test_layout_to_markdown_request_keeps_cli_render_dpi(self, tmp_path) -> None:
         from unittest.mock import patch
@@ -389,7 +389,7 @@ class TestExecuteConvertActionPath:
         assert request.target_format == "md"
         assert request.options["render_dpi"] == 300
 
-    def test_invoice_cn_to_markdown_request_carries_cli_locale_yaml_labels(self, tmp_path) -> None:
+    def test_invoice_cn_to_markdown_request_does_not_derive_task_language_from_cli_display(self, tmp_path) -> None:
         from unittest.mock import patch
 
         from docwen_cli.commands.convert import execute_convert
@@ -420,11 +420,11 @@ class TestExecuteConvertActionPath:
         assert request.action_name == "invoice_cn"
         assert request.target_format == "md"
         assert request.input_refs[0].format == "pdf"
-        assert request.options["locale"] == "de_DE"
+        assert "locale" not in request.options
         assert "ocr_language" not in request.options
-        assert request.options["yaml_key_labels"] == {"title": "Titel", "subtitle": "Untertitel"}
+        assert "yaml_key_labels" not in request.options
 
-    def test_gongwen_to_markdown_request_carries_cli_locale_without_yaml_labels(self, tmp_path) -> None:
+    def test_gongwen_to_markdown_request_does_not_derive_task_locale_from_cli_display(self, tmp_path) -> None:
         from unittest.mock import patch
 
         from docwen_cli.commands.convert import execute_convert
@@ -451,7 +451,7 @@ class TestExecuteConvertActionPath:
         request = mock_controller.execute_single.call_args[0][0]
         assert request.action_name == "gongwen"
         assert request.target_format == "md"
-        assert request.options["locale"] == "de_DE"
+        assert "locale" not in request.options
         assert "yaml_key_labels" not in request.options
 
     def test_invoice_cn_to_markdown_request_prefers_cli_ocr_language_over_config(self, tmp_path) -> None:

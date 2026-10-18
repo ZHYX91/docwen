@@ -256,14 +256,14 @@ class TestWidgetRebuild:
         assert widget._conversion_group.isHidden()
         assert not widget._saveas_group.isHidden()
 
-    def test_layout_ofd_shows_pdf_conversion_but_not_pdf_tools(
+    def test_layout_ofd_shows_pdf_conversion_and_composed_pdf_split(
         self, widget: ConversionPanel, vm: ConversionPanelViewModel
     ) -> None:
         vm.set_file_info("layout", "ofd", file_path="/test.ofd")
         assert widget.conversion_combo is not None
         assert [widget.conversion_combo.itemText(i) for i in range(widget.conversion_combo.count())] == ["PDF"]
         assert widget._merge_pdfs_button is None
-        assert widget._split_pdf_button is None
+        assert widget._split_pdf_button is not None
 
     def test_layout_extra_has_merge_split(self, widget: ConversionPanel, vm: ConversionPanelViewModel) -> None:
         vm.set_file_info("layout", "pdf", file_path="/test.pdf", ui_mode="batch")
@@ -629,6 +629,39 @@ class TestConversionRequests:
 
 
 # ── Focus Management ──────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(("text", "mode"), [("*", "every_page"), ("#", "odd_even")])
+@pytest.mark.parametrize("fmt", ["xps", "ofd", "pdf"])
+def test_layout_split_unknown_count_and_single_page_guard(widget, vm, tmp_path, fmt, text, mode):
+    import fitz
+
+    source = tmp_path / f"input.{fmt}"
+    vm.set_file_info("layout", fmt, file_path=str(source))
+    if fmt == "pdf":
+        with fitz.open() as document:
+            document.new_page()
+            document.save(source)
+        with fitz.open(source) as document:
+            vm.set_pdf_info(document.page_count, source.name)
+    else:
+        # Fixed-layout inputs obtain their page count only after PDF conversion.
+        assert vm.pdf_total_pages == 0
+    emitted = []
+    vm.named_action_requested.connect(lambda name, path, options: emitted.append((name, path, options)))
+    widget._page_input_edit.setText(text)
+    button = widget._split_pdf_button
+    if fmt == "pdf":
+        assert not button.isEnabled()
+        # Also protect the handler when invoked despite disabled presentation.
+        widget._on_split_pdf_clicked()
+        assert emitted == []
+        assert not widget._page_warning_label.isHidden()
+    else:
+        assert button.isEnabled()
+        button.click()
+        assert emitted == [("split_pdf", str(source), {"split_mode": mode})]
+        assert widget._page_warning_label.isHidden()
 
 
 class TestFocusManagement:

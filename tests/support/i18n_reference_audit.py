@@ -342,10 +342,6 @@ DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
         "finite directional extension controls",
     ),
     (
-        "packages/apps/cli/src/docwen_cli/commands/execution_request.py",
-        "key",
-    ): _contract(1, frozenset(), "transparent wrapper; only structural yaml_keys.title/subtitle call sites"),
-    (
         "packages/apps/cli/src/docwen_cli/file_admission_i18n.py",
         "key",
     ): _contract(

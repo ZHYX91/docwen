@@ -54,7 +54,7 @@ class TestCanonicalRouteOptionProjection:
     def test_explicit_proofread_rejects_non_markdown_source(self) -> None:
         from docwen_cli.commands.execution_request import project_route_options
 
-        with pytest.raises(ValueError, match="Markdown-to-DOCX"):
+        with pytest.raises(ValueError, match="Markdown-to-document"):
             project_route_options(
                 {},
                 route_id="convert.docx.to_docx",
@@ -94,7 +94,7 @@ class TestCanonicalRouteOptionProjection:
         assert with_ocr == {"to_md_enable_ocr": True, "ocr_language": "japanese"}
         assert without_request == {"to_md_enable_ocr": False}
 
-    def test_docx_route_projects_the_active_cli_locale(self) -> None:
+    def test_docx_route_does_not_derive_task_locale_from_cli_translator(self) -> None:
         from docwen_cli.commands.execution_request import project_route_options
         from docwen_cli.i18n import init_cli_locale
 
@@ -108,7 +108,12 @@ class TestCanonicalRouteOptionProjection:
         finally:
             init_cli_locale("zh_CN")
 
-        assert projected == {"locale": "de_DE"}
+        assert projected == {}
+        assert project_route_options(
+            {"locale": "ar_SA"},
+            route_id="docwen_plugin_markdown:markdown:docx:convert",
+            route_options=("locale",),
+        ) == {"locale": "ar_SA"}
 
     def test_unrequested_ocr_does_not_emit_a_false_default(self) -> None:
         from docwen_cli.commands.execution_options import build_execution_options

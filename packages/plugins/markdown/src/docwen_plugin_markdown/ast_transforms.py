@@ -56,3 +56,58 @@ def annotate_ast_with_merges(
         if mode == "always" or (text and text[-1] in punct):
             node["_merge"] = True
             following["_merged_into_heading"] = True
+
+
+def _protected_inline(node: dict[str, Any]) -> bool:
+    return (
+        any(key.startswith("_docwen_") for key in node)
+        or str(node.get("type", "")).startswith(("_docwen_", "semantic_"))
+        or node.get("type") in {"inline_html", "footnote_ref"}
+        or any(_protected_inline(child) for child in node.get("children", []))
+    )
+
+
+def _split_inline_lines(children: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    parts: list[list[dict[str, Any]]] = [[]]
+    for child in children:
+        if child.get("type") == "softbreak":
+            parts.append([])
+            continue
+        nested = child.get("children")
+        fragments = (
+            [[{**child, "children": part}] if part else [] for part in _split_inline_lines(nested)]
+            if isinstance(nested, list)
+            else [[child]]
+        )
+        parts[-1].extend(fragments[0])
+        parts.extend(fragments[1:])
+    return parts
+
+
+def split_plain_paragraph_lines(ast: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Make ordinary Markdown soft-separated lines independent Word paragraphs.
+
+    This is a request-owned document export policy, not a change to Markdown
+    syntax or to explicit hard breaks. Only unowned top-level prose is split:
+    semantic anchors, captions and all nested block structures retain their
+    original ownership and paragraph boundaries.
+    """
+    output: list[dict[str, Any]] = []
+    for node in ast:
+        children = node.get("children")
+        if node.get("type") != "paragraph" or not isinstance(children, list) or _protected_inline(node):
+            output.append(node)
+            continue
+        parts = _split_inline_lines(children)
+        if len(parts) == 1:
+            output.append(node)
+            continue
+        # Do not invent empty Word paragraphs from an invalid/empty segment.
+        if not all(
+            part and any(item.get("type") != "text" or str(item.get("raw", "")).strip() for item in part)
+            for part in parts
+        ):
+            output.append(node)
+            continue
+        output.extend({**node, "children": part} for part in parts)
+    return output

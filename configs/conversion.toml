@@ -3,6 +3,10 @@
 # ==============================================================================
 
 # DOCX → MD 格式设置
+# Language of generated labels and managed document styles. It does not change
+# interface text, the selected template, proofreading rules or an explicit OCR model.
+output_locale = "zh_CN"
+
 [docx_to_md]
 # 正文非小标题格式处理
 # true: 保留格式，转换为Markdown标记（如 **粗体**、*斜体* 等）
@@ -23,6 +27,10 @@ preserve_table_header_formatting = false
 
 # MD → DOCX 格式设置
 [md_to_docx]
+# 每行独立成段：仅普通 Markdown 正文中的软换行创建新的 Word 段落；
+# 显式硬换行、标题、列表、引用、表格、代码及带语义锚点的内容保持原有结构。
+each_line_paragraph = false
+
 # 正文非小标题格式标记处理模式:
 # "apply"  - 应用格式（**粗体** → 真正的粗体）
 # "keep"   - 保留标记（**粗体** → 显示为 **粗体**）

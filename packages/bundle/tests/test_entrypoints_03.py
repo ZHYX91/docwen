@@ -93,9 +93,14 @@ class TestGuiAutocloseSingleHome:
             ),
         )
 
+        directions: list[object] = []
+
         class _App:
             def __init__(self) -> None:
                 self.aboutToQuit = _Signal()
+
+            def setLayoutDirection(self, direction: object) -> None:
+                directions.append(direction)
 
             def exec(self) -> int:
                 return 0
@@ -119,7 +124,9 @@ class TestGuiAutocloseSingleHome:
         monkeypatch.setattr(
             config_port_module,
             "ConfigPortAdapter",
-            lambda _loader: SimpleNamespace(get=lambda _key, default=None: default),
+            lambda _loader: SimpleNamespace(
+                get=lambda key, default=None: "ar_SA" if key == "gui.language.locale" else default
+            ),
         )
 
         class _Controller:
@@ -130,6 +137,9 @@ class TestGuiAutocloseSingleHome:
 
         gui_entry.main(["docwen-gui"])
 
+        from PySide6.QtCore import Qt
+
+        assert directions == [Qt.LayoutDirection.RightToLeft]
         assert called == [True], (
             "bundle.gui_entry.main did not delegate autoclose scheduling to docwen_gui.app._schedule_test_autoclose."
         )

@@ -1,6 +1,6 @@
 """I18n key completeness tests.
 
-Validates that all 11 locale files have the same GUI key set for current GUI
+Validates that all shipped locale files have the same GUI key set for current GUI
 namespaces, following ``docs/configuration.md``.
 
 Policy: every GUI key that exists in zh_CN must exist in all other locales.
@@ -31,6 +31,7 @@ ALL_LOCALES = [
     "pt_BR",
     "ru_RU",
     "vi_VN",
+    "ar_SA",
 ]
 
 GUI_KEY_PREFIXES = (

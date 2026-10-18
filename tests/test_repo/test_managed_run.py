@@ -144,16 +144,18 @@ def test_replaced_terminal_marker_preserves_known_outcome_and_both_errors(tmp_pa
 
 
 @pytest.mark.parametrize("returncode", [0, 7])
-def test_source_launcher_preserves_child_exit_status_and_lease(tmp_path, monkeypatch, returncode):
+@pytest.mark.parametrize("entry", ["cli", "gui"])
+def test_source_launcher_preserves_child_exit_status_and_lease(tmp_path, monkeypatch, returncode, entry):
     (tmp_path / "temp").mkdir()
     monkeypatch.setattr(run_source, "resolve_workspace_root", lambda *args, **kwargs: tmp_path)
 
     def execute(*args, **kwargs):
         assert Path(kwargs["env"]["TEMP"]).is_dir()
+        assert args[0][2] == ("docwen_gui" if entry == "gui" else "docwen_bundle.cli_entry")
         return SimpleNamespace(returncode=returncode)
 
     monkeypatch.setattr(run_source.subprocess, "run", execute)
-    assert run_source.main(["cli", "--", "--version"]) == returncode
+    assert run_source.main([entry, "--", "--version"]) == returncode
     roots = list((tmp_path / "temp").iterdir())
     if returncode:
         assert json.loads((roots[0] / ".docwen-temp-lease.json").read_text())["state"] == "retained-failure"

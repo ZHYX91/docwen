@@ -108,6 +108,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "gui.window",
         "gui.transparency",
         "gui.language",
+        "conversion.output_locale",
     ),
     "text": (
         "conversion.md_to_docx.formatting_mode",
@@ -143,6 +144,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "conversion.export.base64_compress_threshold_kb",
     ),
     "formatting": (
+        "conversion.md_to_docx.each_line_paragraph",
         "conversion.markdown_extensions.input.structural_tables",
         "conversion.markdown_extensions.input.captions_references",
         "conversion.markdown_extensions.input.extended_headings",

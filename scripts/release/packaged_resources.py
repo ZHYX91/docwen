@@ -131,6 +131,7 @@ REQUIRED_LOCALE_FILES = (
     "pt_BR.toml",
     "ru_RU.toml",
     "vi_VN.toml",
+    "ar_SA.toml",
     "zh_CN.toml",
     "zh_TW.toml",
 )

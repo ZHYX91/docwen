@@ -281,11 +281,25 @@ def test_shell_resource_index_contains_both_unplated_themes_and_start_sizes(tmp_
         capture_output=True,
     )
     document = ElementTree.parse(dump)
-    values = [node.text for node in document.iter("Value")]
+    resource = next(
+        node
+        for node in document.iter("NamedResource")
+        if node.attrib.get("uri", "").endswith("/Files/assets/msix/Square44x44Logo.png")
+    )
+    assert not (staging / "docwen-shell.resfiles").exists()
+    assert all("/Files/assets/msix/" in node.attrib["uri"] for node in document.iter("NamedResource"))
     for size in (32, 40, 48, 64, 80, 96, 256):
         for variant in ("", "_altform-unplated", "_altform-lightunplated"):
             filename = f"Square44x44Logo.targetsize-{size}{variant}.png"
-            assert any(value and value.endswith(filename) for value in values), filename
+            candidate = next(
+                node
+                for node in resource.findall("Candidate")
+                if node.findtext("Value", "").replace("\\", "/") == f"assets/msix/{filename}"
+            )
+            qualifiers = {node.attrib["name"]: node.attrib["value"] for node in candidate.iter("Qualifier")}
+            assert qualifiers["TargetSize"] == str(size)
+            expected_form = variant.removeprefix("_altform-").upper()
+            assert qualifiers.get("AlternateForm", "") == expected_form
 
 
 @pytest.mark.parametrize(

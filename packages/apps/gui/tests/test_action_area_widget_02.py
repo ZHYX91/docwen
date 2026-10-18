@@ -121,8 +121,12 @@ class TestMdToDocument:
 
         combo.setCurrentIndex(combo.findData(target))
         assert vm.target_format == target
-        assert grid.isHidden()
-        assert "typos_rule" not in vm.collect_options()
+        supports_proofread = target in {"doc", "wps", "odt", "rtf"}
+        assert grid.isHidden() is not supports_proofread
+        if supports_proofread:
+            assert vm.collect_options()["typos_rule"] is True
+        else:
+            assert "typos_rule" not in vm.collect_options()
 
         combo.setCurrentIndex(combo.findData("docx"))
         assert widget.md_document_format_combo is combo

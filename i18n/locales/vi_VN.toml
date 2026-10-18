@@ -278,6 +278,9 @@ sample_button = "Nút mẫu"
 sample_text = "Văn bản mẫu"
 
 font_tooltip = "Lựa chọn được xem trước ngay. Áp dụng hoặc OK sẽ lưu cỡ chữ; Hủy sẽ khôi phục giá trị đã lưu gần nhất."
+output_language_label = "Ngôn ngữ đầu ra:"
+output_language_tooltip = "Ngôn ngữ nhãn và kiểu tài liệu được tạo. Không dịch nội dung hoặc đổi mẫu. Có thể chọn riêng ngôn ngữ OCR."
+
 [settings.general.languages]
 zh_CN = "Tiếng Trung (Giản thể)"
 en_US = "Tiếng Anh"
@@ -290,6 +293,7 @@ pt_BR = "Tiếng Bồ Đào Nha (Brasil)"
 ru_RU = "Tiếng Nga"
 vi_VN = "Tiếng Việt"
 zh_TW = "Tiếng Trung (Phồn thể)"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]
@@ -600,6 +604,9 @@ embed = "Nhúng nội dung"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "Mỗi dòng thành một đoạn"
+each_line_paragraph_help = "Tạo đoạn Word riêng cho mỗi dòng văn bản Markdown thông thường. Không thay đổi tiêu đề, danh sách, trích dẫn, bảng, mã hay ngắt dòng tường minh."
+line_paragraph_section = "Markdown sang Word"
 mermaid_auto = "Tự động tìm"
 mermaid_browse = "Chọn Mermaid CLI"
 mermaid_path = "Đường dẫn CLI:"
@@ -798,7 +805,7 @@ system_desc = "Bật hoặc tắt ghi nhật ký và đặt mức nhật ký."
 enable_logging_label = "Bật hệ thống log"
 enable_logging_tooltip = "Bật hoặc tắt toàn bộ hệ thống log.\nKhi tắt, ứng dụng sẽ không ghi lại thông tin log.\nKhuyến nghị giữ bật khi chạy thực tế."
 log_level_label = "Mức log:"
-log_level_tooltip = "Đặt mức chi tiết của log.\nTừ thấp đến cao: debug > info > warning > error > critical\nMức càng cao ghi càng ít thông tin."
+log_level_tooltip = "Chọn mức chi tiết của nhật ký.\nTừ chi tiết nhất đến ít chi tiết nhất: DEBUG, INFO, WARNING, ERROR, CRITICAL."
 
 # 文件输出区域
 file_section = "Ghi ra tệp"
@@ -868,8 +875,8 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "Ngôn ngữ OCR:"
-language_tooltip = "Ngôn ngữ OCR dùng chung cho mọi định dạng đầu vào. “Theo ngôn ngữ giao diện” chọn theo ngôn ngữ UI hiện tại; không tự nhận dạng ngôn ngữ trong ảnh."
-language_auto = "Theo ngôn ngữ giao diện"
+language_tooltip = "Chọn mô hình OCR theo ngôn ngữ đầu ra; không tự nhận diện ngôn ngữ trong ảnh."
+language_auto = "Theo ngôn ngữ đầu ra"
 language_chinese = "Trung/Anh"
 language_japanese = "Tiếng Nhật"
 language_chinese_cht = "Tiếng Trung phồn thể"
@@ -1278,22 +1285,23 @@ level_format_config = "Cấu hình định dạng cấp"
 realtime_preview = "Xem trước thời gian thực"
 format_help = "📖 Trợ giúp định dạng"
 format_help_title = "Trợ giúp placeholder định dạng"
-format_help_text = """Cách dùng placeholder định dạng
+format_help_text = """Ký hiệu giữ chỗ cho định dạng đánh số
 
-占位符格式：{级别.样式}
+Cú pháp: {level.style}
+level là cấp tiêu đề (1–9); style là tên trong danh sách bên dưới.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+Các kiểu có thể dùng:
+  chinese_lower  - Chữ số Hán thông thường (一、二、三)
+  chinese_upper  - Chữ số Hán dạng tài chính (壹、贰、叁)
+  arabic_half    - Chữ số thập phân (1, 2, 3)
+  arabic_full    - Chữ số thập phân toàn chiều rộng (１、２、３)
+  arabic_circled - Chữ số trong vòng tròn (①②③)
+  letter_upper   - Chữ cái viết hoa (A, B, C)
+  letter_lower   - Chữ cái viết thường (a, b, c)
+  roman_upper    - Số La Mã viết hoa (I, II, III)
+  roman_lower    - Số La Mã viết thường (i, ii, iii)
 
-示例：
+Ví dụ:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

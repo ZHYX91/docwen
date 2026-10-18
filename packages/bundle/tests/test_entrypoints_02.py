@@ -172,6 +172,10 @@ class TestGuiEntry:
             def __init__(self) -> None:
                 self.aboutToQuit = _Signal()
                 self.exec_called = False
+                self.layout_direction: object | None = None
+
+            def setLayoutDirection(self, direction: object) -> None:
+                self.layout_direction = direction
 
             def exec(self) -> int:
                 self.exec_called = True

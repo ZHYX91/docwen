@@ -370,11 +370,11 @@ class TestConversionFormatLookups:
         vm.set_file_info("layout", "pdf")
         assert vm.get_layout_render_formats() == ["PNG", "JPG", "TIF"]
 
-    def test_layout_pdf_operations_only_for_pdf_source(self, vm: ConversionPanelViewModel) -> None:
+    def test_layout_pdf_operations_use_composed_pdf_route(self, vm: ConversionPanelViewModel) -> None:
         vm.set_file_info("layout", "pdf")
         assert vm.supports_layout_pdf_operations is True
         vm.set_file_info("layout", "ofd")
-        assert vm.supports_layout_pdf_operations is False
+        assert vm.supports_layout_pdf_operations is True
 
     def test_none_category(self, vm: ConversionPanelViewModel) -> None:
         assert vm.get_conversion_formats() == []

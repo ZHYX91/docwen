@@ -80,6 +80,13 @@ _TEXT: dict[str, tuple[str, str, str, str, str]] = {
         "Для ‘{text}’ не найден парный символ. Проверьте текст.",
         "У ‘{text}’ нарушен порядок вложенности. Проверьте порядок парных символов.",
     ),
+    "ar_SA": (
+        "خطأ إملائي",
+        "تصحيح الرموز",
+        "عُثر على كلمة حساسة: «{text}». راجعها في سياقها.",
+        "لا توجد علامة مطابقة لـ «{text}». راجع النص.",
+        "ترتيب الأقواس أو العلامات حول «{text}» متداخل بشكل غير صحيح. راجعه.",
+    ),
     "vi_VN": (
         "Lỗi chính tả",
         "Sửa ký hiệu",
@@ -108,12 +115,11 @@ def resolve_comment_locale(context: object) -> str:
         if explicit:
             return normalize_comment_locale(explicit)
     snapshot = getattr(request, "config_snapshot", {})
-    gui = snapshot.get("gui", {}) if isinstance(snapshot, Mapping) else {}
-    language = gui.get("language", {}) if isinstance(gui, Mapping) else {}
-    configured = language.get("locale") if isinstance(language, Mapping) else language
+    conversion = snapshot.get("conversion", {}) if isinstance(snapshot, Mapping) else {}
+    configured = conversion.get("output_locale") if isinstance(conversion, Mapping) else None
     if not configured:
         get_config = getattr(getattr(context, "config", None), "get", None)
-        configured = get_config("gui.language.locale", "en_US") if callable(get_config) else "en_US"
+        configured = get_config("conversion.output_locale", "en_US") if callable(get_config) else "en_US"
     return normalize_comment_locale(configured)
 
 

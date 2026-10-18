@@ -13,7 +13,6 @@ from typing import Any
 from docwen_application.controller import CapabilityUnavailableError
 from docwen_application.postprocessing import prepare_postprocess_options
 from docwen_application.runtime_capability_catalog import RuntimeRoute
-from docwen_cli.i18n import cli_t, get_cli_locale
 from docwen_core.detection import FileAdmissionError, inspect_file
 from docwen_core.detection.ooxml_signature import OOXML_SIGNATURE_INFO_METADATA_KEY
 from docwen_core.models.file_inspection import (
@@ -29,11 +28,6 @@ def resolve_cli_action(args: argparse.Namespace) -> str:
     """Return the resolved action name for this CLI invocation."""
 
     return str(getattr(args, "action", "") or "").strip().lower()
-
-
-def _translation_or_default(key: str, default: str) -> str:
-    value = cli_t(key, default="")
-    return default if value == key or not value else value
 
 
 def project_request_options(
@@ -99,16 +93,6 @@ def project_route_options(
         projected.setdefault("to_md_enable_ocr", bool(ocr_requested))
     if ocr_requested and configured_ocr_language and "ocr_language" in supported:
         projected.setdefault("ocr_language", configured_ocr_language)
-    if "locale" in supported:
-        projected.setdefault("locale", get_cli_locale())
-    if "yaml_key_labels" in supported:
-        projected.setdefault(
-            "yaml_key_labels",
-            {
-                "title": _translation_or_default("yaml_keys.title", "title"),
-                "subtitle": _translation_or_default("yaml_keys.subtitle", "subtitle"),
-            },
-        )
     return projected
 
 

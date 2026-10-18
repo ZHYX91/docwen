@@ -25,6 +25,7 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "gui.window",
         "gui.transparency",
         "gui.language",
+        "conversion.output_locale",
     }
 
     text_plan = reset_plan_for_group("text")
@@ -60,7 +61,8 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
 
     formatting_plan = reset_plan_for_group("formatting")
     assert formatting_plan.files == ()
-    assert len(formatting_plan.dotted_keys) == 24
+    assert len(formatting_plan.dotted_keys) == 25
+    assert "conversion.md_to_docx.each_line_paragraph" in formatting_plan.dotted_keys
     assert "conversion.md_to_docx.mermaid_cli_path" in formatting_plan.dotted_keys
     assert "conversion.md_to_docx.mermaid_mode" in formatting_plan.dotted_keys
     assert {

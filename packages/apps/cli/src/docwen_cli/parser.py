@@ -24,6 +24,7 @@ _AVAILABLE_LOCALES: list[str] = [
     "ru_RU",
     "vi_VN",
     "zh_TW",
+    "ar_SA",
 ]
 
 _common_parser: argparse.ArgumentParser | None = None

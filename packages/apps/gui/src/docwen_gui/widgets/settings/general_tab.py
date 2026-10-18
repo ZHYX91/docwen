@@ -42,6 +42,7 @@ class GeneralTab(BaseSettingsTab):
     def __init__(self, view_model: SettingsViewModel) -> None:
         self._vm = view_model
         self._language_combo: QComboBox = _cast(QComboBox, None)
+        self._output_language_combo: QComboBox = _cast(QComboBox, None)
         self._theme_combo: QComboBox = _cast(QComboBox, None)
         self._transparency_enabled: QCheckBox = _cast(QCheckBox, None)
         self._transparency_value: QDoubleSpinBox = _cast(QDoubleSpinBox, None)
@@ -86,6 +87,7 @@ class GeneralTab(BaseSettingsTab):
         lang_combo.addItem(t("settings.general.languages.ru_RU", "Russian"), "ru_RU")
         lang_combo.addItem(t("settings.general.languages.vi_VN", "Vietnamese"), "vi_VN")
         lang_combo.addItem(t("settings.general.languages.zh_TW", "Chinese (Traditional)"), "zh_TW")
+        lang_combo.addItem(t("settings.general.languages.ar_SA", "العربية"), "ar_SA")
         lang_container_layout.addWidget(lang_combo)
 
         self.add_form_row(
@@ -95,6 +97,25 @@ class GeneralTab(BaseSettingsTab):
             t("settings.general.language_tooltip", "Select the display language"),
         )
         lang_combo.currentIndexChanged.connect(self._on_language_changed)
+
+        output_combo = ScrollSafeComboBox(lang_card)
+        output_combo.setObjectName("generalOutputLanguageCombo")
+        self._output_language_combo = output_combo
+        _prepare_combo(output_combo)
+        for index in range(lang_combo.count()):
+            output_combo.addItem(lang_combo.itemText(index), lang_combo.itemData(index))
+        output_label = t("settings.general.output_language_label", "Task output language:")
+        output_combo.setAccessibleName(output_label)
+        self.add_form_row(
+            lang_form,
+            output_label,
+            output_combo,
+            t(
+                "settings.general.output_language_tooltip",
+                "Language of generated labels and document styles. Does not translate document text or change templates.",
+            ),
+        )
+        output_combo.currentIndexChanged.connect(self._on_output_language_changed)
 
         # ── Theme card ──────────────────────────────────────────────────
         theme_card, theme_form = self.add_settings_card(
@@ -303,6 +324,7 @@ class GeneralTab(BaseSettingsTab):
             self._font_combo,
             self._scale_combo,
             self._language_combo,
+            self._output_language_combo,
             self._theme_combo,
             self._transparency_enabled,
             self._transparency_value,
@@ -320,6 +342,7 @@ class GeneralTab(BaseSettingsTab):
             self.set_combo_data(self._scale_combo, gui.scale_percent)
             if self._language_combo is not None:
                 self.set_combo_data(self._language_combo, gui.language)
+            self.set_combo_data(self._output_language_combo, gui.output_language)
             if self._theme_combo is not None:
                 self.set_combo_data(self._theme_combo, gui.theme)
             if self._transparency_enabled is not None:
@@ -352,6 +375,11 @@ class GeneralTab(BaseSettingsTab):
         locale = self.get_combo_data(self._language_combo)
         if locale:
             self._vm.set_field(SECTION_GUI, "language", locale)
+
+    def _on_output_language_changed(self, _index: int) -> None:
+        locale = self.get_combo_data(self._output_language_combo)
+        if locale:
+            self._vm.set_field(SECTION_GUI, "output_language", locale)
 
     def _on_theme_changed(self, _index: int) -> None:
         theme = self.get_combo_data(self._theme_combo)

@@ -59,7 +59,7 @@ def execute_postprocessed_request(
                     ConversionDiagnostic(
                         level="info",
                         code="POSTPROCESS_PROOFREAD_SKIPPED",
-                        message="All proofreading checks are disabled; the generated DOCX was published without proofreading.",
+                        message="All proofreading checks are disabled; the generated document was published without proofreading.",
                     ),
                 ],
             )
@@ -106,6 +106,8 @@ def _execute_docx_proofread_pipeline(
         raise ValueError("Post-conversion proofreading requires an admitted Markdown source")
 
     identity = request.conversion_identity or _pipeline_conversion_identity(request, task_id)
+    original_target = str(request.target_format).lower()
+    final_is_docx = original_target == "docx"
     render_options = dict(request.options)
     render_options.pop(POSTPROCESS_PROOFREAD_OPTION, None)
 
@@ -114,6 +116,7 @@ def _execute_docx_proofread_pipeline(
         render_request = replace(
             request,
             request_id=render_task_id,
+            target_format="docx",
             options=render_options,
             output_policy=OutputPolicy(
                 output_dir=private_output,
@@ -187,6 +190,18 @@ def _execute_docx_proofread_pipeline(
             media_type=get_media_type("docx"),
             size_bytes=artifact.size_bytes or 0,
         )
+        # The original DOCX workflow publishes the validated document directly.
+        # A different target needs a private validated DOCX until conversion succeeds.
+        proofread_output = Path(private_output) / "validated" if not final_is_docx else None
+        if proofread_output is not None:
+            proofread_output.mkdir(parents=True, exist_ok=True)
+        proofread_output_dir = (
+            str(proofread_output)
+            if proofread_output is not None
+            else request.output_policy.output_dir
+            if request.output_policy.output_dir or request.output_policy.output_path
+            else str(Path(source.path).parent)
+        )
         proofread_request = ConversionRequest(
             request_id=task_id,
             input_refs=[proofread_ref],
@@ -199,11 +214,7 @@ def _execute_docx_proofread_pipeline(
             output_policy=replace(
                 request.output_policy,
                 group_outputs=True,
-                output_dir=(
-                    request.output_policy.output_dir
-                    if request.output_policy.output_dir or request.output_policy.output_path
-                    else str(Path(source.path).parent)
-                ),
+                output_dir=proofread_output_dir,
             ),
             config_snapshot=dict(request.config_snapshot),
             manifest_context=request.manifest_context,
@@ -221,9 +232,127 @@ def _execute_docx_proofread_pipeline(
             diagnostics.append(
                 ConversionDiagnostic(
                     level="info",
-                    message="Generated DOCX was proofread before publication.",
+                    message=(
+                        "Generated DOCX was proofread before publication."
+                        if final_is_docx
+                        else "Generated DOCX was proofread before final document conversion."
+                    ),
                     code="POSTPROCESS_PROOFREAD_APPLIED",
                 )
+            )
+        if not final_is_docx:
+            if not proofread_result.success:
+                return replace(
+                    proofread_result,
+                    task_id=task_id,
+                    artifacts=[],
+                    diagnostics=diagnostics,
+                    metrics=ConversionMetrics(
+                        duration_ms=render_result.metrics.duration_ms + proofread_result.metrics.duration_ms,
+                        input_bytes=source.size_bytes,
+                        output_bytes=0,
+                        extra={"proofread_postprocess": True, "stage": "proofread"},
+                    ),
+                )
+            from docwen_application.preconversion.intermediate_policy import (
+                build_intermediate_record_if_enabled,
+            )
+            from docwen_core.models.request import PRECONVERSION_INTERMEDIATES_OPTION
+
+            checked = [
+                item
+                for item in proofread_result.artifacts
+                if item.is_primary
+                and item.media_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ]
+            if len(checked) != 1:
+                message = "Proofreading did not produce exactly one validated DOCX."
+                return ConversionResult(
+                    task_id=task_id,
+                    success=False,
+                    artifacts=[],
+                    diagnostics=[
+                        *diagnostics,
+                        ConversionDiagnostic(
+                            level="error",
+                            message=message,
+                            code="POSTPROCESS_PROOFREAD_INPUT_INVALID",
+                        ),
+                    ],
+                    error=ConversionErrorInfo(
+                        error_type="conversion_failed",
+                        message=message,
+                        diagnostic_code="POSTPROCESS_PROOFREAD_INPUT_INVALID",
+                    ),
+                )
+            checked_docx = checked[0]
+            checked_ref = FileRef(
+                path=checked_docx.staging_path,
+                format="docx",
+                category=get_category("docx"),
+                input_kind="document",
+                input_role="source",
+                logical_path=checked_docx.suggested_name or f"{request.source_stem}.docx",
+                media_type=get_media_type("docx"),
+                size_bytes=checked_docx.size_bytes or Path(checked_docx.staging_path).stat().st_size,
+            )
+            retained = build_intermediate_record_if_enabled(
+                checked_ref.path,
+                identity.source_stem,
+                source.format,
+                target_format="docx",
+                backend="proofread",
+                config_snapshot=request.config_snapshot,
+            )
+            final_options: dict[str, Any] = {}
+            if retained is not None:
+                retained["applies_to_input_path"] = checked_ref.path
+                final_options[PRECONVERSION_INTERMEDIATES_OPTION] = [retained]
+            final_request = ConversionRequest(
+                request_id=task_id,
+                input_refs=[checked_ref],
+                target_format=original_target,
+                action_name="",
+                options=final_options,
+                output_policy=replace(
+                    request.output_policy,
+                    group_outputs=True,
+                    output_dir=request.output_policy.output_dir or str(Path(source.path).parent),
+                ),
+                config_snapshot=dict(request.config_snapshot),
+                manifest_context=request.manifest_context,
+                conversion_identity=identity,
+            )
+            final_result = execute_stage(final_request, task_id)
+            if not isinstance(final_result, ConversionResult):
+                return final_result
+            final_diagnostics = [
+                *render_diagnostics,
+                *[item for item in proofread_result.diagnostics if item.code not in private_codes],
+                *final_result.diagnostics,
+            ]
+            if final_result.success:
+                final_diagnostics.append(
+                    ConversionDiagnostic(
+                        level="info",
+                        message="Validated DOCX was converted to the selected document format.",
+                        code="POSTPROCESS_PROOFREAD_APPLIED",
+                    )
+                )
+            return replace(
+                final_result,
+                task_id=task_id,
+                diagnostics=final_diagnostics,
+                metrics=ConversionMetrics(
+                    duration_ms=(
+                        render_result.metrics.duration_ms
+                        + proofread_result.metrics.duration_ms
+                        + final_result.metrics.duration_ms
+                    ),
+                    input_bytes=source.size_bytes,
+                    output_bytes=final_result.metrics.output_bytes,
+                    extra={**final_result.metrics.extra, "proofread_postprocess": True},
+                ),
             )
         return replace(
             proofread_result,

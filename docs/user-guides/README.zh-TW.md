@@ -4,32 +4,26 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
 
-DocWen 是面向 Word、Markdown、Excel 等辦公格式的本機文件與表格轉換工具，強調離線可用、流程清楚，並將文件處理留在使用者裝置上。
+DocWen 在本機轉換辦公檔案。它能把 Word 轉成 Markdown、把 Markdown 匯出為 Word、從 PDF 中擷取文字和表格，也能處理試算表、圖片和常見的檔案整理工作。日常操作使用圖形介面；需要批次自動化時使用命令列。
 
-## 📖 專案背景
+介面語言僅控制應用程式文字與版面；一般設定中的「工作輸出語言」獨立控制產生的標籤、文件樣式與校對註解，不翻譯內文。切換介面不會更改已儲存的輸出語言或範本。OCR「自動」跟隨工作輸出語言。Markdown 語法中的每行獨立成段選項預設關閉，可將一般內文逐行轉成 Word 段落。
 
-DocWen 最初面向文印室等日常文件整理情境，主要解決這些問題：
-- 不同部門提供的文件格式不一致，需要整理為規範格式
-- 檔案類型多，不同類型有各自的格式要求
-- 需要在內網、離線環境和較舊裝置上穩定工作
+## 適合做什麼
 
-**設計理念**：DocWen 優先提供低門檻、開箱即用的日常辦公轉換與整理流程。它不以取代 LaTeX、Pandoc 等專業排版或轉換系統為目標，而是把常見文件工作做得直接、清楚，同時保留明確的技術邊界。
+- **Word 與 Markdown 互轉**：處理標題、表格和公式；特殊的 Obsidian 語法需要按需開啟對應擴充。
+- **表格轉換**：把 Excel 等表格匯出為 Markdown，或從 Markdown 產生試算表檔案。
+- **PDF 與版式檔案**：從 PDF、XPS、OFD 擷取文字或轉換檔案，也能合併、拆分 PDF。
+- **圖片與 OCR**：轉換常見圖片格式，離線辨識圖片中的文字和部分表格；辨識結果需要人工核對。
+- **範本與校對**：使用自訂範本產生文件，依自己的詞庫檢查錯別字、標點與符號。
+- **單檔或批次處理**：桌面介面適合日常操作，CLI 適合重複工作。
 
-## ✨ 核心功能
+DocWen 支援 DOCX、XLSX、PDF 和一些舊版辦公、圖片格式，但**並非所有格式之間都能互轉**。實際取決於操作、系統平台及安裝的轉換軟體，參見[功能說明](../capabilities.md)。
 
-- **📄 文檔格式轉換** - Word ↔ Markdown 互轉，支持數學公式轉換、分隔符雙向轉換（Markdown 的三種分隔線與文檔中的分頁符、分節符、分隔線），以及將 Markdown 表格顯式 `<` / `^` 合併標記恢復為 Word 矩形合併。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
-- **📊 表格格式轉換** - Excel ↔ Markdown 互轉，支持 XLSX/XLS/ET/ODS/CSV/TSV 等格式；支持合併單元格導出策略（`fill / empty / marker`）和表格匯總工具。Markdown→XLSX 範本已恢復 YAML 欄位、縱向和橫向欄占位符核心能力，完整 Excel 範本區域/圖片/合併恢復仍是對照審計中的遷移目標。
-- **📑 PDF與版式文件** - PDF/XPS/OFD 轉 Markdown 或 DOCX，支持 PDF 合併、拆分等操作。
-- **🖼️ 圖片處理** - 支持 JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC 等格式互轉和壓縮。
-- **📥 其他格式導入** - 支持 HTML/MHTML/ENEX/EPUB/PPTX/PPT 單向轉換為 Markdown。
-- **🔍 OCR文字識別** - 集成 RapidOCR，從圖片和 PDF 中提取文字。
-- **✏️ 文本校對** - 基於自定義詞庫檢查錯別字、標點、符號和敏感詞。支持 Word (.docx) 和 Markdown (.md) 文件。可在設定介面編輯規則。
-- **📝 範本系統** - 靈活的範本機制，支持自定義文檔和報表格式。
-- **💻 雙模式操作** - 圖形介面 + 命令行介面。
-- **🔒 本地處理與依賴出站保護** - 轉換不依賴線上服務。DocWen 運行期間會阻止其 Python 進程內依賴使用 DNS 和 IPv4/IPv6；外部啟動的 Office/WPS/LibreOffice 仍遵循自身及系統網絡策略。
-- **🔗 單實例運行** - 自動管理程式實例，支持與配套 Obsidian 插件集成。
+## 離線處理
+
+檔案由本機處理，不需要上傳到線上轉換服務。DocWen 限制自身 Python 程序內相依套件的網路存取；外部啟動的 Office、WPS、LibreOffice 仍遵循它們自身及系統的網路原則。處理敏感檔案時，也應檢查這些外部軟體的設定。
 
 ## 📸 介面截圖
 
@@ -49,10 +43,9 @@ DocWen 最初面向文印室等日常文件整理情境，主要解決這些問�
 
 **前置條件**：Python 3.12
 
-**目標邊界**：目前原始碼建置 Windows x64 與 Ubuntu 24.04 x64 正式套件。其他 Linux
-發行版與 macOS 仍屬於原始碼／開發路徑，不在 Ubuntu 套件的支援承諾內。
+**安裝套件**：提供 Windows x64 與 Ubuntu 24.04 x64 版本。其他 Linux 發行版與 macOS 需要從原始碼執行，目前沒有正式安裝套件。
 
-**方式一：使用 uv（推薦）**
+**使用 uv 安裝**
 
 安裝 [uv](https://docs.astral.sh/uv/getting-started/)，然後：
 
@@ -62,11 +55,11 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-DocWen 原始碼、測試與建置僅支援倉庫內鎖定檔及 `uv 0.12.0`；不支援 `pip install -e`。
+請使用 `uv 0.12.0` 和倉庫中的鎖定檔安裝相依套件。測試與正式建置使用此版本；維護相依套件時可使用相容的 `uv 0.12.x`。`pip install -e` 無法套用本倉庫的相依套件排除規則，因此不支援這種安裝方式。
 
 ### 啟動程式
 
-Windows 打包版可雙擊 `DocWen.exe` 啟動圖形介面。從原始碼安裝後可執行：
+從 [Releases 頁面](https://github.com/ZHYX91/docwen/releases) 下載對應套件。Windows 版雙擊 `DocWen.exe`；Ubuntu 24.04 x64 圖形版解壓縮後執行 `./DocWen`，無桌面環境時使用獨立的 `DocWenCLI` 套件。從原始碼安裝後可執行：
 
 ```bash
 docwen-gui  # 圖形介面
@@ -118,10 +111,10 @@ pip install pillow-heif
    - 啟動程式
    - 將 .md 文件拖入窗口
    - 選擇範本
-   - 點擊"轉換為 DOCX"
+   - 點擊"生成 DOCX"
 
 3. **獲取結果**：
-   - 在相同目錄下生成格式規範的 Word 文檔
+   - Word 文件會儲存在輸出位置的結果資料夾中；點擊「開啟輸出」即可找到。輸出位置可在「設定 → 檔案儲存」中更改。
 
 **提示**：新手可以使用 `samples/` 目錄中的範例文件快速體驗軟體功能。
 
@@ -147,7 +140,7 @@ pip install pillow-heif
    - 方式二：點擊拖拽區域的"添加"按鈕選擇文件
 3. **選擇範本**（如需轉換）：右側範本面板自動展開，選擇合適的範本
 4. **配置選項**：在操作面板中勾選需要的轉換/導出選項
-5. **執行操作**：點擊對應的功能按鈕（如"導出MD"、"轉換為DOCX"等）
+5. **執行操作**：點擊對應的功能按鈕（如「導出 Markdown」、"生成 DOCX"等）
 6. **查看結果**：狀態欄顯示處理進度和結果，可點擊右側的「開啟輸出」操作打開輸出位置
 
 ### 單文件模式與批量模式
@@ -193,19 +186,19 @@ pip install pillow-heif
 
 ## 🔧 命令列使用
 
-除了圖形介面，程式也提供命令列介面（CLI），適合自動化腳本、批次處理與外部整合情境。
+使用命令列（CLI）可以在終端機檢查檔案、執行轉換，或編寫指令碼處理重複工作。與其他軟體整合時，請使用下文的 Machine Protocol 介面。
 
 ### 建議的自動化呼叫順序
 
-對於腳本、Agent 或外掛整合，建議依照以下順序呼叫：
+編寫本機自動化指令碼時，可以依照以下順序檢查並執行轉換：
 
 1. `inspect <file> [--json]`：先識別檔案的真實類別、格式與可執行動作。
-2. `resources list formats --json`：讀取目前 DocWen 實際可用的轉換路線與相依性條件。
-3. `schema convert`：讀取 `convert` 的機器可讀參數契約與條件約束。
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先預演檢測、正規化與路由結果，不直接落地轉換。
+2. `resources list formats --json`：查看可用的轉換格式，以及所需軟體是否已安裝。
+3. `schema convert`：查看 `convert` 接受的參數、預設值和使用條件。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：檢查辨識到的格式、轉換方法和參數，不產生檔案。
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：確認後再執行正式轉換。
 
-外部內容消費者使用 `serve --stdio` 與 Machine Protocol v2：先探索能力，再規劃工作，最後執行。CLI 的 `--json` 只是終端呈現格式，不是跨產品相容邊界。本機桌面控制使用獨立且穩定的 `gui open|activate|status` 介面。
+其他軟體或外掛透過 `serve --stdio` 使用 Machine Protocol v2：查詢可用操作、規劃工作，再執行。這是用於軟體整合的穩定介面；CLI 的 `--json` 供終端機指令碼讀取結果。需要開啟桌面介面或將檔案傳給 DocWen 時，使用 `gui open|activate|status`。詳見[命令列說明](../cli.md)和[整合協定](../specs/machine-protocol-v2.md)。
 
 ### 常用範例
 
@@ -215,7 +208,7 @@ pip install pillow-heif
 # Windows 打包版
 DocWenCLI.exe inspect document.docx --json
 
-# 查看 convert 參數契約（適合腳本 / Agent 組裝請求）
+# 查看 convert 接受的參數
 DocWenCLI.exe schema convert
 
 # 預演本次轉換會如何執行，但不實際寫出結果
@@ -227,13 +220,13 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 # Markdown 轉 Word（指定模板，並設定標題 + 正文合併模式）
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.926a8bcb579f16e796662bff35edb7bb437aa718b7b7739b2461f4641128001e --heading-merge-mode punct_required
 
-# Markdown 轉 Word，並在發佈前校對產生的 DOCX
+# Markdown 轉 Word，並在儲存前校對產生的 DOCX
 DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
 
-# 控制 Markdown 匯出圖片與 OCR 文字落位
+# 選擇圖片儲存方式和 OCR 文字位置
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
-# 查看目前環境下的執行期能力與依賴門控
+# 檢查可用轉換和所需軟體
 DocWenCLI.exe doctor --json
 DocWenCLI.exe resources list formats --json
 
@@ -251,30 +244,30 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ### 常用命令與選項
 
-下表只列出常用命令；完整命令面請以 `docwen --help`（原始碼 / uv 安裝）或 `DocWenCLI --help`（打包版）為準。
+下表只列出常用命令；完整命令請以 `docwen --help`（原始碼 / uv 安裝）或 `DocWenCLI --help`（打包版）為準。
 
 | 命令/選項 | 說明 |
 | --- | --- |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 統一轉換入口。 |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | 轉換一個檔案。涉及 Markdown 時使用 `--output-dir` 儲存結果資料夾；其他單檔轉換使用 `--output` 指定檔案路徑。 |
 | `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 轉換後校對；`--check` 必須與 `--proofread` 同時使用，省略 `--check` 時使用已設定的校對預設值。 |
-| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 只預演檢測、正規化、路由與生效參數，不執行實際轉換。 |
-| `schema convert` | 匯出 `convert` 的機器可讀參數契約、預設值、條件約束與規範鍵。 |
-| `validate <file> --check ...` | 文件校對（`typo/punct/symbol/sensitive/all/none`）。需要 CLI 頂層 Envelope JSON 時使用 `--json`；`--report` 是可選的報告檔案路徑。 |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>) --dry-run --json` | 檢查檔案格式、轉換方法和參數，不產生檔案。 |
+| `schema convert` | 列出轉換參數、預設值和使用條件，方便指令碼讀取。 |
+| `validate <file> --check ...` | 預設只檢查文字；加上 `--report <path>` 才會儲存校對結果。可選規則為 `typo/punct/symbol/sensitive/all/none`。 |
 | `inspect <file> [--json]` | 查詢檔案類別/格式、建議動作，以及副檔名與內容不一致警告。 |
-| `doctor --json` | 輸出診斷結果，並附帶執行期能力摘要與依賴門控資訊。 |
-| `resources list formats --json` | 按來源類別列出可用目標格式，並附帶執行期依賴門控 / 限制摘要。 |
-| `resources list optimizations --json` | 列出可用最佳化資源及其規範路線綁定。 |
+| `doctor --json` | 檢查安裝情況、可用轉換和所需軟體。 |
+| `resources list formats --json` | 列出可用轉換格式、所需軟體和目前限制。 |
+| `resources list optimizations --json` | 列出可用最佳化類型及其適用的轉換。 |
 | `resources list templates` | 列出可用模板。 |
 | `resources list numbering-schemes` | 列出可用編號方案。 |
-| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 透過獨立的本機 GUI 控制介面啟動或啟用 DocWen，並可開啟一個絕對路徑檔案。 |
-| `--template <id>` | 原樣使用 `resources list templates` 回傳的資源 ID；顯示名稱、檔名與路徑直接拒絕。DOCX ID 用於 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用於 `xlsx/xls/ods/csv`。 |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 開啟 DocWen 視窗，並可同時傳入一個檔案。檔案路徑必須是絕對路徑。 |
+| `--template <id>` | 請填寫 `resources list templates` 回傳的資源 ID，不能使用範本名稱或路徑。DOCX ID 用於 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用於 `xlsx/xls/ods/csv`。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的圖片提取與 OCR 選項。 |
-| `--image-mode file|base64|embed|omit` | 控制 Markdown 匯出時圖片的落地方式。 |
-| `--ocr-placement image_md|main_md` | 控制 OCR 文字寫入圖片配套 Markdown 或主 Markdown。 |
-| `--heading-merge-mode punct_required|always|never` | 控制 `convert --to docx` 時「標題 + 正文」段落合併策略。 |
+| `--image-mode file\|base64\|embed\|omit` | 選擇匯出圖片的儲存或嵌入方式。 |
+| `--ocr-placement image_md\|main_md` | 控制 OCR 文字寫入圖片配套 Markdown 或主 Markdown。 |
+| `--heading-merge-mode punct_required\|always\|never` | 控制 `convert --to docx` 時「標題 + 正文」段落合併策略。 |
 | `--optimization <id>` | 明確啟用某個最佳化配置（可用列表見 `resources list optimizations`）。 |
-| `batch convert|validate ... --jobs <n> [--continue-on-error]` | 批次處理控制。 |
-| `--json` / `--quiet` / `--timing` | 結構化輸出、壓縮日誌與耗時資訊，適合腳本或外掛呼叫。 |
+| `batch convert\|validate ... --jobs <n> [--continue-on-error]` | 批次處理控制。 |
+| `--json` / `--quiet` / `--timing` | 在終端機指令碼中輸出 JSON、減少日誌，或顯示耗時。 |
 
 
 ## 📝 Markdown 語法約定
@@ -288,11 +281,11 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ### 標題級別映射
 
-為方便無背景知識的同事記憶，本軟體的Markdown標題與Word標題**一一對應**：
+Markdown 標題與 Word 標題級別直接對應：
 - 文檔的標題（title）和副標題（subtitle）放在YAML元數據中
 - Markdown的 `# 一級標題` 對應 Word的"標題1"
 - Markdown的 `## 二級標題` 對應 Word的"標題2"
-- 以此類推，最多支持9級標題
+- 第一至六級使用標準 Markdown 語法。第七至九級需先在 Markdown 輸入設定中啟用「第七至九級標題」，再使用七至九個開頭的 `#`
 
 **提示**：如果您習慣用 Markdown 的一級標題（`#`）表示文檔標題（title），從二級標題（`##`）開始表示正文小標題（heading），可以在 Word 範本中將「標題1」樣式調整為文檔標題的外觀（如置中、粗體、較大字號），並在設定的序號方案中選擇「跳過一級標題編號」的方案。這樣，一級標題就能呈現為文檔標題的效果。
 
@@ -315,7 +308,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 **注意**：
 - 小標題和正文之間不能有空行，否則會被識別為獨立段落
 - 預設情況下（有標點才合併模式），若小標題末尾沒有結束標點符號，即使與正文之間無空行，也會被識別為獨立段落，不會合併
-- 可在設定介面「格式」→「Markdown 轉為文件」中調整「標題 + 正文合併模式」和觸發符號。觸發符號留空時，「有標點才合併」模式不會合併任何段落
+- 可在「設定 → 傳入文字 → Markdown 轉為文件 — 格式處理」中調整「標題 + 正文合併模式」和觸發符號。觸發符號留空時，「有標點才合併」模式不會合併任何段落
 - 逗號、分號、頓號、破折號和刪節號預設不觸發合併；確有需要時可由使用者明確加入
 
 ### 分隔線雙向轉換
@@ -379,12 +372,12 @@ DocWenCLI.exe validate input.md --check typo --check punct
 ### Word 轉 Markdown
 
 1. 將 .docx 文件拖入程式窗口
-2. 程式自動分析文檔結構
+2. 選擇匯出選項，點擊「導出 Markdown」
 3. 生成包含 YAML 元數據的 .md 文件
 
 **支持的格式**：
 - `.docx` - 標準 Word 文檔
-- `.doc` - 自動轉換為 DOCX 後處理
+- `.doc` - 自動生成 DOCX 後處理
 - `.wps` - WPS 文檔自動轉換
 
 **導出選項說明**：
@@ -392,25 +385,25 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | 選項 | 說明 |
 |-----|------|
 | **提取圖片** | 勾選後，將文檔中的圖片提取到輸出文件夾，MD文件中插入圖片連結 |
-| **圖片文字識別** | 勾選後，對圖片進行OCR識別，創建圖片.md文件（包含識別的文字） |
-| **進階欄位優化** | 勾選後，提取更豐富的結構化元數據；不勾選則使用簡化模式，YAML 只包含標題和副標題兩個基本字段 |
-| **清理小標題序號** | 勾選後，移除小標題前的序號（如"一、""（一）""1."等），轉換為純標題文本 |
-| **添加小標題序號** | 勾選後，根據標題層級自動添加序號（可在設定中配置序號方案） |
+| **圖片文字識別** | 辨識圖片中的文字。依圖文輸出位置設定，儲存在每張圖片配套的 Markdown 中，或寫入主 Markdown 檔案。 |
+| **針對文件類型優化** | 選擇適合文件類型的最佳化，例如從公文中擷取欄位；不啟用時使用標準轉換。 |
+| **清除原有文件小標題序號** | 勾選後，移除小標題前的序號（如"一、""（一）""1."等），轉換為純標題文本 |
+| **新增小標題序號** | 勾選後，根據標題層級自動添加序號（可在設定中配置序號方案） |
 
-補充：DOCX -> MD 現已支援還原透過段落樣式（pStyle）關聯到 numbering.xml 的多級列表序號，因此 Word/WPS 中以多級列表實現的標題前綴（如「一、」「（一）」「1．」「（1）」「①」）在簡化模式與進階欄位模式下都能保留；勾選「清理小標題序號」後仍會正確識別標題層級。
+Word/WPS 多層次清單產生的標題編號在匯出時會保留。勾選「清除原有文件小標題序號」可移除這些編號，標題級別仍會保留。
 
 ### Markdown 轉 Word
 
-1. 準備包含 YAML 頭部的 .md 文件
+1. 準備 .md 檔案；如需填寫標題或自訂欄位，可在開頭加入 YAML 資訊
 2. 拖入程式窗口並選擇對應的 Word 範本
-3. 程式自動填充範本並生成文檔
+3. 將目標格式設為 DOCX，點擊「生成 DOCX」，填入範本並儲存文件
 
 **轉換選項說明**：
 
 | 選項 | 說明 |
 |-----|------|
-| **清理小標題序號** | 勾選後，移除小標題前的序號（如"一、""（一）""1."等），轉換為純標題文本 |
-| **添加小標題序號** | 勾選後，根據標題層級自動添加序號（可在設定中配置序號方案） |
+| **清除原有Markdown小標題序號** | 勾選後，移除小標題前的序號（如"一、""（一）""1."等），轉換為純標題文本 |
+| **新增小標題序號** | 勾選後，根據標題層級自動添加序號（可在設定中配置序號方案） |
 
 **注意**：如果文檔中有小標題和正文文本混合的段落，在MD文件中需要保持嚴格換行（參見上方"換行與分段"說明）。
 
@@ -422,7 +415,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 **段落樣式（Paragraph Style）**：應用到整個段落
 
-| 樣式 | 檢測行為 | 缺失時注入 | 來源 |
+| 樣式 | 檢測行為 | 缺少時新增 | 來源 |
 |-----|---------|-----------|-----|
 | 標題 (heading 1~9) | 檢測段落樣式 | 模板標題樣式 | Word 內置 |
 | 代碼塊 | 檢測段落樣式 | Consolas 字體 + 灰色背景 | 本軟體定義 |
@@ -432,14 +425,14 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 **字符樣式（Character Style）**：應用到選中的文字
 
-| 樣式 | 檢測行為 | 缺失時注入 | 來源 |
+| 樣式 | 檢測行為 | 缺少時新增 | 來源 |
 |-----|---------|-----------|-----|
 | 行內代碼 | 檢測字符樣式 | Consolas 字體 + 灰色底紋 | 本軟體定義 |
 | 行內公式 | 檢測字符樣式 | 公式專用樣式 | 本軟體定義 |
 
 **表格樣式（Table Style）**：應用到整個表格
 
-| 樣式 | 檢測行為 | 缺失時注入 | 來源 |
+| 樣式 | 檢測行為 | 缺少時新增 | 來源 |
 |-----|---------|-----------|-----|
 | 三線表 | 用戶配置優先 | 三線表樣式定義 | 本軟體定義 |
 | 網格表 | 用戶配置優先 | 網格表樣式定義 | 本軟體定義 |
@@ -457,15 +450,15 @@ DocWenCLI.exe validate input.md --check typo --check punct
   - Word 根據系統語言自動本地化顯示（中文系統顯示為"標題 1"）
   
 - **本軟體定義的樣式**（代碼塊、引用、公式、分隔線、表格等）：
-  - 根據本軟體的介面語言設定，注入相應語言的樣式名
-  - 中文介面：注入"代碼塊"、"引用 1"、"三線表"等
-  - 英文介面：注入 "Code Block"、"Quote 1"、"Three Line Table" 等
+  - 依介面語言為新增樣式命名
+  - 中文介面：使用"代碼塊"、"引用 1"、"三線表"等
+  - 英文介面：使用 "Code Block"、"Quote 1"、"Three Line Table" 等
 
 **使用建議**：在範本中自定義樣式後，轉換器會自動使用您的樣式；如果範本中沒有，會使用內置預設樣式。
 
 ### 表格文件處理
 
-1. **Excel/CSV 轉 Markdown**：拖入 .xlsx 或 .csv 文件，自動轉換為 Markdown 表格
+1. **Excel/CSV 轉 Markdown**：新增 `.xlsx` 或 `.csv` 檔案，點擊「導出 Markdown」。
 2. **Markdown 轉 Excel**：可將 Markdown 表格匯出為 XLSX；XLSX 範本支援 YAML 欄位、縱向/橫向表格欄占位符、圖片占位符、合併/保護儲存格處理和 Markdown 表格合併恢復。
 
 **支持的格式**：
@@ -489,12 +482,10 @@ DocWenCLI.exe validate input.md --check typo --check punct
 **使用方法**：
 1. 將需要校對的 Word 或 Markdown 文檔拖入程式
 2. 勾選需要的校對規則
-3. 點擊"文本校對"按鈕
+3. 點擊「文件校對」按鈕
 4. Word 文檔的校對結果以批註形式顯示在文檔中；Markdown 文件的校對結果輸出為結構化 JSON 報告
 
-補充說明（Markdown 校對 JSON 報告）：
-- 引擎：`text_rules` + Markdown 適配層 `md_spell`
-- 輸出方式：目前 CLI 校對入口為 `validate`；需要 CLI 頂層 Envelope JSON 時使用 `--json`。`--report` 是可選的報告檔案路徑。
+命令列使用 `validate <file>` 檢查檔案，預設不修改原始檔。加上 `--report <path>` 可儲存校對結果：Markdown 產生 JSON 報告，Word 及支援的舊版文件格式產生附註解的 DOCX。`--json` 用於把命令的執行結果列印為 JSON。
 
 ## 🛠️ 範本系統
 
@@ -577,10 +568,10 @@ Excel 範本中的 `{{→月份}}` 會依次向右填充"1月"、"2月"、"3月"
 
 **合併儲存格處理**：
 
-- Markdown -> Excel 會繼續保留範本原有的 merged ranges。
+- Markdown → Excel 會保留範本原有的合併儲存格。
 - 對由連續整格 `{{↓欄位名}}` 組成的已知列式範本區域，支援根據 Markdown 表格中的顯式 `<` / `^` 合併標記還原矩形合併。
-- 僅當儲存格去掉首尾空白後精確等於 `<` 或 `^` 時才參與 merge 識別；`\<`、`\^` 會保留為字面文字。
-- 非法矩形或與範本原有 merged ranges 衝突時，預設降級為普通文字並記錄警告，不會強制覆蓋範本結構。
+- 只有整個儲存格的內容為 `<` 或 `^`（忽略首尾空白）時才會辨識為合併標記；`\<`、`\^` 會保留為字面文字。
+- 合併區域無法組成矩形，或與範本已有合併儲存格衝突時，會保留為一般文字並提示警告，範本結構保持不變。
 
 **多表格數據合併**：如果 Markdown 中有多個表格使用相同的表頭名，數據會按順序合併後依次填充。
 
@@ -592,26 +583,23 @@ Excel 範本中的 `{{→月份}}` 會依次向右填充"1月"、"2月"、"3月"
 
 - **🚀 一鍵啟動** - 側邊欄圖標快速啟動轉換器
 - **📂 自動傳遞** - 自動傳遞當前打開的文件路徑
-- **🔄 單實例管理** - 程式已運行時自動發送文件，無需重複啟動
-- **🔒 安全的本機控制** - 使用結構化的 `status`、`open`、`activate` 請求，不按程序名稱探測，也不使用命令檔或狀態檔
+- **🔄 使用已開啟的視窗** - 轉換器正在執行時，直接開啟新檔案，無須重新啟動
 
-### 工作原理
+### 使用方式
 
-DocWen Core 在 Windows 使用命名管道進行本機控制，在 Linux/macOS 使用 AF_UNIX socket。檔案鎖只負責單一執行個體所有權，不承載控制命令。這裡描述的是 Core 能力。DocWen Assistant 3.1 支援 Windows 與 Linux 桌面端；Windows Microsoft Store 安裝版可使用自動偵測，Linux 使用手動選取的相容解壓縮套件。Assistant 目前不支援 macOS。
+DocWen Assistant 3.3 支援 Windows 與 Linux 桌面端；Windows Microsoft Store 安裝版可使用自動偵測，Linux 使用手動選取的相容解壓縮套件。Assistant 目前不支援 macOS。
 
-1. **首次點擊** → 啟動轉換器並傳入當前文件
-2. **再次點擊（有文件）** → 替換為新文件（單文件模式）
-3. **再次點擊（無文件）** → 激活轉換器窗口
+1. **首次點選** → 啟動轉換器並開啟目前的檔案
+2. **再次點選（有開啟的檔案）** → 以該檔案取代目前的輸入檔案（單一檔案模式）
+3. **再次點選（沒有開啟的檔案）** → 將轉換器視窗切換到前景
 
 ### 安裝方法
 
-DocWen Assistant 3.1 要求 DocWen 0.13.0 或更新版本；轉換、校對等內容操作使用 Machine Protocol v2 與唯一的 Artifact Bundle v3 合同，啟動/開啟桌面應用則使用獨立的本機 GUI 控制面。原始碼版本不能
-證明已經發布；請只安裝明確標識了相容且已發布 DocWen 版本的數字版本 Release。
+安裝 [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant) 前，需要先安裝相容的 DocWen。Assistant 3.3 要求 DocWen 0.17.0 或更新版本；外掛不會代為安裝主程式。請依發行說明選擇相容版本。開發整合時，這些版本使用 Machine Protocol v2 通訊，並以 Artifact Bundle v3 回傳轉換結果。
 
 ## 🔌 OpenClaw（插件 + Skill）
 
-OpenClaw 3.0 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 合同。原始碼版本不能證明已經
-發布；請以數字版本 Release 頁面為準，並只在不可變發布閘門成功後安裝。
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) 讓 OpenClaw 呼叫本機 DocWen 轉換和校對檔案。需要另外安裝 DocWen，並依外掛發行說明選擇相容版本。外掛 3.0 使用 Machine Protocol v2 和 Artifact Bundle v3。請下載正式發行的安裝檔；原始碼中的版本號不代表該版本已可下載。
 
 ## ❓ 常見問題
 
@@ -619,7 +607,7 @@ OpenClaw 3.0 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 �
 
 - 檢查文件是否被其他程式占用
 - 確認文件格式正確
-- 在設定頁查看「目前實際日誌檔案路徑」，或到系統使用者日誌目錄中查看錯誤日誌；若打包驗證使用了 `DOCWEN_LOG_DIR`，則查看對應的覆寫目錄
+- 開啟「設定 → 日誌」，找到實際日誌檔案並查看錯誤詳情
 
 ### 範本不顯示？
 
@@ -641,12 +629,7 @@ OpenClaw 3.0 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 �
 
 ### Excel轉Markdown後公式儲存格為空？
 
-這是正常現象，原因是程式讀取的是儲存格的**快取值**而非公式本身。
-
-**技術原因**：
-- Excel 文件中，公式儲存格同時存儲公式和上次計算的結果（快取值）
-- 程式使用 `data_only=True` 模式讀取，只獲取快取值
-- 如果文件從未在 Excel 中打開過（如由程式生成），或編輯後未重新保存，快取值就是空的
+DocWen 匯出的是公式儲存格**上次儲存的計算結果**。如果檔案裡沒有儲存這個結果，匯出的儲存格就會為空；由其他程式產生的檔案，或修改後沒有重新計算並儲存的檔案，都可能出現這種情況。
 
 **解決方法**：
 1. 在 Excel 中打開文件
@@ -656,11 +639,11 @@ OpenClaw 3.0 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 �
 
 ## 🔒 安全特性
 
-- **完全本地運行**：所有處理預設在本地完成，不依賴線上服務
-- **依賴出站保護**：受支援的 GUI/CLI 入口會在整個 Python 主進程生命週期內啟用 CPython 稽核守衛；守衛阻止進程內依賴執行所有 DNS／名稱解析以及 AF_INET/AF_INET6 的 `bind`、`connect`、`connect_ex`、`sendto`、`sendmsg` 操作，同時保留 Windows 命名管道與 Unix 域套接字
-- **明確邊界**：單獨啟動的進程（包括 Office/WPS/LibreOffice 及專用 Office helper）不受該守衛管理；它用於防止依賴意外連網，不是作業系統級沙箱
-- **無數據上傳**：DocWen 不提供上傳、遙測、線上下載或網絡服務功能
-- **嚴格安全模式**：預設啟用；核心安全檢查失敗時程式將終止。進階設定/排障請參閱 [故障排查](../maintenance/troubleshooting.md)。
+DocWen 在本機處理檔案，不提供檔案上傳、遙測、線上下載或網路服務功能。程式會限制自身 Python 元件的網路存取；如果這項防護無法啟用，DocWen 不會繼續執行。
+
+另外啟動的 Word/Office、WPS、LibreOffice 等程式及相關輔助程序，仍遵循各自和系統的網路設定，不受這項限制。處理敏感檔案時，也請檢查這些程式的設定。
+
+防護的實作和限制請參閱[網路防護說明](../architecture.md)。如果程式無法啟動或轉換失敗，可查閱[疑難排解](../maintenance/troubleshooting.md)。
 
 ## 📜 許可證
 

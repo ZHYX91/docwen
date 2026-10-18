@@ -115,6 +115,7 @@ class TemplatesTab(BaseSettingsTab):
             set_metric(layout, "setContentsMargins", 0, Spacing.SM, 0, 0)
             template_list = QListWidget(page)
             template_list.setObjectName(f"templateManagementList-{target}")
+            template_list.setProperty("docwenTemplateList", True)
             template_list.setItemDelegate(TemplateItemDelegate(template_list, draggable=True))
             template_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
             template_list.itemSelectionChanged.connect(self._on_selection_changed)

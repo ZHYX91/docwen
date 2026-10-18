@@ -263,7 +263,7 @@ class DocxToMarkdownConverter:
             yaml_header = self._build_yaml_header(
                 metadata,
                 locale=locale,
-                yaml_key_labels=options.get("yaml_key_labels"),
+                yaml_key_labels=options.get("yaml_key_labels", getattr(context, "yaml_key_labels", None)),
             )
 
             markdown_content, stats = self._parse_docx(

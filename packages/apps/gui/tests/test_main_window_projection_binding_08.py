@@ -518,8 +518,8 @@ class TestExecutionThreadDispatch:
         assert request.input_refs[0].format == "png"
         assert request.input_refs[0].category == "image"
         assert request.options["to_md_keep_images"] is True
-        assert "locale" in request.options
-        assert "yaml_key_labels" in request.options
+        assert "locale" not in request.options
+        assert "yaml_key_labels" not in request.options
         for key in ("compress_mode", "size_limit", "size_unit", "quality_mode"):
             assert key not in request.options
             assert key not in context["options"]

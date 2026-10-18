@@ -79,7 +79,8 @@ def test_four_localized_comments_keep_exact_text_anchors(tmp_path, locale):
     "options,snapshot,expected",
     [
         ({"locale": "fr_FR"}, {"gui": {"language": {"locale": "zh_CN"}}}, "fr_FR"),
-        ({}, {"gui": {"language": {"locale": "zh_CN"}}}, "zh_CN"),
+        ({}, {"conversion": {"output_locale": "zh_CN"}, "gui": {"language": {"locale": "ar_SA"}}}, "zh_CN"),
+        ({}, {"gui": {"language": {"locale": "zh_CN"}}}, "en_US"),
         ({"locale": "en_US"}, {}, "en_US"),
         ({}, {}, "en_US"),
     ],

@@ -191,9 +191,8 @@ def _runtime_workspace_root() -> Path:
 
 
 def _configured_locale(config_snapshot: dict[str, Any]) -> str:
-    gui = config_snapshot.get("gui", {})
-    language = gui.get("language", {}) if isinstance(gui, dict) else {}
-    locale = language.get("locale") if isinstance(language, dict) else None
+    conversion = config_snapshot.get("conversion", {})
+    locale = conversion.get("output_locale") if isinstance(conversion, dict) else None
     return str(locale).strip() if locale else "zh_CN"
 
 

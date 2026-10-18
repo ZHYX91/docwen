@@ -269,9 +269,8 @@ def _mapping_section(value: object) -> dict[str, Any]:
 def _snapshot_locale(snapshot: Mapping[str, Any], requested_locale: object) -> str:
     if isinstance(requested_locale, str) and requested_locale.strip():
         return requested_locale.strip()
-    gui = _mapping_section(snapshot.get("gui"))
-    language = gui.get("language")
-    locale = language.get("locale") if isinstance(language, Mapping) else language
+    conversion = _mapping_section(snapshot.get("conversion"))
+    locale = conversion.get("output_locale")
     return str(locale or "zh_CN")
 
 

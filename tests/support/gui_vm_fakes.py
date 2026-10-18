@@ -58,7 +58,8 @@ def optimization_capability_projection() -> dict[str, object]:
             for target in ("md", "docx", "doc", "odt", "rtf", "png", "jpg", "tif")
         ),
         *(
-            ("ofd", "layout", target, "conversion", None, ["render_dpi"])
+            (source, "layout", target, "conversion", None, ["render_dpi"])
+            for source in ("ofd", "xps")
             for target in ("pdf", "docx", "doc", "odt", "rtf", "png", "jpg", "tif")
         ),
         ("pdf", "layout", "md", "action", "invoice_cn", ["locale", "yaml_key_labels"]),

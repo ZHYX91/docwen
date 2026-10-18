@@ -52,8 +52,7 @@ def test_shared_admission_projects_missing_ocr_options_from_one_snapshot() -> No
         '_nested_value(config_snapshot, "ocr", "language")',
         'options["ocr_language"] = ocr_language or "auto"',
         'if "locale" not in options:',
-        '_nested_value(config_snapshot, "gui", "language", "locale")',
-        'options["locale"] = locale or "zh_CN"',
+        'options["locale"] = configured_output_locale(config_snapshot)',
     ):
         assert token in source
     assert "request.options[" not in projection
@@ -90,7 +89,7 @@ def test_direct_regressions_cover_authority_precedence_and_scope() -> None:
         "assert request.config_snapshot == {}",
         '"to_md_enable_ocr": False',
         '["docx", "markdown", "MD", " md "]',
-        '{"ocr_language": "auto", "locale": "ja_JP"}',
+        '{"ocr_language": "auto", "locale": "zh_CN"}',
         '{"ocr_language": "japanese", "locale": "zh_CN"}',
     ):
         assert token in tests

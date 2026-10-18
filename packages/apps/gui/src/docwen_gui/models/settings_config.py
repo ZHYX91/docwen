@@ -26,6 +26,7 @@ class GUIConfig:
     """General / Appearance settings."""
 
     language: str = "zh_CN"
+    output_language: str = "zh_CN"
     theme: str = "light"  # light / dark / system
     font_size_preset: str = "default"
     scale_percent: int = 100
@@ -173,6 +174,9 @@ class FormattingConfig:
     markdown_extensions: dict[str, dict[str, bool]] = field(
         default_factory=lambda: {direction: MarkdownExtensions().to_dict() for direction in ("input", "output")}
     )
+
+    # MD -> Word: ordinary prose paragraph boundaries
+    each_line_paragraph: bool = False
 
     # DOCX -> MD: separators
     page_break_sep: str = "---"

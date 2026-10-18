@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
     ) as run:
         (run.root / "temp").mkdir()
         arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
-        module = "docwen_bundle.gui_entry" if args.entry == "gui" else "docwen_bundle.cli_entry"
+        module = "docwen_gui" if args.entry == "gui" else "docwen_bundle.cli_entry"
         result = subprocess.run(
             [sys.executable, "-m", module, *arguments], cwd=repo, env=source_environment(repo, run.root), check=False
         )

@@ -526,9 +526,29 @@ def write_resource_index(staging_root: Path, work: Path, makepri: Path) -> None:
     _require(index is not None, "makepri_config_index_missing")
     assert index is not None
     index.set("root", "")
-    index.set("startIndexAt", "assets/msix")
+    # Starting a folder pass at assets/msix strips that prefix from the
+    # logical resource names. ResFiles preserves package-relative names while
+    # avoiding an index of the unrelated Python payload.
+    resource_list = staging_root / "docwen-shell.resfiles"
+    with resource_list.open("x", encoding="utf-8") as stream:
+        stream.write(
+            "\n".join(
+                path.relative_to(staging_root).as_posix()
+                for path in sorted((staging_root / "assets/msix").glob("*.png"))
+            )
+            + "\n"
+        )
+    index.set("startIndexAt", resource_list.name)
+    for indexer in index.findall("indexer-config"):
+        index.remove(indexer)
+    ElementTree.SubElement(index, "indexer-config", {"type": "RESFILES", "qualifierDelimiter": "."})
     tree.write(config_path, encoding="utf-8", xml_declaration=True)
-    run(["new", "/pr", str(staging_root), "/cf", str(config_path), "/of", str(staging_root / "resources.pri"), "/o"])
+    try:
+        run(
+            ["new", "/pr", str(staging_root), "/cf", str(config_path), "/of", str(staging_root / "resources.pri"), "/o"]
+        )
+    finally:
+        resource_list.unlink()
     _require((staging_root / "resources.pri").is_file(), "makepri_output_missing")
 
 

@@ -36,6 +36,10 @@ The packaged base contains the 25 files declared by the registry, including `con
 
 ## Shared settings / 共用设置
 
+General settings keep interface language (`gui.language.locale`) separate from task output language (`conversion.output_locale`). The latter controls generated labels and document styles; explicit task locale takes precedence. Existing profiles freeze their previously saved locale once, while new profiles default to `zh_CN`. See [Display and task languages](specs/task-language.md).
+
+常规设置分别管理界面语言 `gui.language.locale` 与任务输出语言 `conversion.output_locale`。后者控制生成标签和文档样式，显式任务参数优先。旧配置首次升级时冻结原先保存的语言，新配置默认 `zh_CN`；详见[语言职责](specs/task-language.md)。
+
 OCR language is shared by every input format through `ocr.language` in `ocr.toml`, owned by the Markdown resources settings page. Word and spreadsheet template filling share `template_fill.list_separator` in `template_fill.toml`, owned by incoming text settings. Empty separators and intentional spaces are preserved. Document YAML/frontmatter is unchanged.
 
 OCR 语言由所有传入格式共用，通过 `ocr.toml` 中的 `ocr.language` 设置，归属“Markdown 资源”。Word 与表格模板填充共用 `template_fill.toml` 中的 `template_fill.list_separator`，归属“传入文本”；空字符串和有意输入的空格原样保留。文档 YAML/frontmatter 不变。
