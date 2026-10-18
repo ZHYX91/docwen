@@ -65,40 +65,6 @@ def _redacted_request_options(options: dict[str, Any]) -> dict[str, Any]:
     return redacted
 
 
-def _to_markdown_locale_options(
-    options: dict[str, Any],
-    *,
-    target_format: str,
-    action_name: str = "",
-    route_options: Sequence[str] | None = None,
-) -> dict[str, Any]:
-    from docwen_gui.i18n import get_locale
-
-    enriched = dict(options)
-    if route_options is not None:
-        supported = frozenset(route_options)
-        if "locale" in supported:
-            enriched.setdefault("locale", get_locale())
-        if target_format not in _MARKDOWN_TARGET_FORMATS or "yaml_key_labels" not in supported:
-            return enriched
-    elif target_format not in _MARKDOWN_TARGET_FORMATS:
-        return enriched
-    elif action_name:
-        # Named routes must provide their canonical option surface. Do not
-        # infer support from an action string.
-        return enriched
-    else:
-        enriched.setdefault("locale", get_locale())
-    enriched.setdefault(
-        "yaml_key_labels",
-        {
-            "title": _t("yaml_keys.title", default="title"),
-            "subtitle": _t("yaml_keys.subtitle", default="subtitle"),
-        },
-    )
-    return enriched
-
-
 def _normalize_proofread_action_options(options: dict[str, Any], *, action_name: str) -> dict[str, Any]:
     if action_name and action_name not in _PROOFREAD_ACTIONS:
         return options
@@ -238,12 +204,6 @@ class ExecutionRequestBuilder:
                 source_format=source_context[0] if source_context else "",
                 target_format=target_format,
                 action_name=action_name,
-            )
-            request_options = _to_markdown_locale_options(
-                request_options,
-                target_format=target_format,
-                action_name=action_name,
-                route_options=route_options,
             )
         request_options = _route_scoped_options(request_options, route_options=route_options)
         output_policy = output_policy or self.output_policy()

@@ -237,6 +237,14 @@ class RuntimeExecutionContext:
         return self._heading_cleanup_rules
 
     @property
+    def yaml_key_labels(self) -> dict[str, str]:
+        """Generated labels follow the request's output locale, never UI state."""
+        from docwen_runtime.config.task_language import configured_output_locale, output_yaml_labels
+
+        locale = self._request.options.get("locale") or configured_output_locale(self._request.config_snapshot)
+        return output_yaml_labels(str(locale))
+
+    @property
     def ocr_blockquote_title(self) -> str:
         """Localized OCR title resolved from this request's snapshot."""
         return self._ocr_blockquote_title

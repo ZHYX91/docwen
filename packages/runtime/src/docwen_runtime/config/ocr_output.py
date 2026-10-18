@@ -9,6 +9,8 @@ from typing import Any
 
 from docwen_runtime.i18n import load_locale_table
 
+from .task_language import configured_output_locale
+
 _LOCALE_CODE = re.compile(r"[A-Za-z]{2,3}_[A-Za-z]{2,4}")
 
 
@@ -50,16 +52,7 @@ def _resolve_locale(snapshot: Mapping[str, Any], requested_locale: object) -> st
     requested = _normalized_locale(requested_locale)
     if requested:
         return requested
-    gui = _mapping(snapshot.get("gui"))
-    language = gui.get("language")
-    if isinstance(language, Mapping):
-        configured = _normalized_locale(language.get("locale"))
-        if configured:
-            return configured
-    configured = _normalized_locale(language)
-    if configured:
-        return configured
-    return "zh_CN"
+    return _normalized_locale(configured_output_locale(snapshot)) or "zh_CN"
 
 
 def _normalized_locale(value: object) -> str:

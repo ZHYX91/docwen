@@ -224,6 +224,9 @@ sample_button = "Пример"
 sample_text = "Текст"
 
 font_tooltip = "Выбор сразу отображается в предпросмотре. «Применить» или OK сохраняет размер текста; «Отмена» возвращает последнее сохранённое значение."
+output_language_label = "Язык результата:"
+output_language_tooltip = "Язык создаваемых подписей и стилей документа. Не переводит текст и не меняет шаблон. Язык OCR выбирается отдельно."
+
 [settings.general.languages]
 zh_CN = "Китайский (упрощённый)"
 en_US = "Английский"
@@ -236,6 +239,7 @@ pt_BR = "Португальский (Бразилия)"
 ru_RU = "Русский"
 vi_VN = "Вьетнамский"
 zh_TW = "Китайский (традиционный)"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]
@@ -546,6 +550,9 @@ embed = "Вставить контент"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "Каждая строка — отдельный абзац"
+each_line_paragraph_help = "Преобразовывать каждую строку обычного текста Markdown в отдельный абзац Word. Заголовки, списки, цитаты, таблицы, код и явные разрывы строк не меняются."
+line_paragraph_section = "Markdown в Word"
 mermaid_auto = "Автоматический поиск"
 mermaid_browse = "Выбрать Mermaid CLI"
 mermaid_path = "Путь к CLI:"
@@ -744,7 +751,7 @@ system_desc = "Включить или отключить журналирова
 enable_logging_label = "Включить логирование"
 enable_logging_tooltip = "Включает систему логирования."
 log_level_label = "Уровень лога:"
-log_level_tooltip = "Уровень детализации логов."
+log_level_tooltip = "Выберите подробность журналов.\nОт наиболее подробного к наименее подробному: DEBUG, INFO, WARNING, ERROR, CRITICAL."
 
 # 文件输出区域
 file_section = "Файл"
@@ -814,8 +821,8 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "Язык OCR:"
-language_tooltip = "Общий язык OCR для всех входных форматов. «Следовать языку интерфейса» выбирает язык по текущему языку UI; язык изображения автоматически не определяется."
-language_auto = "Следовать языку интерфейса"
+language_tooltip = "Выбирает модель OCR по языку результата, а не определяет язык изображения."
+language_auto = "Следовать языку результата"
 language_chinese = "Китайский/Английский"
 language_japanese = "Японский"
 language_chinese_cht = "Традиционный китайский"
@@ -1226,22 +1233,23 @@ level_format_config = "Формат уровня"
 realtime_preview = "Предпросмотр"
 format_help = "📖 Помощь"
 format_help_title = "Заполнители"
-format_help_text = """Использование форматных заполнителей
+format_help_text = """Заполнители формата нумерации
 
-占位符格式：{级别.样式}
+Синтаксис: {level.style}
+level — уровень заголовка (1–9); style — имя из списка ниже.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+Доступные стили:
+  chinese_lower  - Китайские цифры (一、二、三)
+  chinese_upper  - Формальные китайские цифры (壹、贰、叁)
+  arabic_half    - Десятичные цифры (1, 2, 3)
+  arabic_full    - Полноширинные десятичные цифры (１、２、３)
+  arabic_circled - Цифры в кружках (①②③)
+  letter_upper   - Прописные буквы (A, B, C)
+  letter_lower   - Строчные буквы (a, b, c)
+  roman_upper    - Римские цифры в верхнем регистре (I, II, III)
+  roman_lower    - Римские цифры в нижнем регистре (i, ii, iii)
 
-示例：
+Примеры:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

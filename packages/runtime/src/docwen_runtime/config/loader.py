@@ -479,6 +479,7 @@ class ConfigLoader:
         """
         merged: dict[str, Any] = {}
         shipped_tree: dict[str, Any] = {}
+        legacy_output_locale: str | None = None
         for spec in CONFIG_FILES:
             base_path = self._base_dir / spec.rel_path
             user_path = self._user_dir / spec.rel_path
@@ -489,11 +490,20 @@ class ConfigLoader:
             try:
                 user_data = _read_toml_file(user_path, missing_ok=True)
                 migrated = migrate_display_preferences(user_data) if spec.rel_path == "gui.toml" else user_data
+                if spec.rel_path == "conversion.toml" and legacy_output_locale and "output_locale" not in user_data:
+                    migrated = {**user_data, "output_locale": legacy_output_locale}
                 file_data = _merge_file_layers(spec, base_data, migrated)
                 file_data = validate_config_file(spec.rel_path, file_data, base_data)
                 if migrated != user_data:
                     # Only persist a validated sparse user layer; never backfill defaults.
                     write_toml_file(user_path, migrated)
+                if spec.rel_path == "gui.toml":
+                    from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
+
+                    language = migrated.get("language")
+                    old_locale = language.get("locale") if isinstance(language, Mapping) else None
+                    if old_locale in SHIPPED_STYLE_LOCALES:
+                        legacy_output_locale = str(old_locale)
             except (TOMLDecodeError, ConfigSemanticError) as exc:
                 if getattr(_CONFIG_TRANSACTION_STATE, "operation", None) is not None:
                     raise
@@ -923,6 +933,15 @@ class ConfigLoader:
         failures restore every target's byte-exact preimage before the loader
         reconciles its effective configuration.
         """
+        values = dict(values)
+        freeze_output_locale = "gui.language.locale" in values and "conversion.output_locale" not in values
+        if freeze_output_locale:
+            # Freeze the independent output default before a first UI-language
+            # save; otherwise a later legacy-profile migration could copy the
+            # newly selected UI language back into task output.
+            values["conversion.output_locale"] = self.get_base_file_dict("conversion.toml").get(
+                "output_locale", "zh_CN"
+            )
         by_file: dict[str, list[tuple[tuple[str, ...], Any]]] = {}
         try:
             for dotted_key, value in values.items():
@@ -947,15 +966,25 @@ class ConfigLoader:
                 user_path.parent.mkdir(parents=True, exist_ok=True)
                 user_data = _read_toml_file(user_path, missing_ok=True)
                 _reject_reserved_user_keys(user_data)
+                changed = False
                 for rel_key, value in entries:
+                    if (
+                        freeze_output_locale
+                        and rel_path == "conversion.toml"
+                        and rel_key == ("output_locale",)
+                        and "output_locale" in user_data
+                    ):
+                        continue
                     cursor = user_data
                     for part in rel_key[:-1]:
                         if part not in cursor or not isinstance(cursor[part], dict):
                             cursor[part] = {}
                         cursor = cursor[part]
                     cursor[rel_key[-1]] = value
+                    changed = True
                 _reject_reserved_user_keys(user_data)
-                write_toml_file(user_path, user_data)
+                if changed:
+                    write_toml_file(user_path, user_data)
 
         return self._run_user_file_transaction(
             user_paths,

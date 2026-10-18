@@ -77,6 +77,9 @@ class TemplateSelector(QWidget):
     template_selected = Signal(str)
     """选中模板时发出，携带模板名称。"""
 
+    location_requested = Signal(str)
+    """User-requested reveal of a catalog-bound template file."""
+
     template_error = Signal(str, str)
     """操作出错时发出: (summary, detail)。"""
 
@@ -136,6 +139,7 @@ class TemplateSelector(QWidget):
         # ── 模板列表 ────────────────────────────────────────────────────
         self._list = QListWidget()
         self._list.setObjectName("templateSelectorList")
+        self._list.setProperty("docwenTemplateList", True)
         self._list.setItemDelegate(TemplateItemDelegate(self._list))
         self._list.setTextElideMode(Qt.TextElideMode.ElideMiddle)
         self._list.setWordWrap(True)
@@ -349,6 +353,14 @@ class TemplateSelector(QWidget):
             self._list.setCurrentItem(item)
 
         menu = QMenu(self._list)
+        name = self._get_item_template_name(item)
+        details = self._template_details.get(name or "")
+        if details is not None and details.source_path:
+            path = details.source_path
+            location_action = menu.addAction(t("components.template_selector.open_location", "打开文件位置"))
+            location_action.triggered.connect(
+                lambda _checked=False, source_path=path: self.location_requested.emit(source_path)
+            )
         manage_action = menu.addAction(t("components.template_selector.manage_templates", "管理模板"))
         manage_action.triggered.connect(lambda _checked=False: self._open_template_management())  # type: ignore[attr-defined]
         menu.exec(self._list.viewport().mapToGlobal(position))

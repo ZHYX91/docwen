@@ -277,6 +277,9 @@ sample_button = "Exemplo"
 sample_text = "Texto"
 
 font_tooltip = "A seleção é pré-visualizada imediatamente. Aplicar ou OK salva o tamanho do texto; Cancelar restaura o último valor salvo."
+output_language_label = "Idioma de saída:"
+output_language_tooltip = "Idioma dos rótulos e estilos gerados. Não traduz o texto nem altera o modelo. O idioma de OCR pode ser selecionado separadamente."
+
 [settings.general.languages]
 zh_CN = "Chinês (simplificado)"
 en_US = "Inglês"
@@ -289,6 +292,7 @@ pt_BR = "Português (Brasil)"
 ru_RU = "Russo"
 vi_VN = "Vietnamita"
 zh_TW = "Chinês (tradicional)"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]
@@ -599,6 +603,9 @@ embed = "Inserir conteúdo"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "Cada linha como um parágrafo"
+each_line_paragraph_help = "Cria um parágrafo do Word para cada linha de texto comum em Markdown. Títulos, listas, citações, tabelas, código e quebras explícitas não mudam."
+line_paragraph_section = "Markdown para Word"
 mermaid_auto = "Detecção automática"
 mermaid_browse = "Selecionar Mermaid CLI"
 mermaid_path = "Caminho da CLI:"
@@ -797,7 +804,7 @@ system_desc = "Ativar ou desativar o registro e definir o nível."
 enable_logging_label = "Ativar log"
 enable_logging_tooltip = "Ativa o sistema de log."
 log_level_label = "Nível de log:"
-log_level_tooltip = "Nível de detalhe dos logs."
+log_level_tooltip = "Escolha o nível de detalhe dos logs.\nDo mais detalhado ao menos detalhado: DEBUG, INFO, WARNING, ERROR, CRITICAL."
 
 # 文件输出区域
 file_section = "Arquivo"
@@ -867,8 +874,8 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "Idioma do OCR:"
-language_tooltip = "Idioma OCR compartilhado por todos os formatos de entrada. “Usar o idioma da interface” escolhe com base no idioma atual da interface; não detecta automaticamente o idioma da imagem."
-language_auto = "Usar o idioma da interface"
+language_tooltip = "Escolhe o modelo de OCR pelo idioma de saída; não detecta o idioma da imagem."
+language_auto = "Seguir o idioma de saída"
 language_chinese = "Chinês/Inglês"
 language_japanese = "Japonês"
 language_chinese_cht = "Chinês tradicional"
@@ -1276,22 +1283,23 @@ level_format_config = "Formato de nível"
 realtime_preview = "Visualização"
 format_help = "📖 Ajuda"
 format_help_title = "Espaços reservados"
-format_help_text = """Uso de placeholders de formato
+format_help_text = """Espaços reservados para numeração
 
-占位符格式：{级别.样式}
+Sintaxe: {level.style}
+level é o nível do título (1–9); style é um nome da lista abaixo.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+Estilos disponíveis:
+  chinese_lower  - Numerais chineses (一、二、三)
+  chinese_upper  - Numerais chineses formais (壹、贰、叁)
+  arabic_half    - Dígitos decimais (1, 2, 3)
+  arabic_full    - Dígitos decimais de largura completa (１、２、３)
+  arabic_circled - Números circulados (①②③)
+  letter_upper   - Letras maiúsculas (A, B, C)
+  letter_lower   - Letras minúsculas (a, b, c)
+  roman_upper    - Numerais romanos maiúsculos (I, II, III)
+  roman_lower    - Numerais romanos minúsculos (i, ii, iii)
 
-示例：
+Exemplos:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

@@ -3,7 +3,7 @@
   "manifestId": "docwen-windows-production",
   "product": {
     "name": "DocWen",
-    "version": "0.17.4",
+    "version": "0.18.0",
     "stableSemverOnly": true,
     "cliJsonProtocolVersion": 3,
     "releaseTagFormat": "{version}"
@@ -244,7 +244,7 @@
     },
     "lock": {
       "path": "uv.lock",
-      "sha256": "1df0b869c15ac9e4f7a6020a40bb3e19cbf878eadd27ee722de6e5e1367ee377"
+      "sha256": "9a9e4cd20be455e9a793df5a70fd57820b8be7f73c00d33f3c28a7675f0dbb32"
     },
     "pyinstallerVersion": "6.16.0"
   },
@@ -275,8 +275,8 @@
   },
   "releaseAssetAllowlist": [
     "DocWen-windows-x64.zip",
-    "DocWenCLI-0.17.4-linux-x64.tar.gz",
-    "DocWen-0.17.4-linux-x64.tar.gz",
+    "DocWenCLI-0.18.0-linux-x64.tar.gz",
+    "DocWen-0.18.0-linux-x64.tar.gz",
     "SHA256SUMS.txt"
   ]
 }

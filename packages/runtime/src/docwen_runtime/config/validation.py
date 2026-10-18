@@ -278,6 +278,9 @@ def _validate_gui(data: dict[str, Any]) -> None:
 
 
 def _validate_conversion(data: dict[str, Any]) -> None:
+    from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
+
+    _canonical_choice(data, "output_locale", frozenset(SHIPPED_STYLE_LOCALES), label="conversion.output_locale")
     threshold = _read_path(data, "export.base64_compress_threshold_kb")
     if threshold is not None and (not isinstance(threshold, int) or isinstance(threshold, bool) or threshold <= 0):
         raise ConfigSemanticError("conversion.export.base64_compress_threshold_kb must be a positive integer")

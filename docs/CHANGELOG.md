@@ -5,6 +5,25 @@
 
 ## Unreleased / 未发布
 
+## 0.18.0 (2026-10-18)
+
+- Add Arabic interface text and right-to-left layout across the desktop app and CLI help.
+- Separate interface language from task output language. Preserve the saved output language when changing the interface; explicit task language still takes precedence. OCR Auto follows task output language.
+- Remove nested native focus borders from template rows, retain keyboard focus, and restore Open file location in the template menu.
+- Add an optional each-line paragraph policy for ordinary Markdown prose, including nested emphasis; retain explicit hard breaks and semantic-owned structures.
+- Preserve visible raw HTML text without fetching resources; report flattened unsupported structures.
+- Preserve Office bridge warnings, monotonic progress and explicitly requested intermediate files. Proofread Markdown-generated DOCX before exporting DOC, ODT, RTF or WPS.
+- Normalize OFD/XPS inputs to temporary PDF for desktop/CLI PDF merge and split; the Machine PDF-only contract remains unchanged.
+- Correct MSIX icon resource names to match the manifest's package-relative asset paths.
+- 新增阿拉伯语界面、CLI 帮助及从右向左布局。
+- 分离界面语言与任务输出语言；后续切换界面不改变已保存输出语言，显式任务语言优先，OCR 自动选项跟随任务输出语言。
+- 去除模板行原生焦点黑白重框，保留键盘焦点，并恢复右键打开文件位置。
+- 普通 Markdown 正文可选每行独立成段，保留跨行粗斜体、显式换行和语义结构。
+- 保留原始 HTML 的可见文本，不访问外部资源，复杂结构降级时提供提示。
+- Office 桥接保留警告、单调进度和显式中间产物；Markdown 导出 DOC、ODT、RTF、WPS 前先校对私有 DOCX。
+- 桌面与 CLI 的 PDF 合并、拆分支持先将 OFD/XPS 转为临时 PDF；Machine 合同继续仅接收 PDF。
+- 修复 MSIX 图标资源名与 Manifest 中包内路径不一致的问题。
+
 ## 0.17.4 (2026-10-14)
 
 - Preserve heading, code and list styles within quotes, native list starting numbers and continuation paragraphs, and template border overrides.

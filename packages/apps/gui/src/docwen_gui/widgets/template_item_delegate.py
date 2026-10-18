@@ -31,6 +31,10 @@ class TemplateItemDelegate(QStyledItemDelegate):
             return
         row = QStyleOptionViewItem(option)
         self.initStyleOption(row, index)
+        # The list's themed focus border and current-row highlight identify
+        # keyboard focus. Native item focus painting adds a second black/white
+        # frame over that highlight on Windows.
+        row.state &= ~QStyle.StateFlag.State_HasFocus
         name = row.text
         row.text = ""
         style = row.widget.style() if row.widget else QApplication.style()
@@ -68,7 +72,7 @@ class TemplateItemDelegate(QStyledItemDelegate):
         painter.drawText(badge, Qt.AlignmentFlag.AlignCenter, str(source))
         content.setLeft(badge.right() + dp(9))
         selected = bool(row.state & QStyle.StateFlag.State_Selected)
-        text_ink = row.palette.color(QPalette.ColorRole.HighlightedText) if selected and not self.draggable else ink
+        text_ink = row.palette.color(QPalette.ColorRole.HighlightedText) if selected else ink
         painter.setPen(text_ink)
         if index.data(DEFAULT_ROLE):
             label = t("settings.templates.default")

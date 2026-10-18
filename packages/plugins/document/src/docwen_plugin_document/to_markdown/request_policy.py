@@ -187,7 +187,7 @@ def _request_locale(config: object, options: Mapping[str, Any]) -> str:
         return requested.strip()
     getter = getattr(config, "get", None)
     if callable(getter):
-        configured = getter("gui.language.locale", "zh_CN")
+        configured = getter("conversion.output_locale", "zh_CN")
         if isinstance(configured, str) and configured.strip():
             return configured.strip()
     return "zh_CN"

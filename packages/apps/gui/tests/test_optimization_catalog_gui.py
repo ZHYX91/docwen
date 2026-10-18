@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from docwen_application.optimization_selection import OptimizationSource
-from docwen_gui.execution_requests import _to_markdown_locale_options
+from docwen_gui.execution_requests import _route_scoped_options
 from docwen_gui.view_models._optimization_filter import (
     discover_optimization_choices,
 )
@@ -265,28 +265,22 @@ def test_action_area_keeps_public_id_separate_from_internal_action() -> None:
     assert vm.optimization_route_options == ("locale",)
 
 
-def test_route_options_replace_action_name_special_cases(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_route_options_do_not_derive_task_language_from_display(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("docwen_gui.i18n.get_locale", lambda: "de_DE")
 
-    locale_only = _to_markdown_locale_options(
+    locale_only = _route_scoped_options(
         {},
-        target_format="md",
-        action_name="any-action",
         route_options=("locale",),
     )
-    with_labels = _to_markdown_locale_options(
+    with_labels = _route_scoped_options(
         {},
-        target_format="md",
-        action_name="another-action",
         route_options=("locale", "yaml_key_labels"),
     )
-    docx_locale = _to_markdown_locale_options(
-        {},
-        target_format="docx",
+    explicit_locale = _route_scoped_options(
+        {"locale": "ar_SA"},
         route_options=("locale",),
     )
 
-    assert locale_only == {"locale": "de_DE"}
-    assert with_labels["locale"] == "de_DE"
-    assert "yaml_key_labels" in with_labels
-    assert docx_locale == {"locale": "de_DE"}
+    assert locale_only == {}
+    assert with_labels == {}
+    assert explicit_locale == {"locale": "ar_SA"}

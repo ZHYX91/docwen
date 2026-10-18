@@ -318,11 +318,10 @@ _QUOTE_GENERIC_NAMES = {
     "intensequote",
 }
 
-# Exact names emitted by every bundled locale template.  Keep these separate
-# from the fuzzy third-party aliases above: a localized product style is an
-# exact contract, while broad substring matching can misclassify ordinary
-# user-created styles.  The real-template regression test verifies this table
-# against both ``i18n/locales/*.toml`` and the bundled DOCX templates.
+# Exact localized DocWen style names, including languages that do not yet
+# ship a dedicated DOCX template.  Keep these separate from fuzzy third-party
+# aliases so ordinary custom styles are not misclassified.  The regressions
+# check existing templates and also construct Arabic-named styles in memory.
 _LOCALIZED_CODE_BLOCK_STYLE_NAMES = frozenset(
     (
         "Codeblock",
@@ -336,6 +335,7 @@ _LOCALIZED_CODE_BLOCK_STYLE_NAMES = frozenset(
         "Khối mã",
         "代码块",
         "代碼塊",
+        "كتلة كود",
     )
 )
 _LOCALIZED_INLINE_CODE_STYLE_NAMES = frozenset(
@@ -351,6 +351,7 @@ _LOCALIZED_INLINE_CODE_STYLE_NAMES = frozenset(
         "Mã nội tuyến",
         "行内代码",
         "行內代碼",
+        "كود ضمن النص",
     )
 )
 _LOCALIZED_QUOTE_STYLE_NAMES = {
@@ -365,6 +366,7 @@ _LOCALIZED_QUOTE_STYLE_NAMES = {
         "Citação",
         "Цитата",
         "Trích dẫn",
+        "اقتباس",
     )
     for level in range(1, 10)
 }

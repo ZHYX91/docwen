@@ -327,6 +327,7 @@ _AVAILABLE_CODES = frozenset(
         "ru_RU",
         "vi_VN",
         "zh_TW",
+        "ar_SA",
     }
 )
 

@@ -229,7 +229,7 @@ def _convert_tiff_physical_pages(
         yaml_frontmatter = generate_basic_yaml_frontmatter(
             input_stem_value,
             extra={"source_format": "tif"},
-            yaml_key_labels=context.request.options.get("yaml_key_labels"),
+            yaml_key_labels=context.request.options.get("yaml_key_labels", getattr(context, "yaml_key_labels", None)),
         )
         primary_path = Path(context.workspace.create_artifact_path("primary", ".md"))
         created_paths.append(primary_path)
@@ -490,7 +490,7 @@ class ImageToMarkdownConverter:
             yaml_frontmatter = generate_basic_yaml_frontmatter(
                 context.request.source_stem,
                 extra={"source_format": source_format},
-                yaml_key_labels=options.get("yaml_key_labels"),
+                yaml_key_labels=options.get("yaml_key_labels", getattr(context, "yaml_key_labels", None)),
             )
             lines: list[str] = [yaml_frontmatter.rstrip(), "", link]
 
@@ -508,7 +508,7 @@ class ImageToMarkdownConverter:
                     md_link_style=md_file_style,
                     ocr_markdown=table_markdown or None,
                     ocr_blockquote_title=ocr_title,
-                    yaml_key_labels=options.get("yaml_key_labels"),
+                    yaml_key_labels=options.get("yaml_key_labels", getattr(context, "yaml_key_labels", None)),
                 )
 
                 # Write sidecar to staging and register as artifact.

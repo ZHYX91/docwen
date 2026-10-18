@@ -25,7 +25,7 @@ from ._template_selector_support import (
 class TestTabbedTemplateSelectorTabSwitching:
     """Tab switching behaviour."""
 
-    @pytest.mark.parametrize("locale", ["zh_CN", "en_US", "de_DE"])
+    @pytest.mark.parametrize("locale", ["zh_CN", "en_US", "de_DE", "ar_SA"])
     def test_initial_template_prefers_interface_language_and_preserves_manual_choice(self, tabbed, locale):
         from docwen_gui.i18n import get_locale, set_locale, t
 

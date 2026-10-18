@@ -80,6 +80,7 @@ _SPECIAL_CONVERSION_ALLOWED_BACKENDS: dict[str, tuple[str, ...]] = {
 _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
     "general": (
         ("gui", "language"),
+        ("gui", "output_language"),
         ("gui", "theme"),
         ("gui", "font_size_preset"),
         ("gui", "scale_percent"),
@@ -940,11 +941,15 @@ class SettingsViewModel(QObject):
         etc.) back to the SettingsConfig section names used by the GUI tabs.
         """
         config = SettingsConfig()
+        conversion = raw.get("conversion", {})
+        if isinstance(conversion, dict):
+            config.gui.output_language = str(conversion.get("output_locale") or "zh_CN")
 
         # gui section
         gui = raw.get("gui", {})
         if isinstance(gui, dict):
             config.gui = GUIConfig(
+                output_language=config.gui.output_language,
                 language=gui.get("language", {}).get("locale", "zh_CN")
                 if isinstance(gui.get("language"), dict)
                 else "zh_CN",
@@ -1142,6 +1147,7 @@ class SettingsViewModel(QObject):
                 table_m2d.get("custom_style_name", "") if isinstance(table_m2d, dict) else ""
             )
             config.formatting = FormattingConfig(
+                each_line_paragraph=m2d.get("each_line_paragraph", False) is True if isinstance(m2d, dict) else False,
                 markdown_extensions={
                     direction: {
                         name: (extension_settings.get(direction, {}).get(name) is True)
@@ -1195,15 +1201,10 @@ class SettingsViewModel(QObject):
         title_overrides = (
             ocr_output.get("blockquote_title_override_by_locale", {}) if isinstance(ocr_output, dict) else {}
         )
-        try:
-            from docwen_gui.i18n import get_locale
-
-            current_locale = get_locale()
-        except Exception:
-            current_locale = config.gui.language
+        current_locale = config.gui.output_language
         title_text = ""
         if isinstance(title_overrides, dict):
-            title_text = str(title_overrides.get(current_locale) or title_overrides.get(config.gui.language) or "")
+            title_text = str(title_overrides.get(current_locale) or "")
         ocr = raw.get("ocr", {})
         config.export = ExportConfig(
             ocr_language=ocr.get("language", "auto") if isinstance(ocr, dict) else "auto",
@@ -1317,12 +1318,7 @@ class SettingsViewModel(QObject):
         if cfg_port is None:
             return True
 
-        try:
-            from docwen_gui.i18n import get_locale
-
-            title_locale = get_locale()
-        except Exception:
-            title_locale = config.gui.language
+        title_locale = config.gui.output_language
         values = self._serialize_config_values(config, title_locale=title_locale)
         if baseline is not None:
             previous = self._serialize_config_values(baseline, title_locale=title_locale)
@@ -1339,6 +1335,7 @@ class SettingsViewModel(QObject):
 
         gui = config.gui
         put("gui.language.locale", gui.language)
+        put("conversion.output_locale", gui.output_language)
         put("gui.theme.default_theme", gui.theme)
         put("gui.font.size_preset", gui.font_size_preset)
         put("gui.appearance.scale_percent", gui.scale_percent)
@@ -1425,6 +1422,7 @@ class SettingsViewModel(QObject):
         put("conversion.syntax.subscript", fmt.subscript_syntax)
         put("conversion.syntax.unordered_list", fmt.unordered_list_syntax)
         put("conversion.syntax.indent_spaces", int(fmt.indent_spaces))
+        put("conversion.md_to_docx.each_line_paragraph", fmt.each_line_paragraph)
         put("conversion.md_to_docx.mermaid_mode", fmt.mermaid_mode)
         put("conversion.md_to_docx.mermaid_cli_path", fmt.mermaid_cli_path)
         put("conversion.md_to_docx.formatting_mode", text.md_body_format)

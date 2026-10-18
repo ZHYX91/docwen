@@ -503,7 +503,7 @@ class ActionAreaViewModel(QObject):
     @property
     def show_proofread(self) -> bool:
         """Whether DOCX post-conversion proofreading is available."""
-        return self._show_proofread and self._target_format == "docx"
+        return self._show_proofread and self._target_format in {"docx", "doc", "odt", "rtf", "wps"}
 
     # ── Button label helpers ────────────────────────────────────────────
 
@@ -987,7 +987,7 @@ class ActionAreaViewModel(QObject):
 
         # MD→Document options
         if self._file_type == MODE_MD_TO_DOCUMENT:
-            if self._target_format == "docx":
+            if self._target_format in {"docx", "doc", "odt", "rtf", "wps"}:
                 options.update(self._proofread_options)
             options["remove_numbering"] = self._md_remove_numbering
             options["add_numbering"] = self._md_add_numbering

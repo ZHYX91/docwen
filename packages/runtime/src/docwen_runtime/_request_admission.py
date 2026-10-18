@@ -7,6 +7,7 @@ from dataclasses import replace
 from typing import Any
 
 from docwen_core.models.request import ConversionRequest
+from docwen_runtime.config.task_language import configured_output_locale
 
 _MISSING = object()
 
@@ -58,9 +59,7 @@ def project_markdown_ocr_options(
         options["ocr_language"] = ocr_language or "auto"
 
     if "locale" not in options:
-        locale_value = _nested_value(config_snapshot, "gui", "language", "locale")
-        locale = _nonblank_text(locale_value)
-        options["locale"] = locale or "zh_CN"
+        options["locale"] = configured_output_locale(config_snapshot)
 
     return options
 

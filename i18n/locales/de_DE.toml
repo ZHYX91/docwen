@@ -224,6 +224,9 @@ sample_button = "Beispiel"
 sample_text = "Text"
 
 font_tooltip = "Die Auswahl wird sofort als Vorschau angewendet. Anwenden oder OK speichert die Textgröße; Abbrechen stellt den zuletzt gespeicherten Wert wieder her."
+output_language_label = "Ausgabesprache:"
+output_language_tooltip = "Sprache erzeugter Beschriftungen und Dokumentformatvorlagen. Übersetzt keinen Text und ändert keine Vorlage. OCR-Sprache separat wählbar."
+
 [settings.general.languages]
 zh_CN = "Chinesisch (vereinfacht)"
 en_US = "Englisch"
@@ -236,6 +239,7 @@ pt_BR = "Portugiesisch (Brasilien)"
 ru_RU = "Russisch"
 vi_VN = "Vietnamesisch"
 zh_TW = "Chinesisch (traditionell)"
+ar_SA = "العربية"
 
 # 主题名称
 [settings.general.themes]
@@ -546,6 +550,9 @@ embed = "Inhalt einfügen"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+each_line_paragraph = "Jede Zeile als eigener Absatz"
+each_line_paragraph_help = "Jede gewöhnliche Markdown-Textzeile als eigenen Word-Absatz ausgeben. Überschriften, Listen, Zitate, Tabellen, Code und explizite Zeilenumbrüche bleiben unverändert."
+line_paragraph_section = "Markdown zu Word"
 mermaid_auto = "Automatisch suchen"
 mermaid_browse = "Mermaid CLI auswählen"
 mermaid_path = "CLI-Pfad:"
@@ -744,7 +751,7 @@ system_desc = "Logging aktivieren oder deaktivieren und die Protokollstufe festl
 enable_logging_label = "Logging aktivieren"
 enable_logging_tooltip = "Aktiviert das Logging-System."
 log_level_label = "Log-Level:"
-log_level_tooltip = "Detailgrad der Logs."
+log_level_tooltip = "Wählen Sie den Detailgrad der Protokolle.\nVon den meisten zu den wenigsten Details: DEBUG, INFO, WARNING, ERROR, CRITICAL."
 
 # 文件输出区域
 file_section = "Datei"
@@ -814,8 +821,8 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "OCR-Sprache:"
-language_tooltip = "Gemeinsame OCR-Sprache für alle Eingabeformate. „Oberflächensprache verwenden“ wählt anhand der aktuellen UI-Sprache; die Sprache im Bild wird nicht automatisch erkannt."
-language_auto = "Oberflächensprache verwenden"
+language_tooltip = "OCR-Modell anhand der Ausgabesprache wählen; die Bildsprache wird nicht automatisch erkannt."
+language_auto = "Ausgabesprache folgen"
 language_chinese = "Chinesisch/Englisch"
 language_japanese = "Japanisch"
 language_chinese_cht = "Traditionelles Chinesisch"
@@ -1226,22 +1233,23 @@ level_format_config = "Ebenenformat"
 realtime_preview = "Vorschau"
 format_help = "📖 Hilfe"
 format_help_title = "Platzhalter"
-format_help_text = """Verwendung von Format-Platzhaltern
+format_help_text = """Platzhalter für Nummerierungsformate
 
-占位符格式：{级别.样式}
+Syntax: {level.style}
+level ist die Überschriftenebene (1–9); style ist ein Name aus der folgenden Liste.
 
-可用样式：
-  chinese_lower  - 小写中文数字 (一、二、三)
-  chinese_upper  - 大写中文数字 (壹、贰、叁)
-  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
-  arabic_full    - 全角阿拉伯数字 (１、２、３)
-  arabic_circled - 带圈数字 (①②③)
-  letter_upper   - 大写字母 (A, B, C)
-  letter_lower   - 小写字母 (a, b, c)
-  roman_upper    - 大写罗马数字 (I, II, III)
-  roman_lower    - 小写罗马数字 (i, ii, iii)
+Verfügbare Stile:
+  chinese_lower  - Chinesische Zahlen (一、二、三)
+  chinese_upper  - Formelle chinesische Zahlen (壹、贰、叁)
+  arabic_half    - Dezimalziffern (1, 2, 3)
+  arabic_full    - Dezimalziffern in voller Breite (１、２、３)
+  arabic_circled - Eingekreiste Ziffern (①②③)
+  letter_upper   - Großbuchstaben (A, B, C)
+  letter_lower   - Kleinbuchstaben (a, b, c)
+  roman_upper    - Römische Zahlen in Großbuchstaben (I, II, III)
+  roman_lower    - Römische Zahlen in Kleinbuchstaben (i, ii, iii)
 
-示例：
+Beispiele:
   {1.chinese_lower}、 → 一、二、三、
   （{2.chinese_lower}） → （一）（二）（三）
   {3.arabic_half}. → 1. 2. 3.

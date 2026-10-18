@@ -71,9 +71,7 @@ def _request_locale(config: Any, options: Mapping[str, Any]) -> str:
     explicit = options.get("locale")
     if explicit is not None and str(explicit).strip():
         return str(explicit)
-    gui = _section(config.get("gui", {}))
-    language = gui.get("language", {})
-    locale = language.get("locale") if isinstance(language, Mapping) else language
+    locale = _section(config.get("conversion", {})).get("output_locale")
     return str(locale or "zh_CN")
 
 

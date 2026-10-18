@@ -134,9 +134,8 @@ class NumberingSchemeRegistry:
 
 
 def _snapshot_locale(config_snapshot: Mapping[str, Any]) -> str | None:
-    gui = config_snapshot.get("gui", {})
-    language = gui.get("language", {}) if isinstance(gui, Mapping) else {}
-    locale = language.get("locale") if isinstance(language, Mapping) else None
+    conversion = config_snapshot.get("conversion", {})
+    locale = conversion.get("output_locale") if isinstance(conversion, Mapping) else None
     return str(locale) if locale else None
 
 

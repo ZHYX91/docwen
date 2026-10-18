@@ -33,12 +33,26 @@ def _combo_codes(tab) -> tuple[str, ...]:
     return tuple(str(combo.itemData(index)) for index in range(combo.count()))
 
 
+def test_display_and_task_languages_save_independently(qapp, tmp_path):
+    tab, view_model, config_port = _new_tab_context(tmp_path / "user")
+    tab._language_combo.setCurrentIndex(tab._language_combo.findData("ar_SA"))
+    assert view_model.config.gui.output_language == "zh_CN"
+    tab._output_language_combo.setCurrentIndex(tab._output_language_combo.findData("en_US"))
+    assert view_model.config.gui.language == "ar_SA"
+    assert view_model.config.gui.output_language == "en_US"
+    assert view_model.apply_settings()
+    assert config_port.get("gui.language.locale") == "ar_SA"
+    assert config_port.get("conversion.output_locale") == "en_US"
+    tab.deleteLater()
+
+
 def test_general_language_codes_equal_packaged_locale_stems(qapp, tmp_path: Path) -> None:
     tab = _new_tab(tmp_path / "user")
     codes = _combo_codes(tab)
 
     assert len(codes) == len(set(codes))
     assert set(codes) == set(PACKAGED_LOCALES)
+    assert "ar_SA" in codes
 
 
 @pytest.mark.parametrize("active_locale", PACKAGED_LOCALES)

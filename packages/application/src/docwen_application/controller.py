@@ -530,7 +530,29 @@ class ApplicationController:
         request = self._freeze_manifest_context(request)
         scope = self._obtain_cancellation_scope(request, batch=False, claim=True, retain=False)
         task_id = str(request.request_id)
+        managed: _ManagedPreconversion | None = None
         try:
+            if action_name == "merge_pdfs":
+                # The Runtime's first input may become a private OFD/XPS→PDF
+                # staging path. Fix the public output root to the first
+                # original source before any input is materialized elsewhere.
+                first_source = next(ref for ref in request.input_refs if ref.input_role == "source")
+                request = replace(
+                    request,
+                    output_policy=self._source_anchored_output_policy(request.output_policy, first_source.path),
+                )
+                prepared = self._maybe_preconvert(request, cancellation=scope.token.view(), batch=False)
+                managed = prepared if isinstance(prepared, _ManagedPreconversion) else None
+                request = prepared.payload if managed is not None else prepared
+                manifest_request = managed.manifest_request if managed is not None else request
+                if isinstance(request, _PreconversionTerminal):
+                    self._commit_without_runtime(scope)
+                    return self._persist_output_manifests(manifest_request, request.results[0])
+                from docwen_core.models.result import ConversionResult
+
+                if isinstance(request, ConversionResult):
+                    self._commit_without_runtime(scope)
+                    return self._persist_output_manifests(manifest_request, request)
             command = self._aggregate_command(action_name)
             if not self._begin_runtime_task(scope, task_id):
                 result = self._cancelled_results(request, batch=False)[0]
@@ -541,7 +563,11 @@ class ApplicationController:
             finally:
                 self._finish_runtime_task(scope, task_id)
         finally:
-            self._complete_cancellation_scope(scope)
+            try:
+                if managed is not None:
+                    managed.cleanup()
+            finally:
+                self._complete_cancellation_scope(scope)
 
     def execute_batch(self, request: Any) -> list[Any]:
         """Convenience: execute a batch conversion directly.
@@ -915,15 +941,29 @@ class ApplicationController:
 
                 staging_dir = Path(temp_owner.name) / str(idx)
                 staging_dir.mkdir(parents=True, exist_ok=True)
-                priority_key, default_priority = backend_priority_spec(actual_format)
-                backend_priority = self._configured_priority(config_snapshot, priority_key, default_priority)
-                pre_result = pre_convert(
-                    ref.path,
-                    actual_format,
-                    staging_dir=str(staging_dir),
-                    cancel=cancellation,
-                    backend_priority=backend_priority,
-                )
+                if (
+                    actual_format in {"ofd", "xps"}
+                    and request.action_name in {"merge_pdfs", "split_pdf"}
+                    and request.target_format == "pdf"
+                ):
+                    from docwen_application.preconversion.layout_actions import pre_convert_layout
+
+                    pre_result = pre_convert_layout(
+                        ref.path,
+                        actual_format,
+                        staging_dir=str(staging_dir),
+                        cancel=cancellation,
+                    )
+                else:
+                    priority_key, default_priority = backend_priority_spec(actual_format)
+                    backend_priority = self._configured_priority(config_snapshot, priority_key, default_priority)
+                    pre_result = pre_convert(
+                        ref.path,
+                        actual_format,
+                        staging_dir=str(staging_dir),
+                        cancel=cancellation,
+                        backend_priority=backend_priority,
+                    )
                 cleanup_diagnostics = (
                     [
                         ConversionDiagnostic(

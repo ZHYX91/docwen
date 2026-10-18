@@ -1,0 +1,1824 @@
+# DocWen - Arabic (Saudi Arabia) locale file
+# Locale: ar_SA
+# Encoding: UTF-8
+
+[meta]
+name = "Arabic (Saudi Arabia)"
+native_name = "العربية"
+template_name = "English General Template"
+
+# =============================================================================
+# Main Window
+# =============================================================================
+[main_window]
+output_filesystem_unsupported = "لا يمكن حفظ النتائج بأمان في هذا المجلد. اختر مجلدًا آخر؛ وفي WSL اختر مجلدًا على نظام ملفات Linux."
+ocr_quality_notice = "قد تتضمن نتائج التعرف على النص أخطاء أو أجزاء مفقودة. راجعها مع الملف الأصلي."
+file_admission_missing = "لم يعد الملف موجودًا: {path}"
+file_admission_unreadable = "تعذّر قراءة الملف: {path}"
+extension_loss_endnotes = "تحولت الحواشي الختامية إلى حواشٍ سفلية عادية في Markdown."
+extension_loss_headings = "تحولت مستويات العناوين من 7 إلى 9 إلى المستوى 6."
+extension_loss_references = "تحولت التسميات التوضيحية والمراجع المتقاطعة إلى نص ظاهر."
+extension_loss_tables = "تحولت الخلايا المدمجة وبنية رؤوس الجداول إلى جدول Markdown عادي."
+route_catalog_failed = "تعذّر تحميل العمليات المتاحة. لم تبدأ العملية."
+conversion_failed = "فشل التحويل. افتح تفاصيل الخطأ لمعرفة السبب."
+conversion_warning = "اكتمل التحويل مع وجود تحذير."
+ocr_no_text = "لم يُعثر على نص في الصورة. راجع الصورة الأصلية."
+ocr_degraded = "لم يكتمل التعرف على النص بصورة طبيعية (الحالة: {status})، وقد احتُفظ بالنتائج المتاحة."
+ocr_table_fallback = "تعذّر تحديد بنية الجدول، لكن النص المستخرج من الصورة محفوظ."
+aggregate_need_two = "تحتاج إلى ملفين متوافقين على الأقل (العدد الحالي: {count})."
+route_unavailable = "لا توجد عملية متاحة لهذا الملف."
+output_settings_unavailable = "تعذّر تحميل إعدادات الحفظ. لم تبدأ العملية."
+window_title = "DocWen — دون اتصال"
+version_offline = "دون اتصال"
+settings_tooltip = "الإعدادات (Ctrl+,)"
+about_tooltip = "حول DocWen"
+font_size_tooltip = "تغيير حجم النص"
+no_file_for_locate = "اختر ملفًا أولًا لمعرفة مكان النتيجة."
+runtime_unavailable = "خدمة التحويل غير متاحة حاليًا. لا يمكن بدء العملية."
+task_already_running = "هناك عملية قيد التنفيذ. ألغِها قبل بدء عملية أخرى."
+task_processing_prefix = "جارٍ المعالجة:"
+task_progress_prefix = "التقدم:"
+task_failed_prefix = "فشل:"
+task_processing_status = "جارٍ المعالجة: {message}"
+task_progress_status = "التقدم: {percent}% {message}"
+task_completed_status = "اكتمل"
+task_failed_status = "فشل: {message}"
+task_cancelled_status = "أُلغيت العملية"
+no_failed_to_retry = "لا توجد عملية فاشلة لإعادة المحاولة."
+path_not_exist = "المسار غير موجود: {path}"
+open_path_failed = "تعذّر فتح المسار: {path}"
+system_tray_show = "إظهار النافذة"
+system_tray_hide = "إخفاء النافذة"
+system_tray_quit = "خروج"
+batch_add_failed_title = "تعذّر إضافة بعض الملفات"
+batch_add_failed_message = "تعذّرت إضافة {count} ملفات إلى القائمة."
+batch_add_failed_reason = "السبب"
+file_admission_invalid = "تعذّر التحقق من الملف. أزل الملف من القائمة وأضفه مجددًا."
+file_admission_changed = "تغيّر الملف بعد إضافته. أزله من القائمة وأضفه مجددًا للتحقق من أحدث نسخة."
+file_admission_blocked = "لا يمكن معالجة الملف المحدد."
+file_admission_confirm_title = "تأكيد تنسيق الملف"
+file_admission_confirm_message = "لا يتطابق امتداد الملف مع التنسيق المكتشف. هل تريد استخدام التنسيق المكتشف؟"
+file_admission_confirm_action = "استخدام التنسيق المكتشف"
+file_admission_cancelled = "أُلغيت العملية ولم يُعتمد التنسيق المكتشف."
+
+# =============================================================================
+# 通用文本
+# =============================================================================
+[common]
+action_file_count = "{action} ({count} ملفات)"
+app_name = "DocWen"
+default = "افتراضي"
+close = "إغلاق"
+apply = "تطبيق"
+cancel = "إلغاء"
+ok = "موافق"
+save = "حفظ"
+error = "خطأ"
+browse = "استعراض…"
+disclaimer = "نسخة تجريبية؛ راجع النتائج قبل استخدامها.\\nبرنامج مفتوح المصدر بترخيص AGPL-3.0."
+ready = "جاهز"
+reload = "إعادة التحميل"
+save_failed = "تعذّر حفظ الإعدادات"
+
+# =============================================================================
+# 状态栏
+# =============================================================================
+[info_area]
+output_each_source = "حفظ النتيجة بجانب كل ملف أصلي"
+output_date_subfolder = "الحفظ في مجلد فرعي باسم التاريخ"
+task_warning_count = "هناك {count} تنبيهات بشأن التحويل. افتح سجل العمليات للتفاصيل."
+task_progress_percent = "التقدم: {percent}%"
+task_state_skipped = "تم التخطي"
+batch_name = "معالجة مجموعة ({count} ملفات)"
+aggregate_name = "دمج ({count} ملفات)"
+activity_count = "سجل العمليات ({count})"
+notice_title = "تنبيه"
+task_state_cancelling = "جارٍ الإلغاء"
+copy_path = "نسخ المسار"
+ipc_file_missing = "لم يُعثر على الملف المرسل إلى DocWen: {path}"
+font_size_applied = "حجم النص: {label}"
+
+transient_title = "الحالة الحالية"
+history_repeated = "تكرر {count} مرة"
+history_meta = "{count} سجلات"
+task_state_active = "جارٍ التنفيذ"
+task_state_success = "اكتمل"
+history_completed = "اكتمل: {name}"
+task_state_partial = "فشل بعض العمليات"
+task_state_failed = "فشل"
+task_state_cancelled = "أُلغيت"
+task_current_file = "جارٍ معالجة: {name}"
+task_progress_detail = "اكتمل {completed} من {total}، وفشل {failed}"
+history_started = "بدأت المعالجة: {name}"
+task_skipped_count = "تم التخطي: {skipped}"
+task_cancelled_count = "أُلغيت: {cancelled}"
+task_output_file = "النتيجة: {name}"
+task_guide_view_failed_details = "عرض تفاصيل الفشل"
+task_guide_retry_failed = "إعادة محاولة العناصر الفاشلة"
+window_topmost_enabled = "ثُبّتت النافذة فوق غيرها. اضغط Ctrl+Shift+T لإلغاء ذلك."
+window_topmost_disabled = "أُلغي تثبيت النافذة. اضغط Ctrl+Shift+T لتثبيتها مجددًا."
+# =============================================================================
+# CLI 命令行界面
+# =============================================================================
+[cli]
+description = "أداة DocWen لسطر الأوامر لتحويل المستندات والجداول والصور وملفات التخطيط"
+example = "مثال"
+
+# CLI帮助文本
+[cli.help]
+settings = "إدارة الإعدادات"
+settings_reset = "إعادة الإعدادات الافتراضية"
+files = "مسارات ملفات الإدخال (تقبل الأنماط مثل *.docx)"
+template = "معرّف القالب من قائمة القوالب؛ استخدم المعرّف لا اسم القالب أو مساره"
+inspect = "فحص نوع الملف وتنسيقه والعمليات المتاحة له"
+doctor = "فحص المشكلات"
+
+# CLI参数组标题
+[cli.groups]
+
+# CLI交互模式
+[cli.interactive]
+
+# 文件类型菜单
+[cli.interactive.menus]
+
+# 格式选项
+[cli.interactive.formats]
+
+# DPI选项
+[cli.interactive.dpi]
+
+# 压缩选项
+[cli.interactive.compress]
+
+[cli.interactive.pdf_sizes]
+
+# 序号方案
+[cli.interactive.numbering_schemes]
+
+# 优化类型
+[cli.interactive.optimization_types]
+gongwen = "مستند رسمي"
+
+# 校对选项
+invoice_cn = "فاتورة صينية"
+[cli.interactive.proofread]
+
+# 提示文本
+[cli.interactive.prompts]
+
+# CLI消息
+[cli.messages]
+error_aggregate_need_two = "مطلوب ملفان متوافقان على الأقل (العدد الحالي: {count})."
+error_no_valid_files = "خطأ: لا توجد ملفات صالحة"
+error_file_not_found = "خطأ: لم يُعثر على ملفات صالحة"
+warning_invalid_files = "تحذير: {count} ملفات غير صالحة"
+error_prefix = "خطأ"
+invalid_tab = "صفحة إعدادات غير معروفة: {tab}"
+
+# 批处理模式
+[cli.batch]
+
+# CLI 提示文本
+[cli.prompts]
+
+# CLI 验证消息
+[cli.validation]
+
+# CLI 结果消息
+[cli.result]
+
+# CLI 操作描述
+[cli.actions]
+
+# CLI 序号方案名称
+[cli.numbering_schemes]
+
+# =============================================================================
+# 设置对话框
+# =============================================================================
+[settings]
+title = "الإعدادات"
+
+# 选项卡标题
+[settings.tabs]
+general = "عام"
+text = "ملفات Markdown الواردة"
+proofread = "التدقيق اللغوي"
+export = "موارد الصور والتعرف على النص"
+document = "المستندات الواردة"
+spreadsheet = "الجداول الواردة"
+image = "الصور الواردة"
+layout = "ملفات التخطيط الثابت"
+other = "ملفات أخرى"
+link = "الروابط"
+formatting = "صيغة Markdown"
+output = "حفظ الملفات"
+logging = "سجل التشغيل"
+software = "برامج التحويل"
+
+[settings.descriptions]
+general = "إعدادات اللغة والمظهر العامة"
+
+# 设置状态消息
+[settings.status]
+apply_success = "تم تطبيق الإعدادات."
+apply_failed = "تعذّر تطبيق الإعدادات."
+reset_success = "عادت الإعدادات إلى الوضع الافتراضي."
+
+[settings.reset]
+tab_button = "إعادة تعيين الصفحة"
+all_button = "إعادة تعيين الكل"
+tab_confirm_title = "تأكيد إعادة التعيين"
+tab_confirm_message = "هل تريد إعادة إعدادات «{tab_name}» إلى قيمها الافتراضية؟ لا يمكن التراجع عن ذلك."
+all_confirm_title = "تأكيد إعادة تعيين الكل"
+all_confirm_message = "هل تريد إعادة جميع الإعدادات إلى قيمها الافتراضية؟ لن تتغير القواميس. لا يمكن التراجع."
+success = "عادت كل الإعدادات إلى قيمها الافتراضية."
+tab_success = "عادت إعدادات «{tab_name}» إلى قيمها الافتراضية."
+failed = "تعذّرت إعادة تعيين الإعدادات. راجع السجل."
+
+[settings.changes]
+summary = "تغييرات لم تُحفظ ({count})"
+more = "… و{count} تغييرات أخرى"
+
+enabled = "مفعّل"
+disabled = "معطّل"
+empty_value = "(فارغ)"
+field_fallback = "إعداد ({field})"
+[settings.errors]
+tab_load_failed_message = "تعذّر تحميل {tab}\\n\\nالخطأ: {error}"
+
+[settings.toml_editor]
+config_label = "ملف الإعدادات"
+hint = "يمكن تعديل TOML مباشرة هنا. سيتحقق البرنامج من الصيغة قبل الحفظ."
+toml_syntax_error = "خطأ في صيغة TOML"
+save_failed = "تعذّر حفظ الإعدادات"
+save_success_title = "تم الحفظ"
+save_success_message = "حُفظت الإعدادات وأُعيد تحميلها."
+
+# -----------------------------------------------------------------------------
+# 通用设置选项卡
+# -----------------------------------------------------------------------------
+[settings.general]
+font_label = "حجم النص:"
+scale_label = "مقياس الواجهة:"
+scale_tooltip = "يظهر التغيير فورًا على النصوص والأيقونات والمسافات. اضغط تطبيق أو موافق للحفظ، أو إلغاء لاستعادة القيمة السابقة."
+# 语言设置区域
+language_section = "اللغة"
+language_label = "لغة واجهة البرنامج:"
+language_tooltip = "اختر لغة الواجهة.\\nيسري التغيير بالكامل بعد إعادة تشغيل البرنامج."
+
+# 主题设置区域
+theme_section = "المظهر"
+theme_description = "اختر السمة وحجم النص ومقياس الواجهة."
+theme_label = "سمة البرنامج:"
+theme_tooltip = "تظهر السمة الجديدة فورًا. اضغط تطبيق أو موافق للحفظ، أو إلغاء للتراجع."
+theme_preview = "معاينة السمة:"
+sample_button = "زر تجريبي"
+sample_text = "نص تجريبي"
+
+font_tooltip = "يظهر الحجم الجديد فورًا. اضغط تطبيق أو موافق للحفظ، أو إلغاء للتراجع."
+output_language_label = "لغة المخرجات:"
+output_language_tooltip = "لغة التسميات وأنماط المستند المُنشأة. لا تترجم النص ولا تغيّر القالب. يمكن اختيار لغة التعرف الضوئي بشكل مستقل."
+
+[settings.general.languages]
+zh_CN = "الصينية المبسطة"
+en_US = "الإنجليزية"
+de_DE = "الألمانية"
+es_ES = "الإسبانية"
+fr_FR = "الفرنسية"
+ja_JP = "اليابانية"
+ko_KR = "الكورية"
+pt_BR = "البرتغالية (البرازيل)"
+ru_RU = "الروسية"
+vi_VN = "الفيتنامية"
+zh_TW = "الصينية التقليدية"
+ar_SA = "العربية"
+
+# 主题名称
+[settings.general.themes]
+light = "فاتح"
+dark = "داكن"
+system = "اتباع النظام"
+
+# 透明度设置区域
+[settings.general.transparency]
+section = "شفافية النافذة"
+enable = "تفعيل الشفافية"
+tooltip = "اجعل النافذة شبه شفافة، ويمكنك بعد ذلك ضبط مستوى الشفافية."
+opacity_value_tooltip = "اضبط العتامة من 0.20 (الأكثر شفافية) إلى 1.00 (معتم تمامًا)."
+
+# 窗口行为设置区域
+[settings.general.window]
+section = "سلوك النافذة"
+description = "اختر طريقة تذكر النافذة ووضع المعالجة الافتراضي."
+remember_state = "تذكر موضع النافذة وحجمها"
+remember_state_tooltip = "استعادة الموضع والحجم المحفوظين عند فتح البرنامج مرة أخرى."
+auto_center = "وضع النافذة في منتصف الشاشة عند التشغيل"
+auto_center_tooltip = "توسيط النافذة عند بدء البرنامج. يتقدم هذا الخيار على تذكر موضع النافذة."
+expand_side_panels = "توسيع الألواح الجانبية مع النافذة"
+expand_side_panels_tooltip = "عند تكبير النافذة يمكن أن يتسع اللوحان الجانبيان أيضًا؛ وإلا يتسع اللوح الأوسط فقط."
+default_mode_label = "وضع معالجة الملفات الافتراضي:"
+default_mode_tooltip = "اختر وضع المعالجة عند فتح البرنامج: ملف واحد أو مجموعة ملفات."
+single_mode = "ملف واحد"
+batch_mode = "ملفات متعددة"
+
+# -----------------------------------------------------------------------------
+# 文本设置选项卡
+# -----------------------------------------------------------------------------
+[settings.text]
+output_format = "نوع القالب المفضّل"
+output_format_hint = "عند إضافة Markdown يختار البرنامج قوالب هذا النوع أولًا. ولا يغيّر ذلك تنسيق الإخراج وحده."
+# MD转文档序号设置
+md_to_docx_section = "ترقيم العناوين عند التحويل إلى Word"
+remove_numbering = "إزالة أرقام عناوين Markdown الموجودة افتراضيًا"
+remove_numbering_tooltip = "إزالة أرقام العناوين القديمة عند تحويل Markdown إلى Word."
+add_numbering = "إضافة أرقام للعناوين افتراضيًا"
+add_numbering_tooltip = "إضافة ترقيم متسلسل للعناوين في Word الناتج."
+scheme_label = "نمط الترقيم الافتراضي:"
+scheme_tooltip = "اختر نمط ترقيم العناوين."
+render_mode_label = "طريقة كتابة أرقام العناوين:"
+render_mode_tooltip = "اختر إضافة الأرقام كنص أو باستخدام ترقيم Word الأصلي."
+render_mode_text = "أرقام داخل النص"
+render_mode_word_native = "ترقيم Word الأصلي"
+render_mode_hint = "النص: تُضاف الأرقام إلى العناوين. ترقيم Word: تُستخدم قائمة متعددة المستويات في Word."
+
+# 字段优化（字段处理器）
+field_processors_section = "تحسين الحقول عند التحويل إلى مستند"
+field_processors_empty = "لا توجد تحسينات للحقول باللغة الحالية."
+field_processors_load_error = "تعذّر التحميل: {error}"
+field_processors_toggle_failed = "تعذّر تغيير «{name}»، واستُعيدت القيمة السابقة."
+
+# 序号设置区域
+numbering_settings_section = "إعدادات الترقيم"
+numbering_settings_desc = "تستخدم صفحات Markdown والمستندات إعدادات الترقيم نفسها. تُحفظ التغييرات فورًا، ولا يعيدها زر «إلغاء»."
+edit_numbering_add = "تعديل أنماط إضافة الترقيم"
+edit_numbering_clean = "تعديل قواعد إزالة الترقيم"
+
+# 模板设置
+
+# 校对设置
+
+# 词库配置
+
+# 错误消息
+save_numbering_schemes_failed = "تعذّر حفظ أنماط الترقيم. لم تُحفظ التغييرات."
+save_numbering_clean_rules_failed = "تعذّر حفظ قواعد إزالة الترقيم. لم تُحفظ التغييرات."
+
+# -----------------------------------------------------------------------------
+# 文档设置选项卡
+# -----------------------------------------------------------------------------
+input_description = "إعدادات تحويل Markdown إلى مستندات، وملء القوالب، ومعالجة العناوين."
+template_fill_section = "ملء القوالب"
+template_fill_desc = "عند ملء قوالب Word والجداول، تُوصل قيم قوائم YAML بالفاصل الذي تختاره. تُحفظ المسافات والفاصل الفارغ كما هما."
+[settings.proofread]
+validation_section = "قواعد التدقيق"
+enable_symbol_pairing = "فحص تطابق الأقواس وعلامات الاقتباس"
+enable_symbol_correction = "تصحيح علامات الترقيم"
+enable_typos_rule = "فحص الأخطاء الإملائية"
+enable_sensitive_word = "فحص الكلمات الحساسة"
+skip_code_blocks = "تجاوز كتل التعليمات البرمجية"
+skip_quote_blocks = "تجاوز كتل الاقتباس"
+symbol_mapping_section = "قواعد مطابقة علامات الترقيم"
+symbol_mapping_desc = "تحقق من تطابق علامات الفتح والإغلاق."
+symbol_correction_section = "قواعد تصحيح الرموز"
+symbol_correction_desc = "إدارة قواعد تحويل أشكال الرموز."
+typos_section = "قاموس الأخطاء الإملائية"
+typos_desc = "إدارة الكلمات التي تُصحّح عند التدقيق."
+sensitive_words_section = "قاموس الكلمات الحساسة"
+sensitive_words_desc = "إدارة قائمة الكلمات المراد اكتشافها."
+edit = "تعديل"
+
+save_boundary_hint = "يسري حفظ القواميس واستيراد القواعد فورًا. لن يلغي زر «إلغاء» هذه التغييرات، أما مفاتيح التفعيل فتحتاج إلى «تطبيق» أو «موافق»."
+[settings.extraction]
+image_extraction_mode_label = "طريقة استخراج الصور:"
+image_extraction_mode_tooltip = "اختر كيفية حفظ الصور في Markdown: يمكنك حفظ كل صورة منفصلة والإشارة إليها برابط، أو تضمين بياناتها مباشرة بصيغة Base64."
+image_extraction_mode_file = "ملفات صور منفصلة"
+image_extraction_mode_base64 = "تضمين Base64"
+ocr_placement_mode_label = "موضع نص OCR:"
+ocr_placement_mode_tooltip = "اختر مكان حفظ الصور والنص المستخرج منها: في ملف Markdown لكل صورة أو داخل المستند الرئيسي. عند استخدام Base64 يجب اختيار المستند الرئيسي؛ ويعود الاختيار السابق عند الرجوع إلى وضع ملفات الصور."
+ocr_placement_mode_image_md = "ملف Markdown لكل صورة"
+ocr_placement_mode_main_md = "المستند الرئيسي"
+ocr_blockquote_title_enabled_label = "عنوان كتلة النص المستخرج في المستند الرئيسي"
+ocr_blockquote_title_enabled_tooltip = "عند وضع نص OCR في المستند الرئيسي، أضف سطر عنوان أعلى كتلة الاقتباس. نص العنوان يعتمد على لغة الواجهة."
+ocr_blockquote_title_text_label = "نص العنوان (اللغة الحالية):"
+ocr_blockquote_title_text_tooltip = "ينطبق على لغة الواجهة الحالية فقط. اتركه فارغًا أو استخدم القيمة الافتراضية لاعتماد نص اللغة."
+ocr_blockquote_title_text_reset = "إعادة تعيين"
+
+[settings.export]
+md_export_section = "التصدير إلى Markdown (الصور والتعرف على النص)"
+md_export_desc = "حدد طريقة حفظ الصور والنص المستخرج منها عند التصدير إلى Markdown."
+base64_compress_section = "ضغط الصور المضمنة بصيغة Base64"
+base64_compress_desc = "ضغط الصور قبل تضمينها في نص Base64."
+base64_compress_tooltip = "يزيد تضمين Base64 حجم الملف وقد لا تعرضه بعض المحررات. عند التفعيل تُضغط الصور التي تتجاوز الحد إلى JPG قبل التضمين."
+base64_compress_enabled = "ضغط الصور الكبيرة تلقائيًا"
+base64_compress_threshold_label = "حد الحجم"
+base64_compress_threshold_tooltip = "الحجم بالكيلوبايت (KB). تُضغط الصور الأكبر منه قبل التضمين."
+
+
+[settings.optimization_types]
+
+
+[settings.table_export]
+section = "تصدير الخلايا المدمجة"
+desc = "حدد كيفية تمثيل الخلايا المدمجة في Markdown الناتج."
+merge_strategy_label = "طريقة تصدير الخلايا المدمجة:"
+
+merge_strategy_help = "في Markdown العادي: «تعبئة» تكرر نص الخلية المدمجة؛ و«فارغ» يترك الخلايا التابعة بلا نص. عند تفعيل Structural Tables تُستخدم علامتا البنية < و^ بدلًا منهما."
+[settings.table_export.strategies]
+fill = "تعبئة"
+empty = "تركها فارغة"
+
+[settings.document]
+# 内容提取设置
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+keep_images_tooltip = "تفعيل استخراج الصور تلقائيًا عند تحويل المستند إلى Markdown"
+enable_ocr = "تفعيل «التعرف على النص في الصور» افتراضيًا"
+enable_ocr_tooltip = "تفعيل OCR تلقائيًا عند تحويل المستند إلى Markdown"
+
+# 优化设置
+optimization_section = "تحسين تحويل المستندات إلى Markdown"
+enable_optimization = "تفعيل «تحسين حسب نوع المستند» افتراضيًا"
+optimization_type_label = "نوع التحسين الافتراضي:"
+
+# 软件优先级
+word_processors_label = "ترتيب أولوية برامج معالجة المستندات"
+odt_conversion_label = "تحويل تنسيق ODT"
+document_to_pdf_label = "تحويل المستند إلى PDF"
+
+# 软件名称
+[settings.document.software]
+wps_writer = "WPS Writer"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+# 序号设置
+[settings.document.numbering]
+section = "ترقيم العناوين (من مستند إلى Markdown)"
+remove = "إزالة أرقام عناوين المستند افتراضيًا"
+remove_tooltip = "إزالة أرقام العناوين الموجودة عند تحويل DOCX إلى Markdown"
+add = "إضافة ترقيم للعناوين في Markdown افتراضيًا"
+scheme_label = "نمط الترقيم الافتراضي:"
+
+# -----------------------------------------------------------------------------
+# 表格设置选项卡
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+keep_images_tooltip = "تفعيل استخراج الصور عند تحويل الجداول إلى Markdown"
+enable_ocr = "تفعيل OCR للصور افتراضيًا"
+enable_ocr_tooltip = "تفعيل التعرف على النص في الصور عند تحويل الجداول إلى Markdown"
+merge_mode_section = "إعدادات دمج الجداول"
+merge_mode_desc = "اختر طريقة الدمج الافتراضية عند جمع الجداول."
+default_merge_mode_label = "طريقة الدمج الافتراضية:"
+spreadsheet_processors_label = "ترتيب أولوية برامج معالجة الجداول"
+ods_conversion_label = "تحويل تنسيق ODS"
+spreadsheet_to_pdf_label = "تحويل الجدول إلى PDF"
+
+# 汇总模式选项
+merge_mode_help = "الدمج بحسب الصف أو العمود يقارن العناصر الواردة بالجدول الأساسي: يستبدل العنصر الوارد العنصر الأساسي إن كان يغطيه؛ ويُحتفظ بالأساسي إذا كان يغطي الوارد؛ وإلا يُدرج الوارد قرب أقرب تطابق. الدمج بحسب الخلية يتجاهل الفراغات، ويحتفظ بالقيم غير الفارغة، ويجمع الأرقام، ويحتفظ بالنص المتطابق مرة واحدة، ويصل النصوص المختلفة بفاصلة."
+[settings.spreadsheet.merge_modes]
+by_row = "دمج بحسب الصف"
+by_column = "دمج بحسب العمود"
+by_cell = "دمج بحسب الخلية"
+
+# 软件名称
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS Spreadsheets"
+excel = "Excel"
+
+# -----------------------------------------------------------------------------
+# 图片设置选项卡
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+enable_ocr = "تفعيل OCR للصور افتراضيًا"
+size_unit_label = "الوحدة:"
+optimization_section = "تحسين تحويل الصور إلى Markdown"
+enable_optimization = "تفعيل «تحسين حسب نوع الصورة» افتراضيًا"
+optimization_type_label = "نوع التحسين الافتراضي:"
+
+# OCR语言设置
+
+compress_section = "إعدادات ضغط الصور"
+compress_desc = "اختر طريقة الضغط الافتراضية عند تحويل الصور."
+compress_mode_label = "طريقة الضغط:"
+compress_lossless = "أعلى جودة"
+compress_limit_size = "تحديد حجم الملف"
+size_limit_label = "الحد الافتراضي للحجم:"
+
+pdf_tiff_section = "إعدادات PDF وTIFF"
+pdf_size_label = "الحجم الافتراضي عند تحويل صورة إلى PDF"
+pdf_original = "إدراج بالحجم الأصلي"
+pdf_a4 = "ملاءمة صفحة A4"
+pdf_a3 = "ملاءمة صفحة A3"
+tiff_mode_label = "طريقة دمج الصور في TIFF"
+tiff_keep_alpha = "الحفاظ على الشفافية"
+tiff_no_alpha = "دون شفافية"
+
+# -----------------------------------------------------------------------------
+# 版式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+enable_ocr = "تفعيل OCR للصور افتراضيًا"
+optimization_section = "تحسين تحويل ملفات التخطيط إلى Markdown"
+enable_optimization = "تفعيل «تحسين حسب نوع الملف» افتراضيًا"
+optimization_type_label = "نوع التحسين الافتراضي:"
+dpi_section = "إعدادات دقة العرض"
+dpi_desc = "اضبط دقة عرض ملفات التخطيط عند تحويلها إلى صور."
+render_dpi_label = "دقة العرض (DPI):"
+dpi_min = "منخفضة (150)"
+dpi_medium = "متوسطة (300)"
+dpi_high = "عالية (600)"
+pdf_to_doc_label = "تحويل PDF إلى مستند"
+
+# -----------------------------------------------------------------------------
+# 其他文件设置选项卡
+# -----------------------------------------------------------------------------
+[settings.other]
+extraction_section = "استخراج الصور والتعرف على النص"
+keep_images = "تفعيل «استخراج الصور» افتراضيًا"
+keep_images_tooltip = "تفعيل استخراج الصور عند تحويل ملفات أخرى إلى Markdown"
+enable_ocr = "تفعيل OCR للصور افتراضيًا"
+enable_ocr_tooltip = "تفعيل التعرف على النص عند تحويل ملفات أخرى إلى Markdown"
+
+# -----------------------------------------------------------------------------
+# 链接设置选项卡
+# -----------------------------------------------------------------------------
+[settings.link]
+# Markdown链接格式区域
+format_section = "صيغة الروابط في Markdown"
+format_desc = "اختر شكل الروابط التي ينشئها DocWen في Markdown."
+image_link_style_label = "صيغة رابط الصورة:"
+image_link_style_tooltip = "اختر كيفية كتابة روابط الصور: رابط Markdown عادي، أو تضمين صورة Markdown، أو رابط Wiki، أو تضمين Wiki الخاص بـ Obsidian."
+md_file_link_style_label = "صيغة رابط ملف Markdown:"
+md_file_link_style_tooltip = "اختر طريقة كتابة روابط ملفات Markdown: روابط Markdown عادية أو روابط Wiki الخاصة بـ Obsidian. لا تدعم صيغة Markdown العادية تضمين محتوى ملف Markdown آخر."
+
+# 非嵌入链接处理区域
+non_embed_section = "معالجة الروابط غير المضمنة"
+non_embed_desc = "حدد كيفية تحويل الروابط العادية عند إنشاء المستندات أو الجداول من Markdown."
+wiki_link_mode = "معالجة روابط Wiki:"
+wiki_link_tooltip = "للروابط [[link]] و[[link|text]]: احتفظ بالمصدر، أو استخرج النص الظاهر، أو أنشئ رابطًا قابلًا للنقر إذا كان التنسيق يدعمه، أو احذف الرابط."
+markdown_link_mode = "معالجة روابط Markdown:"
+markdown_link_tooltip = "للروابط [text](url): احتفظ بالمصدر، أو استخرج النص، أو أنشئ رابطًا قابلًا للنقر إذا كان التنسيق يدعمه، أو احذف الرابط."
+
+# 嵌入链接处理区域
+embed_section = "معالجة المحتوى المضمن"
+embed_desc = "اختر كيفية التعامل مع الصور والملفات المضمنة عند إنشاء مستندات أو جداول من Markdown."
+wiki_embed_image_mode = "معالجة صورة مضمنة بصيغة Wiki:"
+wiki_embed_image_tooltip = "للصيغة ![[image.png]]: احتفظ بالصيغة، أو اعرض اسم الملف، أو احذف الرابط، أو أدرج الصورة الفعلية."
+markdown_embed_image_mode = "معالجة صور Markdown المضمنة:"
+markdown_embed_image_tooltip = "للصيغة ![alt](image.png): احتفظ بالصيغة، أو اعرض النص البديل (أو اسم الملف عند غيابه)، أو احذف الرابط، أو أدرج الصورة."
+embed_md_file_mode = "معالجة ملف Markdown مضمن:"
+embed_md_file_tooltip = "للصيغة ![[file.md]]: احتفظ بالصيغة، أو اعرض اسم الملف، أو احذف الرابط، أو أدرج محتوى الملف بشكل متداخل."
+max_depth_label = "الحد الأقصى لعمق التضمين:"
+max_depth_tooltip = "الحد الأقصى لتضمين ملفات Markdown داخل بعضها، لتجنب الحلقات اللانهائية والتباطؤ. القيمة المقترحة: من 3 إلى 5."
+
+# 子节点：图片链接格式选项
+[settings.link.image_styles]
+wiki_embed = "تضمين Wiki"
+wiki_link = "رابط Wiki"
+md_embed = "تضمين Markdown"
+md_link = "رابط Markdown"
+
+# 子节点：MD文件链接格式选项
+[settings.link.md_file_styles]
+wiki_embed = "تضمين Wiki"
+wiki_link = "رابط Wiki"
+md_link = "رابط Markdown"
+
+# 子节点：链接处理模式
+[settings.link.modes]
+keep = "الإبقاء كما هو"
+extract_text = "استخراج النص"
+remove = "إزالة"
+hyperlink = "رابط قابل للنقر"
+embed = "تضمين المحتوى"
+
+# -----------------------------------------------------------------------------
+# 格式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.formatting]
+each_line_paragraph = "كل سطر في فقرة مستقلة"
+each_line_paragraph_help = "كتابة كل سطر نصي عادي من Markdown في فقرة Word مستقلة. لا تتأثر العناوين والقوائم والاقتباسات والجداول والكود وفواصل الأسطر الصريحة."
+line_paragraph_section = "من Markdown إلى Word"
+mermaid_auto = "الكشف التلقائي"
+mermaid_browse = "اختيار Mermaid CLI"
+mermaid_path = "مسار أداة CLI:"
+mermaid_recheck = "إعادة الكشف"
+mermaid_test = "تجربة عرض المخطط"
+mermaid_install = "تعليمات التثبيت"
+mermaid_incompatible = "إصدارا CLI ‏{cli} وMermaid ‏{mermaid} غير متوافقين. يلزم الإصدار 11.16 أو أحدث ضمن سلسلة 11.x لكليهما."
+mermaid_testing = "جارٍ إنشاء مخطط تجريبي…"
+mermaid_browser_missing = "لم يُعثر على متصفح متوافق. ثبّته وفق التعليمات ثم أعد المحاولة."
+mermaid_test_failed = "تعذّر عرض المخطط التجريبي: {reason}"
+mermaid_test_passed = "متاح: أُنشئ المخطط التجريبي بنجاح."
+mermaid_ready = "تم الكشف عن CLI ‏{cli} وMermaid ‏{mermaid}. سيُفحص توفر المتصفح عند التحويل."
+mermaid_unavailable = "لا يمكن تحويل المخططات إلى صور. ثبّت Mermaid CLI المحلي إصدار 11.16 أو أحدث ضمن 11.x، وتأكد من وجود Node في PATH. سيُحتفظ بالكود إذا فشل العرض."
+# 文档转为Markdown部分
+docx_to_md_section = "تحويل مستند إلى Markdown"
+format_processing = "التعامل مع التنسيق"
+format_processing_tooltip = "اختر طريقة التعامل مع التنسيق عند تحويل Word إلى Markdown. بعض الخيارات لا تنطبق على تحسين المستندات الرسمية."
+body_format_label = "تنسيق متن المستند:"
+body_format_tooltip = "الاحتفاظ بالتنسيق يحوّل الغامق والمائل والمشطوب إلى علامات Markdown. تجاهل التنسيق يبقي النص وحده."
+heading_format_label = "تنسيق العناوين:"
+heading_format_tooltip = "احتفظ بتنسيق النص داخل العناوين أو أخرجه نصًا عاديًا لتجنّب علامات زائدة؛ فكثيرًا ما يحدّد نمط عنوان Word تنسيقه مسبقًا."
+table_header_format_label = "تنسيق رؤوس الجداول:"
+table_header_format_tooltip = "احتفظ بعلامات الغامق وغيرها داخل رؤوس الجداول، أو أزلها إذا كان نمط الجدول يطبّقها بالفعل."
+
+# 分隔符映射
+separator_mapping = "تحويل الفواصل"
+separator_mapping_tooltip = "اختر ما يقابل فواصل الصفحات والأقسام والخطوط الأفقية في Word عند إخراج Markdown. يشمل فاصل القسم جميع أنواعه."
+page_break_label = "فاصل الصفحة:"
+page_break_tooltip = "حدد علامة Markdown التي تمثّل بدء صفحة جديدة في Word."
+section_break_label = "فاصل القسم:"
+section_break_tooltip = "حدد علامة Markdown التي تمثّل فواصل الأقسام في Word، بغض النظر عن نوعها."
+horizontal_rule_label = "الخط الأفقي:"
+horizontal_rule_tooltip = "حدد علامة Markdown التي تمثّل الخط الأفقي في مستند Word."
+
+# 语法选择
+syntax_selection = "اختيار صيغة Markdown"
+syntax_selection_tooltip = "اختر علامات Markdown التي يكتبها البرنامج عند التحويل من المستندات. تخضع الصيغ الإضافية لخيارات الامتدادات."
+bold_syntax_label = "صيغة النص الغامق:"
+bold_syntax_tooltip = "اختر طريقة كتابة الغامق في Markdown الناتج."
+italic_syntax_label = "صيغة النص المائل:"
+italic_syntax_tooltip = "اختر طريقة كتابة المائل في Markdown الناتج."
+strikethrough_syntax_label = "صيغة الشطب:"
+strikethrough_syntax_tooltip = "اختر طريقة كتابة النص المشطوب."
+highlight_syntax_label = "صيغة التمييز:"
+highlight_syntax_tooltip = "اختر طريقة كتابة النص المميّز."
+superscript_syntax_label = "صيغة النص المرتفع:"
+superscript_syntax_tooltip = "اختر طريقة كتابة النص المرتفع."
+subscript_syntax_label = "صيغة النص المنخفض:"
+subscript_syntax_tooltip = "اختر طريقة كتابة النص المنخفض."
+unordered_list_label = "علامة القائمة غير المرقمة:"
+unordered_list_tooltip = "اختر الرمز المستخدم قبل عناصر القوائم غير المرقمة."
+indent_spaces_label = "مسافة بادئة للقائمة:"
+indent_spaces_tooltip = "اختر عدد المسافات لكل مستوى من مستويات القوائم عند التحويل من DOCX إلى Markdown. مسافتان لملف أقصر، أو أربع مسافات لزيادة الوضوح. لا يؤثر هذا الخيار في التحويل من Markdown إلى DOCX."
+
+# Markdown转为文档部分
+md_to_docx_section = "تحويل Markdown إلى مستند"
+md_format_processing = "التعامل مع التنسيق"
+md_format_processing_tooltip = "حدد كيفية تطبيق علامات تنسيق Markdown عند إنشاء مستند Word."
+md_body_format_label = "علامات تنسيق المتن:"
+md_body_format_tooltip = "تطبيق التنسيق يحوّل العلامات إلى تنسيق فعلي. الإبقاء على العلامات يعرضها نصيًا. تنظيف العلامات يزيلها ويستخدم تنسيق القالب."
+md_heading_format_label = "علامات تنسيق العناوين:"
+md_heading_format_tooltip = "طبّق التنسيق عندما تطلبه علامات Markdown، أو اترك العلامات ظاهرة، أو أزلها واستخدم نمط العنوان في Word. قد تختلف النتيجة عند وجود تنسيق محلي."
+md_table_header_format_label = "علامات تنسيق رؤوس الجداول:"
+md_table_header_format_tooltip = "يمكن تطبيق تنسيق Markdown داخل رؤوس الجداول، أو إبقاء علاماته، أو حذفها والاعتماد على نمط الجدول. غالبًا ما يكون حذف العلامات أفضل لأن النمط ينسّق الصف الأول."
+heading_merge_mode_label = "دمج العنوان مع النص التالي:"
+heading_merge_mode_tooltip = "حدد متى يُدمج العنوان مع سطر النص العادي الذي يليه في فقرة واحدة: عند وجود علامة ترقيم نهائية (الافتراضي)، أو دائمًا عند التجاور، أو لا يُدمج أبدًا. لا تُدمج القوائم أو الأكواد أو الجداول أو الاقتباسات أو الفواصل."
+heading_merge_punctuation_label = "علامات الترقيم التي تسمح بالدمج:"
+heading_merge_punctuation_tooltip = "علامات نهاية العنوان التي تفعّل الدمج في وضع «تتطلب علامة ترقيم». إذا كانت القائمة فارغة يُعطّل هذا النوع من الدمج."
+
+# MD转文档分隔符映射
+md_separator_mapping = "تحويل الفواصل"
+md_separator_mapping_tooltip = "حدد ما إذا كانت فواصل Markdown ستصبح فواصل صفحات أو أقسام أو خطوطًا أفقية في Word."
+mermaid_title = "مخططات Mermaid"
+mermaid_tooltip = "اختر تحويل كتل كود mermaid إلى صور أو الاحتفاظ بها ككود. يتطلب إنشاء الصور Mermaid CLI محليًا؛ وعند الفشل يبقى الكود مع تحذير."
+mermaid_mode_label = "طريقة الإخراج:"
+mermaid_mode_tooltip = "حدد كيف تظهر كتل mermaid في المستندات الناتجة."
+mermaid_code = "الإبقاء ككتلة كود"
+mermaid_image = "تحويل إلى صورة"
+dash_label = "--- (ثلاث شرطات):"
+dash_tooltip = "تحويل الفاصل --- في Markdown إلى فاصل صفحة أو قسم في Word."
+asterisk_label = "*** (ثلاث نجمات):"
+asterisk_tooltip = "تحويل الفاصل *** في Markdown إلى فاصل صفحة أو قسم في Word."
+underscore_label = "___ (ثلاث شرطات سفلية):"
+underscore_tooltip = "تحويل الفاصل ___ في Markdown إلى فاصل صفحة أو قسم في Word. يُنشأ فاصل القسم من نوع «الصفحة التالية»."
+
+# 表格样式
+table_style = "نمط الجدول"
+table_style_tooltip = "اختر نمط جداول Word الناتجة. الأنماط المضمنة تُستخدم من القالب إن وجدت وإلا تُنشأ. ويمكن تحديد نمط مخصّص بالاسم؛ وعند عدم وجوده يُنشأ نمط شبكي بهذا الاسم."
+builtin_style_radio = "استخدام نمط مضمّن"
+custom_style_radio = "استخدام اسم نمط مخصّص"
+
+# 列表拼接符
+list_separator_label = "فاصل قائمة YAML"
+list_separator_tooltip = "الرمز المستخدم لوصل قيم قائمة YAML في نص واحد، مثل الفاصلة أو الفاصلة مع مسافة أو الفاصل الصيني (、). يمكن تركه فارغًا لوصل القيم دون فاصل."
+
+# 格式处理选项
+mermaid_output_group = "طريقة الإخراج"
+mermaid_renderer_group = "أداة العرض المحلية"
+[settings.formatting.options]
+preserve_format = "الاحتفاظ بالتنسيق"
+discard_format = "تجاهل التنسيق"
+apply_format = "تطبيق التنسيق"
+keep_markup = "إبقاء العلامات"
+clean_markup = "إزالة العلامات"
+heading_merge_punct_required = "تتطلب علامة ترقيم (افتراضي)"
+heading_merge_always = "الدمج دائمًا"
+heading_merge_never = "عدم الدمج"
+
+# 分隔符选项
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "تجاهل"
+page_break = "فاصل صفحة"
+section_break = "فاصل قسم"
+horizontal_rule_1 = "خط أفقي 1"
+horizontal_rule_2 = "خط أفقي 2"
+horizontal_rule_3 = "خط أفقي 3"
+
+# 语法选项
+[settings.formatting.syntax]
+bold_asterisk = "نجمتان (**text**)"
+bold_underscore = "شرطتان سفليتان (__text__)"
+italic_asterisk = "نجمة (*text*)"
+italic_underscore = "شرطة سفلية (_text_)"
+strikethrough_extended = "صيغة موسّعة (~~text~~)"
+strikethrough_html = "HTML ‏(<del>)"
+highlight_extended = "صيغة موسّعة (==text==)"
+highlight_html = "HTML ‏(<mark>)"
+superscript_extended = "صيغة موسّعة (^text^)"
+superscript_html = "HTML ‏(<sup>)"
+subscript_extended = "صيغة موسّعة (~text~)"
+subscript_html = "HTML ‏(<sub>)"
+unordered_dash = "شرطة (- item)"
+unordered_asterisk = "نجمة (* item)"
+unordered_plus = "علامة زائد (+ item)"
+indent_2_spaces = "مسافتان (موصى به)"
+indent_4_spaces = "أربع مسافات"
+
+# 表格样式选项
+[settings.formatting.table_styles]
+three_line_table = "جدول بثلاثة خطوط"
+table_grid = "جدول شبكي"
+
+# -----------------------------------------------------------------------------
+# 输出设置选项卡
+# -----------------------------------------------------------------------------
+[settings.output]
+# 中间文件区域
+intermediate_section = "الملفات الوسيطة"
+save_intermediate_label = "حفظ الملفات الوسيطة مع النتائج"
+save_intermediate_tooltip = "عند التفعيل تُحفظ ملفات الخطوات الوسيطة والنتيجة النهائية. عند التعطيل تُحفظ النتيجة النهائية فقط. مثال: في التحويل XLS إلى XLSX إلى ODS يُحتفظ بالملفين XLSX وODS عند التفعيل، وبملف ODS فقط عند التعطيل."
+save_intermediate_desc = "الاحتفاظ بالملفات الوسيطة أثناء التحويل المتعدد الخطوات، مثل XLS إلى XLSX إلى ODS."
+
+# 输出目录区域
+directory_section = "مجلد النتائج"
+output_mode_label = "مكان حفظ النتائج:"
+output_mode_tooltip = "يمكن حفظ الملفات الناتجة بجوار الملفات الأصلية أو في مجلد تختاره."
+custom_path_label = "المسار المخصّص:"
+browse_title = "اختر مجلد النتائج"
+
+# 输出模式选项
+validation_custom_path_required = "اختر مجلد نتائج مخصّصًا أو ارجع إلى الحفظ بجوار الملف الأصلي."
+[settings.output.output_modes]
+source = "مجلد الملف الأصلي"
+custom = "مجلد مخصّص"
+
+# 日期子文件夹区域
+[settings.output.date_folder]
+section = "مجلد فرعي بتاريخ اليوم"
+create_label = "إنشاء مجلد فرعي حسب التاريخ"
+create_tooltip = "ينشئ مجلدًا باسم التاريخ داخل مجلد النتائج، مثل output/2025-01-06/file.pdf. ينطبق على طريقتي الحفظ."
+format_label = "صيغة التاريخ:"
+
+# 日期格式选项
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+# 输出行为区域
+[settings.output.behavior]
+section = "سلوك حفظ النتائج"
+auto_open_folder_label = "فتح مجلد النتائج تلقائيًا بعد التحويل"
+auto_open_folder_tooltip = "افتح مجلد النتائج وحدد الملف النهائي بعد نجاح التحويل أو التدقيق."
+
+# -----------------------------------------------------------------------------
+# 日志设置选项卡
+# -----------------------------------------------------------------------------
+[settings.logging]
+# 日志系统区域
+system_section = "نظام السجلات"
+system_desc = "فعّل السجلات واختر مستوى التفاصيل المسجلة."
+enable_logging_label = "تفعيل السجلات"
+enable_logging_tooltip = "عند التعطيل لا يسجل البرنامج معلومات التشغيل. يُفضّل إبقاء السجلات مفعّلة لتسهيل حل المشكلات."
+log_level_label = "مستوى السجل:"
+log_level_tooltip = "حدد مقدار التفاصيل المسجلة. من الأكثر تفصيلًا إلى الأقل: التصحيح، المعلومات، التحذيرات، الأخطاء، الأخطاء الحرجة."
+
+# 文件输出区域
+file_section = "ملفات السجل"
+file_desc = "اضبط أسماء ملفات السجل ومدة الاحتفاظ بها."
+file_prefix_label = "بادئة اسم ملف السجل:"
+file_prefix_tooltip = "النص الذي تبدأ به أسماء ملفات السجل."
+retention_days_label = "أيام الاحتفاظ بالسجل:"
+retention_days_tooltip = "عدد الأيام التي تُحفظ خلالها ملفات السجل. تُحذف الملفات الأقدم تلقائيًا."
+
+# 控制台输出区域
+console_section = "إخراج الطرفية"
+console_desc = "اضبط عرض السجلات في الطرفية وتنسيقها."
+enable_console_label = "عرض السجلات في الطرفية"
+enable_console_tooltip = "اعرض رسائل السجل في نافذة الطرفية أيضًا عند التفعيل."
+console_level_label = "مستوى سجل الطرفية:"
+console_level_tooltip = "يمكن أن يختلف مستوى سجل الطرفية عن مستوى سجل الملفات."
+validation_custom_directory_required = "اختر مسارًا غير فارغ للمجلد المخصّص للسجلات."
+validation_prefix_invalid = "بادئة اسم ملف السجل تتضمن رمزًا غير مسموح به في أسماء الملفات."
+validation_prefix_required = "أدخل بادئة لاسم ملف السجل."
+directory_auto_notice = "يُختار المجلد تلقائيًا بحسب الوضع، لذلك تعذّر تعديل هذا الحقل."
+directory_env_override_notice = "يحدد متغير بيئة مجلد السجل، لذلك لا يمكن تغييره من هنا."
+console_format_tooltip = "صيغة رسائل الطرفية؛ اتركها فارغة لاستخدام صيغة ملف السجل."
+console_format_label = "تنسيق الطرفية:"
+console_colorize_label = "ألوان الطرفية:"
+console_colorize_tooltip = "اختر متى تُستخدم الألوان في سجل الطرفية."
+open_directory = "فتح المجلد"
+directory_notice_label = "تنبيه المجلد:"
+override_source_label = "مصدر الإعداد البديل:"
+fallback_reason_label = "سبب استخدام البديل:"
+actual_log_file_label = "ملف السجل الحالي:"
+custom_directory_tooltip = "مجلد السجلات المخصّص، ويُستخدم عند اختيار الوضع المخصّص فقط."
+custom_directory_label = "مجلد مخصّص:"
+directory_mode_tooltip = "طريقة اختيار مجلد السجلات."
+directory_mode_label = "طريقة اختيار المجلد:"
+location_desc = "حدد مكان حفظ ملفات السجل."
+location_section = "مكان السجلات"
+
+# 日志级别
+
+[settings.logging.dir_modes]
+user = "المجلد الافتراضي للنظام"
+temp = "المجلد المؤقت"
+custom = "مجلد مخصّص"
+
+[settings.logging.console_colorize]
+auto = "تلقائي"
+always = "دائمًا"
+never = "أبدًا"
+
+[settings.logging.levels]
+debug = "تصحيح (DEBUG)"
+info = "معلومات (INFO)"
+warning = "تحذير (WARNING)"
+error = "خطأ (ERROR)"
+critical = "خطأ حرج (CRITICAL)"
+
+# =============================================================================
+# 关于对话框
+# =============================================================================
+
+[settings.software]
+priority = "أولوية البرامج"
+description = "جرّب البرامج المثبّتة بهذا الترتيب. يتوقف توفرها أيضًا على نوع الملف المطلوب تحويله."
+presentation_processors = "برامج العروض التقديمية"
+wps_presentation = "WPS Presentation"
+powerpoint = "PowerPoint"
+
+[settings.ocr]
+language_label = "لغة التعرف على النص (OCR):"
+language_tooltip = "يختار نموذج التعرف الضوئي حسب لغة المخرجات، ولا يكتشف لغة الصورة تلقائيًا."
+language_auto = "اتباع لغة المخرجات"
+language_chinese = "الصينية والإنجليزية"
+language_japanese = "اليابانية"
+language_chinese_cht = "الصينية التقليدية"
+language_english = "الإنجليزية فقط"
+language_korean = "الكورية"
+language_latin = "الحروف اللاتينية"
+language_cyrillic = "الحروف السيريلية"
+section = "التعرف على النص"
+
+recognize_tables_tooltip = "ينطبق هذا الخيار على OCR فقط. يحاول تحديد بنية الجداول، وإذا تعذر ذلك يحتفظ بالنص العادي. لا يتعرف على الصيغ الرياضية."
+[settings.rule_transfer]
+read_failed = "تعذّر قراءة قواعد التدقيق الحالية."
+added = "أُضيفت"
+unchanged = "بلا تغيير"
+conflict = "مختلفة"
+existing_only = "موجودة سابقًا فقط"
+change = "التغيير"
+rule = "القاعدة"
+current = "الحالي"
+incoming = "الوارد"
+preview = "معاينة استيراد القواعد"
+summary = "أُضيفت {added} · مختلفة {conflict} · بلا تغيير {unchanged} · موجودة سابقًا فقط {existing_only}"
+strategy = "طريقة الاستيراد"
+merge = "دمج مع القواعد الحالية"
+replace = "استبدال جميع القواعد"
+strategy_hint = "الدمج يحتفظ بالقواعد الموجودة ويجمع القيم والملاحظات عند تطابق المفاتيح. الاستبدال يحذف القواعد غير الموجودة في الملف المستورد."
+merge_unavailable = "لا يمكن دمج أزواج علامات الترقيم المتعارضة. ألغِ الاستيراد لتعديل الملف أو اختر الاستبدال."
+confirm = "تأكيد الاستيراد"
+source_changed = "تغيّرت القواعد منذ المعاينة. أعد الاستيراد لمراجعة أحدث الفروق."
+save_failed = "تعذّر الحفظ. احتُفظ بالقواعد الأصلية."
+import = "استيراد…"
+import_failed = "فشل الاستيراد"
+imported = "استُوردت القواعد."
+export = "تصدير…"
+export_failed = "فشل التصدير"
+exported = "صُدّرت كل القواعد."
+[about]
+title = "حول البرنامج"
+subtitle = "تحويل المستندات والجداول"
+version_info = "الإصدار {version}"
+version_tooltip = "يعمل هذا البرنامج دون اتصال. تحقق من وجود تحديثات يدويًا."
+contact = "التواصل: {email}"
+copyright = "© {year} {author}"
+acknowledgments = "شكر وتقدير"
+acknowledgments_intro = "يستفيد المشروع من البرامج والأدوات المفتوحة المصدر التالية. شكرًا لمطوريها:"
+
+# 开源工具描述
+[about.tools]
+python_docx = "تحويل DOCX وMarkdown في الاتجاهين مع قراءة أنماط المستندات وبنيتها"
+openpyxl = "قراءة بيانات جداول XLSX وكتابتها عند التحويل من وإلى Markdown"
+pymupdf = "استخراج محتوى PDF وXPS وتحويل هذه الملفات"
+pymupdf4llm = "استخراج محتوى PDF وتحويله إلى Markdown"
+pdf2docx = "تحويل PDF إلى ملف Word قابل للتحرير"
+easyofd = "قراءة ملفات OFD الصينية وتحويلها"
+rapidocr = "التعرف على النص في الصور وملفات PDF دون اتصال"
+paddleocr = "نماذج التعرف على النص PP-OCRv3/v4 التي طوّرها مشروع PaddleOCR"
+onnxruntime = "محرك تشغيل نماذج RapidOCR"
+pyside6 = "مكتبة إنشاء الواجهة الرسومية باستخدام Qt"
+pillow = "تحويل الصور ومعالجة الأيقونات"
+pillow_heif = "دعم صور HEIF في Pillow"
+img2pdf = "جمع الصور وتحويلها إلى ملفات PDF"
+pywin32 = "التحكم في Office وWPS عبر واجهة COM لتحويل المستندات"
+lxml = "معالجة بنية XML في ملفات Office"
+latex2mathml = "تحويل صيغ LaTeX إلى MathML"
+pyyaml = "قراءة بيانات YAML الوصفية في ملفات Markdown"
+tomlkit = "قراءة ملفات الإعدادات وحفظها"
+pandas = "تحليل بيانات الجداول ومعالجتها"
+numpy = "عمليات الحساب والمعالجة الرقمية الأساسية"
+olefile = "التعرف على تنسيقات Office القديمة ومعالجتها"
+emoji = "التعرف على رموز Emoji ومعالجتها"
+
+[core.theme_manager]
+
+# =============================================================================
+# 主界面组件
+# =============================================================================
+[components]
+
+# Text size
+[components.font_size]
+small = "صغير"
+default = "قياسي"
+large = "كبير"
+
+# 文件拖拽区
+[components.file_drop]
+inspecting = "جارٍ فحص الملفات…"
+empty_hint_single = "اسحب ملفًا إلى هنا"
+empty_hint_batch = "اسحب ملفات أو مجلدات إلى هنا"
+add_button = "إضافة"
+paste_button = "لصق"
+paste_plain_text_action = "لصق كنص عادي"
+clipboard_name = "Markdown من الحافظة {index}.md"
+clipboard_document_name = "مستند من الحافظة {index}.dwclip"
+clipboard_image_name = "صورة من الحافظة {index}.png"
+clipboard_name_generic = "Markdown من الحافظة"
+clipboard_preview = "معاينة الحافظة: {preview}"
+clipboard_preview_label = "معاينة"
+clipboard_non_text = "لا تحتوي الحافظة على نص عادي."
+clipboard_empty = "النص المنسوخ فارغ."
+clipboard_create_failed = "تعذّر تجهيز النص المنسوخ كملف Markdown للإدخال."
+clipboard_output_title = "اختر مجلد نتائج لمحتوى الحافظة"
+clipboard_output_cancelled = "لم يبدأ التحويل لأنك لم تختر مجلد النتائج."
+clipboard_output_invalid = "مجلد النتائج المحدد غير متاح."
+clipboard_output_hint = "سيُطلب اختيار مجلد نتائج قبل تحويل محتوى الحافظة."
+clipboard_retry_unavailable = "لم يعد محتوى الحافظة الأصلي للعنصر {name} متاحًا. الصقه مرة أخرى لإنشاء إدخال جديد."
+add_file_action = "إضافة ملفات"
+add_folder_action = "إضافة مجلد"
+recent_files_action = "الملفات الأخيرة"
+clear_recent_files_action = "مسح الملفات الأخيرة"
+select_folder_dialog = "اختيار مجلد"
+clear_button = "مسح"
+single_mode = "ملف واحد"
+batch_mode = "مجموعة ملفات"
+file_selected_msg = "الملف الحالي: {filename}"
+switch_single_title = "الانتقال إلى وضع الملف الواحد"
+switch_single_message = "سيبقى الملف الحالي فقط: {filename}. ستُزال بقية الملفات من قائمة الإدخال دون حذفها من القرص."
+switch_single_action = "الاحتفاظ بالملف الحالي فقط"
+input_busy = "هناك عملية قيد التنفيذ. انتظر انتهاءها أو ألغِها قبل تغيير الملفات."
+files_added_msg = "أُضيف {count} ملفات"
+files_added_with_skipped_msg = "أُضيف {added} ملفات، وتُخطي {skipped}"
+no_supported_files = "لم يُعثر على ملفات مدعومة."
+unsupported_type_msg = "نوع الملف غير مدعوم: {filename}"
+single_mode_only_one = "وضع الملف الواحد يقبل ملفًا واحدًا فقط."
+drag_preview_single = "سيُختار: {filename}"
+drag_preview_summary = "سيُضاف {added} ويُتخطى {skipped}"
+drag_preview_summary_recursive = "{summary}، مع البحث داخل المجلدات الفرعية"
+drag_preview_summary_degraded = "{summary}؛ عُرض ملخص لأن الدفعة كبيرة"
+drag_preview_skipped_title = "سيُتخطى:"
+drag_preview_skipped_unsupported = "غير مدعوم: {name}"
+drag_preview_skipped_unreadable = "تعذّر القراءة: {path}"
+select_file_dialog = "اختيار ملف"
+all_supported_filter = "كل الملفات المدعومة"
+all_files_filter = "كل الملفات"
+
+# 批量文件列表
+[components.file_drop.batch_list]
+error_count = "أخطاء: {count}"
+issue_count = "مشكلات: {count}"
+no_batch_files = "لا توجد ملفات ضمن الدفعة"
+retry_selected_failed = "إعادة محاولة العنصر الفاشل المحدد"
+retry_all_failed = "إعادة محاولة جميع العناصر الفاشلة في هذه الصفحة"
+total_files = "إجمالي الملفات: {total}"
+action_view_skip = "عرض سبب التخطي"
+action_view_error = "عرض الخطأ"
+action_remove = "إزالة"
+action_move_up = "تحريك لأعلى"
+action_move_down = "تحريك لأسفل"
+sort_button = "ترتيب"
+sort_button_with_label = "الترتيب: {label}"
+sort_custom = "ترتيب مخصّص"
+sort_name = "اسم الملف"
+sort_type = "النوع"
+sort_size = "الحجم"
+sort_mtime = "وقت التعديل"
+sort_ascending = "تصاعدي"
+sort_descending = "تنازلي"
+filter_button = "تصفية"
+filter_button_with_label = "التصفية: {label}"
+filter_all = "الكل"
+filter_failed = "فاشلة"
+filter_pending = "قيد الانتظار"
+filter_processing = "قيد المعالجة"
+filter_completed = "مكتملة"
+action_remove_selected = "إزالة المحدد ({count})"
+action_open_selected_locations = "فتح مواقع المحدد ({count})"
+
+# 批量操作面板
+filter_skipped = "متخطاة"
+filter_cancelled = "ملغاة"
+[components.file_drop.batch_action]
+
+# 状态文本
+[components.file_drop.status]
+pending = "بانتظار التنفيذ"
+processing = "قيد المعالجة"
+completed = "مكتملة"
+skipped = "متخطاة"
+failed = "فاشلة"
+cancelled = "ملغاة"
+
+# 文件选择器
+[components.file_selector]
+
+# 状态栏
+[components.info_area]
+task_completion_notification_title = "اكتملت المهمة"
+task_completion_notification_success = "اكتملت المهمة: عولج {completed} من {total} ملفات."
+task_completion_notification_partial = "اكتملت المهمة: عولج {completed} من {total} ملفات، وفشل {failed}."
+task_completion_notification_failed = "انتهت المهمة: فشل {failed} من {total} ملفات."
+task_completion_notification_cancelled = "أُلغيت المهمة بعد معالجة {completed} من {total} ملفات."
+
+# 应用状态
+
+# 处理状态
+batch_completed = "انتهت الدفعة: نجح {success}، وفشل {failed}، وتُخطي {skipped}، وأُلغي {cancelled}"
+
+# logic.py 状态消息
+
+# 文件类型选择（统一风格）
+
+# GUI状态消息
+
+# 文件状态对话框
+[components.file_dialogs]
+# 跳过对话框
+
+# 错误对话框
+
+# 操作面板
+[components.action_area]
+cancel_hint = "هناك مهمة قيد التنفيذ. اضغط Esc لإلغاء المهمة الحالية."
+
+# 转换面板
+[components.conversion_panel]
+
+# 模板选择器
+[components.template_selector]
+manage_templates = "إدارة القوالب"
+selected_name = "القالب المحدد: {name}"
+no_templates = "لا توجد قوالب متاحة"
+empty_hint = "افتح «إدارة القوالب» لتفعيل قالب مضمّن أو استيراد قالب مخصّص."
+unavailable = "اختيار القوالب غير متاح"
+usage_line = "الاستخدام: {value}"
+source_line = "المصدر: {value}"
+updated_line = "آخر تعديل: {value}"
+source_tooltip = "مجلد المصدر: {value}"
+auto_selected_reason = "اختير قالب متاح من نوع {template_kind} باستخدام الإعدادات الافتراضية."
+open_location = "فتح موقع الملف"
+
+# 选项卡式模板选择器
+[components.template_selector_tabbed]
+document_templates = "مستند"
+spreadsheet_templates = "جدول"
+
+# =============================================================================
+# 转换面板区域
+# =============================================================================
+[conversion_panel]
+no_common_target = "لا يوجد تنسيق إخراج مشترك لهذه الملفات. استخدم وضع الملف الواحد لتحويلها كلًّا على حدة."
+target_format = "التنسيق المطلوب"
+route_options_unavailable = "تعذّر تحميل العمليات المتاحة؛ عُطّلت الأزرار لتجنب طلب غير صحيح."
+no_compatible_operation = "لا توجد عملية متوافقة مع هذا الملف."
+format_conversion = "تحويل التنسيق"
+save_as = "إخراج ملفات التخطيط"
+format_target_help = "التحويل إلى {format}"
+same_format_unavailable = "الملف الأصلي بهذا التنسيق بالفعل."
+image_limit_target_unavailable = "لا يمكن ضمان حجم ملف محدد بدقة لهذا التنسيق."
+convert = "تحويل"
+save_as_action = "تصدير"
+export = "تصدير"
+render = "عرض"
+select_file_hint = "اختر ملفًا أولًا"
+
+# 文档转换区
+[conversion_panel.document]
+convert_to_other_formats = "التحويل إلى تنسيق مستند آخر"
+convert_to_layout = "التحويل إلى تنسيق تخطيط"
+proofread_document = "تدقيق المستند"
+proofread_hint = "فحص أخطاء المستند"
+proofread_button = "تدقيق"
+proofread_options = "خيارات التدقيق"
+symbol_pairing = "تطابق علامات الترقيم"
+symbol_pairing_tooltip = "فحص تطابق الأقواس وعلامات الاقتباس ونحوها"
+typos_rule = "تصحيح الأخطاء الإملائية"
+typos_rule_tooltip = "فحص الأخطاء الشائعة في الكتابة"
+symbol_correction = "تصحيح الرموز"
+symbol_correction_tooltip = "التحقق من الرموز غير المناسبة"
+sensitive_word = "الكلمات المطلوب التنبيه لها"
+sensitive_word_tooltip = "البحث عن الكلمات المحددة في قائمة التنبيه"
+
+# 图片转换区
+[conversion_panel.image]
+convert_to_other_formats = "تحويل الصور إلى تنسيقات أخرى"
+compression_options = "خيارات الضغط"
+highest_quality = "أعلى جودة"
+limit_file_size = "تقييد حجم الملف"
+file_size_limit = "حد حجم الملف:"
+enter_size_limit_warning = "أدخل الحد الأقصى لحجم الملف"
+kb_range_warning = "أدخل رقمًا بين 10 و10000 كيلوبايت (KB)"
+mb_range_warning = "أدخل رقمًا بين 1 و100 ميغابايت (MB)"
+enter_valid_number_warning = "أدخل رقمًا صالحًا"
+convert_to_layout = "التحويل إلى تنسيق تخطيط"
+size_options = "خيارات الحجم"
+original_embed = "إدراج بالحجم الأصلي"
+fit_a4 = "ملاءمة صفحة A4"
+fit_a3 = "ملاءمة صفحة A3"
+merge_images = "دمج الصور"
+merge_images_hint = "دمج عدة صور في ملف واحد"
+merge_to_tif = "دمج في ملف TIF"
+conversion_options = "خيارات التحويل"
+preserve_transparency = "الحفاظ على الشفافية"
+no_transparency = "دون شفافية"
+
+# 版式转换区
+[conversion_panel.layout]
+image_format = "تنسيق الصورة"
+resolution = "الدقة (DPI)"
+convert_to_other_formats = "التحويل إلى تنسيقات تخطيط أخرى"
+convert_to_document_or_image = "التحويل إلى مستند أو صورة"
+merge_split = "دمج أو تقسيم"
+merge_split_hint = "دمج ملفات التخطيط أو تقسيمها"
+merge_to_pdf = "دمج في PDF"
+split_to_pdf = "تقسيم PDF"
+split_page_range = "الصفحات المطلوب تقسيمها:"
+page_range_placeholder = "1-3,5  *  #"
+page_range_help = "حدد الصفحات بأرقام مفصولة بفواصل أو نطاقات. الرمز * يقسّم جميع الصفحات، و# يفصل الفردية عن الزوجية."
+split_all_pages_warning = "اختر بعض الصفحات فقط، أو استخدم * أو # لتقسيم الملف كله."
+split_invalid_range_warning = "أدخل أرقام صفحات ضمن الملف، مثل 1-2 أو 1,3، أو استخدم * أو #."
+selected_split_file = "الملف الحالي: {pages} صفحات"
+invalid_page_range = "نطاق صفحات غير صالح: {part}"
+invalid_page = "رقم صفحة غير صالح: {part}"
+split_mode_single_page_warning = "⚠️ يتكون الملف من صفحة واحدة؛ لا حاجة لتقسيمه"
+
+# 表格转换区
+[conversion_panel.spreadsheet]
+protection_checking = "جارٍ التحقق من حماية المصنف…"
+reference_table = "الجدول المرجعي: {name}"
+protection_password_required = "كلمة المرور (مطلوبة)"
+ods_delivery_options = "خيارات حفظ ODS"
+ods_delivery_hint = "تُستخدم القيم المحفوظة للمعادلات الخارجية. يتطلب تصدير الملفات المحمية بصيغة ODS موافقتك الصريحة."
+protection_password = "كلمة مرور الحماية (اختيارية)"
+allow_protection_loss = "أفهم أن ملف ODS الناتج لن يحتفظ بحماية كلمة المرور"
+protected_batch_single_only = "لا تُعاد استخدام كلمات المرور للدفعة. حوّل الملفات المحمية واحدًا تلو الآخر."
+protection_status_unknown = "تعذّر التأكد من حالة حماية الملف. أُوقف التحويل تجنبًا لإنشاء ملف غير محمي."
+convert_to_other_formats = "تحويل الجدول إلى تنسيقات أخرى"
+convert_to_layout = "التحويل إلى تنسيق تخطيط"
+merge_tables = "دمج الجداول"
+merge_tables_hint = "دمج عدة جداول بالطريقة المختارة"
+merge_tables_button = "📋 دمج الجداول"
+merge_options = "خيارات الدمج"
+merge_by_row = "دمج بحسب الصف"
+merge_by_column = "دمج بحسب العمود"
+merge_by_cell = "دمج بحسب الخلية"
+no_table_selected = "لم يُحدد جدول"
+
+# =============================================================================
+# 操作面板区域
+# =============================================================================
+[action_area]
+recognize_tables = "التعرف على بنية الجداول"
+table_model_unavailable = "نموذج التعرف على الجداول غير متاح؛ سيُحتفظ بالنص المستخرج العادي."
+route_options_unavailable = "تعذّر تحميل العمليات المتاحة، لذلك توقّف إنشاء الملف لتجنّب تحويل غير صحيح."
+no_compatible_output = "لا توجد صيغة إخراج متوافقة مع هذا الملف."
+export_options = "خيارات التصدير"
+generation_options = "خيارات الإنشاء"
+generate = "إنشاء"
+extract_images = "استخراج الصور"
+ocr = "التعرف على نص الصور"
+optimization_unavailable = "خيارات التحسين غير متاحة؛ ما زال التحويل العادي متاحًا."
+
+# 校对选项
+[action_area.proofread]
+
+# 文档转MD面板
+[action_area.document]
+export_markdown = "تصدير إلى Markdown"
+export_markdown_tooltip = "تحويل المستند إلى Markdown"
+optimize_for_type = "تحسين حسب نوع المستند"
+remove_existing_numbering = "إزالة ترقيم العناوين الأصلي"
+add_new_numbering = "إضافة ترقيم للعناوين"
+
+# 表格转MD面板
+[action_area.spreadsheet]
+export_markdown_tooltip = "تحويل الجدول إلى Markdown"
+optimize_for_type = "تحسين حسب نوع الجدول"
+
+# 图片转MD面板
+[action_area.image]
+export_markdown_tooltip = "تحويل الصورة إلى Markdown"
+optimize_for_type = "تحسين حسب نوع الصورة"
+
+# 版式转MD面板
+[action_area.layout]
+export_markdown_tooltip = "تحويل ملف التخطيط إلى Markdown"
+optimize_for_type = "تحسين حسب نوع التخطيط"
+
+# 其他文件转MD面板
+[action_area.other]
+
+# MD转文档面板
+[action_area.md_to_document]
+generate_tooltip = "إنشاء مستند بالتنسيق المحدد"
+format_combo_tooltip = "اختيار تنسيق المستند الناتج"
+remove_existing_numbering = "إزالة ترقيم العناوين الموجود"
+add_new_numbering = "إضافة ترقيم للعناوين"
+
+# MD转表格面板
+[action_area.md_to_spreadsheet]
+generate_tooltip = "إنشاء جدول بالتنسيق المحدد"
+format_combo_tooltip = "اختيار تنسيق الجدول الناتج"
+
+# =============================================================================
+# 编辑器对话框
+# =============================================================================
+[editors]
+
+# 序号新增编辑器
+[editors.numbering_add]
+window_title = "محرر أنماط ترقيم العناوين"
+scheme_list = "قائمة أنماط الترقيم"
+default_scheme = "النمط الافتراضي:"
+level_format_config = "تنسيق مستويات العناوين"
+realtime_preview = "معاينة مباشرة"
+format_help = "📖 شرح صيغة الترقيم"
+format_help_title = "شرح العناصر البديلة في صيغة الترقيم"
+format_help_text = """العناصر النائبة لتنسيق الترقيم
+
+الصيغة: {level.style}
+level هو مستوى العنوان من 1 إلى 9، وstyle هو اسم النمط من القائمة التالية.
+
+الأنماط المتاحة:
+  chinese_lower  - أرقام صينية بسيطة (一、二、三)
+  chinese_upper  - أرقام صينية رسمية (壹、贰、叁)
+  arabic_half    - أرقام عشرية (1, 2, 3)
+  arabic_full    - أرقام عشرية كاملة العرض (１、２、３)
+  arabic_circled - أرقام داخل دوائر (①②③)
+  letter_upper   - أحرف لاتينية كبيرة (A, B, C)
+  letter_lower   - أحرف لاتينية صغيرة (a, b, c)
+  roman_upper    - أرقام رومانية كبيرة (I, II, III)
+  roman_lower    - أرقام رومانية صغيرة (i, ii, iii)
+
+أمثلة:
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+# 级别名称
+level_1 = "عنوان من المستوى 1"
+level_2 = "عنوان من المستوى 2"
+level_3 = "عنوان من المستوى 3"
+level_4 = "عنوان من المستوى 4"
+level_5 = "عنوان من المستوى 5"
+level_6 = "عنوان من المستوى 6"
+level_7 = "عنوان من المستوى 7"
+level_8 = "عنوان من المستوى 8"
+level_9 = "عنوان من المستوى 9"
+
+# 创建和复制
+new_scheme = "نمط ترقيم جديد"
+copy_suffix = "(نسخة)"
+
+# 预览
+preview_sample = "مثال {level_name}"
+no_format = "لم يُحدّد تنسيق"
+
+# 占位符菜单
+menu_current_level = "── المستوى الحالي ({level}) ──"
+menu_decorations = "── علامات شائعة ──"
+menu_hierarchical = "── تنسيق متسلسل ──"
+
+# 数字样式
+style_chinese_lower = "أرقام صينية بسيطة (一二三)"
+style_chinese_upper = "أرقام صينية رسمية (壹贰叁)"
+style_arabic_half = "أرقام عشرية (123)"
+style_arabic_circled = "أرقام داخل دوائر (①②③)"
+style_letter_upper = "حروف لاتينية كبيرة (ABC)"
+style_roman_upper = "أرقام رومانية (I II III)"
+
+# 装饰
+decoration_dun = "فاصلة تعداد صينية"
+decoration_dot_space = "نقطة ومسافة"
+decoration_bracket = "أقواس صينية عريضة"
+decoration_chapter = "تنسيق الفصول"
+
+# 验证消息
+validation_ok = "صيغة الترقيم صالحة"
+validation_fixed_text = "لا يوجد عنصر بديل؛ سيعرض هذا المستوى نصًا ثابتًا فقط."
+validation_invalid_level = "القيمة «{level}» ليست رقم مستوى صالحًا."
+validation_level_out_of_range = "المستوى {level} خارج النطاق؛ اختر من 1 إلى 9."
+validation_unknown_style = "نمط غير معروف: «{style}»."
+word_native_unavailable = "التوافق مع ترقيم Word الأصلي: تعذّر التحقق"
+word_native_full = "التوافق مع ترقيم Word الأصلي: كامل"
+word_native_approximate = "التوافق مع ترقيم Word الأصلي: جزئي ({reason})"
+word_native_incompatible = "غير متوافق مع ترقيم Word الأصلي ({reason})"
+
+
+# 错误消息
+cannot_delete_default_scheme = "لا يمكن حذف نمط الترقيم الافتراضي"
+
+# 方案名称
+[editors.numbering_add.names]
+hierarchical_standard = "الترقيم المتسلسل المعتاد"
+hierarchical_h2_start = "الترقيم المتسلسل بدءًا من H2"
+
+# 方案描述（用于编辑器中显示）
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "ترقيم متسلسل: 1، 1.1، 1.1.1… مع مسافة بعد الرقم"
+hierarchical_h2_start_desc = "يبدأ الترقيم من العنوان H2 ويتجاوز H1: ‏1، 1.1، 1.1.1…"
+
+# 通用编辑器文本（所有编辑器共用）
+[editors.common]
+name = "الاسم:"
+description = "الوصف:"
+copy = "نسخ"
+delete = "حذف"
+move_up = "تحريك لأعلى"
+move_down = "تحريك لأسفل"
+save = "حفظ"
+cancel = "إلغاء"
+prompt = "معلومات"
+select_item_first = "اختر عنصرًا أولًا"
+cannot_delete = "لا يمكن الحذف"
+system_item_hint = "لا يمكن حذف عناصر النظام، ولكن يمكن تعطيلها"
+confirm_delete = "تأكيد الحذف"
+confirm_delete_message = "هل تريد حذف «{name}»؟"
+confirm_close = "تأكيد الإغلاق"
+unsaved_changes_hint = "تغييرات غير محفوظة"
+unsaved_close_message = "توجد تغييرات لم تُحفظ. هل تريد الإغلاق؟"
+
+# 序号清理编辑器
+[editors.numbering_clean]
+level = "مستوى العنوان:"
+disabled = "معطّل"
+window_title = "محرر قواعد إزالة الترقيم"
+rule_list = "قائمة القواعد"
+description = "الوصف:"
+enabled = "مفعّل"
+regex = "تعبير نمطي:"
+regex_test = "اختبار التعبير النمطي"
+input = "الإدخال:"
+result = "النتيجة:"
+new_rule = "قاعدة جديدة"
+copy_suffix = "(نسخة)"
+match_success = "تم العثور على تطابق"
+no_match = "لا يوجد تطابق"
+regex_error = "خطأ في التعبير النمطي"
+prompt = "معلومات"
+
+# 清理规则名称
+[editors.numbering_clean.names]
+chinese_unit_suffix = "صيغة صينية مع بادئة «第»"
+chinese_unit_prefix = "صيغة صينية يبدأ فيها اسم الوحدة"
+circled_numbers = "أرقام داخل دوائر"
+bracket_number = "أرقام بين أقواس"
+hierarchical = "أرقام متسلسلة"
+number_separator = "رقم يتبعه فاصل"
+legal_english = "ترقيم فصول باللغة الإنجليزية"
+letter_number = "ترقيم بالحروف"
+
+# 清理规则描述（用于编辑器中显示）
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "مطابقة الصيغة الصينية 第X回/篇/册/卷/部/集/期/编/章/节/条/款/项/目 يليها فراغ"
+chinese_unit_prefix_desc = "مطابقة وحدة صينية مثل 卷/篇/册/部/集/期/编/章/节/回 يتبعها رقم وفراغ"
+circled_numbers_desc = "مطابقة الأرقام المحاطة بدائرة مثل ①-㊿ و❶-⓴ و⓵-⓾ و㈠-㈩ مع فاصل اختياري"
+bracket_number_desc = "مطابقة الأرقام بين أقواس مثل (1) و（一） و1) و一） مع فاصل اختياري"
+hierarchical_desc = "مطابقة أرقام المستويات مثل 1.1 و1.1.1 و1.1.1.1 مع فاصل اختياري"
+number_separator_desc = "مطابقة رقم يتبعه فاصل مثل 1. أو 2、 أو 一、 أو 二, مع فراغ اختياري"
+legal_english_desc = "مطابقة كلمات Chapter وPart وVolume وBook وSection متبوعة برقم عادي أو روماني"
+letter_number_desc = "مطابقة ترقيم بالحروف مثل A. أو A) أو (A) أو a. أو a)"
+
+# 映射编辑器
+[editors.mapping]
+# 对话框标题
+symbol_editor_title = "قواعد مطابقة علامات الترقيم"
+typo_editor_title = "محرر قاموس الأخطاء الإملائية"
+sensitive_editor_title = "محرر الكلمات المطلوب التنبيه لها"
+# 下拉选择标签
+search_placeholder = "ابحث عن مفتاح أو قيمة أو تعليق"
+correct_word = "الكلمة الصحيحة"
+misspellings = "الأخطاء الإملائية"
+multi_value_hint = "استخدم الرمز | للفصل بين قيم متعددة، مثل value1|value2|value3"
+save_typos_failed = "تعذّر حفظ قاموس الأخطاء الإملائية."
+save_symbol_correction_failed = "تعذّر حفظ قواعد تصحيح الرموز."
+save_sensitive_words_failed = "تعذّر حفظ قائمة الكلمات الحساسة."
+
+# 列头
+symbol_correct_symbol = "الرمز الصحيح"
+symbol_error_symbols = "قائمة الرموز الخاطئة"
+sensitive_sensitive_word = "كلمة للتنبيه"
+sensitive_exceptions = "قائمة الاستثناءات"
+comment = "تعليق"
+
+# 说明文本
+
+# 按钮
+add_entry = "إضافة عنصر"
+delete_entry = "حذف عنصر"
+
+# 提示消息
+
+# 条目编辑对话框
+
+# 标签
+
+# 示例文本
+
+# 验证消息
+
+# 键重复处理
+duplicate_key_title = "المفتاح موجود بالفعل"
+duplicate_key_message = "المفتاح «{entry_key}» موجود بالفعل. القيم الحالية: {current_values}. التعليق الحالي: {current_comment}. اختر كيفية المتابعة."
+duplicate_key_no_comment = "(لا يوجد)"
+overwrite = "استبدال"
+merge = "دمج"
+
+# =============================================================================
+# 文件类型分类
+# =============================================================================
+opening_symbol = "علامة الفتح"
+closing_symbol = "علامة الإغلاق"
+[file_types]
+document = "مستند"
+spreadsheet = "جدول بيانات"
+image = "صورة"
+layout = "ملف تخطيط"
+other = "أخرى"
+text = "نص"
+
+# 带"类"后缀的版本（用于选项卡标签）
+
+[file_category]
+text_short = "نص"
+document_short = "مستند"
+spreadsheet_short = "جدول"
+layout_short = "تخطيط"
+image_short = "صورة"
+other_short = "أخرى"
+
+[file_format_validation]
+
+[file_admission]
+actual_format = "التنسيق الفعلي: {detected_format}"
+compatible_text = "يشير الامتداد إلى {declared_format}، لكن المحتوى من نوع {detected_format}. كلاهما يُعالج بوصفه نصًا."
+same_family_mismatch = "يشير امتداد الملف إلى {declared_format}، لكن المحتوى من نوع {detected_format}. سيُستخدم التنسيق المكتشف لأنهما من الفئة نفسها."
+cross_family_mismatch = "يشير امتداد الملف إلى {declared_format}، لكن المحتوى من نوع {detected_format}. تختلف طريقة المعالجة؛ أكّد استخدام التنسيق المكتشف."
+unknown_extension = "امتداد الملف يشير إلى تنسيق غير مدعوم ({declared_format})، لكن المحتوى من نوع {detected_format}. أكّد استخدام التنسيق المكتشف."
+empty = "الملف المحدد فارغ."
+container_invalid = "بنية الملف تالفة أو غير صالحة (الامتداد: {declared_format}، المكتشف: {detected_format})."
+container_unsupported = "حاوية {detected_format} ليست حزمة مستندات مدعومة (الامتداد: {declared_format})."
+container_unrecognized = "تعذّر التعرف على بنية الملف (الامتداد: {declared_format}، المكتشف: {detected_format})."
+content_unrecognized = "تعذّر التعرف على محتوى الملف (الامتداد: {declared_format}، المكتشف: {detected_format})."
+read_error = "تعذّر قراءة الملف (الامتداد: {declared_format}، المكتشف: {detected_format})."
+unsupported_format = "التنسيق المكتشف {detected_format} غير مدعوم (الامتداد: {declared_format})."
+
+# =============================================================================
+# 转换操作
+# =============================================================================
+[conversion]
+# 文档操作
+
+# 表格操作
+
+# 图片操作
+
+# 生成文件名（用于输出文件命名）
+[conversion.filenames]
+
+[conversion.ocr_output]
+blockquote_prefix = "🖼️ **النص المستخرج من الصورة**:"
+
+# =============================================================================
+# 转换进度消息
+# =============================================================================
+[conversion.progress]
+
+# =============================================================================
+# 转换结果消息（状态栏/弹窗）
+# =============================================================================
+[conversion.messages]
+# 通用消息
+
+# 成功消息
+
+# 校对消息
+
+# 版式转换消息
+
+# 缺少依赖消息
+
+# 合并/拆分消息
+
+# MD转换消息
+
+# 图片转换消息
+
+# 序号操作消息
+
+# 成功消息（带参数）
+
+# 失败消息（带参数）
+
+# =============================================================================
+# 消息和提示
+# =============================================================================
+[messages]
+# 文件操作
+
+# GUI操作结果
+
+# 转换操作
+
+# 设置
+
+# 确认对话框
+
+# 文件拖拽和选择
+no_folder_in_single_mode = "لا يمكن إضافة مجلد في وضع الملف الواحد"
+
+# 错误消息
+[messages.errors]
+
+# 警告消息
+[messages.warnings]
+
+# =============================================================================
+# 校对批注文本（用于文档校对功能的批注内容）
+# =============================================================================
+[proofread]
+
+# 错误类型
+[proofread.error_type]
+
+# 错误来源
+[proofread.source]
+
+# 修改建议
+[proofread.suggestion]
+
+# =============================================================================
+# 链接处理占位符文本（用于文档中显示的错误提示）
+# =============================================================================
+[link_processing]
+
+# =============================================================================
+# 样式名（用于文档转换）
+# 这些样式名用于 MD ↔ DOCX 转换时的样式注入和检测
+# =============================================================================
+[styles]
+# 段落样式
+body_paragraph = "فقرة متن"
+image_paragraph = "فقرة صورة"
+
+# 代码样式
+code_block = "كتلة كود"
+inline_code = "كود ضمن النص"
+
+# 公式样式
+formula_block = "كتلة معادلة"
+inline_formula = "معادلة ضمن النص"
+
+# 列表样式
+list_block = "فقرة قائمة"
+
+# 分隔线样式
+horizontal_rule_1 = "خط أفقي 1"
+horizontal_rule_2 = "خط أفقي 2"
+horizontal_rule_3 = "خط أفقي 3"
+
+# 表格样式
+table_content = "متن الجدول"
+table_header = "رأس الجدول"
+three_line_table = "جدول بثلاثة خطوط"
+table_grid = "جدول شبكي"
+
+# 引用样式（9 级）
+quote_1 = "اقتباس 1"
+quote_2 = "اقتباس 2"
+quote_3 = "اقتباس 3"
+quote_4 = "اقتباس 4"
+quote_5 = "اقتباس 5"
+quote_6 = "اقتباس 6"
+quote_7 = "اقتباس 7"
+quote_8 = "اقتباس 8"
+quote_9 = "اقتباس 9"
+figure_caption = "تسمية شكل توضيحي"
+table_caption = "تسمية جدول"
+equation_caption = "تسمية معادلة"
+code_block_caption = "تسمية مقطع كود"
+
+# =============================================================================
+# 样式格式配置（用于样式注入时的格式属性）
+# =============================================================================
+[style_formats]
+
+# 正文段落格式（与 heading 3-9 相同：仿宋_GB2312、三号、2字符）
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "left"
+
+# 标题1格式（黑体、三号、2字符）
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 16
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# 标题2格式（楷体_GB2312、三号、2字符）
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# 标题3-9格式（仿宋_GB2312、三号、2字符）
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# =============================================================================
+# 占位符（用于文档模板）
+# 这些占位符用于 MD → DOCX 转换时的模板填充
+# =============================================================================
+[placeholders]
+title = "title"
+body = "body"
+
+# =============================================================================
+# YAML 键名（用于元数据）
+# 这些键名用于 DOCX → MD 转换时的 YAML 前置信息输出
+# =============================================================================
+[yaml_keys]
+title = "title"
+subtitle = "subtitle"
+
+[settings.markdown_extensions]
+description = "اختر الامتدادات التي يتعرف عليها DocWen في ملفات Markdown الواردة والتي يستخدمها عند إخراج Markdown. لا يغيّر البرنامج الملفات الأصلية."
+input = "إدخال Markdown: التعرف على الامتدادات"
+output = "إخراج Markdown: استخدام الامتدادات"
+input_hint = "عند التعطيل تُعامل العناصر كنصوص وجداول وحواشٍ عادية."
+output_hint = "عند التعطيل يُنتج Markdown عاديًا ويبلغ عن فقدان بنية الجداول ومستويات العناوين وأنواع الحواشي."
+structural_tables = "جداول Structural Tables"
+captions_references = "التسميات التوضيحية والمراجع في Number Suite"
+extended_headings = "مستويات العناوين 7–9 ‏(H7–H9)"
+typed_endnotes = "التمييز بين الحواشي السفلية والختامية (endnote:)"
+obsidian_preset = "استخدام امتدادات Obsidian"
+
+[activity]
+not_started = "لم تبدأ بعد"
+record_unavailable = "مُسح سجل هذه العملية أو لم يعد متاحًا."
+title = "سجل العمليات"
+search = "البحث باسم الملف أو العملية"
+all_statuses = "كل الحالات"
+all_operations = "كل العمليات"
+time = "الوقت"
+status = "الحالة"
+file = "الملف"
+operation = "العملية"
+details = "التفاصيل"
+select_record = "اختر سجلًا لعرض تفاصيله"
+clear_finished = "مسح العمليات المكتملة"
+info = "تنبيه"
+warning = "تحذير"
+merge = "دمج"
+split = "تقسيم"
+numbering = "ترقيم"
+validate = "فحص"
+input = "الإدخال"
+output = "النتيجة"
+failed_count = "العمليات · فشل {count}"
+
+[file_locations]
+input = "تحديد موقع الملف الأصلي"
+output = "تحديد موقع الملف الناتج"
+multiple = "{count} ملفات"
+show_outputs = "عرض كل الملفات الناتجة"
+
+[settings.templates]
+import_summary = "نجح استيراد {succeeded}؛ فشل {failed}؛ أُلغي {cancelled}."
+load_failed = "تعذّر تحميل القوالب"
+operation_failed = "تعذّرت العملية على القالب. افتح التفاصيل لمعرفة السبب."
+title = "القوالب"
+description = "القوالب المضمّنة للقراءة فقط. انسخ قالبًا لإنشاء نسخة مخصّصة قابلة للتعديل. تسري تغييرات هذه الصفحة فورًا."
+import = "استيراد قوالب"
+copy_edit = "نسخ وتعديل"
+edit = "تعديل"
+rename = "إعادة تسمية"
+export = "تصدير"
+delete = "حذف"
+move_up = "تحريك لأعلى"
+move_down = "تحريك لأسفل"
+open_user_folder = "فتح مجلد القوالب المخصّصة"
+refresh = "تحديث"
+status_note = "تبقى القوالب المعطّلة هنا، لكنها لا تظهر ضمن القوالب المختارة في النافذة الرئيسية."
+custom = "مخصّص"
+builtin = "مضمّن"
+builtin_hint = "هذا قالب مضمّن؛ انسخه قبل تعديله."
+file_filter = "قوالب Office (*.docx *.xlsx);;كل الملفات (*)"
+name_prompt = "اسم القالب:"
+delete_confirm = "هل تريد نقل القالب المخصّص «{name}» إلى سلة المحذوفات؟"
+
+set_default = "تعيين افتراضي"
+default = "افتراضي"
+choose_template = "اختر قالبًا مفعّلًا من اللوحة اليمنى"
+more = "المزيد"
+open_failed = "تعذّر فتح القالب. تحقق من البرنامج المرتبط به."
+name_conflict = "يوجد قالب مخصّص بالفعل باسم {name}."
+keep_both = "الاحتفاظ بالنسختين"
+replace = "استبدال"
+
+[diagnostics]
+local_details = "التفاصيل المحلية"
+preview = "معاينة بيانات التشخيص المنقّحة"
+copy = "نسخ بيانات التشخيص"
+redacted_hint = "تتضمن البيانات المنسوخة الحالات والفئات والأعداد فقط؛ ولا تتضمن نصوص المستندات أو المسارات أو الأخطاء الخام أو الأوامر أو الإعدادات."
+
+[clipboard]
+structured_plain_fallback = "تعذّر مطابقة بنية الجدول أو الصور مع النص المنسوخ بثقة، لذا احتُفظ بالنص العادي كاملًا."
+structured_html_only = "لم تتضمن الحافظة نصًا عاديًا؛ استُخدم HTML بعد التحقق منه."
+structured_invalid = "بنية الجدول أو الصور المنسوخة غير صالحة ولم تُستورد."
+image_invalid = "بيانات الصورة المنسوخة غير صالحة أو تتجاوز الحجم المدعوم."
+images_omitted = "لا تتوفر بيانات صور قابلة للتحقق لـ {count} صور من الحافظة؛ احتُفظ بالمواضع والنصوص المتاحة."
+
+[settings.markdown_extensions.input_help]
+structural_tables = "التعرف على صفوف رؤوس متعددة وأعمدة رؤوس للصفوف وجداول بلا صف عنوان وخلايا مدمجة. تُفسر علامتا < و^ عند التفعيل، وتُعامل كنص Markdown عادي عند التعطيل."
+
+captions_references = "التعرف على تسميات Number Suite التوضيحية والمعرّفات والمراجع المتقاطعة. عند التعطيل تبقى تصريحاتها ومراجع @ نصًا ظاهرًا."
+extended_headings = "التعرف على العناوين من المستوى 7 إلى 9. عند التعطيل تبقى علامات # السبع إلى التسع نصًا ظاهرًا."
+typed_endnotes = "استخدام بادئات مثل endnote: لتمييز الحواشي الختامية من السفلية. عند التعطيل تُعامل كحواشٍ سفلية عادية."
+
+[settings.markdown_extensions.output_help]
+structural_tables = "إخراج صفوف رؤوس متعددة وأعمدة رؤوس للصفوف وخلايا مدمجة بعلامات Structural Tables عند الحاجة. عند التعطيل تتحول إلى جداول Markdown عادية مع التنبيه إلى بنية قد تُفقد."
+
+captions_references = "إنشاء تسميات Number Suite والمراجع المتقاطعة إن توفرت. عند التعطيل تُخرج كنص عادي ويُبلّغ عن المراجع التي تعذّر الحفاظ عليها."
+extended_headings = "إخراج مستويات العناوين 7–9. عند التعطيل تصبح من المستوى 6 مع تنبيه."
+typed_endnotes = "الإبقاء على التمييز بين الحواشي السفلية والختامية بعلامات خاصة. عند التعطيل تُخرج الحواشي الختامية كحواشٍ سفلية مع تنبيه."
+
+[settings.optimization]
+availability_help = "تأتي أنواع التحسين من محرك التحويل الحالي. إذا لم يوجد تحسين ملائم لنوع الملف تُعطّل الخيارات، وتُعرض أخطاء التحميل بصورة منفصلة."
+
+none_available = "لا تتوفر تحسينات لهذا النوع من الملفات في محرك التحويل الحالي."

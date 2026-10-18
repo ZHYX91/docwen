@@ -57,6 +57,7 @@ def _snapshot(*, ocr_language: str, locale: str) -> dict[str, Any]:
     return {
         "ocr": {"language": ocr_language},
         "gui": {"language": {"locale": locale}},
+        "conversion": {"output_locale": locale},
     }
 
 
@@ -112,6 +113,7 @@ def test_real_config_loader_projects_reloaded_ocr_values_without_mutating_reques
         {
             "ocr.language": "japanese",
             "gui.language.locale": "ja_JP",
+            "conversion.output_locale": "ja_JP",
         }
     )
     recorder = _Recorder()
@@ -153,7 +155,7 @@ def test_request_snapshot_is_authoritative_over_the_live_loader(runtime_input: P
         ),
         (
             {"gui": {"language": {"locale": "ja_JP"}}},
-            {"ocr_language": "auto", "locale": "ja_JP"},
+            {"ocr_language": "auto", "locale": "zh_CN"},
         ),
     ],
 )

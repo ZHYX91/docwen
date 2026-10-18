@@ -18,6 +18,8 @@ from docwen_core.docx_styles import (
 from docwen_runtime.templates.registry import TemplateResolutionError
 from docwen_runtime.toml_io import read_toml_file
 
+from .task_language import configured_output_locale
+
 _LOCALE_CODE = re.compile(r"[A-Za-z]{2,3}_[A-Za-z]{2,4}")
 _FORMAT_SOURCE_KEYS: tuple[str, ...] = (
     "body_paragraph",
@@ -78,13 +80,7 @@ def _resolve_locale(snapshot: Mapping[str, Any], options: Mapping[str, Any]) -> 
     if "locale" in options:
         return _required_locale(options["locale"], source="request option")
 
-    gui = _mapping(snapshot.get("gui"))
-    language = gui.get("language", _MISSING)
-    if isinstance(language, Mapping) and "locale" in language:
-        return _required_locale(language["locale"], source="configuration")
-    if language is not _MISSING and not isinstance(language, Mapping):
-        return _required_locale(language, source="configuration")
-    return "zh_CN"
+    return _required_locale(configured_output_locale(snapshot), source="configuration")
 
 
 def _required_locale(value: object, *, source: str) -> str:

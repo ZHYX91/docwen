@@ -47,7 +47,8 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "conversion.export.base64_compress_threshold_kb",
     }
     assert formatting_plan.files == ()
-    assert len(formatting_plan.dotted_keys) == 24
+    assert len(formatting_plan.dotted_keys) == 25
+    assert "conversion.md_to_docx.each_line_paragraph" in formatting_plan.dotted_keys
     assert "conversion.md_to_docx.mermaid_cli_path" in formatting_plan.dotted_keys
     assert "conversion.md_to_docx.mermaid_mode" in formatting_plan.dotted_keys
     assert "document.style.table.md_to_docx.table_style_mode" in reset_plan_for_group("text").dotted_keys
@@ -59,10 +60,10 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
     assert "document.to_md_ocr_placement_mode" not in document_plan.dotted_keys
 
     precise_counts = {
-        "general": 6,
+        "general": 7,
         "text": 15,
         "proofread": 6,
-        "formatting": 24,
+        "formatting": 25,
         "document": 11,
         "spreadsheet": 4,
         "layout": 5,

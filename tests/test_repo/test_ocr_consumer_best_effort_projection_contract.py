@@ -226,7 +226,7 @@ def test_public_task_manager_uses_pure_idempotent_snapshot_admission() -> None:
         'if "ocr_language" not in options:',
         'options["ocr_language"] = ocr_language or "auto"',
         'if "locale" not in options:',
-        'options["locale"] = locale or "zh_CN"',
+        'options["locale"] = configured_output_locale(config_snapshot)',
         "return replace(",
     ):
         assert token in admission

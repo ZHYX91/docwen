@@ -206,10 +206,11 @@ class TestPptxToMd:
             output_dir,
             config_snapshot={
                 "conversion": {
+                    "output_locale": "en_US",
                     "ocr_output": {
                         "show_blockquote_title": True,
                         "blockquote_title_override_by_locale": {"en_US": "Snapshot OCR title"},
-                    }
+                    },
                 },
                 "export": {
                     "to_md_image_extraction_mode": "file",

@@ -90,6 +90,7 @@ def test_direct_single_projects_snapshot_values_without_mutating_caller(tmp_path
         request_id="single",
         config_snapshot={
             "ocr": {"language": "japanese"},
+            "conversion": {"output_locale": "ja_JP"},
             "gui": {"language": {"locale": "ja_JP"}},
         },
     )
@@ -172,6 +173,7 @@ def test_direct_batch_projects_each_derived_request(tmp_path: Path) -> None:
         options={},
         config_snapshot={
             "ocr": {"language": "english"},
+            "conversion": {"output_locale": "en_US"},
             "gui": {"language": {"locale": "en_US"}},
         },
     )
