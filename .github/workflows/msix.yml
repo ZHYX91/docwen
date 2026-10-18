@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       artifact_id:
-        description: Exact verified portable publication candidate ID from the selected source ref
+        description: Exact verified portable publication candidate ID
         type: string
         required: true
+      portable_commit:
+        description: Exact portable source SHA (defaults to the selected packaging source SHA)
+        type: string
+        required: false
 
 permissions:
   actions: read
@@ -24,6 +28,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       ARTIFACT_ID: ${{ inputs.artifact_id }}
+      PORTABLE_COMMIT: ${{ inputs.portable_commit }}
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
     steps:
@@ -39,17 +44,20 @@ jobs:
       - name: Resolve the selected source version
         id: identity
         shell: pwsh
-        run: >-
-          uv run --no-project python scripts/release/publication_entry.py
-          --source-ref "$env:GITHUB_REF" --commit "$env:GITHUB_SHA" --event workflow_dispatch
-          --operation verify --artifact-id "$env:ARTIFACT_ID" --github-output "$env:GITHUB_OUTPUT"
+        run: |
+          if (-not $env:PORTABLE_COMMIT) { $env:PORTABLE_COMMIT = $env:GITHUB_SHA }
+          if ($env:PORTABLE_COMMIT -cnotmatch "^[0-9a-f]{40}$") { throw "Full portable source SHA required" }
+          "portable_commit=$env:PORTABLE_COMMIT" >> $env:GITHUB_OUTPUT
+          uv run --no-project python scripts/release/publication_entry.py `
+            --source-ref "$env:GITHUB_REF" --commit "$env:GITHUB_SHA" --event workflow_dispatch `
+            --operation verify --artifact-id "$env:ARTIFACT_ID" --github-output "$env:GITHUB_OUTPUT"
       - name: Fetch and inspect the exact portable candidate
         shell: pwsh
         env:
           RELEASE_VERSION: ${{ steps.identity.outputs.version }}
         run: |
           uv run --no-project python scripts/release/publication.py fetch-platform `
-            --repository "$env:GITHUB_REPOSITORY" --version "$env:RELEASE_VERSION" --commit "$env:GITHUB_SHA" `
+            --repository "$env:GITHUB_REPOSITORY" --version "$env:RELEASE_VERSION" --commit "${{ steps.identity.outputs.portable_commit }}" `
             --artifact-id "$env:ARTIFACT_ID" --platform windows --directory "$env:RUNNER_TEMP/publication" `
             --receipt "$env:RUNNER_TEMP/candidate-inspection.json"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -63,7 +71,8 @@ jobs:
             --candidate-receipt "$env:RUNNER_TEMP/candidate-inspection.json" `
             --config release/windows-store-msix.v1.json --source-version "$env:RELEASE_VERSION" `
             --output-root "$env:RUNNER_TEMP/msix-output" --work-root "$env:RUNNER_TEMP/msix-work" `
-            --metadata-output "$env:RUNNER_TEMP/msix-output/DocWen-windows-x64.msix.json"
+            --metadata-output "$env:RUNNER_TEMP/msix-output/DocWen-windows-x64.msix.json" `
+            --packaging-commit "$env:GITHUB_SHA"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload the independently identified Store candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

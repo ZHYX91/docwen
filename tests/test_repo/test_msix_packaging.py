@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import stat
 import struct
 import subprocess
 import sys
+import uuid
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
@@ -294,7 +296,7 @@ def test_shell_resource_index_contains_both_unplated_themes_and_start_sizes(tmp_
             candidate = next(
                 node
                 for node in resource.findall("Candidate")
-                if node.findtext("Value", "").replace("\\", "/") == f"assets/msix/{filename}"
+                if node.findtext("Value", "") == f"assets\\msix\\{filename}"
             )
             qualifiers = {node.attrib["name"]: node.attrib["value"] for node in candidate.iter("Qualifier")}
             assert qualifiers["TargetSize"] == str(size)
@@ -401,3 +403,80 @@ def test_package_content_identity_ignores_zip_timestamps(tmp_path: Path) -> None
 
     assert first.read_bytes() != second.read_bytes()
     assert build_msix.package_content_identity(first) == build_msix.package_content_identity(second)
+
+
+def test_pri_candidates_resolve_through_native_package_reader(tmp_path: Path) -> None:
+    """Do not normalize PRI physical paths: native Appx rejects forward slashes."""
+    try:
+        sdk = build_msix.find_makeappx().parent
+    except build_msix.MsixBuildError:
+        pytest.skip("Windows SDK required for native package resource lookup")
+    staging = tmp_path / "staging"
+    build_msix.prepare_layout(_fake_payload(tmp_path / "payload"), staging, build_msix.read_config(_CONFIG_PATH))
+    build_msix.write_resource_index(staging, tmp_path, sdk / "makepri.exe")
+    package = tmp_path / "test.msix"
+    subprocess.run(
+        [str(sdk / "makeappx.exe"), "pack", "/d", str(staging), "/p", str(package)], check=True, capture_output=True
+    )
+    dump = tmp_path / "pri.xml"
+    subprocess.run(
+        [str(sdk / "makepri.exe"), "dump", "/if", str(staging / "resources.pri"), "/of", str(dump), "/dt", "detailed"],
+        check=True,
+        capture_output=True,
+    )
+    candidates = [node.findtext("Value", "") for node in ElementTree.parse(dump).iter("Candidate")]
+    assert candidates
+    pointer = ctypes.c_void_p
+
+    class Guid(ctypes.Structure):
+        _fields_ = [("data", ctypes.c_byte * 16)]
+
+    def guid(value: str) -> Guid:
+        return Guid.from_buffer_copy(uuid.UUID(value).bytes_le)
+
+    def invoke(obj, index, types, *values):
+        table = ctypes.cast(obj, ctypes.POINTER(ctypes.POINTER(pointer))).contents
+        return ctypes.WINFUNCTYPE(ctypes.c_long, pointer, *types)(table[index])(obj, *values)
+
+    ole = ctypes.OleDLL("ole32")
+    ole.CoInitialize(None)
+    factory = pointer()
+    stream = pointer()
+    reader = pointer()
+    try:
+        clsid = guid("5842a140-ff9f-4166-8f5c-62f5b7b0c781")
+        iid = guid("beb94909-e451-438b-b5a7-d79e767b75d8")
+        ole.CoCreateInstance(ctypes.byref(clsid), None, 1, ctypes.byref(iid), ctypes.byref(factory))
+        shell = ctypes.WinDLL("shlwapi")
+        shell.SHCreateStreamOnFileEx.argtypes = [
+            ctypes.c_wchar_p,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_int,
+            pointer,
+            ctypes.POINTER(pointer),
+        ]
+        assert shell.SHCreateStreamOnFileEx(str(package), 0x40, 0, 0, None, ctypes.byref(stream)) == 0
+        assert invoke(factory, 4, [pointer, ctypes.POINTER(pointer)], stream, ctypes.byref(reader)) == 0
+        for candidate in candidates:
+            file = pointer()
+            result = invoke(reader, 5, [ctypes.c_wchar_p, ctypes.POINTER(pointer)], candidate, ctypes.byref(file))
+            assert result == 0, (candidate, hex(result & 0xFFFFFFFF))
+            invoke(file, 2, [])
+        missing = pointer()
+        assert (
+            invoke(
+                reader,
+                5,
+                [ctypes.c_wchar_p, ctypes.POINTER(pointer)],
+                "assets/msix/StoreLogo.png",
+                ctypes.byref(missing),
+            )
+            & 0xFFFFFFFF
+            == 0x80070002
+        )
+    finally:
+        for obj in (reader, stream, factory):
+            if obj:
+                invoke(obj, 2, [])
+        ole.CoUninitialize()

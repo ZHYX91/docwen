@@ -143,3 +143,9 @@ When `--office-smoke` is selected, the verifier also writes a hash-bound `gui_of
 The release-gate source-tree smoke runs the installed `docwen --help` and `docwen-gui` console scripts from `tests/e2e/test_source_tree_entrypoints.py`. It uses `release_gate and (integration or gui_smoke or e2e)` and does not fall back to direct imports.
 
 The two table models total 15,163,177 uncompressed bytes. They reuse the existing CPU ONNX Runtime, NumPy and OpenCV dependencies; neither RapidLayout nor RapidTable is added as a Python runtime dependency. Actual compressed-package and unpacked-payload deltas must be measured from the built candidate. `verify_packaged_cli.py --table-smoke` executes the actual models against the checked mixed-table corpus and verifies the independent off switch.
+
+### Store packaging fixes for an existing portable candidate
+
+The MSIX workflow accepts an optional full `portable_commit` SHA alongside the exact publication `artifact_id`. It defaults to the selected packaging source commit. A packaging-only fix can explicitly select the original portable commit; the normal publication provenance and byte verification still apply. MSIX metadata records `packagingCommit` separately from `sourceCandidate.sourceCommit`. This does not rebuild or replace the portable release.
+
+PRI logical resource URIs use `/Files/assets/msix/...`, while physical candidate values must use Windows backslashes. The Windows SDK regression checks each unmodified PRI candidate against the native Appx package reader; a readable PRI dump alone does not establish that Store can resolve its images.

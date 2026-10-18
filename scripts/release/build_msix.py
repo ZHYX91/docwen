@@ -529,11 +529,13 @@ def write_resource_index(staging_root: Path, work: Path, makepri: Path) -> None:
     # Starting a folder pass at assets/msix strips that prefix from the
     # logical resource names. ResFiles preserves package-relative names while
     # avoiding an index of the unrelated Python payload.
+    # PRI physical paths are consumed by native Appx readers, which reject "/".
+    # Logical resource URIs are independently generated with forward slashes.
     resource_list = staging_root / "docwen-shell.resfiles"
     with resource_list.open("x", encoding="utf-8") as stream:
         stream.write(
             "\n".join(
-                path.relative_to(staging_root).as_posix()
+                str(path.relative_to(staging_root)).replace("/", "\\")
                 for path in sorted((staging_root / "assets/msix").glob("*.png"))
             )
             + "\n"
@@ -696,12 +698,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-version", required=True)
     parser.add_argument("--makeappx", type=Path)
     parser.add_argument("--metadata-output", type=Path)
+    parser.add_argument("--packaging-commit", help="Exact source commit of the packaging workflow")
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        if args.packaging_commit is not None:
+            _require(re.fullmatch(r"[0-9a-f]{40}", args.packaging_commit) is not None, "msix_packaging_commit_invalid")
         config = read_config(args.config.resolve())
         _require(args.source_version == config["sourceVersion"], "msix_source_version_mismatch")
         output = args.output or (args.output_root / config["assetName"])
@@ -715,6 +720,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             portable_zip=args.portable_zip,
             candidate_receipt=args.candidate_receipt,
         )
+        if args.packaging_commit is not None:
+            metadata["packagingCommit"] = args.packaging_commit
         if args.metadata_output is not None:
             _write_metadata(args.metadata_output.resolve(), metadata)
     except (MsixBuildError, PublicationError, OSError, ValueError, subprocess.SubprocessError) as exc:
