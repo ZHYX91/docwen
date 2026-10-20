@@ -199,6 +199,10 @@ invalid_tab = "Aba de configurações desconhecida: {tab}"
 [settings]
 title = "Configurações"
 
+[settings.navigation]
+general = "Configurações gerais"
+optimizations = "Otimização de conteúdo"
+
 # 选项卡标题
 [settings.tabs]
 general = "Geral"

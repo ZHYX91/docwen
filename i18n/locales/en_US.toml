@@ -200,6 +200,10 @@ invalid_tab = "Unknown settings tab: {tab}"
 [settings]
 title = "Settings"
 
+[settings.navigation]
+general = "General settings"
+optimizations = "Content optimization"
+
 # 选项卡标题
 [settings.tabs]
 general = "General"

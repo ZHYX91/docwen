@@ -146,6 +146,10 @@ invalid_tab = "Unbekannter Tab in den Einstellungen: {tab}"
 [settings]
 title = "Einstellungen"
 
+[settings.navigation]
+general = "Allgemeine Einstellungen"
+optimizations = "Inhaltsoptimierung"
+
 # 选项卡标题
 [settings.tabs]
 general = "Allgemein"

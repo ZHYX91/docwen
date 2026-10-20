@@ -196,6 +196,10 @@ invalid_tab = "Onglet de paramètres inconnu : {tab}"
 [settings]
 title = "Paramètres"
 
+[settings.navigation]
+general = "Réglages généraux"
+optimizations = "Optimisation du contenu"
+
 # 选项卡标题
 [settings.tabs]
 general = "Général"

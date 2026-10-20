@@ -200,6 +200,10 @@ invalid_tab = "Không nhận dạng được tab cài đặt: {tab}"
 [settings]
 title = "Cài đặt"
 
+[settings.navigation]
+general = "Cài đặt chung"
+optimizations = "Tối ưu nội dung"
+
 # 选项卡标题
 [settings.tabs]
 general = "Chung"
