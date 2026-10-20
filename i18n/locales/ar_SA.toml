@@ -200,6 +200,10 @@ invalid_tab = "صفحة إعدادات غير معروفة: {tab}"
 [settings]
 title = "الإعدادات"
 
+[settings.navigation]
+general = "الإعدادات العامة"
+optimizations = "تحسين المحتوى"
+
 # 选项卡标题
 [settings.tabs]
 general = "عام"

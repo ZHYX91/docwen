@@ -200,6 +200,10 @@ invalid_tab = "Pestaña de ajustes desconocida: {tab}"
 [settings]
 title = "Configuración"
 
+[settings.navigation]
+general = "Ajustes generales"
+optimizations = "Optimización de contenido"
+
 # 选项卡标题
 [settings.tabs]
 general = "General"

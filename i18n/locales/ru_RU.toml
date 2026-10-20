@@ -146,6 +146,10 @@ invalid_tab = "Неизвестная вкладка настроек: {tab}"
 [settings]
 title = "Настройки"
 
+[settings.navigation]
+general = "Общие настройки"
+optimizations = "Оптимизация содержимого"
+
 # 选项卡标题
 [settings.tabs]
 general = "Общие"

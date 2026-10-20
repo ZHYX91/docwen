@@ -1,9 +1,8 @@
 """Settings main dialog.
 
 Replicates the user-visible behavior of the old ``SettingsDialog``:
-- 700x800 initial, 510x750 minimum, modal
-- Qt sidebar sized for the active locale and appearance + hidden QTabWidget tabBar
-- 15 pages: general, incoming formats, templates, content processing, converter software, output and logging
+- 700x800 initial, 360x320 minimum, modal
+- Grouped scrolling sidebar, with a page selector at narrow widths
 - Bottom bar: Reset Tab + Reset All + Ok/Cancel/Apply (QDialogButtonBox)
 - Dirty tracking with auto-signal monitoring
 - Unsaved-close confirmation (danger, default=no)
@@ -171,25 +170,45 @@ def _read_initial_opacity(parent: QWidget | None) -> float:
 
 # ── Tab order ──────────────────────────────────────────────────────────────
 #
-# Keep one explicit navigation order so the sidebar, page stack, tests, and
-# documentation expose the same settings surface.
-TAB_KEYS = [
-    "general",
-    "text",
-    "document",
-    "spreadsheet",
-    "image",
-    "layout",
-    "other",
-    "proofread",
-    "formatting",
-    "templates",
-    "link",
-    "export",
-    "software",
-    "output",
-    "logging",
-]
+class SettingsNavigationGroup(NamedTuple):
+    key: str
+    page_keys: tuple[str, ...]
+
+
+# These built-in groups own navigation order, not page construction or config.
+# Empty groups add neither a heading nor a placeholder page.
+NAVIGATION_GROUPS = (
+    SettingsNavigationGroup(
+        "general",
+        (
+            "general",
+            "text",
+            "document",
+            "spreadsheet",
+            "image",
+            "layout",
+            "other",
+            "proofread",
+            "formatting",
+            "templates",
+            "link",
+            "export",
+            "software",
+            "output",
+            "logging",
+        ),
+    ),
+    SettingsNavigationGroup("optimizations", ()),
+)
+TAB_KEYS = [key for group in NAVIGATION_GROUPS for key in group.page_keys]
+
+
+def _navigation_group_title(key: str) -> str:
+    return {
+        "general": t("settings.navigation.general"),
+        "optimizations": t("settings.navigation.optimizations"),
+    }[key]
+
 
 # ── Tab display names ──────────────────────────────────────────────────────
 TAB_NAMES: dict[str, str] = {
@@ -427,7 +446,6 @@ class SettingsDialog(QDialog):
         self._compact_navigation = ScrollSafeComboBox(self)
         self._compact_navigation.setObjectName("settingsPageSelector")
         self._compact_navigation.setAccessibleName(t("settings.title"))
-        self._compact_navigation.addItems([TAB_NAMES[key] for key in TAB_KEYS])
         self._compact_navigation.hide()
         layout.addWidget(self._compact_navigation)
 
@@ -437,8 +455,7 @@ class SettingsDialog(QDialog):
         self._tab_widget.setUsesScrollButtons(False)
         self._tab_widget.setElideMode(Qt.TextElideMode.ElideRight)
         self._tab_widget.tabBar().hide()
-        self._compact_navigation.currentIndexChanged.connect(self._tab_widget.setCurrentIndex)
-        self._tab_widget.currentChanged.connect(self._compact_navigation.setCurrentIndex)
+        self._compact_navigation.currentIndexChanged.connect(self._on_compact_page_changed)
 
         # ── Sidebar + content row ───────────────────────────────────────
         content_row = QHBoxLayout()
@@ -554,13 +571,13 @@ class SettingsDialog(QDialog):
         # Use real button size hints so translated text and large fonts fit.
         if self._navigation is not None:
             self._navigation.refresh_width()
-        sidebar_height = self._navigation.minimumSizeHint().height() if self._navigation is not None else 0
-        footer_height = 2 * dp(ACTION_BUTTON_MIN_HEIGHT) + 3 * dp(DIALOG_PADDING)
         sidebar_width = self._navigation.width() if self._navigation is not None else 0
-        compact = self.width() < sidebar_width + dp(480) or self.height() < sidebar_height + footer_height
+        compact = self.width() < sidebar_width + dp(480)
         self._compact_navigation.setVisible(compact)
         if self._navigation is not None:
             self._navigation.setVisible(not compact)
+            if not compact:
+                self._navigation.ensure_current_visible()
         else:
             self._tab_widget.tabBar().setVisible(not compact)
 
@@ -595,22 +612,21 @@ class SettingsDialog(QDialog):
 
     def _build_navigation(self, content_row: QHBoxLayout) -> None:
         nav = SettingsSidebar(self)
-        nav.page_requested.connect(self._tab_widget.setCurrentIndex)
+        nav.page_requested.connect(self._select_navigation_page)
         self._navigation = nav
-        self._navigation_keyboard = SettingsNavigationKeyboard(self._tab_widget, nav)
+        self._navigation_keyboard = SettingsNavigationKeyboard(nav)
+        self._navigation_keyboard.page_requested.connect(self._select_navigation_page)
         content_row.addWidget(nav, 0)
 
-    def _add_nav_item(self, key: str, index: int, title: str) -> None:
+    def _add_nav_item(self, key: str, title: str) -> None:
         assert self._navigation is not None and self._navigation_keyboard is not None
         try:
             icon = self._load_tab_icon(key)
         except Exception:
             logger.exception("Unable to load settings navigation icon: %s", key)
             icon = None
-        button = self._navigation.add_page(key, index, title, icon)
-        self._navigation_keyboard.add(index, key, button, title)
-        if index == 0:
-            self._navigation.select_page(key)
+        button = self._navigation.add_page(key, title, icon)
+        self._navigation_keyboard.add(key, button, title)
 
     @staticmethod
     def _load_tab_icon(tab_key: str) -> QIcon | None:
@@ -653,21 +669,30 @@ class SettingsDialog(QDialog):
     # ── Tab management ──────────────────────────────────────────────────────
 
     def _add_all_tabs(self) -> None:
-        for idx, key in enumerate(TAB_KEYS):
-            title = TAB_NAMES.get(key, key)
-            try:
-                tab = self._build_tab(key)
-            except Exception as error:
-                logger.exception("Failed to build Settings tab: %s", key)
-                tab = self._build_failed_tab(key, title, error)
-            self._tabs[key] = tab
-            set_tab_title = getattr(tab, "set_tab_title", None)
-            if callable(set_tab_title):
-                set_tab_title(title)
-            tab_index = self._tab_widget.addTab(tab, title)
-            self._tab_widget.setTabToolTip(tab_index, title)
-            self._add_nav_item(key, idx, title)
-            self._wire_tab_dirty_tracking(key, tab)
+        assert self._navigation is not None
+        with QSignalBlocker(self._compact_navigation):
+            for group in NAVIGATION_GROUPS:
+                if not group.page_keys:
+                    continue
+                group_title = _navigation_group_title(group.key)
+                self._navigation.add_group(group.key, group_title)
+                for key in group.page_keys:
+                    title = TAB_NAMES.get(key, key)
+                    try:
+                        tab = self._build_tab(key)
+                    except Exception as error:
+                        logger.exception("Failed to build Settings tab: %s", key)
+                        tab = self._build_failed_tab(key, title, error)
+                    self._tabs[key] = tab
+                    tab.setProperty("settingsPageKey", key)
+                    set_tab_title = getattr(tab, "set_tab_title", None)
+                    if callable(set_tab_title):
+                        set_tab_title(title)
+                    tab_index = self._tab_widget.addTab(tab, title)
+                    self._tab_widget.setTabToolTip(tab_index, title)
+                    self._compact_navigation.addItem(f"{group_title} · {title}", key)
+                    self._add_nav_item(key, title)
+                    self._wire_tab_dirty_tracking(key, tab)
 
         # Select first tab
         self._tab_widget.setCurrentIndex(0)
@@ -806,33 +831,37 @@ class SettingsDialog(QDialog):
         the first (general) tab.
         """
         initial = self._vm.initial_tab_key
-        if initial and initial in TAB_KEYS:
-            idx = TAB_KEYS.index(initial)
-            if self._tab_widget is not None:
-                self._tab_widget.setCurrentIndex(idx)
-                if self._navigation is not None:
-                    with contextlib.suppress(Exception):
-                        self._navigation.select_page(initial)
+        if initial:
+            self._select_navigation_page(initial)
+
+    def _select_navigation_page(self, key: str) -> None:
+        """Resolve navigation by page identity, including a page's error state."""
+        tab = self._tabs.get(key)
+        if tab is not None:
+            self._tab_widget.setCurrentWidget(tab)
+            if self._navigation is not None:
+                self._navigation.select_page(key)
+
+    def _on_compact_page_changed(self, index: int) -> None:
+        key = self._compact_navigation.itemData(index)
+        if isinstance(key, str):
+            self._select_navigation_page(key)
 
     def activate_section(self, section: str) -> bool:
         """Select a public settings section, rejecting failed page placeholders."""
 
-        if section not in TAB_KEYS:
-            return False
         tab = self._tabs.get(section)
         if tab is None or tab.property("failedTabKey") == section:
             return False
-        self._tab_widget.setCurrentWidget(tab)
-        if self._navigation is not None:
-            with contextlib.suppress(Exception):
-                self._navigation.select_page(section)
+        self._select_navigation_page(section)
         return True
 
     def current_section(self) -> str | None:
         """Return the semantic key of the currently selected settings page."""
 
-        index = self._tab_widget.currentIndex()
-        return TAB_KEYS[index] if 0 <= index < len(TAB_KEYS) else None
+        tab = self._tab_widget.currentWidget()
+        key = tab.property("settingsPageKey") if tab is not None else None
+        return key if isinstance(key, str) else None
 
     def _wire_view_model(self) -> None:
         """Connect ViewModel signals."""
@@ -845,11 +874,14 @@ class SettingsDialog(QDialog):
 
     def _on_tab_changed(self, index: int) -> None:
         """Sync navigation selection and set focus on first focusable widget."""
-        if 0 <= index < len(TAB_KEYS):
-            key = TAB_KEYS[index]
-            if self._navigation is not None:
-                with contextlib.suppress(Exception):
-                    self._navigation.select_page(key)
+        del index
+        key = self.current_section()
+        if key is None:
+            return
+        with QSignalBlocker(self._compact_navigation):
+            self._compact_navigation.setCurrentIndex(self._compact_navigation.findData(key))
+        if self._navigation is not None:
+            self._navigation.select_page(key)
 
         # Auto-focus first eligible widget in the new tab.
         tab = self._tab_widget.currentWidget()
@@ -857,7 +889,7 @@ class SettingsDialog(QDialog):
             return
         candidate = self._find_focus_target(tab)
         if self._navigation is not None and self._navigation_keyboard is not None:
-            self._navigation_keyboard.sync(index, candidate)
+            self._navigation_keyboard.sync(key, candidate)
         if candidate is not None and not self._compact_navigation.hasFocus():
             candidate.setFocus(Qt.FocusReason.TabFocusReason)
 
@@ -1012,10 +1044,9 @@ class SettingsDialog(QDialog):
 
     def _on_reset_tab(self) -> None:
         """Reset the current tab to defaults."""
-        index = self._tab_widget.currentIndex()
-        if not (0 <= index < len(TAB_KEYS)):
+        tab_key = self.current_section()
+        if tab_key is None:
             return
-        tab_key = TAB_KEYS[index]
         if tab_key == "templates":
             return
         tab_name = TAB_NAMES.get(tab_key, tab_key)

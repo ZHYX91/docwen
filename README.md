@@ -180,6 +180,8 @@ The operation panel automatically adjusts available options based on file type:
 
 Click the settings icon at the bottom of the window or press **Ctrl+,**.
 
+The sidebar groups related settings under headings. In a short window it scrolls vertically, keeping every page reachable; a narrow window uses a page selector instead. Switching layouts preserves the selected page. When the sidebar has keyboard focus, **Up / Down** switch pages, **Home / End** select the first or last page, and **Tab** enters the selected page. Group headings are not selectable.
+
 Under **General → Appearance**, choose **Small / Standard / Large** text and **90 / 100 / 110 / 125 / 150%** interface scale. Scaling is relative to the system setting: system 200% with application 90% gives a nominal 180%. Changes preview immediately; Apply or OK saves them, and Cancel restores the last saved appearance.
 
 Other pages cover incoming files, proofreading, Markdown syntax and resources, templates, links, conversion software, file saving and logging.

@@ -146,6 +146,10 @@ invalid_tab = "알 수 없는 설정 탭: {tab}"
 [settings]
 title = "설정"
 
+[settings.navigation]
+general = "일반 설정"
+optimizations = "콘텐츠 최적화"
+
 # 选项卡标题
 [settings.tabs]
 general = "일반"

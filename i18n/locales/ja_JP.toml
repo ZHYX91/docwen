@@ -146,6 +146,10 @@ invalid_tab = "不明な設定タブ: {tab}"
 [settings]
 title = "設定"
 
+[settings.navigation]
+general = "一般設定"
+optimizations = "コンテンツ最適化"
+
 # 选项卡标题
 [settings.tabs]
 general = "一般"
