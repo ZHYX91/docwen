@@ -19,7 +19,16 @@ pytestmark = pytest.mark.contract
 def _write_expected_document(path: Path, *, enabled: bool, empty: bool) -> None:
     """An explicit output golden independent of the conversion implementation."""
     from docx import Document
-    from docx.shared import Inches
+    from docx.shared import Pt
+
+    def layout(paragraph, index):
+        paragraph.paragraph_format.left_indent = Pt(84)
+        paragraph.paragraph_format.right_indent = Pt(8)
+        paragraph.paragraph_format.first_line_indent = Pt(-72 if index == 0 else -24)
+        paragraph.paragraph_format.keep_with_next = True
+        paragraph.paragraph_format.tab_stops.add_tab_stop(Pt(84))
+        paragraph.runs[0].font.size = Pt(16)
+        paragraph.runs[0].bold = True
 
     document = Document()
     document.add_paragraph("DOCWEN ATTACHMENTS START")
@@ -30,10 +39,10 @@ def _write_expected_document(path: Path, *, enabled: bool, empty: bool) -> None:
         if enabled
         else ["任务分工表 / 工作安排表"]
     )
-    for text in attachments:
+    for index, text in enumerate(attachments):
         paragraph = document.add_paragraph(text)
-        # A tab-stop definition is formatting, not a visible tab character.
-        paragraph.paragraph_format.tab_stops.add_tab_stop(Inches(1))
+        if enabled and not empty:
+            layout(paragraph, index)
     for text in (
         "DOCWEN ATTACHMENTS END",
         "普通列表：普通甲 / 普通乙",
@@ -51,6 +60,9 @@ def _write_expected_document(path: Path, *, enabled: bool, empty: bool) -> None:
         cell.paragraphs[0].text = attachments[0]
         for text in attachments[1:]:
             cell.add_paragraph(text)
+        if enabled and not empty:
+            for index, paragraph in enumerate(cell.paragraphs):
+                layout(paragraph, index)
     imprint = document.add_table(rows=1 if enabled and empty else 2, cols=2)
     imprint.cell(0, 0).text = "DOCWEN IMPRINT"
     imprint.cell(0, 1).text = "KEEP THIS ROW"
@@ -96,6 +108,10 @@ def test_gongwen_fields_fixtures_have_independent_config_and_real_templates(tmp_
         ("body_joined", "on-values", "attachments_mismatch"),
         ("table_joined", "on-values", "attachments_mismatch"),
         ("wrong_number", "on-values", "attachments_mismatch"),
+        ("missing_indent", "on-values", "attachment_layout_mismatch"),
+        ("wrong_tab", "on-values", "attachment_layout_mismatch"),
+        ("lost_font", "on-values", "attachment_layout_mismatch"),
+        ("lost_paragraph_format", "on-values", "attachment_layout_mismatch"),
         ("ordinary_separator", "on-values", "scalar_mismatch"),
         ("copy_separator", "on-values", "scalar_mismatch"),
         ("double_parentheses", "on-values", "scalar_mismatch"),
@@ -129,6 +145,14 @@ def test_gongwen_fields_oracle_rejects_semantic_regressions(
         document.tables[0].cell(0, 0).text = "任务分工表、工作安排表"
     elif mutation == "wrong_number":
         document.tables[0].cell(0, 0).paragraphs[1].text = "1. 工作安排表"
+    elif mutation == "missing_indent":
+        paragraphs["附件：1.\t任务分工表"].paragraph_format.first_line_indent = None
+    elif mutation == "wrong_tab":
+        document.tables[0].cell(0, 0).paragraphs[1].paragraph_format.tab_stops.clear_all()
+    elif mutation == "lost_font":
+        paragraphs["附件：1.\t任务分工表"].runs[0].font.size = None
+    elif mutation == "lost_paragraph_format":
+        paragraphs["附件：1.\t任务分工表"].paragraph_format.keep_with_next = False
     elif mutation == "ordinary_separator":
         paragraphs["普通列表：普通甲 / 普通乙"].text = "普通列表：普通甲、普通乙"
     elif mutation == "copy_separator":
