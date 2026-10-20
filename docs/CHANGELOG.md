@@ -5,6 +5,15 @@
 
 ## Unreleased / 未发布
 
+## 0.19.0
+
+- Restore built-in official-document field formatting in both Markdown-to-Word routes and frozen GUI/CLI packages. Render attachments as separate indented paragraphs in body and table cells; preserve literal values and valid content beside empty fields.
+- Group settings into Basics, Input types, Content and Specialized pages. Add Official documents and Invoices pages, one optimization default per input category, and page-owned reset behavior.
+- Separate shared Markdown output/input preferences from Word-specific mappings, and clarify the current coverage of other conversion routes. Remove obsolete dynamic field processors and optimization enable/type configuration without migration aliases.
+- 恢复公文字段内置格式化及两条 Markdown 转 Word 路线、GUI/CLI 冻结包行为；附件在正文和表格中独立分段缩进，保护字面值和空字段旁的有效内容。
+- 设置按基本设置、输入类型、内容处理和专项优化分组，新增公文／发票页，统一默认优化选择及本页还原归属。
+- 区分共享 Markdown 生成／读取规则与 Word 专用映射，如实说明各转换路线的支持边界；删除旧动态字段处理器和优化 enable/type 配置，不提供兼容别名。
+
 ## 0.18.0 (2026-10-18)
 
 - Add Arabic interface text and right-to-left layout across the desktop app and CLI help.
