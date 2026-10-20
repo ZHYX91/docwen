@@ -147,15 +147,17 @@ invalid_tab = "Unbekannter Tab in den Einstellungen: {tab}"
 title = "Einstellungen"
 
 [settings.navigation]
-general = "Allgemeine Einstellungen"
-optimizations = "Inhaltsoptimierung"
+general = "Allgemein"
+optimizations = "Spezialfunktionen"
 
 # 选项卡标题
+inputs = "Eingabetypen"
+content = "Inhalte"
 [settings.tabs]
 general = "Allgemein"
 text = "Texteingabe"
 proofread = "Prüfung"
-export = "OCR- und Markdown-Ressourcen"
+export = "OCR und Bilder"
 document = "Dokumenteingabe"
 spreadsheet = "Tabelleneingabe"
 image = "Bildeingabe"
@@ -360,6 +362,7 @@ base64_compress_tooltip = "Base64 vergrößert die Datei und kann in manchen Edi
 base64_compress_enabled = "Große Bilder automatisch komprimieren"
 base64_compress_threshold_label = "Schwellenwert"
 base64_compress_threshold_tooltip = "Größenschwelle in KB. Größere Bilder werden vor dem Einbetten komprimiert."
+description = "Texterkennung und Bildausgabe in Markdown. Die Eingabeseiten bestimmen, ob OCR standardmäßig aktiv ist. Bildkonvertierung und Komprimierung bleiben unter Eingehende Bilder."
 
 
 [settings.optimization_types]
@@ -587,7 +590,7 @@ horizontal_rule_tooltip = "Word Rahmenlinie unten."
 
 # 语法选择
 syntax_selection = "Syntaxwahl"
-syntax_selection_tooltip = "Wählen Sie die Markdown-Syntax für die Ausgabe bei der Dokument-zu-Markdown-Konvertierung. Bei der Eingabe erkennt DocWen die unterstützte entsprechende Syntax; optionale Dialekte werden über die Erweiterungsschalter oben gesteuert."
+syntax_selection_tooltip = "Diese Ausgabestile gelten derzeit hauptsächlich für die normale Word-zu-Markdown-Konvertierung. Tabellen, Bilder, PDF/OFD und Spezialfunktionen unterstützen noch nicht alle Optionen. Die Auswahl schränkt das Lesen von Markdown nicht ein."
 bold_syntax_label = "Fett:"
 bold_syntax_tooltip = "Syntax für Fett."
 italic_syntax_label = "Kursiv:"
@@ -643,6 +646,9 @@ list_separator_tooltip = "Trennzeichen beim Zusammenfügen von YAML-Listenwerten
 # 格式处理选项
 mermaid_output_group = "Ausgabemethode"
 mermaid_renderer_group = "Lokaler Renderer"
+output_section = "Markdown erzeugen"
+word_mappings_title = "Word-spezifische Zuordnung und Ausgabe"
+
 [settings.formatting.options]
 preserve_format = "Format behalten"
 discard_format = "Format verwerfen"
@@ -1714,11 +1720,11 @@ version_offline = "Offline-Version"
 window_title = "DocWen Offline-Version"
 
 [settings.markdown_extensions]
-description = "Markdown-Erweiterungen für Eingabe und Ausgabe getrennt wählen. Quelldateien bleiben unverändert."
+description = "Gemeinsame Regeln zum Erzeugen und Lesen von Markdown. Die Ausgabevorgaben sind quellunabhängig, werden aber nicht von allen Konvertierungen vollständig unterstützt. Word-spezifische Zuordnungen stehen separat darunter. Quelldateien bleiben unverändert."
 input = "Markdown-Eingabe: Erweiterungen erkennen"
 output = "Markdown-Ausgabe: Erweiterungen verwenden"
 input_hint = "Deaktivierte Syntax wird als normaler Text, Tabelle oder Fußnote verarbeitet."
-output_hint = "Normales Markdown verwenden und nicht darstellbare Strukturen melden."
+output_hint = "Der normale Word-Export unterstützt diese Erweiterungen, der Tabellenexport unterstützt Structural Tables. Andere Quellen und Spezialfunktionen sind noch nicht vollständig angebunden. Erweiterungen fügen keine Erkennungsfähigkeiten hinzu."
 structural_tables = "Structural Tables: strukturierte Tabellen"
 captions_references = "Number Suite: Beschriftungen und Querverweise"
 extended_headings = "Überschriften der Ebenen 7–9"

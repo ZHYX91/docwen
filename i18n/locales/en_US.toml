@@ -201,15 +201,17 @@ invalid_tab = "Unknown settings tab: {tab}"
 title = "Settings"
 
 [settings.navigation]
-general = "General settings"
-optimizations = "Content optimization"
+general = "Basics"
+optimizations = "Specialized"
 
 # 选项卡标题
+inputs = "Input types"
+content = "Content"
 [settings.tabs]
 general = "General"
 text = "Incoming text"
 proofread = "Proofread"
-export = "OCR & Markdown resources"
+export = "OCR and images"
 document = "Incoming documents"
 spreadsheet = "Incoming spreadsheets"
 image = "Incoming images"
@@ -414,6 +416,7 @@ base64_compress_tooltip = "Base64 increases size and may not render in some edit
 base64_compress_enabled = "Auto-compress large images"
 base64_compress_threshold_label = "Threshold"
 base64_compress_threshold_tooltip = "Size threshold in KB. Images above this size are compressed before embedding."
+description = "Text recognition and Markdown image output. Input pages choose whether OCR is on by default; image format conversion and compression stay on Incoming images."
 
 
 [settings.optimization_types]
@@ -634,7 +637,7 @@ horizontal_rule_tooltip = "Convert Word horizontal rules (Horizontal Rule 1/2/3 
 
 # 语法选择
 syntax_selection = "Syntax Selection"
-syntax_selection_tooltip = "Choose the Markdown syntax emitted when converting documents to Markdown. On input, DocWen recognizes the supported corresponding syntax; optional dialects are controlled by the extension switches above."
+syntax_selection_tooltip = "These output styles currently apply primarily to ordinary Word-to-Markdown conversion. Spreadsheet, image, PDF/OFD and specialized routes do not yet implement all choices. These choices do not restrict Markdown input recognition."
 bold_syntax_label = "Bold syntax:"
 bold_syntax_tooltip = "Select the output syntax format for bold text"
 italic_syntax_label = "Italic syntax:"
@@ -696,6 +699,9 @@ list_separator_tooltip = "Separator used when joining YAML list values into a st
 # 格式处理选项
 mermaid_output_group = "Output method"
 mermaid_renderer_group = "Local renderer"
+output_section = "Generate Markdown"
+word_mappings_title = "Word-specific mapping and generation"
+
 [settings.formatting.options]
 preserve_format = "Preserve format"
 discard_format = "Discard format"
@@ -1708,11 +1714,11 @@ title = "title"
 subtitle = "subtitle"
 
 [settings.markdown_extensions]
-description = "Choose extensions to recognize in Markdown input and to use in Markdown output. Source files are never rewritten."
+description = "Shared rules for generating and reading Markdown. Output conventions are source-independent, but support varies by conversion route. Word-specific mappings are listed separately below. Source files are not rewritten."
 input = "Markdown input: recognize extensions"
 output = "Markdown output: use extensions"
 input_hint = "When disabled, use ordinary text, tables and footnotes."
-output_hint = "When disabled, export ordinary Markdown and report losses of table structure, heading levels and endnote types."
+output_hint = "Ordinary Word export supports these extensions; spreadsheet export supports Structural Tables. Other sources and specialized optimizers are not fully connected yet. Enabling an extension does not add recognition capabilities."
 structural_tables = "Structural Tables"
 captions_references = "Number Suite captions and cross-references"
 extended_headings = "Heading levels 7–9 (H7–H9)"

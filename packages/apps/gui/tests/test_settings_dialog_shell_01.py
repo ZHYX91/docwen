@@ -116,7 +116,7 @@ def test_settings_dialog_action_buttons_keep_readable_geometry(qapp) -> None:
         dialog.close()
 
 
-def test_settings_dialog_tab_order_follows_input_processing_and_delivery(qapp) -> None:
+def test_settings_dialog_tab_order_follows_functional_groups(qapp) -> None:
     from PySide6.QtWidgets import QTabWidget
 
     from docwen_gui.view_models.settings_vm import SettingsViewModel
@@ -144,20 +144,20 @@ def test_settings_dialog_tab_order_follows_input_processing_and_delivery(qapp) -
     }
     pyside6_settings_order = [
         "general",
+        "output",
+        "templates",
+        "software",
+        "logging",
         "text",
         "document",
         "spreadsheet",
         "image",
         "layout",
         "other",
-        "proofread",
         "formatting",
-        "templates",
         "link",
         "export",
-        "software",
-        "output",
-        "logging",
+        "proofread",
         "gongwen",
         "invoice",
     ]

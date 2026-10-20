@@ -184,13 +184,15 @@ The sidebar groups related settings under headings. In a short window it scrolls
 
 Under **General → Appearance**, choose **Small / Standard / Large** text and **90 / 100 / 110 / 125 / 150%** interface scale. Scaling is relative to the system setting: system 200% with application 90% gives a nominal 180%. Changes preview immediately; Apply or OK saves them, and Cancel restores the last saved appearance.
 
-Other pages cover incoming files, proofreading, Markdown syntax and resources, templates, links, conversion software, file saving and logging.
+Settings are organized into **Basics**, **Input types**, **Content** and **Specialized**. The **OCR and images** page controls shared recognition and Markdown image output; per-input OCR defaults stay on the corresponding input pages. Image format conversion and compression remain on Incoming images.
 
-The **Content optimization** group has dedicated **Official documents** and **Invoices** pages. Official document settings separate **Document → Markdown** recognition defaults from **Markdown → Document** template field formatting. The field toggle has an information button describing attachment notes, copied recipients, dates, annotations and supported placeholder positions.
+The **Specialized** group has dedicated **Official documents** and **Invoices** pages. Official document settings separate **Document → Markdown** recognition defaults from **Markdown → Document** template field formatting. The field toggle has an information button describing attachment notes, copied recipients, dates, annotations and supported placeholder positions.
 
 Invoices have separate defaults for **PDF / OFD → Markdown** and **Image → Markdown**. A default only sets the initial choice for compatible files; it does not classify a file as an official document or invoice. Each input category has one default: **Set as default** replaces its previous choice, while **Clear default** removes the current page's choice. Apply or OK saves these changes; Cancel discards the draft. Shared extraction and OCR settings remain on their own pages, with links from the optimization pages. Invoice images always use OCR; scanned PDFs require OCR enabled in the incoming fixed-layout settings, and OFD reads existing text and structure without OCR for scanned content.
 
 **Interface language** controls application text and layout. **Task output language** independently controls generated labels, document styles and proofreading comments; it does not translate body text. Changing the interface keeps saved template choices and output language. OCR **Auto** follows the task output language; choose an OCR language explicitly when needed. See [language settings](docs/specs/task-language.md).
+
+**Markdown syntax** separates shared output conventions from input recognition, with Word-specific mappings listed below. The visible help describes current support: output extensions and preferred syntax are not yet implemented uniformly across all source formats or specialized optimizers. Enabling an extension does not add recognition capabilities.
 
 Under **Markdown syntax**, **Each line as a paragraph** optionally turns ordinary prose lines into separate Word paragraphs. It is off by default; lists, quotes, code, semantic structures and explicit Markdown hard breaks retain their own boundaries.
 

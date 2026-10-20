@@ -197,15 +197,17 @@ invalid_tab = "Onglet de paramètres inconnu : {tab}"
 title = "Paramètres"
 
 [settings.navigation]
-general = "Réglages généraux"
-optimizations = "Optimisation du contenu"
+general = "Général"
+optimizations = "Spécialisations"
 
 # 选项卡标题
+inputs = "Types d’entrée"
+content = "Contenu"
 [settings.tabs]
 general = "Général"
 text = "Texte entrant"
 proofread = "Révision"
-export = "Ressources OCR et Markdown"
+export = "OCR et images"
 document = "Documents entrants"
 spreadsheet = "Tableurs entrants"
 image = "Images entrantes"
@@ -410,6 +412,7 @@ base64_compress_tooltip = "Base64 augmente la taille et peut ne pas s'afficher d
 base64_compress_enabled = "Compresser automatiquement les grandes images"
 base64_compress_threshold_label = "Seuil"
 base64_compress_threshold_tooltip = "Seuil de taille en Ko. Les images plus grandes sont compressées avant leur intégration."
+description = "Reconnaissance de texte et sortie des images en Markdown. Les pages d’entrée définissent l’activation d’OCR par défaut ; la conversion et la compression d’images restent dans Images en entrée."
 
 
 [settings.optimization_types]
@@ -637,7 +640,7 @@ horizontal_rule_tooltip = "Bordure inférieure Word."
 
 # 语法选择
 syntax_selection = "Choix de syntaxe"
-syntax_selection_tooltip = "Choisissez la syntaxe Markdown émise lors de la conversion de documents vers Markdown. En entrée, DocWen reconnaît la syntaxe correspondante prise en charge ; les dialectes facultatifs sont contrôlés par les interrupteurs d’extensions ci-dessus."
+syntax_selection_tooltip = "Ces styles s’appliquent actuellement surtout à la conversion standard de Word en Markdown. Les feuilles de calcul, images, PDF/OFD et optimisations spécialisées ne prennent pas encore en charge tous les choix. Ces choix ne limitent pas la lecture du Markdown."
 bold_syntax_label = "Gras :"
 bold_syntax_tooltip = "Syntaxe pour Gras."
 italic_syntax_label = "Italique :"
@@ -693,6 +696,9 @@ list_separator_tooltip = "Séparateur utilisé pour joindre les valeurs de liste
 # 格式处理选项
 mermaid_output_group = "Méthode de sortie"
 mermaid_renderer_group = "Moteur de rendu local"
+output_section = "Générer du Markdown"
+word_mappings_title = "Correspondances et génération pour Word"
+
 [settings.formatting.options]
 preserve_format = "Garder le format"
 discard_format = "Jeter le format"
@@ -1710,11 +1716,11 @@ title = "Titre"
 subtitle = "Sous-titre"
 
 [settings.markdown_extensions]
-description = "Choisissez séparément les extensions à lire et à produire. Le fichier source reste intact."
+description = "Règles communes pour générer et lire du Markdown. Les conventions de sortie sont indépendantes de la source, mais leur prise en charge varie selon la conversion. Les correspondances propres à Word sont séparées ci-dessous. Les fichiers source restent inchangés."
 input = "Entrée Markdown : reconnaître les extensions"
 output = "Sortie Markdown : utiliser les extensions"
 input_hint = "La syntaxe désactivée devient du texte, des tableaux ou des notes de bas de page ordinaires."
-output_hint = "Utiliser le Markdown courant et signaler les structures non représentables."
+output_hint = "L’export Word standard prend en charge ces extensions ; l’export des feuilles de calcul prend en charge Structural Tables. Les autres sources et optimisations spécialisées ne sont pas encore entièrement intégrées. Une extension n’ajoute pas de capacité de reconnaissance."
 structural_tables = "Structural Tables : tableaux structurés"
 captions_references = "Number Suite : légendes et renvois"
 extended_headings = "Titres de niveaux 7 à 9"

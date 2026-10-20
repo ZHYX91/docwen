@@ -201,15 +201,17 @@ invalid_tab = "صفحة إعدادات غير معروفة: {tab}"
 title = "الإعدادات"
 
 [settings.navigation]
-general = "الإعدادات العامة"
-optimizations = "تحسين المحتوى"
+general = "إعدادات أساسية"
+optimizations = "وظائف متخصصة"
 
 # 选项卡标题
+inputs = "أنواع الإدخال"
+content = "المحتوى"
 [settings.tabs]
 general = "عام"
 text = "ملفات Markdown الواردة"
 proofread = "التدقيق اللغوي"
-export = "موارد الصور والتعرف على النص"
+export = "OCR والصور"
 document = "المستندات الواردة"
 spreadsheet = "الجداول الواردة"
 image = "الصور الواردة"
@@ -414,6 +416,7 @@ base64_compress_tooltip = "يزيد تضمين Base64 حجم الملف وقد �
 base64_compress_enabled = "ضغط الصور الكبيرة تلقائيًا"
 base64_compress_threshold_label = "حد الحجم"
 base64_compress_threshold_tooltip = "الحجم بالكيلوبايت (KB). تُضغط الصور الأكبر منه قبل التضمين."
+description = "التعرف على النص وإخراج الصور في Markdown. تحدد صفحات الإدخال تفعيل OCR افتراضياً؛ ويبقى تحويل صيغ الصور وضغطها في صفحة الصور الواردة."
 
 
 [settings.optimization_types]
@@ -634,7 +637,7 @@ horizontal_rule_tooltip = "حدد علامة Markdown التي تمثّل الخ
 
 # 语法选择
 syntax_selection = "اختيار صيغة Markdown"
-syntax_selection_tooltip = "اختر علامات Markdown التي يكتبها البرنامج عند التحويل من المستندات. تخضع الصيغ الإضافية لخيارات الامتدادات."
+syntax_selection_tooltip = "تُطبق أنماط الإخراج هذه حالياً بشكل أساسي على تحويل Word العادي إلى Markdown. لا تدعم الجداول والصور وPDF/OFD والمسارات المتخصصة جميع الخيارات بعد. لا يقيّد هذا الاختيار قراءة Markdown."
 bold_syntax_label = "صيغة النص الغامق:"
 bold_syntax_tooltip = "اختر طريقة كتابة الغامق في Markdown الناتج."
 italic_syntax_label = "صيغة النص المائل:"
@@ -696,6 +699,9 @@ list_separator_tooltip = "الرمز المستخدم لوصل قيم قائمة
 # 格式处理选项
 mermaid_output_group = "طريقة الإخراج"
 mermaid_renderer_group = "أداة العرض المحلية"
+output_section = "إنشاء Markdown"
+word_mappings_title = "التعيين والإنشاء الخاصان بـ Word"
+
 [settings.formatting.options]
 preserve_format = "الاحتفاظ بالتنسيق"
 discard_format = "تجاهل التنسيق"
@@ -1708,11 +1714,11 @@ title = "title"
 subtitle = "subtitle"
 
 [settings.markdown_extensions]
-description = "اختر الامتدادات التي يتعرف عليها DocWen في ملفات Markdown الواردة والتي يستخدمها عند إخراج Markdown. لا يغيّر البرنامج الملفات الأصلية."
+description = "قواعد مشتركة لإنشاء Markdown وقراءته. قواعد الإخراج مستقلة عن المصدر، لكن الدعم يختلف باختلاف مسار التحويل. تظهر تعيينات Word الخاصة بشكل منفصل أدناه. لا تُعدَّل ملفات المصدر."
 input = "إدخال Markdown: التعرف على الامتدادات"
 output = "إخراج Markdown: استخدام الامتدادات"
 input_hint = "عند التعطيل تُعامل العناصر كنصوص وجداول وحواشٍ عادية."
-output_hint = "عند التعطيل يُنتج Markdown عاديًا ويبلغ عن فقدان بنية الجداول ومستويات العناوين وأنواع الحواشي."
+output_hint = "يدعم تصدير Word العادي هذه الامتدادات، ويدعم تصدير الجداول Structural Tables. لم تُدمج المصادر والتحسينات المتخصصة الأخرى بالكامل بعد. تفعيل الامتداد لا يضيف قدرات تعرف جديدة."
 structural_tables = "جداول Structural Tables"
 captions_references = "التسميات التوضيحية والمراجع في Number Suite"
 extended_headings = "مستويات العناوين 7–9 ‏(H7–H9)"

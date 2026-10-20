@@ -147,15 +147,17 @@ invalid_tab = "不明な設定タブ: {tab}"
 title = "設定"
 
 [settings.navigation]
-general = "一般設定"
-optimizations = "コンテンツ最適化"
+general = "基本設定"
+optimizations = "専用機能"
 
 # 选项卡标题
+inputs = "入力の種類"
+content = "コンテンツ"
 [settings.tabs]
 general = "一般"
 text = "入力テキスト"
 proofread = "校正"
-export = "OCR と Markdown リソース"
+export = "OCR と画像"
 document = "入力文書"
 spreadsheet = "入力スプレッドシート"
 image = "入力画像"
@@ -360,6 +362,7 @@ base64_compress_tooltip = "Base64 はサイズが増え、一部エディタで�
 base64_compress_enabled = "大きい画像を自動圧縮"
 base64_compress_threshold_label = "しきい値"
 base64_compress_threshold_tooltip = "サイズのしきい値（KB）。これを超える画像は埋め込み前に圧縮されます。"
+description = "文字認識と Markdown の画像出力を設定します。OCR を既定で有効にするかは各入力ページで選択します。画像形式の変換と圧縮は「入力画像」にあります。"
 
 
 [settings.optimization_types]
@@ -587,7 +590,7 @@ horizontal_rule_tooltip = "Wordの水平線（水平線1/2/3スタイル）をMa
 
 # 语法选择
 syntax_selection = "構文選択"
-syntax_selection_tooltip = "文書から Markdown へ変換するときに出力する構文を選びます。入力時は DocWen が対応するサポート済み Markdown 構文を認識し、任意の方言は上の拡張スイッチで制御します。"
+syntax_selection_tooltip = "これらの出力形式は現在、主に通常の Word から Markdown への変換に適用されます。表計算、画像、PDF/OFD、専用機能では一部の選択肢に未対応です。この選択は Markdown の読み取りを制限しません。"
 bold_syntax_label = "太字構文："
 bold_syntax_tooltip = "太字テキストの出力構文形式を選択します"
 italic_syntax_label = "斜体構文："
@@ -643,6 +646,9 @@ list_separator_tooltip = "YAMLリスト値を文字列に結合する際に使�
 # 格式处理选项
 mermaid_output_group = "出力方法"
 mermaid_renderer_group = "ローカルレンダラー"
+output_section = "Markdown を生成"
+word_mappings_title = "Word 専用の対応付けと生成"
+
 [settings.formatting.options]
 preserve_format = "フォーマット保持"
 discard_format = "フォーマット破棄"
@@ -1714,11 +1720,11 @@ file_admission_confirm_action = "検出した形式で処理"
 file_admission_cancelled = "処理をキャンセルしました。検出した形式は承認されていません。"
 
 [settings.markdown_extensions]
-description = "Markdown の読み込みと出力で使用する拡張構文を個別に選択します。元のファイルは変更しません。"
+description = "Markdown の生成と読み取りの共通ルールです。出力規則は入力元に依存しませんが、対応範囲は変換経路によって異なります。Word 専用の対応付けは下に分けて表示します。元のファイルは書き換えません。"
 input = "Markdown 入力：拡張構文を認識"
 output = "Markdown 出力：拡張構文を使用"
 input_hint = "無効な拡張構文は通常のテキスト、表、脚注として処理します。"
-output_hint = "通常の Markdown を使用し、表現できない構造や種類を通知します。"
+output_hint = "通常の Word 出力はこれらの拡張に、表計算の出力は Structural Tables に対応しています。ほかの入力元や専用機能はまだ完全には対応していません。拡張を有効にしても認識能力は追加されません。"
 structural_tables = "Structural Tables の構造化テーブル"
 captions_references = "Number Suite のキャプションと相互参照"
 extended_headings = "レベル 7～9 の見出し"

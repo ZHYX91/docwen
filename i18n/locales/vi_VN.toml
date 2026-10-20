@@ -201,15 +201,17 @@ invalid_tab = "Không nhận dạng được tab cài đặt: {tab}"
 title = "Cài đặt"
 
 [settings.navigation]
-general = "Cài đặt chung"
-optimizations = "Tối ưu nội dung"
+general = "Cơ bản"
+optimizations = "Chuyên biệt"
 
 # 选项卡标题
+inputs = "Loại đầu vào"
+content = "Nội dung"
 [settings.tabs]
 general = "Chung"
 text = "Văn bản đầu vào"
 proofread = "Kiểm tra"
-export = "Tài nguyên OCR và Markdown"
+export = "OCR và hình ảnh"
 document = "Tài liệu đầu vào"
 spreadsheet = "Bảng tính đầu vào"
 image = "Hình ảnh đầu vào"
@@ -414,6 +416,7 @@ base64_compress_tooltip = "Base64 làm tăng kích thước và có thể không
 base64_compress_enabled = "Tự động nén ảnh lớn"
 base64_compress_threshold_label = "Ngưỡng"
 base64_compress_threshold_tooltip = "Ngưỡng kích thước tính bằng KB. Hình ảnh lớn hơn sẽ được nén trước khi nhúng."
+description = "Nhận dạng văn bản và xuất hình ảnh Markdown. Các trang đầu vào quyết định có bật OCR mặc định hay không; chuyển đổi và nén ảnh vẫn nằm ở trang ảnh đầu vào."
 
 
 [settings.optimization_types]
@@ -641,7 +644,7 @@ horizontal_rule_tooltip = "Chuyển đường ngang Word (Horizontal Rule 1/2/3)
 
 # 语法选择
 syntax_selection = "Chọn cú pháp"
-syntax_selection_tooltip = "Chọn cú pháp Markdown xuất ra khi chuyển tài liệu sang Markdown. Ở đầu vào, DocWen nhận dạng cú pháp tương ứng được hỗ trợ; các phương ngữ tùy chọn do các công tắc mở rộng phía trên điều khiển."
+syntax_selection_tooltip = "Các kiểu đầu ra này hiện chủ yếu áp dụng khi chuyển Word thông thường sang Markdown. Bảng tính, ảnh, PDF/OFD và các tuyến chuyên biệt chưa hỗ trợ mọi lựa chọn. Lựa chọn này không giới hạn việc đọc Markdown."
 bold_syntax_label = "Cú pháp in đậm:"
 bold_syntax_tooltip = "Chọn cú pháp đầu ra cho chữ in đậm"
 italic_syntax_label = "Cú pháp in nghiêng:"
@@ -697,6 +700,9 @@ list_separator_tooltip = "Dấu phân cách khi nối các giá trị danh sách
 # 格式处理选项
 mermaid_output_group = "Cách xuất"
 mermaid_renderer_group = "Bộ render cục bộ"
+output_section = "Tạo Markdown"
+word_mappings_title = "Ánh xạ và tạo riêng cho Word"
+
 [settings.formatting.options]
 preserve_format = "Giữ định dạng"
 discard_format = "Bỏ định dạng"
@@ -1711,11 +1717,11 @@ title = "tieu_de"
 subtitle = "phu_de"
 
 [settings.markdown_extensions]
-description = "Chọn riêng phần mở rộng khi đọc và tạo Markdown. Tệp gốc không bị thay đổi."
+description = "Quy tắc chung để tạo và đọc Markdown. Quy ước đầu ra không phụ thuộc nguồn, nhưng mức hỗ trợ khác nhau theo tuyến chuyển đổi. Ánh xạ riêng cho Word được đặt bên dưới. Không sửa tệp nguồn."
 input = "Markdown đầu vào: nhận dạng phần mở rộng"
 output = "Markdown đầu ra: dùng phần mở rộng"
 input_hint = "Khi tắt, xử lý như văn bản, bảng hoặc chú thích chân trang thông thường."
-output_hint = "Dùng Markdown thông thường và báo cấu trúc không thể biểu diễn."
+output_hint = "Xuất Word thông thường hỗ trợ các phần mở rộng này; xuất bảng tính hỗ trợ Structural Tables. Các nguồn và tối ưu chuyên biệt khác chưa được tích hợp đầy đủ. Bật phần mở rộng không bổ sung khả năng nhận dạng."
 structural_tables = "Structural Tables: bảng có cấu trúc"
 captions_references = "Number Suite: chú thích và tham chiếu chéo"
 extended_headings = "Tiêu đề cấp 7–9"
