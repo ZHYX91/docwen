@@ -85,6 +85,15 @@ After a local publication directory below `.workspace/artifacts` passes immutabl
 
 On Windows, newly generated housekeeping plans default to recycling. A saved plan keeps its explicit disposition; a failed recycle never falls back to permanent deletion and never empties the Recycle Bin. Apply reports each preflight/apply target on stderr, preserving JSON stdout. A workspace-wide OS lock prevents concurrent application. The adjacent `*.progress.json` binds the plan fingerprint and records each completed target with file fsync and atomic replacement, including its recoverable payload. Reapplying the same plan verifies completed targets remain absent (and recycled payloads remain recoverable), skips those targets, and revalidates every remaining target. A recreated target or missing recovery payload stops the operation. A pending mutation whose result is unknown, including a recorded refusal, requires inspection of that progress record; it is never blindly retried. Interrupted journal writes also fail closed. This covers process interruption and ordinary I/O failures; it does not promise power-loss durability of directory metadata. This is per-target recovery, not a transaction that rolls back a partially completed batch.
 
+Recycle plans additionally bind a relocation-stable physical payload identity: all root/child File IDs,
+relative entry shape, complete ordinary-file content and raw reparse metadata. The owner verifies the
+actual `$R` payload and exact `$I` identity before recording completion, without following old absolute
+link targets or rewriting lease bytes. A post-operation refusal records known source absence, exact
+recovery candidates and observation errors under the existing unconfirmed journal entry; it cannot be
+retried automatically. Old recycle plans without this proof require a newly reviewed plan.
+On replay, current recovery availability is checked independently of the original successful observation.
+A missing, replaced or changed payload refuses that replay and leaves the earlier completed record intact.
+
 Run leases retain `finishedAt` and the original `outcome` separately from a later cleanup failure. QA and production builds record success before cleanup, and cancellation remains interruption rather than success. Explicit successful runtime retention records the responsible owner, reason and a review deadline (72 hours by default). Manual holds without this metadata, or past their deadline, appear as review observations and remain protected; review expiry does not authorize removal. Existing root mismatches, active owners and reparse refusals keep their original error and include a suggested next step. These engineering checks are not GUI, Office or release-package acceptance.
 
 受治理的 QA 会把 basetemp、缓存、结构化报告和进程 TEMP 的真实文件统一放在 `<workspace>/.workspace/temp/p<随机名>`。短物理名称是刻意设计：安全敏感代码会把别名解析回真实路径，因此路径余量必须来自工作区内的真实短路径，不能靠篡改 pytest 临时夹具的路径语义。每项测试的目录名使用稳定的 `t<12 位十六进制摘要><计数器>`，替代 pytest 较长的测试名称前缀；这样仍保持逐测试隔离和真实物理身份，同时为 xdist 工作进程层级和对抗性输出名留出余量。成功自动删除，失败或中断通过 JSON 租约留证。工作区选择依次采用 `--workspace-root`、`DOCWEN_WORKSPACE_ROOT`，最后只根据受治理的 `<工程>/repos/docwen` 布局推导唯一 `.workspace`；已移除的 `<工程>/docwen` 直连布局和任意祖先扫描都失败关闭。本地显式运行根也必须位于该工作区的 `temp` 树内；`--own-pytest-runtime` 只能接管全新、位于工作区内的显式根。Windows 完整套件运行期间仍会把这个物理目录临时映射为经过身份校验的短盘符，供能够安全保留别名的 I/O 端点使用；pytest 的 `tmp_path` 则允许规范化回工作区内物理路径，与生产代码保持同一语义。测试结束时在 `finally` 中解除映射，不会在盘符根目录创建测试文件夹。租约在映射期间记录短盘符，使异常中断后的回收仍能验证目标身份。每次 QA 启动都采用与运维工具相同的保存计划保留策略：成功终态 scratch 立即可回收；失败或中断按 kind 保留最新两份且最长 72 小时；人工保留和非终态继续保留；活动所有者始终阻止删除。`tools/workspace_cleanup.py` 默认只生成不改变工作区的计划；需要删除时，必须先用 `--plan-output` 把计划保存到 `.workspace/diagnostics` 并完成审阅，再在单独命令中用 `--apply-plan` 消费同一文件。根级 `temp-*` 只报告、不进入默认计划；无租约目标需要 `--target` 与 `--reason`，仓库内 `.venv`/`node_modules` 只能通过 `--clean-deps` 显式纳入。apply 会在任何删除前重验允许根、NTFS/文件系统身份、完整元数据与内容指纹、租约/PID 和 reparse 边界。没有本地治理工作区的 CI 通过 `--own-pytest-runtime` 接管全新 runner 临时根；`--report-output` 导出五份可见性 JSON、可选覆盖率 XML 和哈希摘要后，成功立即清理原始运行。Windows 全量测试与覆盖率、GUI 覆盖率使用同一次运行；Linux/macOS 各执行一次 fast 与 release 标记的并集。
@@ -138,7 +147,18 @@ Successful packaged-GUI runs are ephemeral by default. In the governed local lay
 
 ## Change-scoped acceptance and closeout
 
-Keep the existing required CI lanes. Select additional host checks by the affected behavior; do not make every release repeat every historical scenario.
+Keep the existing required CI lanes. Select the smallest representative set of additional checks
+by the affected behavior and record the selection and reasons for omitted surfaces. For a fix,
+cover the original reported case and a relevant boundary; expand for distinct risks rather than
+repeating every historical scenario. Documentation-only and host-independent logic changes may
+omit host execution when the reason is recorded. Confirmed serious product defects block the
+affected release. Missing host/tool evidence stays unverified and is assessed by risk, without an
+automatic publication block or extra approval step. Claim acceptance only for observed passing scope.
+
+A local desktop, sandbox or suitable VM may host the real application when the required software,
+input and observation are available. Choose one for equivalent desktop coverage; do not repeat all
+environments. Static/offscreen checks do not replace affected native interactions. Different
+Office engines, platform-specific launchers and installation channels remain distinct risks.
 
 | Change | Additional acceptance |
 |---|---|

@@ -168,3 +168,26 @@ def test_invalid_attachment_placement_returns_explicit_failure_without_artifacts
     assert "附件说明占位符必须独占" in result.error.message
     assert not result.artifacts
     assert not workspace.registered_artifacts
+
+
+@pytest.mark.parametrize("enabled,empty", [(True, False), (True, True), (False, False), (False, True)])
+def test_release_fixture_checks_real_conversion_layout(tmp_path: Path, enabled: bool, empty: bool) -> None:
+    from scripts.release.gongwen_fields_fixture import verify_gongwen_fields_output, write_gongwen_fields_cases
+
+    case = next(
+        case
+        for case in write_gongwen_fields_cases(tmp_path / "cases")
+        if (case.enabled, case.empty) == (enabled, empty)
+    )
+    config = {
+        "template_fill": {"list_separator": " / ", "gongwen_fields_enabled": enabled},
+        "conversion": {"output_locale": "en_US"},
+    }
+    options = {"template_name": str(case.template_path), "locale": "en_US"}
+    catalog = build_document_style_catalog(config, request_options=options, locales_dir=PROJECT_ROOT / "i18n/locales")
+    context, _workspace = make_context(
+        str(case.source_path), options=options, config_values=config, document_style_catalog=catalog
+    )
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    verify_gongwen_fields_output(Path(result.artifacts[0].staging_path), case=case)

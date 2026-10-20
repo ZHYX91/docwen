@@ -37,6 +37,7 @@ class GongwenFieldsCase:
 def write_gongwen_fields_cases(root: Path) -> tuple[GongwenFieldsCase, ...]:
     """Create four independent profiles, including the GUI's normal template state."""
     from docx import Document
+    from docx.shared import Pt
 
     cases = []
     for enabled in (True, False):
@@ -74,6 +75,13 @@ def write_gongwen_fields_cases(root: Path) -> tuple[GongwenFieldsCase, ...]:
                 document.add_paragraph(text)
             attachments = document.add_table(rows=1, cols=1)
             attachments.cell(0, 0).text = "{{附件说明}}"
+            anchors = [document.paragraphs[1], attachments.cell(0, 0).paragraphs[0]]
+            for anchor in anchors:
+                anchor.paragraph_format.left_indent = Pt(12)
+                anchor.paragraph_format.right_indent = Pt(8)
+                anchor.paragraph_format.keep_with_next = True
+                anchor.runs[0].font.size = Pt(16)
+                anchor.runs[0].bold = True
             imprint = document.add_table(rows=2, cols=2)
             imprint.cell(0, 0).text = "DOCWEN IMPRINT"
             imprint.cell(0, 1).text = "KEEP THIS ROW"
@@ -178,6 +186,36 @@ def verify_gongwen_fields_output(output_path: Path, *, case: GongwenFieldsCase) 
                 for pattern, text in zip((r"\s*附件：\s*1\.\s*任务分工表", r"\s*2\.\s*工作安排表"), actual, strict=True)
             ):
                 raise RuntimeError(f"gongwen_fields_attachments_mismatch:{case.name}:{location}:{actual!r}")
+        first, last = paragraphs.index(_BODY_START), paragraphs.index(_BODY_END)
+        body_nodes = body.findall(f"{_WORD}p")[first + 1 : last]
+        for location, nodes in (("body", body_nodes), ("table", cell.findall(f"{_WORD}p"))):
+            for index, paragraph in enumerate(nodes):
+                indent = paragraph.find(f"{_WORD}pPr/{_WORD}ind")
+                tab = paragraph.find(f"{_WORD}pPr/{_WORD}tabs/{_WORD}tab")
+                size = paragraph.find(f"{_WORD}r/{_WORD}rPr/{_WORD}sz")
+                bold = paragraph.find(f"{_WORD}r/{_WORD}rPr/{_WORD}b")
+                keep_next = paragraph.find(f"{_WORD}pPr/{_WORD}keepNext")
+                # This fixture authors 16 pt characters and a 12 pt base indent:
+                # the 48 pt label and 24 pt number align text at 84 pt (1680 twips).
+                if (
+                    indent is None
+                    or indent.get(f"{_WORD}left") != "1680"
+                    or indent.get(f"{_WORD}right") != "160"
+                    or indent.get(f"{_WORD}hanging") != ("1440" if index == 0 else "480")
+                    or any(
+                        indent.get(f"{_WORD}{key}") is not None
+                        for key in ("leftChars", "hangingChars", "firstLineChars")
+                    )
+                    or tab is None
+                    or tab.get(f"{_WORD}pos") != "1680"
+                    or size is None
+                    or size.get(f"{_WORD}val") != "32"
+                    or bold is None
+                    or bold.get(f"{_WORD}val", "1") not in {"1", "true"}
+                    or keep_next is None
+                    or keep_next.get(f"{_WORD}val", "1") not in {"1", "true"}
+                ):
+                    raise RuntimeError(f"gongwen_fields_attachment_layout_mismatch:{case.name}:{location}:{index}")
     else:
         expected_body = [] if case.enabled else [""] if case.empty else ["任务分工表 / 工作安排表"]
         expected_cell = [""] if case.empty else expected_body
