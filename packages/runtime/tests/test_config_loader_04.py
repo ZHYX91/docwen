@@ -37,7 +37,6 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "conversion.md_to_docx.heading_merge_mode",
         "conversion.md_to_docx.heading_merge_punctuation",
         "template_fill.list_separator",
-        "template_fill.gongwen_fields_enabled",
         "document.style.table.md_to_docx.table_style_mode",
         "document.style.table.md_to_docx.builtin_style_key",
         "document.style.table.md_to_docx.custom_style_name",
