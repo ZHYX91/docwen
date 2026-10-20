@@ -290,10 +290,6 @@ render_mode_word_native = "Word ネイティブ"
 render_mode_hint = "テキスト = 見出しに番号を書き込む；Word ネイティブ = Word のアウトライン番号を使用する"
 
 # 字段优化（字段处理器）
-field_processors_section = "フィールド最適化（Markdownからドキュメント）"
-field_processors_empty = "現在の言語で利用できるフィールド最適化はありません。"
-field_processors_load_error = "読み込みエラー：{error}"
-field_processors_toggle_failed = "「{name}」を更新できませんでした。元の値に戻しました。"
 
 # 序号设置区域
 numbering_settings_section = "番号付け設定"
@@ -1828,3 +1824,8 @@ typed_endnotes = "型付き注記ラベルで脚注/文末脚注の区別を保�
 availability_help = "最適化タイプは現在の実行環境から取得します。この入力カテゴリに適用できるものがなければ関連項目は無効になり、検出失敗は別途エラー表示されます。"
 
 none_available = "現在の実行環境には、この入力カテゴリに適用できる最適化タイプがありません。"
+
+[settings.gongwen]
+title = "公文書"
+fields_label = "中国公文書のフィールドを整形"
+fields_help = "Word テンプレートの添付資料、写しの送付先、文書日付、発行日、注記を整形し、規則に該当する空欄を削除します。添付資料のプレースホルダーは本文または表のセル内で独立した段落に置いてください。ヘッダー、フッター、テキストボックス、文中への配置には対応していません。オフの場合は通常の入力規則と共通のリスト区切り文字を使用します。"

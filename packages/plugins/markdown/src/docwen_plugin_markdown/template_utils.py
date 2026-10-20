@@ -21,6 +21,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.section import Section
 from docx.shared import Emu, Mm, Pt
+from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
 from docwen_plugin_markdown.yaml_processor import BODY_PLACEHOLDER_ALIASES
@@ -726,10 +727,28 @@ def scan_placeholders(doc: Document) -> dict[str, list[Any]]:
     """
     pattern = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
     placeholders: dict[str, list[Any]] = {}
-    for p in _iter_document_paragraphs(doc):
-        keys = dict.fromkeys(match.group(1).strip() for match in pattern.finditer(p.text))
-        for key in keys:
-            placeholders.setdefault(key, []).append(p)
+    roots = [doc.element]
+    roots.extend(
+        part.element
+        for part in doc.part.related_parts.values()
+        if hasattr(part, "element") and str(part.partname).startswith(("/word/header", "/word/footer"))
+    )
+    for root in roots:
+        for element in root.iter(qn("w:p")):
+            # Scan original XML as well as supported body/cell anchors so an
+            # unsupported attachment location cannot silently go unnoticed.
+            # Text in a nested textbox belongs only to its own paragraph.
+            texts = []
+            for node in element.iter(qn("w:t")):
+                owner = node.getparent()
+                while owner is not None and owner.tag != qn("w:p"):
+                    owner = owner.getparent()
+                if owner is element:
+                    texts.append(node.text or "")
+            keys = dict.fromkeys(match.group(1).strip() for match in pattern.finditer("".join(texts)))
+            paragraph = Paragraph(element, doc)
+            for key in keys:
+                placeholders.setdefault(key, []).append(paragraph)
     return placeholders
 
 
@@ -738,31 +757,3 @@ def _whole_paragraph_placeholder_key(text: str) -> str | None:
     if match is None:
         return None
     return match.group(1).strip()
-
-
-def _iter_document_paragraphs(doc: Document):
-    # Keep the element wrappers themselves alive while traversing. Using
-    # ``id(paragraph._element)`` is unsafe here because lxml may release a
-    # wrapper between cells and reuse its Python object id, which silently
-    # drops a later, distinct table paragraph from placeholder scanning.
-    seen: set[Any] = set()
-
-    for paragraph in doc.paragraphs:
-        seen.add(paragraph._element)
-        yield paragraph
-
-    for table in doc.tables:
-        yield from _iter_table_paragraphs(table, seen)
-
-
-def _iter_table_paragraphs(table, seen: set[Any]):
-    for row in table.rows:
-        for cell in row.cells:
-            for paragraph in cell.paragraphs:
-                element = paragraph._element
-                if element in seen:
-                    continue
-                seen.add(element)
-                yield paragraph
-            for nested_table in cell.tables:
-                yield from _iter_table_paragraphs(nested_table, seen)

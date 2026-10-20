@@ -62,7 +62,6 @@ CONFIG_FILES: tuple[ConfigFileSpec, ...] = (
     ConfigFileSpec("link.toml", ("link",), ("link",)),
     ConfigFileSpec("software.toml", ("software",), ("software",)),
     ConfigFileSpec("optimize.toml", ("optimize",), ()),
-    ConfigFileSpec("field_processors.toml", ("field_processors",), ("text",)),
     ConfigFileSpec("numbering/add.toml", ("numbering", "add"), ("text",)),
     ConfigFileSpec(
         "numbering/cleanup.toml",
@@ -117,6 +116,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "conversion.md_to_docx.heading_merge_mode",
         "conversion.md_to_docx.heading_merge_punctuation",
         "template_fill.list_separator",
+        "template_fill.gongwen_fields_enabled",
         "document.style.table.md_to_docx.table_style_mode",
         "document.style.table.md_to_docx.builtin_style_key",
         "document.style.table.md_to_docx.custom_style_name",
@@ -237,7 +237,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
 # than the destructive scope of "restore this page".  User-authored editors
 # remain visible from their panel but are preserved by a current-page reset.
 _GROUP_RESET_PRESERVED_FILES: dict[str, frozenset[str]] = {
-    "text": frozenset({"field_processors.toml", "numbering/cleanup.toml"}),
+    "text": frozenset({"numbering/cleanup.toml"}),
     "proofread": frozenset(
         {
             "proofread/pairs.toml",

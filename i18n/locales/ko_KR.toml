@@ -290,10 +290,6 @@ render_mode_word_native = "Word 기본"
 render_mode_hint = "텍스트 = 제목에 번호 기록; Word 기본 = Word 다단계 목록 번호 사용"
 
 # 字段优化（字段处理器）
-field_processors_section = "필드 최적화（마크다운 → 문서）"
-field_processors_empty = "현재 언어에서 사용할 수 있는 필드 최적화가 없습니다."
-field_processors_load_error = "로드 오류: {error}"
-field_processors_toggle_failed = "“{name}”을(를) 업데이트하지 못했습니다. 이전 값으로 복원했습니다."
 
 # 序号设置区域
 numbering_settings_section = "번호 매김 설정"
@@ -1828,3 +1824,8 @@ typed_endnotes = "유형 주석 레이블로 각주/미주 구분을 유지합�
 availability_help = "최적화 유형은 현재 런타임에서 가져옵니다. 이 입력 범주에 적용할 유형이 없으면 관련 컨트롤을 비활성화하고, 검색 실패는 별도 오류로 표시합니다."
 
 none_available = "현재 런타임에는 이 입력 범주에 적용할 수 있는 최적화 유형이 없습니다."
+
+[settings.gongwen]
+title = "공문서"
+fields_label = "중국 공문서 필드 서식 적용"
+fields_help = "Word 서식 파일의 첨부 설명, 참조 수신처, 작성일, 발행일과 주석을 정리하고 규칙에 해당하는 빈 필드를 제거합니다. 첨부 자리표시자는 본문 또는 표 셀의 독립된 문단에 있어야 합니다. 머리글, 바닥글, 텍스트 상자와 문장 안의 배치는 지원하지 않습니다. 끄면 일반 필드 채우기와 공통 목록 구분자를 사용합니다."

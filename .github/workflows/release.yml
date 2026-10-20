@@ -111,9 +111,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:PYTHONUTF8 = "1"
           $env:PYTHONIOENCODING = "utf-8"
-          uv run python scripts/release/verify_packaged_cli.py --binary-dir "$output/payload" --proofread-report-smoke
+          uv run python scripts/release/verify_packaged_cli.py --binary-dir "$output/payload" --proofread-report-smoke --gongwen-fields-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           uv run python scripts/release/verify_packaged_gui.py --binary-dir "$output/payload" --settings-smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          uv run python scripts/release/verify_packaged_gui.py --binary-dir "$output/payload" --gongwen-fields-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload verified Windows packages
         id: upload
@@ -187,8 +189,9 @@ jobs:
           gui_dir="extracted-gui/DocWen-${RELEASE_VERSION}-linux-x64"
           (cd "$cli_dir" && sha256sum --check SHA256SUMS.txt)
           (cd "$gui_dir" && sha256sum --check SHA256SUMS.txt)
-          uv run python scripts/release/verify_packaged_cli.py --binary-dir "$cli_dir" --proofread-report-smoke
+          uv run python scripts/release/verify_packaged_cli.py --binary-dir "$cli_dir" --proofread-report-smoke --gongwen-fields-smoke
           xvfb-run -a uv run python scripts/release/verify_packaged_gui.py --binary-dir "$gui_dir" --settings-smoke
+          xvfb-run -a uv run python scripts/release/verify_packaged_gui.py --binary-dir "$gui_dir" --gongwen-fields-smoke
       - name: Upload verified Linux packages
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

@@ -344,10 +344,6 @@ render_mode_word_native = "Gốc của Word"
 render_mode_hint = "Văn bản = ghi số vào tiêu đề; gốc của Word = dùng danh sách đa cấp của Word"
 
 # 字段优化（字段处理器）
-field_processors_section = "Tối ưu trường (Markdown → Tài liệu)"
-field_processors_empty = "Không có tối ưu trường nào cho ngôn ngữ hiện tại."
-field_processors_load_error = "Lỗi tải: {error}"
-field_processors_toggle_failed = "Không thể cập nhật “{name}”. Đã khôi phục giá trị trước đó."
 
 # 序号设置区域
 numbering_settings_section = "Thiết lập đánh số"
@@ -1825,3 +1821,8 @@ typed_endnotes = "Giữ phân biệt chú thích chân trang/cuối tài liệu 
 availability_help = "Loại tối ưu hóa đến từ môi trường chạy hiện tại. Nếu không có loại phù hợp với nhóm đầu vào này, các điều khiển sẽ bị vô hiệu hóa; lỗi khám phá được báo riêng."
 
 none_available = "Môi trường chạy hiện tại không có loại tối ưu hóa phù hợp với nhóm đầu vào này."
+
+[settings.gongwen]
+title = "Công văn"
+fields_label = "Định dạng trường công văn Trung Quốc"
+fields_help = "Định dạng phụ lục, nơi nhận bản sao, ngày văn bản, ngày phát hành và ghi chú trong mẫu Word; xóa các trường trống theo quy tắc. Chỗ giữ chỗ phụ lục phải nằm trong một đoạn riêng ở nội dung hoặc ô bảng. Không hỗ trợ đầu trang, chân trang, hộp văn bản hay vị trí giữa câu. Khi tắt, dùng cách điền thông thường và dấu phân cách danh sách chung."

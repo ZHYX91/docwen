@@ -340,10 +340,6 @@ render_mode_word_native = "Natif Word"
 render_mode_hint = "Texte = inscrire les numéros dans les titres ; natif Word = utiliser les listes à plusieurs niveaux de Word"
 
 # 字段优化（字段处理器）
-field_processors_section = "Optimisations de champs (Markdown vers Document)"
-field_processors_empty = "Aucune optimisation de champs disponible pour la langue actuelle."
-field_processors_load_error = "Erreur de chargement : {error}"
-field_processors_toggle_failed = "Impossible de mettre à jour « {name} ». La valeur précédente a été restaurée."
 
 # 序号设置区域
 numbering_settings_section = "Paramètres de numérotation"
@@ -1824,3 +1820,8 @@ typed_endnotes = "Préserve la distinction notes de bas de page/notes de fin ave
 availability_help = "Les types d’optimisation proviennent de l’environnement d’exécution actuel. Si aucun ne convient à cette catégorie d’entrée, les contrôles sont désactivés ; les échecs de détection sont signalés séparément."
 
 none_available = "Aucun type d’optimisation n’est disponible pour cette catégorie d’entrée dans l’environnement actuel."
+
+[settings.gongwen]
+title = "Documents officiels"
+fields_label = "Formater les champs des documents officiels chinois"
+fields_help = "Formate les annexes, destinataires en copie, dates et notes des modèles Word, et supprime les champs vides prévus. Le marqueur des annexes doit occuper un paragraphe entier dans le corps ou une cellule. Les en-têtes, pieds de page, zones de texte et marqueurs dans une phrase ne sont pas pris en charge. Si désactivé, le remplissage normal et le séparateur général des listes s’appliquent."

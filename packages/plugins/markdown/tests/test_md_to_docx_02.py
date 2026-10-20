@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from ._md_to_docx_support import (
     SAMPLE_MD_CONTENT,
-    FakeConfigView,
     MdToDocxConverter,
     Path,
     make_context,
     pytest,
     write_temp_md,
-    zipfile,
 )
 
 pytestmark = pytest.mark.contract
@@ -273,168 +271,6 @@ class TestMdToDocxGolden:
         assert len(result.diagnostics) >= 1
         assert result.diagnostics[0].level == "info"
         assert result.diagnostics[0].code == "MD2DOCX-OK"
-
-    def test_md_to_docx_runs_configured_yaml_field_processors(self, tmp_path, monkeypatch):
-        """Configured field processors mutate YAML before template/metadata fill."""
-        module_dir = tmp_path / "mods"
-        module_dir.mkdir()
-        (module_dir / "metadata_title_processor.py").write_text(
-            "def process_yaml(data):\n    data['标题'] = 'Processed Title'\n",
-            encoding="utf-8",
-        )
-        monkeypatch.syspath_prepend(str(module_dir))
-
-        md_path = write_temp_md("---\n标题: Raw Title\n---\n# Body\n")
-        ctx, _workspace = make_context(md_path, target_format="docx")
-        ctx._config = FakeConfigView(
-            {
-                "gui": {"language": {"locale": "zh_CN"}},
-                "field_processors": {
-                    "settings": {"order": ["metadata"]},
-                    "processors": {
-                        "metadata": {
-                            "module": "metadata_title_processor",
-                            "locales": ["zh_CN"],
-                            "enabled": True,
-                        }
-                    },
-                },
-            }
-        )
-
-        result = MdToDocxConverter().convert(ctx)
-
-        assert result.success is True
-        with zipfile.ZipFile(Path(result.artifacts[0].staging_path), "r") as zf:
-            assert zf.namelist().count("docProps/core.xml") == 1
-            core_xml = zf.read("docProps/core.xml").decode("utf-8")
-        assert "Processed Title" in core_xml
-
-    def test_md_to_docx_applies_gongwen_placeholder_cleanup_rules(self, tmp_path):
-        """Gongwen field processors also restore old template cleanup rules."""
-        from docx import Document
-
-        template_path = tmp_path / "gongwen-template.docx"
-        template = Document()
-        template.add_paragraph("{{正文}}")
-        template.add_paragraph("{{附件说明}}")
-        table = template.add_table(rows=3, cols=2)
-        table.rows[0].cells[0].text = "字段"
-        table.rows[0].cells[1].text = "内容"
-        table.rows[1].cells[0].text = "抄送机关"
-        table.rows[1].cells[1].text = "{{抄送机关}}"
-        table.rows[2].cells[0].text = "版记"
-        table.rows[2].cells[1].text = "{{印发机关}}{{印发日期}}"
-        template.save(template_path)
-
-        md_path = write_temp_md(
-            "---\n"
-            "标题: 公文标题\n"
-            "附件说明:\n"
-            "  - 1. 材料清单\n"
-            "  - （二）办理依据\n"
-            "抄送机关: []\n"
-            "印发机关: ''\n"
-            "印发日期: ''\n"
-            "---\n"
-            "# 正文标题\n"
-            "正文内容。\n"
-        )
-        ctx, _workspace = make_context(
-            md_path,
-            target_format="docx",
-            options={"template_name": str(template_path)},
-        )
-        ctx._config = FakeConfigView(
-            {
-                "gui": {"language": {"locale": "zh_CN"}},
-                "field_processors": {
-                    "settings": {"order": ["gongwen"]},
-                    "processors": {
-                        "gongwen": {
-                            "module": "docwen_plugin_markdown.field_processors.gongwen",
-                            "locales": ["zh_CN"],
-                            "enabled": True,
-                        }
-                    },
-                },
-            }
-        )
-
-        result = MdToDocxConverter().convert(ctx)
-
-        assert result.success is True
-        output_path = Path(result.artifacts[0].staging_path)
-        doc = Document(str(output_path))
-        attachment_paragraphs = [
-            paragraph
-            for paragraph in doc.paragraphs
-            if "附件：1. 材料清单" in paragraph.text or "2. 办理依据" in paragraph.text
-        ]
-        document_text = "\n".join(paragraph.text for paragraph in doc.paragraphs)
-        assert len(attachment_paragraphs) == 2
-        assert "附件：1. 材料清单" in document_text
-        assert "2. 办理依据" in document_text
-        assert "['附件" not in document_text
-        for paragraph in attachment_paragraphs:
-            left_indent = paragraph.paragraph_format.left_indent
-            first_line_indent = paragraph.paragraph_format.first_line_indent
-            assert left_indent is not None
-            assert left_indent > 0
-            assert first_line_indent is not None
-            assert first_line_indent < 0
-        assert doc.tables
-        table_text = "\n".join(cell.text for row in doc.tables[0].rows for cell in row.cells)
-        assert "字段" in table_text
-        assert "抄送机关" not in table_text
-        assert "版记" not in table_text
-        assert "{{" not in table_text
-
-    def test_md_to_docx_gongwen_attachment_in_table_falls_back_to_yaml_fill(self, tmp_path):
-        """Attachment special handling should not block generic table-cell fill."""
-        from docx import Document
-
-        template_path = tmp_path / "gongwen-table-attachment-template.docx"
-        template = Document()
-        template.add_paragraph("{{正文}}")
-        table = template.add_table(rows=1, cols=2)
-        table.rows[0].cells[0].text = "附件"
-        table.rows[0].cells[1].text = "{{附件说明}}"
-        template.save(template_path)
-
-        md_path = write_temp_md(
-            "---\n标题: 公文标题\n附件说明:\n  - 1. 材料清单\n  - （二）办理依据\n---\n# 正文标题\n正文内容。\n"
-        )
-        ctx, _workspace = make_context(
-            md_path,
-            target_format="docx",
-            options={"template_name": str(template_path)},
-        )
-        ctx._config = FakeConfigView(
-            {
-                "gui": {"language": {"locale": "zh_CN"}},
-                "field_processors": {
-                    "settings": {"order": ["gongwen"]},
-                    "processors": {
-                        "gongwen": {
-                            "module": "docwen_plugin_markdown.field_processors.gongwen",
-                            "locales": ["zh_CN"],
-                            "enabled": True,
-                        }
-                    },
-                },
-            }
-        )
-
-        result = MdToDocxConverter().convert(ctx)
-
-        assert result.success is True
-        doc = Document(str(result.artifacts[0].staging_path))
-        table_text = "\n".join(cell.text for row in doc.tables[0].rows for cell in row.cells)
-        assert "附件：1. 材料清单" in table_text
-        assert "2. 办理依据" in table_text
-        assert "['附件" not in table_text
-        assert "{{附件说明}}" not in table_text
 
     @pytest.mark.parametrize(
         ("config_separator", "expected"),

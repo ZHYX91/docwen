@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 import yaml
@@ -42,6 +42,19 @@ BODY_PLACEHOLDER_ALIASES: frozenset[str] = frozenset(
         "正文",
     }
 )
+
+
+def is_empty_field_value(value: Any) -> bool:
+    """Treat empty nested YAML containers as empty without discarding zero/false."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, Mapping):
+        return all(is_empty_field_value(item) for item in value.values())
+    if isinstance(value, (list, tuple, set)):
+        return all(is_empty_field_value(item) for item in value)
+    return False
 
 
 def extract_yaml_front_matter(content: str) -> tuple[dict[str, Any], str]:

@@ -344,10 +344,6 @@ render_mode_word_native = "Word native"
 render_mode_hint = "Text = write numbers into headings; Word native = use Word multilevel list numbering"
 
 # 字段优化（字段处理器）
-field_processors_section = "Field Optimizations (Markdown to Document)"
-field_processors_empty = "No field optimizations available for the current language."
-field_processors_load_error = "Load error: {error}"
-field_processors_toggle_failed = "Failed to update “{name}”. The previous value has been restored."
 
 # 序号设置区域
 numbering_settings_section = "Numbering Settings"
@@ -1822,3 +1818,8 @@ typed_endnotes = "Preserve the footnote/endnote distinction with typed note labe
 availability_help = "Only optimizations available for this file type can be selected. If none are available, the options are disabled. Loading errors appear separately."
 
 none_available = "No optimization types are available for this input category in the current runtime."
+
+[settings.gongwen]
+title = "Official documents"
+fields_label = "Format Chinese official-document fields"
+fields_help = "Format attachment descriptions, copy recipients, document and publication dates, and notes in Word templates, and remove eligible empty fields. The attachment placeholder must occupy its own paragraph in the document body or a table cell. Headers, footers, text boxes and inline placements are unsupported. When off, ordinary field filling and the general list separator apply."

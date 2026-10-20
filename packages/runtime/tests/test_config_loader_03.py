@@ -399,10 +399,9 @@ class TestConfigLoaderEditableFileText:
             ConfigLoader(base_dir=base_dir, user_dir=user_dir)
 
 
-def test_config_registry_has_exactly_25_files() -> None:
+def test_config_registry_declares_current_configuration_files() -> None:
     from docwen_runtime.config.registry import CONFIG_FILES
 
-    assert len(CONFIG_FILES) == 25
     assert {spec.rel_path for spec in CONFIG_FILES} == {
         "gui.toml",
         "output.toml",
@@ -420,7 +419,6 @@ def test_config_registry_has_exactly_25_files() -> None:
         "link.toml",
         "software.toml",
         "optimize.toml",
-        "field_processors.toml",
         "numbering/add.toml",
         "numbering/cleanup.toml",
         "proofread/engine.toml",
@@ -437,6 +435,7 @@ def test_config_registry_has_exactly_25_files() -> None:
     [
         ("link.format.image_link_style", "link.toml"),
         ("text.remove_numbering", "text.toml"),
+        ("template_fill.gongwen_fields_enabled", "template_fill.toml"),
         ("export.to_md_image_extraction_mode", "export.toml"),
         ("document.keep_images", "document.toml"),
         ("numbering.add.settings.default_scheme", "numbering/add.toml"),
@@ -473,7 +472,6 @@ def test_registry_groups_specs_by_group() -> None:
         "proofread/sensitive_words.toml",
     }
     assert {s.rel_path for s in specs_for_group("text")} == {
-        "field_processors.toml",
         "text.toml",
         "template_fill.toml",
         "numbering/add.toml",

@@ -45,11 +45,7 @@ from docwen_core.resolved_resource_staging import (
 )
 from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges
 from docwen_plugin_markdown.document_semantics import annotate_table_semantics
-from docwen_plugin_markdown.field_registry import (
-    collect_placeholder_rules,
-    collect_special_placeholder_handlers,
-    run_yaml_processors,
-)
+from docwen_plugin_markdown.gongwen_fields import GongwenFieldPlacementError
 from docwen_plugin_markdown.manifest import RESOLVED_V4_MD_TO_DOCX_OPTIONS_SCHEMA
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
@@ -66,7 +62,7 @@ from docwen_plugin_markdown.resolved_runtime_v4 import (
 from docwen_plugin_markdown.resolved_source_carriers_v4 import apply_resolved_source_carriers_v4
 from docwen_plugin_markdown.runtime_semantics_v3 import RuntimeSemanticsV3Unsupported
 from docwen_plugin_markdown.template_filler import fill_template
-from docwen_plugin_markdown.template_policy import template_list_separator
+from docwen_plugin_markdown.template_policy import template_gongwen_fields_enabled, template_list_separator
 from docwen_plugin_markdown.template_utils import (
     TemplatePackageError,
     extract_body_font,
@@ -199,7 +195,12 @@ def convert_resolved_v4_to_docx(
         return failed_with_resource_cleanup(
             _failure(task_id, started_at, exc.diagnostic_code, str(exc), input_bytes=input_bytes)
         )
-    except (ManagedStyleCompletionError, BibliographyConversionError, NoteWritebackError) as exc:
+    except (
+        ManagedStyleCompletionError,
+        BibliographyConversionError,
+        NoteWritebackError,
+        GongwenFieldPlacementError,
+    ) as exc:
         code = getattr(exc, "diagnostic_code", "MD2DOCX-RESOLVED-V4-OUTPUT-INVALID")
         return failed_with_resource_cleanup(_failure(task_id, started_at, code, str(exc), input_bytes=input_bytes))
     except SemanticDocumentValidationError as exc:
@@ -271,7 +272,7 @@ def _render_resolved_v4_docx(
     options = dict(context.request.options)
     extensions = resolve_markdown_extensions(options, context.config, direction="input")
     style_catalog = context.document_style_catalog
-    locale, template_name, heading_merge_mode = _validated_resolved_v4_options(options, style_catalog)
+    template_name, heading_merge_mode = _validated_resolved_v4_options(options, style_catalog)
 
     context.progress.report_progress(5.0, "Re-admitting resolved v4 inputs")
     prepared = load_resolved_v4_inputs(workspace)
@@ -295,13 +296,6 @@ def _render_resolved_v4_docx(
     # the source-file route.  Normalize only the request-local parser
     # projection so canonical endnotes retain their domain through Mistune.
     md_body = normalize_note_syntax(md_body, typed_endnotes=extensions.typed_endnotes)
-    field_processors_config = context.config.get("field_processors", {})
-    run_yaml_processors(yaml_dict, field_processors_config, current_locale=locale)
-    placeholder_rules = collect_placeholder_rules(field_processors_config, current_locale=locale)
-    special_placeholder_handlers = collect_special_placeholder_handlers(
-        field_processors_config,
-        current_locale=locale,
-    )
 
     context.progress.report_progress(25.0, "Parsing authenticated Markdown projection")
     source_image_alt_texts = _markdown_image_alt_texts(md_body)
@@ -361,8 +355,9 @@ def _render_resolved_v4_docx(
         bibliography_style_id=managed_styles.style_id("bibliography"),
     )
     placeholder_map = without_reserved_bibliography_placeholder(placeholder_map)
+    template_yaml = dict(yaml_dict)
     ensure_title_fallback(
-        yaml_dict,
+        template_yaml,
         placeholder_names=placeholder_map,
         source_stem=prepared.source_stem,
     )
@@ -398,12 +393,11 @@ def _render_resolved_v4_docx(
     rendered = renderer.render(render_ast)
     fill_template(
         doc=doc,
-        yaml_dict=yaml_dict,
+        yaml_dict=template_yaml,
         rendered_paragraphs=rendered,
         placeholder_para=placeholder_para,
         placeholder_map=placeholder_map,
-        placeholder_rules=placeholder_rules,
-        special_placeholder_handlers=special_placeholder_handlers,
+        gongwen_fields_enabled=template_gongwen_fields_enabled(context.config),
         list_separator=template_list_separator(context.config),
     )
     if bibliography_anchor is not None:
@@ -415,8 +409,8 @@ def _render_resolved_v4_docx(
         )
     session.finalize_document()
     _install_list_numbering(doc, renderer.list_numbering)
-    if yaml_dict:
-        _inject_docx_metadata(doc, yaml_dict)
+    if template_yaml:
+        _inject_docx_metadata(doc, template_yaml)
 
     context.cancellation.check()
     context.progress.report_progress(80.0, "Writing and proving resolved v4 DOCX")
@@ -511,7 +505,7 @@ def _render_resolved_v4_docx(
     return _ResolvedV4RenderedOutput(output_path, input_bytes, (artifact,), result)
 
 
-def _validated_resolved_v4_options(options: dict[str, Any], style_catalog: Any) -> tuple[str, str, str]:
+def _validated_resolved_v4_options(options: dict[str, Any], style_catalog: Any) -> tuple[str, str]:
     unknown_options = sorted(set(options) - _ACTIVE_OPTIONS)
     if unknown_options:
         raise ResolvedConversionV4Unsupported(
@@ -549,7 +543,7 @@ def _validated_resolved_v4_options(options: dict[str, Any], style_catalog: Any) 
             "MD2DOCX-RESOLVED-V4-OPTIONS-INVALID",
             "heading_merge_mode is outside the closed resolved-v4 set",
         )
-    return locale, template_name, heading_merge_mode
+    return template_name, heading_merge_mode
 
 
 def _renderer(

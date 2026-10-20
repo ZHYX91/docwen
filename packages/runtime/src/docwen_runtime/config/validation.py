@@ -406,38 +406,6 @@ def _validate_optimize(data: dict[str, Any]) -> None:
         _validate_optional_bool(record, "enabled", label=f"optimize.types.{type_id}")
 
 
-def _validate_field_processors(data: dict[str, Any]) -> None:
-    _validate_string_list_at(
-        data,
-        "settings.order",
-        label="field_processors.settings.order",
-        unique=True,
-        strip_items=True,
-    )
-    records = _validate_dynamic_record_map(data, "processors", label="field_processors.processors")
-    if records is None:
-        return
-    for processor_id, record in records.items():
-        label = f"field_processors.processors.{processor_id}"
-        _validate_optional_string(record, "module", label=label, non_empty=True)
-        if "module" not in record:
-            raise ConfigSemanticError(f"{label}.module must be a non-empty string")
-        if isinstance(record, MutableMapping):
-            record["module"] = record["module"].strip()
-        for key in ("name", "name_key", "description", "description_key"):
-            _validate_optional_string(record, key, label=label)
-        for key in ("enabled", "is_system"):
-            _validate_optional_bool(record, key, label=label)
-        if "locales" in record:
-            _validate_string_list_value(
-                record["locales"],
-                label=f"{label}.locales",
-                allow_empty_list=False,
-                unique=True,
-                strip_items=True,
-            )
-
-
 def _validate_numbering_add(data: dict[str, Any]) -> None:
     _validate_string_list_at(
         data,
@@ -645,6 +613,7 @@ def _validate_ocr(data: dict[str, Any]) -> None:
 
 def _validate_template_fill(data: dict[str, Any]) -> None:
     _validate_optional_string(data, "list_separator", label="template_fill")
+    _validate_optional_bool(data, "gongwen_fields_enabled", label="template_fill")
 
 
 _EXPLICIT_VALIDATORS = {
@@ -658,7 +627,6 @@ _EXPLICIT_VALIDATORS = {
     "link.toml": _validate_link,
     "software.toml": _validate_software,
     "optimize.toml": _validate_optimize,
-    "field_processors.toml": _validate_field_processors,
     "numbering/add.toml": _validate_numbering_add,
     "numbering/cleanup.toml": _validate_numbering_cleanup,
     "proofread/pairs.toml": _validate_proofread_pairs,

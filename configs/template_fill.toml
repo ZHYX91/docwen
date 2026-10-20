@@ -1,3 +1,6 @@
 # Join YAML list values when filling Word and spreadsheet templates.
 # Empty strings and whitespace are intentional and preserved exactly.
 list_separator = "、"
+
+# Format Chinese official-document fields in Word templates.
+gongwen_fields_enabled = true

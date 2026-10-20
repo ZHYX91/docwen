@@ -63,7 +63,7 @@ Wiki and Markdown settings remain independent. Do not replace the user's existin
 - `packages/plugins/markdown/src/docwen_plugin_markdown/to_docx/converter.py`
 - `packages/plugins/markdown/src/docwen_plugin_markdown/template_filler.py`
 - `packages/plugins/markdown/src/docwen_plugin_markdown/field_registry.py`
-- `packages/plugins/markdown/src/docwen_plugin_markdown/field_processors/gongwen.py`
+- `packages/plugins/markdown/src/docwen_plugin_markdown/gongwen_fields.py`
 - Shared ordinary-link and DOCX inline-rendering utilities.
 - Link-tab help text and focused conversion/package tests.
 

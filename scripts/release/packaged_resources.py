@@ -13,7 +13,6 @@ REQUIRED_CONFIG_FILES = (
     "conversion.toml",
     "document.toml",
     "export.toml",
-    "field_processors.toml",
     "gui.toml",
     "image.toml",
     "layout.toml",

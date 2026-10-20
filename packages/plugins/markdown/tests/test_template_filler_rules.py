@@ -1,364 +1,326 @@
-"""Permanent contracts for grouped empty-placeholder cleanup."""
+"""Original-template substitution and safe built-in Gongwen layout contracts."""
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 import pytest
 from docx import Document
+from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt
+from docx.styles.style import CharacterStyle, ParagraphStyle
 
-from docwen_plugin_markdown.field_processors.gongwen import (
-    process_attachment_placeholder,
-    process_yaml,
-)
-from docwen_plugin_markdown.template_filler import (
-    apply_placeholder_rules,
-    apply_special_placeholder_handlers,
-    fill_template,
-    fill_yaml_placeholders,
-)
-
-pytestmark = pytest.mark.contract
+from docwen_plugin_markdown.gongwen_fields import GongwenFieldPlacementError
+from docwen_plugin_markdown.template_filler import fill_template, fill_yaml_placeholders
 from docwen_plugin_markdown.template_utils import scan_placeholders
 
-
-def _apply_rules(document, yaml_data: dict[str, Any], rules: dict[str, list[list[str]]]) -> None:
-    placeholder_map = scan_placeholders(document)
-    fill_yaml_placeholders(document, yaml_data, placeholder_map)
-    apply_placeholder_rules(document, yaml_data, placeholder_map, [rules])
+pytestmark = pytest.mark.contract
 
 
-def test_empty_paragraph_group_requires_the_complete_group_in_one_paragraph() -> None:
+def _fill(document, values: dict[str, Any], *, enabled: bool = True) -> None:
+    fill_template(document, values, [], None, scan_placeholders(document), gongwen_fields_enabled=enabled)
+
+
+def test_all_fields_are_replaced_once_from_original_spans_across_runs() -> None:
     document = Document()
-    document.add_paragraph("remove prefix {{ first }} / {{second}} suffix")
-    document.add_paragraph("keep first={{first}} suffix")
-    document.add_paragraph("keep second={{second}} suffix")
+    paragraph = document.add_paragraph()
+    first = paragraph.add_run("prefix {{fir")
+    first.bold = True
+    paragraph.add_run("st}} / {{second}} / {{third}} / {{first}}")
+    values = {"first": "{{second}}", "second": None, "third": "{{附件说明}}"}
+    _fill(document, values)
+    assert paragraph.text == "prefix {{second}} /  / {{附件说明}} / {{second}}"
+    assert first.bold is True
 
-    _apply_rules(
+
+def test_missing_non_gongwen_fields_remove_only_markers() -> None:
+    document = Document()
+    paragraph = document.add_paragraph("prefix {{missing}} suffix")
+    _fill(document, {})
+    assert paragraph.text == "prefix  suffix"
+
+
+def test_generic_lists_keep_exact_separator_and_zero_false_values() -> None:
+    document = Document()
+    paragraph = document.add_paragraph("{{普通列表}}")
+    fill_template(
         document,
-        {"first": "", "second": None},
-        {"delete_paragraph_if_empty": [["first", "second"]]},
+        {"普通列表": ["甲", ["乙", None], "", "null", "None", 0, False]},
+        [],
+        None,
+        scan_placeholders(document),
+        list_separator=" / ",
     )
+    assert paragraph.text == "甲 / 乙 / 0 / False"
 
-    assert [paragraph.text for paragraph in document.paragraphs] == [
-        "keep first= suffix",
-        "keep second= suffix",
+
+def test_rendered_markdown_and_inserted_attachment_names_are_literal() -> None:
+    document = Document()
+    body = document.add_paragraph("{{body}}")
+    document.add_paragraph("{{附件说明}}")
+    document.add_paragraph("{{名字}}")
+    placeholders = scan_placeholders(document)
+    rendered = document.add_paragraph("literal {{附件说明}} / {{主送机关}}")
+    fill_template(
+        document,
+        {"附件说明": ["{{名字}}"], "名字": "值"},
+        [rendered],
+        body,
+        placeholders,
+    )
+    assert [p.text for p in document.paragraphs] == [
+        "literal {{附件说明}} / {{主送机关}}",
+        "附件：{{名字}}",
+        "值",
     ]
 
 
-def test_nonempty_paragraph_group_preserves_container_and_replaces_each_value() -> None:
+@pytest.mark.parametrize("count", [1, 2, 12])
+def test_every_body_cell_and_nested_cell_anchor_expands_in_place(count: int) -> None:
     document = Document()
-    document.add_paragraph("prefix {{first}} / {{second}} suffix")
-
-    _apply_rules(
-        document,
-        {"first": "kept", "second": ""},
-        {"delete_paragraph_if_empty": [["first", "second"]]},
-    )
-
-    assert [paragraph.text for paragraph in document.paragraphs] == ["prefix kept /  suffix"]
-
-
-def test_empty_row_group_requires_the_complete_group_in_one_row() -> None:
-    document = Document()
-    table = document.add_table(rows=3, cols=2)
-    table.rows[0].cells[0].text = "remove {{first}}"
-    table.rows[0].cells[1].text = "and {{ second }}"
-    table.rows[1].cells[0].text = "keep {{first}}"
-    table.rows[1].cells[1].text = "first-only"
-    table.rows[2].cells[0].text = "second-only"
-    table.rows[2].cells[1].text = "keep {{second}}"
-
-    _apply_rules(
-        document,
-        {"first": "", "second": ""},
-        {"delete_row_if_empty": [["first", "second"]]},
-    )
-
-    assert [[cell.text for cell in row.cells] for row in table.rows] == [
-        ["keep ", "first-only"],
-        ["second-only", "keep "],
-    ]
-
-
-def test_nonempty_row_group_preserves_row_and_replaces_each_value() -> None:
-    document = Document()
+    document.add_paragraph("before")
+    document.add_paragraph("{{ 附件说明 }}")
+    document.add_paragraph("after")
     table = document.add_table(rows=1, cols=2)
-    table.rows[0].cells[0].text = "{{first}}"
-    table.rows[0].cells[1].text = "{{second}}"
+    table.cell(0, 0).text = "{{附件说明}}"
+    nested = table.cell(0, 1).add_table(rows=1, cols=1)
+    nested.cell(0, 0).text = "{{附件说明}}"
+    source = {"附件说明": [f"{i}. 材料{i}" for i in range(1, count + 1)]}
+    original = deepcopy(source)
 
-    _apply_rules(
-        document,
-        {"first": "kept", "second": ""},
-        {"delete_row_if_empty": [["first", "second"]]},
+    _fill(document, source)
+
+    expected = (
+        ["附件：材料1"] if count == 1 else [f"{'附件：' if i == 1 else ''}{i}.\t材料{i}" for i in range(1, count + 1)]
     )
+    assert source == original
+    assert [p.text for p in document.paragraphs] == ["before", *expected, "after"]
+    assert [p.text for p in table.cell(0, 0).paragraphs] == expected
+    assert [p.text for p in nested.cell(0, 0).paragraphs] == expected
+    for paragraph in [*document.paragraphs[1:-1], *table.cell(0, 0).paragraphs, *nested.cell(0, 0).paragraphs]:
+        left_indent = paragraph.paragraph_format.left_indent
+        first_line_indent = paragraph.paragraph_format.first_line_indent
+        assert left_indent is not None and left_indent > 0
+        assert first_line_indent is not None and first_line_indent < 0
+        assert "\u3000" not in paragraph.text
 
-    assert [[cell.text for cell in row.cells] for row in table.rows] == [["kept", ""]]
 
-
-def test_empty_cell_group_requires_the_complete_group_in_one_cell() -> None:
+def test_attachment_expansion_preserves_paragraph_and_opening_run_properties() -> None:
     document = Document()
-    table = document.add_table(rows=1, cols=2)
-    table.rows[0].cells[0].text = "clear label {{first}} / {{second}}"
-    table.rows[0].cells[1].text = "keep label {{first}}"
+    style = document.styles.add_style("Attachment", WD_STYLE_TYPE.PARAGRAPH)
+    assert isinstance(style, ParagraphStyle)
+    style.font.size = Pt(14)
+    char_style = document.styles.add_style("AttachmentName", WD_STYLE_TYPE.CHARACTER)
+    assert isinstance(char_style, CharacterStyle)
+    char_style.font.italic = True
+    paragraph = document.add_paragraph(style=style)
+    paragraph.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    paragraph.paragraph_format.space_before = Pt(3)
+    paragraph.paragraph_format.space_after = Pt(5)
+    paragraph.paragraph_format.line_spacing = 1.5
+    paragraph.paragraph_format.keep_with_next = True
+    paragraph.paragraph_format.right_indent = Pt(8)
+    paragraph.paragraph_format.left_indent = Pt(28)
+    opening = paragraph.add_run("{{附")
+    opening.style = char_style
+    opening.bold = True
+    opening.font.size = Pt(14)
+    paragraph.add_run("件说明}}")
 
-    _apply_rules(
-        document,
-        {"first": "", "second": ""},
-        {"delete_cell_if_empty": [["first", "second"]]},
-    )
+    _fill(document, {"附件说明": ["甲", "乙"]})
 
-    assert len(table.rows) == 1
-    assert len(table.rows[0].cells) == 2
-    assert [cell.text for cell in table.rows[0].cells] == ["", "keep label "]
-
-
-def test_nonempty_cell_group_preserves_cell_and_replaces_each_value() -> None:
-    document = Document()
-    cell = document.add_table(rows=1, cols=1).cell(0, 0)
-    cell.text = "prefix {{first}} / {{second}} suffix"
-
-    _apply_rules(
-        document,
-        {"first": "kept", "second": ""},
-        {"delete_cell_if_empty": [["first", "second"]]},
-    )
-
-    assert cell.text == "prefix kept /  suffix"
-
-
-def test_unconfigured_empty_placeholder_preserves_surrounding_paragraph() -> None:
-    document = Document()
-    document.add_paragraph("prefix {{missing}} suffix")
-
-    _apply_rules(document, {}, {})
-
-    assert [paragraph.text for paragraph in document.paragraphs] == ["prefix  suffix"]
-
-
-def test_rules_only_consume_the_pre_render_template_snapshot() -> None:
-    document = Document()
-    body_placeholder = document.add_paragraph("{{body}}")
-    document.add_paragraph("template {{first}} / {{second}}")
-    placeholder_map = scan_placeholders(document)
-    rendered = document.add_paragraph("literal {{first}} / {{second}}")
-
-    fill_template(
-        document,
-        {"first": "", "second": ""},
-        [rendered],
-        body_placeholder,
-        placeholder_map,
-        placeholder_rules=[{"delete_paragraph_if_empty": [["first", "second"]]}],
-    )
-
-    assert [paragraph.text for paragraph in document.paragraphs] == ["literal {{first}} / {{second}}"]
+    for index, rendered in enumerate(document.paragraphs):
+        paragraph_style = rendered.style
+        run_style = rendered.runs[0].style
+        assert paragraph_style is not None and paragraph_style.style_id == style.style_id
+        assert run_style is not None and run_style.style_id == char_style.style_id
+        assert rendered.runs[0].bold is True
+        assert rendered.runs[0].font.size == Pt(14)
+        assert rendered.paragraph_format.alignment == WD_ALIGN_PARAGRAPH.JUSTIFY
+        assert rendered.paragraph_format.space_before == Pt(3)
+        assert rendered.paragraph_format.space_after == Pt(5)
+        assert rendered.paragraph_format.line_spacing == 1.5
+        assert rendered.paragraph_format.keep_with_next is True
+        assert rendered.paragraph_format.right_indent == Pt(8)
+        assert rendered.paragraph_format.left_indent == Pt(91)
+        assert rendered.paragraph_format.first_line_indent == Pt(-63 if index == 0 else -21)
 
 
-def test_special_handler_does_not_consume_a_rendered_literal() -> None:
-    document = Document()
-    body_placeholder = document.add_paragraph("{{body}}")
-    placeholder_map = scan_placeholders(document)
-    rendered = document.add_paragraph("literal {{附件说明}}")
-
-    fill_template(
-        document,
-        {"附件说明": ["附件：材料"]},
-        [rendered],
-        body_placeholder,
-        placeholder_map,
-        special_placeholder_handlers={"附件说明": process_attachment_placeholder},
-    )
-
-    assert [paragraph.text for paragraph in document.paragraphs] == ["literal {{附件说明}}"]
-
-
-def test_deleting_the_last_matching_row_removes_the_empty_table() -> None:
-    document = Document()
-    document.add_table(rows=1, cols=1).cell(0, 0).text = "{{first}}"
-
-    _apply_rules(document, {"first": ""}, {"delete_row_if_empty": [["first"]]})
-
-    assert document.tables == []
-
-
-def test_placeholder_fragments_in_different_cells_are_not_stitched() -> None:
-    document = Document()
-    table = document.add_table(rows=1, cols=2)
-    table.cell(0, 0).text = "{{fir"
-    table.cell(0, 1).text = "st}}"
-
-    _apply_rules(document, {"first": ""}, {"delete_row_if_empty": [["first"]]})
-
-    assert len(document.tables) == 1
-    assert [cell.text for cell in table.rows[0].cells] == ["{{fir", "st}}"]
-
-
-def test_nested_table_row_rules_use_the_nearest_original_row() -> None:
-    document = Document()
-    outer = document.add_table(rows=1, cols=1)
-    nested = outer.cell(0, 0).add_table(rows=1, cols=2)
-    nested.cell(0, 0).text = "{{first}}"
-    nested.cell(0, 1).text = "{{second}}"
-
-    _apply_rules(
-        document,
-        {"first": "", "second": ""},
-        {"delete_row_if_empty": [["first", "second"]]},
-    )
-
-    assert len(document.tables) == 1
-    assert outer.cell(0, 0).tables == []
-
-
-def test_merged_cell_is_deduplicated_and_cleared_once() -> None:
+def test_merged_cell_anchor_is_expanded_only_once() -> None:
     document = Document()
     table = document.add_table(rows=1, cols=2)
     merged = table.cell(0, 0).merge(table.cell(0, 1))
-    merged.text = "label {{first}} / {{second}}"
-
-    _apply_rules(
-        document,
-        {"first": "", "second": ""},
-        {"delete_cell_if_empty": [["first", "second"]]},
-    )
-
-    assert len(document.tables) == 1
-    assert table.cell(0, 0)._tc is table.cell(0, 1)._tc
-    assert table.cell(0, 0).text == ""
+    merged.text = "{{附件说明}}"
+    _fill(document, {"附件说明": ["甲", "乙"]})
+    assert [p.text for p in merged.paragraphs] == ["附件：1.\t甲", "2.\t乙"]
 
 
-def test_row_rules_have_priority_over_cell_rules_across_processors() -> None:
+def test_empty_attachment_and_paragraph_cleanup_preserve_valid_cell_structure() -> None:
     document = Document()
+    document.add_paragraph("{{附件说明}}")
     table = document.add_table(rows=1, cols=1)
-    table.cell(0, 0).text = "{{first}} / {{second}}"
-    placeholder_map = scan_placeholders(document)
+    cell = table.cell(0, 0)
+    cell.text = "{{附件说明}}"
+    nested = cell.add_table(rows=1, cols=1)
+    nested.cell(0, 0).text = "unrelated"
+    cell.paragraphs[-1].text = "{{主送机关}}："
 
-    apply_placeholder_rules(
-        document,
-        {"first": "", "second": ""},
-        placeholder_map,
-        [
-            {"delete_cell_if_empty": [["first", "second"]]},
-            {"delete_row_if_empty": [["first", "second"]]},
-        ],
-    )
-
-    assert document.tables == []
-
-
-def test_recursively_empty_mappings_and_sequences_trigger_group_cleanup() -> None:
-    document = Document()
-    document.add_paragraph("{{first}} / {{second}}")
-
-    _apply_rules(
-        document,
-        {"first": {"nested": ""}, "second": [None, {"nested": "  "}]},
-        {"delete_paragraph_if_empty": [["first", "second"]]},
-    )
+    _fill(document, {"附件说明": [None, {"nested": " "}]})
 
     assert document.paragraphs == []
+    assert nested.cell(0, 0).text == "unrelated"
+    assert cell._tc[-1].tag == qn("w:p")
+    assert cell.paragraphs[-1].text == ""
 
 
-def test_attachment_handler_processes_all_original_whitespace_variants() -> None:
+def test_only_pure_empty_field_rows_and_paragraphs_are_deleted() -> None:
     document = Document()
-    document.add_paragraph("{{附件说明}}")
-    document.add_paragraph("{{ 附件说明 }}")
-    placeholder_map = scan_placeholders(document)
+    document.add_paragraph("主送机关：{{主送机关}}")
+    document.add_paragraph("正文不得删除 {{主送机关}}")
+    document.add_paragraph("{{发文字号}} {{标题}}")
+    table = document.add_table(rows=4, cols=2)
+    table.rows[0].cells[0].text = "抄送机关"
+    table.rows[0].cells[1].text = "{{抄送机关}}"
+    table.rows[1].cells[0].text = "版记"
+    table.rows[1].cells[1].text = "{{印发机关}} / {{印发日期}}"
+    table.rows[2].cells[0].text = "{{抄送机关}}"
+    table.rows[2].cells[1].text = "{{负责人}}"
+    table.rows[3].cells[0].text = "{{抄送机关}}"
+    table.rows[3].cells[1].text = "这部分正文必须保留"
 
-    handled = apply_special_placeholder_handlers(
-        document,
-        {"附件说明": ["附件：材料"]},
-        {"附件说明": process_attachment_placeholder},
-        placeholder_map=placeholder_map,
-    )
+    _fill(document, {"标题": "标题值", "负责人": "负责人值"})
 
-    assert handled == {"附件说明"}
-    assert [paragraph.text for paragraph in document.paragraphs] == ["附件：材料", "附件：材料"]
+    assert [p.text for p in document.paragraphs] == ["正文不得删除 ", " 标题值"]
+    assert [[cell.text for cell in row.cells] for row in table.rows] == [
+        ["", "负责人值"],
+        ["", "这部分正文必须保留"],
+    ]
 
 
-def test_special_body_handler_does_not_suppress_the_same_placeholder_in_a_table() -> None:
+def test_nonempty_fields_anywhere_in_a_row_prevent_row_deletion() -> None:
     document = Document()
-    body_placeholder = document.add_paragraph("{{body}}")
-    document.add_paragraph("{{附件说明}}")
-    table_cell = document.add_table(rows=1, cols=1).cell(0, 0)
-    table_cell.text = "table {{附件说明}}"
-    placeholder_map = scan_placeholders(document)
-
-    fill_template(
-        document,
-        {"附件说明": ["附件：材料"]},
-        [],
-        body_placeholder,
-        placeholder_map,
-        special_placeholder_handlers={"附件说明": process_attachment_placeholder},
-    )
-
-    assert "附件：材料" in [paragraph.text for paragraph in document.paragraphs]
-    assert table_cell.text == "table 附件：材料"
+    table = document.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "{{抄送机关}}"
+    table.cell(0, 1).text = "{{印发机关}}"
+    table.cell(1, 0).text = "{{印发机关}}"
+    table.cell(1, 1).text = "{{印发日期}}"
+    _fill(document, {"印发机关": "办公室", "抄送机关": []})
+    assert len(table.rows) == 2
+    assert [[cell.text for cell in row.cells] for row in table.rows] == [["", "办公室"], ["办公室", ""]]
 
 
-def test_attachment_processor_treats_recursively_empty_values_as_empty() -> None:
-    yaml_data: dict[str, Any] = {"附件说明": ["", None, {"nested": "  "}]}
-
-    process_yaml(yaml_data)
-
-    assert yaml_data["附件说明"] == []
-
-
-def test_delete_table_rule_requires_the_complete_group_in_one_table() -> None:
+def test_row_group_must_be_complete_in_one_row_and_nested_rows_are_independent() -> None:
     document = Document()
-    remove_table = document.add_table(rows=2, cols=1)
-    remove_table.cell(0, 0).text = "{{first}}"
-    remove_table.cell(1, 0).text = "{{second}}"
-    keep_first = document.add_table(rows=1, cols=1)
-    keep_first.cell(0, 0).text = "keep {{first}}"
-    keep_second = document.add_table(rows=1, cols=1)
-    keep_second.cell(0, 0).text = "keep {{second}}"
-
-    _apply_rules(
-        document,
-        {"first": "", "second": ""},
-        {"delete_table_if_empty": [["first", "second"]]},
-    )
-
-    assert len(document.tables) == 2
-    assert document.tables[0]._tbl is keep_first._tbl
-    assert document.tables[1]._tbl is keep_second._tbl
-    assert keep_first.cell(0, 0).text == "keep "
-    assert keep_second.cell(0, 0).text == "keep "
+    outer = document.add_table(rows=3, cols=1)
+    outer.cell(0, 0).text = "{{印发机关}}"
+    outer.cell(1, 0).text = "{{印发日期}}"
+    nested = outer.cell(2, 0).add_table(rows=1, cols=2)
+    nested.cell(0, 0).text = "{{印发机关}}"
+    nested.cell(0, 1).text = "{{印发日期}}"
+    _fill(document, {})
+    assert len(outer.rows) == 3
+    assert outer.cell(2, 0).tables == []
+    assert outer.cell(2, 0)._tc[-1].tag == qn("w:p")
 
 
-def test_placeholder_inside_hyperlink_is_replaced_without_flattening_ooxml() -> None:
+def test_last_empty_row_removes_table_but_not_other_content() -> None:
+    document = Document()
+    document.add_paragraph("正文")
+    document.add_table(rows=1, cols=1).cell(0, 0).text = "抄送：{{抄送机关}}"
+    _fill(document, {})
+    assert document.tables == []
+    assert [p.text for p in document.paragraphs] == ["正文"]
+
+
+def test_empty_rule_preserves_drawing_in_same_paragraph() -> None:
+    document = Document()
+    paragraph = document.add_paragraph("{{主送机关}}")
+    paragraph.add_run()._r.append(OxmlElement("w:drawing"))
+    _fill(document, {})
+    assert len(document.paragraphs) == 1
+    assert paragraph._p.find(f"{qn('w:r')}/{qn('w:drawing')}") is not None
+
+
+@pytest.mark.parametrize(
+    "location", ["inline", "duplicate", "header", "footer", "textbox", "break", "key_break", "hyperlink"]
+)
+def test_unsupported_attachment_locations_fail_when_enabled(location: str) -> None:
+    document = Document()
+    if location == "header":
+        paragraph = document.sections[0].header.paragraphs[0]
+    elif location == "footer":
+        paragraph = document.sections[0].footer.paragraphs[0]
+    else:
+        paragraph = document.add_paragraph()
+    if location == "inline":
+        paragraph.text = "do not lose this {{附件说明}} suffix"
+    elif location == "duplicate":
+        paragraph.text = "{{附件说明}}{{附件说明}}"
+    elif location == "break":
+        paragraph.add_run("{{附件").add_break()
+        paragraph.add_run("说明}}")
+    elif location == "key_break":
+        paragraph.add_run("{{").add_break()
+        paragraph.add_run("附件说明}}")
+    elif location in {"textbox", "hyperlink"}:
+        wrapper = OxmlElement("w:txbxContent" if location == "textbox" else "w:hyperlink")
+        owner = OxmlElement("w:p") if location == "textbox" else wrapper
+        run = OxmlElement("w:r")
+        text = OxmlElement("w:t")
+        text.text = "{{附件说明}}"
+        run.append(text)
+        owner.append(run)
+        if location == "textbox":
+            wrapper.append(owner)
+            paragraph.add_run()._r.append(wrapper)
+        else:
+            paragraph._p.append(wrapper)
+    else:
+        paragraph.text = "{{附件说明}}"
+    snapshot = document.element.xml
+    with pytest.raises(GongwenFieldPlacementError, match="附件说明占位符必须独占"):
+        _fill(document, {"附件说明": ["甲", "乙"]})
+    assert document.element.xml == snapshot
+
+
+def test_disabling_fields_keeps_generic_inline_attachment_fill_and_empty_containers() -> None:
+    document = Document()
+    inline = document.add_paragraph("prefix {{附件说明}} suffix")
+    empty = document.add_paragraph("主送：{{主送机关}}")
+    header = document.sections[0].header.paragraphs[0]
+    header.text = "{{附件说明}}"
+    _fill(document, {"附件说明": ["甲", "乙"]}, enabled=False)
+    assert inline.text == "prefix 甲、乙 suffix"
+    assert empty.text == "主送："
+    assert header.text == "甲、乙"
+
+
+def test_hyperlink_placeholder_and_surrounding_run_properties_are_preserved() -> None:
     document = Document()
     paragraph = document.add_paragraph("prefix ")
     hyperlink = OxmlElement("w:hyperlink")
     hyperlink.set(qn("r:id"), "rId-test")
     run = OxmlElement("w:r")
-    run_properties = OxmlElement("w:rPr")
-    bold = OxmlElement("w:b")
-    run_properties.append(bold)
+    properties = OxmlElement("w:rPr")
+    properties.append(OxmlElement("w:b"))
+    run.append(properties)
     text = OxmlElement("w:t")
-    text.text = "{{missing}}"
-    run.append(run_properties)
+    text.text = "{{first}} / {{second}}"
     run.append(text)
     hyperlink.append(run)
     paragraph._p.append(hyperlink)
     paragraph.add_run(" suffix")
-
-    apply_placeholder_rules(document, {}, {"missing": [paragraph]})
-
+    _fill(document, {"first": "{{second}}", "second": ""})
     assert paragraph._p.find(qn("w:hyperlink")) is hyperlink
-    assert hyperlink.find(qn("w:r")) is run
-    assert run.find(qn("w:rPr")) is run_properties
-    assert "".join(item.text or "" for item in paragraph._p.iter(qn("w:t"))) == "prefix  suffix"
+    assert run.find(qn("w:rPr")) is properties
+    assert paragraph.text == "prefix {{second}} /  suffix"
 
 
-def test_any_yaml_key_preserves_each_placeholder_location_format() -> None:
+def test_any_yaml_key_keeps_each_placeholder_location_format() -> None:
     document = Document()
     first = document.add_paragraph()
     first.alignment = WD_ALIGN_PARAGRAPH.CENTER

@@ -39,9 +39,7 @@ class TextTab(BaseSettingsTab):
         self._remove_numbering: QCheckBox = _cast(QCheckBox, None)
         self._add_numbering: QCheckBox = _cast(QCheckBox, None)
         self._scheme_combo: QComboBox = _cast(QComboBox, None)
-        self._field_processor_checkboxes: dict[str, QCheckBox] = {}
-        self._field_processors_by_id: dict[str, dict] = {}
-        self._field_processors_empty_label: QLabel = _cast(QLabel, None)
+        self._gongwen_fields: QCheckBox = _cast(QCheckBox, None)
         super().__init__()
         self._load_values()
 
@@ -120,19 +118,18 @@ class TextTab(BaseSettingsTab):
 
         self._numbering_editors = NumberingEditors(self, self._vm, self._refresh_scheme_combo_items)
 
-        # ── Field processors card ─────────────────────────────────────
-        _card_fp, self._field_processors_form = self.add_settings_card(
-            t("settings.text.field_processors_section", "Field Optimizations (Markdown to Document)"),
-            object_name="textFieldProcessorsCard",
+        _gongwen_card, gongwen_form = self.add_settings_card(
+            t("settings.gongwen.title"),
+            object_name="textGongwenFieldsCard",
         )
-        self._field_processors_empty_label = QLabel(
-            t("settings.text.field_processors_empty", "No field optimizations available for the current language."),
-            self,
+        gongwen_row, self._gongwen_fields = self._create_toggle_with_info(
+            t("settings.gongwen.fields_label"),
+            t("settings.gongwen.fields_help"),
         )
-        self._field_processors_empty_label.setWordWrap(True)
-        self._field_processors_empty_label.setProperty("class", "secondary")
-        self._field_processors_form.addRow(self._field_processors_empty_label)
-        self._build_field_processor_rows()
+        gongwen_form.addRow(gongwen_row)
+        self._gongwen_fields.toggled.connect(
+            lambda enabled: self._vm.set_field(SECTION_TEXT, "gongwen_fields_enabled", enabled)
+        )
 
     # ── Value loading ───────────────────────────────────────────────────────
 
@@ -156,7 +153,8 @@ class TextTab(BaseSettingsTab):
             with QSignalBlocker(self._render_mode_combo):
                 self._render_mode_combo.setEnabled(text.add_numbering)
                 self.set_combo_data(self._render_mode_combo, text.heading_numbering_render_mode)
-        self._load_field_processor_values()
+        with QSignalBlocker(self._gongwen_fields):
+            self._gongwen_fields.setChecked(text.gongwen_fields_enabled)
 
     def reload_from_config(self) -> None:
         self._load_values()
@@ -174,50 +172,6 @@ class TextTab(BaseSettingsTab):
                 self._scheme_combo.addItem(label, scheme_id)
             if selected_scheme:
                 self.set_combo_data(self._scheme_combo, selected_scheme)
-
-    def _build_field_processor_rows(self) -> None:
-        processors = self._vm.get_available_field_processors()
-        self._field_processors_by_id = {str(item.get("id")): item for item in processors}
-        self._field_processors_empty_label.setVisible(not processors)
-        for item in processors:
-            self._add_field_processor_row(item)
-
-    def _add_field_processor_row(self, item: dict) -> None:
-        processor_id = str(item.get("id") or "")
-        if not processor_id or processor_id in self._field_processor_checkboxes:
-            return
-        name = str(item.get("name") or processor_id)
-        # Field processors may come from mutable user/plugin configuration.
-        # Their display name is data, not authority to address DocWen's core
-        # locale catalogue with an arbitrary dynamic key.
-        label = name
-        description = str(item.get("description") or "")
-        if item.get("load_error"):
-            description = t(
-                "settings.text.field_processors_load_error",
-                "Load error: {error}",
-                error=item.get("load_error"),
-            )
-        checkbox = self.create_settings_toggle(label, description, bool(item.get("enabled", True)))
-        checkbox.stateChanged.connect(
-            lambda state, pid=processor_id: self._on_field_processor_toggled(pid, bool(state))
-        )
-        self._field_processor_checkboxes[processor_id] = checkbox
-        self._field_processors_form.addRow(checkbox)
-
-    def _load_field_processor_values(self) -> None:
-        processors = self._vm.get_available_field_processors()
-        self._field_processors_by_id = {str(item.get("id")): item for item in processors}
-        self._field_processors_empty_label.setVisible(not processors)
-        for item in processors:
-            self._add_field_processor_row(item)
-        for processor_id, checkbox in self._field_processor_checkboxes.items():
-            item = self._field_processors_by_id.get(processor_id)
-            checkbox.setVisible(item is not None)
-            if item is None:
-                continue
-            with QSignalBlocker(checkbox):
-                checkbox.setChecked(bool(item.get("enabled", True)))
 
     # ── Signal handlers ─────────────────────────────────────────────────────
 
@@ -256,24 +210,3 @@ class TextTab(BaseSettingsTab):
         if not isinstance(mode, str) or not mode:
             return
         self._vm.set_field(SECTION_TEXT, "heading_numbering_render_mode", mode)
-
-    def _on_field_processor_toggled(self, processor_id: str, enabled: bool) -> None:
-        if self._vm.set_field_processor_enabled(processor_id, enabled):
-            return
-        checkbox = self._field_processor_checkboxes.get(processor_id)
-        processor = self._field_processors_by_id.get(processor_id, {})
-        name = str(processor.get("name") or processor_id)
-        if checkbox is not None:
-            with QSignalBlocker(checkbox):
-                checkbox.setChecked(not enabled)
-        from PySide6.QtWidgets import QMessageBox
-
-        QMessageBox.warning(
-            self,
-            t("common.error", "Error"),
-            t(
-                "settings.text.field_processors_toggle_failed",
-                "Failed to update “{name}”. The previous value has been restored.",
-                name=name,
-            ),
-        )

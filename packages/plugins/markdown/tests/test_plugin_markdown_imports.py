@@ -261,7 +261,7 @@ def test_common_utils_has_no_dead_docx_ast_alias() -> None:
 
 
 def test_yaml_processor_only_owns_front_matter_extraction() -> None:
-    """YAML field processing lives in field_registry, not legacy stubs."""
+    """Field layout lives in the built-in Gongwen module, not parser stubs."""
     import inspect
 
     from docwen_plugin_markdown import yaml_processor

@@ -15,16 +15,7 @@ pytestmark = pytest.mark.contract
 def _gongwen_config(*, wiki_mode: str, markdown_mode: str) -> dict:
     config = _link_config(wiki_mode=wiki_mode, markdown_mode=markdown_mode)
     config["gui"] = {"language": {"locale": "zh_CN"}}
-    config["field_processors"] = {
-        "settings": {"order": ["gongwen"]},
-        "processors": {
-            "gongwen": {
-                "module": "docwen_plugin_markdown.field_processors.gongwen",
-                "locales": ["zh_CN"],
-                "enabled": True,
-            }
-        },
-    }
+    config["template_fill"] = {"gongwen_fields_enabled": True}
     return config
 
 

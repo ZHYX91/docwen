@@ -97,6 +97,7 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("text", "heading_merge_mode"),
         ("text", "heading_merge_punctuation"),
         ("text", "list_separator"),
+        ("text", "gongwen_fields_enabled"),
         ("text", "md_body_format"),
         ("text", "md_heading_format"),
         ("text", "md_table_header_format"),
@@ -453,37 +454,6 @@ class SettingsViewModel(QObject):
             self._is_dirty = dirty
             self.dirty_state_changed.emit(dirty)
 
-    def get_available_field_processors(self) -> list[dict[str, Any]]:
-        """Return Text-tab field processors visible for the current GUI locale."""
-        with QMutexLocker(self._mutex):
-            field_processors = deepcopy(self._config.text.field_processors)
-            locale = self._config.gui.language
-        return self._list_field_processors(field_processors, locale)
-
-    def set_field_processor_enabled(self, processor_id: str, enabled: bool) -> bool:
-        """Update a field processor enabled flag in the Settings draft."""
-        with QMutexLocker(self._mutex):
-            text = self._config.text
-            field_processors = _plain_mapping(text.field_processors)
-            processors = field_processors.get("processors", {})
-            if not isinstance(processors, dict):
-                return False
-            processor = processors.get(processor_id)
-            if not isinstance(processor, dict):
-                return False
-            old = bool(processor.get("enabled", True))
-            if old == enabled:
-                return True
-            processor["enabled"] = bool(enabled)
-            text.field_processors = field_processors
-            self._config.mark_dirty(SECTION_TEXT)
-            dirty = self._recompute_dirty()
-        self.config_changed.emit(SECTION_TEXT, f"field_processors.{processor_id}.enabled", bool(enabled))
-        if dirty != self._is_dirty:
-            self._is_dirty = dirty
-            self.dirty_state_changed.emit(dirty)
-        return True
-
     def set_field_batch(self, section: str, updates: dict[str, object]) -> None:
         """Set multiple fields within one section atomically.
 
@@ -717,47 +687,6 @@ class SettingsViewModel(QObject):
             if source_category
             else (),
         )
-
-    @staticmethod
-    def _list_field_processors(field_processors: object, locale: str) -> list[dict[str, Any]]:
-        field_processor_map = _plain_mapping(field_processors)
-        processors = field_processor_map.get("processors", {})
-        if not isinstance(processors, dict):
-            return []
-        settings = field_processor_map.get("settings", {})
-        configured_order = settings.get("order", []) if isinstance(settings, dict) else []
-        ordered_ids: list[str] = []
-        for item in configured_order:
-            if isinstance(item, str) and item in processors and item not in ordered_ids:
-                ordered_ids.append(item)
-        for processor_id in processors:
-            if isinstance(processor_id, str) and processor_id not in ordered_ids:
-                ordered_ids.append(processor_id)
-
-        result: list[dict[str, Any]] = []
-        for processor_id in ordered_ids:
-            processor = processors.get(processor_id, {})
-            if not isinstance(processor, dict):
-                continue
-            locales = processor.get("locales", ["*"])
-            locale_list = locales if isinstance(locales, list) else ["*"]
-            if "*" not in locale_list and locale not in locale_list:
-                continue
-            module = processor.get("module", "")
-            item: dict[str, Any] = {
-                "id": processor_id,
-                "enabled": bool(processor.get("enabled", True)),
-                "locales": list(locale_list),
-                "module": module if isinstance(module, str) else "",
-                "name": str(processor.get("name", "")),
-                "name_key": str(processor.get("name_key", "")),
-                "description": str(processor.get("description", "")),
-                "is_system": bool(processor.get("is_system", False)),
-            }
-            if not item["module"]:
-                item["load_error"] = "missing module"
-            result.append(item)
-        return result
 
     # ── Section → registry group mapping for reset operations ──────────────
     # Each GUI section maps to one runtime registry group.  Runtime decides
@@ -996,15 +925,15 @@ class SettingsViewModel(QObject):
             default_scheme=text_raw.get("numbering_scheme", "hierarchical_standard"),
             numbering_schemes=deepcopy(numbering_add) if isinstance(numbering_add, dict) else {},
             numbering_clean_rules=deepcopy(numbering_cleanup) if isinstance(numbering_cleanup, dict) else {},
-            field_processors=_plain_data(raw.get("field_processors", {}))
-            if isinstance(raw.get("field_processors"), Mapping)
-            else {},
             heading_numbering_render_mode=text_raw.get("heading_numbering_render_mode", "text"),
         )
 
         template_fill = raw.get("template_fill", {})
         config.text.list_separator = (
             str(template_fill.get("list_separator", "、")) if isinstance(template_fill, dict) else "、"
+        )
+        config.text.gongwen_fields_enabled = (
+            template_fill.get("gongwen_fields_enabled", True) if isinstance(template_fill, dict) else True
         )
 
         # proofread section — proofread/{engine,skip,symbol_map,typos,sensitive_words}.toml
@@ -1374,7 +1303,6 @@ class SettingsViewModel(QObject):
             },
         )
         self._collect_numbering_clean_values(values, _plain_mapping(text.numbering_clean_rules))
-        self._collect_field_processor_enabled_flags(values, text.field_processors)
         out = config.output
         put("output.directory.mode", out.output_mode)
         put("output.directory.custom_path", out.custom_path)
@@ -1431,6 +1359,7 @@ class SettingsViewModel(QObject):
         put("conversion.md_to_docx.heading_merge_mode", text.heading_merge_mode)
         put("conversion.md_to_docx.heading_merge_punctuation", text.heading_merge_punctuation)
         put("template_fill.list_separator", text.list_separator)
+        put("template_fill.gongwen_fields_enabled", text.gongwen_fields_enabled)
         put("document.style.table.md_to_docx.table_style_mode", text.table_style_mode)
         put("document.style.table.md_to_docx.builtin_style_key", text.builtin_table_style)
         put("document.style.table.md_to_docx.custom_style_name", text.custom_table_style_name)
@@ -1548,17 +1477,6 @@ class SettingsViewModel(QObject):
             for key in keys:
                 if key in category_data:
                     values[f"{category}.{key}"] = category_data[key]
-
-    @staticmethod
-    def _collect_field_processor_enabled_flags(values: dict[str, Any], field_processors: object) -> None:
-        processors = _plain_mapping(field_processors).get("processors", {})
-        if not isinstance(processors, dict):
-            return
-        for processor_id, processor in processors.items():
-            if not isinstance(processor_id, str) or not isinstance(processor, dict):
-                continue
-            if "enabled" in processor:
-                values[f"field_processors.processors.{processor_id}.enabled"] = bool(processor["enabled"])
 
     @staticmethod
     def _persist_config_values(cfg_port: Any, values: dict[str, Any]) -> bool:

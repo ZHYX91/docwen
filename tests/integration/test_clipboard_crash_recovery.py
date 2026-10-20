@@ -107,7 +107,31 @@ os._exit(23)
     legacy.mkdir()
     (legacy / "body.md").write_text("not owned", encoding="utf-8")
     original_unlink = os.unlink
+    original_scandir = os.scandir
     attempted = []
+
+    class ResourceOrder:
+        # rmtree uses filesystem enumeration order, which need not put resource
+        # 0 before resource 1. Control that order so this injects a partial
+        # deletion on every platform rather than failing before any deletion.
+        def __init__(self, path):
+            self.scan = original_scandir(path)
+            self.entries = iter(sorted(self.scan, key=lambda entry: entry.name))
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return next(self.entries)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            self.close()
+
+        def close(self):
+            self.scan.close()
 
     def deny_resource(path, *args, **kwargs):
         if os.fspath(path) in {str(blocked_resource), blocked_resource.name}:
@@ -119,6 +143,7 @@ os._exit(23)
     second = None
     try:
         with monkeypatch.context() as fault:
+            fault.setattr(os, "scandir", ResourceOrder)
             fault.setattr(os, "unlink", deny_resource)
             first = ClipboardInputStore(root)
         assert attempted == [blocked_resource.name]
