@@ -96,6 +96,8 @@ _REQUIRED_SETTINGS_TAB_KEYS: tuple[str, ...] = (
     "software",
     "output",
     "logging",
+    "gongwen",
+    "invoice",
 )
 _REQUIRED_SETTINGS_PAGE_MODULES: frozenset[str] = frozenset(
     f"docwen_gui.widgets.settings.{key}_tab" for key in _REQUIRED_SETTINGS_TAB_KEYS

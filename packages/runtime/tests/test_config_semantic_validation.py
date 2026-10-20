@@ -33,6 +33,9 @@ PROJECT_CONFIGS = Path(__file__).resolve().parents[3] / "configs"
         ("optimize.toml", '[types.custom]\nenabled = "yes"\n'),
         ("template_fill.toml", 'gongwen_fields_enabled = "false"\n'),
         ("template_fill.toml", "gongwen_fields_enabled = 1\n"),
+        ("document.toml", 'to_md_optimization = ""\n'),
+        ("image.toml", 'to_md_optimization = " invoice_cn "\n'),
+        ("layout.toml", "to_md_optimization = false\n"),
         ("numbering/add.toml", '[settings]\norder = ["custom", "custom"]\n'),
         (
             "numbering/add.toml",
@@ -88,6 +91,9 @@ def test_deep_semantic_invalid_user_override_is_quarantined(
         {"link": {"embedding": {"max_depth": 21}}},
         {"export": {"to_md_ocr_placement_mode": "sidecar"}},
         {"template_fill": {"gongwen_fields_enabled": "false"}},
+        {"document": {"to_md_optimization": False}},
+        {"image": {"to_md_optimization": ""}},
+        {"layout": {"to_md_optimization": " invoice_cn "}},
         {"link": {"format": {"md_file_link_style": "markdown_embed"}}},
         {"software": {"default_priority": {"word_processors": [7]}}},
         {
@@ -172,6 +178,24 @@ max_depth_reached = "placeholder"
     assert export.md_file_link_style == "markdown_link"
     assert export.image_extraction_mode == "base64"
     assert export.ocr_placement_mode == "image_md"
+    assert not list(user_dir.glob("*.bak_*"))
+
+
+@pytest.mark.parametrize("category", ["document", "image", "layout"])
+def test_unknown_optimization_resource_id_is_preserved_as_a_dormant_preference(tmp_path: Path, category: str) -> None:
+    from docwen_runtime.config.loader import ConfigLoader
+
+    user_dir = tmp_path / "user"
+    user_dir.mkdir()
+    user_file = user_dir / f"{category}.toml"
+    original = b'# temporarily unavailable resource\nto_md_optimization = "custom_optimizer"\n'
+    user_file.write_bytes(original)
+
+    loader = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=user_dir)
+
+    assert loader.config_state_trusted is True
+    assert loader.config.as_dict()[category]["to_md_optimization"] == "custom_optimizer"
+    assert user_file.read_bytes() == original
     assert not list(user_dir.glob("*.bak_*"))
 
 

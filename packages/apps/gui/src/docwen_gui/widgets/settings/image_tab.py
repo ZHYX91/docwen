@@ -1,7 +1,4 @@
-"""Image settings tab — extraction, compression, PDF/TIFF options.
-
-Matches old ImageTab (DynamicSettingsTab, 8 fields across 3 cards).
-"""
+"""Shared image extraction, compression and PDF/TIFF output settings."""
 
 from __future__ import annotations
 
@@ -61,29 +58,6 @@ class ImageTab(DynamicSettingsTab):
                         "type": "combobox",
                         "label": t("settings.image.size_unit_label", "Unit:"),
                         "items": [("KB", "KB"), ("MB", "MB")],
-                    },
-                ],
-            },
-            {
-                "title": t("settings.image.optimization_section", "Optimization"),
-                "description": t(
-                    "settings.optimization.availability_help",
-                    "Optimization types come from the current runtime. If none apply to this input category, "
-                    "the controls are disabled; discovery failures are reported separately.",
-                ),
-                "presentation": "card",
-                "fields": [
-                    {
-                        "key": "to_md_enable_optimization",
-                        "type": "checkbox",
-                        "text": t("settings.image.enable_optimization", "Enable content optimization"),
-                        "tooltip": "",
-                    },
-                    {
-                        "key": "to_md_optimization_type",
-                        "type": "combobox",
-                        "label": t("settings.image.optimization_type_label", "Optimization Type:"),
-                        "items": [],
                     },
                 ],
             },

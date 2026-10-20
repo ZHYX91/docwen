@@ -1,7 +1,4 @@
-"""Document settings tab — extraction options, optimization, software priority.
-
-Matches old DocumentTab (DynamicSettingsTab + software priority QListWidgets).
-"""
+"""Shared document extraction, numbering and table-export settings."""
 
 from __future__ import annotations
 
@@ -81,29 +78,6 @@ class DocumentTab(DynamicSettingsTab):
                         "type": "combobox",
                         "label": t("settings.document.numbering.scheme_label", "Default numbering scheme:"),
                         "items": scheme_items,
-                    },
-                ],
-            },
-            {
-                "title": t("settings.document.optimization_section", "Optimization"),
-                "description": t(
-                    "settings.optimization.availability_help",
-                    "Optimization types come from the current runtime. If none apply to this input category, "
-                    "the controls are disabled; discovery failures are reported separately.",
-                ),
-                "presentation": "card",
-                "fields": [
-                    {
-                        "key": "to_md_enable_optimization",
-                        "type": "checkbox",
-                        "text": t("settings.document.enable_optimization", "Enable content optimization"),
-                        "tooltip": "",
-                    },
-                    {
-                        "key": "to_md_optimization_type",
-                        "type": "combobox",
-                        "label": t("settings.document.optimization_type_label", "Optimization Type:"),
-                        "items": [],
                     },
                 ],
             },

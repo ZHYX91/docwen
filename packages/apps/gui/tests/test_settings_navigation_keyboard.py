@@ -56,7 +56,8 @@ def test_all_sidebar_pages_and_language_expose_accessible_names(dialog) -> None:
     assert language.accessibleName() == t("settings.general.language_label")
     group = dialog.findChild(QLabel, "settingsNavGroup_general")
     assert group is not None and group.text() == t("settings.navigation.general")
-    assert dialog.findChild(QLabel, "settingsNavGroup_optimizations") is None
+    optimizations = dialog.findChild(QLabel, "settingsNavGroup_optimizations")
+    assert optimizations is not None and optimizations.text() == t("settings.navigation.optimizations")
     selector = dialog._compact_navigation
     assert [selector.itemData(index) for index in range(selector.count())] == TAB_KEYS
 
@@ -78,12 +79,12 @@ def test_arrows_keep_sidebar_focus_enter_does_not_submit_and_tab_enters_content(
     assert frame.geometry() == _item(dialog, "text").rect()
     assert not first.focusPolicy() & Qt.FocusPolicy.TabFocus
     QTest.keyClick(_item(dialog, "text"), Qt.Key.Key_End)
-    assert dialog.current_section() == "logging"
-    assert qapp.focusWidget() is _item(dialog, "logging")
-    QTest.keyClick(_item(dialog, "logging"), Qt.Key.Key_Return)
+    assert dialog.current_section() == "invoice"
+    assert qapp.focusWidget() is _item(dialog, "invoice")
+    QTest.keyClick(_item(dialog, "invoice"), Qt.Key.Key_Return)
     assert dialog.isVisible()
-    assert qapp.focusWidget() is _item(dialog, "logging")
-    QTest.keyClick(_item(dialog, "logging"), Qt.Key.Key_Home)
+    assert qapp.focusWidget() is _item(dialog, "invoice")
+    QTest.keyClick(_item(dialog, "invoice"), Qt.Key.Key_Home)
     assert dialog.current_section() == "general"
     QTest.keyClick(first, Qt.Key.Key_Tab)
     assert qapp.focusWidget() is dialog.findChild(QComboBox, "generalLanguageCombo")
@@ -118,26 +119,26 @@ def test_short_wide_window_scrolls_selected_page_into_view(dialog, qapp, qtbot) 
     first = _item(dialog, "general")
     first.setFocus(Qt.FocusReason.TabFocusReason)
     QTest.keyClick(first, Qt.Key.Key_End)
-    assert dialog.current_section() == "logging"
-    assert qapp.focusWidget() is _item(dialog, "logging")
-    qtbot.waitUntil(lambda: _item_is_in_view(dialog, "logging"))
+    assert dialog.current_section() == "invoice"
+    assert qapp.focusWidget() is _item(dialog, "invoice")
+    qtbot.waitUntil(lambda: _item_is_in_view(dialog, "invoice"))
     assert sidebar.verticalScrollBar().value() > 0
-    QTest.keyClick(_item(dialog, "logging"), Qt.Key.Key_Home)
+    QTest.keyClick(_item(dialog, "invoice"), Qt.Key.Key_Home)
     assert dialog.current_section() == "general"
     qtbot.waitUntil(lambda: _item_is_in_view(dialog, "general"))
 
     dialog.resize(440, 450)
     qapp.processEvents()
     assert selector.isVisible() and sidebar.isHidden()
-    selector.setCurrentIndex(selector.findData("logging"))
-    assert dialog.current_section() == "logging"
+    selector.setCurrentIndex(selector.findData("invoice"))
+    assert dialog.current_section() == "invoice"
     assert selector.count() == len(TAB_KEYS)
     dialog.resize(960, 450)
     qapp.processEvents()
     assert selector.isHidden()
     assert sidebar.isVisible()
-    assert dialog.current_section() == "logging"
-    qtbot.waitUntil(lambda: _item_is_in_view(dialog, "logging"))
+    assert dialog.current_section() == "invoice"
+    qtbot.waitUntil(lambda: _item_is_in_view(dialog, "invoice"))
 
 
 def test_page_keys_survive_different_selector_and_stack_positions(dialog, qapp, monkeypatch) -> None:
@@ -169,18 +170,15 @@ def test_page_keys_survive_different_selector_and_stack_positions(dialog, qapp, 
 def test_group_headings_do_not_add_pages_or_keyboard_stops(qapp, qtbot, monkeypatch, locale, font_size) -> None:
     previous_locale = get_locale()
     set_locale(locale)
-    monkeypatch.setattr(
-        settings_dialog,
-        "NAVIGATION_GROUPS",
-        (
-            SettingsNavigationGroup("general", tuple(TAB_KEYS[:2])),
-            SettingsNavigationGroup("optimizations", tuple(TAB_KEYS[2:])),
-        ),
-    )
+    name_keys = {
+        "templates": "settings.templates.title",
+        "gongwen": "settings.gongwen.title",
+        "invoice": "settings.invoice.title",
+    }
     monkeypatch.setattr(
         settings_dialog,
         "TAB_NAMES",
-        {key: t("settings.templates.title" if key == "templates" else f"settings.tabs.{key}") for key in TAB_KEYS},
+        {key: t(name_keys.get(key, f"settings.tabs.{key}")) for key in TAB_KEYS},
     )
     window = None
     try:
@@ -205,26 +203,41 @@ def test_group_headings_do_not_add_pages_or_keyboard_stops(qapp, qtbot, monkeypa
         assert separator is not None and separator.focusPolicy() == Qt.FocusPolicy.NoFocus
         assert separator.height() == 1
 
-        window.activate_section("text")
-        text_item = _item(window, "text")
-        text_item.setFocus(Qt.FocusReason.TabFocusReason)
-        QTest.keyClick(text_item, Qt.Key.Key_Down)
-        assert window.current_section() == "document"
-        assert qapp.focusWidget() is _item(window, "document")
-        assert selector.currentData() == "document"
-        qtbot.waitUntil(lambda: _item_is_in_view(window, "document"))
+        window.activate_section("logging")
+        last_general_item = _item(window, "logging")
+        last_general_item.setFocus(Qt.FocusReason.TabFocusReason)
+        QTest.keyClick(last_general_item, Qt.Key.Key_Down)
+        assert window.current_section() == "gongwen"
+        assert qapp.focusWidget() is _item(window, "gongwen")
+        assert selector.currentData() == "gongwen"
+        qtbot.waitUntil(lambda: _item_is_in_view(window, "gongwen"))
 
         window.resize(440, 450)
         qapp.processEvents()
         assert selector.isVisible() and sidebar.isHidden()
         selector.setFocus(Qt.FocusReason.TabFocusReason)
         QTest.keyClick(selector, Qt.Key.Key_Up)
-        assert window.current_section() == "text"
+        assert window.current_section() == "logging"
         assert selector.currentText().startswith(t("settings.navigation.general"))
         QTest.keyClick(selector, Qt.Key.Key_Down)
-        assert window.current_section() == "document"
+        assert window.current_section() == "gongwen"
         assert selector.currentText().startswith(t("settings.navigation.optimizations"))
     finally:
         if window is not None:
             window.close()
         set_locale(previous_locale)
+
+
+def test_empty_optimization_group_adds_neither_heading_nor_placeholder(qapp, monkeypatch) -> None:
+    general_keys = tuple(key for key in TAB_KEYS if key not in {"gongwen", "invoice"})
+    monkeypatch.setattr(
+        settings_dialog,
+        "NAVIGATION_GROUPS",
+        (SettingsNavigationGroup("general", general_keys), SettingsNavigationGroup("optimizations", ())),
+    )
+    window = SettingsDialog(view_model=SettingsViewModel())
+    try:
+        assert window.findChild(QLabel, "settingsNavGroup_optimizations") is None
+        assert window._tab_widget.count() == window._compact_navigation.count() == len(general_keys)
+    finally:
+        window.close()

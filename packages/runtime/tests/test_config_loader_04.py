@@ -92,8 +92,6 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "document.to_md_remove_numbering",
         "document.to_md_add_numbering",
         "document.to_md_default_scheme",
-        "document.to_md_enable_optimization",
-        "document.to_md_optimization_type",
     }
 
     spreadsheet_plan = reset_plan_for_group("spreadsheet")
@@ -110,10 +108,33 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
     assert set(layout_plan.dotted_keys) == {
         "layout.to_md_keep_images",
         "layout.to_md_enable_ocr",
-        "layout.to_md_enable_optimization",
-        "layout.to_md_optimization_type",
         "layout.render_dpi",
     }
+
+    image_plan = reset_plan_for_group("image")
+    assert image_plan.files == ()
+    assert set(image_plan.dotted_keys) == {
+        "image.to_md_keep_images",
+        "image.to_md_enable_ocr",
+        "image.compress_mode",
+        "image.size_limit",
+        "image.size_unit",
+        "image.pdf_quality",
+        "image.tiff_mode",
+    }
+
+    gongwen_plan = reset_plan_for_group("gongwen")
+    assert gongwen_plan.files == ()
+    assert gongwen_plan.dotted_keys == ("template_fill.gongwen_fields_enabled",)
+    assert gongwen_plan.conditional_dotted_keys == (("document.to_md_optimization", "gongwen"),)
+
+    invoice_plan = reset_plan_for_group("invoice")
+    assert invoice_plan.files == ()
+    assert invoice_plan.dotted_keys == ()
+    assert invoice_plan.conditional_dotted_keys == (
+        ("image.to_md_optimization", "invoice_cn"),
+        ("layout.to_md_optimization", "invoice_cn"),
+    )
 
     link_plan = reset_plan_for_group("link")
     assert link_plan.files == ()
@@ -180,14 +201,18 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         document_plan,
         spreadsheet_plan,
         layout_plan,
+        image_plan,
+        gongwen_plan,
+        invoice_plan,
         link_plan,
         other_plan,
         output_plan,
         logging_plan,
         proofread_plan,
     ):
-        assert len(plan.dotted_keys) == len(set(plan.dotted_keys))
-        for key in plan.dotted_keys:
+        all_keys = (*plan.dotted_keys, *(key for key, _expected in plan.conditional_dotted_keys))
+        assert len(all_keys) == len(set(all_keys))
+        for key in all_keys:
             spec = spec_for_dotted_key(key)
             assert spec is not None
             assert spec.rel_path not in RESET_EXCLUDED

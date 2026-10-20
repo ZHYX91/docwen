@@ -50,9 +50,9 @@ The removed keys `image.ocr_language` and `conversion.md_to_docx.list_separator`
 
 ## Chinese official-document fields / 公文字段
 
-`template_fill.gongwen_fields_enabled` is a boolean, enabled by default. It formats the fixed Chinese official-document fields in Word templates independently of interface or output language. Both Markdown input routes use the same implementation. It does not select document-to-Markdown recognition. The incoming Markdown settings page owns this switch and its reset behavior.
+`template_fill.gongwen_fields_enabled` is a boolean, enabled by default. It formats the fixed Chinese official-document fields in Word templates independently of interface or output language. Both Markdown input routes use the same implementation. It does not select document-to-Markdown recognition. The Official documents settings page owns this switch and its reset behavior; the generic list separator remains on Incoming text.
 
-`template_fill.gongwen_fields_enabled` 是布尔值，默认开启。它处理 Word 模板中的固定中文公文字段，不随界面或输出语言改变；两条 Markdown 输入路线使用同一套实现。它不控制文档转 Markdown 的公文识别。该开关及其恢复默认行为归属“传入文本”设置页。
+`template_fill.gongwen_fields_enabled` 是布尔值，默认开启。它处理 Word 模板中的固定中文公文字段，不随界面或输出语言改变；两条 Markdown 输入路线使用同一套实现。它不控制文档转 Markdown 的公文识别。该开关及其恢复默认行为归属“公文”设置页；通用列表分隔符仍归属“传入文本”。
 
 | Field / 字段 | Enabled behavior / 开启后的行为 |
 | --- | --- |
@@ -69,3 +69,23 @@ The removed keys `image.ocr_language` and `conversion.md_to_docx.list_separator`
 When disabled, these fields use ordinary template filling, including `template_fill.list_separator`; official-document container cleanup is disabled. The original YAML data is not rewritten. Removed field-processor configuration has no aliases, migration or dynamic module fallback.
 
 关闭后，这些字段按普通模板规则填充，列表遵守 `template_fill.list_separator`，不执行公文专用容器清理。原始 YAML 数据不被改写。已删除的字段处理器配置不提供别名、迁移或动态模块回退。
+
+## Optimization defaults / 专项优化默认选择
+
+The Official documents and Invoices pages form a separate navigation group. Defaults use one resource ID per input category, with `"none"` as the shipped value. A default initializes the operation panel when an input is selected; it does not classify file contents or modify the ordinary conversion route. Changing the selection for a task does not save it as a new default.
+
+“公文”和“发票”位于独立的导航分组。每类输入仅保存一个资源 ID，出厂值均为 `"none"`。默认值用于传入文件后初始化操作面板，不自动判断文件内容，也不改变普通转换入口。单次任务中的选择不会回写为设置默认值。
+
+| Input / 输入类别 | Persisted key / 持久化键 | Built-in resource / 内置资源 | Settings page / 设置页 |
+| --- | --- | --- | --- |
+| Documents / 文档 | `document.to_md_optimization` | `gongwen` | Official documents / 公文 |
+| PDF and OFD / 版式文件 | `layout.to_md_optimization` | `invoice_cn` | Invoices / 发票 |
+| Images / 图片 | `image.to_md_optimization` | `invoice_cn` | Invoices / 发票 |
+
+The value is an exact, nonempty resource ID or `"none"`. Availability comes from the existing capability catalog and may differ by format or installed conversion software. Unavailable choices remain saved but are not selected for execution; users can still clear their page's saved default. Resource IDs and internal action names remain separate. The removed enable/type pair has no alias, dual write or automatic migration.
+
+取值为精确的非空资源 ID 或 `"none"`。可用性由现有能力目录决定，可能随文件格式和已安装的转换软件变化。不可用选择继续保留，但不会用于执行；用户仍可取消该页已保存的默认。资源 ID 与内部动作名称分开管理。已移除的 enable/type 配置对没有别名、双写或自动迁移。
+
+Resetting Official documents restores field formatting and clears the document default only while its persisted choice is `gongwen`. Resetting Invoices independently clears layout and image defaults only while they are `invoice_cn`. These comparisons read persisted values inside the same configuration transaction and process lock as the reset. Other optimization choices, common input settings, and unrelated unsaved drafts are preserved. Concurrent external writes refresh the Cancel baseline without overwriting another page's draft. GUI and `docwen config reset gongwen --yes` / `docwen config reset invoice --yes` share the same reset plan.
+
+恢复“公文”默认会恢复字段格式化开关，并仅在持久化的文档默认为 `gongwen` 时取消该选择。恢复“发票”默认分别检查版式与图片，仅取消值为 `invoice_cn` 的选择。条件判断在重置使用的同一配置事务和进程锁内读取持久化值。其他优化选择、通用输入设置和其他页未保存草稿得到保留；并发外部写入会刷新取消操作的基线，不覆盖其他页的草稿。GUI 与 `docwen config reset gongwen --yes` / `docwen config reset invoice --yes` 共用同一重置计划。

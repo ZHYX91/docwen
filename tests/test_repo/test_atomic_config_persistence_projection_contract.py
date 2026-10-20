@@ -69,7 +69,7 @@ def test_every_public_loader_mutation_uses_the_shared_executor() -> None:
         "Configuration transaction rollback failed",
         "self._config_state_trusted = False",
         "self._config_state_trusted = True",
-        "self._reset_grouped_values_on_disk(dotted_by_file)",
+        "self._reset_grouped_values_on_disk(active_values)",
     ):
         assert token in source
 

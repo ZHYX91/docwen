@@ -7,9 +7,8 @@
 to_md_keep_images = true
 # 默认勾选"图片文字识别"
 to_md_enable_ocr = true
-# Optional content optimization is disabled until explicitly enabled.
-to_md_enable_optimization = false
-to_md_optimization_type = "invoice_cn"
+# 默认内容优化：none（不预选）或运行时提供的优化资源 ID（如 invoice_cn）
+to_md_optimization = "none"
 # 压缩选项默认设置
 # 压缩模式: lossless/limit_size
 compress_mode = "lossless"

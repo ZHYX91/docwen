@@ -25,6 +25,48 @@ from ._action_area_vm_support import (
 )
 
 
+@pytest.mark.parametrize(
+    ("category", "setup_method", "source", "resource"),
+    [
+        ("document", "setup_for_document_file", "/test.docx", "gongwen"),
+        ("layout", "setup_for_layout_file", "/test.pdf", "invoice_cn"),
+        ("image", "setup_for_image_file", "/test.png", "invoice_cn"),
+    ],
+)
+def test_optimization_default_initializes_each_task_without_persisting_manual_choices(
+    category: str, setup_method: str, source: str, resource: str
+) -> None:
+    key = f"{category}.to_md_optimization"
+    main_vm = FakeMainWindowViewModel({key: resource})
+    action_vm = ActionAreaViewModel(main_vm)  # type: ignore[arg-type]
+    setup = getattr(action_vm, setup_method)
+
+    setup(source)
+    assert action_vm.optimize_for_type == resource
+    action_vm.optimize_for_type = None
+    assert action_vm.action_name == ""
+    assert main_vm.controller.config_port.get(key) == resource
+
+    setup(source)
+    assert action_vm.optimize_for_type == resource
+    main_vm.controller.config_port._values[key] = "none"
+    setup(source)
+    assert action_vm.optimize_for_type is None
+    assert action_vm.action_name == ""
+
+
+@pytest.mark.parametrize("default", ["none", "unavailable-resource"])
+def test_unavailable_optimization_default_does_not_select_a_different_resource(default: str) -> None:
+    main_vm = FakeMainWindowViewModel({"document.to_md_optimization": default})
+    action_vm = ActionAreaViewModel(main_vm)  # type: ignore[arg-type]
+
+    action_vm.setup_for_document_file("/test.docx")
+
+    assert action_vm.optimize_for_type is None
+    assert action_vm.action_name == ""
+    assert main_vm.controller.config_port.get("document.to_md_optimization") == default
+
+
 class TestInitialState:
     def test_not_visible(self, vm: ActionAreaViewModel) -> None:
         assert vm.visible is False
@@ -91,8 +133,7 @@ class TestSetupDocumentFile:
                 {
                     "document.to_md_keep_images": False,
                     "document.to_md_enable_ocr": True,
-                    "document.to_md_enable_optimization": True,
-                    "document.to_md_optimization_type": "gongwen",
+                    "document.to_md_optimization": "gongwen",
                 }
             )
         )
@@ -281,8 +322,7 @@ class TestSetupLayoutFile:
                 {
                     "layout.to_md_keep_images": False,
                     "layout.to_md_enable_ocr": True,
-                    "layout.to_md_enable_optimization": True,
-                    "layout.to_md_optimization_type": "invoice_cn",
+                    "layout.to_md_optimization": "invoice_cn",
                 }
             )
         )
@@ -323,8 +363,7 @@ class TestSetupOtherFile:
                 {
                     "other.to_md_keep_images": False,
                     "other.to_md_enable_ocr": True,
-                    "other.to_md_enable_optimization": True,
-                    "other.to_md_optimization_type": "gongwen",
+                    "other.to_md_optimization": "gongwen",
                 }
             )
         )

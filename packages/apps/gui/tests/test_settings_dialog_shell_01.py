@@ -158,6 +158,8 @@ def test_settings_dialog_tab_order_follows_input_processing_and_delivery(qapp) -
         "software",
         "output",
         "logging",
+        "gongwen",
+        "invoice",
     ]
 
     assert set(TAB_KEYS).issuperset(tk_settings_tabs)

@@ -253,8 +253,7 @@ def test_action_area_keeps_public_id_separate_from_internal_action() -> None:
             "settings": {"order": ["public-gongwen"]},
             "types": {"public-gongwen": {"enabled": True}},
         },
-        "document.to_md_enable_optimization": True,
-        "document.to_md_optimization_type": "public-gongwen",
+        "document.to_md_optimization": "public-gongwen",
     }.get(key, default)
     vm = ActionAreaViewModel(main_vm=cast(Any, SimpleNamespace(controller=controller)))
 

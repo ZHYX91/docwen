@@ -84,9 +84,13 @@ LOCALIZED_PROSE_KEYS = (
     "settings.logging.console_colorize.auto",
     "settings.logging.console_colorize.always",
     "settings.logging.console_colorize.never",
-    "settings.image.optimization_section",
-    "settings.image.enable_optimization",
-    "settings.image.optimization_type_label",
+    "settings.optimization.current_default",
+    "settings.optimization.set_default",
+    "settings.optimization.clear_default",
+    "settings.optimization.discovery_failed",
+    "settings.optimization.unavailable",
+    "settings.gongwen.title",
+    "settings.invoice.title",
     "editors.numbering_add.word_native_unavailable",
     "editors.numbering_add.word_native_full",
     "editors.numbering_add.word_native_approximate",
@@ -181,6 +185,7 @@ def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
         "settings.formatting.separators.dash",
         "settings.formatting.separators.asterisk",
         "settings.formatting.separators.underscore",
+        "settings.invoice.layout_title",  # File-format identifiers and a direction arrow, not prose.
         "settings.output.date_formats.iso",
         "settings.output.date_formats.compact",
         "settings.output.date_formats.chinese",
@@ -218,25 +223,22 @@ def test_all_locales_toml_parse_and_have_meta() -> None:
         assert "native_name" in data["meta"], f"Missing meta.native_name in {toml_path.name}"
 
 
-def test_image_optimization_settings_never_fall_back_to_english() -> None:
+def test_specialized_optimization_settings_are_localized() -> None:
     keys = (
-        "settings.image.optimization_section",
-        "settings.image.enable_optimization",
-        "settings.image.optimization_type_label",
+        "settings.optimization.current_default",
+        "settings.optimization.set_default",
+        "settings.optimization.clear_default",
+        "settings.gongwen.description",
+        "settings.invoice.description",
     )
-    forbidden_fallbacks = {
-        "Optimization",
-        "Enable content optimization",
-        "Optimization Type:",
-    }
+    english = _read_toml_file(LOCALES_DIR / "en_US.toml")
 
     for toml_path in sorted(LOCALES_DIR.glob("*.toml")):
         data = _read_toml_file(toml_path)
         values = [_get_nested_value(data, key).strip() for key in keys]
-        assert all(values), f"{toml_path.name} has an empty image optimization label"
-        assert not (set(values) & forbidden_fallbacks), (
-            f"{toml_path.name} still exposes the generic English image optimization fallback"
-        )
+        assert all(values), f"{toml_path.name} has an empty optimization label"
+        if toml_path.stem != "en_US":
+            assert all(value != _get_nested_value(english, key) for key, value in zip(keys, values, strict=True))
 
 
 def test_numbering_cleanup_display_keys_resolve_in_every_locale() -> None:

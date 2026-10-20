@@ -435,16 +435,16 @@ class TestPartialPersistenceFailure:
         }
 
     def test_reset_tab_draft_ownership_covers_every_dialog_group(self) -> None:
-        from docwen_gui.view_models.settings_vm import _RESET_GROUP_DRAFT_PATHS
+        from docwen_gui.view_models.settings_vm import _RESET_GROUP_DRAFT_PATHS, _RESET_GROUP_OPTIMIZATION_DEFAULTS
         from docwen_gui.widgets.settings.dialog import RESET_GROUPS
         from docwen_runtime.config.registry import all_specs, reset_plan_for_group
 
         dialog_groups = set(RESET_GROUPS.values())
         assert dialog_groups <= set(_RESET_GROUP_DRAFT_PATHS)
         for group in dialog_groups:
-            assert _RESET_GROUP_DRAFT_PATHS[group]
+            assert _RESET_GROUP_DRAFT_PATHS[group] or _RESET_GROUP_OPTIMIZATION_DEFAULTS.get(group)
             plan = reset_plan_for_group(group)
-            assert plan.files or plan.dotted_keys
+            assert plan.files or plan.dotted_keys or plan.conditional_dotted_keys
 
         runtime_groups = {group for spec in all_specs() for group in spec.groups}
         assert runtime_groups <= set(_RESET_GROUP_DRAFT_PATHS)

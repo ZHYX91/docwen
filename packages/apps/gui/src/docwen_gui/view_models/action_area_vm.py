@@ -789,11 +789,11 @@ class ActionAreaViewModel(QObject):
             self._doc_add_numbering = False
             self._doc_numbering_scheme = "gongwen_standard"
         if self._show_optimize:
-            enable_optimization = bool(self._read_file_to_md_default(section, "to_md_enable_optimization", False))
-            optimization_type = self._read_file_to_md_default(section, "to_md_optimization_type", None)
-            candidate_id = str(optimization_type).strip() if enable_optimization and optimization_type else None
+            candidate_id = self._read_file_to_md_default(section, "to_md_optimization", "none")
             self._optimize_for_type = (
-                candidate_id if self._optimization_choices_result.get(candidate_id) is not None else None
+                candidate_id
+                if isinstance(candidate_id, str) and self._optimization_choices_result.get(candidate_id) is not None
+                else None
             )
         else:
             self._optimize_for_type = None

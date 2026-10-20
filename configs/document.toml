@@ -18,10 +18,8 @@ to_md_remove_numbering = true
 to_md_add_numbering = false
 # 默认使用的序号方案
 to_md_default_scheme = "hierarchical_standard"
-# 默认启用针对文档类型优化
-to_md_enable_optimization = false
-# 默认优化类型ID
-to_md_optimization_type = "gongwen"
+# 默认内容优化：none（不预选）或运行时提供的优化资源 ID（如 gongwen）
+to_md_optimization = "none"
 
 # ── 代码样式配置 ──
 # 样式名数据源说明：

@@ -616,7 +616,18 @@ def _validate_template_fill(data: dict[str, Any]) -> None:
     _validate_optional_bool(data, "gongwen_fields_enabled", label="template_fill")
 
 
+def _validate_to_md_optimization(data: dict[str, Any]) -> None:
+    # Resource discovery owns which IDs are currently usable. Preserve unknown
+    # IDs as dormant preferences; only the persisted value shape belongs here.
+    value = data.get("to_md_optimization")
+    if "to_md_optimization" in data and (not isinstance(value, str) or not value or value != value.strip()):
+        raise ConfigSemanticError("to_md_optimization must be 'none' or a non-empty exact resource ID")
+
+
 _EXPLICIT_VALIDATORS = {
+    "document.toml": _validate_to_md_optimization,
+    "image.toml": _validate_to_md_optimization,
+    "layout.toml": _validate_to_md_optimization,
     "ocr.toml": _validate_ocr,
     "template_fill.toml": _validate_template_fill,
     "logger.toml": _validate_logger,

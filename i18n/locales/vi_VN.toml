@@ -438,9 +438,6 @@ enable_ocr = "Mặc định chọn \"OCR hình ảnh\""
 enable_ocr_tooltip = "Mặc định bật \"OCR hình ảnh\" khi chuyển tài liệu → MD"
 
 # 优化设置
-optimization_section = "Tối ưu hóa (Tài liệu → Markdown)"
-enable_optimization = "Mặc định bật \"Tối ưu theo loại tài liệu\""
-optimization_type_label = "Loại tối ưu mặc định:"
 
 # 软件优先级
 word_processors_label = "Ưu tiên phần mềm xử lý tài liệu"
@@ -497,9 +494,6 @@ extraction_section = "Thiết lập trích xuất ảnh/OCR"
 keep_images = "Mặc định chọn \"Trích xuất hình ảnh\""
 enable_ocr = "Mặc định chọn \"OCR hình ảnh\""
 size_unit_label = "Đơn vị:"
-optimization_section = "Tối ưu hóa (Hình ảnh → Markdown)"
-enable_optimization = "Mặc định bật \"Tối ưu theo loại hình ảnh\""
-optimization_type_label = "Loại tối ưu mặc định:"
 
 # OCR语言设置
 
@@ -526,9 +520,6 @@ tiff_no_alpha = "Không trong suốt"
 extraction_section = "Thiết lập trích xuất ảnh/OCR"
 keep_images = "Mặc định chọn \"Trích xuất hình ảnh\""
 enable_ocr = "Mặc định chọn \"OCR hình ảnh\""
-optimization_section = "Tối ưu hóa (Bố cục → Markdown)"
-enable_optimization = "Mặc định bật \"Tối ưu theo loại bố cục\""
-optimization_type_label = "Loại tối ưu mặc định:"
 dpi_section = "Thiết lập DPI kết xuất"
 dpi_desc = "Đặt DPI (độ phân giải) mặc định khi chuyển tệp bố cục → ảnh"
 render_dpi_label = "DPI kết xuất:"
@@ -1822,11 +1813,30 @@ extended_headings = "Xuất H7–H9. Khi tắt, các tiêu đề này chuyển t
 typed_endnotes = "Giữ phân biệt chú thích chân trang/cuối tài liệu bằng nhãn có kiểu. Khi tắt, chú thích cuối được xuất thành chú thích chân trang thường và báo mất kiểu."
 
 [settings.optimization]
-availability_help = "Loại tối ưu hóa đến từ môi trường chạy hiện tại. Nếu không có loại phù hợp với nhóm đầu vào này, các điều khiển sẽ bị vô hiệu hóa; lỗi khám phá được báo riêng."
+no_default = "Không có (chuyển đổi thông thường)"
+current_default = "Mặc định hiện tại: {name}"
+set_default = "Đặt làm mặc định"
+clear_default = "Bỏ lựa chọn mặc định"
+discovery_failed = "Không tải được các chức năng tối ưu. Hiện chưa thể chọn mặc định mới."
+unavailable = "Tối ưu {name} không khả dụng cho loại đầu vào này trong môi trường hiện tại."
 
-none_available = "Môi trường chạy hiện tại không có loại tối ưu hóa phù hợp với nhóm đầu vào này."
 
 [settings.gongwen]
+description = "Thiết lập riêng lựa chọn mặc định cho công văn và định dạng trường trong mẫu."
+to_markdown_title = "Tài liệu → Markdown"
+to_markdown_description = "Dùng tối ưu công văn làm lựa chọn ban đầu cho tài liệu tương thích, không tự phân loại tệp là công văn. DOCX được xử lý trực tiếp; DOC, WPS, RTF và ODT cần bộ chuyển đổi tài liệu khả dụng."
+document_settings = "Trích xuất, đánh số và bảng trong tài liệu"
+from_markdown_title = "Markdown → Tài liệu"
 title = "Công văn"
 fields_label = "Định dạng trường công văn Trung Quốc"
 fields_help = "Định dạng phụ lục, nơi nhận bản sao, ngày văn bản, ngày phát hành và ghi chú trong mẫu Word; xóa các trường trống theo quy tắc. Chỗ giữ chỗ phụ lục phải nằm trong một đoạn riêng ở nội dung hoặc ô bảng. Không hỗ trợ đầu trang, chân trang, hộp văn bản hay vị trí giữa câu. Khi tắt, dùng cách điền thông thường và dấu phân cách danh sách chung."
+
+[settings.invoice]
+title = "Hóa đơn"
+description = "Đặt lựa chọn ban đầu để trích xuất hóa đơn tiếng Trung. Tệp không được tự phân loại là hóa đơn; có thể đổi lựa chọn mỗi lần chuyển đổi."
+layout_title = "PDF / OFD → Markdown"
+layout_description = "PDF quét cần bật OCR trong cài đặt tệp đầu vào có bố cục cố định. OFD đọc văn bản và cấu trúc sẵn có, không thực hiện OCR cho nội dung quét."
+layout_settings = "Cài đặt trích xuất PDF và OCR"
+image_title = "Ảnh → Markdown"
+image_description = "Ảnh hóa đơn luôn dùng OCR với cài đặt ngôn ngữ OCR dùng chung."
+ocr_settings = "Cài đặt ngôn ngữ OCR dùng chung"

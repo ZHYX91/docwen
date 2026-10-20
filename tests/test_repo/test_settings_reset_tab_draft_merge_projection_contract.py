@@ -40,6 +40,8 @@ def test_reset_tab_draft_merge_stays_model_owned_and_preserves_unrelated_drafts(
         "spreadsheet",
         "image",
         "layout",
+        "gongwen",
+        "invoice",
         "link",
         "formatting",
         "output",
@@ -71,9 +73,6 @@ def test_reset_tab_draft_merge_stays_model_owned_and_preserves_unrelated_drafts(
     assert "source_may_have_changed = before_source is None or after_source != before_source" in reconcile
     assert "group is None or (operation_succeeded and group not in _RESET_GROUP_DRAFT_PATHS)" in reconcile
     assert "self._merge_group_reset_from_raw(" in reconcile
-    assert "source_paths = _changed_model_paths(before, after)" in merge
-    assert "reset_paths = set(source_paths)" in merge
-    assert "reset_paths.update(_RESET_GROUP_DRAFT_PATHS.get(group, ()))" in merge
     assert "draft_paths = _changed_model_paths(previous_snapshot, previous_draft)" in merge
     assert "if any(_model_paths_overlap(path, reset_path) for reset_path in reset_paths):" in merge
     assert "_write_model_path(merged, path, _read_model_path(previous_draft, path))" in merge

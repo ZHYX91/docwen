@@ -74,6 +74,15 @@ _SPECIAL_CONVERSION_ALLOWED_BACKENDS: dict[str, tuple[str, ...]] = {
     "pdf_to_office": ("msoffice_word", "libreoffice"),
 }
 
+_OPTIMIZATION_DEFAULT_CATEGORIES = frozenset({"document", "layout", "image"})
+
+# The same input default may later be chosen by another optimization page.
+# A page owns the value only while its resource is selected.
+_RESET_GROUP_OPTIMIZATION_DEFAULTS: dict[str, tuple[tuple[str, str], ...]] = {
+    "gongwen": (("document", "gongwen"),),
+    "invoice": (("layout", "invoice_cn"), ("image", "invoice_cn")),
+}
+
 # GUI-model leaves owned by each Reset Tab action. Runtime remains the source
 # of truth for physical files/dotted keys; this map only describes which draft
 # values belong to each visible tab so a reset can preserve unrelated drafts.
@@ -97,7 +106,6 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("text", "heading_merge_mode"),
         ("text", "heading_merge_punctuation"),
         ("text", "list_separator"),
-        ("text", "gongwen_fields_enabled"),
         ("text", "md_body_format"),
         ("text", "md_heading_format"),
         ("text", "md_table_header_format"),
@@ -125,8 +133,6 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("conversion_defaults", "document", "to_md_remove_numbering"),
         ("conversion_defaults", "document", "to_md_add_numbering"),
         ("conversion_defaults", "document", "to_md_default_scheme"),
-        ("conversion_defaults", "document", "to_md_enable_optimization"),
-        ("conversion_defaults", "document", "to_md_optimization_type"),
     ),
     "spreadsheet": (
         ("conversion_defaults", "spreadsheet", "to_md_keep_images"),
@@ -134,14 +140,22 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("conversion_defaults", "spreadsheet", "to_md_table_merge_export_strategy"),
         ("conversion_defaults", "spreadsheet", "merge_mode"),
     ),
-    "image": (("conversion_defaults", "image"),),
+    "image": (
+        ("conversion_defaults", "image", "to_md_keep_images"),
+        ("conversion_defaults", "image", "to_md_enable_ocr"),
+        ("conversion_defaults", "image", "compress_mode"),
+        ("conversion_defaults", "image", "size_limit"),
+        ("conversion_defaults", "image", "size_unit"),
+        ("conversion_defaults", "image", "pdf_quality"),
+        ("conversion_defaults", "image", "tiff_mode"),
+    ),
     "layout": (
         ("conversion_defaults", "layout", "to_md_keep_images"),
         ("conversion_defaults", "layout", "to_md_enable_ocr"),
-        ("conversion_defaults", "layout", "to_md_enable_optimization"),
-        ("conversion_defaults", "layout", "to_md_optimization_type"),
         ("conversion_defaults", "layout", "render_dpi"),
     ),
+    "gongwen": (("text", "gongwen_fields_enabled"),),
+    "invoice": (),
     "link": (("link",),),
     "formatting": (("formatting",),),
     "output": (("output",),),
@@ -331,10 +345,6 @@ class SettingsViewModel(QObject):
 
     config_reloaded = Signal()
     """Emitted after config is reloaded from source (after Reset)."""
-
-    optimization_types_changed = Signal(dict)
-    """Emitted when localization-resolved optimization types are ready:
-    {type_id: localized_display_name}."""
 
     # ── Construction ────────────────────────────────────────────────────────
 
@@ -671,6 +681,31 @@ class SettingsViewModel(QObject):
 
     # ── Localized optimization types ────────────────────────────────────────
 
+    def get_default_optimization(self, category: str) -> str:
+        """Return the sole default resource for one supported input category."""
+        if category not in _OPTIMIZATION_DEFAULT_CATEGORIES:
+            raise ValueError(f"Unsupported optimization default category: {category}")
+        with QMutexLocker(self._mutex):
+            data = getattr(self._config.conversion_defaults, category)
+            value = data.get("to_md_optimization", "none")
+        return value if isinstance(value, str) and value else "none"
+
+    def set_default_optimization(self, category: str, resource_id: str) -> bool:
+        """Choose one available resource, replacing this category's previous choice."""
+        self.get_default_optimization(category)
+        choices = self.get_optimization_choices_result(source_category=category)
+        if choices.get(resource_id) is None:
+            return False
+        self.set_conversion_default(category, "to_md_optimization", resource_id)
+        return True
+
+    def clear_default_optimization(self, category: str, resource_id: str) -> bool:
+        """Clear only this page's current choice, including an unavailable resource."""
+        if self.get_default_optimization(category) != resource_id:
+            return False
+        self.set_conversion_default(category, "to_md_optimization", "none")
+        return True
+
     def get_optimization_choices_result(
         self,
         locale: str | None = None,
@@ -815,9 +850,9 @@ class SettingsViewModel(QObject):
     ) -> None:
         """Merge one immediate Reset Tab result without losing other drafts.
 
-        The persisted baseline always follows the reconciled source. The draft
-        takes actual before/after source changes plus, on success, every visible
-        model leaf owned by the target group. Unrelated draft leaves survive.
+        The persisted baseline always follows the reconciled source. Only the
+        target group's owned leaves discard drafts; concurrent writes to other
+        pages update the Cancel baseline without replacing unsaved edits.
         """
         after = self._map_raw_to_config(after_source)
         if before_source is not None:
@@ -827,14 +862,32 @@ class SettingsViewModel(QObject):
                 baseline = self._persisted_baseline if self._persisted_baseline is not None else self._snapshot
                 before = deepcopy(baseline)
 
-        source_paths = _changed_model_paths(before, after)
-        reset_paths = set(source_paths)
+        owned_paths = set(_RESET_GROUP_DRAFT_PATHS.get(group, ()))
+        conditional_defaults = _RESET_GROUP_OPTIMIZATION_DEFAULTS.get(group, ())
         if operation_succeeded:
-            reset_paths.update(_RESET_GROUP_DRAFT_PATHS.get(group, ()))
+            reset_paths = set(owned_paths)
+        else:
+            owned_paths.update(
+                ("conversion_defaults", category, "to_md_optimization") for category, _resource in conditional_defaults
+            )
+            reset_paths = {
+                path
+                for path in _changed_model_paths(before, after)
+                if any(_model_paths_overlap(path, owned) for owned in owned_paths)
+            }
 
         with QMutexLocker(self._mutex):
             previous_draft = deepcopy(self._config)
             previous_snapshot = deepcopy(self._snapshot)
+            for category, resource_id in conditional_defaults:
+                path = ("conversion_defaults", category, "to_md_optimization")
+                if _read_model_path(previous_draft, path) == resource_id:
+                    if operation_succeeded:
+                        reset_paths.add(path)
+                else:
+                    # Keep another page's unsaved choice even when this reset
+                    # removed our resource from the persisted configuration.
+                    reset_paths = {key for key in reset_paths if not _model_paths_overlap(path, key)}
             draft_paths = _changed_model_paths(previous_snapshot, previous_draft)
             merged = deepcopy(after)
             for path in sorted(draft_paths, key=lambda item: (len(item), item)):
@@ -1437,8 +1490,7 @@ class SettingsViewModel(QObject):
                 "to_md_remove_numbering",
                 "to_md_add_numbering",
                 "to_md_default_scheme",
-                "to_md_enable_optimization",
-                "to_md_optimization_type",
+                "to_md_optimization",
                 "to_md_table_merge_export_strategy",
             ),
             "spreadsheet": (
@@ -1450,8 +1502,7 @@ class SettingsViewModel(QObject):
             "image": (
                 "to_md_keep_images",
                 "to_md_enable_ocr",
-                "to_md_enable_optimization",
-                "to_md_optimization_type",
+                "to_md_optimization",
                 "compress_mode",
                 "size_limit",
                 "size_unit",
@@ -1461,8 +1512,7 @@ class SettingsViewModel(QObject):
             "layout": (
                 "to_md_keep_images",
                 "to_md_enable_ocr",
-                "to_md_enable_optimization",
-                "to_md_optimization_type",
+                "to_md_optimization",
                 "render_dpi",
             ),
             "other": (

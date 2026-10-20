@@ -1,7 +1,4 @@
-"""Layout settings tab — extraction, optimization, DPI, software priority.
-
-Matches old LayoutTab (DynamicSettingsTab + 1 software priority QListWidget).
-"""
+"""Shared fixed-layout extraction, OCR and render-DPI settings."""
 
 from __future__ import annotations
 
@@ -30,29 +27,6 @@ class LayoutTab(DynamicSettingsTab):
                         "type": "checkbox",
                         "text": t("settings.layout.enable_ocr", "Enable OCR on images"),
                         "tooltip": "",
-                    },
-                ],
-            },
-            {
-                "title": t("settings.layout.optimization_section", "Optimization"),
-                "description": t(
-                    "settings.optimization.availability_help",
-                    "Optimization types come from the current runtime. If none apply to this input category, "
-                    "the controls are disabled; discovery failures are reported separately.",
-                ),
-                "presentation": "card",
-                "fields": [
-                    {
-                        "key": "to_md_enable_optimization",
-                        "type": "checkbox",
-                        "text": t("settings.layout.enable_optimization", "Enable content optimization"),
-                        "tooltip": "",
-                    },
-                    {
-                        "key": "to_md_optimization_type",
-                        "type": "combobox",
-                        "label": t("settings.layout.optimization_type_label", "Optimization Type:"),
-                        "items": [],
                     },
                 ],
             },

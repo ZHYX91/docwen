@@ -39,10 +39,15 @@ class ConfigFileSpec:
 
 @dataclass(frozen=True)
 class ConfigGroupResetPlan:
-    """Physical files and precise values owned by one settings reset group."""
+    """Files and values owned by a reset group, with optional current-value guards.
+
+    Conditional entries are ``(dotted_key, expected_current_value)`` pairs.
+    Runtime evaluates them from persisted files inside the reset transaction.
+    """
 
     files: tuple[str, ...]
     dotted_keys: tuple[str, ...]
+    conditional_dotted_keys: tuple[tuple[str, str], ...] = ()
 
 
 CONFIG_FILES: tuple[ConfigFileSpec, ...] = (
@@ -52,13 +57,13 @@ CONFIG_FILES: tuple[ConfigFileSpec, ...] = (
     ConfigFileSpec("conversion.toml", ("conversion",), ("formatting",)),
     ConfigFileSpec("export.toml", ("export",), ("export", "conversion_defaults")),
     ConfigFileSpec("other.toml", ("other",), ("other", "conversion_defaults")),
-    ConfigFileSpec("document.toml", ("document",), ("document", "conversion_defaults")),
+    ConfigFileSpec("document.toml", ("document",), ("document", "conversion_defaults", "gongwen")),
     ConfigFileSpec("text.toml", ("text",), ("text", "conversion_defaults")),
-    ConfigFileSpec("layout.toml", ("layout",), ("layout", "conversion_defaults")),
+    ConfigFileSpec("layout.toml", ("layout",), ("layout", "conversion_defaults", "invoice")),
     ConfigFileSpec("spreadsheet.toml", ("spreadsheet",), ("spreadsheet", "conversion_defaults")),
-    ConfigFileSpec("image.toml", ("image",), ("image", "conversion_defaults")),
+    ConfigFileSpec("image.toml", ("image",), ("image", "conversion_defaults", "invoice")),
     ConfigFileSpec("ocr.toml", ("ocr",), ("export",)),
-    ConfigFileSpec("template_fill.toml", ("template_fill",), ("text",)),
+    ConfigFileSpec("template_fill.toml", ("template_fill",), ("text", "gongwen")),
     ConfigFileSpec("link.toml", ("link",), ("link",)),
     ConfigFileSpec("software.toml", ("software",), ("software",)),
     ConfigFileSpec("optimize.toml", ("optimize",), ()),
@@ -116,7 +121,6 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "conversion.md_to_docx.heading_merge_mode",
         "conversion.md_to_docx.heading_merge_punctuation",
         "template_fill.list_separator",
-        "template_fill.gongwen_fields_enabled",
         "document.style.table.md_to_docx.table_style_mode",
         "document.style.table.md_to_docx.builtin_style_key",
         "document.style.table.md_to_docx.custom_style_name",
@@ -180,8 +184,6 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "document.to_md_remove_numbering",
         "document.to_md_add_numbering",
         "document.to_md_default_scheme",
-        "document.to_md_enable_optimization",
-        "document.to_md_optimization_type",
     ),
     "spreadsheet": (
         "spreadsheet.to_md_keep_images",
@@ -192,10 +194,18 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
     "layout": (
         "layout.to_md_keep_images",
         "layout.to_md_enable_ocr",
-        "layout.to_md_enable_optimization",
-        "layout.to_md_optimization_type",
         "layout.render_dpi",
     ),
+    "image": (
+        "image.to_md_keep_images",
+        "image.to_md_enable_ocr",
+        "image.compress_mode",
+        "image.size_limit",
+        "image.size_unit",
+        "image.pdf_quality",
+        "image.tiff_mode",
+    ),
+    "gongwen": ("template_fill.gongwen_fields_enabled",),
     "link": (
         "link.format.image_link_style",
         "link.format.md_file_link_style",
@@ -229,6 +239,15 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "logger.console_colorize",
         "logger.directory_mode",
         "logger.directory",
+    ),
+}
+
+
+_GROUP_RESET_CONDITIONAL_DOTTED_KEYS: dict[str, tuple[tuple[str, str], ...]] = {
+    "gongwen": (("document.to_md_optimization", "gongwen"),),
+    "invoice": (
+        ("image.to_md_optimization", "invoice_cn"),
+        ("layout.to_md_optimization", "invoice_cn"),
     ),
 }
 
@@ -293,6 +312,7 @@ def reset_plan_for_group(group: str) -> ConfigGroupResetPlan:
 
     specs = specs_for_group(group)
     dotted_keys = _GROUP_RESET_DOTTED_KEYS.get(group, ())
+    conditional_dotted_keys = _GROUP_RESET_CONDITIONAL_DOTTED_KEYS.get(group, ())
     group_paths = {spec.rel_path for spec in specs}
     preserved_paths = _GROUP_RESET_PRESERVED_FILES.get(group, frozenset())
     unknown_preserved_paths = preserved_paths - group_paths
@@ -300,7 +320,7 @@ def reset_plan_for_group(group: str) -> ConfigGroupResetPlan:
         unknown = ", ".join(sorted(unknown_preserved_paths))
         raise RuntimeError(f"Reset-preserved files are not owned by {group!r}: {unknown}")
     partial_group_paths: set[str] = set()
-    for dotted_key in dotted_keys:
+    for dotted_key in (*dotted_keys, *(key for key, _expected in conditional_dotted_keys)):
         spec = spec_for_dotted_key(dotted_key)
         if spec is None:
             raise RuntimeError(f"Reset key is not registered: {dotted_key}")
@@ -312,7 +332,7 @@ def reset_plan_for_group(group: str) -> ConfigGroupResetPlan:
         for spec in specs
         if spec.rel_path not in partial_group_paths and spec.rel_path not in preserved_paths
     )
-    return ConfigGroupResetPlan(files=files, dotted_keys=dotted_keys)
+    return ConfigGroupResetPlan(files=files, dotted_keys=dotted_keys, conditional_dotted_keys=conditional_dotted_keys)
 
 
 def wrap_namespace(data: dict[str, Any], namespace: tuple[str, ...]) -> dict[str, Any]:

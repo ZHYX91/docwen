@@ -437,9 +437,6 @@ enable_ocr = "Ativar OCR"
 enable_ocr_tooltip = "Reconhecimento de texto para imagens."
 
 # 优化设置
-optimization_section = "Otimização (Documento → Markdown)"
-enable_optimization = "Ativar otimização"
-optimization_type_label = "Tipo:"
 
 # 软件优先级
 word_processors_label = "Processador de texto"
@@ -496,9 +493,6 @@ extraction_section = "Extração/OCR"
 keep_images = "Manter imagens"
 enable_ocr = "Ativar OCR"
 size_unit_label = "Unidade:"
-optimization_section = "Otimização (Imagem → Markdown)"
-enable_optimization = "Ativar \"Otimizar por tipo de imagem\" por padrão"
-optimization_type_label = "Tipo de otimização padrão:"
 
 # OCR语言设置
 
@@ -525,9 +519,6 @@ tiff_no_alpha = "Remover transparência"
 extraction_section = "Extração/OCR"
 keep_images = "Extrair imagens"
 enable_ocr = "Ativar OCR"
-optimization_section = "Otimização (Layout → Markdown)"
-enable_optimization = "Ativar \"Otimizar por tipo de layout\" por padrão"
-optimization_type_label = "Tipo de otimização padrão:"
 dpi_section = "DPI de renderização"
 dpi_desc = "DPI para renderização de layout."
 render_dpi_label = "DPI de renderização:"
@@ -1820,11 +1811,30 @@ extended_headings = "Gera H7–H9. Desativado, esses títulos viram H6 e a perda
 typed_endnotes = "Preserva a distinção entre notas de rodapé e de fim com rótulos tipados. Desativado, notas de fim são exportadas como notas de rodapé comuns e a perda é informada."
 
 [settings.optimization]
-availability_help = "Os tipos de otimização vêm do ambiente de execução atual. Se nenhum servir para esta categoria de entrada, os controles são desativados; falhas de descoberta são mostradas separadamente."
+no_default = "Nenhuma (conversão comum)"
+current_default = "Padrão atual: {name}"
+set_default = "Definir como padrão"
+clear_default = "Remover seleção padrão"
+discovery_failed = "Não foi possível carregar os recursos de otimização. Não é possível escolher um novo padrão no momento."
+unavailable = "A otimização {name} não está disponível para esta categoria de entrada no ambiente atual."
 
-none_available = "Não há tipos de otimização disponíveis para esta categoria de entrada no ambiente atual."
 
 [settings.gongwen]
+description = "Configure separadamente o padrão para documentos oficiais e a formatação dos campos do modelo."
+to_markdown_title = "Documento → Markdown"
+to_markdown_description = "Use a otimização de documentos oficiais como seleção inicial para documentos compatíveis, sem classificar os arquivos automaticamente. DOCX é processado diretamente; DOC, WPS, RTF e ODT precisam de um conversor de documentos disponível."
+document_settings = "Extração, numeração e tabelas de documentos"
+from_markdown_title = "Markdown → Documento"
 title = "Documentos oficiais"
 fields_label = "Formatar campos de documentos oficiais chineses"
 fields_help = "Formata anexos, destinatários de cópias, datas e notas em modelos do Word e remove os campos vazios previstos. O marcador de anexos deve ocupar um parágrafo próprio no corpo ou em uma célula. Cabeçalhos, rodapés, caixas de texto e marcadores no meio do texto não são aceitos. Quando desativado, aplicam-se o preenchimento normal e o separador geral de listas."
+
+[settings.invoice]
+title = "Faturas"
+description = "Defina a seleção inicial para extrair faturas chinesas. Os arquivos não são classificados como faturas; a seleção pode ser alterada em cada conversão."
+layout_title = "PDF / OFD → Markdown"
+layout_description = "PDFs digitalizados precisam do OCR ativado nas configurações de arquivos de layout fixo recebidos. OFD lê o texto e a estrutura existentes; não aplica OCR ao conteúdo digitalizado."
+layout_settings = "Extração de PDF e configurações de OCR"
+image_title = "Imagem → Markdown"
+image_description = "Imagens de faturas sempre usam OCR com a configuração de idioma compartilhada."
+ocr_settings = "Configuração compartilhada do idioma de OCR"
