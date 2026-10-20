@@ -179,26 +179,9 @@ class SettingsNavigationGroup(NamedTuple):
 # These built-in groups own navigation order, not page construction or config.
 # Empty groups add neither a heading nor a placeholder page.
 NAVIGATION_GROUPS = (
-    SettingsNavigationGroup(
-        "general",
-        (
-            "general",
-            "text",
-            "document",
-            "spreadsheet",
-            "image",
-            "layout",
-            "other",
-            "proofread",
-            "formatting",
-            "templates",
-            "link",
-            "export",
-            "software",
-            "output",
-            "logging",
-        ),
-    ),
+    SettingsNavigationGroup("general", ("general", "output", "templates", "software", "logging")),
+    SettingsNavigationGroup("inputs", ("text", "document", "spreadsheet", "image", "layout", "other")),
+    SettingsNavigationGroup("content", ("formatting", "link", "export", "proofread")),
     SettingsNavigationGroup("optimizations", ("gongwen", "invoice")),
 )
 TAB_KEYS = [key for group in NAVIGATION_GROUPS for key in group.page_keys]
@@ -207,6 +190,8 @@ TAB_KEYS = [key for group in NAVIGATION_GROUPS for key in group.page_keys]
 def _navigation_group_title(key: str) -> str:
     return {
         "general": t("settings.navigation.general"),
+        "inputs": t("settings.navigation.inputs"),
+        "content": t("settings.navigation.content"),
         "optimizations": t("settings.navigation.optimizations"),
     }[key]
 

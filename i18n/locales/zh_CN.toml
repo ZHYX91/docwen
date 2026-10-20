@@ -201,15 +201,17 @@ invalid_tab = "未知设置选项卡：{tab}"
 title = "设置"
 
 [settings.navigation]
-general = "常规设置"
-optimizations = "内容优化"
+general = "基本设置"
+optimizations = "专项优化"
 
 # 选项卡标题
+inputs = "输入类型"
+content = "内容处理"
 [settings.tabs]
 general = "通用"
 text = "传入文本"
 proofread = "校对"
-export = "OCR 与 Markdown 资源"
+export = "OCR 与图片"
 document = "传入文档"
 spreadsheet = "传入表格"
 image = "传入图片"
@@ -414,6 +416,7 @@ base64_compress_tooltip = "Base64 会让图片体积变大，部分编辑器可�
 base64_compress_enabled = "超大图片自动压缩"
 base64_compress_threshold_label = "压缩阈值"
 base64_compress_threshold_tooltip = "压缩阈值（KB）：超过该大小的图片会先压缩再内联。"
+description = "文字识别与 Markdown 图文输出。各输入页决定是否默认启用 OCR；图片格式转换和压缩仍在“传入图片”中。"
 
 
 [settings.optimization_types]
@@ -634,7 +637,7 @@ horizontal_rule_tooltip = "Word 分隔线（Horizontal Rule 1/2/3 样式）转�
 
 # 语法选择
 syntax_selection = "语法选择"
-syntax_selection_tooltip = "选择文档转 Markdown 时输出的语法。输入时会识别 DocWen 支持的相应 Markdown 语法；可选方言由上方扩展开关控制。"
+syntax_selection_tooltip = "以下输出样式目前主要用于普通 Word 转 Markdown。表格、图片、PDF/OFD 及专项优化尚未全部采用这些选项；读取 Markdown 不受这里的输出样式选择限制。"
 bold_syntax_label = "粗体语法:"
 bold_syntax_tooltip = "选择粗体的输出语法格式"
 italic_syntax_label = "斜体语法:"
@@ -696,6 +699,9 @@ list_separator_tooltip = "模板填充时，若 YAML 字段值为列表，使用
 # 格式处理选项
 mermaid_output_group = "输出方式"
 mermaid_renderer_group = "本地渲染器"
+output_section = "生成 Markdown"
+word_mappings_title = "Word 专用映射与生成"
+
 [settings.formatting.options]
 preserve_format = "保留格式"
 discard_format = "丢弃格式"
@@ -1708,11 +1714,11 @@ title = "标题"
 subtitle = "副标题"
 
 [settings.markdown_extensions]
-description = "分别选择传入 Markdown 时识别的扩展，以及生成 Markdown 时使用的扩展。原文件不会被改写。"
+description = "统一管理生成和读取 Markdown 的规则。输出约定面向所有来源，各转换路径的支持程度不同。Word 专用映射单独列在下方；源文件不会被改写。"
 input = "传入 Markdown：识别扩展"
 output = "生成 Markdown：使用扩展"
 input_hint = "关闭时按普通文本、普通表格和脚注处理。"
-output_hint = "关闭时使用普通 Markdown；不能表达的表格结构、标题层级和尾注类型会提示损失。"
+output_hint = "普通 Word 导出可应用这些扩展，电子表格导出支持结构表格。其他来源及专项优化尚未全面接入；开启扩展不会新增识别能力。"
 structural_tables = "Structural Tables 结构表格"
 captions_references = "Number Suite 题注和交叉引用"
 extended_headings = "七至九级标题（H7–H9）"

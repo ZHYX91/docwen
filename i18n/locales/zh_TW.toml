@@ -147,15 +147,17 @@ invalid_tab = "未知設定頁：{tab}"
 title = "設定"
 
 [settings.navigation]
-general = "一般設定"
-optimizations = "內容最佳化"
+general = "基本設定"
+optimizations = "專項最佳化"
 
 # 选项卡标题
+inputs = "輸入類型"
+content = "內容處理"
 [settings.tabs]
 general = "通用"
 text = "傳入文字"
 proofread = "校對"
-export = "OCR 與 Markdown 資源"
+export = "OCR 與圖片"
 document = "傳入文件"
 spreadsheet = "傳入表格"
 image = "傳入圖片"
@@ -360,6 +362,7 @@ base64_compress_tooltip = "Base64 會讓圖片體積變大，部分編輯器可�
 base64_compress_enabled = "超大圖片自動壓縮"
 base64_compress_threshold_label = "壓縮閾值"
 base64_compress_threshold_tooltip = "壓縮閾值（KB）：超過該大小的圖片會先壓縮再內嵌。"
+description = "文字辨識與 Markdown 圖文輸出。各輸入頁決定是否預設啟用 OCR；圖片格式轉換與壓縮仍在「傳入圖片」中。"
 
 
 [settings.optimization_types]
@@ -580,7 +583,7 @@ horizontal_rule_tooltip = "Word 分隔線（Horizontal Rule 1/2/3 樣式）轉�
 
 # 语法选择
 syntax_selection = "語法選擇"
-syntax_selection_tooltip = "選擇文件轉 Markdown 時輸出的語法。輸入時會辨識 DocWen 支援的相應 Markdown 語法；可選方言由上方延伸開關控制。"
+syntax_selection_tooltip = "以下輸出樣式目前主要用於一般 Word 轉 Markdown。試算表、圖片、PDF/OFD 及專項最佳化尚未全部採用這些選項；讀取 Markdown 不受此處的輸出樣式選擇限制。"
 bold_syntax_label = "粗體語法:"
 bold_syntax_tooltip = "選擇粗體的輸出語法格式"
 italic_syntax_label = "斜體語法:"
@@ -642,6 +645,9 @@ list_separator_tooltip = "範本填入時，若 YAML 欄位值為清單，使用
 # 格式处理选项
 mermaid_output_group = "輸出方式"
 mermaid_renderer_group = "本機渲染器"
+output_section = "產生 Markdown"
+word_mappings_title = "Word 專用對應與產生"
+
 [settings.formatting.options]
 preserve_format = "保留格式"
 discard_format = "丟棄格式"
@@ -1713,11 +1719,11 @@ version_offline = "離線版"
 window_title = "DocWen 離線版"
 
 [settings.markdown_extensions]
-description = "分別選擇讀取與產生 Markdown 時使用的擴充語法。原始檔不會被改寫。"
+description = "統一管理產生與讀取 Markdown 的規則。輸出約定適用於所有來源，各轉換路徑的支援程度不同。Word 專用對應另列於下方；原始檔案不會被改寫。"
 input = "傳入 Markdown：辨識擴充語法"
 output = "產生 Markdown：使用擴充語法"
 input_hint = "關閉時以一般文字、一般表格和註腳處理。"
-output_hint = "關閉時使用一般 Markdown，並提示無法表達的結構或類型。"
+output_hint = "一般 Word 匯出可套用這些擴充，試算表匯出支援結構表格。其他來源與專項最佳化尚未全面接入；開啟擴充不會新增辨識能力。"
 structural_tables = "Structural Tables 結構表格"
 captions_references = "Number Suite 題注和交互參照"
 extended_headings = "七至九級標題（H7–H9）"

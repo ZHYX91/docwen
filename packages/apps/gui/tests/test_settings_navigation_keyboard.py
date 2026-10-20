@@ -73,12 +73,12 @@ def test_arrows_keep_sidebar_focus_enter_does_not_submit_and_tab_enters_content(
     highlight = frame.palette().color(QPalette.ColorRole.Highlight)
     assert any(focus_image.pixelColor(focus_image.width() // 2, y) == highlight for y in range(4))
     QTest.keyClick(first, Qt.Key.Key_Down)
-    assert dialog.current_section() == "text"
-    assert qapp.focusWidget() is _item(dialog, "text")
-    assert frame.isVisible() and frame.parentWidget() is _item(dialog, "text")
-    assert frame.geometry() == _item(dialog, "text").rect()
+    assert dialog.current_section() == "output"
+    assert qapp.focusWidget() is _item(dialog, "output")
+    assert frame.isVisible() and frame.parentWidget() is _item(dialog, "output")
+    assert frame.geometry() == _item(dialog, "output").rect()
     assert not first.focusPolicy() & Qt.FocusPolicy.TabFocus
-    QTest.keyClick(_item(dialog, "text"), Qt.Key.Key_End)
+    QTest.keyClick(_item(dialog, "output"), Qt.Key.Key_End)
     assert dialog.current_section() == "invoice"
     assert qapp.focusWidget() is _item(dialog, "invoice")
     QTest.keyClick(_item(dialog, "invoice"), Qt.Key.Key_Return)
@@ -100,10 +100,10 @@ def test_compact_selector_can_traverse_multiple_pages_without_focus_escaping(dia
     assert selector is not None and selector.isVisible()
     selector.setFocus(Qt.FocusReason.TabFocusReason)
     QTest.keyClick(selector, Qt.Key.Key_Down)
-    assert dialog.current_section() == "text"
+    assert dialog.current_section() == "output"
     assert qapp.focusWidget() is selector
     QTest.keyClick(selector, Qt.Key.Key_Down)
-    assert dialog.current_section() == "document"
+    assert dialog.current_section() == "templates"
     assert qapp.focusWidget() is selector
     assert selector.accessibleName() == t("settings.title")
 
@@ -195,7 +195,7 @@ def test_group_headings_do_not_add_pages_or_keyboard_stops(qapp, qtbot, monkeypa
         selector = window._compact_navigation
         assert sidebar is not None and sidebar.isVisible()
         assert selector.count() == len(TAB_KEYS) == window._tab_widget.count()
-        for key in ("general", "optimizations"):
+        for key in ("general", "inputs", "content", "optimizations"):
             heading = window.findChild(QLabel, f"settingsNavGroup_{key}")
             assert heading is not None and heading.text() == t(f"settings.navigation.{key}")
             assert heading.focusPolicy() == Qt.FocusPolicy.NoFocus
@@ -203,10 +203,10 @@ def test_group_headings_do_not_add_pages_or_keyboard_stops(qapp, qtbot, monkeypa
         assert separator is not None and separator.focusPolicy() == Qt.FocusPolicy.NoFocus
         assert separator.height() == 1
 
-        window.activate_section("logging")
-        last_general_item = _item(window, "logging")
-        last_general_item.setFocus(Qt.FocusReason.TabFocusReason)
-        QTest.keyClick(last_general_item, Qt.Key.Key_Down)
+        window.activate_section("proofread")
+        last_content_item = _item(window, "proofread")
+        last_content_item.setFocus(Qt.FocusReason.TabFocusReason)
+        QTest.keyClick(last_content_item, Qt.Key.Key_Down)
         assert window.current_section() == "gongwen"
         assert qapp.focusWidget() is _item(window, "gongwen")
         assert selector.currentData() == "gongwen"
@@ -217,8 +217,8 @@ def test_group_headings_do_not_add_pages_or_keyboard_stops(qapp, qtbot, monkeypa
         assert selector.isVisible() and sidebar.isHidden()
         selector.setFocus(Qt.FocusReason.TabFocusReason)
         QTest.keyClick(selector, Qt.Key.Key_Up)
-        assert window.current_section() == "logging"
-        assert selector.currentText().startswith(t("settings.navigation.general"))
+        assert window.current_section() == "proofread"
+        assert selector.currentText().startswith(t("settings.navigation.content"))
         QTest.keyClick(selector, Qt.Key.Key_Down)
         assert window.current_section() == "gongwen"
         assert selector.currentText().startswith(t("settings.navigation.optimizations"))

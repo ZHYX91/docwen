@@ -6,6 +6,10 @@ This matrix is the current product capability inventory. It describes supported 
 
 Test family names in this table denote their focused shards; for example, `test_config_loader.py` means the collected `test_config_loader_*.py` modules.
 
+Shared Markdown output conventions apply to every source in principle. Current extension/syntax coverage is strongest in ordinary Word export; spreadsheet export supports Structural Tables, while image, fixed-layout, presentation, markup and specialized optimizer routes do not implement every shared choice. These settings do not add recognition capabilities. The route-by-route implementation review is recorded in [settings information architecture](maintenance/proposals/settings-information-architecture.md); it does not establish real-file acceptance for every route.
+
+共享 Markdown 输出约定面向所有输入来源。目前普通 Word 导出的扩展／语法覆盖较完整，表格导出支持 Structural Tables；图片、版式、演示、标记文件及专项优化尚未落实全部共享选项。开启设置不会新增识别能力；逐路线代码边界见上述实现记录，不表示所有路线真实文件验收通过。
+
 | ID | Area / 领域 | Current behavior / 当前行为 | Owner / 所有者 | Implementation / 实现 | Tests / 测试 | State / 状态 |
 | --- | --- | --- | --- | --- | --- | --- |
 | FEAT-LANG-001 | configuration | 界面语言与独立 conversion.output_locale 分离，新 profile 输出默认 zh_CN，旧 profile 一次性冻结已保存的 GUI locale；显式任务 locale 优先。生成标签、文档样式、校对和 OCR auto 读取输出语言；模板 ID 与手动选择独立。见 [语言职责](specs/task-language.md) | runtime + GUI + plugins | config/task_language.py + config/loader.py + widgets/settings/general_tab.py | test_task_output_language.py + test_settings_general_language_catalog.py | implemented（源码与宿主分别验证） |

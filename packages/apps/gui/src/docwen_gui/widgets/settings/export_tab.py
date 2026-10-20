@@ -37,6 +37,7 @@ class ExportTab(BaseSettingsTab):
         self._load_values()
 
     def _create_interface(self) -> None:
+        self.set_tab_description(t("settings.export.description"))
         _ocr_card, ocr_form = self.add_settings_card(
             t("settings.ocr.section", "OCR Recognition"), object_name="exportOcrLanguageCard"
         )

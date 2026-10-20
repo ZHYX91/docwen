@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Literal
 from typing import cast as _cast
 
-from PySide6.QtWidgets import QCheckBox, QComboBox, QPushButton
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QPushButton
 
 from docwen_core.markdown_extensions import EXTENSION_NAMES
 
@@ -144,73 +146,18 @@ class FormattingTab(BaseSettingsTab):
                 "Choose which Markdown extensions to recognize and generate. Your source files are never rewritten.",
             )
         )
-        for direction in ("input", "output"):
-            _card, form = self.add_settings_card(
-                t(f"settings.markdown_extensions.{direction}", direction.title()),
-                t(f"settings.markdown_extensions.{direction}_hint", "Extensions are optional."),
-                object_name=f"markdownExtensions{direction.title()}Card",
-            )
-            for name in EXTENSION_NAMES:
-                label = t(f"settings.markdown_extensions.{name}", name.replace("_", " "))
-                help_text = t(
-                    f"settings.markdown_extensions.{direction}_help.{name}",
-                    _EXTENSION_HELP_FALLBACKS[(direction, name)],
-                )
-                help_widget, checkbox = self._create_toggle_with_info(label, help_text)
-                checkbox.setObjectName(f"markdownExtension{direction.title()}{name.title().replace('_', '')}")
-                self._extension_checks[(direction, name)] = checkbox
-                form.addRow(help_widget)
-                checkbox.toggled.connect(self._save_extensions)
-            preset = QPushButton(t("settings.markdown_extensions.obsidian_preset", "Use Obsidian extensions"))
-            preset.setObjectName(f"markdownExtensions{direction.title()}Preset")
-            preset.clicked.connect(lambda _checked=False, selected=direction: self._apply_extension_preset(selected))
-            form.addRow(preset)
-        # ── MD → Word: ordinary prose paragraph policy ────────────────
-        _paragraph_card, paragraph_form = self.add_settings_card(
-            t("settings.formatting.line_paragraph_section", "Markdown to Word"),
-            object_name="formattingLineParagraphCard",
-        )
-        self._each_line_paragraph = self.create_settings_toggle(
-            t("settings.formatting.each_line_paragraph", "Each line as a paragraph"),
-            t(
-                "settings.formatting.each_line_paragraph_help",
-                "Create separate Word paragraphs for consecutive ordinary Markdown text lines. "
-                "Explicit hard breaks, headings, lists, quotes, tables and code remain unchanged.",
-            ),
-        )
-        self._each_line_paragraph.setObjectName("formattingEachLineParagraph")
-        self.add_form_row(paragraph_form, "", self._each_line_paragraph)
-        self._each_line_paragraph.toggled.connect(
-            lambda checked: self._vm.set_field(SECTION_FORMATTING, "each_line_paragraph", checked)
-        )
+        self._create_extension_card("output")
 
-        # ── DOCX → MD: Separator Mapping ───────────────────────────────
-        _c2, f2 = self.add_settings_card(
-            f"{t('settings.formatting.docx_to_md_section', 'DOCX to MD')} — {t('settings.formatting.separator_mapping', 'Separator Mapping')}",
-            t("settings.formatting.separator_mapping_tooltip", "Map document separators to Markdown equivalents."),
-            object_name="formattingDocxSeparatorsCard",
-        )
-        self._page_break = self.create_combobox(
-            _sep_options(), t("settings.formatting.page_break_tooltip", "Page break mapping")
-        )
-        self.add_form_row(f2, t("settings.formatting.page_break_label", "Page Break:"), self._page_break)
-        self._section_break = self.create_combobox(
-            _sep_options(), t("settings.formatting.section_break_tooltip", "Section break mapping")
-        )
-        self.add_form_row(f2, t("settings.formatting.section_break_label", "Section Break:"), self._section_break)
-        self._horizontal_rule = self.create_combobox(
-            _sep_options(), t("settings.formatting.horizontal_rule_tooltip", "Horizontal rule mapping")
-        )
-        self.add_form_row(f2, t("settings.formatting.horizontal_rule_label", "Horizontal Rule:"), self._horizontal_rule)
-
-        # ── DOCX → MD: Syntax ──────────────────────────────────────────
+        # ── Shared Markdown output syntax ──────────────────────────────────────────
         _c3, f3 = self.add_settings_card(
-            f"{t('settings.formatting.docx_to_md_section', 'DOCX to MD')} — {t('settings.formatting.syntax_selection', 'Syntax Selection')}",
+            f"{t('settings.formatting.output_section', 'Generate Markdown')} — {t('settings.formatting.syntax_selection', 'Syntax Selection')}",
             t(
                 "settings.formatting.syntax_selection_tooltip",
-                "Choose Markdown syntax variants for formatting elements.",
+                "These output styles currently apply primarily to ordinary Word-to-Markdown conversion. "
+                "Other sources and specialized optimizers do not yet implement all choices. "
+                "These choices do not restrict Markdown input recognition.",
             ),
-            object_name="formattingDocxSyntaxCard",
+            object_name="formattingOutputSyntaxCard",
         )
         self._bold_syntax = self.create_combobox(
             _syntax_bold_options(), t("settings.formatting.bold_syntax_tooltip", "Bold syntax")
@@ -249,6 +196,72 @@ class FormattingTab(BaseSettingsTab):
         )
         self.add_form_row(f3, t("settings.formatting.indent_spaces_label", "Indent:"), self._indent_spaces)
 
+        self._create_extension_card("input")
+
+        mappings_title = QLabel(t("settings.formatting.word_mappings_title"), self._scroll_container)
+        mappings_title.setObjectName("formattingWordMappingsTitle")
+        mappings_title.setProperty("settingsRole", "fieldLabel")
+        mappings_title.setTextFormat(Qt.TextFormat.PlainText)
+        mappings_title.setWordWrap(True)
+        self._scroll_layout.addWidget(mappings_title)
+
+        # ── DOCX → MD: Separator Mapping ───────────────────────────────
+        _c2, f2 = self.add_settings_card(
+            f"{t('settings.formatting.docx_to_md_section', 'DOCX to MD')} — {t('settings.formatting.separator_mapping', 'Separator Mapping')}",
+            t("settings.formatting.separator_mapping_tooltip", "Map document separators to Markdown equivalents."),
+            object_name="formattingDocxSeparatorsCard",
+        )
+        self._page_break = self.create_combobox(
+            _sep_options(), t("settings.formatting.page_break_tooltip", "Page break mapping")
+        )
+        self.add_form_row(f2, t("settings.formatting.page_break_label", "Page Break:"), self._page_break)
+        self._section_break = self.create_combobox(
+            _sep_options(), t("settings.formatting.section_break_tooltip", "Section break mapping")
+        )
+        self.add_form_row(f2, t("settings.formatting.section_break_label", "Section Break:"), self._section_break)
+        self._horizontal_rule = self.create_combobox(
+            _sep_options(), t("settings.formatting.horizontal_rule_tooltip", "Horizontal rule mapping")
+        )
+        self.add_form_row(f2, t("settings.formatting.horizontal_rule_label", "Horizontal Rule:"), self._horizontal_rule)
+
+        # ── MD → DOCX: Separator Mapping ───────────────────────────────
+        _c5, f5 = self.add_settings_card(
+            f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.md_separator_mapping', 'Separator Mapping')}",
+            t("settings.formatting.md_separator_mapping_tooltip", "Map Markdown separators to document equivalents."),
+            object_name="formattingMdSeparatorsCard",
+        )
+        self._dash_sep = self.create_combobox(
+            _word_sep_options(), t("settings.formatting.dash_tooltip", "Dash separator mapping")
+        )
+        self.add_form_row(f5, t("settings.formatting.dash_label", "Dash (---):"), self._dash_sep)
+        self._asterisk_sep = self.create_combobox(
+            _word_sep_options(), t("settings.formatting.asterisk_tooltip", "Asterisk separator mapping")
+        )
+        self.add_form_row(f5, t("settings.formatting.asterisk_label", "Asterisk (***):"), self._asterisk_sep)
+        self._underscore_sep = self.create_combobox(
+            _word_sep_options(), t("settings.formatting.underscore_tooltip", "Underscore separator mapping")
+        )
+        self.add_form_row(f5, t("settings.formatting.underscore_label", "Underscore (___):"), self._underscore_sep)
+
+        # ── MD → Word: ordinary prose paragraph policy ────────────────
+        _paragraph_card, paragraph_form = self.add_settings_card(
+            t("settings.formatting.line_paragraph_section", "Markdown to Word"),
+            object_name="formattingLineParagraphCard",
+        )
+        self._each_line_paragraph = self.create_settings_toggle(
+            t("settings.formatting.each_line_paragraph", "Each line as a paragraph"),
+            t(
+                "settings.formatting.each_line_paragraph_help",
+                "Create separate Word paragraphs for consecutive ordinary Markdown text lines. "
+                "Explicit hard breaks, headings, lists, quotes, tables and code remain unchanged.",
+            ),
+        )
+        self._each_line_paragraph.setObjectName("formattingEachLineParagraph")
+        self.add_form_row(paragraph_form, "", self._each_line_paragraph)
+        self._each_line_paragraph.toggled.connect(
+            lambda checked: self._vm.set_field(SECTION_FORMATTING, "each_line_paragraph", checked)
+        )
+
         # ── MD → DOCX: Mermaid ────────────────────────────────────────
         _c_mermaid, f_mermaid = self.add_settings_card(
             f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.mermaid_title', 'Mermaid diagrams')}",
@@ -282,25 +295,6 @@ class FormattingTab(BaseSettingsTab):
         )
         self._mermaid_controls = MermaidControls(self, f_mermaid, self._vm)
 
-        # ── MD → DOCX: Separator Mapping ───────────────────────────────
-        _c5, f5 = self.add_settings_card(
-            f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.md_separator_mapping', 'Separator Mapping')}",
-            t("settings.formatting.md_separator_mapping_tooltip", "Map Markdown separators to document equivalents."),
-            object_name="formattingMdSeparatorsCard",
-        )
-        self._dash_sep = self.create_combobox(
-            _word_sep_options(), t("settings.formatting.dash_tooltip", "Dash separator mapping")
-        )
-        self.add_form_row(f5, t("settings.formatting.dash_label", "Dash (---):"), self._dash_sep)
-        self._asterisk_sep = self.create_combobox(
-            _word_sep_options(), t("settings.formatting.asterisk_tooltip", "Asterisk separator mapping")
-        )
-        self.add_form_row(f5, t("settings.formatting.asterisk_label", "Asterisk (***):"), self._asterisk_sep)
-        self._underscore_sep = self.create_combobox(
-            _word_sep_options(), t("settings.formatting.underscore_tooltip", "Underscore separator mapping")
-        )
-        self.add_form_row(f5, t("settings.formatting.underscore_label", "Underscore (___):"), self._underscore_sep)
-
         # Wire all combos
         self._wire_combo(self._page_break, "page_break_sep")
         self._wire_combo(self._section_break, "section_break_sep")
@@ -332,6 +326,28 @@ class FormattingTab(BaseSettingsTab):
                 checkbox.setChecked(True)
                 checkbox.blockSignals(False)
         self._save_extensions()
+
+    def _create_extension_card(self, direction: Literal["input", "output"]) -> None:
+        _card, form = self.add_settings_card(
+            t(f"settings.markdown_extensions.{direction}", direction.title()),
+            t(f"settings.markdown_extensions.{direction}_hint", "Extensions are optional."),
+            object_name=f"markdownExtensions{direction.title()}Card",
+        )
+        for name in EXTENSION_NAMES:
+            label = t(f"settings.markdown_extensions.{name}", name.replace("_", " "))
+            help_text = t(
+                f"settings.markdown_extensions.{direction}_help.{name}",
+                _EXTENSION_HELP_FALLBACKS[(direction, name)],
+            )
+            help_widget, checkbox = self._create_toggle_with_info(label, help_text)
+            checkbox.setObjectName(f"markdownExtension{direction.title()}{name.title().replace('_', '')}")
+            self._extension_checks[(direction, name)] = checkbox
+            form.addRow(help_widget)
+            checkbox.toggled.connect(self._save_extensions)
+        preset = QPushButton(t("settings.markdown_extensions.obsidian_preset", "Use Obsidian extensions"))
+        preset.setObjectName(f"markdownExtensions{direction.title()}Preset")
+        preset.clicked.connect(lambda _checked=False, selected=direction: self._apply_extension_preset(selected))
+        form.addRow(preset)
 
     def _wire_combo(self, combo: QComboBox, key: str) -> None:
         combo.currentIndexChanged.connect(

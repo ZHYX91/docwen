@@ -89,3 +89,9 @@ The value is an exact, nonempty resource ID or `"none"`. Availability comes from
 Resetting Official documents restores field formatting and clears the document default only while its persisted choice is `gongwen`. Resetting Invoices independently clears layout and image defaults only while they are `invoice_cn`. These comparisons read persisted values inside the same configuration transaction and process lock as the reset. Other optimization choices, common input settings, and unrelated unsaved drafts are preserved. Concurrent external writes refresh the Cancel baseline without overwriting another page's draft. GUI and `docwen config reset gongwen --yes` / `docwen config reset invoice --yes` share the same reset plan.
 
 恢复“公文”默认会恢复字段格式化开关，并仅在持久化的文档默认为 `gongwen` 时取消该选择。恢复“发票”默认分别检查版式与图片，仅取消值为 `invoice_cn` 的选择。条件判断在重置使用的同一配置事务和进程锁内读取持久化值。其他优化选择、通用输入设置和其他页未保存草稿得到保留；并发外部写入会刷新取消操作的基线，不覆盖其他页的草稿。GUI 与 `docwen config reset gongwen --yes` / `docwen config reset invoice --yes` 共用同一重置计划。
+
+## Settings navigation and Markdown scope
+
+Settings are grouped into Basics, Input types, Content and Specialized. The OCR and images page owns shared recognition and Markdown image output; input pages still own per-category OCR defaults. Markdown output rules remain source-independent, with separate input recognition and explicitly scoped Word mappings. Current conversion coverage is described in the page help and the [settings architecture review](maintenance/proposals/settings-information-architecture.md). Page identities, config keys and reset ownership are unchanged.
+
+设置按基本设置、输入类型、内容处理、专项优化分组。“OCR 与图片”管理共享识别与 Markdown 图文输出，各输入页仍管理本类文件的 OCR 默认开关。Markdown 输出规则不按来源拆成重复配置；读取规则独立，Word 专用映射另行标注。当前覆盖范围见页面说明与上述设计复查，页面标识、配置键和重置归属不变。

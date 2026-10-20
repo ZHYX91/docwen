@@ -200,15 +200,17 @@ invalid_tab = "Aba de configurações desconhecida: {tab}"
 title = "Configurações"
 
 [settings.navigation]
-general = "Configurações gerais"
-optimizations = "Otimização de conteúdo"
+general = "Geral"
+optimizations = "Especializados"
 
 # 选项卡标题
+inputs = "Tipos de entrada"
+content = "Conteúdo"
 [settings.tabs]
 general = "Geral"
 text = "Texto de entrada"
 proofread = "Revisão"
-export = "Recursos de OCR e Markdown"
+export = "OCR e imagens"
 document = "Documentos de entrada"
 spreadsheet = "Planilhas de entrada"
 image = "Imagens de entrada"
@@ -413,6 +415,7 @@ base64_compress_tooltip = "Base64 aumenta o tamanho e pode não renderizar em al
 base64_compress_enabled = "Comprimir automaticamente imagens grandes"
 base64_compress_threshold_label = "Limite"
 base64_compress_threshold_tooltip = "Limite de tamanho em KB. Imagens maiores são compactadas antes da incorporação."
+description = "Reconhecimento de texto e saída de imagens em Markdown. As páginas de entrada definem se o OCR vem ativado; a conversão e a compressão de imagens continuam em Imagens de entrada."
 
 
 [settings.optimization_types]
@@ -640,7 +643,7 @@ horizontal_rule_tooltip = "Borda inferior Word."
 
 # 语法选择
 syntax_selection = "Escolha de sintaxe"
-syntax_selection_tooltip = "Escolha a sintaxe Markdown emitida ao converter documentos para Markdown. Na entrada, o DocWen reconhece a sintaxe correspondente compatível; dialetos opcionais são controlados pelos seletores de extensão acima."
+syntax_selection_tooltip = "Estes estilos de saída se aplicam atualmente sobretudo à conversão comum de Word para Markdown. Planilhas, imagens, PDF/OFD e rotas especializadas ainda não implementam todas as opções. As escolhas não restringem a leitura de Markdown."
 bold_syntax_label = "Negrito:"
 bold_syntax_tooltip = "Sintaxe para Negrito."
 italic_syntax_label = "Itálico:"
@@ -696,6 +699,9 @@ list_separator_tooltip = "Separador usado ao concatenar valores de lista YAML em
 # 格式处理选项
 mermaid_output_group = "Método de saída"
 mermaid_renderer_group = "Renderizador local"
+output_section = "Gerar Markdown"
+word_mappings_title = "Mapeamento e geração específicos do Word"
+
 [settings.formatting.options]
 preserve_format = "Manter formato"
 discard_format = "Descartar formato"
@@ -1709,11 +1715,11 @@ title = "Título"
 subtitle = "Subtítulo"
 
 [settings.markdown_extensions]
-description = "Escolha separadamente as extensões ao ler e gerar Markdown. O arquivo original não é alterado."
+description = "Regras comuns para gerar e ler Markdown. As convenções de saída independem da origem, mas o suporte varia por conversão. Os mapeamentos específicos do Word aparecem separadamente abaixo. Os arquivos de origem não são alterados."
 input = "Entrada Markdown: reconhecer extensões"
 output = "Saída Markdown: usar extensões"
 input_hint = "A sintaxe desativada é tratada como texto, tabelas ou notas de rodapé comuns."
-output_hint = "Usar Markdown comum e informar estruturas que não podem ser representadas."
+output_hint = "A exportação comum do Word oferece estas extensões; a exportação de planilhas oferece Structural Tables. Outras origens e otimizações especializadas ainda não estão totalmente integradas. Ativar uma extensão não acrescenta capacidade de reconhecimento."
 structural_tables = "Structural Tables: tabelas estruturadas"
 captions_references = "Number Suite: legendas e referências cruzadas"
 extended_headings = "Títulos de níveis 7–9"

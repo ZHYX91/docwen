@@ -147,15 +147,17 @@ invalid_tab = "Неизвестная вкладка настроек: {tab}"
 title = "Настройки"
 
 [settings.navigation]
-general = "Общие настройки"
-optimizations = "Оптимизация содержимого"
+general = "Основные"
+optimizations = "Специализированные"
 
 # 选项卡标题
+inputs = "Типы входа"
+content = "Содержимое"
 [settings.tabs]
 general = "Общие"
 text = "Входной текст"
 proofread = "Проверка"
-export = "Ресурсы OCR и Markdown"
+export = "OCR и изображения"
 document = "Входные документы"
 spreadsheet = "Входные таблицы"
 image = "Входные изображения"
@@ -360,6 +362,7 @@ base64_compress_tooltip = "Base64 увеличивает размер и мож�
 base64_compress_enabled = "Автосжатие больших изображений"
 base64_compress_threshold_label = "Порог"
 base64_compress_threshold_tooltip = "Порог размера в КБ. Более крупные изображения сжимаются перед встраиванием."
+description = "Распознавание текста и вывод изображений в Markdown. Страницы входных типов задают включение OCR по умолчанию; преобразование и сжатие изображений остаются на странице входных изображений."
 
 
 [settings.optimization_types]
@@ -587,7 +590,7 @@ horizontal_rule_tooltip = "Нижняя граница Word."
 
 # 语法选择
 syntax_selection = "Выбор синтаксиса"
-syntax_selection_tooltip = "Выберите синтаксис Markdown, выводимый при конвертации документов в Markdown. На входе DocWen распознаёт поддерживаемый соответствующий синтаксис; дополнительные диалекты управляются переключателями расширений выше."
+syntax_selection_tooltip = "Эти стили вывода пока применяются главным образом при обычном преобразовании Word в Markdown. Таблицы, изображения, PDF/OFD и специализированные маршруты ещё не поддерживают все варианты. Этот выбор не ограничивает чтение Markdown."
 bold_syntax_label = "Жирный:"
 bold_syntax_tooltip = "Синтаксис для Жирного."
 italic_syntax_label = "Курсив:"
@@ -643,6 +646,9 @@ list_separator_tooltip = "Разделитель при объединении �
 # 格式处理选项
 mermaid_output_group = "Способ вывода"
 mermaid_renderer_group = "Локальный рендерер"
+output_section = "Создание Markdown"
+word_mappings_title = "Преобразования и создание Word"
+
 [settings.formatting.options]
 preserve_format = "Сохранить формат"
 discard_format = "Отбросить формат"
@@ -1714,11 +1720,11 @@ file_admission_confirm_action = "Обработать в обнаруженно�
 file_admission_cancelled = "Обработка отменена; обнаруженный формат не принят."
 
 [settings.markdown_extensions]
-description = "Выберите расширения отдельно для чтения и записи Markdown. Исходные файлы не изменяются."
+description = "Общие правила создания и чтения Markdown. Соглашения вывода не зависят от источника, но поддержка различается по маршрутам. Специальные преобразования Word приведены отдельно ниже. Исходные файлы не изменяются."
 input = "Входной Markdown: распознавать расширения"
 output = "Выходной Markdown: использовать расширения"
 input_hint = "Отключённый синтаксис обрабатывается как обычный текст, таблицы или сноски."
-output_hint = "Использовать обычный Markdown и сообщать о непредставимых структурах."
+output_hint = "Обычный экспорт Word поддерживает эти расширения, экспорт таблиц — Structural Tables. Другие источники и специализированные преобразования пока подключены не полностью. Включение расширения не добавляет возможностей распознавания."
 structural_tables = "Structural Tables: структурные таблицы"
 captions_references = "Number Suite: подписи и перекрёстные ссылки"
 extended_headings = "Заголовки уровней 7–9"
