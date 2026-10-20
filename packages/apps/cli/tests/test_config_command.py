@@ -17,17 +17,18 @@ def test_config_reset_requires_group_and_yes() -> None:
     assert main(["config", "reset", "--yes"]) == 2
 
 
-def test_config_reset_group_calls_one_group(capsys: pytest.CaptureFixture[str]) -> None:
+@pytest.mark.parametrize("group", ["general", "gongwen", "invoice"])
+def test_config_reset_group_calls_one_group(group: str, capsys: pytest.CaptureFixture[str]) -> None:
     from docwen_cli.main import main
 
     controller = MagicMock()
     controller.config_port.reset_group.return_value = True
 
-    exit_code = main(["config", "reset", "general", "--yes", "--json"], controller=controller)
+    exit_code = main(["config", "reset", group, "--yes", "--json"], controller=controller)
 
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
-    controller.config_port.reset_group.assert_called_once_with("general")
+    controller.config_port.reset_group.assert_called_once_with(group)
     controller.config_port.reset_all.assert_not_called()
     assert payload["command"] == "config reset"
     assert payload["protocol_version"] == 3
@@ -83,6 +84,8 @@ def test_config_reset_failure_is_typed(capsys: pytest.CaptureFixture[str]) -> No
         "spreadsheet",
         "image",
         "layout",
+        "gongwen",
+        "invoice",
         "link",
         "proofread",
     ],

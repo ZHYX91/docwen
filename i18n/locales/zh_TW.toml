@@ -384,9 +384,6 @@ enable_ocr = "默認勾選\"圖片文字識別\""
 enable_ocr_tooltip = "文件轉MD時默認勾選\"圖片文字識別\""
 
 # 优化设置
-optimization_section = "優化設定（文件轉Markdown）"
-enable_optimization = "默認啟用\"針對文件類型優化\""
-optimization_type_label = "默認優化類型:"
 
 # 软件优先级
 word_processors_label = "文件處理軟體優先級"
@@ -443,9 +440,6 @@ extraction_section = "圖片提取/OCR設定"
 keep_images = "默認勾選\"提取圖片\""
 enable_ocr = "默認勾選\"圖片文字識別\""
 size_unit_label = "單位:"
-optimization_section = "優化設定（圖片轉Markdown）"
-enable_optimization = "默認啟用\"針對圖片類型優化\""
-optimization_type_label = "默認優化類型:"
 
 # OCR语言设置
 
@@ -472,9 +466,6 @@ tiff_no_alpha = "不保留透明"
 extraction_section = "圖片提取/OCR設定"
 keep_images = "默認勾選\"提取圖片\""
 enable_ocr = "默認勾選\"圖片文字識別\""
-optimization_section = "優化設定（版式轉Markdown）"
-enable_optimization = "默認啟用\"針對版式類型優化\""
-optimization_type_label = "默認優化類型:"
 dpi_section = "渲染DPI設定"
 dpi_desc = "設定版式文件轉圖片時的默認DPI（分辨率）"
 render_dpi_label = "渲染 DPI:"
@@ -1824,11 +1815,30 @@ extended_headings = "輸出 H7–H9；關閉時這些標題降為 H6，並回報
 typed_endnotes = "以類型化註記標籤保留註腳/尾註區別；關閉時尾註輸出為一般註腳，並回報類型損失。"
 
 [settings.optimization]
-availability_help = "只顯示適用於目前檔案類型的最佳化選項。沒有可用選項時無法選取；載入失敗會另外提示。"
+no_default = "無（一般轉換）"
+current_default = "目前預設：{name}"
+set_default = "設為預設"
+clear_default = "取消預設"
+discovery_failed = "無法取得最佳化能力，暫時無法設定新的預設選擇。"
+unavailable = "目前環境未提供適用於此輸入類別的{name}最佳化。"
 
-none_available = "目前執行環境沒有適用於此輸入類別的最佳化類型。"
 
 [settings.gongwen]
+description = "分別設定公文辨識的預設選擇與範本欄位格式。"
+to_markdown_title = "文件 → Markdown"
+to_markdown_description = "將公文最佳化設為相容文件的初始選擇，不會自動判斷檔案是否為公文。DOCX 可直接處理；DOC、WPS、RTF、ODT 需要可用的文件轉換能力。"
+document_settings = "文件擷取、編號與表格設定"
+from_markdown_title = "Markdown → 文件"
 title = "公文"
 fields_label = "格式化公文欄位"
 fields_help = "填入 Word 範本時，處理附件說明、抄送機關、成文日期、印發日期和附註，並清理符合規則的空欄位。附件說明須獨占本文或表格儲存格中的段落；頁首、頁尾、文字方塊和行內位置不支援。關閉後依一般欄位規則填入，清單使用通用分隔符。"
+
+[settings.invoice]
+title = "發票"
+description = "設定中文發票擷取的初始選擇，不會自動判斷檔案是否為發票。轉換時仍可變更。"
+layout_title = "PDF / OFD → Markdown"
+layout_description = "掃描 PDF 需要在傳入版式檔案設定中啟用 OCR；OFD 讀取既有文字與結構，不對掃描內容執行 OCR。"
+layout_settings = "PDF 擷取與 OCR 設定"
+image_title = "圖片 → Markdown"
+image_description = "發票圖片一律使用 OCR，辨識語言沿用共用 OCR 設定。"
+ocr_settings = "共用 OCR 語言設定"

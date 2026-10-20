@@ -272,8 +272,7 @@ class TestApplyCancel:
             "document": {
                 "to_md_keep_images": False,
                 "to_md_enable_ocr": True,
-                "to_md_enable_optimization": True,
-                "to_md_optimization_type": "contract",
+                "to_md_optimization": "contract",
                 "to_md_table_merge_export_strategy": "marker",
             },
             "spreadsheet": {
@@ -294,7 +293,7 @@ class TestApplyCancel:
             "layout": {
                 "to_md_keep_images": False,
                 "to_md_enable_ocr": True,
-                "to_md_enable_optimization": True,
+                "to_md_optimization": "invoice_cn",
                 "render_dpi": 600,
             },
             "other": {
@@ -496,7 +495,7 @@ class TestReset:
 
         plan = reset_plan_for_group(group)
         assert "numbering/cleanup.toml" not in plan.files
-        assert "template_fill.gongwen_fields_enabled" in plan.dotted_keys
+        assert "template_fill.gongwen_fields_enabled" not in plan.dotted_keys
 
         # Set some custom clean rules to make them non-default
         vm.set_field(
@@ -522,7 +521,7 @@ class TestReset:
         rules_after = vm.config.text.numbering_clean_rules or {}
         rule_ids_after = {r["id"] for r in rules_after.get("rules", [])}
         assert "my_rule" in rule_ids_after
-        assert vm.config.text.gongwen_fields_enabled is True
+        assert vm.config.text.gongwen_fields_enabled is False
         assert vm.config.dirty_sections == frozenset({SECTION_TEXT})
 
 

@@ -46,6 +46,7 @@ from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 from ...styles.theme_semantics import apply_theme_class
 from ...view_models.settings_vm import SettingsViewModel
 from ...view_models.template_vm import TemplateViewModel
+from .base_tab import BaseSettingsTab
 from .navigation import SettingsNavigationKeyboard, SettingsSidebar
 
 logger = logging.getLogger(__name__)
@@ -198,7 +199,7 @@ NAVIGATION_GROUPS = (
             "logging",
         ),
     ),
-    SettingsNavigationGroup("optimizations", ()),
+    SettingsNavigationGroup("optimizations", ("gongwen", "invoice")),
 )
 TAB_KEYS = [key for group in NAVIGATION_GROUPS for key in group.page_keys]
 
@@ -227,6 +228,8 @@ TAB_NAMES: dict[str, str] = {
     "software": t("settings.tabs.software"),
     "output": t("settings.tabs.output"),
     "logging": t("settings.tabs.logging"),
+    "gongwen": t("settings.gongwen.title"),
+    "invoice": t("settings.invoice.title"),
 }
 
 _TabFactory = Callable[[SettingsViewModel], object]
@@ -324,6 +327,18 @@ def _build_other_tab(view_model: SettingsViewModel) -> QWidget:
     return OtherTab(view_model)
 
 
+def _build_gongwen_tab(view_model: SettingsViewModel) -> QWidget:
+    from .gongwen_tab import GongwenTab
+
+    return GongwenTab(view_model)
+
+
+def _build_invoice_tab(view_model: SettingsViewModel) -> QWidget:
+    from .invoice_tab import InvoiceTab
+
+    return InvoiceTab(view_model)
+
+
 _TAB_SPECS: dict[str, _TabSpec] = {
     "general": _TabSpec("general_tab", "GeneralTab", _build_general_tab),
     "text": _TabSpec("text_tab", "TextTab", _build_text_tab),
@@ -339,6 +354,8 @@ _TAB_SPECS: dict[str, _TabSpec] = {
     "export": _TabSpec("export_tab", "ExportTab", _build_export_tab),
     "logging": _TabSpec("logging_tab", "LoggingTab", _build_logging_tab),
     "other": _TabSpec("other_tab", "OtherTab", _build_other_tab),
+    "gongwen": _TabSpec("gongwen_tab", "GongwenTab", _build_gongwen_tab),
+    "invoice": _TabSpec("invoice_tab", "InvoiceTab", _build_invoice_tab),
 }
 
 # ── Reset group mapping (registry group to reset per tab) ──────────────────
@@ -357,6 +374,8 @@ RESET_GROUPS: dict[str, str] = {
     "export": "export",
     "logging": "logging",
     "other": "other",
+    "gongwen": "gongwen",
+    "invoice": "invoice",
 }
 
 
@@ -468,11 +487,6 @@ class SettingsDialog(QDialog):
 
         # ── Tabs ────────────────────────────────────────────────────────
         self._add_all_tabs()
-
-        # ── Inject template data into the ViewModel ────────────────────
-
-        # ── Populate dynamic optimization type items (ViewModel-driven) ─
-        self._populate_optimization_types()
 
         # ── Activate the optimal tab (if specified by caller) ───────────
         self._activate_initial_tab()
@@ -647,6 +661,8 @@ class SettingsDialog(QDialog):
             "software": "software.svg",
             "logging": "logging.svg",
             "other": "other.svg",
+            "gongwen": "gongwen.svg",
+            "invoice": "invoice.svg",
         }
         icon_name = icon_name_map.get(tab_key)
         if icon_name is None:
@@ -692,7 +708,8 @@ class SettingsDialog(QDialog):
                     self._tab_widget.setTabToolTip(tab_index, title)
                     self._compact_navigation.addItem(f"{group_title} · {title}", key)
                     self._add_nav_item(key, title)
-                    self._wire_tab_dirty_tracking(key, tab)
+                    if isinstance(tab, BaseSettingsTab):
+                        tab.section_requested.connect(self.activate_section)
 
         # Select first tab
         self._tab_widget.setCurrentIndex(0)
@@ -750,79 +767,6 @@ class SettingsDialog(QDialog):
         layout.addWidget(message)
         layout.addStretch(1)
         return tab
-
-    def _wire_tab_dirty_tracking(self, tab_key: str, tab: QWidget) -> None:
-        """ViewModel handles dirty tracking internally via set_field().
-
-        This method is kept for potential future per-tab UI hooks (e.g.
-        adding a "*" to the tab title) but no longer duplicates dirty-state
-        logic — the ViewModel is the single source of truth.
-        """
-
-    def _populate_optimization_types(self) -> None:
-        """Populate optimization policy controls from Runtime capabilities.
-
-        A valid empty catalog shows a localized disabled placeholder. Discovery
-        failure instead shows a disabled error item, while the remainder of
-        the settings page stays usable.
-        """
-        from .base_tab import BaseSettingsTab
-
-        config = self._vm.config.conversion_defaults
-        for tab_key, source_category in (
-            ("document", "document"),
-            ("image", "image"),
-            ("layout", "layout"),
-        ):
-            tab = self._tabs.get(tab_key)
-            widgets = getattr(tab, "widgets", {}) if tab is not None else {}
-            if not isinstance(widgets, dict):
-                continue
-            combo = widgets.get("to_md_optimization_type")
-            enable_checkbox = widgets.get("to_md_enable_optimization")
-            if not isinstance(combo, QComboBox):
-                continue
-
-            result = self._vm.get_optimization_choices_result(source_category=source_category)
-            configured = getattr(config, tab_key, {})
-            configured_id = configured.get("to_md_optimization_type") if isinstance(configured, dict) else None
-            blocker = QSignalBlocker(combo)
-            combo.clear()
-            if result.status == "failed":
-                combo.addItem(
-                    t("main_window.runtime_unavailable", "Conversion service is unavailable; conversion cannot start."),
-                    None,
-                )
-                error_text = str(result.error or "")
-                combo.setToolTip(error_text)
-                if isinstance(enable_checkbox, QCheckBox):
-                    enable_checkbox.setToolTip(error_text)
-            else:
-                combo.setToolTip("")
-                if not result.choices:
-                    combo.addItem(
-                        t(
-                            "settings.optimization.none_available",
-                            "No optimization types are available for this input category in the current runtime.",
-                        ),
-                        None,
-                    )
-                else:
-                    for choice in result.choices:
-                        combo.addItem(choice.label, choice.id)
-                    if configured_id is not None:
-                        BaseSettingsTab.set_combo_data(combo, configured_id)
-            del blocker
-
-            has_choices = bool(result.choices)
-            combo.setEnabled(
-                has_choices and (not isinstance(enable_checkbox, QCheckBox) or enable_checkbox.isChecked())
-            )
-            if isinstance(enable_checkbox, QCheckBox):
-                enable_checkbox.setEnabled(has_choices)
-                enable_checkbox.toggled.connect(
-                    lambda checked, target=combo, available=has_choices: target.setEnabled(available and checked)
-                )
 
     def _activate_initial_tab(self) -> None:
         """Activate the tab specified by the ViewModel's ``initial_tab_key``.

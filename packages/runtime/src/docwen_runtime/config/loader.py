@@ -875,23 +875,37 @@ class ConfigLoader:
         """
 
         plan = reset_plan_for_group(group)
-        if not plan.files and not plan.dotted_keys:
+        if not plan.files and not plan.dotted_keys and not plan.conditional_dotted_keys:
             logger.error("未知的配置组: %s", group)
             return False
 
         whole_specs = [require_spec(rel_path) for rel_path in plan.files if rel_path not in RESET_EXCLUDED]
         dotted_by_file = self._plan_reset_values(plan.dotted_keys)
-        if dotted_by_file is None:
+        conditional_by_file = self._plan_reset_values(tuple(key for key, _expected in plan.conditional_dotted_keys))
+        if dotted_by_file is None or conditional_by_file is None:
             return False
-        dotted_specs = [require_spec(rel_path) for rel_path in dotted_by_file]
+        dotted_specs = [require_spec(rel_path) for rel_path in dict.fromkeys((*dotted_by_file, *conditional_by_file))]
         user_paths = [self._user_path_for_spec(spec) for spec in (*whole_specs, *dotted_specs)]
 
         def _reset_group_on_disk() -> None:
+            active_values = {rel_path: list(keys) for rel_path, keys in dotted_by_file.items()}
+            # This callback runs after recovery and while the process/config
+            # locks are held. A different window may have changed the selected
+            # optimizer since this loader's snapshot was published.
+            for dotted_key, expected in plan.conditional_dotted_keys:
+                spec = spec_for_dotted_key(dotted_key)
+                assert spec is not None  # validated by the reset plan
+                base = self.get_base_file_dict(spec.rel_path)
+                user = _read_toml_file(self._user_path_for_spec(spec), missing_ok=True)
+                current = _merge_file_layers(spec, base, user)
+                rel_key = relative_key_for_spec(spec, dotted_key)
+                if _read_nested_value(current, rel_key) == expected:
+                    active_values.setdefault(spec.rel_path, []).append(rel_key)
             for spec in whole_specs:
                 user_path = self._user_path_for_spec(spec)
                 if _path_exists_or_is_symlink(user_path):
                     durable_unlink(user_path)
-            self._reset_grouped_values_on_disk(dotted_by_file)
+            self._reset_grouped_values_on_disk(active_values)
 
         return self._run_user_file_transaction(
             user_paths,

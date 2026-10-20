@@ -1,7 +1,7 @@
 """Base classes for Settings tab widgets.
 
 ``BaseSettingsTab`` provides common helpers (add section, add card, create
-checkbox / combobox / spinbox) used by all 13 tabs.  All widgets bind to
+checkbox / combobox / spinbox) shared by settings tabs.  All widgets bind to
 ``SettingsViewModel`` — they never touch config_manager or runtime directly.
 
 ``DynamicSettingsTab`` builds a form-driven tab from a schema dict.
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import QEvent, QPoint, QSize, Qt
+from PySide6.QtCore import QEvent, QPoint, QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -211,6 +211,8 @@ class BaseSettingsTab(QWidget):
     SettingsViewModel.  Subclasses override ``_create_interface()``.
     """
 
+    section_requested = Signal(str)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("settingsTabRoot")
@@ -306,6 +308,15 @@ class BaseSettingsTab(QWidget):
 
         self._scroll_layout.addWidget(card)
         return card, form
+
+    def add_settings_link(self, form: QFormLayout, text: str, section: str, *, object_name: str) -> QPushButton:
+        """Link to the page that owns a shared setting without duplicating it."""
+        button = QPushButton(text, self._scroll_container)
+        button.setObjectName(object_name)
+        button.setAutoDefault(False)
+        button.clicked.connect(lambda _checked=False: self.section_requested.emit(section))
+        form.addRow(button)
+        return button
 
     @staticmethod
     def add_form_row(form: QFormLayout, label_text: str, widget: QWidget, tooltip: str | None = None) -> QWidget | None:

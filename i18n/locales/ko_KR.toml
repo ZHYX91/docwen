@@ -384,9 +384,6 @@ enable_ocr = "기본으로 \"이미지 OCR\" 선택"
 enable_ocr_tooltip = "문서 → MD 변환 시 기본으로 \"이미지 OCR\"을 선택합니다"
 
 # 优化设置
-optimization_section = "최적화 설정（문서 → Markdown）"
-enable_optimization = "기본으로 \"문서 유형 최적화\" 사용"
-optimization_type_label = "기본 최적화 유형:"
 
 # 软件优先级
 word_processors_label = "문서 처리 소프트웨어 우선순위"
@@ -443,9 +440,6 @@ extraction_section = "이미지 추출/OCR 설정"
 keep_images = "기본으로 \"이미지 추출\" 선택"
 enable_ocr = "기본으로 \"이미지 OCR\" 선택"
 size_unit_label = "단위:"
-optimization_section = "최적화（이미지 → Markdown）"
-enable_optimization = "기본으로 \"이미지 유형 최적화\" 활성화"
-optimization_type_label = "기본 최적화 유형:"
 
 # OCR语言设置
 
@@ -472,9 +466,6 @@ tiff_no_alpha = "투명도 없음"
 extraction_section = "이미지 추출/OCR 설정"
 keep_images = "기본으로 \"이미지 추출\" 선택"
 enable_ocr = "기본으로 \"이미지 OCR\" 선택"
-optimization_section = "최적화（레이아웃 → Markdown）"
-enable_optimization = "기본으로 \"레이아웃 유형 최적화\" 활성화"
-optimization_type_label = "기본 최적화 유형:"
 dpi_section = "렌더링 DPI 설정"
 dpi_desc = "레이아웃 파일을 이미지로 변환할 때 사용할 기본 DPI(해상도)를 설정합니다"
 render_dpi_label = "렌더링 DPI:"
@@ -1825,11 +1816,30 @@ extended_headings = "H7–H9를 출력합니다. 끄면 해당 제목을 H6로 �
 typed_endnotes = "유형 주석 레이블로 각주/미주 구분을 유지합니다. 끄면 미주를 일반 각주로 내보내고 유형 손실을 알립니다."
 
 [settings.optimization]
-availability_help = "최적화 유형은 현재 런타임에서 가져옵니다. 이 입력 범주에 적용할 유형이 없으면 관련 컨트롤을 비활성화하고, 검색 실패는 별도 오류로 표시합니다."
+no_default = "없음(일반 변환)"
+current_default = "현재 기본값: {name}"
+set_default = "기본값으로 설정"
+clear_default = "기본 선택 해제"
+discovery_failed = "최적화 기능을 불러오지 못했습니다. 지금은 새 기본값을 선택할 수 없습니다."
+unavailable = "현재 환경에서는 이 입력 범주에 {name} 최적화를 사용할 수 없습니다."
 
-none_available = "현재 런타임에는 이 입력 범주에 적용할 수 있는 최적화 유형이 없습니다."
 
 [settings.gongwen]
+description = "공문 인식의 기본 선택과 템플릿 필드 서식을 각각 설정합니다."
+to_markdown_title = "문서 → Markdown"
+to_markdown_description = "호환되는 문서에서 공문 최적화를 초기 선택으로 사용합니다. 파일이 공문인지 자동으로 분류하지는 않습니다. DOCX는 직접 처리하며 DOC, WPS, RTF, ODT에는 사용 가능한 문서 변환기가 필요합니다."
+document_settings = "문서 추출, 번호 매기기 및 표 설정"
+from_markdown_title = "Markdown → 문서"
 title = "공문서"
 fields_label = "중국 공문서 필드 서식 적용"
 fields_help = "Word 서식 파일의 첨부 설명, 참조 수신처, 작성일, 발행일과 주석을 정리하고 규칙에 해당하는 빈 필드를 제거합니다. 첨부 자리표시자는 본문 또는 표 셀의 독립된 문단에 있어야 합니다. 머리글, 바닥글, 텍스트 상자와 문장 안의 배치는 지원하지 않습니다. 끄면 일반 필드 채우기와 공통 목록 구분자를 사용합니다."
+
+[settings.invoice]
+title = "송장"
+description = "중국어 송장 추출에 사용할 초기 선택을 설정합니다. 파일을 송장으로 자동 분류하지 않으며 변환할 때마다 선택을 바꿀 수 있습니다."
+layout_title = "PDF / OFD → Markdown"
+layout_description = "스캔 PDF는 입력 고정 레이아웃 파일 설정에서 OCR을 켜야 합니다. OFD는 기존 텍스트와 구조를 읽으며 스캔 내용에 OCR을 적용하지 않습니다."
+layout_settings = "PDF 추출 및 OCR 설정"
+image_title = "이미지 → Markdown"
+image_description = "송장 이미지는 항상 OCR을 사용하며 공유 OCR 언어 설정을 따릅니다."
+ocr_settings = "공유 OCR 언어 설정"

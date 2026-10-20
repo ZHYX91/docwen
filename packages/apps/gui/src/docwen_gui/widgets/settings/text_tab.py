@@ -1,4 +1,4 @@
-"""Settings for incoming Markdown, numbering and field processing."""
+"""Settings for incoming Markdown and heading numbering."""
 
 from __future__ import annotations
 
@@ -39,7 +39,6 @@ class TextTab(BaseSettingsTab):
         self._remove_numbering: QCheckBox = _cast(QCheckBox, None)
         self._add_numbering: QCheckBox = _cast(QCheckBox, None)
         self._scheme_combo: QComboBox = _cast(QComboBox, None)
-        self._gongwen_fields: QCheckBox = _cast(QCheckBox, None)
         super().__init__()
         self._load_values()
 
@@ -118,19 +117,6 @@ class TextTab(BaseSettingsTab):
 
         self._numbering_editors = NumberingEditors(self, self._vm, self._refresh_scheme_combo_items)
 
-        _gongwen_card, gongwen_form = self.add_settings_card(
-            t("settings.gongwen.title"),
-            object_name="textGongwenFieldsCard",
-        )
-        gongwen_row, self._gongwen_fields = self._create_toggle_with_info(
-            t("settings.gongwen.fields_label"),
-            t("settings.gongwen.fields_help"),
-        )
-        gongwen_form.addRow(gongwen_row)
-        self._gongwen_fields.toggled.connect(
-            lambda enabled: self._vm.set_field(SECTION_TEXT, "gongwen_fields_enabled", enabled)
-        )
-
     # ── Value loading ───────────────────────────────────────────────────────
 
     def _load_values(self) -> None:
@@ -153,8 +139,6 @@ class TextTab(BaseSettingsTab):
             with QSignalBlocker(self._render_mode_combo):
                 self._render_mode_combo.setEnabled(text.add_numbering)
                 self.set_combo_data(self._render_mode_combo, text.heading_numbering_render_mode)
-        with QSignalBlocker(self._gongwen_fields):
-            self._gongwen_fields.setChecked(text.gongwen_fields_enabled)
 
     def reload_from_config(self) -> None:
         self._load_values()

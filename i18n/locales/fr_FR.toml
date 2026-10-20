@@ -434,9 +434,6 @@ enable_ocr = "Activer OCR"
 enable_ocr_tooltip = "Reconnaissance de texte pour les images."
 
 # 优化设置
-optimization_section = "Optimisation (Document → Markdown)"
-enable_optimization = "Activer l'optimisation"
-optimization_type_label = "Type :"
 
 # 软件优先级
 word_processors_label = "Traitement de texte"
@@ -493,9 +490,6 @@ extraction_section = "Extraction/OCR"
 keep_images = "Garder les images"
 enable_ocr = "Activer OCR"
 size_unit_label = "Unite :"
-optimization_section = "Optimisation (Image → Markdown)"
-enable_optimization = "Activer « Optimiser par type d’image » par défaut"
-optimization_type_label = "Type d’optimisation par défaut :"
 
 # OCR语言设置
 
@@ -522,9 +516,6 @@ tiff_no_alpha = "Supprimer la transparence"
 extraction_section = "Extraction/OCR"
 keep_images = "Extraire les images"
 enable_ocr = "Activer OCR"
-optimization_section = "Optimisation (Mise en page → Markdown)"
-enable_optimization = "Activer \"Optimiser par type de mise en page\" par défaut"
-optimization_type_label = "Type d'optimisation par défaut :"
 dpi_section = "DPI de rendu"
 dpi_desc = "DPI pour le rendu de mise en page."
 render_dpi_label = "DPI de rendu :"
@@ -1821,11 +1812,30 @@ extended_headings = "Génère H7–H9. Désactivé, ces titres deviennent H6 et 
 typed_endnotes = "Préserve la distinction notes de bas de page/notes de fin avec des étiquettes typées. Désactivé, les notes de fin sont exportées comme notes de bas de page ordinaires et la perte est signalée."
 
 [settings.optimization]
-availability_help = "Les types d’optimisation proviennent de l’environnement d’exécution actuel. Si aucun ne convient à cette catégorie d’entrée, les contrôles sont désactivés ; les échecs de détection sont signalés séparément."
+no_default = "Aucune (conversion ordinaire)"
+current_default = "Choix par défaut : {name}"
+set_default = "Définir par défaut"
+clear_default = "Retirer ce choix par défaut"
+discovery_failed = "Impossible de charger les fonctions d’optimisation. Aucun nouveau choix par défaut n’est disponible pour le moment."
+unavailable = "L’optimisation {name} n’est pas disponible pour cette catégorie de fichiers dans l’environnement actuel."
 
-none_available = "Aucun type d’optimisation n’est disponible pour cette catégorie d’entrée dans l’environnement actuel."
 
 [settings.gongwen]
+description = "Réglez séparément le choix par défaut pour les documents officiels et le formatage des champs du modèle."
+to_markdown_title = "Document → Markdown"
+to_markdown_description = "Présélectionnez l’optimisation des documents officiels pour les documents compatibles, sans classer automatiquement les fichiers. DOCX est traité directement ; DOC, WPS, RTF et ODT nécessitent un convertisseur de documents disponible."
+document_settings = "Extraction, numérotation et tableaux des documents"
+from_markdown_title = "Markdown → Document"
 title = "Documents officiels"
 fields_label = "Formater les champs des documents officiels chinois"
 fields_help = "Formate les annexes, destinataires en copie, dates et notes des modèles Word, et supprime les champs vides prévus. Le marqueur des annexes doit occuper un paragraphe entier dans le corps ou une cellule. Les en-têtes, pieds de page, zones de texte et marqueurs dans une phrase ne sont pas pris en charge. Si désactivé, le remplissage normal et le séparateur général des listes s’appliquent."
+
+[settings.invoice]
+title = "Factures"
+description = "Définissez le choix initial pour extraire les factures chinoises. Les fichiers ne sont pas automatiquement classés comme factures ; ce choix reste modifiable à chaque conversion."
+layout_title = "PDF / OFD → Markdown"
+layout_description = "Les PDF numérisés nécessitent l’activation de l’OCR dans les réglages des fichiers à mise en page fixe entrants. OFD lit le texte et la structure existants, sans OCR du contenu numérisé."
+layout_settings = "Extraction PDF et réglages OCR"
+image_title = "Image → Markdown"
+image_description = "Les images de factures utilisent toujours l’OCR et son réglage de langue commun."
+ocr_settings = "Réglage commun de la langue OCR"

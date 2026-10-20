@@ -6,10 +6,12 @@ from copy import deepcopy
 from typing import Any, cast
 
 import pytest
-from PySide6.QtWidgets import QComboBox
+from PySide6.QtWidgets import QLabel, QPushButton, QWidget
 from tests.support.gui_vm_fakes import FakeController, optimization_capability_projection
 
 from docwen_gui.view_models.settings_vm import SettingsViewModel
+from docwen_gui.widgets.settings.dialog import SettingsDialog
+from docwen_gui.widgets.settings.gongwen_tab import GongwenTab
 
 pytestmark = pytest.mark.gui
 
@@ -96,68 +98,139 @@ class TestOptimizationDiscovery:
         assert list(vm.get_optimization_choices_result(locale="zh_CN").items) == ["gongwen", "invoice_cn"]
 
 
-def _combo(dialog: Any, tab_key: str) -> QComboBox:
-    tab = dialog._tabs[tab_key]
-    combo = tab.widgets["to_md_optimization_type"]  # type: ignore[attr-defined]
-    assert isinstance(combo, QComboBox)
-    return combo
+def _default_button(dialog: SettingsDialog, category: str) -> QPushButton:
+    button = dialog.findChild(QPushButton, f"{category}OptimizationDefaultButton")
+    assert button is not None
+    return button
 
 
-class TestDialogOptimizationPopulation:
-    def test_three_category_combos_have_only_runtime_resources(self, qapp) -> None:
-        from docwen_gui.widgets.settings.dialog import SettingsDialog
+@pytest.fixture
+def optimization_dialog(qapp):
+    dialog = SettingsDialog(view_model=_vm(FakeController()))
+    yield dialog
+    dialog.view_model.cancel()
+    dialog.close()
+    dialog.deleteLater()
 
-        dialog = SettingsDialog(view_model=_vm(FakeController()))
-        try:
-            assert [_combo(dialog, "document").itemData(i) for i in range(_combo(dialog, "document").count())] == [
-                "gongwen"
-            ]
-            assert [_combo(dialog, "image").itemData(i) for i in range(_combo(dialog, "image").count())] == [
-                "invoice_cn"
-            ]
-            assert [_combo(dialog, "layout").itemData(i) for i in range(_combo(dialog, "layout").count())] == [
-                "invoice_cn"
-            ]
-            assert "contract" not in {
-                _combo(dialog, "document").itemData(i) for i in range(_combo(dialog, "document").count())
-            }
-        finally:
-            dialog.close()
-            dialog.deleteLater()
 
-    def test_ready_empty_has_localized_reason_without_failure_placeholder(self, qapp) -> None:
+class TestSpecializedOptimizationPages:
+    def test_pages_own_defaults_and_ordinary_pages_have_no_optimization_fields(self, optimization_dialog) -> None:
+        dialog = optimization_dialog
+        assert dialog.activate_section("gongwen")
+        assert dialog.findChild(QWidget, "gongwenToMarkdownCard") is not None
+        assert dialog.findChild(QWidget, "gongwenFromMarkdownCard") is not None
+        assert dialog.activate_section("invoice")
+        assert dialog.findChild(QWidget, "invoiceLayoutToMarkdownCard") is not None
+        assert dialog.findChild(QWidget, "invoiceImageToMarkdownCard") is not None
+        for key in ("document", "image", "layout"):
+            assert not any("optimization" in field for field in dialog._tabs[key].widgets)
+        assert dialog._tabs["text"].findChild(QWidget, "textGongwenFieldsCard") is None
+
+    def test_document_default_can_replace_another_choice_and_clear_only_this_choice(self, optimization_dialog) -> None:
         from docwen_gui.i18n import t
-        from docwen_gui.widgets.settings.dialog import SettingsDialog
+
+        dialog = optimization_dialog
+        vm = dialog.view_model
+        button = _default_button(dialog, "document")
+        vm.set_conversion_default("document", "to_md_optimization", "another_optimizer")
+        current = dialog.findChild(QLabel, "documentOptimizationCurrent")
+        assert current is not None and "another_optimizer" in current.text()
+        assert button.text() == t("settings.optimization.set_default")
+        button.click()
+        assert vm.get_default_optimization("document") == "gongwen"
+        assert button.text() == t("settings.optimization.clear_default")
+        assert "another_optimizer" not in current.text()
+        button.click()
+        assert vm.get_default_optimization("document") == "none"
+        assert button.text() == t("settings.optimization.set_default")
+
+    def test_invoice_scopes_and_config_reload_stay_in_sync(self, optimization_dialog) -> None:
+        from docwen_gui.i18n import t
+
+        dialog = optimization_dialog
+        vm = dialog.view_model
+        layout_button = _default_button(dialog, "layout")
+        image_button = _default_button(dialog, "image")
+        layout_button.click()
+        assert vm.get_default_optimization("layout") == "invoice_cn"
+        assert vm.get_default_optimization("image") == "none"
+        image_button.click()
+        assert vm.get_default_optimization("image") == "invoice_cn"
+        assert vm.get_default_optimization("document") == "none"
+        vm.set_conversion_default("image", "to_md_optimization", "none")
+        assert image_button.text() == t("settings.optimization.set_default")
+        assert layout_button.text() == t("settings.optimization.clear_default")
+        vm.cancel()
+        assert vm.get_default_optimization("layout") == "none"
+        assert layout_button.text() == t("settings.optimization.set_default")
+        config = vm.config
+        config.conversion_defaults.image["to_md_optimization"] = "invoice_cn"
+        vm.load_full_config(config)
+        assert image_button.text() == t("settings.optimization.clear_default")
+
+    def test_ready_empty_has_localized_reason_without_discovery_failure(self, qapp) -> None:
+        from docwen_gui.i18n import t
 
         controller = FakeController()
         controller.describe_runtime_capabilities = _empty_projection  # type: ignore[method-assign]
         dialog = SettingsDialog(view_model=_vm(controller))
         try:
-            combo = _combo(dialog, "document")
-            assert combo.count() == 1
-            assert combo.itemData(0) is None
-            assert combo.itemText(0) == t("settings.optimization.none_available")
-            assert not combo.isEnabled()
-            assert combo.itemText(0) != t("main_window.runtime_unavailable")
+            reason = dialog.findChild(QLabel, "documentOptimizationAvailability")
+            assert reason is not None
+            assert reason.text() == t("settings.optimization.unavailable", name=t("settings.gongwen.title"))
+            assert reason.text() != t("settings.optimization.discovery_failed")
+            assert not _default_button(dialog, "document").isEnabled()
         finally:
             dialog.close()
             dialog.deleteLater()
 
-    def test_failure_is_contained_inside_combo_and_page_still_loads(self, qapp) -> None:
-        from docwen_gui.widgets.settings.dialog import SettingsDialog
+    @pytest.mark.parametrize("failed", [False, True])
+    def test_saved_unavailable_default_remains_clearable(self, qapp, failed) -> None:
+        from docwen_gui.i18n import t
 
         controller = FakeController()
-        controller.describe_runtime_capabilities = lambda: {"broken": True}  # type: ignore[method-assign]
-        dialog = SettingsDialog(view_model=_vm(controller))
+        controller.describe_runtime_capabilities = (  # type: ignore[method-assign]
+            (lambda: {"broken": True}) if failed else _empty_projection
+        )
+        vm = _vm(controller)
+        vm.set_conversion_default("layout", "to_md_optimization", "invoice_cn")
+        dialog = SettingsDialog(view_model=vm)
         try:
-            combo = _combo(dialog, "document")
-            assert combo.count() == 1
-            assert combo.itemData(0) is None
-            assert not combo.isEnabled()
-            assert dialog._tabs["document"].objectName() != "settingsTabLoadErrorPage"
+            button = _default_button(dialog, "layout")
+            reason = dialog.findChild(QLabel, "layoutOptimizationAvailability")
+            assert reason is not None and reason.text()
+            if failed:
+                assert reason.text() == t("settings.optimization.discovery_failed")
+            assert button.text() == t("settings.optimization.clear_default")
+            assert button.isEnabled()
+            button.click()
+            assert vm.get_default_optimization("layout") == "none"
+            assert not button.isEnabled()
+            assert dialog._tabs["invoice"].objectName() != "settingsTabLoadErrorPage"
+            gongwen_tab = dialog._tabs["gongwen"]
+            assert isinstance(gongwen_tab, GongwenTab)
+            assert gongwen_tab._gongwen_fields.isEnabled()
         finally:
+            vm.cancel()
             dialog.close()
             dialog.deleteLater()
+
+    @pytest.mark.parametrize(
+        "page,button_name,destination",
+        [
+            ("gongwen", "gongwenDocumentSettingsButton", "document"),
+            ("invoice", "invoiceLayoutSettingsButton", "layout"),
+            ("invoice", "invoiceOcrSettingsButton", "export"),
+        ],
+    )
+    def test_shared_settings_links_navigate_without_editing(self, optimization_dialog, page, button_name, destination):
+        dialog = optimization_dialog
+        assert dialog.activate_section(page)
+        button = dialog.findChild(QPushButton, button_name)
+        assert button is not None
+        button.click()
+        assert dialog.current_section() == destination
+        assert not dialog.view_model.is_dirty
 
 
 class TestInitialTabKey:

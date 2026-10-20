@@ -384,9 +384,6 @@ enable_ocr = "デフォルトで「画像OCR」をチェック"
 enable_ocr_tooltip = "ドキュメントをMDに変換する際、デフォルトで「画像OCR」をチェックします"
 
 # 优化设置
-optimization_section = "最適化設定（ドキュメントからMarkdown）"
-enable_optimization = "デフォルトで「ドキュメントタイプに合わせて最適化」を有効にする"
-optimization_type_label = "デフォルトの最適化タイプ："
 
 # 软件优先级
 word_processors_label = "ドキュメント処理ソフトウェアの優先順位"
@@ -443,9 +440,6 @@ extraction_section = "画像抽出/OCR設定"
 keep_images = "デフォルトで「画像を抽出」をチェック"
 enable_ocr = "デフォルトで「画像OCR」をチェック"
 size_unit_label = "単位:"
-optimization_section = "最適化（画像からMarkdown）"
-enable_optimization = "デフォルトで「画像タイプに合わせて最適化」を有効化"
-optimization_type_label = "デフォルトの最適化タイプ："
 
 # OCR语言设置
 
@@ -472,9 +466,6 @@ tiff_no_alpha = "透明度なし"
 extraction_section = "画像抽出/OCR設定"
 keep_images = "デフォルトで「画像を抽出」をチェック"
 enable_ocr = "デフォルトで「画像OCR」をチェック"
-optimization_section = "最適化（レイアウトからMarkdown）"
-enable_optimization = "デフォルトで「レイアウト種別に最適化」を有効化"
-optimization_type_label = "デフォルト最適化種別："
 dpi_section = "レンダリングDPI設定"
 dpi_desc = "レイアウトファイルを画像に変換する際のデフォルトDPI（解像度）を設定します"
 render_dpi_label = "レンダリング DPI："
@@ -1825,11 +1816,30 @@ extended_headings = "H7–H9 を出力します。無効時は H6 に下げ、�
 typed_endnotes = "型付き注記ラベルで脚注/文末脚注の区別を保持します。無効時は文末脚注を通常の脚注として出力し、型の損失を通知します。"
 
 [settings.optimization]
-availability_help = "最適化タイプは現在の実行環境から取得します。この入力カテゴリに適用できるものがなければ関連項目は無効になり、検出失敗は別途エラー表示されます。"
+no_default = "なし（通常の変換）"
+current_default = "現在の既定値：{name}"
+set_default = "既定に設定"
+clear_default = "既定の選択を解除"
+discovery_failed = "最適化機能を読み込めませんでした。現在、新しい既定値は選択できません。"
+unavailable = "現在の環境では、この入力カテゴリで{name}の最適化を利用できません。"
 
-none_available = "現在の実行環境には、この入力カテゴリに適用できる最適化タイプがありません。"
 
 [settings.gongwen]
+description = "公文書認識の既定選択とテンプレートフィールドの書式を個別に設定します。"
+to_markdown_title = "文書 → Markdown"
+to_markdown_description = "対応する文書で公文書最適化を初期選択にします。ファイルが公文書かどうかを自動判定する機能ではありません。DOCX は直接処理し、DOC、WPS、RTF、ODT には利用可能な文書コンバーターが必要です。"
+document_settings = "文書の抽出・番号付け・表の設定"
+from_markdown_title = "Markdown → 文書"
 title = "公文書"
 fields_label = "中国公文書のフィールドを整形"
 fields_help = "Word テンプレートの添付資料、写しの送付先、文書日付、発行日、注記を整形し、規則に該当する空欄を削除します。添付資料のプレースホルダーは本文または表のセル内で独立した段落に置いてください。ヘッダー、フッター、テキストボックス、文中への配置には対応していません。オフの場合は通常の入力規則と共通のリスト区切り文字を使用します。"
+
+[settings.invoice]
+title = "請求書"
+description = "中国語請求書の抽出に使う初期選択を設定します。ファイルを請求書として自動分類せず、変換ごとに選択を変更できます。"
+layout_title = "PDF / OFD → Markdown"
+layout_description = "スキャン PDF では、入力固定レイアウトファイルの設定で OCR を有効にする必要があります。OFD は既存のテキストと構造を読み取り、スキャン内容の OCR は行いません。"
+layout_settings = "PDF 抽出と OCR の設定"
+image_title = "画像 → Markdown"
+image_description = "請求書画像には常に OCR を使用し、言語は共通の OCR 設定に従います。"
+ocr_settings = "共通の OCR 言語設定"

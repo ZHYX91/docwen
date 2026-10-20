@@ -24,6 +24,8 @@ _TAB_GROUP_MAP: dict[str, str] = {
     "other": "other",
     "formatting": "formatting",
     "document": "document",
+    "gongwen": "gongwen",
+    "invoice": "invoice",
     "text": "text",
     "spreadsheet": "spreadsheet",
     "image": "image",

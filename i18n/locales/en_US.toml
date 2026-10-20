@@ -438,9 +438,6 @@ enable_ocr = "Check \"Image OCR\" by default"
 enable_ocr_tooltip = "Check \"Image OCR\" by default when converting document to MD"
 
 # 优化设置
-optimization_section = "Optimization Settings (Document to Markdown)"
-enable_optimization = "Enable \"Optimize for document type\" by default"
-optimization_type_label = "Default optimization type:"
 
 # 软件优先级
 word_processors_label = "Document Processing Software Priority"
@@ -497,9 +494,6 @@ extraction_section = "Image Extraction/OCR Settings"
 keep_images = "Check \"Extract images\" by default"
 enable_ocr = "Check \"Image OCR\" by default"
 size_unit_label = "Unit:"
-optimization_section = "Optimization (Image to Markdown)"
-enable_optimization = "Enable \"Optimize for image type\" by default"
-optimization_type_label = "Default optimization type:"
 
 # OCR语言设置
 
@@ -526,9 +520,6 @@ tiff_no_alpha = "No Transparency"
 extraction_section = "Image Extraction/OCR Settings"
 keep_images = "Check \"Extract images\" by default"
 enable_ocr = "Check \"Image OCR\" by default"
-optimization_section = "Optimization (Layout to Markdown)"
-enable_optimization = "Enable \"Optimize for layout type\" by default"
-optimization_type_label = "Default optimization type:"
 dpi_section = "Rendering DPI Settings"
 dpi_desc = "Set the default DPI (resolution) when converting layout files to images"
 render_dpi_label = "Render DPI:"
@@ -1819,11 +1810,30 @@ extended_headings = "Generate H7–H9 headings. When disabled, those headings be
 typed_endnotes = "Preserve the footnote/endnote distinction with typed note labels. When disabled, endnotes are exported as ordinary footnotes and the loss is reported."
 
 [settings.optimization]
-availability_help = "Only optimizations available for this file type can be selected. If none are available, the options are disabled. Loading errors appear separately."
+no_default = "None (ordinary conversion)"
+current_default = "Current default: {name}"
+set_default = "Set as default"
+clear_default = "Clear default"
+discovery_failed = "Optimization capabilities could not be loaded. A new default cannot be selected yet."
+unavailable = "{name} optimization is unavailable for this input category in the current environment."
 
-none_available = "No optimization types are available for this input category in the current runtime."
 
 [settings.gongwen]
+description = "Set defaults for recognizing official documents and formatting template fields separately."
+to_markdown_title = "Document → Markdown"
+to_markdown_description = "Use official document optimization as the initial choice for compatible documents; this does not classify files as official documents. DOCX is handled directly; DOC, WPS, RTF and ODT need an available document converter."
+document_settings = "Document extraction, numbering and tables"
+from_markdown_title = "Markdown → Document"
 title = "Official documents"
 fields_label = "Format Chinese official-document fields"
 fields_help = "Format attachment descriptions, copy recipients, document and publication dates, and notes in Word templates, and remove eligible empty fields. The attachment placeholder must occupy its own paragraph in the document body or a table cell. Headers, footers, text boxes and inline placements are unsupported. When off, ordinary field filling and the general list separator apply."
+
+[settings.invoice]
+title = "Invoices"
+description = "Set the initial choice for Chinese invoice extraction. This does not classify files as invoices; you can change the choice for each conversion."
+layout_title = "PDF / OFD → Markdown"
+layout_description = "Scanned PDFs need OCR enabled in incoming fixed-layout settings. OFD reads existing text and structure; scanned OFD content does not undergo OCR."
+layout_settings = "PDF extraction and OCR settings"
+image_title = "Image → Markdown"
+image_description = "Invoice images always use OCR, with the shared OCR language setting."
+ocr_settings = "Shared OCR language settings"

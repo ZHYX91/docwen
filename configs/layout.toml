@@ -9,10 +9,8 @@ to_md_keep_images = true
 to_md_enable_ocr = false
 # 提取方式: file(图片文件) / base64(Base64编码)
 # OCR位置迁移回退：仅当全局 export 同名键缺失/留空时供 GUI 使用；生产默认见 export.toml
-# 默认启用针对版式类型优化
-to_md_enable_optimization = false
-# 默认优化类型ID
-to_md_optimization_type = "invoice_cn"
+# 默认内容优化：none（不预选）或运行时提供的优化资源 ID（如 invoice_cn）
+to_md_optimization = "none"
 
 # 渲染选项默认设置
 # 渲染DPI: 150/300/600

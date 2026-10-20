@@ -438,9 +438,6 @@ enable_ocr = "默认勾选\"图片文字识别\""
 enable_ocr_tooltip = "文档转MD时默认勾选\"图片文字识别\""
 
 # 优化设置
-optimization_section = "优化设置（文档转Markdown）"
-enable_optimization = "默认启用\"针对文档类型优化\""
-optimization_type_label = "默认优化类型:"
 
 # 软件优先级
 word_processors_label = "文档处理软件优先级"
@@ -497,9 +494,6 @@ extraction_section = "图片提取/OCR设置"
 keep_images = "默认勾选\"提取图片\""
 enable_ocr = "默认勾选\"图片文字识别\""
 size_unit_label = "单位:"
-optimization_section = "优化设置（图片转Markdown）"
-enable_optimization = "默认启用\"针对图片类型优化\""
-optimization_type_label = "默认优化类型:"
 
 # OCR语言设置
 
@@ -526,9 +520,6 @@ tiff_no_alpha = "不保留透明"
 extraction_section = "图片提取/OCR设置"
 keep_images = "默认勾选\"提取图片\""
 enable_ocr = "默认勾选\"图片文字识别\""
-optimization_section = "优化设置（版式转Markdown）"
-enable_optimization = "默认启用\"针对版式类型优化\""
-optimization_type_label = "默认优化类型:"
 dpi_section = "渲染DPI设置"
 dpi_desc = "设置版式文件转图片时的默认DPI（分辨率）"
 render_dpi_label = "渲染 DPI:"
@@ -1819,11 +1810,30 @@ extended_headings = "输出 H7–H9；关闭时这些标题降为 H6，并报告
 typed_endnotes = "用 endnote: 标签保留脚注与尾注的区别；关闭时尾注输出为普通脚注，并报告类型损失。"
 
 [settings.optimization]
-availability_help = "只显示适用于当前文件类型的优化选项。没有可用选项时无法选择；加载失败会另行提示。"
+no_default = "无（普通转换）"
+current_default = "当前默认：{name}"
+set_default = "设为默认"
+clear_default = "取消默认"
+discovery_failed = "无法获取优化能力，暂时不能设置新的默认选择。"
+unavailable = "当前环境未提供适用于此输入类别的{name}优化。"
 
-none_available = "当前运行环境没有适用于此输入类别的优化类型。"
 
 [settings.gongwen]
+description = "分别设置公文识别默认选择与模板字段格式化。"
+to_markdown_title = "文档 → Markdown"
+to_markdown_description = "将公文优化设为兼容文档的初始选择，不会自动判断文件是否为公文。DOCX 可直接处理；DOC、WPS、RTF、ODT 需有可用的文档转换能力。"
+document_settings = "文档提取、编号与表格设置"
+from_markdown_title = "Markdown → 文档"
 title = "公文"
 fields_label = "格式化公文字段"
 fields_help = "填充 Word 模板时，处理附件说明、抄送机关、成文日期、印发日期和附注，并清理符合规则的空字段。附件说明须独占正文或表格单元格中的段落；页眉、页脚、文本框和行内位置不支持。关闭后按普通字段规则填充，列表使用通用分隔符。"
+
+[settings.invoice]
+title = "发票"
+description = "设置中文发票提取的初始选择，不会自动判断文件是否为发票。转换时仍可更改。"
+layout_title = "PDF / OFD → Markdown"
+layout_description = "扫描 PDF 需要在传入版式文件设置中启用 OCR；OFD 读取已有文本与结构，不对扫描内容执行 OCR。"
+layout_settings = "PDF 提取与 OCR 设置"
+image_title = "图片 → Markdown"
+image_description = "发票图片始终使用 OCR，识别语言沿用共享 OCR 设置。"
+ocr_settings = "共享 OCR 语言设置"

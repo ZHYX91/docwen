@@ -438,9 +438,6 @@ enable_ocr = "Marcar \"OCR de imagen\" por defecto"
 enable_ocr_tooltip = "Marca \"OCR de imagen\" por defecto al convertir documento → MD"
 
 # 优化设置
-optimization_section = "Ajustes de optimización (Documento → Markdown)"
-enable_optimization = "Activar por defecto \"Optimizar según tipo de documento\""
-optimization_type_label = "Tipo de optimización predeterminado:"
 
 # 软件优先级
 word_processors_label = "Prioridad de software para documentos"
@@ -497,9 +494,6 @@ extraction_section = "Ajustes de extracción de imágenes/OCR"
 keep_images = "Marcar \"Extraer imágenes\" por defecto"
 enable_ocr = "Marcar \"OCR de imagen\" por defecto"
 size_unit_label = "Unidad:"
-optimization_section = "Optimización (Imagen → Markdown)"
-enable_optimization = "Habilitar \"Optimizar por tipo de imagen\" por defecto"
-optimization_type_label = "Tipo de optimización predeterminado:"
 
 # OCR语言设置
 
@@ -526,9 +520,6 @@ tiff_no_alpha = "Sin transparencia"
 extraction_section = "Ajustes de extracción de imágenes/OCR"
 keep_images = "Marcar \"Extraer imágenes\" por defecto"
 enable_ocr = "Marcar \"OCR de imagen\" por defecto"
-optimization_section = "Optimización (Diseño → Markdown)"
-enable_optimization = "Habilitar \"Optimizar por tipo de maquetación\" por defecto"
-optimization_type_label = "Tipo de optimización predeterminado:"
 dpi_section = "Ajustes de DPI de renderizado"
 dpi_desc = "Establece el DPI (resolución) predeterminado al convertir archivos de maquetación a imágenes"
 render_dpi_label = "DPI de renderizado:"
@@ -1831,11 +1822,30 @@ extended_headings = "Genera H7–H9. Desactivado, esos encabezados pasan a H6 y 
 typed_endnotes = "Conserva la distinción entre notas al pie y finales mediante etiquetas tipadas. Desactivado, las notas finales se exportan como notas al pie normales y se informa de la pérdida."
 
 [settings.optimization]
-availability_help = "Los tipos de optimización proceden del entorno de ejecución actual. Si ninguno sirve para esta categoría de entrada, los controles se desactivan; los errores de descubrimiento se muestran por separado."
+no_default = "Ninguna (conversión normal)"
+current_default = "Opción predeterminada: {name}"
+set_default = "Establecer por defecto"
+clear_default = "Quitar opción predeterminada"
+discovery_failed = "No se pudieron cargar las funciones de optimización. Por ahora no se puede elegir una nueva opción predeterminada."
+unavailable = "La optimización {name} no está disponible para esta categoría de entrada en el entorno actual."
 
-none_available = "No hay tipos de optimización disponibles para esta categoría de entrada en el entorno actual."
 
 [settings.gongwen]
+description = "Configure por separado la opción predeterminada para documentos oficiales y el formato de los campos de plantilla."
+to_markdown_title = "Documento → Markdown"
+to_markdown_description = "Use la optimización de documentos oficiales como selección inicial para documentos compatibles, sin clasificar los archivos automáticamente. DOCX se procesa directamente; DOC, WPS, RTF y ODT necesitan un conversor de documentos disponible."
+document_settings = "Extracción, numeración y tablas de documentos"
+from_markdown_title = "Markdown → Documento"
 title = "Documentos oficiales"
 fields_label = "Dar formato a campos de documentos oficiales chinos"
 fields_help = "Da formato a anexos, destinatarios de copias, fechas y notas en plantillas de Word, y elimina los campos vacíos previstos. El marcador de anexos debe ocupar un párrafo propio en el cuerpo o en una celda. No se admiten encabezados, pies, cuadros de texto ni marcadores entre texto. Al desactivarlo, se aplican el relleno normal y el separador general de listas."
+
+[settings.invoice]
+title = "Facturas"
+description = "Configure la selección inicial para extraer facturas chinas. No se clasifican los archivos como facturas; la selección se puede cambiar en cada conversión."
+layout_title = "PDF / OFD → Markdown"
+layout_description = "Los PDF escaneados necesitan OCR activado en los ajustes de archivos de diseño fijo entrantes. OFD lee el texto y la estructura existentes; no aplica OCR al contenido escaneado."
+layout_settings = "Extracción de PDF y ajustes de OCR"
+image_title = "Imagen → Markdown"
+image_description = "Las imágenes de facturas siempre usan OCR con el ajuste de idioma compartido."
+ocr_settings = "Ajustes compartidos del idioma de OCR"

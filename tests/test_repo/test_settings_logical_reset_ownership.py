@@ -31,7 +31,7 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
     assert RESET_GROUPS == _TAB_GROUP_MAP
     for group in RESET_GROUPS.values():
         plan = reset_plan_for_group(group)
-        assert plan.files or plan.dotted_keys, group
+        assert plan.files or plan.dotted_keys or plan.conditional_dotted_keys, group
 
     export_plan = reset_plan_for_group("export")
     formatting_plan = reset_plan_for_group("formatting")
@@ -55,18 +55,21 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
     assert "conversion.code_detection.code_font" not in formatting_plan.dotted_keys
     assert "conversion.export.base64_compress_enabled" not in formatting_plan.dotted_keys
     assert document_plan.files == ()
-    assert len(document_plan.dotted_keys) == 11
+    assert len(document_plan.dotted_keys) == 9
     assert "document.to_md_image_extraction_mode" not in document_plan.dotted_keys
     assert "document.to_md_ocr_placement_mode" not in document_plan.dotted_keys
 
     precise_counts = {
         "general": 7,
-        "text": 16,
+        "text": 15,
         "proofread": 6,
         "formatting": 25,
-        "document": 11,
+        "document": 9,
         "spreadsheet": 4,
-        "layout": 5,
+        "layout": 3,
+        "image": 7,
+        "gongwen": 1,
+        "invoice": 0,
         "link": 8,
         "other": 2,
         "output": 6,
@@ -77,7 +80,14 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         assert plan.files == (), group
         assert len(plan.dotted_keys) == count, group
 
-    assert reset_plan_for_group("image").files == ("image.toml",)
+    assert "template_fill.gongwen_fields_enabled" not in reset_plan_for_group("text").dotted_keys
+    for category in ("document", "layout", "image"):
+        assert f"{category}.to_md_optimization" not in reset_plan_for_group(category).dotted_keys
+    assert reset_plan_for_group("gongwen").conditional_dotted_keys == (("document.to_md_optimization", "gongwen"),)
+    assert reset_plan_for_group("invoice").conditional_dotted_keys == (
+        ("image.to_md_optimization", "invoice_cn"),
+        ("layout.to_md_optimization", "invoice_cn"),
+    )
     assert "link.path_resolution.search_dirs" not in reset_plan_for_group("link").dotted_keys
     assert "output.manifest.save_to_output" not in reset_plan_for_group("output").dotted_keys
     assert "logger.format" not in reset_plan_for_group("logging").dotted_keys
@@ -109,7 +119,8 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
     assert "plan = reset_plan_for_group(group)" in reset_group_block
     assert "rel_path not in RESET_EXCLUDED" in reset_group_block
     assert "dotted_by_file = self._plan_reset_values(plan.dotted_keys)" in reset_group_block
-    assert "self._reset_grouped_values_on_disk(dotted_by_file)" in reset_group_block
+    assert "self._reset_grouped_values_on_disk(active_values)" in reset_group_block
+    assert "plan.conditional_dotted_keys" in reset_group_block
     assert "self._run_user_file_transaction(" in reset_group_block
     assert 'operation=f"reset_group:{group}"' in reset_group_block
     assert "self.reset_file(" not in reset_group_block

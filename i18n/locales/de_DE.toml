@@ -384,9 +384,6 @@ enable_ocr = "OCR aktivieren"
 enable_ocr_tooltip = "Texterkennung für Bilder."
 
 # 优化设置
-optimization_section = "Optimierung (Dokument → Markdown)"
-enable_optimization = "Optimierung aktivieren"
-optimization_type_label = "Typ:"
 
 # 软件优先级
 word_processors_label = "Textverarbeitung"
@@ -443,9 +440,6 @@ extraction_section = "Extraktion/OCR"
 keep_images = "Bilder behalten"
 enable_ocr = "OCR aktivieren"
 size_unit_label = "Einheit:"
-optimization_section = "Optimierung (Bild → Markdown)"
-enable_optimization = "\"Für Bildtyp optimieren\" standardmäßig aktivieren"
-optimization_type_label = "Standard-Optimierungstyp:"
 
 # OCR语言设置
 
@@ -472,9 +466,6 @@ tiff_no_alpha = "Transparenz entfernen"
 extraction_section = "Extraktion/OCR"
 keep_images = "Bilder extrahieren"
 enable_ocr = "OCR aktivieren"
-optimization_section = "Optimierung (Layout → Markdown)"
-enable_optimization = "\"Für Layouttyp optimieren\" standardmäßig aktivieren"
-optimization_type_label = "Standard-Optimierungstyp:"
 dpi_section = "Rendering DPI"
 dpi_desc = "DPI für Layout-Rendering."
 render_dpi_label = "Render-DPI:"
@@ -1825,11 +1816,30 @@ extended_headings = "Gibt H7–H9 aus. Deaktiviert werden diese Überschriften z
 typed_endnotes = "Erhält die Unterscheidung zwischen Fuß- und Endnoten mit typisierten Notizkennungen. Deaktiviert werden Endnoten als normale Fußnoten exportiert und der Verlust gemeldet."
 
 [settings.optimization]
-availability_help = "Optimierungstypen stammen aus der aktuellen Laufzeitumgebung. Passt keiner zu dieser Eingabekategorie, werden die Steuerelemente deaktiviert; Fehler bei der Ermittlung werden separat angezeigt."
+no_default = "Keine (normale Konvertierung)"
+current_default = "Aktueller Standard: {name}"
+set_default = "Als Standard festlegen"
+clear_default = "Standard aufheben"
+discovery_failed = "Optimierungsfunktionen konnten nicht geladen werden. Ein neuer Standard kann derzeit nicht gewählt werden."
+unavailable = "Die Optimierung {name} ist in der aktuellen Umgebung für diese Eingabekategorie nicht verfügbar."
 
-none_available = "In der aktuellen Laufzeitumgebung ist für diese Eingabekategorie kein Optimierungstyp verfügbar."
 
 [settings.gongwen]
+description = "Standardauswahl für amtliche Dokumente und Formatierung von Vorlagenfeldern getrennt einstellen."
+to_markdown_title = "Dokument → Markdown"
+to_markdown_description = "Die Optimierung amtlicher Dokumente als Vorauswahl für kompatible Dokumente verwenden. Dateien werden dabei nicht als amtliche Dokumente klassifiziert. DOCX wird direkt verarbeitet; DOC, WPS, RTF und ODT benötigen einen verfügbaren Dokumentkonverter."
+document_settings = "Dokumentextraktion, Nummerierung und Tabellen"
+from_markdown_title = "Markdown → Dokument"
 title = "Amtliche Dokumente"
 fields_label = "Chinesische Amtsdokumentfelder formatieren"
 fields_help = "Formatiert Anlagen, Kopieempfänger, Dokument- und Veröffentlichungsdaten sowie Anmerkungen in Word-Vorlagen und entfernt geeignete leere Felder. Der Anlagenplatzhalter muss einen eigenen Absatz im Dokumenttext oder in einer Tabellenzelle belegen. Kopf- und Fußzeilen, Textfelder und Platzhalter im Fließtext werden nicht unterstützt. Ausgeschaltet gelten die normale Feldfüllung und das allgemeine Listentrennzeichen."
+
+[settings.invoice]
+title = "Rechnungen"
+description = "Vorauswahl für das Auslesen chinesischer Rechnungen festlegen. Dateien werden nicht als Rechnungen klassifiziert; die Auswahl kann bei jeder Konvertierung geändert werden."
+layout_title = "PDF / OFD → Markdown"
+layout_description = "Für gescannte PDFs muss OCR in den Einstellungen für eingehende Dateien mit festem Layout aktiviert sein. OFD liest vorhandenen Text und Struktur; gescannte OFD-Inhalte werden nicht per OCR verarbeitet."
+layout_settings = "PDF-Extraktion und OCR-Einstellungen"
+image_title = "Bild → Markdown"
+image_description = "Rechnungsbilder verwenden immer OCR mit der gemeinsamen OCR-Spracheinstellung."
+ocr_settings = "Gemeinsame OCR-Spracheinstellungen"
