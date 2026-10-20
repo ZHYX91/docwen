@@ -175,7 +175,8 @@ def test_release_workflow_builds_each_supported_package_once_and_runs_packaged_g
     assert "verify_packaged_gui.py" in windows_commands
     assert "--settings-smoke" in windows_commands
     assert "build_msix.py" not in windows_commands
-    assert windows_commands.count("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }") == 3
+    assert windows_commands.count("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }") == 4
+    assert windows_commands.count("--gongwen-fields-smoke") == 2
     assert '$env:PYTHONUTF8 = "1"' in windows_commands
     assert '$env:PYTHONIOENCODING = "utf-8"' in windows_commands
 
@@ -184,6 +185,7 @@ def test_release_workflow_builds_each_supported_package_once_and_runs_packaged_g
     assert "--proofread-report-smoke" in linux_commands
     assert "verify_packaged_gui.py" in linux_commands
     assert "--settings-smoke" in linux_commands
+    assert linux_commands.count("--gongwen-fields-smoke") == 2
     linux_dependency_step = next(
         step for step in linux["steps"] if step.get("name") == "Install Linux GUI dependencies"
     )

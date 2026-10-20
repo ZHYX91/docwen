@@ -30,8 +30,13 @@ from docwen_runtime.output.finalizer import OutputFinalizer
 
 try:
     from scripts.release import packaged_resources as _packaged_resources
+    from scripts.release.gongwen_fields_fixture import verify_gongwen_fields_output, write_gongwen_fields_cases
 except ModuleNotFoundError:
     import packaged_resources as _packaged_resources  # type: ignore[no-redef]
+    from gongwen_fields_fixture import (  # type: ignore[no-redef]
+        verify_gongwen_fields_output,
+        write_gongwen_fields_cases,
+    )
 
 _REQUIRED_CONFIG_FILES = _packaged_resources.REQUIRED_CONFIG_FILES
 _REQUIRED_LOCALE_FILES = _packaged_resources.REQUIRED_LOCALE_FILES
@@ -802,11 +807,12 @@ def _verify_physical_page_bundle(
     entries = bundle.get("entries")
     if not isinstance(artifacts, list) or not isinstance(relations, list) or not isinstance(entries, list):
         raise RuntimeError(f"packaged_physical_page_bundle_invalid:{bundle}")
-    by_id = {
-        artifact.get("artifact_id"): artifact
-        for artifact in artifacts
-        if isinstance(artifact, dict) and isinstance(artifact.get("artifact_id"), str)
-    }
+    by_id: dict[str, dict[str, Any]] = {}
+    for artifact in artifacts:
+        if isinstance(artifact, dict):
+            artifact_id = artifact.get("artifact_id")
+            if isinstance(artifact_id, str):
+                by_id[artifact_id] = artifact
     if any(
         artifact.get("media_type") == "application/vnd.docwen.document-node+json" for artifact in by_id.values()
     ) or any(isinstance(relation, dict) and relation.get("role") == "manifest" for relation in relations):
@@ -1082,6 +1088,8 @@ def _write_proofread_report_fixture(path: Path) -> bytes:
 
 def _run(binary_path: Path, *args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env.pop("PYTHONHOME", None)
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     env["DOCWEN_CONFIG_DIR"] = str(cwd / "config_home")
@@ -1568,6 +1576,35 @@ def _run_template_resource_smoke(binary_path: Path, *, work_dir: Path) -> Path:
     if _TEMPLATE_SMOKE_TEXT not in document_xml:
         raise RuntimeError("convert with canonical template ID output omitted the smoke fixture text")
     return resolved_output
+
+
+def _run_gongwen_fields_smoke(binary_path: Path, *, work_dir: Path) -> tuple[Path, ...]:
+    """Exercise the frozen Markdown converter with field processing on and off."""
+    outputs = []
+    for case in write_gongwen_fields_cases(work_dir):
+        payload = _load_json_payload(
+            _run(
+                binary_path,
+                "convert",
+                str(case.source_path),
+                "--to",
+                "docx",
+                "--template",
+                case.template_id,
+                "--output-dir",
+                str(case.work_dir / "outputs"),
+                "--json",
+                "--quiet",
+                cwd=case.work_dir,
+            ),
+            command_name=f"Gongwen fields {case.name}",
+        )
+        if payload.get("success") is not True or payload.get("command") != "convert":
+            raise RuntimeError(f"packaged_gongwen_fields_conversion_failed:{case.name}:{payload}")
+        output = _resolve_output_file(payload, work_dir=case.work_dir, command_name=f"Gongwen fields {case.name}")
+        verify_gongwen_fields_output(output, case=case)
+        outputs.append(output)
+    return tuple(outputs)
 
 
 def _verify_doctor_payload(payload: dict[str, object]) -> None:
@@ -3613,6 +3650,11 @@ def main(argv: list[str]) -> int:
         help="Also verify the packaged Markdown proofread report 2.0 coordinate and empty-result contracts.",
     )
     parser.add_argument(
+        "--gongwen-fields-smoke",
+        action="store_true",
+        help="Verify real Markdown-to-DOCX Gongwen fields in body and tables, including the on/off config contract.",
+    )
+    parser.add_argument(
         "--successful-warning-smoke",
         metavar="INPUT",
         help="Also verify a successful conversion warning in packaged JSON and text modes.",
@@ -3698,6 +3740,13 @@ def main(argv: list[str]) -> int:
             if args.proofread_report_smoke
             else None
         )
+        # Keep this semantic fixture below Win32 MAX_PATH. The separate default
+        # gate already exercises long paths; this gate checks document fields.
+        gongwen_fields_outputs = (
+            _run_gongwen_fields_smoke(binary_path, work_dir=Path(temp_dir) / "fields")
+            if args.gongwen_fields_smoke
+            else ()
+        )
         warning_output_file = None
         if args.successful_warning_smoke:
             warning_input = Path(args.successful_warning_smoke).resolve()
@@ -3730,6 +3779,8 @@ def main(argv: list[str]) -> int:
             message += f"; tables on/off -> {table_output_files[0].name} / {table_output_files[1].name}"
         if proofread_report_files is not None:
             message += f"; proofread-report -> {proofread_report_files[0].name} / {proofread_report_files[1].name}"
+        if gongwen_fields_outputs:
+            message += f"; gongwen-fields on/off -> {len(gongwen_fields_outputs)} verified DOCX outputs"
         if warning_output_file is not None:
             message += f"; warning {args.successful_warning_code} -> {warning_output_file.name}"
         print(message)

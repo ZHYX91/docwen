@@ -31,14 +31,8 @@ PROJECT_CONFIGS = Path(__file__).resolve().parents[3] / "configs"
             '[default_priority]\nword_processors = ["libreoffice", 7]\n',
         ),
         ("optimize.toml", '[types.custom]\nenabled = "yes"\n'),
-        (
-            "field_processors.toml",
-            "[processors.custom]\nmodule = 7\nenabled = true\n",
-        ),
-        (
-            "field_processors.toml",
-            '[processors.custom]\nmodule = "example.custom"\nlocales = []\nenabled = true\n',
-        ),
+        ("template_fill.toml", 'gongwen_fields_enabled = "false"\n'),
+        ("template_fill.toml", "gongwen_fields_enabled = 1\n"),
         ("numbering/add.toml", '[settings]\norder = ["custom", "custom"]\n'),
         (
             "numbering/add.toml",
@@ -93,6 +87,7 @@ def test_deep_semantic_invalid_user_override_is_quarantined(
     (
         {"link": {"embedding": {"max_depth": 21}}},
         {"export": {"to_md_ocr_placement_mode": "sidecar"}},
+        {"template_fill": {"gongwen_fields_enabled": "false"}},
         {"link": {"format": {"md_file_link_style": "markdown_embed"}}},
         {"software": {"default_priority": {"word_processors": [7]}}},
         {

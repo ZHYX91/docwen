@@ -290,10 +290,6 @@ render_mode_word_native = "Word 原生"
 render_mode_hint = "文字 = 將序號寫入標題文字；Word 原生 = 使用 Word 多級清單自動編號"
 
 # 字段优化（字段处理器）
-field_processors_section = "欄位優化（Markdown轉為文件）"
-field_processors_empty = "當前語言暫無可用的欄位優化。"
-field_processors_load_error = "載入失敗：{error}"
-field_processors_toggle_failed = "無法更新「{name}」的啟用狀態，已恢復原值。"
 
 # 序号设置区域
 numbering_settings_section = "序號設定"
@@ -1827,3 +1823,8 @@ typed_endnotes = "以類型化註記標籤保留註腳/尾註區別；關閉時�
 availability_help = "只顯示適用於目前檔案類型的最佳化選項。沒有可用選項時無法選取；載入失敗會另外提示。"
 
 none_available = "目前執行環境沒有適用於此輸入類別的最佳化類型。"
+
+[settings.gongwen]
+title = "公文"
+fields_label = "格式化公文欄位"
+fields_help = "填入 Word 範本時，處理附件說明、抄送機關、成文日期、印發日期和附註，並清理符合規則的空欄位。附件說明須獨占本文或表格儲存格中的段落；頁首、頁尾、文字方塊和行內位置不支援。關閉後依一般欄位規則填入，清單使用通用分隔符。"

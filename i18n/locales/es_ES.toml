@@ -344,10 +344,6 @@ render_mode_word_native = "Nativa de Word"
 render_mode_hint = "Texto = escribir los números en los títulos; nativa de Word = usar listas multinivel de Word"
 
 # 字段优化（字段处理器）
-field_processors_section = "Optimizaciones de campos (Markdown → Documento)"
-field_processors_empty = "No hay optimizaciones de campos disponibles para el idioma actual."
-field_processors_load_error = "Error de carga: {error}"
-field_processors_toggle_failed = "No se pudo actualizar «{name}». Se restauró el valor anterior."
 
 # 序号设置区域
 numbering_settings_section = "Ajustes de numeración"
@@ -1834,3 +1830,8 @@ typed_endnotes = "Conserva la distinción entre notas al pie y finales mediante 
 availability_help = "Los tipos de optimización proceden del entorno de ejecución actual. Si ninguno sirve para esta categoría de entrada, los controles se desactivan; los errores de descubrimiento se muestran por separado."
 
 none_available = "No hay tipos de optimización disponibles para esta categoría de entrada en el entorno actual."
+
+[settings.gongwen]
+title = "Documentos oficiales"
+fields_label = "Dar formato a campos de documentos oficiales chinos"
+fields_help = "Da formato a anexos, destinatarios de copias, fechas y notas en plantillas de Word, y elimina los campos vacíos previstos. El marcador de anexos debe ocupar un párrafo propio en el cuerpo o en una celda. No se admiten encabezados, pies, cuadros de texto ni marcadores entre texto. Al desactivarlo, se aplican el relleno normal y el separador general de listas."

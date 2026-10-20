@@ -1,4 +1,4 @@
-"""Request-local YAML links carried through string-based field processors."""
+"""Request-local YAML links carried through template display values."""
 
 from __future__ import annotations
 

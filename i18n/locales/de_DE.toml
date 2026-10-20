@@ -290,10 +290,6 @@ render_mode_word_native = "Word-nativ"
 render_mode_hint = "Text = Nummern in Überschriften schreiben; Word-nativ = mehrstufige Word-Listennummerierung verwenden"
 
 # 字段优化（字段处理器）
-field_processors_section = "Feldoptimierungen (Markdown zu Dokument)"
-field_processors_empty = "Keine Feldoptimierungen für die aktuelle Sprache verfügbar."
-field_processors_load_error = "Ladefehler: {error}"
-field_processors_toggle_failed = "„{name}“ konnte nicht aktualisiert werden. Der vorherige Wert wurde wiederhergestellt."
 
 # 序号设置区域
 numbering_settings_section = "Nummerierungseinstellungen"
@@ -1828,3 +1824,8 @@ typed_endnotes = "Erhält die Unterscheidung zwischen Fuß- und Endnoten mit typ
 availability_help = "Optimierungstypen stammen aus der aktuellen Laufzeitumgebung. Passt keiner zu dieser Eingabekategorie, werden die Steuerelemente deaktiviert; Fehler bei der Ermittlung werden separat angezeigt."
 
 none_available = "In der aktuellen Laufzeitumgebung ist für diese Eingabekategorie kein Optimierungstyp verfügbar."
+
+[settings.gongwen]
+title = "Amtliche Dokumente"
+fields_label = "Chinesische Amtsdokumentfelder formatieren"
+fields_help = "Formatiert Anlagen, Kopieempfänger, Dokument- und Veröffentlichungsdaten sowie Anmerkungen in Word-Vorlagen und entfernt geeignete leere Felder. Der Anlagenplatzhalter muss einen eigenen Absatz im Dokumenttext oder in einer Tabellenzelle belegen. Kopf- und Fußzeilen, Textfelder und Platzhalter im Fließtext werden nicht unterstützt. Ausgeschaltet gelten die normale Feldfüllung und das allgemeine Listentrennzeichen."

@@ -344,10 +344,6 @@ render_mode_word_native = "Word 原生"
 render_mode_hint = "文本 = 将序号写入标题文本；Word 原生 = 使用 Word 多级列表自动编号"
 
 # 字段优化（字段处理器）
-field_processors_section = "字段优化（Markdown转为文档）"
-field_processors_empty = "当前语言暂无可用字段优化。"
-field_processors_load_error = "加载失败：{error}"
-field_processors_toggle_failed = "无法更新“{name}”的启用状态，已恢复原值。"
 
 # 序号设置区域
 numbering_settings_section = "序号设置"
@@ -1822,3 +1818,8 @@ typed_endnotes = "用 endnote: 标签保留脚注与尾注的区别；关闭时�
 availability_help = "只显示适用于当前文件类型的优化选项。没有可用选项时无法选择；加载失败会另行提示。"
 
 none_available = "当前运行环境没有适用于此输入类别的优化类型。"
+
+[settings.gongwen]
+title = "公文"
+fields_label = "格式化公文字段"
+fields_help = "填充 Word 模板时，处理附件说明、抄送机关、成文日期、印发日期和附注，并清理符合规则的空字段。附件说明须独占正文或表格单元格中的段落；页眉、页脚、文本框和行内位置不支持。关闭后按普通字段规则填充，列表使用通用分隔符。"

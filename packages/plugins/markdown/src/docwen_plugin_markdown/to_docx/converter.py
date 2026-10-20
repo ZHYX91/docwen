@@ -64,11 +64,7 @@ from docwen_plugin_markdown.common_utils import (
     remove_md_numbering,
 )
 from docwen_plugin_markdown.document_semantics import analyze_document_semantics
-from docwen_plugin_markdown.field_registry import (
-    collect_placeholder_rules,
-    collect_special_placeholder_handlers,
-    run_yaml_processors,
-)
+from docwen_plugin_markdown.gongwen_fields import GongwenFieldPlacementError
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.preprocessor import (
     materialize_image_placeholders,
@@ -82,7 +78,7 @@ from docwen_plugin_markdown.runtime_semantics_v3 import (
     prepare_runtime_semantics_v3,
 )
 from docwen_plugin_markdown.template_filler import fill_template
-from docwen_plugin_markdown.template_policy import template_list_separator
+from docwen_plugin_markdown.template_policy import template_gongwen_fields_enabled, template_list_separator
 from docwen_plugin_markdown.template_utils import (
     TemplatePackageError,
     body_content_extent,
@@ -251,14 +247,6 @@ def _resolve_horizontal_rule_actions(config: object) -> dict[str, str]:
         "asterisk": read("asterisk", "section_break"),
         "underscore": read("underscore", "horizontal_rule_1"),
     }
-
-
-def _resolve_locale(conversion_config: object) -> str:
-    if isinstance(conversion_config, dict):
-        locale = conversion_config.get("output_locale")
-        if isinstance(locale, str) and locale:
-            return locale
-    return "zh_CN"
 
 
 def _resolve_table_style_name(
@@ -811,13 +799,6 @@ class MdToDocxConverter:
             yaml_dict, md_body = extract_yaml_front_matter(content)
             cancellable.check()
             link_config = _request_link_config(context.config)
-            field_processors_config = context.config.get("field_processors", {})
-            current_locale = str(options.get("locale") or _resolve_locale(context.config.get("conversion", {})))
-            placeholder_rules = collect_placeholder_rules(field_processors_config, current_locale=current_locale)
-            special_placeholder_handlers = collect_special_placeholder_handlers(
-                field_processors_config,
-                current_locale=current_locale,
-            )
 
             # ── Stage 2: Preprocess & Parse ────────────────────────────
             progress.report_progress(20.0, "Preprocessing Markdown")
@@ -1019,8 +1000,9 @@ class MdToDocxConverter:
             except BibliographyConversionError as exc:
                 return _bibliography_failure(task_id, t_start, exc)
             placeholder_map = without_reserved_bibliography_placeholder(placeholder_map)
+            template_yaml = dict(yaml_dict)
             ensure_title_fallback(
-                yaml_dict,
+                template_yaml,
                 placeholder_names=placeholder_map,
                 source_stem=context.request.source_stem,
             )
@@ -1028,9 +1010,8 @@ class MdToDocxConverter:
                 resource_source_path, link_config, declared_inputs=declared_resource_resolver is not None
             )
             for key in placeholder_map:
-                if key in yaml_dict:
-                    yaml_dict[key] = yaml_links.project(yaml_dict[key])
-            run_yaml_processors(yaml_dict, field_processors_config, current_locale=current_locale)
+                if key in template_yaml:
+                    template_yaml[key] = yaml_links.project(template_yaml[key])
             body_font = extract_body_font(doc)
             body_style = extract_body_style(doc)
             body_paragraph_format = extract_body_paragraph_format(doc)
@@ -1164,16 +1145,15 @@ class MdToDocxConverter:
             progress.report_progress(70.0, "Filling template")
             fill_template(
                 doc=doc,
-                yaml_dict=yaml_dict,
+                yaml_dict=template_yaml,
                 rendered_paragraphs=paragraphs,
                 placeholder_para=placeholder_para,
                 placeholder_map=placeholder_map,
-                placeholder_rules=placeholder_rules,
-                special_placeholder_handlers=special_placeholder_handlers,
+                gongwen_fields_enabled=template_gongwen_fields_enabled(context.config),
                 list_separator=template_list_separator(context.config),
             )
             yaml_links.materialize(doc)
-            yaml_dict = yaml_links.plain(yaml_dict)
+            metadata_yaml = yaml_links.plain(template_yaml)
             if semantic_v3_session is not None:
                 try:
                     semantic_v3_session.finalize_document()
@@ -1212,8 +1192,8 @@ class MdToDocxConverter:
             suggested_name = f"{context.request.source_stem}.docx"
 
             # Inject DOCX metadata (title/subject) from YAML
-            if yaml_dict:
-                _inject_docx_metadata(doc, yaml_dict)
+            if metadata_yaml:
+                _inject_docx_metadata(doc, metadata_yaml)
 
             from docwen_core.docx_table_roles import inject_table_roles, prepare_table_roles
 
@@ -1402,6 +1382,7 @@ class MdToDocxConverter:
                 Path(pending_output).unlink(missing_ok=True)
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
             error_text = conversion_error_text(context.request, exc)
+            diagnostic_code = exc.diagnostic_code if isinstance(exc, GongwenFieldPlacementError) else "MD2DOCX-ERROR"
             logger.error(f"MD→DOCX failed: {error_text}")
             return ConversionResult(
                 task_id=task_id,
@@ -1409,14 +1390,14 @@ class MdToDocxConverter:
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
                     message=error_text,
-                    diagnostic_code="MD2DOCX-ERROR",
+                    diagnostic_code=diagnostic_code,
                 ),
                 metrics=ConversionMetrics(duration_ms=elapsed_ms),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
                         message=f"MD→DOCX conversion failed: {error_text}",
-                        code="MD2DOCX-ERROR",
+                        code=diagnostic_code,
                     )
                 ],
             )

@@ -30,6 +30,7 @@ from tools.workspace_root import WorkspaceRootError, resolve_workspace_root
 
 try:
     from scripts.release import packaged_resources as _packaged_resources
+    from scripts.release.gongwen_fields_fixture import verify_gongwen_fields_output, write_gongwen_fields_cases
     from scripts.release.successful_warning_fixture import (
         SUCCESSFUL_WARNING_ACTION,
         SUCCESSFUL_WARNING_CODE,
@@ -38,6 +39,10 @@ try:
     )
 except ModuleNotFoundError:
     import packaged_resources as _packaged_resources  # type: ignore[no-redef]
+    from gongwen_fields_fixture import (  # type: ignore[no-redef]
+        verify_gongwen_fields_output,
+        write_gongwen_fields_cases,
+    )
     from successful_warning_fixture import (  # type: ignore[no-redef]
         SUCCESSFUL_WARNING_ACTION,
         SUCCESSFUL_WARNING_CODE,
@@ -558,6 +563,8 @@ def _run(binary_path: Path, *args: str, cwd: Path) -> subprocess.CompletedProces
 
 def _base_env(cwd: Path) -> dict[str, str]:
     env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env.pop("PYTHONHOME", None)
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     env["DOCWEN_CONFIG_DIR"] = str(cwd / "config_home")
@@ -629,6 +636,48 @@ def _write_office_smoke_inputs(work_dir: Path) -> list[tuple[str, Path, str, tup
         ("xlsx", xlsx_path, "panel", ("DOCWEN PACKAGED GUI SHEET 2026", "Alpha", "95")),
         ("markdown", markdown_path, "action", ("DOCWEN PACKAGED GUI MARKDOWN 2026", "semantic readback")),
     ]
+
+
+def _run_gongwen_fields_smoke(
+    binary_path: Path,
+    *,
+    cwd: Path,
+) -> tuple[list[Path], subprocess.CompletedProcess[str]]:
+    """Drive normal template selection and ActionArea conversion in the frozen GUI."""
+    outputs: list[Path] = []
+    stdout_parts: list[str] = []
+    stderr_parts: list[str] = []
+    for case in write_gongwen_fields_cases(cwd / "gongwen_fields"):
+        report_path = case.work_dir / "report.json"
+        env = _base_env(case.work_dir)
+        # Aggregate diagnostics under the verifier's existing log gate while
+        # each process reads its own independent config and template state.
+        env["DOCWEN_LOG_DIR"] = str(cwd / "log_home")
+        env["DOCWEN_GUI_TEST_AUTOCLOSE_MS"] = "120000"
+        env["DOCWEN_GUI_TEST_CONVERSION_REPORT"] = str(report_path)
+        env["DOCWEN_GUI_TEST_CONVERSION_INPUT"] = str(case.source_path)
+        env["DOCWEN_GUI_TEST_CONVERSION_OUTPUT_DIR"] = str(case.work_dir / "outputs")
+        env["DOCWEN_GUI_TEST_CONVERSION_TARGET"] = "docx"
+        env["DOCWEN_GUI_TEST_CONVERSION_SURFACE"] = "action"
+        env["DOCWEN_GUI_TEST_CONVERSION_ACTION"] = ""
+        env["DOCWEN_GUI_TEST_CONVERSION_TIMEOUT_MS"] = "90000"
+        proc = _run_with_env(binary_path, cwd=case.work_dir, env=env, timeout=120)
+        stdout_parts.append(proc.stdout)
+        stderr_parts.append(proc.stderr)
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"packaged_gui_gongwen_fields_process_failed:{case.name}:{proc.returncode}\n"
+                f"STDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
+            )
+        output = _read_conversion_smoke_output(report_path)
+        verify_gongwen_fields_output(output, case=case)
+        outputs.append(output)
+    return outputs, subprocess.CompletedProcess(
+        [str(binary_path), "--gongwen-fields-smoke"],
+        0,
+        stdout="".join(stdout_parts),
+        stderr="".join(stderr_parts),
+    )
 
 
 def _run_office_smoke(
@@ -1126,6 +1175,14 @@ def main(argv: list[str]) -> int:
         ),
     )
     parser.add_argument(
+        "--gongwen-fields-smoke",
+        action="store_true",
+        help=(
+            "Run four real Markdown-to-DOCX conversions through the packaged ActionArea with a custom template; "
+            "verify Gongwen body/table fields, empty containers and the on/off config contract."
+        ),
+    )
+    parser.add_argument(
         "--ocr-smoke",
         action="store_true",
         help=(
@@ -1231,6 +1288,17 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     if (args.candidate_id is None) != (args.receipt_output is None):
         parser.error("--candidate-id and --receipt-output must be provided together")
+    if args.gongwen_fields_smoke and (
+        args.notification_smoke
+        or args.settings_smoke
+        or args.ocr_smoke
+        or args.ipc_smoke
+        or args.office_smoke
+        or args.presentation_smoke
+        or args.smartdoc_smoke
+        or args.successful_warning_smoke
+    ):
+        parser.error("--gongwen-fields-smoke must run alone because it launches four conversion instances")
     if args.ipc_smoke and (
         args.notification_smoke
         or args.settings_smoke
@@ -1311,13 +1379,16 @@ def main(argv: list[str]) -> int:
         presentation_output: Path | None = None
         presentation_fixture_backend = ""
         smartdoc_outputs: list[Path] = []
+        gongwen_fields_outputs: list[Path] = []
         smartdoc_fixture_backends: list[str] = []
         successful_warning_output: Path | None = None
         successful_warning_screenshot: Path | None = None
         successful_warning_report: Path | None = None
         successful_warning_cli_output: Path | None = None
         successful_warning_input_sha256 = ""
-        if args.office_smoke:
+        if args.gongwen_fields_smoke:
+            gongwen_fields_outputs, proc = _run_gongwen_fields_smoke(binary_path, cwd=verification_dir)
+        elif args.office_smoke:
             office_outputs, proc = _run_office_smoke(binary_path, cwd=verification_dir)
         elif args.presentation_smoke:
             presentation_output, presentation_fixture_backend, proc = _run_presentation_smoke(
@@ -1452,6 +1523,11 @@ def main(argv: list[str]) -> int:
 
         if settings_result is not None:
             print(f"packaged_gui_smoke_ok: {binary_path.name}; settings_tabs={len(settings_result['loadedTabs'])}")
+        elif gongwen_fields_outputs:
+            print(
+                f"packaged_gui_smoke_ok: {binary_path.name}; "
+                f"gongwen-fields on/off -> {len(gongwen_fields_outputs)} verified DOCX outputs"
+            )
         elif office_outputs:
             names = ", ".join(path.name for path in office_outputs)
             print(f"packaged_gui_smoke_ok: {binary_path.name}; office -> {names}")
@@ -1488,6 +1564,7 @@ def main(argv: list[str]) -> int:
                 for name, selected in (
                     ("notification", args.notification_smoke),
                     ("settings", args.settings_smoke),
+                    ("gongwen-fields", args.gongwen_fields_smoke),
                     ("ocr", args.ocr_smoke),
                     ("ipc", args.ipc_smoke),
                     ("office", args.office_smoke),
@@ -2083,8 +2160,11 @@ def _verify_office_conversion_metrics(
         and report.get("outputPath") == str(output_path)
     )
     engine_valid = engine == "office_bridge"
-    backend_valid = isinstance(backend, str) and bool(backend.strip())
-    if not all((duration_valid, input_valid, output_valid, engine_valid, backend_valid)):
+    if (
+        not all((duration_valid, input_valid, output_valid, engine_valid))
+        or not isinstance(backend, str)
+        or not backend.strip()
+    ):
         raise RuntimeError(f"packaged_gui_office_metrics_invalid: {case_name}: {metrics!r}")
     return backend.strip()
 

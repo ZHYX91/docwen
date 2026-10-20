@@ -52,6 +52,7 @@ class TextConfig:
     heading_merge_mode: str = "punct_required"
     heading_merge_punctuation: str = DEFAULT_HEADING_MERGE_PUNCTUATION
     list_separator: str = "、"
+    gongwen_fields_enabled: bool = True
     table_style_mode: str = "builtin"
     builtin_table_style: str = "three_line_table"
     custom_table_style_name: str = ""
@@ -69,12 +70,6 @@ class TextConfig:
         default_factory=lambda: {
             "settings": {"order": []},
             "rules": [],
-        }
-    )
-    field_processors: dict = field(
-        default_factory=lambda: {
-            "settings": {"order": []},
-            "processors": {},
         }
     )
     heading_numbering_render_mode: str = "text"

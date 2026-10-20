@@ -61,7 +61,7 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
 
     precise_counts = {
         "general": 7,
-        "text": 15,
+        "text": 16,
         "proofread": 6,
         "formatting": 25,
         "document": 11,

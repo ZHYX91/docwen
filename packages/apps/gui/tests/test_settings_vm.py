@@ -434,22 +434,17 @@ class TestApplyCancel:
         rule_ids = [r.get("id") for r in saved.get("rules", []) if isinstance(r, dict)]
         assert "r1" in rule_ids
 
-    def test_apply_persists_field_processor_enabled_flags(
-        self, vm: SettingsViewModel, config_port: ConfigPortAdapter
-    ) -> None:
-        vm.set_field_processor_enabled("gongwen", False)
+    def test_apply_persists_gongwen_fields_enabled(self, vm: SettingsViewModel, config_port: ConfigPortAdapter) -> None:
+        vm.set_field(SECTION_TEXT, "gongwen_fields_enabled", False)
 
         assert vm.apply_settings() is True
 
         snapshot = config_port.snapshot()
-        assert snapshot["field_processors"]["processors"]["gongwen"]["enabled"] is False
+        assert snapshot["template_fill"]["gongwen_fields_enabled"] is False
 
     def test_dynamic_non_mapping_text_drafts_degrade_without_apply_failure(self, vm: SettingsViewModel) -> None:
-        vm.set_field(SECTION_TEXT, "field_processors", "invalid dynamic value")
         vm.set_field(SECTION_TEXT, "numbering_schemes", ["invalid dynamic value"])
 
-        assert vm.get_available_field_processors() == []
-        assert vm.set_field_processor_enabled("gongwen", False) is False
         assert vm.apply_settings() is True
 
     def test_cancel_restores_snapshot(self, vm: SettingsViewModel) -> None:
@@ -501,7 +496,7 @@ class TestReset:
 
         plan = reset_plan_for_group(group)
         assert "numbering/cleanup.toml" not in plan.files
-        assert "field_processors.toml" not in plan.files
+        assert "template_fill.gongwen_fields_enabled" in plan.dotted_keys
 
         # Set some custom clean rules to make them non-default
         vm.set_field(
@@ -512,14 +507,7 @@ class TestReset:
                 "rules": [{"id": "my_rule", "pattern": "^test", "enabled": True, "description": "custom"}],
             },
         )
-        vm.set_field(
-            SECTION_TEXT,
-            "field_processors",
-            {
-                "settings": {"order": ["my_processor"]},
-                "processors": {"my_processor": {"enabled": False}},
-            },
-        )
+        vm.set_field(SECTION_TEXT, "gongwen_fields_enabled", False)
 
         # Verify before reset
         rules_before = vm.config.text.numbering_clean_rules or {}
@@ -534,7 +522,7 @@ class TestReset:
         rules_after = vm.config.text.numbering_clean_rules or {}
         rule_ids_after = {r["id"] for r in rules_after.get("rules", [])}
         assert "my_rule" in rule_ids_after
-        assert vm.config.text.field_processors["processors"]["my_processor"]["enabled"] is False
+        assert vm.config.text.gongwen_fields_enabled is True
         assert vm.config.dirty_sections == frozenset({SECTION_TEXT})
 
 
