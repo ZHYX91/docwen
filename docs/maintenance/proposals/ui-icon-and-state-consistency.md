@@ -56,7 +56,7 @@ Do not delete an asset merely because a similarly named SVG exists. Do not chang
 
 ## Implementation and validation boundaries
 
-[The asset inventory](../../../assets/icons/README.md) records the 31 role assets, their pinned Fluent source and license. Navigation, location, copy, delete, sorting, retry, template and software-priority controls use the shared loader. Status controls retain semantic colors and text; wrapped action buttons reserve icon space and draw disabled/RTL states correctly. Platform artwork remains only in missing-resource fallbacks and system-owned surfaces.
+[The asset inventory](../../../assets/icons/README.md) records the role assets, their pinned Fluent source and license. Navigation, location, copy, delete, sorting, retry, template and software-priority controls use the shared loader. The input toolbar keeps compact Add and Paste labels, joins Paste and its SVG chevron as a split group, and presents Clear as an icon with a localized tooltip and accessible name. The split group stays together when controls reflow; icons follow the existing theme and scale engine. Status controls retain semantic colors and text; wrapped action buttons reserve icon space and draw disabled/RTL states correctly. Platform artwork remains only in missing-resource fallbacks and system-owned surfaces.
 
 `test_icon_fidelity.py`, GUI control tests and resource/packaging checks cover the migrated assets and consumers. Unreferenced legacy operation/status PNGs were removed together with their packaging entries. Brand derivatives and the composite file-drop illustration keep their separate roles.
 

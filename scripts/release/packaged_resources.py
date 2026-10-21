@@ -82,6 +82,7 @@ REQUIRED_ASSET_FILES = (
     "icons/FLUENT_SYSTEM_ICONS_LICENSE.txt",
     "icons/README.md",
     "icons/about.svg",
+    "icons/chevron_down.svg",
     "icons/clear.svg",
     "icons/complete.svg",
     "icons/copy.svg",

@@ -83,21 +83,25 @@ class TestConstruction:
         btn = widget.clear_button
         assert btn is not None
 
-    def test_action_buttons_keep_full_text_and_horizontal_order(self, widget: InputArea, qapp: QApplication) -> None:
+    def test_action_buttons_keep_labels_and_compact_horizontal_order(
+        self, widget: InputArea, qapp: QApplication
+    ) -> None:
         from PySide6.QtWidgets import QBoxLayout
 
         from docwen_gui.styles.design_tokens import Sizing
-        from docwen_gui.widgets.input_area import _ACTION_BUTTON_MIN_WIDTH
 
         widget.resize(720, 480)
         widget.show()
         qapp.processEvents()
         widget._sync_top_control_layout()
 
-        buttons = (widget.add_button, widget.paste_button, widget.clear_button)
+        buttons = (widget.add_button, widget.paste_button)
         assert all(button.text() for button in buttons)
-        assert all(button.minimumWidth() >= _ACTION_BUTTON_MIN_WIDTH for button in buttons)
         assert all(button.minimumHeight() >= Sizing.CONTROL_HEIGHT for button in buttons)
+        assert not widget.clear_button.text()
+        assert not widget.clear_button.icon().isNull()
+        assert widget.clear_button.toolTip() == widget.clear_button.accessibleName()
+        assert widget.clear_button.toolTip()
         assert widget._top_layout.direction() == QBoxLayout.Direction.LeftToRight
         assert widget._action_layout.direction() == QBoxLayout.Direction.LeftToRight
         assert widget._mode_frame.geometry().right() < widget._action_frame.geometry().right()
@@ -121,7 +125,6 @@ class TestConstruction:
         labels = {
             widget.add_button: "Add a document from the computer",
             widget.paste_button: "Paste Markdown text from the clipboard",
-            widget.clear_button: "Clear all current input items",
         }
         for control, text in labels.items():
             control.setText(text)
@@ -615,10 +618,27 @@ class TestViewModelWiring:
         # No crash; visual state handled by widget
         assert True
 
-    def test_clear_resets_selection(self, widget: InputArea) -> None:
-        widget.view_model.clear_files()
-        # Widget should handle this gracefully
-        assert True
+    def test_clear_icon_resets_selection_without_deleting_the_file(
+        self, widget: InputArea, main_vm: MainWindowViewModel, tmp_path: Path, qtbot
+    ) -> None:
+        from PySide6.QtTest import QSignalSpy
+
+        from docwen_core.models import FileRef
+
+        source = tmp_path / "keep.md"
+        source.write_text("Keep this document", encoding="utf-8")
+        selected = FileRef(path=str(source), format="markdown", category="markdown")
+        main_vm.set_selected_file(selected)
+        widget.view_model.sync_selection([selected], current=True)
+        cleared = QSignalSpy(widget.view_model.files_cleared)
+        widget.show()
+        widget.clear_button.setFocus()
+        qtbot.keyClick(widget.clear_button, Qt.Key.Key_Space)
+
+        assert cleared.count() == 1
+        assert not widget.view_model.selection_message
+        assert not widget._selection_label.text()
+        assert source.read_text(encoding="utf-8") == "Keep this document"
 
 
 # ── Public API ────────────────────────────────────────────────────────

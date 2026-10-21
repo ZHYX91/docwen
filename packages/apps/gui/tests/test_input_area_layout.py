@@ -1,7 +1,7 @@
 """Input-action geometry during live resize, font changes, and UI scaling."""
 
 import pytest
-from PySide6.QtCore import QPoint, QRect
+from PySide6.QtCore import QPoint, QRect, Qt
 from PySide6.QtWidgets import QApplication
 
 from docwen_gui.styles.theme_manager import ThemeManager
@@ -12,16 +12,17 @@ from docwen_gui.widgets.input_area import InputArea
 pytestmark = pytest.mark.gui
 
 
-@pytest.mark.parametrize("scale", [100, 150])
+@pytest.mark.parametrize("scale", [90, 100, 110, 125, 150])
 @pytest.mark.parametrize("font_preset", ["default", "large"])
+@pytest.mark.parametrize("theme", ["light", "dark"])
 def test_actions_remain_visible_and_separate_during_live_resize(
-    qapp: QApplication, qtbot, scale: int, font_preset: str
+    qapp: QApplication, qtbot, scale: int, font_preset: str, theme: str
 ) -> None:
     main_vm = MainWindowViewModel(controller=None)
     widget = InputArea(view_model=InputAreaViewModel(main_vm=main_vm))
     qtbot.addWidget(widget)
     manager = ThemeManager.get_instance()
-    manager.initialize(qapp, "light")
+    manager.initialize(qapp, theme)
     manager.apply_font_size_preset(font_preset)
     manager.apply_ui_scale(scale)
     controls = (widget.add_button, widget.paste_button, widget._paste_menu_button, widget.clear_button)
@@ -34,17 +35,26 @@ def test_actions_remain_visible_and_separate_during_live_resize(
         assert all(not left.intersects(right) for index, left in enumerate(rects) for right in rects[index + 1 :]), (
             detail
         )
-        assert all(control.width() >= control.sizeHint().width() for control in controls), detail
+        assert all(control.width() >= control.sizeHint().width() for control in controls[:2]), detail
         assert all(control.height() >= control.sizeHint().height() for control in controls), detail
+        assert rects[1].right() + 1 == rects[2].left(), detail
+        assert rects[1].top() == rects[2].top(), detail
+        assert all(control.width() == control.height() for control in controls[2:]), detail
 
     try:
         widget.show()
         for width in (720, 460, 360, 720):
             widget.resize(width, 760)
             qtbot.waitUntil(visible_and_separate, timeout=1000)
+        compact_widths = [control.width() for control in controls]
+        widget.resize(1000, 760)
+        qtbot.waitUntil(visible_and_separate)
+        assert [control.width() for control in controls] == compact_widths
+        assert widget.paste_menu_button.arrowType() == Qt.ArrowType.NoArrow
+        assert not widget.paste_menu_button.icon().isNull()
         for control, label in zip(
-            (widget.add_button, widget.paste_button, widget.clear_button),
-            ("Add a document", "Paste clipboard content", "Clear current input"),
+            (widget.add_button, widget.paste_button),
+            ("Add a document", "Paste clipboard content"),
             strict=True,
         ):
             control.setText(label)
@@ -57,3 +67,4 @@ def test_actions_remain_visible_and_separate_during_live_resize(
         qtbot.waitUntil(lambda: not main_vm.inspection_busy)
         manager.apply_ui_scale(100)
         manager.apply_font_size_preset("default")
+        manager.apply_theme("light")

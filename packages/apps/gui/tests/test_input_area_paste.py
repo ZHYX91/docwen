@@ -1,7 +1,7 @@
 """Input-area paste button and keyboard scope through real Qt events."""
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence
 from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication, QLineEdit, QVBoxLayout, QWidget
@@ -32,6 +32,23 @@ class TestPasteAction:
         qtbot.mouseClick(widget.paste_button, Qt.MouseButton.LeftButton)
 
         assert spy.count() == 1
+
+    def test_split_menu_requests_plain_text_without_normal_paste(self, widget: InputArea, qtbot) -> None:
+        normal = QSignalSpy(widget.paste_requested)
+        plain = QSignalSpy(widget.paste_plain_text_requested)
+        menu = widget.paste_menu_button.menu()
+        assert menu is not None
+        widget.show()
+
+        def choose_plain_text() -> None:
+            qtbot.keyClick(menu, Qt.Key.Key_Down)
+            qtbot.keyClick(menu, Qt.Key.Key_Return)
+
+        QTimer.singleShot(0, choose_plain_text)
+        qtbot.mouseClick(widget.paste_menu_button, Qt.MouseButton.LeftButton)
+
+        assert normal.count() == 0
+        assert plain.count() == 1
 
     def test_ctrl_v_is_scoped_to_input_area_and_does_not_steal_line_edit_paste(
         self, widget: InputArea, qapp: QApplication, qtbot

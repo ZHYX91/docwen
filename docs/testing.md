@@ -160,6 +160,13 @@ Successful packaged-GUI runs are ephemeral by default. In the governed local lay
 
 ## Change-scoped acceptance and closeout
 
+Input toolbar regressions cover compact labelled Add/Paste actions, the joined paste/menu boundary,
+icon-only Clear, and reflow under light/dark themes at all five application scales and standard/large
+fonts (`test_input_area_layout.py`). Paste/menu event tests distinguish normal and plain-text requests;
+the Clear keyboard test checks selection reset while preserving the source file. Native inspection
+also checks the SVG arrow, keyboard focus and representative live theme/scale changes in an isolated
+profile. Source rendering and geometry checks do not establish packaged or cross-machine acceptance.
+
 Keep the existing required CI lanes. Select the smallest representative set of additional checks
 by the affected behavior and record the selection and reasons for omitted surfaces. For a fix,
 cover the original reported case and a relevant boundary; expand for distinct risks rather than

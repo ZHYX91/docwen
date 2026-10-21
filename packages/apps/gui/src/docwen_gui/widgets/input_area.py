@@ -6,7 +6,7 @@ Widgets never call runtime/plugins directly — they go through
 Key behaviors:
 - Drag-and-drop from file manager (URL) or text editor (text/plain)
 - Single/batch mode choices remain fully labelled in a vertical group
-- Add, Paste, and Clear actions stay textual and reflow when space is tight
+- Add and Paste stay labelled; alternate paste and clear use compact SVG actions
 - Paste delegates one explicit clipboard read to the owning main window
 - Clear resets the editable selection
 - Default height 200px with a compact title icon and semantic prompt label
@@ -43,6 +43,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMenu,
+    QPushButton,
     QRadioButton,
     QSizePolicy,
     QStyle,
@@ -59,6 +60,7 @@ from qfluentwidgets import (
 
 from docwen_gui.format_presentation import SUPPORTED_FORMAT_GROUPS, presentation_for
 from docwen_gui.i18n import t
+from docwen_gui.resources import set_action_icon
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.ui_scale import dp, set_metric
 
@@ -79,7 +81,6 @@ _SPACING_XS = Spacing.XS
 _SPACING_SM = Spacing.SM
 _SPACING_MD = Spacing.MD
 _PYRAMID_INDENTS = (72, 58, 44, 30, 18, 8)
-_ACTION_BUTTON_MIN_WIDTH = Sizing.BUTTON_MIN_WIDTH
 
 _SUPPORTED_TYPE_ROWS: tuple[tuple[str, str, str], ...] = tuple(
     (label_key, fallback, ", ".join(presentation_for(fmt).display_name for fmt in formats))
@@ -112,7 +113,6 @@ _I_BATCH_MODE = "components.file_drop.batch_mode"
 _I_SINGLE_MODE = "components.file_drop.single_mode"
 _I_ADD_BUTTON = "components.file_drop.add_button"
 _I_PASTE_BUTTON = "components.file_drop.paste_button"
-_I_CLEAR_BUTTON = "components.file_drop.clear_button"
 _I_ADD_FILE = "components.file_drop.add_file_action"
 _I_ADD_FOLDER = "components.file_drop.add_folder_action"
 _I_RECENT_FILES = "components.file_drop.recent_files_action"
@@ -184,8 +184,7 @@ class InputArea(QFrame):
         layout.addWidget(self._drop_group)
 
         # Top controls: a vertical mode group on the left and explicit actions
-        # on the right. The two groups stack when translations or large text
-        # need more width; button labels are never collapsed into icons.
+        # on the right. Keep the paste action and its menu together during reflow.
         self._top_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
         self._top_layout.setContentsMargins(0, 0, 0, 0)
         set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
@@ -220,20 +219,28 @@ class InputArea(QFrame):
 
         self._add_button = PrimaryPushButton(_i18n(_I_ADD_BUTTON, "Add"), self._drop_group)
         self._add_button.setObjectName("fileDropPrimaryButton")
-        set_metric(self._add_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
+        self._add_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        set_metric(self._add_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         self._add_button.clicked.connect(self._on_add_clicked)
         self._action_layout.addWidget(self._add_button)
 
-        self._paste_button = PushButton(_i18n(_I_PASTE_BUTTON, "Paste"), self._drop_group)
+        self._paste_frame = QFrame(self._action_frame)
+        self._paste_frame.setObjectName("fileDropPasteGroup")
+        self._paste_frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        paste_layout = QHBoxLayout(self._paste_frame)
+        paste_layout.setContentsMargins(0, 0, 0, 0)
+        paste_layout.setSpacing(0)
+        self._paste_button = PushButton(_i18n(_I_PASTE_BUTTON, "Paste"), self._paste_frame)
         self._paste_button.setObjectName("fileDropPasteButton")
-        set_metric(self._paste_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
+        self._paste_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        set_metric(self._paste_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         self._paste_button.clicked.connect(self.request_paste)
-        self._action_layout.addWidget(self._paste_button)
+        paste_layout.addWidget(self._paste_button)
 
-        self._paste_menu_button = QToolButton(self._drop_group)
+        self._paste_menu_button = QToolButton(self._paste_frame)
         self._paste_menu_button.setObjectName("fileDropPasteMenuButton")
-        self._paste_menu_button.setArrowType(Qt.ArrowType.DownArrow)
-        self._paste_menu_button.setStyleSheet("QToolButton::menu-indicator { image: none; }")
+        set_action_icon(self._paste_menu_button, "chevron_down.svg", size=16)
+        self._paste_menu_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         plain_text_label = t("components.file_drop.paste_plain_text_action", default="Paste as Plain Text")
         self._paste_menu_button.setToolTip(plain_text_label)
         self._paste_menu_button.setAccessibleName(plain_text_label)
@@ -244,18 +251,20 @@ class InputArea(QFrame):
         self._paste_menu_button.setMenu(paste_menu)
         self._paste_menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         set_metric(self._paste_menu_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
-        self._action_layout.addWidget(self._paste_menu_button)
+        paste_layout.addWidget(self._paste_menu_button)
+        self._action_layout.addWidget(self._paste_frame)
 
         self._action_layout.addSpacing(dp(Spacing.GROUP_GAP))
-        self._clear_button = PushButton(_i18n(_I_CLEAR_BUTTON, "Clear"), self._drop_group)
+        self._clear_button = QPushButton(self._drop_group)
         self._clear_button.setObjectName("fileDropClearButton")
-        self._clear_button.setProperty("quietAction", True)
-        set_metric(self._clear_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
-        self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
-        self._clear_button.setAccessibleName(_i18n(_I_CLEAR_BUTTON, "Clear"))
-        self._clear_button.setAccessibleDescription(_i18n(_I_CLEAR_BUTTON, "Clear"))
+        set_action_icon(self._clear_button, "clear.svg", size=18)
+        clear_label = _i18n("components.file_drop.clear_input_tooltip", "Clear input list")
+        self._clear_button.setToolTip(clear_label)
+        self._clear_button.setAccessibleName(clear_label)
+        self._clear_button.setAccessibleDescription(clear_label)
         self._clear_button.clicked.connect(self._on_clear_clicked)
         self._action_layout.addWidget(self._clear_button)
+        self._action_layout.addStretch(1)
 
         self._top_layout.addWidget(self._action_frame, 1)
 
@@ -772,6 +781,7 @@ class InputArea(QFrame):
             self._batch_mode_button,
             self._add_button,
             self._paste_button,
+            self._paste_frame,
             self._paste_menu_button,
             self._clear_button,
         )
@@ -786,21 +796,21 @@ class InputArea(QFrame):
             self._paste_menu_button.sizeHint().height(),
             self._clear_button.sizeHint().height(),
         )
-        for control in (self._add_button, self._paste_button, self._clear_button):
-            control.setMinimumHeight(control_height)
-            control.setMinimumWidth(max(dp(_ACTION_BUTTON_MIN_WIDTH), control.sizeHint().width()))
-        self._paste_menu_button.setMinimumSize(
-            max(dp(Sizing.CONTROL_HEIGHT), self._paste_menu_button.sizeHint().width()), control_height
-        )
+        for control in (self._add_button, self._paste_button):
+            control.setFixedHeight(control_height)
+            control.setFixedWidth(max(control_height, control.sizeHint().width()))
+        for control in (self._paste_menu_button, self._clear_button):
+            control.setFixedSize(control_height, control_height)
+        paste_width = self._paste_button.width() + self._paste_menu_button.width()
+        self._paste_frame.setFixedSize(paste_width, control_height)
 
         mode_width = max(self._single_mode_button.sizeHint().width(), self._batch_mode_button.sizeHint().width())
         action_width = (
             self._add_button.minimumWidth()
-            + self._paste_button.minimumWidth()
-            + self._paste_menu_button.minimumWidth()
+            + paste_width
             + self._clear_button.minimumWidth()
             + dp(Spacing.GROUP_GAP)
-            + 3 * dp(Spacing.CONTROL_GAP)
+            + 2 * dp(Spacing.CONTROL_GAP)
         )
         required = mode_width + action_width + dp(Spacing.GROUP_GAP)
         compact = 0 < content_width < max(dp(_COMPACT_WIDTH_THRESHOLD), required)
@@ -819,9 +829,7 @@ class InputArea(QFrame):
         set_metric(self._action_layout, "setSpacing", Spacing.CONTROL_GAP)
         # Keep one complete button readable, while allowing the horizontal row
         # to shrink far enough to switch to its stacked form.
-        self._action_frame.setMinimumWidth(
-            max(control.minimumWidth() for control in (self._add_button, self._paste_button, self._clear_button))
-        )
+        self._action_frame.setMinimumWidth(max(self._add_button.width(), paste_width, self._clear_button.width()))
 
         if direction_changed:
             self.height_changed.emit(self.minimumHeight())
@@ -898,7 +906,7 @@ class InputArea(QFrame):
         return self._paste_menu_button
 
     @property
-    def clear_button(self) -> PushButton:
+    def clear_button(self) -> QPushButton:
         """Public access to the clear button for external wiring."""
         return self._clear_button
 
