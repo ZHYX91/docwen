@@ -184,6 +184,8 @@ Trang **OCR và hình ảnh** quản lý nhận dạng chung và xuất hình �
 
 **Công văn** và **Hóa đơn** có trang riêng. **Tài liệu → Markdown** đặt lựa chọn nhận dạng ban đầu cho công văn; **Markdown → Tài liệu** cấu hình định dạng trường mẫu, kèm trợ giúp về phần đính kèm, nơi nhận bản sao, ngày và ghi chú. Hóa đơn có lựa chọn riêng cho **PDF / OFD → Markdown** và **Ảnh → Markdown**. Các giá trị mặc định chỉ thay đổi lựa chọn ban đầu cho tệp tương thích, không tự phân loại tệp. **Áp dụng / OK** để lưu, **Hủy** để bỏ thay đổi chưa áp dụng.
 
+**Phạm vi áp dụng:** Tính năng định dạng trường chuyên biệt hướng đến công văn Trung Quốc, còn tối ưu trích xuất hóa đơn hướng đến các mẫu hóa đơn Trung Quốc. Các tệp khác vẫn dùng được các đường chuyển đổi thông thường.
+
 ### Phím tắt
 
 -   **Kéo file ngoài**: Kéo trực tiếp vào cửa sổ để nhập

@@ -186,6 +186,8 @@ Abre la configuración con el icono de la parte inferior de la ventana o **Ctrl+
 
 **Documentos oficiales** y **Facturas** tienen páginas independientes. En documentos oficiales, **Documento → Markdown** controla la selección inicial de reconocimiento y **Markdown → Documento** el formato de campos de plantilla, con ayuda sobre anexos, destinatarios en copia, fechas y notas. Las facturas separan **PDF / OFD → Markdown** e **Imagen → Markdown**. Estas preferencias solo establecen la elección inicial para archivos compatibles; no clasifican automáticamente el archivo. **Aplicar / Aceptar** guarda y **Cancelar** descarta los cambios no aplicados.
 
+**Ámbito:** El formato especializado de campos está pensado para documentos oficiales chinos y la optimización de extracción, para facturas chinas. Otros archivos pueden seguir las rutas de conversión habituales.
+
 ### Atajos
 
 -   **Arrastrar archivo externo**: Importa arrastrándolo.

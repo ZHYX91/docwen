@@ -187,6 +187,8 @@ Das Bedienfeld passt die verfügbaren Optionen automatisch basierend auf dem Dat
 
 **Amtliche Dokumente** und **Rechnungen** haben eigene Seiten. Bei amtlichen Dokumenten regelt **Dokument → Markdown** die Erkennungsvorgabe und **Markdown → Dokument** die Formatierung von Vorlagenfeldern mit Hinweisen zu Anlagen, Verteiler, Datum und Vermerken. Rechnungen bieten getrennte Vorgaben für **PDF / OFD → Markdown** und **Bild → Markdown**. Diese Optionen bestimmen nur die anfängliche Auswahl geeigneter Dateien und klassifizieren sie nicht automatisch. **Übernehmen / OK** speichert, **Abbrechen** verwirft ungespeicherte Änderungen.
 
+**Geltungsbereich:** Die spezielle Feldformatierung ist für chinesische Amtsdokumente ausgelegt; die Rechnungsoptimierung zielt auf chinesische Rechnungsformate. Andere Dateien können weiterhin die normalen Konvertierungswege verwenden.
+
 ### Verknüpfungen
 
 -   **Externe Datei ziehen**: Ziehen Sie direkt in das Fenster zum Importieren.

@@ -187,6 +187,8 @@ La page **OCR et images** regroupe la reconnaissance et la sortie des images dan
 
 Les **Documents officiels** et les **Factures** ont chacun leur page. Pour les documents officiels, **Document → Markdown** règle la reconnaissance initiale et **Markdown → Document** les champs de modèle, avec une aide sur les annexes, les destinataires en copie, les dates et les notes. Les factures ont des valeurs distinctes pour **PDF / OFD → Markdown** et **Image → Markdown**. Ces valeurs ne fixent que le choix initial des fichiers compatibles, sans détecter automatiquement leur type. **Appliquer / OK** enregistre et **Annuler** écarte les changements non appliqués.
 
+**Portée :** Le formatage spécialisé des champs vise les documents officiels chinois et l’optimisation de l’extraction vise les factures chinoises. Les autres fichiers peuvent toujours utiliser les conversions ordinaires.
+
 ### Raccourcis
 
 -   **Faire glisser fichier externe** : Faites glisser directement dans la fenêtre pour importer.

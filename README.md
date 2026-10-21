@@ -193,6 +193,8 @@ Invoices have separate defaults for **PDF / OFD → Markdown** and **Image → M
 
 Under **Markdown syntax**, **Each line as a paragraph** optionally turns ordinary prose lines into separate Word paragraphs. It is off by default; lists, quotes, code, semantic structures and explicit Markdown hard breaks retain their own boundaries.
 
+**Scope:** The specialized field formatter targets Chinese official-document conventions, and the invoice extraction optimization targets Chinese invoice formats. Other documents can still use the regular conversion paths.
+
 ### Shortcuts
 
 -   **Drag External File**: Drag directly into the window to import.
