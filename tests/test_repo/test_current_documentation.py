@@ -308,6 +308,49 @@ def test_public_readmes_and_architecture_describe_the_network_guard_boundary() -
         assert not any(marker in text for marker in stale_scope_markers)
 
 
+
+def test_readmes_do_not_reintroduce_stale_localization_guidance() -> None:
+    """The visible guides must match current settings and conversion defaults."""
+    paths = _public_readme_paths()
+    assert len(paths) == 12
+    stale = (
+        "Every non-empty line is treated as a separate paragraph by default.",
+        "每个非空行默认作为独立段落处理",
+        "每個非空行默認作為獨立段落處理",
+        "Jede nicht leere Zeile wird standardmäßig als separater Absatz behandelt.",
+        "Chaque ligne non vide est traitée par défaut comme un paragraphe séparé.",
+        "Cada línea no vacía se trata como un párrafo independiente por defecto.",
+        "空でない行はデフォルトで別々の段落として扱われます。",
+        "비어 있지 않은 각 줄은 기본적으로 독립된 단락으로 처리됩니다.",
+        "Cada linha não vazia é tratada como um parágrafo separado por padrão.",
+        "Каждая непустая строка по умолчанию обрабатывается как отдельный абзац.",
+        "Mỗi dòng không rỗng được xem là một đoạn riêng theo mặc định.",
+        "設定按選項卡組織", "Die Einstellungen sind in Tabs organisiert",
+        "Les paramètres sont organisés en onglets",
+        "La configuración está organizada en pestañas",
+        "設定はタブで構成されています", "설정은 탭으로 구성됩니다",
+        "As configurações são organizadas em abas",
+        "Настройки организованы по вкладкам",
+        "Cài đặt được tổ chức theo tab",
+    )
+    for path in paths:
+        content = path.read_text(encoding="utf-8")
+        assert "template-management-en.png" not in content, path.name
+        assert not any(phrase in content for phrase in stale), path.name
+
+    arabic = (DOCS / "user-guides" / "README.ar.md").read_text(encoding="utf-8")
+    ocr = next(line for line in arabic.splitlines() if line.startswith("**التعرف على النص (OCR):**"))
+    assert "لغة إخراج المهمة" in ocr and "اتباع لغة الواجهة" not in ocr
+
+    for locale in ("es-ES", "ko-KR", "vi-VN"):
+        source = (DOCS / "user-guides" / f"README.{locale}.md").read_text(encoding="utf-8")
+        assert all(old not in source for old in (
+            "title: Test Document", "## Test Title", "This is the test body content."
+        )), locale
+    vietnamese = (DOCS / "user-guides" / "README.vi-VN.md").read_text(encoding="utf-8")
+    assert "Text Proofreading" not in vietnamese and "Export MD" not in vietnamese
+
+
 def test_current_docs_do_not_depend_on_completed_audit_material() -> None:
     current_files = [ROOT / "README.md", *DOCS.rglob("*.md")]
     current_files = [path for path in current_files if path.name != "CHANGELOG.md"]

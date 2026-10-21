@@ -39,9 +39,6 @@ Vorlage und Erstellungsoptionen für Markdown-Dokumente auswählen.
 
 ![Markdown in Dokumente umwandeln](../assets/screenshots/markdown-generation-en.png)
 
-Vorlagen in den Einstellungen importieren, aktivieren, sortieren und kopieren.
-
-![Vorlagenverwaltung](../assets/screenshots/template-management-en.png)
 
 Changelog: siehe [CHANGELOG.md](../CHANGELOG.md)
 
@@ -184,9 +181,11 @@ Das Bedienfeld passt die verfügbaren Optionen automatisch basierend auf dem Dat
 
 ### Einstellungsoberfläche
 
-Klicken Sie in der Kopfzeile des Bedienbereichs auf die Schaltfläche „Einstellungen“, um die Einstellungen zu öffnen:
+Öffnen Sie die Einstellungen über das Symbol am unteren Fensterrand oder mit **Strg+,**. Die Navigation ist in **Grundlagen**, **Eingabetypen**, **Inhaltsverarbeitung** und **Spezialisierte Optimierungen** gegliedert. In niedrigen Fenstern ist die Seitenleiste scrollbar; bei zu geringer Breite erscheint eine Seitenauswahl.
 
-Die Einstellungen sind in Tabs organisiert: **Allgemein**, **Text**, **Korrekturlesen**, **Dokument**, **Tabelle**, **Bild**, **Layout**, **Link**, **Formatierung**, **Ausgabe**, **Export**, **Log**, **Andere**.
+**OCR und Bilder** enthält gemeinsame Optionen für Erkennung und Markdown-Bildausgabe. Die OCR-Vorgabe eines Dateityps bleibt auf dessen Eingabeseite; Bildkonvertierung und Komprimierung stehen unter **Bildeingabe**. **Markdown-Syntax** trennt allgemeine Ausgaberegeln, Eingaberegeln und Word-Zuordnungen. Nicht jeder Eingabeweg oder jede Spezialoptimierung berücksichtigt schon alle Syntaxoptionen.
+
+**Amtliche Dokumente** und **Rechnungen** haben eigene Seiten. Bei amtlichen Dokumenten regelt **Dokument → Markdown** die Erkennungsvorgabe und **Markdown → Dokument** die Formatierung von Vorlagenfeldern mit Hinweisen zu Anlagen, Verteiler, Datum und Vermerken. Rechnungen bieten getrennte Vorgaben für **PDF / OFD → Markdown** und **Bild → Markdown**. Diese Optionen bestimmen nur die anfängliche Auswahl geeigneter Dateien und klassifizieren sie nicht automatisch. **Übernehmen / OK** speichert, **Abbrechen** verwirft ungespeicherte Änderungen.
 
 ### Verknüpfungen
 
@@ -305,7 +304,7 @@ Um es Kollegen ohne Hintergrundwissen leichter zu machen, entsprechen die Markdo
 
 ### Zeilenumbrüche und Absätze
 
-**Grundregel**: Jede nicht leere Zeile wird standardmäßig als separater Absatz behandelt.
+**Grundregel**: Normale weiche Markdown-Zeilenumbrüche erzeugen standardmäßig **keine** getrennten Word-Absätze. Aktivieren Sie **Jede Zeile als Absatz** unter **Einstellungen → Markdown-Syntax**, um gewöhnliche Textzeilen zu trennen. Listen, Zitate, Code und ausdrückliche harte Umbrüche behalten eigene Regeln.
 
 **Gemischte Absätze**: Wenn ein Untertitel mit dem Fließtext im selben Absatz gemischt werden muss (Standardmodus: „Satzzeichen erforderlich“), müssen folgende Bedingungen erfüllt sein:
 1.  Der Untertitel endet mit einem Satzzeichen (unterstützt mehrsprachige Satzzeichen, einschließlich Punkte, Fragezeichen, Ausrufezeichen und andere gängige Schlusssatzzeichen).
@@ -462,9 +461,7 @@ Der Konverter erkennt und verarbeitet Vorlagenstile automatisch während der Mar
     -   Stilnamen verwenden Word-Standard-englische Namen (z.B. `heading 1`).
     -   Word zeigt automatisch lokalisierte Namen basierend auf der Systemsprache an (z.B. "Überschrift 1" auf deutschen Systemen).
 -   **Softwaredefinierte Stile** (Codeblock, Zitat, Formel, Trennzeichen, Tabelle usw.):
-    -   Injiziert entsprechende Sprachstilnamen basierend auf der Schnittstellenspracheneinstellung der Software.
-    -   Chinesische Schnittstelle: Injiziert "代码块", "引用 1", "三线表", usw.
-    -   Englische Schnittstelle: Injiziert "Code Block", "Quote 1", "Three Line Table", usw.
+    -   Neue verwaltete Stilnamen folgen der **Aufgabenausgabesprache** in den allgemeinen Einstellungen, nicht der Oberflächensprache. Ein UI-Sprachwechsel benennt bestehende Vorlagenstile nicht um.
 
 **Vorschlag**: Nach dem Anpassen von Stilen in der Vorlage verwendet der Konverter automatisch Ihre Stile; wenn sie nicht in der Vorlage vorhanden sind, werden integrierte voreingestellte Stile verwendet.
 

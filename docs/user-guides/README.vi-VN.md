@@ -39,9 +39,6 @@ Chọn mẫu và các tùy chọn tạo tài liệu từ Markdown.
 
 ![Tạo tài liệu từ Markdown](../assets/screenshots/markdown-generation-en.png)
 
-Nhập, bật, sắp xếp và sao chép mẫu trong phần cài đặt.
-
-![Quản lý mẫu](../assets/screenshots/template-management-en.png)
 
 Nhật ký thay đổi: xem [CHANGELOG.md](../CHANGELOG.md)
 
@@ -108,12 +105,12 @@ không mở rộng cam kết sang bản phân phối hoặc kiến trúc khác.
 
     ```markdown
     ---
-    title: Test Document
+    title: Tài liệu thử nghiệm
     ---
     
-    ## Test Title
+    ## Tiêu đề thử nghiệm
     
-    This is the test body content.
+    Đây là nội dung dùng để thử nghiệm.
     ```
 
 2.  **Chuyển đổi bằng kéo thả**:
@@ -149,7 +146,7 @@ Chương trình dùng **bố cục 3 cột thích ứng**:
     -   Cách 2: Nhấn nút "Add" trong vùng kéo thả để chọn file.
 3.  **Chọn template** (nếu cần): Panel template bên phải tự mở, chọn template phù hợp.
 4.  **Chọn tuỳ chọn**: Tick các tuỳ chọn xuất/chuyển đổi trong panel thao tác.
-5.  **Thực thi**: Nhấn nút chức năng tương ứng (ví dụ: "Export MD", "Tạo DOCX", ...).
+5.  **Thực thi**: Nhấn nút chức năng tương ứng (ví dụ: "Xuất Markdown", "Tạo DOCX", ...).
 6.  **Xem kết quả**: Thanh trạng thái hiển thị tiến độ và kết quả; nhấn thao tác "Mở đầu ra" ở bên phải để mở vị trí đầu ra.
 
 ### Chế độ 1 file vs chế độ theo lô
@@ -172,18 +169,20 @@ Panel thao tác tự điều chỉnh chức năng theo loại file:
 
 | Loại file | Thao tác khả dụng |
 | :--- | :--- |
-| Tài liệu Word | Export MD, Convert PDF, Text Proofreading, OCR |
-| Markdown | Convert DOCX, Convert PDF, Text Proofreading |
-| Bảng tính Excel | Export MD, Convert PDF, Table Summary |
-| PDF | Export MD, Merge, Split, OCR |
+| Tài liệu Word | Xuất Markdown, Chuyển PDF, Kiểm tra văn bản, OCR |
+| Markdown | Tạo DOCX, Chuyển PDF, Kiểm tra văn bản |
+| Bảng tính Excel | Xuất Markdown, Chuyển PDF, Tóm tắt bảng |
+| PDF | Xuất Markdown, Trộn, Tách, OCR |
 | Ảnh | Chuyển đổi định dạng, Nén, OCR |
-| HTML/EPUB/PPTX v.v. | Export MD |
+| HTML/EPUB/PPTX v.v. | Xuất Markdown |
 
 ### Màn hình cài đặt
 
-Nhấn nút "Cài đặt" trong phần tiêu đề của khu thao tác để mở cài đặt:
+Mở cài đặt bằng biểu tượng ở cuối cửa sổ hoặc **Ctrl+,**. Thanh điều hướng bên trái được chia thành **Cơ bản**, **Loại đầu vào**, **Nội dung** và **Tối ưu chuyên biệt**. Khi cửa sổ thấp có thể cuộn thanh bên; chỉ khi không đủ chiều rộng mới chuyển sang danh sách chọn trang.
 
-Cài đặt được tổ chức theo tab: **Chung**, **Văn bản**, **Soát lỗi**, **Tài liệu**, **Bảng tính**, **Hình ảnh**, **Bố cục**, **Liên kết**, **Định dạng**, **Đầu ra**, **Xuất**, **Ghi log**, **Khác**.
+Trang **OCR và hình ảnh** quản lý nhận dạng chung và xuất hình ảnh trong Markdown. OCR mặc định theo từng loại tệp nằm ở trang đầu vào tương ứng; chuyển đổi định dạng và nén ảnh ở **Hình ảnh đầu vào**. **Cú pháp Markdown** tách quy tắc xuất chung, quy tắc đọc đầu vào và ánh xạ dành riêng cho Word. Không phải mọi nguồn hay tối ưu chuyên biệt đều áp dụng mọi tùy chọn cú pháp.
+
+**Công văn** và **Hóa đơn** có trang riêng. **Tài liệu → Markdown** đặt lựa chọn nhận dạng ban đầu cho công văn; **Markdown → Tài liệu** cấu hình định dạng trường mẫu, kèm trợ giúp về phần đính kèm, nơi nhận bản sao, ngày và ghi chú. Hóa đơn có lựa chọn riêng cho **PDF / OFD → Markdown** và **Ảnh → Markdown**. Các giá trị mặc định chỉ thay đổi lựa chọn ban đầu cho tệp tương thích, không tự phân loại tệp. **Áp dụng / OK** để lưu, **Hủy** để bỏ thay đổi chưa áp dụng.
 
 ### Phím tắt
 
@@ -302,7 +301,7 @@ Hãy giữ Markdown gốc và kiểm tra DOCX tạo ra. Đánh số trong Word d
 
 ### Xuống dòng và đoạn văn
 
-**Quy tắc cơ bản**: Mỗi dòng không rỗng được xem là một đoạn riêng theo mặc định.
+**Quy tắc cơ bản**: Xuống dòng mềm trong Markdown thông thường mặc định **không** tạo đoạn Word riêng. Bật **Mỗi dòng là một đoạn** tại **Cài đặt → Cú pháp Markdown** nếu muốn tách các dòng văn bản thường. Danh sách, trích dẫn, khối mã và ngắt dòng rõ ràng vẫn theo quy tắc riêng.
 
 **Đoạn trộn**: Khi một tiêu đề phụ cần trộn với nội dung trong cùng một đoạn (mặc định: chế độ "Cần dấu kết câu"), phải thỏa các điều kiện:
 1.  Tiêu đề phụ kết thúc bằng dấu kết câu (hỗ trợ dấu kết câu đa ngôn ngữ).
@@ -311,8 +310,8 @@ Hãy giữ Markdown gốc và kiểm tra DOCX tạo ra. Đánh số trong Word d
 
 **Ví dụ**:
 ```markdown
-## I. Work Requirements.
-This meeting requires all units to earnestly implement...
+## I. Yêu cầu công việc.
+Cuộc họp yêu cầu các đơn vị nghiêm túc triển khai...
 ```
 Hai dòng trên sẽ được gộp thành một đoạn: "I. Work Requirements." giữ định dạng tiêu đề phụ và "This meeting..." giữ định dạng nội dung.
 
@@ -459,7 +458,7 @@ Trong quá trình Markdown → DOCX, chương trình tự phát hiện và xử 
     -   Tên style dùng tên chuẩn tiếng Anh (ví dụ: `heading 1`).
     -   Word sẽ hiển thị tên đã được bản địa hoá theo ngôn ngữ hệ thống.
 -   **Style do phần mềm định nghĩa** (Code Block, Quote, Formula, Separator, Table, ...):
-    -   Chèn tên style theo ngôn ngữ giao diện của phần mềm.
+    -   Tên style quản lý được tạo mới theo **ngôn ngữ đầu ra tác vụ** trong cài đặt chung, không theo ngôn ngữ giao diện. Đổi giao diện không đổi tên style có sẵn trong mẫu.
 
 **Gợi ý**: Sau khi bạn tuỳ chỉnh style trong template, chương trình sẽ ưu tiên dùng style đó; nếu template không có thì dùng preset mặc định.
 
@@ -490,7 +489,7 @@ Chương trình cung cấp 4 quy tắc kiểm tra có thể tuỳ chỉnh:
 **Cách dùng**:
 1.  Kéo tài liệu Word hoặc file Markdown cần kiểm tra vào chương trình.
 2.  Chọn các quy tắc cần dùng.
-3.  Nhấn nút "Text Proofreading".
+3.  Nhấn nút "Kiểm tra".
 4.  Kết quả hiển thị dưới dạng comment trong tài liệu. Đối với file Markdown, kết quả được xuất dưới dạng báo cáo JSON.
 
 Ghi chú (báo cáo JSON khi kiểm tra Markdown):
