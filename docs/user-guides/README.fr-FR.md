@@ -149,7 +149,7 @@ Le programme utilise une **mise en page adaptative à trois colonnes** :
     -   Méthode 2 : Cliquez sur le bouton "Ajouter" dans la zone de glisser-déposer pour sélectionner des fichiers.
 3.  **Sélectionner le modèle** (si conversion nécessaire) : Le panneau de modèle droit s'étend automatiquement ; sélectionnez un modèle approprié.
 4.  **Configurer les options** : Cochez les options de conversion/exportation requises dans le panneau d'opération.
-5.  **Exécuter l'opération** : Cliquez sur le bouton de fonction correspondant (ex : "Export MD", "Générer DOCX", etc.).
+5.  **Exécuter l'opération** : Cliquez sur le bouton de fonction correspondant (ex : "Exporter en Markdown", "Générer DOCX", etc.).
 6.  **Voir le résultat** : La barre d’état affiche la progression et le résultat ; cliquez sur l’action « Ouvrir la sortie » à droite pour ouvrir l’emplacement de sortie.
 
 ### Mode fichier unique vs Mode par lots
@@ -172,12 +172,12 @@ Le panneau d'opération ajuste automatiquement les options disponibles en foncti
 
 | Type de fichier | Opérations disponibles |
 | :--- | :--- |
-| Document Word | Export MD, Convertir PDF, Correction texte, OCR |
+| Document Word | Exporter en Markdown, Convertir PDF, Correction texte, OCR |
 | Markdown | Convertir DOCX, Convertir PDF, Correction texte |
-| Tableau Excel | Export MD, Convertir PDF, Résumé tableau |
-| Fichier PDF | Export MD, Fusionner, Diviser, OCR |
+| Tableau Excel | Exporter en Markdown, Convertir PDF, Résumé tableau |
+| Fichier PDF | Exporter en Markdown, Fusionner, Diviser, OCR |
 | Fichier Image | Conversion format, Compression, OCR |
-| HTML/EPUB/PPTX etc. | Export MD |
+| HTML/EPUB/PPTX etc. | Exporter en Markdown |
 
 ### Interface des paramètres
 

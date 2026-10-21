@@ -149,7 +149,7 @@ Das Programm verwendet ein **adaptives dreispaltiges Layout**:
     -   Methode 2: Klicken Sie auf die Schaltfläche "Hinzufügen" im Drag-and-Drop-Bereich, um Dateien auszuwählen.
 3.  **Vorlage auswählen** (falls Konvertierung erforderlich): Das rechte Vorlagenpanel erweitert sich automatisch; wählen Sie eine geeignete Vorlage.
 4.  **Optionen konfigurieren**: Wählen Sie im Bedienfeld die erforderlichen Konvertierungs-/Exportoptionen aus.
-5.  **Operation ausführen**: Klicken Sie auf die entsprechende Funktionstaste (z.B. "Export MD", "Generieren DOCX" usw.).
+5.  **Operation ausführen**: Klicken Sie auf die entsprechende Funktionstaste (z.B. "Markdown Export", "Generieren DOCX" usw.).
 6.  **Ergebnis anzeigen**: Die Statusleiste zeigt Fortschritt und Ergebnisse an; klicken Sie rechts auf die Aktion „Ausgabe öffnen“, um den Ausgabeort zu öffnen.
 
 ### Einzeldateimodus vs. Stapelmodus
@@ -172,12 +172,12 @@ Das Bedienfeld passt die verfügbaren Optionen automatisch basierend auf dem Dat
 
 | Dateityp | Verfügbare Operationen |
 | :--- | :--- |
-| Word-Dokument | Export MD, Konvertieren PDF, Textkorrektur, OCR |
+| Word-Dokument | Markdown Export, Konvertieren PDF, Textkorrektur, OCR |
 | Markdown | Konvertieren DOCX, Konvertieren PDF, Textkorrektur |
-| Excel-Tabelle | Export MD, Konvertieren PDF, Tabellenzusammenfassung |
-| PDF-Datei | Export MD, Zusammenführen, Teilen, OCR |
+| Excel-Tabelle | Markdown Export, Konvertieren PDF, Tabellenzusammenfassung |
+| PDF-Datei | Markdown Export, Zusammenführen, Teilen, OCR |
 | Bilddatei | Formatkonvertierung, Komprimierung, OCR |
-| HTML/EPUB/PPTX usw. | Export MD |
+| HTML/EPUB/PPTX usw. | Markdown Export |
 
 ### Einstellungsoberfläche
 

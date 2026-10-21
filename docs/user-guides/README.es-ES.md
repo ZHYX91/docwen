@@ -148,7 +148,7 @@ El programa utiliza un **diseño adaptativo de tres columnas**:
     -   Método 2: Pulsa "Add" en la zona de arrastre para seleccionar archivos.
 3.  **Selecciona plantilla** (si es necesario): El panel derecho se expande; selecciona una plantilla adecuada.
 4.  **Configura opciones**: Marca las opciones necesarias en el panel de operaciones.
-5.  **Ejecuta**: Pulsa el botón correspondiente (p. ej., "Export MD", "Generar DOCX", etc.).
+5.  **Ejecuta**: Pulsa el botón correspondiente (p. ej., "Exportar Markdown", "Generar DOCX", etc.).
 6.  **Ver resultado**: La barra de estado muestra el progreso y el resultado; pulsa la acción «Abrir salida» a la derecha para abrir la ubicación de salida.
 
 ### Modo de archivo único vs modo por lotes
