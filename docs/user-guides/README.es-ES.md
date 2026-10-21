@@ -145,7 +145,7 @@ El programa utiliza un **diseño adaptativo de tres columnas**:
 1.  **Inicia el programa**: Doble clic en `DocWen.exe` (Windows empaquetado) o ejecuta `docwen-gui`.
 2.  **Importa un archivo**:
     -   Método 1: Arrastra el archivo a la ventana.
-    -   Método 2: Pulsa "Add" en la zona de arrastre para seleccionar archivos.
+    -   Método 2: Pulsa "Añadir" en la zona de arrastre para seleccionar archivos.
 3.  **Selecciona plantilla** (si es necesario): El panel derecho se expande; selecciona una plantilla adecuada.
 4.  **Configura opciones**: Marca las opciones necesarias en el panel de operaciones.
 5.  **Ejecuta**: Pulsa el botón correspondiente (p. ej., "Exportar Markdown", "Generar DOCX", etc.).

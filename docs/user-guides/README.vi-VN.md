@@ -143,7 +143,7 @@ Chương trình dùng **bố cục 3 cột thích ứng**:
 1.  **Khởi chạy**: Nhấp đúp `DocWen.exe` (Windows đóng gói) hoặc chạy `docwen-gui`.
 2.  **Nhập file**:
     -   Cách 1: Kéo thả file vào cửa sổ.
-    -   Cách 2: Nhấn nút "Add" trong vùng kéo thả để chọn file.
+    -   Cách 2: Nhấn nút "Thêm" trong vùng kéo thả để chọn file.
 3.  **Chọn template** (nếu cần): Panel template bên phải tự mở, chọn template phù hợp.
 4.  **Chọn tuỳ chọn**: Tick các tuỳ chọn xuất/chuyển đổi trong panel thao tác.
 5.  **Thực thi**: Nhấn nút chức năng tương ứng (ví dụ: "Xuất Markdown", "Tạo DOCX", ...).
