@@ -5,8 +5,9 @@ from __future__ import annotations
 import io
 import os
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from PIL import Image, ImageOps, ImageSequence
 
@@ -40,6 +41,7 @@ PIL_FORMATS = {
 SUPPORTED_IMAGE_FORMATS = ("jpg", "jpeg", "png", "gif", "bmp", "tif", "tiff", "webp")
 HEIC_INPUT_FORMATS = ("heic", "heif")
 FLAT_EXPORT_EXIF_TAGS = (271, 272, 305, 306)
+INTEGER_PNG_CLIPPING_WARNING = "PNG stores at most 16-bit integer samples; values outside 0–65535 were clipped. Use TIFF to retain the original integer range."
 
 
 def normalize_format(value: str) -> str:
@@ -157,9 +159,13 @@ def convert_mode_for_format(img: Image.Image, target_format: str) -> Image.Image
             return img.convert("P")
         return img.copy()
     if target == "png":
+        if img.mode == "I":
+            # PNG has at most 16-bit integer samples. Pillow <13 implicitly
+            # clipped this export to 0..65535; make that conversion explicit.
+            return img.convert("I;16")
         if img.mode in ("P", "LA", "PA", "La", "RGBa"):
             return img.convert("RGBA")
-        if img.mode not in ("1", "L", "I", "I;16", "RGB", "RGBA"):
+        if img.mode not in ("1", "L", "I;16", "RGB", "RGBA"):
             return img.convert("RGB")
         return img.copy()
     if target == "webp":
@@ -270,8 +276,13 @@ def save_image_with_options(
     options: dict[str, Any],
     *,
     save_metadata: dict[str, Any] | None = None,
+    on_precision_loss: Callable[[], None] | None = None,
 ) -> None:
     target = normalize_format(target_format)
+    if target == "png" and img.mode == "I" and on_precision_loss is not None:
+        minimum, maximum = cast(tuple[int, int], img.getextrema())
+        if minimum < 0 or maximum > 65535:
+            on_precision_loss()
     converted = convert_mode_for_format(img, target)
     metadata = save_metadata or {}
     try:

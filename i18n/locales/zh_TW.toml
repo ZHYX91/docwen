@@ -1668,6 +1668,7 @@ subtitle = "副標題"
 
 
 [main_window]
+image_png_16bit_clipped = "PNG 最多儲存 16 位整數像素；超出 0–65535 的值已被裁剪。如需保留原始整數範圍，請使用 TIFF。"
 output_filesystem_unsupported = "無法安全地將結果儲存到這個資料夾，繼續可能覆寫既有檔案。請選擇其他輸出資料夾；在 WSL 中可改用 Linux 原生資料夾。"
 ocr_quality_notice = "OCR 結果可能有錯漏，請對照原文校對。"
 file_admission_missing = "輸入檔案不存在或已移走：{path}"

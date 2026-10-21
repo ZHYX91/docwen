@@ -11,6 +11,7 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+image_png_16bit_clipped = "PNG 最多保存 16 位整数像素；超出 0–65535 的值已被裁剪。如需保留原始整数范围，请使用 TIFF。"
 output_filesystem_unsupported = "无法安全地将结果保存到这个文件夹，继续可能覆盖已有文件。请选择其他输出文件夹；在 WSL 中可改用 Linux 原生文件夹。"
 ocr_quality_notice = "OCR 结果可能存在错漏，请对照原文校对。"
 file_admission_missing = "输入文件不存在或已移走：{path}"

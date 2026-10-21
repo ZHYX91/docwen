@@ -41,6 +41,12 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
         if diagnostic.code in extension_messages:
             messages.append(extension_messages[diagnostic.code])
             continue
+        if diagnostic.code == "IMAGE-PNG-16BIT-CLIPPED":
+            message = _t("main_window.image_png_16bit_clipped")
+            if diagnostic.location:
+                message = f"{message} ({diagnostic.location})"
+            messages.append(message)
+            continue
         if diagnostic.code == "OCR-BEST-EFFORT" or diagnostic.code.startswith("OCR-BEST-EFFORT."):
             status = diagnostic.code.partition(".")[2] or "unknown"
             if status == "no_text":
