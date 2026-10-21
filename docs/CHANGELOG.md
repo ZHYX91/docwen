@@ -5,6 +5,9 @@
 
 ## Unreleased / 未发布
 
+- Require virtualenv 21.14.9 or newer for development tooling to address upstream environment-creation and launcher security advisories.
+- 开发工具依赖 virtualenv 最低版本提高至 21.14.9，修复上游环境创建和启动脚本安全问题。
+
 ## 0.19.2
 
 - Upgrade bundled Pillow to 13.0.0 for upstream image-decoding security fixes and refresh the development virtualenv dependency to 21.14.7.
