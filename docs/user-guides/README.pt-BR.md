@@ -180,11 +180,11 @@ O painel de operação ajusta automaticamente as opções disponíveis com base 
 
 ### Interface de Configurações
 
-Abra as configurações pelo ícone na parte inferior da janela ou com **Ctrl+,**. A navegação lateral é agrupada em **Configurações básicas**, **Tipos de entrada**, **Processamento de conteúdo** e **Otimizações especializadas**. Ela rola em janelas baixas e só vira um seletor suspenso quando não há largura suficiente.
+Abra as configurações pelo ícone na parte inferior da janela ou com **Ctrl+,**. A navegação lateral é agrupada em **Geral**, **Tipos de entrada**, **Conteúdo** e **Especializados**. Ela rola em janelas baixas e só vira um seletor suspenso quando não há largura suficiente.
 
 **OCR e imagens** reúne opções comuns de reconhecimento e saída de imagens no Markdown. O OCR padrão de cada arquivo permanece na respectiva página de entrada; conversão e compactação de imagens ficam em **Imagens de entrada**. **Sintaxe Markdown** separa convenções de saída, regras de leitura e mapeamentos do Word. Nem todas as origens e otimizações seguem todas as opções de sintaxe.
 
-**Documentos oficiais** e **Notas fiscais** têm páginas próprias. Para documentos oficiais, **Documento → Markdown** define a escolha inicial de reconhecimento e **Markdown → Documento** a formatação de campos do modelo, com ajuda sobre anexos, destinatários em cópia, datas e notas. Notas fiscais têm padrões separados para **PDF / OFD → Markdown** e **Imagem → Markdown**. Eles apenas definem a escolha inicial de arquivos compatíveis, sem identificá-los automaticamente. **Aplicar / OK** salva; **Cancelar** descarta alterações não aplicadas.
+**Documentos oficiais** e **Faturas** têm páginas próprias. Para documentos oficiais, **Documento → Markdown** define a escolha inicial de reconhecimento e **Markdown → Documento** a formatação de campos do modelo, com ajuda sobre anexos, destinatários em cópia, datas e notas. Faturas têm padrões separados para **PDF / OFD → Markdown** e **Imagem → Markdown**. Eles apenas definem a escolha inicial de arquivos compatíveis, sem identificá-los automaticamente. **Aplicar / OK** salva; **Cancelar** descarta alterações não aplicadas.
 
 ### Atalhos
 

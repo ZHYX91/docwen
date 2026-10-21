@@ -180,7 +180,7 @@ El panel ajusta automáticamente las operaciones disponibles según el tipo de a
 
 ### Pantalla de configuración
 
-Abre la configuración con el icono de la parte inferior de la ventana o **Ctrl+,**. La navegación lateral se agrupa en **Opciones básicas**, **Tipos de entrada**, **Procesamiento de contenido** y **Optimizaciones especializadas**. Se puede desplazar en ventanas bajas y solo pasa a un selector desplegable si falta anchura.
+Abre la configuración con el icono de la parte inferior de la ventana o **Ctrl+,**. La navegación lateral se agrupa en **General**, **Tipos de entrada**, **Contenido** y **Especializados**. Se puede desplazar en ventanas bajas y solo pasa a un selector desplegable si falta anchura.
 
 **OCR e imágenes** reúne la configuración compartida de reconocimiento y salida de imágenes en Markdown. El OCR inicial de cada tipo de archivo sigue en su página de entrada; la conversión y compresión se encuentran en **Imágenes de entrada**. **Sintaxis Markdown** separa reglas de salida, lectura y correspondencias de Word. No todas las fuentes u optimizaciones aplican todavía todas las opciones de sintaxis.
 

@@ -181,7 +181,7 @@ Das Bedienfeld passt die verfügbaren Optionen automatisch basierend auf dem Dat
 
 ### Einstellungsoberfläche
 
-Öffnen Sie die Einstellungen über das Symbol am unteren Fensterrand oder mit **Strg+,**. Die Navigation ist in **Grundlagen**, **Eingabetypen**, **Inhaltsverarbeitung** und **Spezialisierte Optimierungen** gegliedert. In niedrigen Fenstern ist die Seitenleiste scrollbar; bei zu geringer Breite erscheint eine Seitenauswahl.
+Öffnen Sie die Einstellungen über das Symbol am unteren Fensterrand oder mit **Strg+,**. Die Navigation ist in **Allgemein**, **Eingabetypen**, **Inhalte** und **Spezialfunktionen** gegliedert. In niedrigen Fenstern ist die Seitenleiste scrollbar; bei zu geringer Breite erscheint eine Seitenauswahl.
 
 **OCR und Bilder** enthält gemeinsame Optionen für Erkennung und Markdown-Bildausgabe. Die OCR-Vorgabe eines Dateityps bleibt auf dessen Eingabeseite; Bildkonvertierung und Komprimierung stehen unter **Bildeingabe**. **Markdown-Syntax** trennt allgemeine Ausgaberegeln, Eingaberegeln und Word-Zuordnungen. Nicht jeder Eingabeweg oder jede Spezialoptimierung berücksichtigt schon alle Syntaxoptionen.
 

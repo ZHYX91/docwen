@@ -178,7 +178,7 @@ Panel thao tác tự điều chỉnh chức năng theo loại file:
 
 ### Màn hình cài đặt
 
-Mở cài đặt bằng biểu tượng ở cuối cửa sổ hoặc **Ctrl+,**. Thanh điều hướng bên trái được chia thành **Cơ bản**, **Loại đầu vào**, **Nội dung** và **Tối ưu chuyên biệt**. Khi cửa sổ thấp có thể cuộn thanh bên; chỉ khi không đủ chiều rộng mới chuyển sang danh sách chọn trang.
+Mở cài đặt bằng biểu tượng ở cuối cửa sổ hoặc **Ctrl+,**. Thanh điều hướng bên trái được chia thành **Cơ bản**, **Loại đầu vào**, **Nội dung** và **Chuyên biệt**. Khi cửa sổ thấp có thể cuộn thanh bên; chỉ khi không đủ chiều rộng mới chuyển sang danh sách chọn trang.
 
 Trang **OCR và hình ảnh** quản lý nhận dạng chung và xuất hình ảnh trong Markdown. OCR mặc định theo từng loại tệp nằm ở trang đầu vào tương ứng; chuyển đổi định dạng và nén ảnh ở **Hình ảnh đầu vào**. **Cú pháp Markdown** tách quy tắc xuất chung, quy tắc đọc đầu vào và ánh xạ dành riêng cho Word. Không phải mọi nguồn hay tối ưu chuyên biệt đều áp dụng mọi tùy chọn cú pháp.
 

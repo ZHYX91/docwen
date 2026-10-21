@@ -181,7 +181,7 @@ Le panneau d'opération ajuste automatiquement les options disponibles en foncti
 
 ### Interface des paramètres
 
-Ouvrez les paramètres avec l’icône en bas de la fenêtre ou **Ctrl+,**. La navigation latérale regroupe **Paramètres de base**, **Types d’entrée**, **Traitement du contenu** et **Optimisations spécialisées**. Elle défile si la fenêtre est basse et devient une liste déroulante seulement si la largeur est insuffisante.
+Ouvrez les paramètres avec l’icône en bas de la fenêtre ou **Ctrl+,**. La navigation latérale regroupe **Général**, **Types d’entrée**, **Contenu** et **Spécialisations**. Elle défile si la fenêtre est basse et devient une liste déroulante seulement si la largeur est insuffisante.
 
 La page **OCR et images** regroupe la reconnaissance et la sortie des images dans Markdown. Les valeurs OCR propres à chaque type de fichier restent dans sa page d’entrée ; la conversion et la compression d’images restent dans **Images en entrée**. **Syntaxe Markdown** distingue les règles de sortie, les règles de lecture et les correspondances Word. Tous les chemins d’entrée et toutes les optimisations ne prennent pas encore en charge chaque option de syntaxe.
 
