@@ -226,7 +226,7 @@ def verify_gongwen_fields_output(output_path: Path, *, case: GongwenFieldsCase) 
 
     expected_scalars = (
         "普通列表：普通甲 / 普通乙",
-        "抄送：单位甲，单位乙" if case.enabled else "抄送：单位甲 / 单位乙",
+        "抄送：单位甲、单位乙" if case.enabled else "抄送：单位甲 / 单位乙",
         "（此件公开发布）" if case.enabled else "（（此件公开发布））",
         "成文：2026年10月20日" if case.enabled else "成文：2026-10-20",
     )

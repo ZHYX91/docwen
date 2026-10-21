@@ -6,15 +6,20 @@ import contextlib
 import logging
 import re
 from collections.abc import Iterator, Mapping
+from copy import deepcopy
 from typing import Any
 
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.text.run import Run
 
 from docwen_plugin_markdown.gongwen_fields import (
+    gongwen_review_notes,
     prepare_gongwen_fields,
     remove_empty_gongwen_fields,
     render_attachment_placeholders,
     validate_attachment_placeholders,
+    validate_review_placeholders,
 )
 from docwen_plugin_markdown.yaml_processor import is_empty_field_value
 
@@ -40,8 +45,10 @@ def fill_template(
     field cleanup together; it is independent of the output/interface locale.
     """
     values = prepare_gongwen_fields(yaml_dict) if gongwen_fields_enabled else yaml_dict
+    review_notes = gongwen_review_notes(yaml_dict) if gongwen_fields_enabled else {}
     if placeholder_map and gongwen_fields_enabled:
         validate_attachment_placeholders(doc, placeholder_map)
+        validate_review_placeholders(doc, placeholder_map, review_notes)
         remove_empty_gongwen_fields(doc, values, placeholder_map)
         render_attachment_placeholders(values.get("附件说明", ()), placeholder_map)
 
@@ -57,6 +64,7 @@ def fill_template(
             placeholder_map,
             skip_keys={"附件说明"} if gongwen_fields_enabled else None,
             list_separator=list_separator,
+            review_notes=review_notes,
         )
 
 
@@ -86,6 +94,8 @@ def fill_yaml_placeholders(
     placeholder_map: dict[str, list[Any]],
     skip_keys: set[str] | None = None,
     list_separator: str = "、",
+    *,
+    review_notes: Mapping[str, str] | None = None,
 ) -> None:
     """Replace all authored keys in each paragraph in one nonrecursive pass.
 
@@ -103,10 +113,12 @@ def fill_yaml_placeholders(
             _, replacements = paragraphs.setdefault(paragraph._element, (paragraph, {}))
             replacements[key] = replacement
     for paragraph, replacements in paragraphs.values():
-        _replace_placeholder_runs(paragraph, replacements)
+        _replace_placeholder_runs(paragraph, replacements, doc=doc, review_notes=review_notes)
 
 
-def _replace_placeholder_runs(paragraph, replacements: Mapping[str, str]) -> None:
+def _replace_placeholder_runs(
+    paragraph, replacements: Mapping[str, str], *, doc=None, review_notes: Mapping[str, str] | None = None
+) -> None:
     characters: list[str] = []
     locations: list[tuple[Any, int] | None] = []
     for element in paragraph._element.iter():
@@ -143,16 +155,45 @@ def _replace_placeholder_runs(paragraph, replacements: Mapping[str, str]) -> Non
         if start_element is end_element:
             current = start_element.text or ""
             _set_word_text(start_element, current[:start_offset] + replacement + current[end_offset:])
-            continue
-        start_text = start_element.text or ""
-        end_text = end_element.text or ""
-        _set_word_text(start_element, start_text[:start_offset] + replacement)
-        seen = {start_element, end_element}
-        for location in locations[match.start() + 1 : match.end() - 1]:
-            if location is not None and location[0] not in seen:
-                _set_word_text(location[0], "")
-                seen.add(location[0])
-        _set_word_text(end_element, end_text[end_offset:])
+        else:
+            start_text = start_element.text or ""
+            end_text = end_element.text or ""
+            _set_word_text(start_element, start_text[:start_offset] + replacement)
+            seen = {start_element, end_element}
+            for location in locations[match.start() + 1 : match.end() - 1]:
+                if location is not None and location[0] not in seen:
+                    _set_word_text(location[0], "")
+                    seen.add(location[0])
+            _set_word_text(end_element, end_text[end_offset:])
+        note = review_notes.get(key) if review_notes is not None else None
+        if note and replacement and doc is not None:
+            # Isolate only the inserted text. Right-to-left substitution keeps
+            # earlier original offsets valid even after splitting this run.
+            _split_text_run(start_element, start_offset + len(replacement))
+            inserted = _split_text_run(start_element, start_offset)
+            doc.add_comment(Run(inserted, paragraph), text=note, author="DocWen", initials="DW")
+
+
+def _split_text_run(text_element, offset: int):
+    """Split at a text-node offset without flattening controls or hyperlinks."""
+    run = text_element.getparent()
+    if run is None or run.tag != qn("w:r"):
+        raise ValueError("无法为公文字段定位批注，请检查模板中的占位符。")
+    text = text_element.text or ""
+    if not 0 <= offset <= len(text):
+        raise ValueError("公文字段批注位置无效，未保存转换结果。")
+    following = OxmlElement("w:r")
+    following.attrib.update(run.attrib)
+    if run.rPr is not None:
+        following.append(deepcopy(run.rPr))
+    suffix = deepcopy(text_element)
+    _set_word_text(suffix, text[offset:])
+    _set_word_text(text_element, text[:offset])
+    following.append(suffix)
+    for child in list(run)[run.index(text_element) + 1 :]:
+        following.append(child)
+    run.addnext(following)
+    return following
 
 
 def _set_word_text(element, text: str) -> None:

@@ -409,11 +409,11 @@ class TestYamlFieldCleaning:
 
         assert remove_brackets("（联系人：张三）") == "联系人：张三"
 
-    def test_copy_to_split_correctly(self):
+    def test_copy_to_preserves_original_punctuation(self):
         from docwen_plugin_optimizer_gongwen.utils import process_copy_to
 
         result = process_copy_to("抄送：省委组织部、省人社厅")
-        assert result == ["省委组织部", "省人社厅"]
+        assert result == "省委组织部、省人社厅"
 
     def test_copy_to_cleaning_matches_all_labels_accepted_by_the_scorer(self):
         from docwen_plugin_optimizer_gongwen.models import ParagraphFeature
@@ -424,7 +424,7 @@ class TestYamlFieldCleaning:
         for label in ("抄送", "报送", "分送"):
             text = f"{label}：省委组织部、省人社厅。"
             assert scorer.starts_with_copy_label(ParagraphFeature(index=0, text=text))
-            assert process_copy_to(text) == ["省委组织部", "省人社厅"]
+            assert process_copy_to(text) == "省委组织部、省人社厅"
 
     def test_attachment_item_numbering_stripped(self):
         from docwen_plugin_optimizer_gongwen.utils import process_attachment_item

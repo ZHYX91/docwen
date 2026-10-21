@@ -27,7 +27,7 @@ def test_field_projection_keeps_source_data_separate_from_word_layout() -> None:
 
     assert source == original
     assert values["附件说明"] == ("材料清单", "办理依据")
-    assert values["抄送机关"] == "省政府办公厅，市政府办公室"
+    assert values["抄送机关"] == "省政府办公厅、市政府办公室"
     assert values["附注"] == "此件公开发布"
     assert values["印发日期"] == "2026年6月28日印发"
     assert values["成文日期"] == "2026年6月27日"

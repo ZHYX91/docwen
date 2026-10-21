@@ -145,7 +145,7 @@ def test_real_docx_fields_share_switch_and_preserve_yaml_and_literal_values(
     else:
         assert "附件：1.\t材料清单" in paragraphs
         assert "2.\t办理依据" in paragraphs
-        assert "单位甲，单位乙|公开发布|2026年6月27日|2026年6月28日印发" in paragraphs
+        assert "单位甲、单位乙|公开发布|2026年6月27日|2026年6月28日印发" in paragraphs
         assert "：" not in paragraphs
         for cell in cells:
             assert [p.text for p in cell.paragraphs] == ["附件：1.\t材料清单", "2.\t办理依据"]

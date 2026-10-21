@@ -211,8 +211,8 @@ class TestSignerFollowing:
         assert "李四" in signers
         assert "王五" in signers
 
-    def test_signer_following_dedup(self):
-        """Duplicate signers are not added again."""
+    def test_signer_following_keeps_distinct_source_occurrences(self):
+        """Retain repeated names from separate source spans."""
         from docwen_plugin_optimizer_gongwen.models import RecognitionResult
         from docwen_plugin_optimizer_gongwen.recognition.yaml_builder import build_yaml
 
@@ -251,7 +251,7 @@ class TestSignerFollowing:
             validation_finding_count=0,
         )
         build_yaml(scorer=None, features=features, result=result)
-        assert result.yaml_info["签发人"] == ["张三", "李四"]
+        assert result.yaml_info["签发人"] == ["张三", "张三", "李四"]
 
     def test_signer_following_empty_text(self):
         """signer_following with empty text does not change signer list."""
@@ -323,12 +323,12 @@ class TestExtractSignersFromText:
         result = extract_signers_from_text("李四")
         assert result == ["李四"]
 
-    def test_invalid_name_filtered(self):
-        """Non-Chinese or too-short tokens are filtered out."""
+    def test_ambiguous_names_are_not_dropped(self):
+        """Unusual tokens are retained for a human to check."""
         from docwen_plugin_optimizer_gongwen.utils import extract_signers_from_text
 
         result = extract_signers_from_text("A、李、张三")
-        assert result == ["张三"]
+        assert result == ["A", "李", "张三"]
 
     def test_empty_text(self):
         from docwen_plugin_optimizer_gongwen.utils import extract_signers_from_text
