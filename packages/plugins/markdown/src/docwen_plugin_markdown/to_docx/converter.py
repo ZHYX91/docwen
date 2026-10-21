@@ -78,7 +78,11 @@ from docwen_plugin_markdown.runtime_semantics_v3 import (
     prepare_runtime_semantics_v3,
 )
 from docwen_plugin_markdown.template_filler import fill_template
-from docwen_plugin_markdown.template_policy import template_gongwen_fields_enabled, template_list_separator
+from docwen_plugin_markdown.template_policy import (
+    template_attachment_alignment,
+    template_gongwen_fields_enabled,
+    template_list_separator,
+)
 from docwen_plugin_markdown.template_utils import (
     TemplatePackageError,
     body_content_extent,
@@ -1150,6 +1154,7 @@ class MdToDocxConverter:
                 placeholder_para=placeholder_para,
                 placeholder_map=placeholder_map,
                 gongwen_fields_enabled=template_gongwen_fields_enabled(context.config),
+                attachment_alignment=template_attachment_alignment(context.config),
                 list_separator=template_list_separator(context.config),
             )
             yaml_links.materialize(doc)

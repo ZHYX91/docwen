@@ -41,7 +41,15 @@ second: 实际值
 """
 
 
-def _conversion_context(tmp_path: Path, route: str, template: Path, enabled: bool | None, source_text: str = _SOURCE):
+def _conversion_context(
+    tmp_path: Path,
+    route: str,
+    template: Path,
+    enabled: bool | None,
+    source_text: str = _SOURCE,
+    *,
+    alignment: str | None = None,
+):
     config = {
         "template_fill": {"list_separator": " / "},
         "gui": {"language": {"locale": "en_US"}},
@@ -49,6 +57,8 @@ def _conversion_context(tmp_path: Path, route: str, template: Path, enabled: boo
     }
     if enabled is not None:
         config["template_fill"]["gongwen_fields_enabled"] = enabled
+    if alignment is not None:
+        config["template_fill"]["attachment_alignment"] = alignment
     options = {"template_name": str(template), "locale": "en_US"}
     style_catalog = build_document_style_catalog(
         config, request_options=options, locales_dir=PROJECT_ROOT / "i18n" / "locales"
@@ -146,12 +156,12 @@ def test_real_docx_fields_share_switch_and_preserve_yaml_and_literal_values(
         for cell in cells:
             assert [p.text for p in cell.paragraphs] == ["1. 材料清单 / （二）办理依据"]
     else:
-        assert "附件：1. 材料清单" in paragraphs
-        assert "\u3000\u3000\u30002. 办理依据" in paragraphs
+        assert "附件：1.\t材料清单" in paragraphs
+        assert "\u3000\u3000\u30002.\t办理依据" in paragraphs
         assert "单位甲、单位乙|公开发布|2026年6月27日|2026年6月28日印发" in paragraphs
         assert "：" not in paragraphs
         for cell in cells:
-            assert [p.text for p in cell.paragraphs] == ["附件：1. 材料清单", "\u3000\u3000\u30002. 办理依据"]
+            assert [p.text for p in cell.paragraphs] == ["附件：1.\t材料清单", "\u3000\u3000\u30002.\t办理依据"]
 
 
 @pytest.mark.parametrize("route", ["source", "resolved"])
@@ -173,17 +183,33 @@ def test_invalid_attachment_placement_returns_explicit_failure_without_artifacts
     assert not workspace.registered_artifacts
 
 
-@pytest.mark.parametrize("enabled,empty", [(True, False), (True, True), (False, False), (False, True)])
-def test_release_fixture_checks_real_conversion_layout(tmp_path: Path, enabled: bool, empty: bool) -> None:
+@pytest.mark.parametrize(
+    "enabled,empty,alignment",
+    [
+        (True, False, "spaces"),
+        (True, True, "spaces"),
+        (False, False, "spaces"),
+        (False, True, "spaces"),
+        (True, False, "tab"),
+        (True, True, "tab"),
+    ],
+)
+def test_release_fixture_checks_real_conversion_layout(
+    tmp_path: Path, enabled: bool, empty: bool, alignment: str
+) -> None:
     from scripts.release.gongwen_fields_fixture import verify_gongwen_fields_output, write_gongwen_fields_cases
 
     case = next(
         case
         for case in write_gongwen_fields_cases(tmp_path / "cases")
-        if (case.enabled, case.empty) == (enabled, empty)
+        if (case.enabled, case.empty, case.alignment) == (enabled, empty, alignment)
     )
     config = {
-        "template_fill": {"list_separator": " / ", "gongwen_fields_enabled": enabled},
+        "template_fill": {
+            "list_separator": " / ",
+            "gongwen_fields_enabled": enabled,
+            "attachment_alignment": case.alignment,
+        },
         "conversion": {"output_locale": "en_US"},
     }
     options = {"template_name": str(case.template_path), "locale": "en_US"}
@@ -206,7 +232,7 @@ def test_generated_template_character_indents_survive_production_routes(tmp_path
     original_hash = hashlib.sha256(template_path.read_bytes()).hexdigest()
     names = [f"材料{i:02d}" for i in range(1, count + 1)]
     markdown = "---\n附件说明:\n" + "".join(f"  - {name}\n" for name in names) + "---\n\n正文。\n"
-    context, _workspace = _conversion_context(tmp_path, route, template_path, True, markdown)
+    context, _workspace = _conversion_context(tmp_path, route, template_path, True, markdown, alignment="spaces")
 
     result = MdToDocxConverter().convert(context)
 
@@ -224,7 +250,8 @@ def test_generated_template_character_indents_survive_production_routes(tmp_path
     assert [p.text for p in attachments] == expected
     hanging_points = 48 if count == 1 else 64
     for paragraph in attachments:
-        assert paragraph.paragraph_format.left_indent == Pt(-16 + hanging_points)
+        left = paragraph.paragraph_format.left_indent
+        assert left is not None and left.twips == round((31.6 + hanging_points) * 20)
         assert paragraph.paragraph_format.first_line_indent == Pt(-hanging_points)
         assert not list(paragraph._p.iter(qn("w:tab")))
         assert paragraph._p.pPr is not None and paragraph._p.pPr.ind is not None

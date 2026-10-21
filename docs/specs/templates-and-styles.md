@@ -132,21 +132,36 @@ quotes, etc.) retain their own indentation and numbering contracts.
 Attachment expansion has its own column layout. The standalone `{{附件说明}}` anchor's effective
 first-line origin combines the effective left/start and first-line/hanging indents, resolving
 direct formatting, paragraph-style ancestors and document defaults;
-nonzero character units take precedence over the corresponding length fallback. Character units
-are converted using the attachment font size to place the label, number and name columns.
+paired physical lengths retain the measured geometry saved by Word. Recomputing that geometry
+from character metadata and font size can move a real template's label outside its authored origin.
+Character-only axes use the attachment font size as a fallback; this coordinate policy is specific
+to generated attachment columns and does not rewrite the template's styles or general body inheritance.
 Generated paragraphs cancel competing inherited character indents locally with character zeroes,
-then set physical hanging indents and literal space padding, without inserting tabs or automatic numbering.
+then set physical hanging indents and literal number padding. The configured
+`template_fill.attachment_alignment` chooses `tab` (default) or `spaces`; it applies only while
+Gongwen field formatting is enabled, and both Word conversion routes consume the same request snapshot.
+The `tab` layout places one left tab stop at the continuation indent and one tab before each name,
+replacing the ordinary separator after the period. Earlier authored stops are cancelled locally;
+later unrelated stops and shared styles remain intact. No automatic numbering is introduced.
 The leading padding loses one half-character cell for every additional number digit; full-width spaces
-and half-em EN SPACE express those cells. The period is followed by exactly one ordinary U+0020 space.
+and half-em EN SPACE express those cells. In `spaces` mode the period is followed by exactly one ordinary U+0020 space.
 The generated number prefix suppresses pair kerning (including inherited `11` contraction), while
 attachment names retain the template's original run formatting.
-Template styles and unrelated paragraph properties remain intact. A single attachment has no number;
-multiple attachments keep periods, name starts and wrapped name lines aligned across 9/10 and 99/100.
+An authored hanging indent wider than the required prefix is retained, rounding up only to the next
+half-character padding cell. Template styles and unrelated paragraph properties remain intact. A single attachment has no number;
+multiple attachments compensate the number width across 9/10 and 99/100. The `tab` layout anchors
+the first name line and its continuations to the same coordinate. The `spaces` alternative retains
+ordinary editable text and space padding; proportional spacing, mixed scripts and justification
+can introduce small differences between its calculated indent and rendered name start.
 
-附件说明按独立列布局处理：从直接格式、段落样式及文档默认值解析左侧与首行／悬挂缩进，按有效首行起点定位；非零字符单位优先于
-对应物理长度，按附件字体字号换算。生成段落局部抵消冲突的继承字符缩进，再设置悬挂缩进及空格补位，不插入制表符或自动编号。
-序号每增加一位，前置补位减少半字宽；全角空格与半字宽空格（EN SPACE）表达补位，点后固定一个普通半角空格。
-模板样式和其他段落格式保持原样。单附件不编号，多附件跨10、100时保持点号、名称首字和续行对齐。
+附件说明按独立列布局处理：从直接格式、段落样式及文档默认值解析左侧与首行／悬挂缩进，保留Word已保存的配对物理长度及实际首行起点；
+仅缺少物理长度的字符轴按附件字号换算。该坐标策略仅用于生成附件列，不改写模板样式或正文继承。原悬挂量大于前缀所需宽度时保留，
+只按半字宽补位单元向上取整。生成段落局部抵消冲突的继承字符缩进，再设置物理悬挂缩进。
+`template_fill.attachment_alignment`提供`tab`（默认）与`spaces`两种布局，仅在公文字段优化启用时生效，两条Word路线读取同一请求配置。
+制表位方式仅在名称前插入一个制表符，并将左制表位设在续行缩进处；编号仍用空白补位，不添加编号右制表位或自动编号。
+可能截获该制表符的较早模板制表位仅在生成段落中取消，较晚制表位与共享样式保留。空格方式点后固定一个普通半角空格，
+序号每增加一位，前置补位减少半字宽；复杂混排和两端对齐可能使实际名称起点与估算缩进略有差别。
+单附件不编号；字体、两端对齐及其他模板段落格式保持原样。
 
 The standalone `{{body}}` run may author direct font/character overrides
 separate from its paragraph style. Ordinary body text receives only these

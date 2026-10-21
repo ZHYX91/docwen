@@ -1,5 +1,7 @@
 """Template filling policy shared by Word and spreadsheet conversion routes."""
 
+from typing import Literal
+
 
 def template_list_separator(config: object) -> str:
     """Read the immutable request config without stripping intentional spaces."""
@@ -12,3 +14,14 @@ def template_gongwen_fields_enabled(config: object) -> bool:
     """Read the single validated request-scoped switch for built-in fields."""
     getter = getattr(config, "get", None)
     return bool(getter("template_fill.gongwen_fields_enabled", True)) if callable(getter) else True
+
+
+def template_attachment_alignment(config: object) -> Literal["spaces", "tab"]:
+    """Select the validated attachment layout independently of field recognition."""
+    getter = getattr(config, "get", None)
+    value = getter("template_fill.attachment_alignment", "tab") if callable(getter) else "tab"
+    if value == "spaces":
+        return "spaces"
+    if value == "tab":
+        return "tab"
+    raise ValueError("Unknown attachment alignment")

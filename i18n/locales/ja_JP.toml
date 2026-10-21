@@ -1440,8 +1440,8 @@ text = "テキスト"
 [file_category]
 text_short = "テキスト"
 document_short = "文書"
-spreadsheet_short = "表"
-layout_short = "レイアウト"
+spreadsheet_short = "スプレッドシート"
+layout_short = "固定レイアウト"
 image_short = "画像"
 other_short = "その他"
 
@@ -1839,6 +1839,11 @@ from_markdown_title = "Markdown → 文書"
 title = "公文書"
 fields_label = "中国公文書のフィールドを整形"
 fields_help = "Word テンプレートの添付資料、写しの送付先、文書日付、発行日、注記を整形し、規則に該当する空欄を削除します。添付資料のプレースホルダーは本文または表のセル内で独立した段落に置いてください。ヘッダー、フッター、テキストボックス、文中への配置には対応していません。オフの場合は通常の入力規則と共通のリスト区切り文字を使用します。"
+
+attachment_alignment_label = "添付資料名の配置"
+attachment_alignment_spaces = "空白＋ぶら下げ"
+attachment_alignment_tab = "タブ＋ぶら下げ"
+attachment_alignment_help = "空白方式は通常の文字と空白を保持します。複雑な混植や両端揃えでは多少ずれる場合があります。タブ方式は添付資料名と折り返し行を同じ位置に揃えます。公文書フィールドの書式設定が有効な場合にのみ適用されます。"
 
 [settings.invoice]
 title = "請求書"

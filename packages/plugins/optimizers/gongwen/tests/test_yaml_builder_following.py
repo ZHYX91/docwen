@@ -372,7 +372,7 @@ def test_yaml_builder_extracts_composite_and_labelled_fields_exactly():
     assert set(skip) == set(range(8))
 
 
-def test_attachment_description_is_deduplicated_after_cleaning():
+def test_attachment_description_keeps_repeated_source_entries_after_cleaning():
     features = [
         _make_feature(0, "附件：1. 工作方案"),
         _make_feature(1, "1. 工作方案"),
@@ -384,4 +384,4 @@ def test_attachment_description_is_deduplicated_after_cleaning():
 
     yaml_info, _ = _make_result(candidates, features)
 
-    assert yaml_info["附件说明"] == ["工作方案"]
+    assert yaml_info["附件说明"] == ["工作方案", "工作方案"]

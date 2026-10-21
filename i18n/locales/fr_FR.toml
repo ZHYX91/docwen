@@ -1489,10 +1489,10 @@ text = "Texte"
 
 [file_category]
 text_short = "Texte"
-document_short = "Doc"
-spreadsheet_short = "Table"
-layout_short = "Page"
-image_short = "Img"
+document_short = "Documents"
+spreadsheet_short = "Feuilles de calcul"
+layout_short = "Mise en page fixe"
+image_short = "Images"
 other_short = "Autres"
 
 [file_format_validation]
@@ -1835,6 +1835,11 @@ from_markdown_title = "Markdown → Document"
 title = "Documents officiels"
 fields_label = "Formater les champs des documents officiels chinois"
 fields_help = "Formate les annexes, destinataires en copie, dates et notes des modèles Word, et supprime les champs vides prévus. Le marqueur des annexes doit occuper un paragraphe entier dans le corps ou une cellule. Les en-têtes, pieds de page, zones de texte et marqueurs dans une phrase ne sont pas pris en charge. Si désactivé, le remplissage normal et le séparateur général des listes s’appliquent."
+
+attachment_alignment_label = "Alignement des pièces jointes"
+attachment_alignment_spaces = "Espaces + retrait"
+attachment_alignment_tab = "Tabulation + retrait"
+attachment_alignment_help = "Les espaces conservent le texte et l’espacement ordinaires ; les paragraphes mêlant plusieurs écritures ou justifiés peuvent présenter de légers décalages. Les tabulations alignent les noms des pièces jointes et les lignes suivantes sur une position commune. S’applique uniquement lorsque la mise en forme des champs officiels est activée."
 
 [settings.invoice]
 title = "Factures"

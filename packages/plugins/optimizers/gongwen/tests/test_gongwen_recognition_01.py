@@ -387,8 +387,12 @@ class TestElementScorer:
         from docwen_plugin_optimizer_gongwen.recognition.scorer import ElementScorer
 
         features = [
-            ParagraphFeature(index=0, text="测试印发机关", source="table", table_cell_context="body"),
-            ParagraphFeature(index=1, text="2025年7月5日印发", source="table", table_cell_context="body"),
+            ParagraphFeature(
+                index=0, text="测试印发机关", source="table", table_index=0, table_row_index=0, table_cell_index=0
+            ),
+            ParagraphFeature(
+                index=1, text="2025年7月5日印发", source="table", table_index=0, table_row_index=0, table_cell_index=1
+            ),
         ]
         scorer = ElementScorer()
         scorer.reset_context(features)

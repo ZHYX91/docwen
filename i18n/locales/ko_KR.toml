@@ -1440,9 +1440,9 @@ text = "텍스트"
 [file_category]
 text_short = "텍스트"
 document_short = "문서"
-spreadsheet_short = "시트"
-layout_short = "레이아웃"
-image_short = "Img"
+spreadsheet_short = "스프레드시트"
+layout_short = "고정 레이아웃"
+image_short = "이미지"
 other_short = "기타"
 
 [file_format_validation]
@@ -1839,6 +1839,11 @@ from_markdown_title = "Markdown → 문서"
 title = "공문서"
 fields_label = "중국 공문서 필드 서식 적용"
 fields_help = "Word 서식 파일의 첨부 설명, 참조 수신처, 작성일, 발행일과 주석을 정리하고 규칙에 해당하는 빈 필드를 제거합니다. 첨부 자리표시자는 본문 또는 표 셀의 독립된 문단에 있어야 합니다. 머리글, 바닥글, 텍스트 상자와 문장 안의 배치는 지원하지 않습니다. 끄면 일반 필드 채우기와 공통 목록 구분자를 사용합니다."
+
+attachment_alignment_label = "첨부 설명 정렬 방식"
+attachment_alignment_spaces = "공백 + 내어쓰기"
+attachment_alignment_tab = "탭 + 내어쓰기"
+attachment_alignment_help = "공백 방식은 일반 텍스트와 공백을 유지하며, 복잡한 혼합 문자나 양쪽 정렬에서는 약간의 차이가 생길 수 있습니다. 탭 방식은 첨부 이름과 이어지는 줄을 같은 위치에 정렬합니다. 공문 필드 서식이 활성화된 경우에만 적용됩니다."
 
 [settings.invoice]
 title = "송장"

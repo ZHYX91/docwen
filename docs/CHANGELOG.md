@@ -7,12 +7,21 @@
 
 ## 0.19.1
 
+- Choose attachment alignment under Official documents → Field formatting: the default uses one name tab stop shared with hanging indentation; space padding remains available. Preserve template fonts and justification in both modes.
+- 公文页的公文字段优化下新增附件说明对齐方式：默认以一个名称制表位和悬挂缩进共同定位，另可选择普通空格补位；两种方式均保留模板字体和两端对齐。
+
+- Recognize standalone header retention markers such as `测试★1年` as security-classification metadata without requiring a fixed classification name; preserve stars in ordinary body content.
+- 文首“测试★1年”等完整星号期限格式可归入“密级和保密期限”，支持自定义标识并保留原文，正文中的星号继续保留。
+
+- Preserve ordered, repeated attachment entries when recognizing official documents and distinguish letterheads from printer/date pairs. Extract pure imprint tables into metadata while retaining body content in mixed tables.
+- 公文回转保留附件原顺序及重复条目，按上下文区分红头与印发机关；纯版记表格提取为字段后不再残留正文，混合表格中的有效内容继续保留。
+
 - Preserve uncertain recipient prose and explicitly labelled signer names when reading official documents. Keep multi-value field text and punctuation available for review.
-- Align attachment numbers, names and wrapped lines with the template's effective indentation, including the 9/10 and 99/100 boundaries. Use compact space padding and exactly one ordinary space after each number's period.
+- Preserve the template's effective first-line origin and compensate literal number widths across 9/10 and 99/100. The tab layout shares one name origin with wrapped lines; the space layout keeps one ordinary space after the period.
 - Compact the input toolbar with grouped add/paste actions, an SVG paste chevron and a clear icon; preserve keyboard access and source files when clearing the list.
 - Synchronize multilingual guides with current settings, conversion defaults, task output language and actual button labels; remove the obsolete template-management screenshot from display.
 - 读取公文时保留不确定的主送正文及明确标注的签发人姓名，多项字段文本和标点保留供核对。
-- 附件编号、名称及长名称续行沿用模板有效缩进，覆盖9/10和99/100边界；采用紧凑空格补位，编号点后固定一个普通半角空格。
+- 附件编号及长名称沿用模板有效首行位置，编号按位数补位；制表位方式统一名称首行和续行起点，空格方式保留编号点后的一个普通半角空格。
 - 输入工具栏采用紧凑的添加／粘贴分体操作、SVG箭头和清空图标，保留键盘操作，清空列表不删除源文件。
 - 多语言手册同步当前设置结构、转换默认值、任务输出语言和实际按钮名称，撤下过时的模板管理展示图。
 

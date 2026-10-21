@@ -234,7 +234,10 @@ def build_yaml(
                 yaml_info[yaml_key] = cleaned_text
         else:
             current = yaml_info[yaml_key]
-            if isinstance(current, list) and cleaned_text not in current:
+            if isinstance(current, list) and (yaml_key == "附件说明" or cleaned_text not in current):
+                # Repeated attachment names are distinct authored entries.
+                # Merged cells are deduplicated by source identity at extraction,
+                # never by their text after ordinal removal.
                 current.append(cleaned_text)
 
         # Structural paragraphs are excluded from body rendering

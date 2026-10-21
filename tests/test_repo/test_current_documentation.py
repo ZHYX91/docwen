@@ -91,7 +91,7 @@ NETWORK_GUARD_EXTERNAL_PROCESS_MARKERS = {
     "README.zh-TW.md": "不受這項限制",
 }
 
-SCREENSHOTS = {"markdown-generation-en.png", "template-management-en.png"}
+SCREENSHOTS = {"markdown-generation-en.png", "official-documents-en.png", "template-management-en.png"}
 
 BANNED_CURRENT_TOKENS = (
     "gui-ui-ux-acceptance",

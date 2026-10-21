@@ -7,7 +7,7 @@ import logging
 import re
 from collections.abc import Iterator, Mapping
 from copy import deepcopy
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import OxmlElement
@@ -37,6 +37,7 @@ def fill_template(
     placeholder_map: dict[str, list[Any]] | None = None,
     *,
     gongwen_fields_enabled: bool = True,
+    attachment_alignment: Literal["spaces", "tab"] = "spaces",
     list_separator: str = "、",
 ) -> None:
     """Fill the pre-render template snapshot using request-local display values.
@@ -52,7 +53,7 @@ def fill_template(
         validate_attachment_placeholders(doc, placeholder_map)
         validate_review_placeholders(doc, placeholder_map, review_notes)
         remove_empty_gongwen_fields(doc, values, placeholder_map)
-        render_attachment_placeholders(values.get("附件说明", ()), placeholder_map)
+        render_attachment_placeholders(values.get("附件说明", ()), placeholder_map, alignment=attachment_alignment)
 
     if rendered_paragraphs and placeholder_para is not None:
         inject_body_paragraphs(doc, placeholder_para, rendered_paragraphs)

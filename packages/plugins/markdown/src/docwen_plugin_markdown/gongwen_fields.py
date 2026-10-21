@@ -7,10 +7,11 @@ attachment labels, numbering and indentation exist only in the Word output.
 from __future__ import annotations
 
 import datetime as dt
+import math
 import re
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -185,7 +186,12 @@ def remove_empty_gongwen_fields(doc: Any, values: Mapping[str, Any], placeholder
                 _remove_paragraph(paragraph)
 
 
-def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[str, Sequence[Any]]) -> None:
+def render_attachment_placeholders(
+    names: Sequence[str],
+    placeholders: Mapping[str, Sequence[Any]],
+    *,
+    alignment: Literal["spaces", "tab"] = "spaces",
+) -> None:
     """Expand each original attachment anchor in its own body/cell container."""
     for target in placeholders.get("附件说明", ()):
         parent = target._p.getparent()
@@ -205,12 +211,13 @@ def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[s
         char_width = _font_size(target, source_run)
         inherited = inherited_indent_attributes(target)
         base_indent = _attachment_origin(target, char_width)
-        label_width = 3 * char_width
         # Keep the period and following ordinary space adjacent to the name.
         # Reserve the label's six half-character cells, reducing the leading
         # padding by one cell whenever the number gains a digit.
-        padding_cells = max(6, len(str(len(names))) - 1)
-        hanging = label_width if len(names) == 1 else int((padding_cells + 2) * char_width / 2)
+        source_hanging = _indent_length(effective_indent_attributes(target), char_width, "hanging")
+        number_cells = 0 if len(names) == 1 else 2
+        padding_cells = max(6, len(str(len(names))) - 1, math.ceil(source_hanging * 2 / char_width) - number_cells)
+        hanging = int((padding_cells + number_cells) * char_width / 2)
         text_indent = base_indent + hanging
         insertion_index = parent.index(target._p)
 
@@ -228,14 +235,21 @@ def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[s
             if source_run is not None and source_run._r.rPr is not None:
                 run._r.insert(0, deepcopy(source_run._r.rPr))
             if len(names) == 1:
-                run.text = f"附件：{name}"
+                run.text = f"附件：{_attachment_padding(padding_cells - 6)}"
+                if alignment == "spaces":
+                    run.text += name
+                else:
+                    run.add_tab()
+                    name_run = paragraph.add_run(name)
+                    if source_run is not None and source_run._r.rPr is not None:
+                        name_run._r.insert(0, deepcopy(source_run._r.rPr))
             else:
                 prefix = (
                     "附件：" + _attachment_padding(padding_cells - 6)
                     if index == 1
                     else _attachment_padding(padding_cells - len(str(index)) + 1)
                 )
-                run.text = f"{prefix}{index}. "
+                run.text = f"{prefix}{index}." + (" " if alignment == "spaces" else "\t")
                 # A template can kern pairs such as "11" more tightly. Keep
                 # literal number cells uniform without changing the name's font.
                 properties = run._r.get_or_add_rPr()
@@ -287,8 +301,72 @@ def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[s
                 indent.set(qn("w:hangingChars"), "0")
             if any(qn(f"w:{name}") in inherited for name in ("start", "startChars")):
                 indent.set(qn("w:start"), str(Emu(text_indent).twips))
+            if alignment == "tab":
+                _attachment_name_tab(paragraph, text_indent)
             parent.insert(insertion_index + index - 1, element)
         parent.remove(target._p)
+
+
+def _attachment_name_tab(paragraph: Paragraph, position: int) -> None:
+    """Use one name stop, cancelling only earlier authored stops locally.
+
+    Stops are inherited independently of indentation. An earlier template stop
+    would capture our single tab before it reached the continuation origin.
+    Shared styles and later unrelated stops must remain intact.
+    """
+    effective: dict[int, str] = {}
+    properties: list[Any] = [paragraph._p.pPr]
+    style = paragraph.style
+    seen: set[Any] = set()
+    while style is not None and style.element not in seen:
+        seen.add(style.element)
+        properties.append(style.element.find(qn("w:pPr")))
+        style = style.base_style
+    properties.append(
+        cast(Any, paragraph.part).styles.element.find(f"{qn('w:docDefaults')}/{qn('w:pPrDefault')}/{qn('w:pPr')}")
+    )
+    destination = Emu(position).twips
+    for source in properties:
+        if source is None:
+            continue
+        tabs = source.find(qn("w:tabs"))
+        if tabs is not None:
+            for stop in tabs:
+                effective.setdefault(int(stop.get(qn("w:pos"), "0")), stop.get(qn("w:val"), "left"))
+    original_destination = destination
+    while effective.get(destination) == "bar":
+        destination += 1
+    if destination != original_destination:
+        # A visible bar and a positioning stop cannot share one declaration.
+        # Move only the generated name origin by the smallest physical unit.
+        difference = Twips(destination - original_destination)
+        first_line = paragraph.paragraph_format.first_line_indent
+        assert first_line is not None
+        paragraph.paragraph_format.left_indent = Twips(destination)
+        paragraph.paragraph_format.first_line_indent = Emu(first_line - difference)
+        indent = paragraph._p.get_or_add_pPr().get_or_add_ind()
+        if qn("w:start") in indent.attrib:
+            indent.set(qn("w:start"), str(destination))
+        position = Twips(destination)
+    tabs = cast(Any, paragraph._p.get_or_add_pPr()).get_or_add_tabs()
+    for stop in list(tabs):
+        stop_position = int(stop.get(qn("w:pos"), "0"))
+        kind = stop.get(qn("w:val"))
+        if stop_position <= destination and kind != "bar" and (kind != "clear" or stop_position == destination):
+            tabs.remove(stop)
+    for earlier in sorted(
+        value for value, kind in effective.items() if value < destination and kind not in {"bar", "clear"}
+    ):
+        stop = OxmlElement("w:tab")
+        stop.set(qn("w:val"), "clear")
+        stop.set(qn("w:pos"), str(earlier))
+        tabs.append(stop)
+    paragraph.paragraph_format.tab_stops.add_tab_stop(Emu(position))
+    ordered = sorted(tabs, key=lambda stop: int(stop.get(qn("w:pos"), "0")))
+    for stop in ordered:
+        tabs.remove(stop)
+    for stop in ordered:
+        tabs.append(stop)
 
 
 def _attachment_names(value: Any) -> tuple[str, ...]:
@@ -415,7 +493,9 @@ def _attachment_origin(paragraph: Any, char_width: int) -> int:
     attributes = effective_indent_attributes(paragraph)
     axis = "start" if any(qn(f"w:{name}") in attributes for name in ("start", "startChars")) else "left"
     left = _indent_length(attributes, char_width, axis)
-    if int(attributes.get(qn("w:hangingChars"), "0")):
+    if any(qn(f"w:{name}") in attributes for name in ("hanging", "firstLine")):
+        first = "hanging" if qn("w:hanging") in attributes else "firstLine"
+    elif int(attributes.get(qn("w:hangingChars"), "0")):
         first = "hanging"
     elif int(attributes.get(qn("w:firstLineChars"), "0")):
         first = "firstLine"
@@ -426,11 +506,17 @@ def _attachment_origin(paragraph: Any, char_width: int) -> int:
 
 
 def _indent_length(attributes: Mapping[str, str], char_width: int, axis: str) -> int:
-    # Character zero cancels earlier character units; the length still applies.
+    # Word-authored paired values contain measured physical geometry. Replacing
+    # that geometry with font-size arithmetic moves real template anchors when
+    # character metadata and lengths disagree. Only character-only templates
+    # need a font-based fallback. This policy is local to attachment layout.
+    length = attributes.get(qn(f"w:{axis}"))
+    if length is not None:
+        return int(Twips(int(length)))
     characters = int(attributes.get(qn(f"w:{axis}Chars"), "0"))
     if characters:
         return round(characters * char_width / 100)
-    return int(Twips(int(attributes.get(qn(f"w:{axis}"), "0"))))
+    return 0
 
 
 def _attachment_padding(half_characters: int) -> str:

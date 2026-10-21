@@ -39,6 +39,7 @@ def test_actions_remain_visible_and_separate_during_live_resize(
         assert all(control.height() >= control.sizeHint().height() for control in controls), detail
         assert rects[1].right() + 1 == rects[2].left(), detail
         assert rects[1].top() == rects[2].top(), detail
+        assert rects[-1].right() == frame.width() - 1, detail
         assert all(control.width() == control.height() for control in controls[2:]), detail
 
     try:

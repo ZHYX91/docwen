@@ -6,6 +6,7 @@ import json
 import subprocess
 import tomllib
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from scripts.release.gongwen_fields_fixture import (
@@ -16,9 +17,12 @@ from scripts.release.gongwen_fields_fixture import (
 pytestmark = pytest.mark.contract
 
 
-def _write_expected_document(path: Path, *, enabled: bool, empty: bool) -> None:
+def _write_expected_document(
+    path: Path, *, enabled: bool, empty: bool, alignment: Literal["spaces", "tab"] = "spaces"
+) -> None:
     """An explicit output golden independent of the conversion implementation."""
     from docx import Document
+    from docx.oxml.ns import qn
     from docx.shared import Pt
 
     def layout(paragraph):
@@ -28,13 +32,18 @@ def _write_expected_document(path: Path, *, enabled: bool, empty: bool) -> None:
         paragraph.paragraph_format.keep_with_next = True
         paragraph.runs[0].font.size = Pt(16)
         paragraph.runs[0].bold = True
+        paragraph.runs[0].font.name = "Times New Roman"
+        paragraph.runs[0]._r.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), "仿宋_GB2312")
+        if alignment == "tab":
+            paragraph.paragraph_format.tab_stops.add_tab_stop(Pt(76))
 
     document = Document()
     document.add_paragraph("DOCWEN ATTACHMENTS START")
+    separator = "\t" if alignment == "tab" else " "
     attachments = (
         ([] if enabled else [""])
         if empty
-        else ["附件：1. 任务分工表", "\u3000\u3000\u30002. 工作安排表"]
+        else [f"附件：1.{separator}任务分工表", f"\u3000\u3000\u30002.{separator}工作安排表"]
         if enabled
         else ["任务分工表 / 工作安排表"]
     )
@@ -77,16 +86,22 @@ def test_gongwen_fields_fixtures_have_independent_config_and_real_templates(tmp_
     from docx import Document
 
     cases = write_gongwen_fields_cases(tmp_path / "fixtures")
-    assert len(cases) == 4
-    assert {(case.enabled, case.empty) for case in cases} == {
-        (True, True),
-        (True, False),
-        (False, True),
-        (False, False),
+    assert len(cases) == 6
+    assert {(case.alignment, case.enabled, case.empty) for case in cases} == {
+        ("spaces", True, True),
+        ("spaces", True, False),
+        ("spaces", False, True),
+        ("spaces", False, False),
+        ("tab", True, True),
+        ("tab", True, False),
     }
     for case in cases:
         config = tomllib.loads((case.work_dir / "config_home" / "template_fill.toml").read_text(encoding="utf-8"))
-        assert config == {"gongwen_fields_enabled": case.enabled, "list_separator": " / "}
+        assert config == {
+            "gongwen_fields_enabled": case.enabled,
+            "attachment_alignment": case.alignment,
+            "list_separator": " / ",
+        }
         state = json.loads((case.work_dir / "data_home" / "template-state.json").read_text(encoding="utf-8"))
         identity = state["user_identities"][case.template_path.name]
         assert state["defaults"]["docx"] == identity["id"]
@@ -97,7 +112,7 @@ def test_gongwen_fields_fixtures_have_independent_config_and_real_templates(tmp_
         assert template.tables[1].cell(1, 0).text == "{{印发机关}}"
         assert template.tables[1].cell(1, 1).text == "{{印发日期}}"
         output = case.work_dir / "outputs" / "golden.docx"
-        _write_expected_document(output, enabled=case.enabled, empty=case.empty)
+        _write_expected_document(output, enabled=case.enabled, empty=case.empty, alignment=case.alignment)
         verify_gongwen_fields_output(output, case=case)
 
 
@@ -110,6 +125,15 @@ def test_gongwen_fields_fixtures_have_independent_config_and_real_templates(tmp_
         ("missing_indent", "on-values", "attachment_layout_mismatch"),
         ("wrong_indent", "on-values", "attachment_layout_mismatch"),
         ("tab_separator", "on-values", "attachments_mismatch"),
+        ("unexpected_stop", "on-values", "attachment_layout_mismatch"),
+        ("lost_tab", "tab-on-values", "attachments_mismatch"),
+        ("extra_tab", "tab-on-values", "attachments_mismatch"),
+        ("missing_tab_stop", "tab-on-values", "attachment_layout_mismatch"),
+        ("wrong_tab_stop", "tab-on-values", "attachment_layout_mismatch"),
+        ("right_tab_stop", "tab-on-values", "attachment_layout_mismatch"),
+        ("wrong_tab_hanging", "tab-on-values", "attachment_layout_mismatch"),
+        ("tab_lost_font", "tab-on-values", "attachment_layout_mismatch"),
+        ("tab_empty_paragraph", "tab-on-empty", "empty_paragraph_mismatch"),
         ("wide_separator", "on-values", "attachments_mismatch"),
         ("lost_font", "on-values", "attachment_layout_mismatch"),
         ("lost_paragraph_format", "on-values", "attachment_layout_mismatch"),
@@ -132,10 +156,14 @@ def test_gongwen_fields_oracle_rejects_semantic_regressions(
     tmp_path: Path,
 ) -> None:
     from docx import Document
+    from docx.enum.text import WD_TAB_ALIGNMENT
+    from docx.shared import Pt
 
     case = next(case for case in write_gongwen_fields_cases(tmp_path / "fixtures") if case.name == case_name)
     output = case.work_dir / "outputs" / "incorrect.docx"
-    _write_expected_document(output, enabled=case.enabled or mutation == "ignored_off", empty=case.empty)
+    _write_expected_document(
+        output, enabled=case.enabled or mutation == "ignored_off", empty=case.empty, alignment=case.alignment
+    )
     document = Document(output)
     paragraphs = {paragraph.text: paragraph for paragraph in document.paragraphs}
     if mutation == "body_joined":
@@ -152,6 +180,25 @@ def test_gongwen_fields_oracle_rejects_semantic_regressions(
         document.tables[0].cell(0, 0).paragraphs[1].paragraph_format.left_indent = None
     elif mutation == "tab_separator":
         paragraphs["附件：1. 任务分工表"].text = "附件：1.\t任务分工表"
+    elif mutation == "unexpected_stop":
+        paragraphs["附件：1. 任务分工表"].paragraph_format.tab_stops.add_tab_stop(Pt(76))
+    elif mutation == "lost_tab":
+        paragraphs["附件：1.\t任务分工表"].text = "附件：1. 任务分工表"
+    elif mutation == "extra_tab":
+        paragraphs["附件：1.\t任务分工表"].text = "附件：1.\t\t任务分工表"
+    elif mutation in {"missing_tab_stop", "wrong_tab_stop", "right_tab_stop"}:
+        paragraph = paragraphs["附件：1.\t任务分工表"]
+        paragraph.paragraph_format.tab_stops.clear_all()
+        if mutation == "wrong_tab_stop":
+            paragraph.paragraph_format.tab_stops.add_tab_stop(Pt(75))
+        elif mutation == "right_tab_stop":
+            paragraph.paragraph_format.tab_stops.add_tab_stop(Pt(76), WD_TAB_ALIGNMENT.RIGHT)
+    elif mutation == "wrong_tab_hanging":
+        paragraphs["附件：1.\t任务分工表"].paragraph_format.first_line_indent = Pt(-60)
+    elif mutation == "tab_lost_font":
+        paragraphs["附件：1.\t任务分工表"].runs[0].font.name = "Arial"
+    elif mutation == "tab_empty_paragraph":
+        paragraphs["DOCWEN EMPTY FIELD END"].insert_paragraph_before("：")
     elif mutation == "wide_separator":
         paragraphs["附件：1. 任务分工表"].text = "附件：1.  任务分工表"
     elif mutation == "lost_font":
@@ -183,13 +230,13 @@ def test_gongwen_fields_oracle_rejects_semantic_regressions(
         verify_gongwen_fields_output(output, case=case)
 
 
-def test_packaged_cli_gongwen_fields_gate_runs_four_real_convert_requests(
+def test_packaged_cli_gongwen_fields_gate_runs_both_layouts_and_field_switches(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from scripts.release import verify_packaged_cli
 
-    observed: list[tuple[Path, bool, bool]] = []
+    observed: list[tuple[Path, bool, bool, str]] = []
 
     def fake_run(binary_path: Path, *args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
         assert args[0] == "convert"
@@ -200,9 +247,10 @@ def test_packaged_cli_gongwen_fields_gate_runs_four_real_convert_requests(
         config = tomllib.loads((cwd / "config_home" / "template_fill.toml").read_text(encoding="utf-8"))
         enabled = config["gongwen_fields_enabled"]
         empty = "附件说明: []" in Path(args[1]).read_text(encoding="utf-8")
-        observed.append((cwd, enabled, empty))
+        alignment = config["attachment_alignment"]
+        observed.append((cwd, enabled, empty, alignment))
         output = Path(args[args.index("--output-dir") + 1]) / "fields.docx"
-        _write_expected_document(output, enabled=enabled, empty=empty)
+        _write_expected_document(output, enabled=enabled, empty=empty, alignment=alignment)
         return subprocess.CompletedProcess(
             [str(binary_path), *args],
             0,
@@ -212,13 +260,15 @@ def test_packaged_cli_gongwen_fields_gate_runs_four_real_convert_requests(
 
     monkeypatch.setattr(verify_packaged_cli, "_run", fake_run)
     outputs = verify_packaged_cli._run_gongwen_fields_smoke(tmp_path / "DocWenCLI.exe", work_dir=tmp_path / "run")
-    assert len(outputs) == 4
-    assert len({cwd for cwd, _enabled, _empty in observed}) == 4
-    assert {(enabled, empty) for _cwd, enabled, empty in observed} == {
-        (True, True),
-        (True, False),
-        (False, True),
-        (False, False),
+    assert len(outputs) == 6
+    assert len({cwd for cwd, _enabled, _empty, _alignment in observed}) == 6
+    assert {(alignment, enabled, empty) for _cwd, enabled, empty, alignment in observed} == {
+        ("spaces", True, True),
+        ("spaces", True, False),
+        ("spaces", False, True),
+        ("spaces", False, False),
+        ("tab", True, True),
+        ("tab", True, False),
     }
 
 
@@ -265,6 +315,7 @@ def test_packaged_gui_gongwen_fields_gate_uses_action_area_and_profile_template(
             output,
             enabled=config["gongwen_fields_enabled"],
             empty="附件说明: []" in source.read_text(encoding="utf-8"),
+            alignment=config["attachment_alignment"],
         )
         Path(env["DOCWEN_GUI_TEST_CONVERSION_REPORT"]).write_text(
             json.dumps(
@@ -290,9 +341,9 @@ def test_packaged_gui_gongwen_fields_gate_uses_action_area_and_profile_template(
         )
         == 0
     )
-    assert len(observed) == 4
-    assert len({env["DOCWEN_CONFIG_DIR"] for env in observed}) == 4
-    assert len({env["DOCWEN_DATA_DIR"] for env in observed}) == 4
+    assert len(observed) == 6
+    assert len({env["DOCWEN_CONFIG_DIR"] for env in observed}) == 6
+    assert len({env["DOCWEN_DATA_DIR"] for env in observed}) == 6
 
 
 def test_packaged_cli_child_environment_cannot_import_checkout(

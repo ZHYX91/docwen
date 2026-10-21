@@ -31,13 +31,15 @@ def test_generated_attachment_columns_override_character_indents_without_editing
 
     paragraphs = document.paragraphs[1:] if location == "body" else document.tables[0].cell(0, 0).paragraphs
     assert len(paragraphs) == count
-    # The authored origin is 2 - 3 characters (-16 pt), not the stale physical
-    # fallbacks. Ordinary text follows the period and one U+0020 directly;
+    # Native Word places this paired-value template at 79 - 47.4 = 31.6 pt.
+    # Font-size arithmetic on the character metadata would move it to -16 pt.
+    # Ordinary text follows the period and one U+0020 directly;
     # leading padding shrinks as the number gains digits.
     hanging_points = 48 if count == 1 else 64
-    text_points = -16 + hanging_points
+    text_points = 31.6 + hanging_points
     for paragraph in paragraphs:
-        assert paragraph.paragraph_format.left_indent == Pt(text_points)
+        left = paragraph.paragraph_format.left_indent
+        assert left is not None and left.twips == round(text_points * 20)
         assert paragraph.paragraph_format.first_line_indent == Pt(-hanging_points)
         indent = paragraph._p.get_or_add_pPr().get_or_add_ind()
         if inheritance != "direct":
@@ -63,7 +65,7 @@ def test_direct_character_zero_uses_length_fallback_and_preserves_unrelated_form
     fill_template(document, {"附件说明": ["甲", "乙"]}, [], None, scan_placeholders(document))
 
     for paragraph in document.paragraphs[1:]:
-        assert paragraph.paragraph_format.left_indent == Pt(28)
+        assert paragraph.paragraph_format.left_indent == Pt(28.6)
         assert paragraph.paragraph_format.right_indent == Pt(8)
         assert paragraph.paragraph_format.space_after == Pt(5)
         assert paragraph.runs[0].bold is True
@@ -103,7 +105,7 @@ def test_logical_start_and_inherited_first_line_characters_use_generated_columns
     fill_template(document, {"附件说明": ["甲", "乙"]}, [], None, scan_placeholders(document))
 
     for paragraph in document.paragraphs[1:]:
-        text_points = 144 if first_line == "firstLineChars" else 48
+        text_points = 191 if first_line == "firstLineChars" else 95
         assert paragraph.paragraph_format.left_indent == Pt(text_points)
         assert paragraph._p.pPr is not None and paragraph._p.pPr.ind is not None
         indent = paragraph._p.pPr.ind

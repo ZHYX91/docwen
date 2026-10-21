@@ -100,10 +100,10 @@ _SIZE_LIMIT_TARGETS = frozenset({"jpg", "jpeg", "webp"})
 
 SUPPORTED_FORMAT_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("file_category.text_short", "Text", ("md", "txt")),
-    ("file_category.layout_short", "Layout", ("pdf", "xps", "ofd")),
-    ("file_category.document_short", "Doc", ("docx", "doc", "wps", "rtf", "odt")),
-    ("file_category.spreadsheet_short", "Sheet", ("xlsx", "xls", "et", "csv", "tsv", "ods")),
-    ("file_category.image_short", "Image", ("jpg", "png", "bmp", "gif", "tiff", "heic", "heif", "webp")),
+    ("file_category.layout_short", "Fixed-layout", ("pdf", "xps", "ofd")),
+    ("file_category.document_short", "Documents", ("docx", "doc", "wps", "rtf", "odt")),
+    ("file_category.spreadsheet_short", "Spreadsheets", ("xlsx", "xls", "et", "csv", "tsv", "ods")),
+    ("file_category.image_short", "Images", ("jpg", "png", "bmp", "gif", "tiff", "heic", "heif", "webp")),
     ("file_category.other_short", "Other", ("html", "mhtml", "enex", "pptx", "ppt", "epub")),
 )
 

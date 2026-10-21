@@ -1499,10 +1499,10 @@ text = "Texto"
 
 [file_category]
 text_short = "Texto"
-document_short = "Doc"
-spreadsheet_short = "Hoja"
-layout_short = "Maq"
-image_short = "Img"
+document_short = "Documentos"
+spreadsheet_short = "Hojas de cálculo"
+layout_short = "Diseño fijo"
+image_short = "Imágenes"
 other_short = "Otros"
 
 [file_format_validation]
@@ -1845,6 +1845,11 @@ from_markdown_title = "Markdown → Documento"
 title = "Documentos oficiales"
 fields_label = "Dar formato a campos de documentos oficiales chinos"
 fields_help = "Da formato a anexos, destinatarios de copias, fechas y notas en plantillas de Word, y elimina los campos vacíos previstos. El marcador de anexos debe ocupar un párrafo propio en el cuerpo o en una celda. No se admiten encabezados, pies, cuadros de texto ni marcadores entre texto. Al desactivarlo, se aplican el relleno normal y el separador general de listas."
+
+attachment_alignment_label = "Alineación de los anexos"
+attachment_alignment_spaces = "Espacios + sangría"
+attachment_alignment_tab = "Tabulación + sangría"
+attachment_alignment_help = "Los espacios conservan el texto y espaciado normales; los párrafos con escrituras mixtas o justificados pueden presentar pequeños desfases. Las tabulaciones alinean los nombres de anexos y sus líneas continuadas en una misma posición. Solo se aplica al activar el formato de campos de documentos oficiales."
 
 [settings.invoice]
 title = "Facturas"

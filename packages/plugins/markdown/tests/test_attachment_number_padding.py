@@ -51,7 +51,7 @@ def test_saved_literal_padding_crosses_ten_and_hundred_without_tabs(location, co
         assert not paragraph._p.findall(f"{qn('w:r')}/{qn('w:tab')}")
         assert paragraph._p.find(f"{qn('w:pPr')}/{qn('w:numPr')}") is None
         assert ". " in paragraph.text and ".  " not in paragraph.text
-        assert paragraph.paragraph_format.left_indent == Pt(48)
+        assert paragraph.paragraph_format.left_indent == Pt(95.6)
         assert paragraph.paragraph_format.first_line_indent == Pt(-64)
         prefix, name = paragraph.runs
         assert prefix._r.rPr is not None

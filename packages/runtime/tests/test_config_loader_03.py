@@ -436,6 +436,7 @@ def test_config_registry_declares_current_configuration_files() -> None:
         ("link.format.image_link_style", "link.toml"),
         ("text.remove_numbering", "text.toml"),
         ("template_fill.gongwen_fields_enabled", "template_fill.toml"),
+        ("template_fill.attachment_alignment", "template_fill.toml"),
         ("export.to_md_image_extraction_mode", "export.toml"),
         ("document.keep_images", "document.toml"),
         ("numbering.add.settings.default_scheme", "numbering/add.toml"),
