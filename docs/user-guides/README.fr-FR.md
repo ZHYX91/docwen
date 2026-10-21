@@ -39,9 +39,6 @@ Choisissez un modèle et les options de génération des documents Markdown.
 
 ![De Markdown au document](../assets/screenshots/markdown-generation-en.png)
 
-Importez, activez, réorganisez et copiez les modèles dans les paramètres.
-
-![Gestion des modèles](../assets/screenshots/template-management-en.png)
 
 Journal des modifications : voir [CHANGELOG.md](../CHANGELOG.md)
 
@@ -152,7 +149,7 @@ Le programme utilise une **mise en page adaptative à trois colonnes** :
     -   Méthode 2 : Cliquez sur le bouton "Ajouter" dans la zone de glisser-déposer pour sélectionner des fichiers.
 3.  **Sélectionner le modèle** (si conversion nécessaire) : Le panneau de modèle droit s'étend automatiquement ; sélectionnez un modèle approprié.
 4.  **Configurer les options** : Cochez les options de conversion/exportation requises dans le panneau d'opération.
-5.  **Exécuter l'opération** : Cliquez sur le bouton de fonction correspondant (ex : "Export MD", "Générer DOCX", etc.).
+5.  **Exécuter l'opération** : Cliquez sur le bouton de fonction correspondant (ex : "Exporter en Markdown", "Générer DOCX", etc.).
 6.  **Voir le résultat** : La barre d’état affiche la progression et le résultat ; cliquez sur l’action « Ouvrir la sortie » à droite pour ouvrir l’emplacement de sortie.
 
 ### Mode fichier unique vs Mode par lots
@@ -175,18 +172,22 @@ Le panneau d'opération ajuste automatiquement les options disponibles en foncti
 
 | Type de fichier | Opérations disponibles |
 | :--- | :--- |
-| Document Word | Export MD, Convertir PDF, Correction texte, OCR |
+| Document Word | Exporter en Markdown, Convertir PDF, Correction texte, OCR |
 | Markdown | Convertir DOCX, Convertir PDF, Correction texte |
-| Tableau Excel | Export MD, Convertir PDF, Résumé tableau |
-| Fichier PDF | Export MD, Fusionner, Diviser, OCR |
+| Tableau Excel | Exporter en Markdown, Convertir PDF, Résumé tableau |
+| Fichier PDF | Exporter en Markdown, Fusionner, Diviser, OCR |
 | Fichier Image | Conversion format, Compression, OCR |
-| HTML/EPUB/PPTX etc. | Export MD |
+| HTML/EPUB/PPTX etc. | Exporter en Markdown |
 
 ### Interface des paramètres
 
-Cliquez sur le bouton « Paramètres » dans l’en-tête de la zone d’opérations pour ouvrir la configuration :
+Ouvrez les paramètres avec l’icône en bas de la fenêtre ou **Ctrl+,**. La navigation latérale regroupe **Général**, **Types d’entrée**, **Contenu** et **Spécialisations**. Elle défile si la fenêtre est basse et devient une liste déroulante seulement si la largeur est insuffisante.
 
-Les paramètres sont organisés en onglets : **Général**, **Texte**, **Relecture**, **Document**, **Tableau**, **Image**, **Mise en page**, **Lien**, **Formatage**, **Sortie**, **Exporter**, **Journal**, **Autres**.
+La page **OCR et images** regroupe la reconnaissance et la sortie des images dans Markdown. Les valeurs OCR propres à chaque type de fichier restent dans sa page d’entrée ; la conversion et la compression d’images restent dans **Images en entrée**. **Syntaxe Markdown** distingue les règles de sortie, les règles de lecture et les correspondances Word. Tous les chemins d’entrée et toutes les optimisations ne prennent pas encore en charge chaque option de syntaxe.
+
+Les **Documents officiels** et les **Factures** ont chacun leur page. Pour les documents officiels, **Document → Markdown** règle la reconnaissance initiale et **Markdown → Document** les champs de modèle, avec une aide sur les annexes, les destinataires en copie, les dates et les notes. Les factures ont des valeurs distinctes pour **PDF / OFD → Markdown** et **Image → Markdown**. Ces valeurs ne fixent que le choix initial des fichiers compatibles, sans détecter automatiquement leur type. **Appliquer / OK** enregistre et **Annuler** écarte les changements non appliqués.
+
+**Portée :** Le formatage spécialisé des champs vise les documents officiels chinois et l’optimisation de l’extraction vise les factures chinoises. Les autres fichiers peuvent toujours utiliser les conversions ordinaires.
 
 ### Raccourcis
 
@@ -305,7 +306,7 @@ Pour faciliter la mémorisation pour les collègues sans connaissances de base, 
 
 ### Sauts de ligne et paragraphes
 
-**Règle de base** : Chaque ligne non vide est traitée par défaut comme un paragraphe séparé.
+**Règle de base** : Les simples retours à la ligne Markdown ne créent **pas** de paragraphes Word distincts par défaut. Activez **Chaque ligne comme paragraphe** sous **Paramètres → Syntaxe Markdown** pour séparer les lignes de prose. Listes, citations, code et sauts explicites conservent leurs propres règles.
 
 **Paragraphes mixtes** : Lorsqu'un sous-titre doit être mélangé avec le corps du texte dans le même paragraphe (mode par défaut : « Ponctuation requise »), les conditions suivantes doivent être remplies :
 1.  Le sous-titre se termine par un signe de ponctuation de fin (prend en charge la ponctuation multilingue, y compris les points, les points d'interrogation, les points d'exclamation et autres signes de ponctuation de fin courants).
@@ -462,9 +463,7 @@ Le convertisseur détecte et traite automatiquement les styles de modèle lors d
     -   Les noms de style utilisent les noms anglais standard de Word (ex: `heading 1`).
     -   Word affiche automatiquement les noms localisés en fonction de la langue du système (ex: "Titre 1" sur les systèmes français).
 -   **Styles définis par le logiciel** (Bloc de code, Citation, Formule, Séparateur, Tableau, etc.) :
-    -   Injecte les noms de style de langue correspondants en fonction du paramètre de langue de l'interface du logiciel.
-    -   Interface chinoise : Injecte "代码块", "引用 1", "三线表", etc.
-    -   Interface anglaise : Injecte "Code Block", "Quote 1", "Three Line Table", etc.
+    -   Les nouveaux styles gérés suivent la **langue de sortie de la tâche** des paramètres généraux, non la langue de l’interface. Changer cette dernière ne renomme pas les styles déjà présents dans le modèle.
 
 **Suggestion** : Après avoir personnalisé les styles dans le modèle, le convertisseur utilisera automatiquement vos styles ; s'ils ne sont pas présents dans le modèle, il utilisera les styles prédéfinis intégrés.
 

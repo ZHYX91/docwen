@@ -39,9 +39,6 @@ Seleccione una plantilla y las opciones de generación de documentos Markdown.
 
 ![De Markdown a documento](../assets/screenshots/markdown-generation-en.png)
 
-Importe, active, ordene y copie plantillas en la configuración.
-
-![Gestión de plantillas](../assets/screenshots/template-management-en.png)
 
 Registro de cambios: ver [CHANGELOG.md](../CHANGELOG.md)
 
@@ -110,12 +107,12 @@ x64. Estos requisitos no amplían ese compromiso a otras distribuciones o arquit
 
     ```markdown
     ---
-    title: Test Document
+    title: Documento de prueba
     ---
     
-    ## Test Title
+    ## Título de prueba
     
-    This is the test body content.
+    Este es el contenido de prueba.
     ```
 
 2.  **Conversión con arrastrar y soltar**:
@@ -148,10 +145,10 @@ El programa utiliza un **diseño adaptativo de tres columnas**:
 1.  **Inicia el programa**: Doble clic en `DocWen.exe` (Windows empaquetado) o ejecuta `docwen-gui`.
 2.  **Importa un archivo**:
     -   Método 1: Arrastra el archivo a la ventana.
-    -   Método 2: Pulsa "Add" en la zona de arrastre para seleccionar archivos.
+    -   Método 2: Pulsa "Añadir" en la zona de arrastre para seleccionar archivos.
 3.  **Selecciona plantilla** (si es necesario): El panel derecho se expande; selecciona una plantilla adecuada.
 4.  **Configura opciones**: Marca las opciones necesarias en el panel de operaciones.
-5.  **Ejecuta**: Pulsa el botón correspondiente (p. ej., "Export MD", "Generar DOCX", etc.).
+5.  **Ejecuta**: Pulsa el botón correspondiente (p. ej., "Exportar Markdown", "Generar DOCX", etc.).
 6.  **Ver resultado**: La barra de estado muestra el progreso y el resultado; pulsa la acción «Abrir salida» a la derecha para abrir la ubicación de salida.
 
 ### Modo de archivo único vs modo por lotes
@@ -183,9 +180,14 @@ El panel ajusta automáticamente las operaciones disponibles según el tipo de a
 
 ### Pantalla de configuración
 
-Pulsa el botón «Configuración» en la cabecera del área de operaciones para abrir la configuración:
+Abre la configuración con el icono de la parte inferior de la ventana o **Ctrl+,**. La navegación lateral se agrupa en **General**, **Tipos de entrada**, **Contenido** y **Especializados**. Se puede desplazar en ventanas bajas y solo pasa a un selector desplegable si falta anchura.
 
-La configuración está organizada en pestañas: **General**, **Texto**, **Corrección**, **Documento**, **Hoja**, **Imagen**, **Maquetación**, **Enlaces**, **Formato**, **Salida**, **Exportar**, **Registro**, **Otros**.
+**OCR e imágenes** reúne la configuración compartida de reconocimiento y salida de imágenes en Markdown. El OCR inicial de cada tipo de archivo sigue en su página de entrada; la conversión y compresión se encuentran en **Imágenes de entrada**. **Sintaxis Markdown** separa reglas de salida, lectura y correspondencias de Word. No todas las fuentes u optimizaciones aplican todavía todas las opciones de sintaxis.
+
+**Documentos oficiales** y **Facturas** tienen páginas independientes. En documentos oficiales, **Documento → Markdown** controla la selección inicial de reconocimiento y **Markdown → Documento** el formato de campos de plantilla, con ayuda sobre anexos, destinatarios en copia, fechas y notas. Las facturas separan **PDF / OFD → Markdown** e **Imagen → Markdown**. Estas preferencias solo establecen la elección inicial para archivos compatibles; no clasifican automáticamente el archivo. **Aplicar / Aceptar** guarda y **Cancelar** descarta los cambios no aplicados.
+
+**Ámbito:** El formato especializado de campos está pensado para documentos oficiales chinos y la optimización de extracción, para facturas chinas. Otros archivos pueden seguir las rutas de conversión habituales.
+
 ### Atajos
 
 -   **Arrastrar archivo externo**: Importa arrastrándolo.
@@ -302,7 +304,7 @@ Para facilitar el uso a compañeros sin conocimientos técnicos, los encabezados
 
 ### Saltos de línea y párrafos
 
-**Regla básica**: Cada línea no vacía se trata como un párrafo independiente por defecto.
+**Regla básica**: Los saltos de línea suaves de Markdown **no** crean párrafos Word independientes de forma predeterminada. Activa **Cada línea como párrafo** en **Configuración → Sintaxis Markdown** para separar las líneas de prosa. Las listas, citas, código y saltos explícitos conservan sus propias reglas.
 
 **Párrafos mixtos**: Cuando un subencabezado debe mezclarse con el texto del cuerpo en el mismo párrafo (modo predeterminado: "Se requiere puntuación"), deben cumplirse estas condiciones:
 1.  El subencabezado termina con un signo de puntuación final (admite puntuación multilingüe).
@@ -311,10 +313,10 @@ Para facilitar el uso a compañeros sin conocimientos técnicos, los encabezados
 
 **Ejemplo**:
 ```markdown
-## I. Work Requirements.
-This meeting requires all units to earnestly implement...
+## I. Requisitos de trabajo.
+Esta reunión exige que todas las unidades cumplan las tareas acordadas...
 ```
-Las dos líneas anteriores se fusionarán en un solo párrafo: "I. Work Requirements." mantiene el formato de subencabezado y "This meeting..." el formato del cuerpo.
+Las dos líneas anteriores se fusionarán en un solo párrafo: "I. Requisitos de trabajo." mantiene el formato de subencabezado y "Esta reunión..." el formato del cuerpo.
 
 **Nota**:
 - No puede haber una línea vacía entre el subencabezado y el cuerpo; de lo contrario, se reconocerán como párrafos separados.
@@ -459,7 +461,7 @@ El convertidor detecta y procesa automáticamente los estilos de la plantilla du
     -   Los nombres de estilo usan nombres estándar en inglés (p. ej., `heading 1`).
     -   Word muestra nombres localizados según el idioma del sistema.
 -   **Estilos definidos por el software** (Code Block, Quote, Formula, Separator, Table, etc.):
-    -   Inyecta nombres según el idioma de la interfaz del software.
+    -   Los nombres de los estilos gestionados nuevos siguen el **idioma de salida de la tarea**, no el de la interfaz. Cambiar la interfaz no renombra los estilos existentes de la plantilla.
 
 **Sugerencia**: Tras personalizar estilos en la plantilla, el convertidor usará tus estilos; si no existen, usará estilos predefinidos.
 

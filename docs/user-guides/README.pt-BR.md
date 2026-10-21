@@ -39,9 +39,6 @@ Selecione um modelo e as opções de geração de documentos Markdown.
 
 ![Markdown para documento](../assets/screenshots/markdown-generation-en.png)
 
-Importe, ative, reordene e copie modelos nas configurações.
-
-![Gerenciamento de modelos](../assets/screenshots/template-management-en.png)
 
 Registro de alterações: veja [CHANGELOG.md](../CHANGELOG.md)
 
@@ -183,9 +180,13 @@ O painel de operação ajusta automaticamente as opções disponíveis com base 
 
 ### Interface de Configurações
 
-Clique no botão "Configurações" no cabeçalho da área de operações para abrir as configurações:
+Abra as configurações pelo ícone na parte inferior da janela ou com **Ctrl+,**. A navegação lateral é agrupada em **Geral**, **Tipos de entrada**, **Conteúdo** e **Especializados**. Ela rola em janelas baixas e só vira um seletor suspenso quando não há largura suficiente.
 
-As configurações são organizadas em abas: **Geral**, **Texto**, **Revisão**, **Documento**, **Planilha**, **Imagem**, **Layout**, **Link**, **Formatação**, **Saída**, **Exportar**, **Log**, **Outros**.
+**OCR e imagens** reúne opções comuns de reconhecimento e saída de imagens no Markdown. O OCR padrão de cada arquivo permanece na respectiva página de entrada; conversão e compactação de imagens ficam em **Imagens de entrada**. **Sintaxe Markdown** separa convenções de saída, regras de leitura e mapeamentos do Word. Nem todas as origens e otimizações seguem todas as opções de sintaxe.
+
+**Documentos oficiais** e **Faturas** têm páginas próprias. Para documentos oficiais, **Documento → Markdown** define a escolha inicial de reconhecimento e **Markdown → Documento** a formatação de campos do modelo, com ajuda sobre anexos, destinatários em cópia, datas e notas. Faturas têm padrões separados para **PDF / OFD → Markdown** e **Imagem → Markdown**. Eles apenas definem a escolha inicial de arquivos compatíveis, sem identificá-los automaticamente. **Aplicar / OK** salva; **Cancelar** descarta alterações não aplicadas.
+
+**Escopo:** A formatação especializada de campos é voltada a documentos oficiais chineses, e a otimização da extração de faturas é voltada a formatos de faturas chinesas. Outros arquivos continuam podendo usar as conversões normais.
 
 ### Atalhos
 
@@ -302,7 +303,7 @@ Para facilitar a memorização por colegas sem conhecimento prévio, os cabeçal
 
 ### Quebras de Linha e Parágrafos
 
-**Regra Básica**: Cada linha não vazia é tratada como um parágrafo separado por padrão.
+**Regra básica**: Quebras suaves de linha em Markdown **não** criam parágrafos separados no Word por padrão. Ative **Cada linha como parágrafo** em **Configurações → Sintaxe Markdown** para separar linhas de texto. Listas, citações, código e quebras explícitas mantêm suas regras.
 
 **Parágrafos Mistos**: Quando um subtítulo precisa ser misturado com o corpo do texto no mesmo parágrafo (modo padrão: "Pontuação obrigatória"), as seguintes condições devem ser atendidas:
 1.  O subtítulo termina com um sinal de pontuação de fim (suporta pontuação multilíngue, incluindo pontos, pontos de interrogação, pontos de exclamação e outros sinais de pontuação de fim comuns).
@@ -459,9 +460,7 @@ O conversor detecta e processa automaticamente estilos de modelo durante a conve
     -   Nomes de estilo usam nomes ingleses padrão do Word (por exemplo, `heading 1`).
     -   O Word exibe automaticamente nomes localizados com base no idioma do sistema (por exemplo, "Título 1" em sistemas em português).
 -   **Estilos Definidos pelo Software** (Bloco de Código, Citação, Fórmula, Separador, Tabela, etc.):
-    -   Injeta nomes de estilo de idioma correspondentes com base na configuração de idioma da interface do software.
-    -   Interface em Chinês: Injeta "代码块", "引用 1", "三线表", etc.
-    -   Interface em Inglês: Injeta "Code Block", "Quote 1", "Three Line Table", etc.
+    -   Novos estilos gerenciados seguem o **idioma de saída da tarefa** das configurações gerais, não o idioma da interface. Mudar a interface não renomeia estilos já presentes no modelo.
 
 **Sugestão**: Depois de personalizar estilos no modelo, o conversor usará automaticamente seus estilos; se não estiverem presentes no modelo, usará estilos predefinidos embutidos.
 

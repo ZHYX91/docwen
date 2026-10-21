@@ -31,9 +31,6 @@ Select a template and generation options for Markdown documents.
 
 ![Markdown to document](docs/assets/screenshots/markdown-generation-en.png)
 
-Import, enable, reorder, and copy templates in settings.
-
-![Template management](docs/assets/screenshots/template-management-en.png)
 
 Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
 
@@ -196,6 +193,8 @@ Invoices have separate defaults for **PDF / OFD → Markdown** and **Image → M
 
 Under **Markdown syntax**, **Each line as a paragraph** optionally turns ordinary prose lines into separate Word paragraphs. It is off by default; lists, quotes, code, semantic structures and explicit Markdown hard breaks retain their own boundaries.
 
+**Scope:** The specialized field formatter targets Chinese official-document conventions, and the invoice extraction optimization targets Chinese invoice formats. Other documents can still use the regular conversion paths.
+
 ### Shortcuts
 
 -   **Drag External File**: Drag directly into the window to import.
@@ -325,7 +324,7 @@ Markdown headings map directly to Word heading levels:
 
 ### Line Breaks and Paragraphs
 
-**Basic Rule**: Every non-empty line is treated as a separate paragraph by default.
+**Basic Rule**: Ordinary Markdown soft line breaks do not create separate Word paragraphs by default. Enable **Each line as a paragraph** under **Settings → Markdown syntax** to split ordinary prose lines. Lists, quotes, code, other semantic structures and explicit hard breaks retain their own rules.
 
 **Mixed Paragraphs**: When a subheading needs to be mixed with the body text in the same paragraph (default mode: "Punctuation required"), the following conditions must be met:
 1.  The subheading ends with one of the configured trigger characters. The exact default is `。：！？.:!?` (full-width or half-width period, colon, question mark, or exclamation mark).
@@ -483,9 +482,7 @@ The converter automatically detects and processes template styles during Markdow
     -   Style names use Word standard English names (e.g., `heading 1`).
     -   Word automatically displays localized names based on system language (e.g., "标题 1" on Chinese systems).
 -   **Software Defined Styles** (Code Block, Quote, Formula, Separator, Table, etc.):
-    -   Injects corresponding language style names based on the software's interface language setting.
-    -   Chinese Interface: Injects "代码块", "引用 1", "三线表", etc.
-    -   English Interface: Injects "Code Block", "Quote 1", "Three Line Table", etc.
+    -   New managed style names use **Task output language** in General settings, not interface language. Switching interface language does not rename styles already in the selected template.
 
 **Suggestion**: After customizing styles in the template, the converter will automatically use your styles; if not present in the template, it will use built-in preset styles.
 

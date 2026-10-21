@@ -308,6 +308,86 @@ def test_public_readmes_and_architecture_describe_the_network_guard_boundary() -
         assert not any(marker in text for marker in stale_scope_markers)
 
 
+def test_readmes_do_not_reintroduce_stale_localization_guidance() -> None:
+    """Guidance must reflect current conversion defaults and UI settings."""
+    import tomllib
+
+    config = tomllib.loads((ROOT / "configs" / "conversion.toml").read_text(encoding="utf-8"))
+    assert config["md_to_docx"]["each_line_paragraph"] is False
+
+    policy = (DOCS / "specs" / "task-language.md").read_text(encoding="utf-8")
+    assert "Follow task output language" in policy
+
+    obsolete = (
+        "Every non-empty line is treated as a separate paragraph by default.",
+        "每个非空行默认作为独立段落处理",
+        "每個非空行默認作為獨立段落處理",
+        "Jede nicht leere Zeile wird standardmäßig als separater Absatz behandelt.",
+        "Chaque ligne non vide est traitée par défaut comme un paragraphe séparé.",
+        "Cada línea no vacía se trata como un párrafo independiente por defecto.",
+        "空でない行はデフォルトで別々の段落として扱われます。",
+        "비어 있지 않은 각 줄은 기본적으로 독립된 단락으로 처리됩니다.",
+        "Cada linha não vazia é tratada como um parágrafo separado por padrão.",
+        "Каждая непустая строка по умолчанию обрабатывается как отдельный абзац.",
+        "Mỗi dòng không rỗng được xem là một đoạn riêng theo mặc định.",
+        "設定按選項卡組織",
+        "Die Einstellungen sind in Tabs organisiert",
+        "Les paramètres sont organisés en onglets",
+        "La configuración está organizada en pestañas",
+        "設定はタブで構成されています",
+        "설정은 탭으로 구성됩니다",
+        "As configurações são organizadas em abas",
+        "Настройки организованы по вкладкам",
+        "Cài đặt được tổ chức theo tab",
+    )
+    guides = _public_readme_paths()
+    assert len(guides) == 12
+
+    # File-drop button labels come from the shipping locale catalog, not English screenshots.
+    file_drop_locales = {
+        "README.md": "en_US",
+        "README.zh-CN.md": "zh_CN",
+        "README.zh-TW.md": "zh_TW",
+        "README.de-DE.md": "de_DE",
+        "README.fr-FR.md": "fr_FR",
+        "README.es-ES.md": "es_ES",
+        "README.ja-JP.md": "ja_JP",
+        "README.ko-KR.md": "ko_KR",
+        "README.pt-BR.md": "pt_BR",
+        "README.ru-RU.md": "ru_RU",
+        "README.vi-VN.md": "vi_VN",
+    }
+    for readme in guides:
+        locale = file_drop_locales.get(readme.name)
+        if locale is None:  # The Arabic overview does not describe the file-drop button.
+            continue
+        source = tomllib.loads((ROOT / "i18n" / "locales" / f"{locale}.toml").read_text(encoding="utf-8"))
+        label = source["components"]["file_drop"]["add_button"]
+        guide = readme.read_text(encoding="utf-8")
+        assert f'"{label}"' in guide or f"「{label}」" in guide, readme.name
+
+    for path in guides:
+        content = path.read_text(encoding="utf-8")
+        assert not any(phrase in content for phrase in obsolete), path.name
+
+    arabic = (DOCS / "user-guides" / "README.ar.md").read_text(encoding="utf-8")
+    ocr = next(line for line in arabic.splitlines() if line.startswith("**التعرف على النص (OCR):**"))
+    assert "لغة إخراج المهمة" in ocr
+    assert "اتباع لغة الواجهة" not in ocr
+
+    for locale in ("es-ES", "ko-KR", "vi-VN"):
+        guide = (DOCS / "user-guides" / f"README.{locale}.md").read_text(encoding="utf-8")
+        assert "title: Test Document" not in guide
+        assert "## Test Title" not in guide
+        assert "This is the test body content." not in guide
+        assert "## I. Work Requirements." not in guide
+        assert "This meeting..." not in guide
+
+    vietnamese = (DOCS / "user-guides" / "README.vi-VN.md").read_text(encoding="utf-8")
+    assert "Text Proofreading" not in vietnamese
+    assert "Export MD" not in vietnamese
+
+
 def test_current_docs_do_not_depend_on_completed_audit_material() -> None:
     current_files = [ROOT / "README.md", *DOCS.rglob("*.md")]
     current_files = [path for path in current_files if path.name != "CHANGELOG.md"]
