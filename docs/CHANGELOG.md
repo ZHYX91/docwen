@@ -7,6 +7,9 @@
 
 ## 0.19.1
 
+- Keep python-docx part modules available as physical files in frozen packages so Linux can resolve the library's default XML template paths during document generation.
+- 冻结包保留 python-docx 部件模块的实体目录，修复 Linux 生成文档时无法解析库内默认 XML 模板路径的问题。
+
 - Choose attachment alignment under Official documents → Field formatting: the default uses one name tab stop shared with hanging indentation; space padding remains available. Preserve template fonts and justification in both modes.
 - 公文页的公文字段优化下新增附件说明对齐方式：默认以一个名称制表位和悬挂缩进共同定位，另可选择普通空格补位；两种方式均保留模板字体和两端对齐。
 
