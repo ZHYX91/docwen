@@ -4,3 +4,6 @@ list_separator = "、"
 
 # Format Chinese official-document fields in Word templates.
 gongwen_fields_enabled = true
+
+# Attachment-name alignment: spaces or a tab stop, with a hanging indent.
+attachment_alignment = "tab"

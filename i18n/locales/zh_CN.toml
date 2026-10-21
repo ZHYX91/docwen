@@ -985,7 +985,7 @@ add_folder_action = "添加文件夹"
 recent_files_action = "最近使用"
 clear_recent_files_action = "清空最近使用"
 select_folder_dialog = "选择文件夹"
-clear_button = "清空"
+clear_input_tooltip = "清空输入列表"
 single_mode = "单文件"
 batch_mode = "批量"
 file_selected_msg = "当前文件：{filename}"
@@ -1488,9 +1488,9 @@ text = "文本"
 [file_category]
 text_short = "文本"
 document_short = "文档"
-spreadsheet_short = "表格"
-layout_short = "版式"
-image_short = "图片"
+spreadsheet_short = "电子表格"
+layout_short = "版式文件"
+image_short = "图像"
 other_short = "其他"
 
 [file_format_validation]
@@ -1833,6 +1833,11 @@ from_markdown_title = "Markdown → 文档"
 title = "公文"
 fields_label = "格式化公文字段"
 fields_help = "填充 Word 模板时，专门处理附件说明、签发人、主送机关、抄送机关、成文日期、印发日期和附注，并安全清理空字段。签发人、主送机关、抄送机关如填写多项列表，会暂用顿号连接，并在 Word 中添加说明批注，请自行核对姓名排版或机关之间的顿号、逗号；已写好标点的字符串原样保留。附件说明须独占正文或表格单元格中的段落。关闭后按普通字段填充规则处理，列表使用通用分隔符。"
+
+attachment_alignment_label = "附件说明对齐方式"
+attachment_alignment_spaces = "空格＋悬挂缩进"
+attachment_alignment_tab = "制表位＋悬挂缩进"
+attachment_alignment_help = "空格方式保留普通文字与空格，复杂混排或两端对齐时可能略有偏差；制表位方式将附件名和续行定位到同一位置，适合严格对齐。仅在公文字段格式化开启时生效。"
 
 [settings.invoice]
 title = "发票"

@@ -83,21 +83,27 @@ class TestConstruction:
         btn = widget.clear_button
         assert btn is not None
 
-    def test_action_buttons_keep_full_text_and_horizontal_order(self, widget: InputArea, qapp: QApplication) -> None:
+    def test_action_buttons_keep_labels_and_compact_horizontal_order(
+        self, widget: InputArea, qapp: QApplication
+    ) -> None:
         from PySide6.QtWidgets import QBoxLayout
 
         from docwen_gui.styles.design_tokens import Sizing
-        from docwen_gui.widgets.input_area import _ACTION_BUTTON_MIN_WIDTH
 
         widget.resize(720, 480)
         widget.show()
         qapp.processEvents()
         widget._sync_top_control_layout()
 
-        buttons = (widget.add_button, widget.paste_button, widget.clear_button)
+        buttons = (widget.add_button, widget.paste_button)
         assert all(button.text() for button in buttons)
-        assert all(button.minimumWidth() >= _ACTION_BUTTON_MIN_WIDTH for button in buttons)
-        assert all(button.minimumHeight() >= Sizing.CONTROL_HEIGHT for button in buttons)
+        assert all(
+            control.minimumHeight() >= Sizing.CONTROL_HEIGHT for control in (widget.add_button, widget._paste_frame)
+        )
+        assert not widget.clear_button.text()
+        assert not widget.clear_button.icon().isNull()
+        assert widget.clear_button.toolTip() == widget.clear_button.accessibleName()
+        assert widget.clear_button.toolTip()
         assert widget._top_layout.direction() == QBoxLayout.Direction.LeftToRight
         assert widget._action_layout.direction() == QBoxLayout.Direction.LeftToRight
         assert widget._mode_frame.geometry().right() < widget._action_frame.geometry().right()
@@ -121,7 +127,6 @@ class TestConstruction:
         labels = {
             widget.add_button: "Add a document from the computer",
             widget.paste_button: "Paste Markdown text from the clipboard",
-            widget.clear_button: "Clear all current input items",
         }
         for control, text in labels.items():
             control.setText(text)
@@ -222,18 +227,23 @@ class TestConstruction:
         widget._sync_supported_type_layout()
         qapp.processEvents()
         assert len(widget._type_prompt_rows) == 6
-        left_edges = []
-        right_edges = []
+        text_widths = []
+        centers = []
+        colon_edges = []
         for row, _layout, label, value in widget._type_prompt_rows:
-            left_edges.append(label.geometry().left())
-            right_edges.append(value.geometry().right())
-            assert abs(label.x() - (row.width() - 1 - value.geometry().right())) <= 1
+            colon_edges.append(label.geometry().right())
             assert label.geometry().right() < value.geometry().left()
             assert value.geometry().right() < row.width()
-            assert value.alignment() & Qt.AlignmentFlag.AlignRight
+            assert value.alignment() & Qt.AlignmentFlag.AlignHCenter
+            assert "," not in value.text()
+            text_widths.append(value.fontMetrics().horizontalAdvance(value.text()))
+            centers.append(value.geometry().center().x())
             assert value.height() >= value.heightForWidth(value.width())
-        assert all(upper > lower for upper, lower in pairwise(left_edges))
-        assert all(upper < lower for upper, lower in pairwise(right_edges))
+        assert all(upper < lower for upper, lower in pairwise(text_widths))
+        assert max(centers) - min(centers) <= 1
+        colon_steps = [upper - lower for upper, lower in pairwise(colon_edges)]
+        assert min(colon_steps) > 0
+        assert max(colon_steps) - min(colon_steps) <= 2
 
     @pytest.mark.parametrize("theme", ["light", "dark"])
     def test_format_pyramid_stays_compact_and_centered_after_resize(self, widget, qapp, theme):
@@ -283,9 +293,19 @@ class TestConstruction:
         previous_bottom = -1
         for row, layout, label, value in widget._type_prompt_rows:
             margins = layout.contentsMargins()
-            assert margins.left() == margins.right() >= 0
+            assert margins.left() >= 0 and margins.right() >= 0
             assert label.geometry().right() < value.geometry().left()
-            assert 0 <= value.x() < value.geometry().right() < row.width()
+            assert 0 <= value.x() < value.geometry().right() < row.width(), (
+                label.text(),
+                row.rect(),
+                layout.geometry(),
+                margins.left(),
+                margins.right(),
+                layout.spacing(),
+                label.geometry(),
+                value.geometry(),
+                widget._types_container.width(),
+            )
             assert value.height() >= value.heightForWidth(value.width())
             assert row.y() > previous_bottom
             previous_bottom = row.geometry().bottom()
@@ -613,11 +633,6 @@ class TestViewModelWiring:
     def test_selection_message_visible(self, widget: InputArea) -> None:
         widget.view_model.selection_message_changed.emit("Test message", "success")
         # No crash; visual state handled by widget
-        assert True
-
-    def test_clear_resets_selection(self, widget: InputArea) -> None:
-        widget.view_model.clear_files()
-        # Widget should handle this gracefully
         assert True
 
 

@@ -29,6 +29,7 @@ def composition(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 def test_one_default_per_input_category_persists_and_reopens(composition) -> None:
     vm, port, controller = composition
+    assert vm.config.text.attachment_alignment == port.get("template_fill.attachment_alignment") == "tab"
     assert vm.get_default_optimization("document") == "none"
     assert port.set("document.to_md_optimization", "contract")
     vm.load_from_controller_config()
@@ -49,6 +50,48 @@ def test_one_default_per_input_category_persists_and_reopens(composition) -> Non
     assert reopened.get_default_optimization("layout") == "invoice_cn"
     assert reopened.get_default_optimization("image") == "none"
     assert not reopened.is_dirty
+
+
+@pytest.mark.parametrize("alignment", ["spaces", "tab"])
+def test_attachment_alignment_persists_and_reopens_when_field_formatting_is_disabled(
+    composition, alignment: str
+) -> None:
+    vm, port, controller = composition
+    vm.set_field(SECTION_TEXT, "attachment_alignment", alignment)
+    vm.set_field(SECTION_TEXT, "gongwen_fields_enabled", False)
+
+    assert vm.apply_changes()
+    assert port.get("template_fill.attachment_alignment") == alignment
+    reopened = SettingsViewModel(controller=controller)
+    assert reopened.config.text.attachment_alignment == alignment
+    assert reopened.config.text.gongwen_fields_enabled is False
+    assert not reopened.is_dirty
+
+
+def test_gongwen_reset_restores_attachment_alignment_without_resetting_text_drafts(composition) -> None:
+    vm, port, _controller = composition
+    vm.set_field(SECTION_TEXT, "attachment_alignment", "spaces")
+    assert vm.apply_changes()
+    vm.set_field(SECTION_TEXT, "list_separator", " | ")
+
+    assert vm.reset_group("gongwen")
+    assert vm.config.text.attachment_alignment == port.get("template_fill.attachment_alignment") == "tab"
+    assert vm.config.text.list_separator == " | "
+    vm.cancel_changes()
+    assert vm.config.text.attachment_alignment == "tab"
+
+
+def test_text_reset_preserves_attachment_alignment_and_its_draft(composition) -> None:
+    vm, port, _controller = composition
+    vm.set_field(SECTION_TEXT, "attachment_alignment", "tab")
+    assert vm.apply_changes()
+    vm.set_field(SECTION_TEXT, "attachment_alignment", "spaces")
+
+    assert vm.reset_group("text")
+    assert port.get("template_fill.attachment_alignment") == "tab"
+    assert vm.config.text.attachment_alignment == "spaces"
+    vm.cancel_changes()
+    assert vm.config.text.attachment_alignment == "tab"
 
 
 def test_default_changes_and_field_formatting_cancel_together_without_persisting(composition) -> None:

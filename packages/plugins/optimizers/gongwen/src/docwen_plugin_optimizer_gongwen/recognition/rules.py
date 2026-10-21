@@ -25,7 +25,7 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
     ],
     # ── 密级和保密期限 ──
     "security": [
-        ScoringRule("starts_with_security_keyword", 60),
+        ScoringRule("is_security_classification", 60),
         ScoringRule("is_after_last_unique_element", 40),
     ],
     # ── 紧急程度 ──
@@ -38,6 +38,7 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
         ScoringRule("ends_with_authority_suffix", 50),
         ScoringRule("is_after_last_unique_element", 30),
         ScoringRule("within_first_3_paragraphs", 30),
+        ScoringRule("precedes_document_number", 40),
     ],
     # ── 发文字号 ──
     "doc_number": [
@@ -88,6 +89,7 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
         ScoringRule("is_after_last_unique_element", 20),
         ScoringRule("is_too_close_to_recipient_or_title", -20),
         ScoringRule("within_first_5_paragraphs", -20),
+        ScoringRule("precedes_document_number", -100),
         ScoringRule("is_table_cell", -60),
         # A copy-to edition line often ends in an authority suffix such as
         # “办公厅”; the explicit label is stronger evidence than that suffix.
@@ -129,8 +131,7 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
     ],
     # ── 印发机关 ──
     "printing_authority": [
-        ScoringRule("follows_printing_date_reverse", 40),
-        ScoringRule("precedes_printing_date_directly", 40),
+        ScoringRule("precedes_printing_date_directly", 80),
         ScoringRule("ends_with_authority_suffix", 40),
     ],
     # ── 印发日期 ──

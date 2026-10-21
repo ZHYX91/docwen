@@ -985,7 +985,7 @@ add_folder_action = "Thêm thư mục"
 recent_files_action = "Gần đây"
 clear_recent_files_action = "Xóa gần đây"
 select_folder_dialog = "Chọn thư mục"
-clear_button = "Xóa sạch"
+clear_input_tooltip = "Xóa danh sách đầu vào"
 single_mode = "Một"
 batch_mode = "Hàng loạt"
 file_selected_msg = "Tệp hiện tại: {filename}"
@@ -1489,11 +1489,11 @@ text = "Văn bản"
 # 带"类"后缀的版本（用于选项卡标签）
 
 [file_category]
-text_short = "Văn"
-document_short = "Tài"
-spreadsheet_short = "Bảng"
-layout_short = "Bố"
-image_short = "Ảnh"
+text_short = "Văn bản"
+document_short = "Tài liệu"
+spreadsheet_short = "Bảng tính"
+layout_short = "Bố cục cố định"
+image_short = "Hình ảnh"
 other_short = "Khác"
 
 [file_format_validation]
@@ -1836,6 +1836,11 @@ from_markdown_title = "Markdown → Tài liệu"
 title = "Công văn"
 fields_label = "Định dạng trường công văn Trung Quốc"
 fields_help = "Định dạng phụ lục, nơi nhận bản sao, ngày văn bản, ngày phát hành và ghi chú trong mẫu Word; xóa các trường trống theo quy tắc. Chỗ giữ chỗ phụ lục phải nằm trong một đoạn riêng ở nội dung hoặc ô bảng. Không hỗ trợ đầu trang, chân trang, hộp văn bản hay vị trí giữa câu. Khi tắt, dùng cách điền thông thường và dấu phân cách danh sách chung."
+
+attachment_alignment_label = "Căn chỉnh tên tài liệu đính kèm"
+attachment_alignment_spaces = "Khoảng trắng + thụt treo"
+attachment_alignment_tab = "Tab + thụt treo"
+attachment_alignment_help = "Cách dùng khoảng trắng giữ nguyên văn bản và khoảng cách thông thường; đoạn trộn nhiều hệ chữ hoặc căn đều có thể lệch nhẹ. Điểm dừng tab căn tên tài liệu đính kèm và các dòng tiếp theo tại cùng một vị trí. Chỉ áp dụng khi bật định dạng trường công văn."
 
 [settings.invoice]
 title = "Hóa đơn"

@@ -32,6 +32,7 @@ def test_gongwen_reset_owns_field_switch_and_only_its_selected_default(tmp_path:
     assert loader.set_values(
         {
             "template_fill.gongwen_fields_enabled": False,
+            "template_fill.attachment_alignment": "spaces",
             "template_fill.list_separator": " / ",
             "document.to_md_optimization": selection,
             "document.to_md_keep_images": False,
@@ -44,7 +45,11 @@ def test_gongwen_reset_owns_field_switch_and_only_its_selected_default(tmp_path:
     assert loader.reset_group("gongwen") is True
 
     snapshot = loader.config.as_dict()
-    assert snapshot["template_fill"] == {"gongwen_fields_enabled": True, "list_separator": " / "}
+    assert snapshot["template_fill"] == {
+        "gongwen_fields_enabled": True,
+        "attachment_alignment": "tab",
+        "list_separator": " / ",
+    }
     assert snapshot["document"]["to_md_optimization"] == ("none" if selection == "gongwen" else selection)
     assert snapshot["document"]["to_md_keep_images"] is False
     for name in ("image", "layout"):
@@ -129,11 +134,21 @@ def test_text_reset_preserves_gongwen_field_switch(tmp_path: Path) -> None:
     from docwen_runtime.config.loader import ConfigLoader
 
     loader = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=tmp_path / "user")
-    assert loader.set_values({"template_fill.list_separator": " / ", "template_fill.gongwen_fields_enabled": False})
+    assert loader.set_values(
+        {
+            "template_fill.list_separator": " / ",
+            "template_fill.gongwen_fields_enabled": False,
+            "template_fill.attachment_alignment": "tab",
+        }
+    )
 
     assert loader.reset_group("text") is True
 
-    assert loader.config.as_dict()["template_fill"] == {"list_separator": "、", "gongwen_fields_enabled": False}
+    assert loader.config.as_dict()["template_fill"] == {
+        "list_separator": "、",
+        "gongwen_fields_enabled": False,
+        "attachment_alignment": "tab",
+    }
 
 
 @pytest.mark.parametrize(

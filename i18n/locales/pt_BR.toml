@@ -984,7 +984,7 @@ add_folder_action = "Adicionar pasta"
 recent_files_action = "Recentes"
 clear_recent_files_action = "Limpar recentes"
 select_folder_dialog = "Selecionar pasta"
-clear_button = "Limpar"
+clear_input_tooltip = "Limpar lista de entrada"
 single_mode = "Único"
 batch_mode = "Lote"
 file_selected_msg = "Arquivo atual: {filename}"
@@ -1488,10 +1488,10 @@ text = "Texto"
 
 [file_category]
 text_short = "Texto"
-document_short = "Documento"
-spreadsheet_short = "Planilha"
-layout_short = "Layout"
-image_short = "Img"
+document_short = "Documentos"
+spreadsheet_short = "Planilhas"
+layout_short = "Layout fixo"
+image_short = "Imagens"
 other_short = "Outros"
 
 [file_format_validation]
@@ -1834,6 +1834,11 @@ from_markdown_title = "Markdown → Documento"
 title = "Documentos oficiais"
 fields_label = "Formatar campos de documentos oficiais chineses"
 fields_help = "Formata anexos, destinatários de cópias, datas e notas em modelos do Word e remove os campos vazios previstos. O marcador de anexos deve ocupar um parágrafo próprio no corpo ou em uma célula. Cabeçalhos, rodapés, caixas de texto e marcadores no meio do texto não são aceitos. Quando desativado, aplicam-se o preenchimento normal e o separador geral de listas."
+
+attachment_alignment_label = "Alinhamento dos anexos"
+attachment_alignment_spaces = "Espaços + recuo"
+attachment_alignment_tab = "Tabulação + recuo"
+attachment_alignment_help = "Os espaços preservam o texto e o espaçamento comuns; parágrafos com escritas mistas ou justificados podem apresentar pequenos desvios. As tabulações alinham os nomes dos anexos e as linhas seguintes na mesma posição. Aplica-se apenas com a formatação de campos de documentos oficiais ativada."
 
 [settings.invoice]
 title = "Faturas"

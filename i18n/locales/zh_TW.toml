@@ -931,7 +931,7 @@ add_folder_action = "新增資料夾"
 recent_files_action = "最近使用"
 clear_recent_files_action = "清空最近使用"
 select_folder_dialog = "選擇資料夾"
-clear_button = "清空"
+clear_input_tooltip = "清空輸入清單"
 single_mode = "單文件"
 batch_mode = "批量"
 file_selected_msg = "目前檔案：{filename}"
@@ -1437,11 +1437,11 @@ text = "文本"
 # 带"类"后缀的版本（用于选项卡标签）
 
 [file_category]
-text_short = "文本"
+text_short = "文字"
 document_short = "文件"
-spreadsheet_short = "表格"
-layout_short = "版式"
-image_short = "圖片"
+spreadsheet_short = "試算表"
+layout_short = "版式檔案"
+image_short = "影像"
 other_short = "其他"
 
 [file_format_validation]
@@ -1838,6 +1838,11 @@ from_markdown_title = "Markdown → 文件"
 title = "公文"
 fields_label = "格式化公文欄位"
 fields_help = "填入 Word 範本時，處理附件說明、抄送機關、成文日期、印發日期和附註，並清理符合規則的空欄位。附件說明須獨占本文或表格儲存格中的段落；頁首、頁尾、文字方塊和行內位置不支援。關閉後依一般欄位規則填入，清單使用通用分隔符。"
+
+attachment_alignment_label = "附件說明對齊方式"
+attachment_alignment_spaces = "空格＋凸排縮排"
+attachment_alignment_tab = "定位點＋凸排縮排"
+attachment_alignment_help = "空格方式保留普通文字與空格，複雜混排或左右對齊時可能略有偏差；定位點方式將附件名稱和續行定位至同一位置，適合嚴格對齊。僅在公文字段格式化開啟時生效。"
 
 [settings.invoice]
 title = "發票"

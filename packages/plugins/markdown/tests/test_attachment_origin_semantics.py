@@ -20,8 +20,8 @@ pytestmark = pytest.mark.contract
     "inherited,direct,in_defaults,origin",
     [
         ({}, {"left": "240", "leftChars": "0"}, False, 12),
-        ({"left": "400", "leftChars": "200"}, {"left": "240"}, False, 32),
-        ({"firstLineChars": "200", "firstLine": "1280"}, {"hanging": "200"}, False, 32),
+        ({"left": "400", "leftChars": "200"}, {"left": "240"}, False, 12),
+        ({"firstLineChars": "200", "firstLine": "1280"}, {"hanging": "200"}, False, -10),
         (
             {"left": "1580", "leftChars": "200", "hanging": "948", "hangingChars": "300"},
             {"leftChars": "0", "firstLineChars": "0"},
@@ -29,7 +29,7 @@ pytestmark = pytest.mark.contract
             31.6,
         ),
         ({"left": "640", "firstLineChars": "100"}, {}, True, 48),
-        ({"leftChars": "200", "left": "1580"}, {}, True, 32),
+        ({"leftChars": "200", "left": "1580"}, {}, True, 79),
         ({"firstLine": "640"}, {"hanging": "0"}, False, 0),
         ({"hanging": "480"}, {"firstLine": "0"}, False, 0),
     ],
@@ -70,3 +70,34 @@ def test_attachment_origin_resolves_units_defaults_and_related_axes(
         assert left == Pt(origin + 64)
         assert left.twips + first.twips == round(origin * 20)
     assert document.styles.element.xml == styles_before
+
+
+@pytest.mark.parametrize("count", [1, 2])
+def test_wide_authored_hanging_is_not_shrunk_and_keeps_its_first_line_origin(count: int) -> None:
+    document = Document()
+    anchor = document.add_paragraph("{{附件说明}}")
+    anchor.runs[0].font.size = Pt(16)
+    anchor.paragraph_format.left_indent = Pt(128)
+    anchor.paragraph_format.first_line_indent = Pt(-96)
+
+    fill_template(document, {"附件说明": ["长附件名称" * 20] * count}, [], None, {"附件说明": [anchor]})
+
+    for paragraph in document.paragraphs:
+        assert paragraph.paragraph_format.left_indent == Pt(128)
+        assert paragraph.paragraph_format.first_line_indent == Pt(-96)
+        assert paragraph.text.startswith("附件：") or paragraph.text.lstrip().startswith("2. ")
+
+
+def test_character_only_anchor_still_uses_its_font_for_missing_lengths() -> None:
+    document = Document()
+    anchor = document.add_paragraph("{{附件说明}}")
+    anchor.runs[0].font.size = Pt(20)
+    indent = anchor._p.get_or_add_pPr().get_or_add_ind()
+    for name, value in {"leftChars": "500", "hangingChars": "300"}.items():
+        indent.set(qn(f"w:{name}"), value)
+
+    fill_template(document, {"附件说明": ["甲", "乙"]}, [], None, {"附件说明": [anchor]})
+
+    for paragraph in document.paragraphs:
+        assert paragraph.paragraph_format.left_indent == Pt(120)
+        assert paragraph.paragraph_format.first_line_indent == Pt(-80)

@@ -62,7 +62,11 @@ from docwen_plugin_markdown.resolved_runtime_v4 import (
 from docwen_plugin_markdown.resolved_source_carriers_v4 import apply_resolved_source_carriers_v4
 from docwen_plugin_markdown.runtime_semantics_v3 import RuntimeSemanticsV3Unsupported
 from docwen_plugin_markdown.template_filler import fill_template
-from docwen_plugin_markdown.template_policy import template_gongwen_fields_enabled, template_list_separator
+from docwen_plugin_markdown.template_policy import (
+    template_attachment_alignment,
+    template_gongwen_fields_enabled,
+    template_list_separator,
+)
 from docwen_plugin_markdown.template_utils import (
     TemplatePackageError,
     extract_body_font,
@@ -398,6 +402,7 @@ def _render_resolved_v4_docx(
         placeholder_para=placeholder_para,
         placeholder_map=placeholder_map,
         gongwen_fields_enabled=template_gongwen_fields_enabled(context.config),
+        attachment_alignment=template_attachment_alignment(context.config),
         list_separator=template_list_separator(context.config),
     )
     if bibliography_anchor is not None:

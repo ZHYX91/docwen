@@ -984,7 +984,7 @@ add_folder_action = "Add Folder"
 recent_files_action = "Recent"
 clear_recent_files_action = "Clear recent"
 select_folder_dialog = "Select Folder"
-clear_button = "Clear"
+clear_input_tooltip = "Clear input list"
 single_mode = "Single File"
 batch_mode = "Batch"
 file_selected_msg = "Current file: {filename}"
@@ -1487,10 +1487,10 @@ text = "Text"
 
 [file_category]
 text_short = "Text"
-document_short = "Doc"
-spreadsheet_short = "Sheet"
-layout_short = "Layout"
-image_short = "Img"
+document_short = "Documents"
+spreadsheet_short = "Spreadsheets"
+layout_short = "Fixed-layout"
+image_short = "Images"
 other_short = "Other"
 
 [file_format_validation]
@@ -1833,6 +1833,11 @@ from_markdown_title = "Markdown → Document"
 title = "Official documents"
 fields_label = "Format Chinese official-document fields"
 fields_help = "Format attachments, signers, primary and copy recipients, dates and notes in Word templates, and safely remove empty fields. Multi-item signer or recipient lists use Chinese enumeration commas temporarily and get a plain-language Word comment asking you to review layout or punctuation. Authored strings keep their original punctuation. Attachment placeholders must occupy their own paragraph in the body or a table cell. When off, generic template filling and the configured list separator apply."
+
+attachment_alignment_label = "Attachment alignment"
+attachment_alignment_spaces = "Spaces + hanging indent"
+attachment_alignment_tab = "Tabs + hanging indent"
+attachment_alignment_help = "Spaces keep ordinary text and spacing; complex mixed-script or justified paragraphs may show small offsets. Tab stops align attachment-name starts and wrapped lines to a shared position. Applies only when official-document field formatting is enabled."
 
 [settings.invoice]
 title = "Invoices"

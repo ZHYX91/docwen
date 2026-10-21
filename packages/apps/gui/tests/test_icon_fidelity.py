@@ -98,7 +98,9 @@ def test_location_button_prefers_application_open_folder_svg(qapp, monkeypatch: 
     assert button.iconSize() == QSize(20, 20)
 
 
-@pytest.mark.parametrize("asset", ["copy.svg", "delete.svg", "move_up.svg", "move_down.svg", "refresh.svg"])
+@pytest.mark.parametrize(
+    "asset", ["copy.svg", "clear.svg", "chevron_down.svg", "delete.svg", "move_up.svg", "move_down.svg", "refresh.svg"]
+)
 def test_action_icons_use_disabled_palette_for_disabled_controls(qapp, asset: str) -> None:
     from PySide6.QtGui import QColor, QPalette
     from PySide6.QtWidgets import QPushButton

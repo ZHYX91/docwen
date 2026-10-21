@@ -1180,7 +1180,7 @@ def main(argv: list[str]) -> int:
         "--gongwen-fields-smoke",
         action="store_true",
         help=(
-            "Run four real Markdown-to-DOCX conversions through the packaged ActionArea with a custom template; "
+            "Run six real Markdown-to-DOCX conversions through the packaged ActionArea with a custom template; "
             "verify Gongwen body/table fields, empty containers and the on/off config contract."
         ),
     )
@@ -1300,7 +1300,7 @@ def main(argv: list[str]) -> int:
         or args.smartdoc_smoke
         or args.successful_warning_smoke
     ):
-        parser.error("--gongwen-fields-smoke must run alone because it launches four conversion instances")
+        parser.error("--gongwen-fields-smoke must run alone because it launches independent conversion instances")
     if args.ipc_smoke and (
         args.notification_smoke
         or args.settings_smoke

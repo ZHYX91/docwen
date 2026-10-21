@@ -984,7 +984,7 @@ add_folder_action = "إضافة مجلد"
 recent_files_action = "الملفات الأخيرة"
 clear_recent_files_action = "مسح الملفات الأخيرة"
 select_folder_dialog = "اختيار مجلد"
-clear_button = "مسح"
+clear_input_tooltip = "مسح قائمة الإدخال"
 single_mode = "ملف واحد"
 batch_mode = "مجموعة ملفات"
 file_selected_msg = "الملف الحالي: {filename}"
@@ -1486,11 +1486,11 @@ text = "نص"
 # 带"类"后缀的版本（用于选项卡标签）
 
 [file_category]
-text_short = "نص"
-document_short = "مستند"
-spreadsheet_short = "جدول"
-layout_short = "تخطيط"
-image_short = "صورة"
+text_short = "نصوص"
+document_short = "مستندات"
+spreadsheet_short = "جداول بيانات"
+layout_short = "تخطيط ثابت"
+image_short = "صور"
 other_short = "أخرى"
 
 [file_format_validation]
@@ -1833,6 +1833,11 @@ from_markdown_title = "Markdown → مستند"
 title = "المستندات الرسمية"
 fields_label = "تنسيق حقول المستندات الرسمية الصينية"
 fields_help = "ينسّق المرفقات وجهات النسخ وتواريخ المستند والنشر والملاحظات في قوالب Word، ويحذف الحقول الفارغة التي تنطبق عليها القواعد. يجب أن يشغل موضع المرفقات فقرة مستقلة في متن المستند أو خلية جدول. لا تُدعم الترويسات والتذييلات ومربعات النص والمواضع داخل الجملة. عند الإيقاف تُستخدم قواعد التعبئة العادية وفاصل القوائم العام."
+
+attachment_alignment_label = "محاذاة وصف المرفقات"
+attachment_alignment_spaces = "مسافات + بادئة معلّقة"
+attachment_alignment_tab = "جدولة + بادئة معلّقة"
+attachment_alignment_help = "تحافظ طريقة المسافات على النص والمسافات العادية؛ وقد تظهر إزاحات طفيفة في الفقرات المختلطة أو المضبوطة. تحاذي علامات الجدولة بداية اسم المرفق والأسطر الملتفّة عند موضع واحد. يسري الخيار عند تفعيل تنسيق حقول المستندات الرسمية فقط."
 
 [settings.invoice]
 title = "الفواتير"

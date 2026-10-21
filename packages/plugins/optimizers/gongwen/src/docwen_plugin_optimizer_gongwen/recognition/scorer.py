@@ -22,7 +22,11 @@ from docwen_plugin_optimizer_gongwen.constants import (
 )
 from docwen_plugin_optimizer_gongwen.models import ParagraphFeature, RecognitionCandidate
 from docwen_plugin_optimizer_gongwen.recognition.rules import SCORING_RULES
-from docwen_plugin_optimizer_gongwen.utils import extract_doc_number_and_signers, starts_with_copy_to_label
+from docwen_plugin_optimizer_gongwen.utils import (
+    extract_doc_number_and_signers,
+    extract_printing_line,
+    starts_with_copy_to_label,
+)
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ProgressSink
@@ -65,6 +69,7 @@ _NAME_SEPARATOR_CHARS = "·•"
 _NAME_PATTERN = rf"{_NAME_PART_PATTERN}(?:[{re.escape(_NAME_SEPARATOR_CHARS)}]{_NAME_PART_PATTERN})*"
 _NAME_RE = re.compile(rf"^{_NAME_PATTERN}$")
 _NAME_LIST_SPLIT_RE = re.compile(r"[、\s　]+")
+_SECURITY_RETENTION_RE = re.compile(r"\w{0,20}★(?:[0-9０-９零〇一二三四五六七八九十百两]+(?:年|个月|月|天|日)|长期)")
 
 # ── Document keywords blacklist (for person name detection) ───────────
 _DOC_KEYWORDS = [
@@ -312,7 +317,7 @@ class ElementScorer:
         if pf.table_row_index != 0 or not nonempty or nonempty[0].index != pf.index:
             return False
         return any(
-            self.starts_with_security_keyword(other)
+            self.is_security_classification(other)
             or self.starts_with_urgency_keyword(other)
             or self.is_document_number_format(other)
             for other in nonempty[1:4]
@@ -322,6 +327,33 @@ class ElementScorer:
         """Check whether text starts with a secrecy-level keyword."""
         t = pf.text.strip()
         return t.startswith(("绝密", "机密", "秘密"))
+
+    def is_security_classification(self, pf: ParagraphFeature) -> bool:
+        """Accept a standalone header retention marker without a fixed level name."""
+        if self.starts_with_security_keyword(pf):
+            return True
+        if any((pf.heading_level, pf.list_marker, pf.has_image, pf.has_formula)):
+            return False
+        compact = re.sub(r"[ \t\u3000]", "", pf.text.strip())
+        if _SECURITY_RETENTION_RE.fullmatch(compact) is None:
+            return False
+        for previous in self._all_features:
+            if previous.index >= pf.index:
+                break
+            if not previous.text.strip():
+                continue
+            if previous.heading_level or previous.list_marker:
+                return False
+            label = re.sub(r"\s", "", previous.text).rstrip("：:")
+            if not (
+                self.is_numeric_sequence(previous)
+                or self.starts_with_urgency_keyword(previous)
+                or label in {"份号", "密级", "保密期限", "密级和保密期限", "紧急程度"}
+            ):
+                # A title, agency, prose paragraph or ordinary table header
+                # closes the leading metadata block. Keep later stars as body.
+                return False
+        return True
 
     def starts_with_urgency_keyword(self, pf: ParagraphFeature) -> bool:
         """Check for supported urgency prefixes, including spaced forms."""
@@ -557,20 +589,51 @@ class ElementScorer:
         """Check whether the paragraph follows the issue date."""
         return self._follows_element_check(pf, "issue_date")
 
-    def follows_printing_date_reverse(self, pf: ParagraphFeature) -> bool:
-        """Check whether this printing authority precedes the printing date."""
-        printing_pos = self._get_element_pos("printing_date")
-        if printing_pos == -1:
-            return False
-        return pf.index < printing_pos
-
     def precedes_printing_date_directly(self, pf: ParagraphFeature) -> bool:
-        """Check that the next non-empty feature is the printing date."""
+        """Pair a printer with its adjacent date in the same source context."""
 
         printing_pos = self._get_element_pos("printing_date")
         if printing_pos == -1 or pf.index >= printing_pos:
             return False
-        return self._count_nonempty_between(pf.index, printing_pos) == 0
+        if printing_pos >= len(self._all_features) or self._count_nonempty_between(pf.index, printing_pos):
+            return False
+        printing = self._all_features[printing_pos]
+        if extract_printing_line(printing.text)[0]:
+            return False
+        if pf.source != printing.source:
+            return False
+        if pf.source == "table":
+            return (
+                pf.table_index is not None
+                and pf.table_row_index is not None
+                and (pf.table_index, pf.table_row_index) == (printing.table_index, printing.table_row_index)
+                and pf.table_cell_index is not None
+                and printing.table_cell_index is not None
+                and pf.table_cell_index < printing.table_cell_index
+            )
+        return not any((pf.heading_level, pf.list_marker, pf.has_image, pf.has_formula))
+
+    def precedes_document_number(self, pf: ParagraphFeature) -> bool:
+        """Locate a letterhead before its document number, beyond fixed line limits."""
+        title_pos = self._get_element_pos("title")
+        if title_pos >= 0 and pf.index >= title_pos:
+            return False
+        positions = [
+            self._get_element_pos(kind) for kind in ("doc_number", "combined_id", "combined_doc_number_signer")
+        ]
+        if not any(position >= 0 for position in positions):
+            # Round 1 has not reached the number yet. Reserve the preceding
+            # letterhead instead of consuming it as a post-body signature.
+            positions = [
+                other.index
+                for other in self._all_features
+                if self.is_document_number_format(other)
+                or self.has_combined_ids(other)
+                or self.has_doc_number_and_signer(other)
+            ]
+        return any(
+            position > pf.index and self._count_nonempty_between(pf.index, position) <= 1 for position in positions
+        )
 
     def follows_combined_doc_number_signer_directly(self, pf: ParagraphFeature) -> bool:
         """Check whether the paragraph directly follows a combined number and signer."""
@@ -688,6 +751,15 @@ class ElementScorer:
         an attachment artifact even when the document has no attachment list.
         """
 
+        if pf.table_index is not None and any(
+            kind in ROUND1_ELEMENTS + ROUND2_ELEMENTS
+            and 0 <= index < len(self._all_features)
+            and self._all_features[index].table_index == pf.table_index
+            for kind, index in self._element_positions.items()
+        ):
+            # Unknown cells in a metadata table remain part of that table.
+            # An earlier attachment list does not make them a separate annex.
+            return False
         last_known_index = max(self._element_positions.values(), default=-1)
         return (
             self._last_attachment_marker_index >= 0

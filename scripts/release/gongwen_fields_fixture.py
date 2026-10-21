@@ -11,6 +11,7 @@ import json
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 from xml.etree import ElementTree
 
 _WORD = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
@@ -31,17 +32,25 @@ class GongwenFieldsCase:
     template_id: str
     enabled: bool
     empty: bool
+    alignment: Literal["spaces", "tab"] = "spaces"
 
 
 def write_gongwen_fields_cases(root: Path) -> tuple[GongwenFieldsCase, ...]:
-    """Create four independent profiles, including the GUI's normal template state."""
+    """Create independent profiles for field switches and both attachment layouts."""
     from docx import Document
+    from docx.oxml.ns import qn
     from docx.shared import Pt
 
     cases = []
-    for enabled in (True, False):
-        for empty in (False, True):
+    layouts: tuple[tuple[Literal["spaces", "tab"], tuple[bool, ...]], ...] = (
+        ("spaces", (True, False)),
+        ("tab", (True,)),
+    )
+    for alignment, enabled_values in layouts:
+        for enabled, empty in ((enabled, empty) for enabled in enabled_values for empty in (False, True)):
             name = f"{'on' if enabled else 'off'}-{'empty' if empty else 'values'}"
+            if alignment == "tab":
+                name = f"tab-{name}"
             work_dir = root / name
             config_dir = work_dir / "config_home"
             data_dir = work_dir / "data_home"
@@ -50,7 +59,8 @@ def write_gongwen_fields_cases(root: Path) -> tuple[GongwenFieldsCase, ...]:
             template_path.parent.mkdir(parents=True)
             (work_dir / "outputs").mkdir()
             (config_dir / "template_fill.toml").write_text(
-                f"gongwen_fields_enabled = {'true' if enabled else 'false'}\nlist_separator = ' / '\n",
+                f"gongwen_fields_enabled = {'true' if enabled else 'false'}\n"
+                f"attachment_alignment = '{alignment}'\nlist_separator = ' / '\n",
                 encoding="utf-8",
             )
             # An explicitly enabled Chinese field must also work with English
@@ -81,6 +91,8 @@ def write_gongwen_fields_cases(root: Path) -> tuple[GongwenFieldsCase, ...]:
                 anchor.paragraph_format.keep_with_next = True
                 anchor.runs[0].font.size = Pt(16)
                 anchor.runs[0].bold = True
+                anchor.runs[0].font.name = "Times New Roman"
+                anchor.runs[0]._r.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), "仿宋_GB2312")
             imprint = document.add_table(rows=2, cols=2)
             imprint.cell(0, 0).text = "DOCWEN IMPRINT"
             imprint.cell(0, 1).text = "KEEP THIS ROW"
@@ -125,7 +137,9 @@ def write_gongwen_fields_cases(root: Path) -> tuple[GongwenFieldsCase, ...]:
                 f"{_CONTENT}\n",
                 encoding="utf-8",
             )
-            cases.append(GongwenFieldsCase(name, work_dir, source_path, template_path, _TEMPLATE_ID, enabled, empty))
+            cases.append(
+                GongwenFieldsCase(name, work_dir, source_path, template_path, _TEMPLATE_ID, enabled, empty, alignment)
+            )
     return tuple(cases)
 
 
@@ -177,12 +191,16 @@ def verify_gongwen_fields_output(output_path: Path, *, case: GongwenFieldsCase) 
     cell_attachments = [_paragraph_text(paragraph) for paragraph in cell.findall(f"{_WORD}p")]
 
     if case.enabled and not case.empty:
-        # Space-padded literal numbering must remain editable ordinary text.
+        # Literal numbering remains editable in both layouts. The tab variant
+        # replaces only the separator before the name, not the numbering prefix.
+        separator = "\t" if case.alignment == "tab" else " "
         for location, actual in (("body", body_attachments), ("table", cell_attachments)):
             if len(actual) != 2 or not all(
                 expected == text
                 for expected, text in zip(
-                    ("附件：1. 任务分工表", "\u3000\u3000\u30002. 工作安排表"), actual, strict=True
+                    (f"附件：1.{separator}任务分工表", f"\u3000\u3000\u30002.{separator}工作安排表"),
+                    actual,
+                    strict=True,
                 )
             ):
                 raise RuntimeError(f"gongwen_fields_attachments_mismatch:{case.name}:{location}:{actual!r}")
@@ -191,9 +209,38 @@ def verify_gongwen_fields_output(output_path: Path, *, case: GongwenFieldsCase) 
         for location, nodes in (("body", body_nodes), ("table", cell.findall(f"{_WORD}p"))):
             for index, paragraph in enumerate(nodes):
                 indent = paragraph.find(f"{_WORD}pPr/{_WORD}ind")
-                size = paragraph.find(f"{_WORD}r/{_WORD}rPr/{_WORD}sz")
-                bold = paragraph.find(f"{_WORD}r/{_WORD}rPr/{_WORD}b")
+                run_properties = [run.find(f"{_WORD}rPr") for run in paragraph.findall(f"{_WORD}r")]
                 keep_next = paragraph.find(f"{_WORD}pPr/{_WORD}keepNext")
+                tabs = paragraph.findall(f".//{_WORD}r/{_WORD}tab")
+                stops = paragraph.findall(f"{_WORD}pPr/{_WORD}tabs/{_WORD}tab")
+                tab_layout_valid = (
+                    len(tabs) == 1
+                    and len(stops) == 1
+                    and stops[0].get(f"{_WORD}pos") == "1520"
+                    and stops[0].get(f"{_WORD}val") == "left"
+                    if case.alignment == "tab"
+                    else not tabs and not stops
+                )
+                font_valid = bool(run_properties)
+                for properties in run_properties:
+                    if properties is None:
+                        font_valid = False
+                        break
+                    size = properties.find(f"{_WORD}sz")
+                    bold = properties.find(f"{_WORD}b")
+                    fonts = properties.find(f"{_WORD}rFonts")
+                    if (
+                        size is None
+                        or size.get(f"{_WORD}val") != "32"
+                        or bold is None
+                        or bold.get(f"{_WORD}val", "1") not in {"1", "true"}
+                        or fonts is None
+                        or fonts.get(f"{_WORD}ascii") != "Times New Roman"
+                        or fonts.get(f"{_WORD}hAnsi") != "Times New Roman"
+                        or fonts.get(f"{_WORD}eastAsia") != "仿宋_GB2312"
+                    ):
+                        font_valid = False
+                        break
                 # This fixture authors 16 pt characters and a 12 pt base indent:
                 # the 48 pt label and 16 pt number/period/space place names at 76 pt.
                 if (
@@ -205,11 +252,8 @@ def verify_gongwen_fields_output(output_path: Path, *, case: GongwenFieldsCase) 
                         indent.get(f"{_WORD}{key}") is not None
                         for key in ("leftChars", "hangingChars", "firstLineChars")
                     )
-                    or paragraph.find(f".//{_WORD}tab") is not None
-                    or size is None
-                    or size.get(f"{_WORD}val") != "32"
-                    or bold is None
-                    or bold.get(f"{_WORD}val", "1") not in {"1", "true"}
+                    or not tab_layout_valid
+                    or not font_valid
                     or keep_next is None
                     or keep_next.get(f"{_WORD}val", "1") not in {"1", "true"}
                 ):

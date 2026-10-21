@@ -7,6 +7,7 @@ These files come from Microsoft Fluent System Icons at commit `9cf8af0f95a555918
 | Asset | Upstream source |
 |---|---|
 | `about.svg` | [assets/Question Circle/SVG/ic_fluent_question_circle_24_regular.svg](https://github.com/microsoft/fluentui-system-icons/blob/9cf8af0f95a555918a60b8147a2f33a6a1248442/assets/Question%20Circle/SVG/ic_fluent_question_circle_24_regular.svg) |
+| `chevron_down.svg` | [assets/Chevron Down/SVG/ic_fluent_chevron_down_24_regular.svg](https://github.com/microsoft/fluentui-system-icons/blob/9cf8af0f95a555918a60b8147a2f33a6a1248442/assets/Chevron%20Down/SVG/ic_fluent_chevron_down_24_regular.svg) |
 | `clear.svg` | [assets/Dismiss/SVG/ic_fluent_dismiss_24_regular.svg](https://github.com/microsoft/fluentui-system-icons/blob/9cf8af0f95a555918a60b8147a2f33a6a1248442/assets/Dismiss/SVG/ic_fluent_dismiss_24_regular.svg) |
 | `complete.svg` | [assets/Checkmark Circle/SVG/ic_fluent_checkmark_circle_24_regular.svg](https://github.com/microsoft/fluentui-system-icons/blob/9cf8af0f95a555918a60b8147a2f33a6a1248442/assets/Checkmark%20Circle/SVG/ic_fluent_checkmark_circle_24_regular.svg) |
 | `copy.svg` | [assets/Copy/SVG/ic_fluent_copy_24_regular.svg](https://github.com/microsoft/fluentui-system-icons/blob/9cf8af0f95a555918a60b8147a2f33a6a1248442/assets/Copy/SVG/ic_fluent_copy_24_regular.svg) |

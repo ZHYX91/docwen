@@ -41,6 +41,13 @@ explicit copy-ID label, or must lead the document with following official-header
 (security, urgency or document number). Ordinary data tables remain in the body. Leading zeroes
 in legitimate copy identifiers remain strings.
 
+The leading header also accepts a standalone `label★duration` line as the security-classification
+and retention field, with a custom or empty label. Durations accept Arabic/full-width/Chinese
+numerals with a year, month or day unit, or `长期`; the original field text is retained.
+Copy IDs, urgency lines and explicit metadata labels may precede it. A title, document number,
+agency or prose closes this leading block; inline stars, headings, list items and ordinary body
+table cells do not qualify merely by containing the marker.
+
 Ordinary Word lists remain Markdown lists: numbering counters, starts/restarts, nesting and
 continuation lines are retained. Ordered markers normalize to decimal Markdown markers and bullets
 to `-`. Gongwen heading-number removal/replacement applies only to recognised headings, not to
@@ -54,5 +61,9 @@ leaves the paragraph in the body and emits the human-readable `GW004` review war
 
 表格单元格是纯数字不能单独证明其为份号；需要相邻的明确份号标签，或位于文首且后续有密级、
 紧急程度、发文字号等公文版头依据。普通数据表留在正文，合法份号保留前导零字符串。
+文首独立的“自定义标识★期限”（标识可为空，如“测试★1年”“★1年”）也可归入“密级和保密期限”，
+完整保留原文；期限支持阿拉伯/全角/中文数字加年、月、天/日，或“长期”。前方可有份号、紧急程度
+及明确元数据标签；遇到标题、发文字号、机关或正文即结束该文首区域。正文行内、标题、列表及普通
+正文表格中的星号不能单独触发字段提取。
 普通 Word 列表保留计数、起始/重启、嵌套与续行；有序标记规范为 Markdown 十进制数字，无序标记为
 `-`。公文标题序号清理/替换只作用于识别为标题的段落，不删除普通列表标记。

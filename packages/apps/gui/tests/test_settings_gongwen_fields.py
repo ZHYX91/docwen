@@ -23,6 +23,8 @@ def test_gongwen_fields_toggle_has_help_and_is_independent_of_ui_language(qapp, 
         card = tab.findChild(QWidget, "gongwenFromMarkdownCard")
         assert card is not None
         assert tab._gongwen_fields.isChecked()
+        assert tab._attachment_alignment.currentData() == "tab"
+        assert tab._attachment_alignment.isEnabled()
         info = card.findChild(QToolButton, "settingsInfoButton")
         assert info is not None
         assert info.accessibleName() == t("settings.gongwen.fields_label")
@@ -44,3 +46,38 @@ def test_cancel_restores_gongwen_fields_toggle(qapp) -> None:
     assert tab._gongwen_fields.isChecked()
     assert vm.config.text.gongwen_fields_enabled is True
     tab.close()
+
+
+@pytest.mark.parametrize(
+    "language",
+    ["zh_CN", "en_US", "ar_SA", "de_DE", "es_ES", "fr_FR", "ja_JP", "ko_KR", "pt_BR", "ru_RU", "vi_VN", "zh_TW"],
+)
+def test_attachment_alignment_is_a_translated_dependent_choice(qapp, language) -> None:
+    previous_locale = get_locale()
+    set_locale(language)
+    vm = SettingsViewModel(config=SettingsConfig(text=TextConfig(attachment_alignment="spaces")))
+    tab = GongwenTab(vm)
+    try:
+        combo = tab._attachment_alignment
+        assert combo.currentData() == "spaces"
+        assert combo.accessibleName() == t("settings.gongwen.attachment_alignment_label")
+        assert "settings.gongwen." not in combo.accessibleName()
+        assert combo.count() == 2
+        assert all("settings.gongwen." not in combo.itemText(i) for i in range(combo.count()))
+        assert combo.isEnabled()
+
+        combo.setCurrentIndex(combo.findData("tab"))
+        assert vm.config.text.attachment_alignment == "tab"
+        tab._gongwen_fields.setChecked(False)
+        assert not combo.isEnabled()
+        assert combo.currentData() == vm.config.text.attachment_alignment == "tab"
+        tab._gongwen_fields.setChecked(True)
+        assert combo.isEnabled()
+        assert combo.currentData() == "tab"
+
+        vm.cancel()
+        assert combo.currentData() == vm.config.text.attachment_alignment == "spaces"
+        assert not vm.is_dirty
+    finally:
+        tab.close()
+        set_locale(previous_locale)

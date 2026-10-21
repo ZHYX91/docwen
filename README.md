@@ -31,6 +31,10 @@ Select a template and generation options for Markdown documents.
 
 ![Markdown to document](docs/assets/screenshots/markdown-generation-en.png)
 
+Choose attachment alignment in Official documents settings:
+
+![Official document field formatting](docs/assets/screenshots/official-documents-en.png)
+
 
 Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
 

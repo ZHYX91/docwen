@@ -6,7 +6,7 @@ Widgets never call runtime/plugins directly — they go through
 Key behaviors:
 - Drag-and-drop from file manager (URL) or text editor (text/plain)
 - Single/batch mode choices remain fully labelled in a vertical group
-- Add, Paste, and Clear actions stay textual and reflow when space is tight
+- Add and Paste stay labelled; alternate paste and clear use compact SVG actions
 - Paste delegates one explicit clipboard read to the owning main window
 - Clear resets the editable selection
 - Default height 200px with a compact title icon and semantic prompt label
@@ -15,6 +15,7 @@ Key behaviors:
 from __future__ import annotations
 
 import os
+from math import ceil
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import cast as _cast
@@ -28,6 +29,7 @@ from PySide6.QtGui import (
     QDragLeaveEvent,
     QDragMoveEvent,
     QDropEvent,
+    QFontMetricsF,
     QIcon,
     QKeySequence,
     QResizeEvent,
@@ -43,6 +45,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMenu,
+    QPushButton,
     QRadioButton,
     QSizePolicy,
     QStyle,
@@ -53,12 +56,12 @@ from PySide6.QtWidgets import (
 from qfluentwidgets import (
     CaptionLabel,
     PrimaryPushButton,
-    PushButton,
     StrongBodyLabel,
 )
 
 from docwen_gui.format_presentation import SUPPORTED_FORMAT_GROUPS, presentation_for
 from docwen_gui.i18n import t
+from docwen_gui.resources import set_action_icon
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.ui_scale import dp, set_metric
 
@@ -78,11 +81,10 @@ _ORNAMENT_SIZE = QSize(72, 72)
 _SPACING_XS = Spacing.XS
 _SPACING_SM = Spacing.SM
 _SPACING_MD = Spacing.MD
-_PYRAMID_INDENTS = (72, 58, 44, 30, 18, 8)
-_ACTION_BUTTON_MIN_WIDTH = Sizing.BUTTON_MIN_WIDTH
+_PYRAMID_GAPS = (12, 12, 10, 10, 8, 16)
 
 _SUPPORTED_TYPE_ROWS: tuple[tuple[str, str, str], ...] = tuple(
-    (label_key, fallback, ", ".join(presentation_for(fmt).display_name for fmt in formats))
+    (label_key, fallback, " ".join(presentation_for(fmt).display_name for fmt in formats))
     for label_key, fallback, formats in SUPPORTED_FORMAT_GROUPS
 )
 
@@ -112,7 +114,6 @@ _I_BATCH_MODE = "components.file_drop.batch_mode"
 _I_SINGLE_MODE = "components.file_drop.single_mode"
 _I_ADD_BUTTON = "components.file_drop.add_button"
 _I_PASTE_BUTTON = "components.file_drop.paste_button"
-_I_CLEAR_BUTTON = "components.file_drop.clear_button"
 _I_ADD_FILE = "components.file_drop.add_file_action"
 _I_ADD_FOLDER = "components.file_drop.add_folder_action"
 _I_RECENT_FILES = "components.file_drop.recent_files_action"
@@ -184,8 +185,7 @@ class InputArea(QFrame):
         layout.addWidget(self._drop_group)
 
         # Top controls: a vertical mode group on the left and explicit actions
-        # on the right. The two groups stack when translations or large text
-        # need more width; button labels are never collapsed into icons.
+        # on the right. Keep the paste action and its menu together during reflow.
         self._top_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
         self._top_layout.setContentsMargins(0, 0, 0, 0)
         set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
@@ -217,23 +217,31 @@ class InputArea(QFrame):
         self._action_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self._action_frame)
         self._action_layout.setContentsMargins(0, 0, 0, 0)
         set_metric(self._action_layout, "setSpacing", Spacing.CONTROL_GAP)
+        self._action_layout.addStretch(1)
 
         self._add_button = PrimaryPushButton(_i18n(_I_ADD_BUTTON, "Add"), self._drop_group)
         self._add_button.setObjectName("fileDropPrimaryButton")
-        set_metric(self._add_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
+        self._add_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        set_metric(self._add_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         self._add_button.clicked.connect(self._on_add_clicked)
-        self._action_layout.addWidget(self._add_button)
+        self._action_layout.addWidget(self._add_button, alignment=Qt.AlignmentFlag.AlignRight)
 
-        self._paste_button = PushButton(_i18n(_I_PASTE_BUTTON, "Paste"), self._drop_group)
+        self._paste_frame = QFrame(self._action_frame)
+        self._paste_frame.setObjectName("fileDropPasteGroup")
+        self._paste_frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        paste_layout = QHBoxLayout(self._paste_frame)
+        paste_layout.setContentsMargins(0, 0, 0, 0)
+        paste_layout.setSpacing(0)
+        self._paste_button = QPushButton(_i18n(_I_PASTE_BUTTON, "Paste"), self._paste_frame)
         self._paste_button.setObjectName("fileDropPasteButton")
-        set_metric(self._paste_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
+        self._paste_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self._paste_button.clicked.connect(self.request_paste)
-        self._action_layout.addWidget(self._paste_button)
+        paste_layout.addWidget(self._paste_button)
 
-        self._paste_menu_button = QToolButton(self._drop_group)
+        self._paste_menu_button = QToolButton(self._paste_frame)
         self._paste_menu_button.setObjectName("fileDropPasteMenuButton")
-        self._paste_menu_button.setArrowType(Qt.ArrowType.DownArrow)
-        self._paste_menu_button.setStyleSheet("QToolButton::menu-indicator { image: none; }")
+        set_action_icon(self._paste_menu_button, "chevron_down.svg", size=16)
+        self._paste_menu_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         plain_text_label = t("components.file_drop.paste_plain_text_action", default="Paste as Plain Text")
         self._paste_menu_button.setToolTip(plain_text_label)
         self._paste_menu_button.setAccessibleName(plain_text_label)
@@ -243,19 +251,18 @@ class InputArea(QFrame):
         paste_menu.addAction(self._paste_plain_text_action)
         self._paste_menu_button.setMenu(paste_menu)
         self._paste_menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        set_metric(self._paste_menu_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
-        self._action_layout.addWidget(self._paste_menu_button)
+        paste_layout.addWidget(self._paste_menu_button)
+        self._action_layout.addWidget(self._paste_frame, alignment=Qt.AlignmentFlag.AlignRight)
 
-        self._action_layout.addSpacing(dp(Spacing.GROUP_GAP))
-        self._clear_button = PushButton(_i18n(_I_CLEAR_BUTTON, "Clear"), self._drop_group)
+        self._clear_button = QPushButton(self._drop_group)
         self._clear_button.setObjectName("fileDropClearButton")
-        self._clear_button.setProperty("quietAction", True)
-        set_metric(self._clear_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
-        self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
-        self._clear_button.setAccessibleName(_i18n(_I_CLEAR_BUTTON, "Clear"))
-        self._clear_button.setAccessibleDescription(_i18n(_I_CLEAR_BUTTON, "Clear"))
+        set_action_icon(self._clear_button, "delete.svg", size=18)
+        clear_label = _i18n("components.file_drop.clear_input_tooltip", "Clear input list")
+        self._clear_button.setToolTip(clear_label)
+        self._clear_button.setAccessibleName(clear_label)
+        self._clear_button.setAccessibleDescription(clear_label)
         self._clear_button.clicked.connect(self._on_clear_clicked)
-        self._action_layout.addWidget(self._clear_button)
+        self._action_layout.addWidget(self._clear_button, alignment=Qt.AlignmentFlag.AlignRight)
 
         self._top_layout.addWidget(self._action_frame, 1)
 
@@ -350,12 +357,12 @@ class InputArea(QFrame):
             type_label = QLabel(f"{_i18n(label_key, fallback_label)}:", row_widget)
             type_label.setObjectName("fileDropTypesTypeLabel")
             type_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-            type_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            type_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             value_label = WrappingLabel(formats, row_widget)
             value_label.setObjectName("fileDropTypesValueLabel")
             value_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             value_label.setMinimumWidth(0)
-            value_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            value_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
 
             row_layout.addWidget(type_label, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             row_layout.addWidget(value_label, 1)
@@ -772,6 +779,7 @@ class InputArea(QFrame):
             self._batch_mode_button,
             self._add_button,
             self._paste_button,
+            self._paste_frame,
             self._paste_menu_button,
             self._clear_button,
         )
@@ -786,21 +794,23 @@ class InputArea(QFrame):
             self._paste_menu_button.sizeHint().height(),
             self._clear_button.sizeHint().height(),
         )
-        for control in (self._add_button, self._paste_button, self._clear_button):
-            control.setMinimumHeight(control_height)
-            control.setMinimumWidth(max(dp(_ACTION_BUTTON_MIN_WIDTH), control.sizeHint().width()))
-        self._paste_menu_button.setMinimumSize(
-            max(dp(Sizing.CONTROL_HEIGHT), self._paste_menu_button.sizeHint().width()), control_height
-        )
+        self._add_button.setFixedHeight(control_height)
+        self._add_button.setFixedWidth(max(control_height, self._add_button.sizeHint().width()))
+        border_width = dp(1)
+        inner_height = control_height - 2 * border_width
+        self._paste_button.setFixedHeight(inner_height)
+        self._paste_button.setFixedWidth(max(inner_height, self._paste_button.sizeHint().width()))
+        self._paste_menu_button.setFixedSize(inner_height, inner_height)
+        self._clear_button.setFixedSize(control_height, control_height)
+        paste_width = self._paste_button.width() + self._paste_menu_button.width() + 2 * border_width
+        self._paste_frame.setFixedSize(paste_width, control_height)
 
         mode_width = max(self._single_mode_button.sizeHint().width(), self._batch_mode_button.sizeHint().width())
         action_width = (
             self._add_button.minimumWidth()
-            + self._paste_button.minimumWidth()
-            + self._paste_menu_button.minimumWidth()
+            + paste_width
             + self._clear_button.minimumWidth()
-            + dp(Spacing.GROUP_GAP)
-            + 3 * dp(Spacing.CONTROL_GAP)
+            + 2 * dp(Spacing.CONTROL_GAP)
         )
         required = mode_width + action_width + dp(Spacing.GROUP_GAP)
         compact = 0 < content_width < max(dp(_COMPACT_WIDTH_THRESHOLD), required)
@@ -819,9 +829,7 @@ class InputArea(QFrame):
         set_metric(self._action_layout, "setSpacing", Spacing.CONTROL_GAP)
         # Keep one complete button readable, while allowing the horizontal row
         # to shrink far enough to switch to its stacked form.
-        self._action_frame.setMinimumWidth(
-            max(control.minimumWidth() for control in (self._add_button, self._paste_button, self._clear_button))
-        )
+        self._action_frame.setMinimumWidth(max(self._add_button.width(), paste_width, self._clear_button.width()))
 
         if direction_changed:
             self.height_changed.emit(self.minimumHeight())
@@ -832,31 +840,57 @@ class InputArea(QFrame):
         fallback_width = self._drop_group.width() - (dp(_SPACING_MD) * 4)
         panel_width = self._empty_center_panel.width()
         available_width = max(panel_width if panel_width > 0 else fallback_width, 0)
-        middle_gap = max(dp(_SPACING_MD), 24)
+        label_width = max(label.sizeHint().width() for _, _, label, _ in self._type_prompt_rows)
+        middle_gap = dp(_SPACING_MD)
         row_widths = []
-        for index, (_, row_layout, type_label, value_label) in enumerate(self._type_prompt_rows):
-            desired_indent = dp(_PYRAMID_INDENTS[min(index, len(_PYRAMID_INDENTS) - 1)])
-            label_width = type_label.sizeHint().width()
-            required_width = (
-                label_width
-                + value_label.fontMetrics().horizontalAdvance(value_label.text())
-                + row_layout.spacing()
-                + middle_gap
+        previous_width = 0.0
+        for index, (_, _, _, value_label) in enumerate(self._type_prompt_rows):
+            font = value_label.font()
+            font.setWordSpacing(0)
+            metrics = QFontMetricsF(font)
+            formats = value_label.text().split()
+            text_width = sum(metrics.horizontalAdvance(name) for name in formats)
+            gaps = max(1, len(formats) - 1)
+            desired_width = max(text_width + gaps * dp(_PYRAMID_GAPS[index]), previous_width + dp(_SPACING_SM))
+            row_widths.append((font, metrics.horizontalAdvance(" "), text_width, gaps, desired_width))
+            previous_width = desired_width
+        first_width = row_widths[0][-1]
+        steps = len(row_widths) - 1
+        # Keep the colon edge straight while the format names retain their
+        # centered, font-measured widths. Reserve enough gap on every row.
+        middle_gap += ceil(
+            max(
+                (row[-1] - (first_width + (previous_width - first_width) * index / steps)) / 2
+                for index, row in enumerate(row_widths)
             )
-            row_widths.append((desired_indent, label_width, required_width))
-        # Keep the format overview compact and centered on wide screens while
-        # deriving its natural width from the current font and translated text.
-        preferred_width = max(required + 2 * indent for indent, _, required in row_widths)
+        )
+        preferred_width = label_width + middle_gap + ceil(previous_width)
         content_width = min(available_width, preferred_width)
         self._types_container.setFixedWidth(content_width)
         total_height = self._types_layout.spacing() * (len(self._type_prompt_rows) - 1)
-        for (row, row_layout, type_label, value_label), (desired_indent, label_width, required_width) in zip(
-            self._type_prompt_rows, row_widths, strict=True
-        ):
-            # Give text the available width before reserving decorative insets.
-            actual_indent = min(desired_indent, max((content_width - required_width) // 2, 0))
-            row_layout.setContentsMargins(actual_indent, 0, actual_indent, 0)
-            value_width = max(1, content_width - 2 * actual_indent - label_width - row_layout.spacing())
+        max_value_width = max(1, content_width - label_width - middle_gap)
+        value_center = content_width - max_value_width / 2
+        first_width = min(first_width, max_value_width)
+        for index, (
+            (row, row_layout, type_label, value_label),
+            (font, space_width, text_width, gaps, desired_width),
+        ) in enumerate(zip(self._type_prompt_rows, row_widths, strict=True)):
+            value_width = min(ceil(desired_width), max_value_width)
+            colon_right = (
+                value_center - (first_width + (max_value_width - first_width) * index / steps) / 2 - middle_gap
+            )
+            left_inset = max(0, round(colon_right - label_width))
+            right_inset = max(0, round((max_value_width - value_width) / 2))
+            label_room = max(0, content_width - right_inset - label_width - value_width)
+            left_inset = min(left_inset, max(0, label_room - dp(_SPACING_XS)))
+            row_layout.setContentsMargins(left_inset, 0, right_inset, 0)
+            row_layout.setSpacing(max(0, content_width - left_inset - right_inset - label_width - value_width))
+            type_label.setFixedWidth(label_width)
+            value_label.setFixedWidth(value_width)
+            gap = max(dp(_SPACING_XS), (min(desired_width, value_width) - text_width) / gaps)
+            font.setWordSpacing(gap - space_width)
+            if value_label.font() != font:
+                value_label.setFont(font)
             row_height = max(type_label.sizeHint().height(), value_label.heightForWidth(value_width))
             row.setFixedHeight(row_height)
             total_height += row_height
@@ -888,7 +922,7 @@ class InputArea(QFrame):
         return self._add_button
 
     @property
-    def paste_button(self) -> PushButton:
+    def paste_button(self) -> QPushButton:
         """Public access to the explicit clipboard action."""
         return self._paste_button
 
@@ -898,7 +932,7 @@ class InputArea(QFrame):
         return self._paste_menu_button
 
     @property
-    def clear_button(self) -> PushButton:
+    def clear_button(self) -> QPushButton:
         """Public access to the clear button for external wiring."""
         return self._clear_button
 

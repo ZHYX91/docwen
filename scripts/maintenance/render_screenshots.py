@@ -21,8 +21,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("theme", choices=("light", "dark"))
     parser.add_argument("--scale", type=int, choices=(90, 100, 110, 125, 150), default=100)
     parser.add_argument("--font", choices=("small", "default", "large"), default="default")
-    parser.add_argument("--section", choices=("templates", "general"), default="templates")
-    parser.add_argument("--input", choices=("file", "clipboard"), default="file")
+    parser.add_argument("--section", choices=("templates", "general", "gongwen"), default="templates")
+    parser.add_argument("--input", choices=("file", "clipboard", "empty"), default="file")
     parser.add_argument("--width", type=int, default=1040)
     parser.add_argument("--height", type=int, default=820)
     parser.add_argument("--settings-width", type=int, default=960)
@@ -209,10 +209,12 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
                     nonlocal ready_ticks
                     try:
                         projection = window._view_model.ui_projection
-                        ready = (
-                            not window._view_model.inspection_busy
-                            and projection.right_panel_visible
-                            and window._template_selector.get_selected_template_resource() is not None
+                        ready = not window._view_model.inspection_busy and (
+                            args.input == "empty"
+                            or (
+                                projection.right_panel_visible
+                                and window._template_selector.get_selected_template_resource() is not None
+                            )
                         )
                         ready_ticks = ready_ticks + 1 if ready else 0
                         if ready_ticks >= 3:

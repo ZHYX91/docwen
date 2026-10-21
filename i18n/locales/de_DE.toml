@@ -932,7 +932,7 @@ add_folder_action = "Ordner hinzufügen"
 recent_files_action = "Zuletzt verwendet"
 clear_recent_files_action = "Zuletzt verwendete loeschen"
 select_folder_dialog = "Ordner auswählen"
-clear_button = "Leeren"
+clear_input_tooltip = "Eingabeliste leeren"
 single_mode = "Einzel"
 batch_mode = "Stapel"
 file_selected_msg = "Aktuelle Datei: {filename}"
@@ -1439,10 +1439,10 @@ text = "Text"
 
 [file_category]
 text_short = "Text"
-document_short = "Dok"
-spreadsheet_short = "Tabelle"
-layout_short = "Layout"
-image_short = "Bild"
+document_short = "Dokumente"
+spreadsheet_short = "Tabellenkalkulationen"
+layout_short = "Festes Seitenlayout"
+image_short = "Bilder"
 other_short = "Andere"
 
 [file_format_validation]
@@ -1839,6 +1839,11 @@ from_markdown_title = "Markdown → Dokument"
 title = "Amtliche Dokumente"
 fields_label = "Chinesische Amtsdokumentfelder formatieren"
 fields_help = "Formatiert Anlagen, Kopieempfänger, Dokument- und Veröffentlichungsdaten sowie Anmerkungen in Word-Vorlagen und entfernt geeignete leere Felder. Der Anlagenplatzhalter muss einen eigenen Absatz im Dokumenttext oder in einer Tabellenzelle belegen. Kopf- und Fußzeilen, Textfelder und Platzhalter im Fließtext werden nicht unterstützt. Ausgeschaltet gelten die normale Feldfüllung und das allgemeine Listentrennzeichen."
+
+attachment_alignment_label = "Ausrichtung der Anlagen"
+attachment_alignment_spaces = "Leerzeichen + Einzug"
+attachment_alignment_tab = "Tabstopp + Einzug"
+attachment_alignment_help = "Leerzeichen behalten normalen Text und Abstände bei; gemischte Schriften oder Blocksatz können kleine Versätze zeigen. Tabstopps richten Anlagennamen und Folgezeilen an derselben Position aus. Gilt nur bei aktivierter Formatierung amtlicher Dokumentfelder."
 
 [settings.invoice]
 title = "Rechnungen"

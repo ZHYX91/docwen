@@ -25,13 +25,37 @@ character-unit and physical indents found in an actual user template. No binary 
 required by CI. `test_gongwen_indentation.py` covers style/ancestor/default/direct inheritance, body/cell anchors,
 one/multiple/two-/three-digit attachments, character-zero cancellation and formatting preservation;
 `test_attachment_origin_semantics.py` checks first-line/hanging origins, character-zero length fallbacks
-and document defaults. `test_gongwen_conversion.py` exercises both production Markdown input routes with
+and document defaults. Paired physical lengths retain the actual Word anchor (31.6 pt in the generated
+legacy-format case); character-only axes still use the font fallback. Regressions preserve wider authored
+hanging indents and compare saved lengths in twips rather than floating-point EMU conversions.
+`test_gongwen_conversion.py` exercises both production Markdown input routes with
 one/multiple attachments and the 9/10 and 99/100 boundaries. `test_attachment_number_padding.py` saves and
 reopens code-generated body/cell templates to check literal space padding, exactly one ordinary space after
 the period, inherited formatting and absence of inserted tabs or automatic numbering.
+`test_attachment_alignment_modes.py` additionally exercises explicit `spaces`/`tab` layouts and
+the configured default through both production routes. It saves/reopens body and cell anchors,
+retains justification, and checks one name tab sharing the continuation origin, cancellation of
+earlier authored tab stops, preservation of later stops, and rejection of invalid configuration.
+The packaged GUI/CLI field gate retains four explicit space-layout cases and adds enabled tab-layout
+value/empty cases; its independent oracle rejects missing/extra tabs and misplaced name tab stops.
+Space-layout geometry remains an approximation under mixed scripts and justification; native
+acceptance must report those differences instead of claiming both modes have identical precision.
 Gongwen's `test_field_text_preservation.py` exercises actual DOCX extraction,
 including labelled unusual/Latin signers and uncertain recipient prose retained in the body. These structural checks do not
 prove pagination: selected native Word checks must also verify name columns and long-name continuation lines.
+
+`test_gongwen_roundtrip_metadata.py` uses generated DOCX files to preserve attachment order and repeated names,
+distinguish letterheads after variable-length header blocks from printing authorities, and consume pure imprint
+tables while retaining unrecognized content in mixed tables. It covers body/table placement, composite document
+numbers and signer names, merged copy-recipient cells, and printer/date pairs that must not cross tables, rows,
+headings or body-to-table boundaries. Combined printing lines own their agency names, and an earlier attachment
+list must not turn unknown cells in a mixed imprint table into a separate annex. Actual-file reverse conversion
+remains a separate acceptance step.
+
+`test_security_retention_context.py` saves and reopens generated DOCX header paragraphs/tables containing
+custom or empty classification labels with `★` and a retention duration. It checks original field text,
+leading-zero copy IDs, Arabic/full-width/Chinese durations, and protects inline prose, headings, lists
+and data tables from being consumed as metadata.
 
 `tests/integration/test_quote_content_mapping.py` validates quote child styles, current native list starts,
 continuations, literal code, body order and table data. Markdown spelling and reasonable quote/list nesting
@@ -159,6 +183,14 @@ Successful packaged-GUI runs are ephemeral by default. In the governed local lay
 
 
 ## Change-scoped acceptance and closeout
+
+Input toolbar regressions cover right-aligned compact Add/Paste actions, the shared paste/menu border,
+trash-icon Clear, and reflow under light/dark themes at all five application scales and standard/large
+fonts (`test_input_area_layout.py`). Format overview checks cover whitespace-separated names, centered
+pyramid rows, diagonal category colons and narrow-window wrapping. Paste/menu event tests distinguish normal and plain-text requests;
+the Clear keyboard test checks selection reset while preserving the source file. Native inspection
+also checks the SVG arrow, keyboard focus and representative live theme/scale changes in an isolated
+profile. Source rendering and geometry checks do not establish packaged or cross-machine acceptance.
 
 Keep the existing required CI lanes. Select the smallest representative set of additional checks
 by the affected behavior and record the selection and reasons for omitted surfaces. For a fix,
