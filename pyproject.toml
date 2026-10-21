@@ -133,6 +133,7 @@ dev = [
     "Cython==3.1.6",
     "pyinstaller==6.16.0",
     "pre-commit>=4.0.0",
+    "virtualenv>=21.14.9,<22.0.0",
     "setuptools>=83.0.0",
     "ruff>=0.15.1",
     "pyright>=1.1.408",
