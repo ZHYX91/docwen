@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 from pathlib import Path
+from typing import Any
 from urllib.parse import unquote, urlsplit
 
 import pytest
@@ -218,9 +219,11 @@ def test_cancellation_after_last_frame_prevents_navigation_publication(
     save = converter.save_image_with_options
     calls = 0
 
-    def cancel_last(image: Image.Image, output_path: str, target_format: str, options: dict[str, object]) -> None:
+    def cancel_last(
+        image: Image.Image, output_path: str, target_format: str, options: dict[str, object], **kwargs: Any
+    ) -> None:
         nonlocal calls
-        save(image, output_path, target_format, options)
+        save(image, output_path, target_format, options, **kwargs)
         calls += 1
         if calls == 4:
             context._cancellation.cancel("cancel after final frame")

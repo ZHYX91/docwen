@@ -32,6 +32,7 @@ from docwen_core.text.ocr import (
 from docwen_core.text.table_recognition import TableRecognitionStatus, recognize_table_markdown
 from docwen_core.yaml_tools import extract_yaml, generate_basic_yaml_frontmatter
 from docwen_plugin_image._common import (
+    INTEGER_PNG_CLIPPING_WARNING,
     file_size,
     media_type_for,
     new_artifact_id,
@@ -129,7 +130,20 @@ def _convert_tiff_physical_pages(
                     if enable_ocr or keep_images:
                         frame_path = Path(context.workspace.create_artifact_path("image", ".png"))
                         created_paths.append(frame_path)
-                        save_image_with_options(frame, str(frame_path), "png", {})
+                        save_image_with_options(
+                            frame,
+                            str(frame_path),
+                            "png",
+                            {},
+                            on_precision_loss=lambda page_number=page_number: diagnostics.append(
+                                ConversionDiagnostic(
+                                    level="warning",
+                                    code="IMAGE-PNG-16BIT-CLIPPED",
+                                    message=INTEGER_PNG_CLIPPING_WARNING,
+                                    location=f"{Path(input_path).name}:frame-{page_number}",
+                                )
+                            ),
+                        )
 
                     if enable_ocr:
                         assert frame_path is not None

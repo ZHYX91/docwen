@@ -5,6 +5,15 @@
 
 ## Unreleased / 未发布
 
+## 0.19.2
+
+- Upgrade bundled Pillow to 13.0.0 for upstream image-decoding security fixes and refresh the development virtualenv dependency to 21.14.7.
+- 随包 Pillow 升级至 13.0.0，纳入上游图像解码安全修复；开发工具依赖 virtualenv 升级至 21.14.7。
+- Keep integer TIFF-to-PNG exports and TIFF OCR page images working with Pillow 13 by explicitly retaining the existing 16-bit sample clipping behavior.
+- 整数 TIFF 转 PNG 及 TIFF OCR 拆页显式沿用原有 16 位像素裁剪规则，适配 Pillow 13。
+- Report a warning when integer samples exceed PNG's 0–65535 range; values within that range remain unchanged.
+- 整数像素超出 PNG 的 0–65535 范围时显示裁剪提示；范围内像素值保持不变。
+
 ## 0.19.1
 
 - Keep python-docx part modules available as physical files in frozen packages so Linux can resolve the library's default XML template paths during document generation.

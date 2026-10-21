@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from PIL import Image
 
 from docwen_plugin_image._common import (
+    INTEGER_PNG_CLIPPING_WARNING,
     file_size,
     media_type_for,
     new_artifact_id,
@@ -51,6 +52,13 @@ class ImageFormatConverter:
         frames = 1
         diagnostics: list[ConversionDiagnostic] = []
 
+        def report_precision_loss() -> None:
+            diagnostics.append(
+                ConversionDiagnostic(
+                    level="warning", code="IMAGE-PNG-16BIT-CLIPPED", message=INTEGER_PNG_CLIPPING_WARNING
+                )
+            )
+
         try:
             with Image.open(input_path) as img:
                 n_frames = getattr(img, "n_frames", 1)
@@ -73,7 +81,13 @@ class ImageFormatConverter:
                         )
                         img.seek(idx - 1)
                         with img.copy() as frame:
-                            save_image_with_options(frame, output_path, target, context.request.options)
+                            save_image_with_options(
+                                frame,
+                                output_path,
+                                target,
+                                context.request.options,
+                                on_precision_loss=report_precision_loss,
+                            )
                         artifact = ArtifactManifest(
                             artifact_id=new_artifact_id(),
                             kind="primary" if idx == 1 else "auxiliary",
@@ -129,7 +143,9 @@ class ImageFormatConverter:
                         finally:
                             prepared.close()
                     else:
-                        save_image_with_options(img, output_path, target, context.request.options)
+                        save_image_with_options(
+                            img, output_path, target, context.request.options, on_precision_loss=report_precision_loss
+                        )
                         width, height = img.size
                     artifact = ArtifactManifest(
                         artifact_id=new_artifact_id(),
