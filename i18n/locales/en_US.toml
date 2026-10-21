@@ -11,6 +11,7 @@ template_name = "English General Template"
 # Main Window
 # =============================================================================
 [main_window]
+image_png_16bit_clipped = "PNG stores at most 16-bit integer samples; values outside 0–65535 were clipped. Use TIFF to retain the original integer range."
 output_filesystem_unsupported = "This folder cannot save results safely without risking replacement of existing files. Choose another output folder; in WSL, use a native Linux folder."
 ocr_quality_notice = "OCR results may contain errors or omissions; verify them against the source."
 file_admission_missing = "The input file no longer exists: {path}"

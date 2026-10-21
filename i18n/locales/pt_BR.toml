@@ -11,6 +11,7 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+image_png_16bit_clipped = "PNG armazena valores inteiros de até 16 bits; os valores fora do intervalo 0–65535 foram limitados. Use TIFF para preservar o intervalo original."
 output_filesystem_unsupported = "Não é possível salvar com segurança nesta pasta: o sistema de arquivos não permite publicação atômica sem sobrescrever resultados existentes. Escolha outro local de saída; no WSL, use um sistema de arquivos nativo do Linux."
 ocr_quality_notice = "O OCR pode conter erros ou omissões; confira os resultados com o original."
 file_admission_missing = "O arquivo de entrada não existe mais: {path}"

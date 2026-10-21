@@ -15,6 +15,7 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+image_png_16bit_clipped = "PNG admite valores enteros de hasta 16 bits; los valores fuera del intervalo 0–65535 se han limitado. Use TIFF para conservar el intervalo original."
 output_filesystem_unsupported = "No se puede guardar de forma segura en esta carpeta: el sistema de archivos no permite una publicación atómica sin sobrescritura. Elija otra ubicación de salida; en WSL, use un sistema de archivos nativo de Linux."
 ocr_quality_notice = "Los resultados OCR pueden contener errores u omisiones; compárelos con el original."
 file_admission_missing = "El archivo de entrada ya no existe: {path}"

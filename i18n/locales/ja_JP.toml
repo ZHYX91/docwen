@@ -1669,6 +1669,7 @@ subtitle = "サブタイトル"
 
 
 [main_window]
+image_png_16bit_clipped = "PNG が保存できる整数画素値は最大16ビットです。0–65535の範囲外の値は切り詰められました。元の値の範囲を保持するにはTIFFを使用してください。"
 output_filesystem_unsupported = "このフォルダーには安全に保存できません。既存の結果を上書きせずにアトミックに保存できないファイルシステムです。別の出力先を選択してください。WSL では Linux ネイティブのファイルシステムを使用してください。"
 ocr_quality_notice = "OCR 結果には誤りや抜けが含まれる場合があります。原文と照合してください。"
 file_admission_missing = "入力ファイルが存在しないか、移動されています：{path}"

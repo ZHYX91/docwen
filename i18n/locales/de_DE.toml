@@ -1669,6 +1669,7 @@ subtitle = "Untertitel"
 
 
 [main_window]
+image_png_16bit_clipped = "PNG speichert ganzzahlige Pixelwerte mit höchstens 16 Bit; Werte außerhalb von 0–65535 wurden begrenzt. Verwenden Sie TIFF, um den ursprünglichen Wertebereich zu erhalten."
 output_filesystem_unsupported = "In diesem Ordner kann nicht sicher gespeichert werden: Das Dateisystem unterstützt keine atomare Ausgabe ohne Überschreiben. Wählen Sie einen anderen Ausgabeort; verwenden Sie unter WSL ein natives Linux-Dateisystem."
 ocr_quality_notice = "OCR-Ergebnisse können Fehler oder Auslassungen enthalten; bitte mit der Vorlage vergleichen."
 file_admission_missing = "Die Eingabedatei ist nicht mehr vorhanden: {path}"
