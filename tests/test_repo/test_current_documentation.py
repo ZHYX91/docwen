@@ -342,6 +342,30 @@ def test_readmes_do_not_reintroduce_stale_localization_guidance() -> None:
     )
     guides = _public_readme_paths()
     assert len(guides) == 12
+
+    # File-drop button labels come from the shipping locale catalog, not English screenshots.
+    file_drop_locales = {
+        "README.md": "en_US",
+        "README.zh-CN.md": "zh_CN",
+        "README.zh-TW.md": "zh_TW",
+        "README.de-DE.md": "de_DE",
+        "README.fr-FR.md": "fr_FR",
+        "README.es-ES.md": "es_ES",
+        "README.ja-JP.md": "ja_JP",
+        "README.ko-KR.md": "ko_KR",
+        "README.pt-BR.md": "pt_BR",
+        "README.ru-RU.md": "ru_RU",
+        "README.vi-VN.md": "vi_VN",
+    }
+    for readme in guides:
+        locale = file_drop_locales.get(readme.name)
+        if locale is None:  # The Arabic overview does not describe the file-drop button.
+            continue
+        source = tomllib.loads((ROOT / "i18n" / "locales" / f"{locale}.toml").read_text(encoding="utf-8"))
+        label = source["components"]["file_drop"]["add_button"]
+        guide = readme.read_text(encoding="utf-8")
+        assert f'"{label}"' in guide or f"「{label}」" in guide, readme.name
+
     for path in guides:
         content = path.read_text(encoding="utf-8")
         assert not any(phrase in content for phrase in obsolete), path.name
