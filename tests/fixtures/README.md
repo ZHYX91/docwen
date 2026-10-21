@@ -2,6 +2,11 @@
 
 本目录只存放需要随仓库长期维护的测试资产。目标不是把所有测试输入都外置，而是让需要复用、需要文件语义、或需要整份结果比对的资产有清晰边界。
 
+附件说明缩进回归由 `tests/support/gongwen_template.py` 在受管测试目录中生成最小 DOCX，
+保留真实问题的字符／物理缩进冲突、样式继承和字体条件，不提交整份历史模板。
+正文、表格、默认值继承和两条生产路径的断言见 Markdown 插件的
+`test_gongwen_indentation.py` 与 `test_gongwen_conversion.py`；真实 Office 排版另行验收。
+
 `files/quote-content.md` is the minimal anonymous quote/list content-mapping corpus:
 mixed Heading/Code/Table/List blocks, continuation paragraphs, list–quote–list nesting,
 table-only quote and surrounding outside prose. It is a source regression input;

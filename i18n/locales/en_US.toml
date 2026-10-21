@@ -1832,7 +1832,7 @@ document_settings = "Document extraction, numbering and tables"
 from_markdown_title = "Markdown → Document"
 title = "Official documents"
 fields_label = "Format Chinese official-document fields"
-fields_help = "Format attachment descriptions, copy recipients, document and publication dates, and notes in Word templates, and remove eligible empty fields. The attachment placeholder must occupy its own paragraph in the document body or a table cell. Headers, footers, text boxes and inline placements are unsupported. When off, ordinary field filling and the general list separator apply."
+fields_help = "Format attachments, signers, primary and copy recipients, dates and notes in Word templates, and safely remove empty fields. Multi-item signer or recipient lists use Chinese enumeration commas temporarily and get a plain-language Word comment asking you to review layout or punctuation. Authored strings keep their original punctuation. Attachment placeholders must occupy their own paragraph in the body or a table cell. When off, generic template filling and the configured list separator apply."
 
 [settings.invoice]
 title = "Invoices"

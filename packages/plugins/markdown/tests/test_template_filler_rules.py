@@ -79,7 +79,7 @@ def test_rendered_markdown_and_inserted_attachment_names_are_literal() -> None:
     ]
 
 
-@pytest.mark.parametrize("count", [1, 2, 12])
+@pytest.mark.parametrize("count", [1, 2, 12, 100])
 def test_every_body_cell_and_nested_cell_anchor_expands_in_place(count: int) -> None:
     document = Document()
     document.add_paragraph("before")
@@ -95,7 +95,12 @@ def test_every_body_cell_and_nested_cell_anchor_expands_in_place(count: int) -> 
     _fill(document, source)
 
     expected = (
-        ["附件：材料1"] if count == 1 else [f"{'附件：' if i == 1 else ''}{i}.\t材料{i}" for i in range(1, count + 1)]
+        ["附件：材料1"]
+        if count == 1
+        else [
+            f"{'附件：' if i == 1 else '　' * ((7 - len(str(i))) // 2) + ' ' * ((7 - len(str(i))) % 2)}{i}. 材料{i}"
+            for i in range(1, count + 1)
+        ]
     )
     assert source == original
     assert [p.text for p in document.paragraphs] == ["before", *expected, "after"]
@@ -106,7 +111,7 @@ def test_every_body_cell_and_nested_cell_anchor_expands_in_place(count: int) -> 
         first_line_indent = paragraph.paragraph_format.first_line_indent
         assert left_indent is not None and left_indent > 0
         assert first_line_indent is not None and first_line_indent < 0
-        assert "\u3000" not in paragraph.text
+        assert "\t" not in paragraph.text
 
 
 def test_attachment_expansion_preserves_paragraph_and_opening_run_properties() -> None:
@@ -133,7 +138,7 @@ def test_attachment_expansion_preserves_paragraph_and_opening_run_properties() -
 
     _fill(document, {"附件说明": ["甲", "乙"]})
 
-    for index, rendered in enumerate(document.paragraphs):
+    for rendered in document.paragraphs:
         paragraph_style = rendered.style
         run_style = rendered.runs[0].style
         assert paragraph_style is not None and paragraph_style.style_id == style.style_id
@@ -146,8 +151,8 @@ def test_attachment_expansion_preserves_paragraph_and_opening_run_properties() -
         assert rendered.paragraph_format.line_spacing == 1.5
         assert rendered.paragraph_format.keep_with_next is True
         assert rendered.paragraph_format.right_indent == Pt(8)
-        assert rendered.paragraph_format.left_indent == Pt(91)
-        assert rendered.paragraph_format.first_line_indent == Pt(-63 if index == 0 else -21)
+        assert rendered.paragraph_format.left_indent == Pt(84)
+        assert rendered.paragraph_format.first_line_indent == Pt(-56)
 
 
 def test_merged_cell_anchor_is_expanded_only_once() -> None:
@@ -156,7 +161,7 @@ def test_merged_cell_anchor_is_expanded_only_once() -> None:
     merged = table.cell(0, 0).merge(table.cell(0, 1))
     merged.text = "{{附件说明}}"
     _fill(document, {"附件说明": ["甲", "乙"]})
-    assert [p.text for p in merged.paragraphs] == ["附件：1.\t甲", "2.\t乙"]
+    assert [p.text for p in merged.paragraphs] == ["附件：1. 甲", "\u3000\u3000\u30002. 乙"]
 
 
 def test_empty_attachment_and_paragraph_cleanup_preserve_valid_cell_structure() -> None:

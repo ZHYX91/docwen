@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from docwen_plugin_optimizer_gongwen.constants import (
     COPY_TO_LABELS,
@@ -81,7 +82,10 @@ def extract_doc_number_and_name(text: str) -> tuple[str, str]:
     if RE_DOC_NUMBER.fullmatch(doc_number.strip()) is None:
         return "", ""
     names = extract_signers_from_text(name)
-    return (doc_number.strip(), names[0]) if names == [name] else ("", "")
+    # This unlabeled composite is also a recognition heuristic. Preserve the
+    # conservative name test here; the labeled signer extractor is lossless.
+    plausible_name = _is_cjk_name_piece(name)
+    return (doc_number.strip(), names[0]) if names == [name] and plausible_name else ("", "")
 
 
 def extract_printing_line(text: str) -> tuple[str, str]:
@@ -147,17 +151,10 @@ def process_attachment_item(text: str, *, cleanup_rules=()) -> str:
     return t.strip()
 
 
-def process_copy_to(text: str) -> list[str]:
-    """Split CC text into organization list.
-
-    '抄送：省委组织部、省人社厅。' → ['省委组织部', '省人社厅']
-    """
-    t = _COPY_TO_LABEL_RE.sub("", text.strip(), count=1)
-    # Strip trailing period
-    t = re.sub(r"[。.]\s*$", "", t)
-    # Split by separators
-    parts = re.split(r"[，,、]", t)
-    return [p.strip() for p in parts if p.strip()]
+def process_copy_to(text: str) -> str:
+    """Keep authored recipient grouping and punctuation, including inside brackets."""
+    value = _COPY_TO_LABEL_RE.sub("", text.strip(), count=1)
+    return re.sub(r"[。.]\s*$", "", value).strip()
 
 
 def starts_with_copy_to_label(text: str) -> bool:
@@ -212,27 +209,35 @@ def format_display_value(value, separator: str = "") -> str:
 
 # ── 签发人提取 ──────────────────────────────────────────────
 
-_NAME_PART_PATTERN = r"[一-龥]{2,12}"
-_NAME_PATTERN = (
-    rf"{_NAME_PART_PATTERN}"
-    rf"(?:[·•]{_NAME_PART_PATTERN})*"
-)
-_NAME_RE = re.compile(rf"^{_NAME_PATTERN}$")
-_NAME_LIST_SPLIT_RE = re.compile(r"[、\s　]+")
+_NAME_LIST_SPLIT_RE = re.compile(r"[、，,；;\t\r\n]+")
+
+
+def _is_cjk_name_piece(text: str) -> bool:
+    """Only disambiguate simple space-separated names; never reject source text."""
+    return sum(character not in "·•" for character in text) >= 2 and all(
+        character in "·•"
+        or unicodedata.name(character, "").startswith(("CJK UNIFIED IDEOGRAPH", "CJK COMPATIBILITY IDEOGRAPH"))
+        for character in text
+    )
 
 
 def extract_signers_from_text(text: str) -> list[str]:
-    """从纯人名文本中提取多个签发人。
+    """Keep every nonempty name in source order, without a surname dictionary.
 
-    支持的格式：
-    - "李四、王五" — 顿号分隔
-    - "李四 王五" — 空格分隔
-    - "张三　李四" — 全角空格分隔
-
-    每段按 NAME_PATTERN 验证（2-12 个中文字符，
-    支持少数民族间隔号），不符合格式的项被过滤。
+    Explicit punctuation, tabs and line breaks separate entries. Ordinary
+    spaces separate only unambiguous multi-character CJK tokens. An uncertain
+    chunk such as ``张 三`` or ``John Smith`` is kept verbatim as one entry.
+    Repeated names and uncommon Unicode characters are never filtered out.
     """
-    text = text.strip()
-    parts = _NAME_LIST_SPLIT_RE.split(text)
-    tokens = [p.strip() for p in parts if p.strip()]
-    return [t for t in tokens if _NAME_RE.match(t)]
+    text = re.sub(r"^\s*签发人\s*[：:]\s*", "", text, count=1).strip()
+    names = []
+    for part in _NAME_LIST_SPLIT_RE.split(text):
+        part = part.strip()
+        if not part:
+            continue
+        words = part.split()
+        if len(words) > 1 and all(_is_cjk_name_piece(word) for word in words):
+            names.extend(words)
+        else:
+            names.append(part)
+    return names

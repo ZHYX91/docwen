@@ -50,7 +50,7 @@ _ELEMENT_TO_YAML: dict[str, tuple[str, bool]] = {
     "recipient": ("主送机关", True),
     "notes": ("附注", True),
     "printing_authority": ("印发机关", True),
-    "copy_to": ("抄送机关", False),
+    "copy_to": ("抄送机关", True),
     "attachment_header": ("附件说明", False),
     "disclosure": ("公开方式", True),
 }
@@ -89,7 +89,7 @@ def build_yaml(
         "主送机关": "",
         "附注": "",
         "印发机关": "",
-        "抄送机关": [],
+        "抄送机关": "",
         "附件说明": [],
         "公开方式": "",
     }
@@ -97,7 +97,7 @@ def build_yaml(
     skip_indices: list[int] = []
     attachment_list_indices: list[int] = []
 
-    for para_idx, candidate in result.candidates.items():
+    for para_idx, candidate in sorted(result.candidates.items()):
         text = features[para_idx].text.strip() if para_idx < len(features) else ""
         element_type = candidate.element_type
         yaml_key: str | None = None
@@ -119,10 +119,11 @@ def build_yaml(
                 yaml_info["发文字号"] = doc_number
             signer_values = yaml_info["签发人"]
             if isinstance(signer_values, list):
-                for signer in signers:
-                    if signer not in signer_values:
-                        signer_values.append(signer)
-            skip_indices.append(para_idx)
+                signer_values.extend(signers)
+            if doc_number and signers:
+                skip_indices.append(para_idx)
+            if not signers or any(re.search(r"\s", name) for name in signers):
+                candidate.trace.append("signer_text_preserved")
             continue
 
         if element_type == "combined_doc_number_signer_following":
@@ -130,18 +131,22 @@ def build_yaml(
             if doc_number and not yaml_info["发文字号"]:
                 yaml_info["发文字号"] = doc_number
             signer_values = yaml_info["签发人"]
-            if signer and isinstance(signer_values, list) and signer not in signer_values:
+            if signer and isinstance(signer_values, list):
                 signer_values.append(signer)
-            skip_indices.append(para_idx)
+            if doc_number and signer:
+                skip_indices.append(para_idx)
+            else:
+                candidate.trace.append("signer_text_preserved")
             continue
 
-        if element_type == "signer":
+        if element_type in ("signer", "signer_following"):
+            names = extract_signers_from_text(text)
             signer_values = yaml_info["签发人"]
-            if isinstance(signer_values, list):
-                for signer in extract_signers_from_text(extract_after_colon(text)):
-                    if signer not in signer_values:
-                        signer_values.append(signer)
-            skip_indices.append(para_idx)
+            if names and isinstance(signer_values, list):
+                signer_values.extend(names)
+                skip_indices.append(para_idx)
+            if not names or any(re.search(r"\s", name) for name in names):
+                candidate.trace.append("signer_text_preserved")
             continue
 
         # ── Direct mapping ──
@@ -181,18 +186,6 @@ def build_yaml(
             skip_indices.append(para_idx)
             continue
 
-        # ── Signer following → contribute to signer list ──
-        elif element_type == "signer_following":
-            if text:
-                extracted = extract_signers_from_text(text)
-                if extracted:
-                    assert isinstance(yaml_info["签发人"], list)
-                    for s in extracted:
-                        if s not in yaml_info["签发人"]:
-                            yaml_info["签发人"].append(s)
-            skip_indices.append(para_idx)
-            continue
-
         # ── Non-structural content → no YAML mapping ──
         elif element_type in ("body",):
             # These don't produce top-level YAML entries
@@ -215,14 +208,18 @@ def build_yaml(
                 yaml_info["印发机关"] = printing_authority
             cleaned_text = printing_date or convert_date_format(re.sub(r"\s*印发\s*$", "", text))
         elif element_type == "recipient":
-            cleaned_text = remove_colon(text)
+            from docwen_plugin_optimizer_gongwen.recognition.recipient_block import recipient_block
+
+            text, continued = recipient_block(features, result, para_idx)
+            skip_indices.extend(continued)
+            cleaned_text = remove_colon(re.sub(r"^主送机关\s*[：:]\s*", "", text, count=1))
         elif element_type == "notes":
             cleaned_text = remove_brackets(text)
         elif element_type == "disclosure":
             cleaned_text = extract_after_colon(text)
         elif element_type == "copy_to":
             yaml_info["抄送机关"] = process_copy_to(text)
-            # Skip scalar/list assignment below — we directly assign a list
+            # Preserve the authored expression instead of guessing agency boundaries.
             skip_indices.append(para_idx)
             continue
         elif element_type in ("attachment_header", "attachment_following", "attachment_content"):

@@ -12,14 +12,15 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import Any, cast
 
-from docx.enum.text import WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.oxml.text.paragraph import CT_P
-from docx.shared import Pt, Twips
+from docx.oxml.xmlchemy import BaseOxmlElement
+from docx.shared import Emu, Pt, Twips
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
+from docwen_plugin_markdown.template_utils import effective_indent_attributes, inherited_indent_attributes
 from docwen_plugin_markdown.yaml_processor import is_empty_field_value
 
 _PLACEHOLDER = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
@@ -38,6 +39,7 @@ _PARAGRAPH_GROUPS = (
     ("发文字号",),
     ("公开方式",),
     ("主送机关",),
+    ("签发人",),
     ("附注",),
     ("抄送机关",),
     ("附件说明",),
@@ -65,7 +67,7 @@ _NON_TEXT_CONTENT = frozenset(
 
 
 class GongwenFieldPlacementError(ValueError):
-    """An attachment placeholder cannot be rendered at its authored location."""
+    """A Gongwen field cannot be safely rendered or reviewed at its location."""
 
     diagnostic_code = "MD2DOCX-GONGWEN-FIELD-PLACEMENT"
 
@@ -75,14 +77,66 @@ def prepare_gongwen_fields(source: Mapping[str, Any]) -> dict[str, Any]:
     values = dict(source)
     if "附件说明" in source:
         values["附件说明"] = _attachment_names(source["附件说明"])
-    if "抄送机关" in source:
-        values["抄送机关"] = "，".join(_display_items(source["抄送机关"]))
+    for key in ("签发人", "主送机关", "抄送机关"):
+        if key in source:
+            value = source[key]
+            values[key] = value if isinstance(value, str) else "、".join(_field_list_items(key, value))
     if "附注" in source:
         values["附注"] = _notes(source["附注"])
     for key, suffix in (("成文日期", ""), ("印发日期", "印发")):
         if key in source:
             values[key] = _date(source[key], suffix)
     return values
+
+
+def _field_list_items(key: str, value: Any) -> tuple[str, ...]:
+    """Accept a flat list of authored strings; never infer names or categories."""
+    if value is None:
+        return ()
+    if not isinstance(value, (list, tuple)):
+        raise ValueError(f"“{key}”请填写一段文字，或每项都是文字的列表。")
+    items = []
+    for item in value:
+        if item is None:
+            continue
+        if not isinstance(item, str):
+            raise ValueError(f"“{key}”的每一项都应是文字，不支持嵌套列表、数字或对象。")
+        if item.strip():
+            items.append(item.strip())
+    return tuple(items)
+
+
+def gongwen_review_notes(source: Mapping[str, Any]) -> dict[str, str]:
+    """Explain only multi-item list rendering, not already-authored punctuation."""
+    notes = {}
+    for key in ("签发人", "主送机关", "抄送机关"):
+        value = source.get(key)
+        if isinstance(value, str) or len(_field_list_items(key, value)) < 2:
+            continue
+        if key == "签发人":
+            notes[key] = (
+                "这里有多位签发人，已暂用顿号连接。请在 Word 中自行调整姓名的换行和对齐，"
+                "并核对姓名顺序；本程序没有自动排版。"
+            )
+        else:
+            notes[key] = f"{key}有多项，已暂用顿号连接。请核对哪些地方应使用顿号、哪些应改成逗号，并检查机关排列顺序。"
+    return notes
+
+
+def validate_review_placeholders(doc: Any, placeholders: Mapping[str, Sequence[Any]], notes: Mapping[str, str]) -> None:
+    """Do not silently drop required review comments in unsupported Word parts."""
+    for key in notes:
+        for paragraph in placeholders.get(key, ()):
+            ancestor = paragraph._p.getparent()
+            while ancestor is not None and ancestor is not doc.element.body:
+                if ancestor.tag not in {qn("w:tc"), qn("w:tr"), qn("w:tbl")}:
+                    break
+                ancestor = ancestor.getparent()
+            if ancestor is not doc.element.body:
+                raise GongwenFieldPlacementError(
+                    f"“{key}”有多个条目，需要添加核对批注。请将占位符放在正文或表格中，"
+                    "或改用已核对标点和排版的单段文字。"
+                )
 
 
 def validate_attachment_placeholders(doc: Any, placeholders: Mapping[str, Sequence[Any]]) -> None:
@@ -149,10 +203,15 @@ def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[s
         if source_run is None:
             source_run = next(iter(target.runs), None)
         char_width = _font_size(target, source_run)
-        base_indent = _left_indent(target)
+        inherited = inherited_indent_attributes(target)
+        base_indent = _attachment_origin(target, char_width)
         label_width = 3 * char_width
-        number_width = int((len(str(len(names))) + 2) * char_width / 2) if len(names) > 1 else 0
-        text_indent = base_indent + label_width + number_width
+        # Keep the period and following ordinary space adjacent to the name.
+        # Reserve the label's six half-character cells, reducing the leading
+        # padding by one cell whenever the number gains a digit.
+        padding_cells = max(6, len(str(len(names))) - 1)
+        hanging = label_width if len(names) == 1 else int((padding_cells + 2) * char_width / 2)
+        text_indent = base_indent + hanging
         insertion_index = parent.index(target._p)
 
         for index, name in enumerate(names, 1):
@@ -171,16 +230,63 @@ def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[s
             if len(names) == 1:
                 run.text = f"附件：{name}"
             else:
-                run.text = f"{'附件：' if index == 1 else ''}{index}.\t{name}"
-                _attachment_tab_stop(paragraph, target, text_indent)
+                prefix = (
+                    "附件：" + _attachment_padding(padding_cells - 6)
+                    if index == 1
+                    else _attachment_padding(padding_cells - len(str(index)) + 1)
+                )
+                run.text = f"{prefix}{index}. "
+                # A template can kern pairs such as "11" more tightly. Keep
+                # literal number cells uniform without changing the name's font.
+                properties = run._r.get_or_add_rPr()
+                kern = properties.find(qn("w:kern"))
+                if kern is None:
+                    new_kern = cast(BaseOxmlElement, OxmlElement("w:kern"))
+                    properties.insert_element_before(
+                        new_kern,
+                        "w:position",
+                        "w:sz",
+                        "w:szCs",
+                        "w:highlight",
+                        "w:u",
+                        "w:effect",
+                        "w:bdr",
+                        "w:shd",
+                        "w:fitText",
+                        "w:vertAlign",
+                        "w:rtl",
+                        "w:cs",
+                        "w:em",
+                        "w:lang",
+                        "w:eastAsianLayout",
+                        "w:specVanish",
+                        "w:oMath",
+                        "w:rPrChange",
+                    )
+                    kern = new_kern
+                kern.set(qn("w:val"), str(int(Emu(char_width).pt * 2) + 1))
+                name_run = paragraph.add_run(name)
+                if source_run is not None and source_run._r.rPr is not None:
+                    name_run._r.insert(0, deepcopy(source_run._r.rPr))
             paragraph.paragraph_format.left_indent = text_indent
-            paragraph.paragraph_format.first_line_indent = -(label_width + number_width if index == 1 else number_width)
+            paragraph.paragraph_format.first_line_indent = -hanging
             # Character-based indents would override the physical layout above.
             indent = paragraph._p.get_or_add_pPr().get_or_add_ind()
             for attribute in ("leftChars", "startChars", "firstLineChars", "hangingChars", "start"):
                 key = qn(f"w:{attribute}")
                 if key in indent.attrib:
                     del indent.attrib[key]
+            # Removing a direct value exposes style/default character units.
+            # Word requires a local zero to cancel those earlier declarations;
+            # keep the template's shared styles and unrelated axes untouched.
+            for attribute in ("leftChars", "startChars"):
+                key = qn(f"w:{attribute}")
+                if int(inherited.get(key, "0")):
+                    indent.set(key, "0")
+            if any(int(inherited.get(qn(f"w:{name}"), "0")) for name in ("firstLineChars", "hangingChars")):
+                indent.set(qn("w:hangingChars"), "0")
+            if any(qn(f"w:{name}") in inherited for name in ("start", "startChars")):
+                indent.set(qn("w:start"), str(Emu(text_indent).twips))
             parent.insert(insertion_index + index - 1, element)
         parent.remove(target._p)
 
@@ -207,6 +313,8 @@ def _display_items(value: Any):
 def _notes(value: Any) -> str:
     if is_empty_field_value(value):
         return ""
+    if isinstance(value, (Mapping, list, tuple, set)):
+        raise ValueError("“附注”请填写一段文字，不要填写列表或对象。")
     text = str(value).strip()
     if len(text) < 2 or (text[0], text[-1]) not in {("（", "）"), ("(", ")")}:
         return text
@@ -224,6 +332,8 @@ def _notes(value: Any) -> str:
 def _date(value: Any, suffix: str) -> str:
     if is_empty_field_value(value):
         return ""
+    if isinstance(value, (Mapping, list, tuple, set)):
+        raise ValueError("成文日期和印发日期应填写单个日期或文字，不要填写列表或对象。")
     if isinstance(value, dt.date):
         parsed = value
     else:
@@ -301,28 +411,30 @@ def _font_size(paragraph: Any, run: Run | None) -> int:
     return int(Pt(16))
 
 
-def _left_indent(paragraph: Any) -> int:
-    if paragraph.paragraph_format.left_indent is not None:
-        return int(paragraph.paragraph_format.left_indent)
-    style = paragraph.style
-    while style is not None:
-        if style.paragraph_format.left_indent is not None:
-            return int(style.paragraph_format.left_indent)
-        style = style.base_style
-    return 0
+def _attachment_origin(paragraph: Any, char_width: int) -> int:
+    attributes = effective_indent_attributes(paragraph)
+    axis = "start" if any(qn(f"w:{name}") in attributes for name in ("start", "startChars")) else "left"
+    left = _indent_length(attributes, char_width, axis)
+    if int(attributes.get(qn("w:hangingChars"), "0")):
+        first = "hanging"
+    elif int(attributes.get(qn("w:firstLineChars"), "0")):
+        first = "firstLine"
+    else:
+        first = "hanging" if qn("w:hanging") in attributes else "firstLine"
+    offset = _indent_length(attributes, char_width, first)
+    return left + (-offset if first == "hanging" else offset)
 
 
-def _attachment_tab_stop(paragraph: Any, target: Any, position: int) -> None:
-    stops = paragraph.paragraph_format.tab_stops
-    stops.clear_all()
-    properties = [target._p.pPr]
-    style = target.style
-    while style is not None:
-        properties.append(style.element.pPr)
-        style = style.base_style
-    for properties_element in properties:
-        if properties_element is None:
-            continue
-        for stop in properties_element.findall(f"{qn('w:tabs')}/{qn('w:tab')}"):
-            stops.add_tab_stop(Twips(int(stop.get(qn("w:pos")))), WD_TAB_ALIGNMENT.CLEAR)
-    stops.add_tab_stop(position)
+def _indent_length(attributes: Mapping[str, str], char_width: int, axis: str) -> int:
+    # Character zero cancels earlier character units; the length still applies.
+    characters = int(attributes.get(qn(f"w:{axis}Chars"), "0"))
+    if characters:
+        return round(characters * char_width / 100)
+    return int(Twips(int(attributes.get(qn(f"w:{axis}"), "0"))))
+
+
+def _attachment_padding(half_characters: int) -> str:
+    # An EN SPACE is half an em, unlike a proportional-font U+0020. Only this
+    # leading padding uses it; the separator after the period is always U+0020.
+    full, half = divmod(half_characters, 2)
+    return "\u3000" * full + "\u2002" * half

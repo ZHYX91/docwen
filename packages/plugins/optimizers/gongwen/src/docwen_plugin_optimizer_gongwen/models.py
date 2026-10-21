@@ -111,7 +111,7 @@ class GongwenMetadata:
     recipient: str = ""
     notes: str = ""
     printing_authority: str = ""
-    copy_to: list[str] = field(default_factory=list)
+    copy_to: str = ""
     attachment: list[str] = field(default_factory=list)
     disclosure: str = ""
 
@@ -160,7 +160,7 @@ class GongwenMetadata:
             recipient=d.get("主送机关", ""),
             notes=d.get("附注", ""),
             printing_authority=d.get("印发机关", ""),
-            copy_to=d.get("抄送机关", []),
+            copy_to=d.get("抄送机关", ""),
             attachment=d.get("附件说明", []),
             disclosure=d.get("公开方式", ""),
         )

@@ -129,6 +129,36 @@ def collect_structured_signals(
             }
         )
 
+    preserved_signers = [
+        idx for idx, candidate in result.candidates.items() if "signer_text_preserved" in candidate.trace
+    ]
+    if preserved_signers:
+        signals["needs_review_reasons"].append("signer_text_preserved")
+        gongwen_warnings.append(
+            {
+                "code": "GW003",
+                "severity": "warning",
+                "scope": "signer",
+                "message": "部分签发人姓名的分隔不明确，已保留原文。请核对姓名是否完整，并确认每项对应一位签发人。",
+                "details": {"paragraph_indices": preserved_signers},
+            }
+        )
+
+    uncertain_recipients = [
+        idx for idx, candidate in result.candidates.items() if "recipient_continuation_uncertain" in candidate.trace
+    ]
+    if uncertain_recipients:
+        signals["needs_review_reasons"].append("recipient_continuation_uncertain")
+        gongwen_warnings.append(
+            {
+                "code": "GW004",
+                "severity": "warning",
+                "scope": "recipient",
+                "message": "主送机关前有一段疑似续行的文字，已保留在正文。请核对是否需要合并到主送机关。",
+                "details": {"paragraph_indices": uncertain_recipients},
+            }
+        )
+
     # --- Build recognition_summary ---
     needs_review = bool(gongwen_warnings or signals["needs_review_reasons"] or result.missing_required)
     recognition_summary = {
