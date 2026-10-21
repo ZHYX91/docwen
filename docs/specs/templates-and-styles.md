@@ -129,6 +129,19 @@ other paragraph properties and all template style definitions retain their
 inheritance. Semantic structures (lists, tables,
 quotes, etc.) retain their own indentation and numbering contracts.
 
+Attachment expansion has its own column layout. The standalone `{{附件说明}}` anchor's effective
+left/start indent resolves direct formatting, paragraph-style ancestors and document defaults;
+nonzero character units take precedence over the corresponding length fallback. Character units
+are converted using the attachment font size to place the label, number and name columns.
+Generated paragraphs cancel competing inherited character indents locally with character zeroes,
+then set physical hanging indents and tab stops. Template styles and unrelated paragraph properties
+remain intact. A single attachment has no number; multiple attachments and wrapped name lines share
+the name column, including when numbering reaches two digits.
+
+附件说明按独立列布局处理：从直接格式、段落样式及文档默认值解析有效左侧缩进，非零字符单位优先于
+对应物理长度，按附件字体字号换算。生成段落局部抵消冲突的继承字符缩进，再设置悬挂缩进及制表位；
+模板样式和其他段落格式保持原样。单附件不编号，多附件及名称续行保持名称列对齐。
+
 The standalone `{{body}}` run may author direct font/character overrides
 separate from its paragraph style. Ordinary body text receives only these
 explicit run properties (including script-specific fonts and sizes), not

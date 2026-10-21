@@ -16,10 +16,11 @@ from docx.enum.text import WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.oxml.text.paragraph import CT_P
-from docx.shared import Pt, Twips
+from docx.shared import Emu, Pt, Twips
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
+from docwen_plugin_markdown.template_utils import inherited_indent_attributes
 from docwen_plugin_markdown.yaml_processor import is_empty_field_value
 
 _PLACEHOLDER = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
@@ -202,7 +203,8 @@ def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[s
         if source_run is None:
             source_run = next(iter(target.runs), None)
         char_width = _font_size(target, source_run)
-        base_indent = _attachment_origin(target, char_width)
+        inherited = inherited_indent_attributes(target)
+        base_indent = _left_indent(target, char_width, inherited)
         label_width = 3 * char_width
         number_width = int((len(str(len(names))) + 2) * char_width / 2) if len(names) > 1 else 0
         text_indent = base_indent + label_width + number_width
@@ -234,6 +236,17 @@ def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[s
                 key = qn(f"w:{attribute}")
                 if key in indent.attrib:
                     del indent.attrib[key]
+            # Removing a direct value exposes style/default character units.
+            # Word requires a local zero to cancel those earlier declarations;
+            # keep the template's shared styles and unrelated axes untouched.
+            for attribute in ("leftChars", "startChars"):
+                key = qn(f"w:{attribute}")
+                if int(inherited.get(key, "0")):
+                    indent.set(key, "0")
+            if any(int(inherited.get(qn(f"w:{name}"), "0")) for name in ("firstLineChars", "hangingChars")):
+                indent.set(qn("w:hangingChars"), "0")
+            if any(qn(f"w:{name}") in inherited for name in ("start", "startChars")):
+                indent.set(qn("w:start"), str(Emu(text_indent).twips))
             parent.insert(insertion_index + index - 1, element)
         parent.remove(target._p)
 
@@ -358,45 +371,16 @@ def _font_size(paragraph: Any, run: Run | None) -> int:
     return int(Pt(16))
 
 
-def _attachment_origin(paragraph: Any, char_width: int) -> int:
-    """Keep the authored first-line start, including inherited character indents."""
-    properties = [paragraph._p.pPr]
-    style = paragraph.style
-    while style is not None:
-        properties.append(style.element.pPr)
-        style = style.base_style
-
-    left = None
-    first = None
-    for properties_element in properties:
-        indent = properties_element.find(qn("w:ind")) if properties_element is not None else None
-        if indent is None:
-            continue
-        if left is None:
-            left = _indent_measure(indent, char_width, ("startChars", "leftChars"), ("start", "left"))
-        if first is None:
-            # A hanging indent takes precedence over first-line indentation.
-            hanging = _indent_measure(indent, char_width, ("hangingChars",), ("hanging",))
-            first = (
-                -hanging
-                if hanging is not None
-                else _indent_measure(indent, char_width, ("firstLineChars",), ("firstLine",))
-            )
-    return (left or 0) + (first or 0)
-
-
-def _indent_measure(
-    element: Any, char_width: int, character_names: tuple[str, ...], names: tuple[str, ...]
-) -> int | None:
-    for name in character_names:
-        value = element.get(qn(f"w:{name}"))
-        if value is not None:
-            return round(int(value) * char_width / 100)
-    for name in names:
-        value = element.get(qn(f"w:{name}"))
-        if value is not None:
-            return int(Twips(int(value)))
-    return None
+def _left_indent(paragraph: Any, char_width: int, inherited: Mapping[str, str]) -> int:
+    attributes = dict(inherited)
+    direct = paragraph._p.pPr.ind if paragraph._p.pPr is not None else None
+    if direct is not None:
+        attributes.update(direct.attrib)
+    axis = "start" if any(qn(f"w:{name}") in attributes for name in ("start", "startChars")) else "left"
+    characters = int(attributes.get(qn(f"w:{axis}Chars"), "0"))
+    if characters:
+        return round(characters * char_width / 100)
+    return int(Twips(int(attributes.get(qn(f"w:{axis}"), "0"))))
 
 
 def _attachment_tab_stop(paragraph: Any, target: Any, position: int) -> None:

@@ -9,7 +9,10 @@ from pathlib import Path
 
 import pytest
 from docx import Document
+from docx.oxml.ns import qn
+from docx.shared import Pt
 from tests.support.config import FakeConfigView
+from tests.support.gongwen_template import attachment_template
 
 from docwen_core.models.resolved_numbering import canonicalize_numbering_plan
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
@@ -191,3 +194,28 @@ def test_release_fixture_checks_real_conversion_layout(tmp_path: Path, enabled: 
     result = MdToDocxConverter().convert(context)
     assert result.success, result.error
     verify_gongwen_fields_output(Path(result.artifacts[0].staging_path), case=case)
+
+
+@pytest.mark.parametrize("route", ["source", "resolved"])
+def test_generated_template_character_indents_survive_production_routes(tmp_path: Path, route: str) -> None:
+    template = attachment_template()
+    attachment_style = template.styles["Attachment"].element.xml
+    template_path = tmp_path / "generated.docx"
+    template.save(str(template_path))
+    original_hash = hashlib.sha256(template_path.read_bytes()).hexdigest()
+    context, _workspace = _conversion_context(tmp_path, route, template_path, True)
+
+    result = MdToDocxConverter().convert(context)
+
+    assert result.success, result.error
+    output = Document(result.artifacts[0].staging_path)
+    attachments = [p for p in output.paragraphs if p.text in ("附件：1.\t材料清单", "2.\t办理依据")]
+    assert len(attachments) == 2
+    for index, paragraph in enumerate(attachments):
+        assert paragraph.paragraph_format.left_indent == Pt(104)
+        assert paragraph.paragraph_format.first_line_indent == Pt(-72 if index == 0 else -24)
+        assert paragraph._p.pPr is not None and paragraph._p.pPr.ind is not None
+        assert paragraph._p.pPr.ind.get(qn("w:leftChars")) == "0"
+        assert paragraph._p.pPr.ind.get(qn("w:hangingChars")) == "0"
+    assert output.styles["Attachment"].element.xml == attachment_style
+    assert hashlib.sha256(template_path.read_bytes()).hexdigest() == original_hash

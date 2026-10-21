@@ -147,7 +147,7 @@ class BodyParagraphFormat:
                 _preserve_mapped_indentation(paragraph, indent, dict(self.source_indent_attributes))
 
 
-def _inherited_indent_attributes(paragraph: Any) -> dict[str, str]:
+def inherited_indent_attributes(paragraph: Any) -> dict[str, str]:
     """Read indentation only, without flattening any other style properties."""
     inherited: dict[str, str] = {}
     first_line_characters = (qn("w:firstLineChars"), qn("w:hangingChars"))
@@ -185,7 +185,7 @@ def _preserve_mapped_indentation(paragraph: Any, indent: Any, source: dict[str, 
     effect (MS-OI29500, 2.1.44). Restore only a changed related source value;
     an unchanged custom body style keeps its original inheritance verbatim.
     """
-    target = _inherited_indent_attributes(paragraph)
+    target = inherited_indent_attributes(paragraph)
     for length_name, character_name in (
         ("left", "leftChars"),
         ("right", "rightChars"),
@@ -648,7 +648,7 @@ def extract_body_paragraph_format(doc: Document) -> BodyParagraphFormat | None:
         widow_control=paragraph_format.widow_control,
         indent_attributes=authored_indent,
         source_style_id=placeholder.style.style_id if placeholder.style is not None else None,
-        source_indent_attributes=tuple(_inherited_indent_attributes(placeholder).items()),
+        source_indent_attributes=tuple(inherited_indent_attributes(placeholder).items()),
     )
 
 

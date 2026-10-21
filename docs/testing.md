@@ -20,6 +20,13 @@ Tests are grouped by primary behavior family and execution cost. The default rep
 
 Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry point pins the repository's pytest configuration and root fixtures even when every selected path belongs to a single workspace package.
 
+`tests/support/gongwen_template.py` builds a minimal attachment template in code, preserving the conflicting
+character-unit and physical indents found in an actual user template. No binary template or local archive is
+required by CI. `test_gongwen_indentation.py` covers style/ancestor/default/direct inheritance, body/cell anchors,
+one/multiple/two-digit attachments, character-zero cancellation and formatting preservation;
+`test_gongwen_conversion.py` exercises both production Markdown input routes. These structural checks do not
+prove pagination: selected native Word checks must also verify name columns and long-name continuation lines.
+
 `tests/integration/test_quote_content_mapping.py` validates quote child styles, current native list starts,
 continuations, literal code, body order and table data. Markdown spelling and reasonable quote/list nesting
 changes are normal mappings and do not require a loss warning. Authored IDs, links and fenced literal sources
