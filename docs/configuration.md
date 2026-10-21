@@ -57,12 +57,22 @@ The removed keys `image.ocr_language` and `conversion.md_to_docx.list_separator`
 | Field / 字段 | Enabled behavior / 开启后的行为 |
 | --- | --- |
 | `附件说明` | One paragraph per attachment, with a prefix, consistent numbering and hanging indentation. 每项附件独立成段，使用统一前缀、编号和悬挂缩进。 |
-| `抄送机关` | Join recipients with `，`. 使用中文逗号连接接收单位。 |
+| `签发人` / `主送机关` / `抄送机关` | Preserve authored strings. Flat lists use `、`; multiple nonempty items get a Word comment asking the user to confirm signer layout or recipient punctuation and order. 已写好的字符串原样保留；列表使用顿号，多项列表在填充值上添加批注，请用户确认签发人排版或机关之间的标点与顺序。 |
 | `成文日期` / `印发日期` | Format recognized dates as Chinese dates; publication dates end with `印发`. Unrecognized text is retained. 可识别日期使用中文年月日，印发日期增加“印发”，无法识别的原文保持不变。 |
 | `附注` | Remove one existing outer pair of parentheses; the template owns the displayed parentheses. 去掉内容已有的一层外括号，由模板控制显示的括号。 |
 | Empty official fields / 空公文字段 | Remove only eligible dedicated paragraphs or rows, preserving other nonempty fields and unrelated content. 仅清理符合条件的专用段落或表格行，保护其他有值字段和无关内容。 |
 
 `{{附件说明}}` must occupy an entire paragraph in the main document body or a table cell, including nested tables. Each original occurrence expands separately. Inline occurrences, headers, footers and text boxes produce a template error when field formatting is enabled. Empty attachments keep table cells structurally valid. Inserted YAML values are literal content and are never interpreted again as template placeholders.
+
+Required signer/recipient comments are supported in the main body and table cells. A multi-item field in an
+unsupported Word part fails explicitly. Single-item lists and authored strings receive no automatic review comment;
+turning field formatting off restores generic list filling. The converter does not move document numbers or arrange
+signer names into columns.
+
+Document-to-Markdown Gongwen extraction retains copy-recipient expressions as strings, including their punctuation
+and parentheses. An explicit document-number/signature label admits unusual or Latin signer names without guessing
+from surnames. Primary-recipient continuation consumes only clear collective address text; uncertain preceding
+paragraphs remain in the body and receive a review warning.
 
 `{{附件说明}}` 须独占正文或表格单元格中的一个段落，支持嵌套表格和多处独立占位段。开启字段格式化时，行内、页眉、页脚和文本框中的附件占位符会触发模板错误。空附件不会破坏单元格结构；插入的 YAML 值始终作为内容，不会被再次解释为模板占位符。
 

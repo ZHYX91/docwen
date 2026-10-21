@@ -144,6 +144,21 @@ def collect_structured_signals(
             }
         )
 
+    uncertain_recipients = [
+        idx for idx, candidate in result.candidates.items() if "recipient_continuation_uncertain" in candidate.trace
+    ]
+    if uncertain_recipients:
+        signals["needs_review_reasons"].append("recipient_continuation_uncertain")
+        gongwen_warnings.append(
+            {
+                "code": "GW004",
+                "severity": "warning",
+                "scope": "recipient",
+                "message": "主送机关前有一段疑似续行的文字，已保留在正文。请核对是否需要合并到主送机关。",
+                "details": {"paragraph_indices": uncertain_recipients},
+            }
+        )
+
     # --- Build recognition_summary ---
     needs_review = bool(gongwen_warnings or signals["needs_review_reasons"] or result.missing_required)
     recognition_summary = {

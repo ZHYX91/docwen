@@ -41,7 +41,7 @@ second: 实际值
 """
 
 
-def _conversion_context(tmp_path: Path, route: str, template: Path, enabled: bool | None):
+def _conversion_context(tmp_path: Path, route: str, template: Path, enabled: bool | None, source_text: str = _SOURCE):
     config = {
         "template_fill": {"list_separator": " / "},
         "gui": {"language": {"locale": "en_US"}},
@@ -55,11 +55,11 @@ def _conversion_context(tmp_path: Path, route: str, template: Path, enabled: boo
     )
     if route == "source":
         source = tmp_path / "source.md"
-        source.write_text(_SOURCE, encoding="utf-8")
+        source.write_text(source_text, encoding="utf-8")
         return make_context(str(source), options=options, config_values=config, document_style_catalog=style_catalog)
 
     plan_body = {"heading_definitions": [], "heading_instances": [], "targets": []}
-    source_hash = hashlib.sha256(_SOURCE.encode("utf-8")).hexdigest()
+    source_hash = hashlib.sha256(source_text.encode("utf-8")).hexdigest()
     plan_hash = hashlib.sha256(canonicalize_numbering_plan(plan_body)).hexdigest()
     envelope = {"input_id": "gongwen-fields", "source_sha256": source_hash, "plan_sha256": plan_hash}
     neutral_payload = {
@@ -67,7 +67,7 @@ def _conversion_context(tmp_path: Path, route: str, template: Path, enabled: boo
         "$schema": "urn:docwen:schema:resolved-document:v1",
         "schema": "docwen.resolved_document.v1",
         "document": {
-            "authored_markdown": _SOURCE,
+            "authored_markdown": source_text,
             "targets": [],
             "references": [],
             "resource_occurrences": [],
@@ -146,12 +146,12 @@ def test_real_docx_fields_share_switch_and_preserve_yaml_and_literal_values(
         for cell in cells:
             assert [p.text for p in cell.paragraphs] == ["1. 材料清单 / （二）办理依据"]
     else:
-        assert "附件：1.\t材料清单" in paragraphs
-        assert "2.\t办理依据" in paragraphs
+        assert "附件：1. 材料清单" in paragraphs
+        assert "\u3000\u3000\u30002. 办理依据" in paragraphs
         assert "单位甲、单位乙|公开发布|2026年6月27日|2026年6月28日印发" in paragraphs
         assert "：" not in paragraphs
         for cell in cells:
-            assert [p.text for p in cell.paragraphs] == ["附件：1.\t材料清单", "2.\t办理依据"]
+            assert [p.text for p in cell.paragraphs] == ["附件：1. 材料清单", "\u3000\u3000\u30002. 办理依据"]
 
 
 @pytest.mark.parametrize("route", ["source", "resolved"])
@@ -197,23 +197,36 @@ def test_release_fixture_checks_real_conversion_layout(tmp_path: Path, enabled: 
 
 
 @pytest.mark.parametrize("route", ["source", "resolved"])
-def test_generated_template_character_indents_survive_production_routes(tmp_path: Path, route: str) -> None:
+@pytest.mark.parametrize("count", [1, 2, 9, 10, 99, 100, 101])
+def test_generated_template_character_indents_survive_production_routes(tmp_path: Path, route: str, count: int) -> None:
     template = attachment_template()
     attachment_style = template.styles["Attachment"].element.xml
     template_path = tmp_path / "generated.docx"
     template.save(str(template_path))
     original_hash = hashlib.sha256(template_path.read_bytes()).hexdigest()
-    context, _workspace = _conversion_context(tmp_path, route, template_path, True)
+    names = [f"材料{i:02d}" for i in range(1, count + 1)]
+    markdown = "---\n附件说明:\n" + "".join(f"  - {name}\n" for name in names) + "---\n\n正文。\n"
+    context, _workspace = _conversion_context(tmp_path, route, template_path, True, markdown)
 
     result = MdToDocxConverter().convert(context)
 
     assert result.success, result.error
     output = Document(result.artifacts[0].staging_path)
-    attachments = [p for p in output.paragraphs if p.text in ("附件：1.\t材料清单", "2.\t办理依据")]
-    assert len(attachments) == 2
-    for index, paragraph in enumerate(attachments):
-        assert paragraph.paragraph_format.left_indent == Pt(104)
-        assert paragraph.paragraph_format.first_line_indent == Pt(-72 if index == 0 else -24)
+    expected = (
+        ["附件：" + names[0]]
+        if count == 1
+        else [
+            f"{'附件：' if i == 1 else '　' * ((7 - len(str(i))) // 2) + ' ' * ((7 - len(str(i))) % 2)}{i}. {name}"
+            for i, name in enumerate(names, 1)
+        ]
+    )
+    attachments = [p for p in output.paragraphs if p.text in expected]
+    assert [p.text for p in attachments] == expected
+    hanging_points = 48 if count == 1 else 64
+    for paragraph in attachments:
+        assert paragraph.paragraph_format.left_indent == Pt(-16 + hanging_points)
+        assert paragraph.paragraph_format.first_line_indent == Pt(-hanging_points)
+        assert not list(paragraph._p.iter(qn("w:tab")))
         assert paragraph._p.pPr is not None and paragraph._p.pPr.ind is not None
         assert paragraph._p.pPr.ind.get(qn("w:leftChars")) == "0"
         assert paragraph._p.pPr.ind.get(qn("w:hangingChars")) == "0"

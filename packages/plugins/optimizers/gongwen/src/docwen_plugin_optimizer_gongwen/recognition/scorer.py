@@ -22,7 +22,7 @@ from docwen_plugin_optimizer_gongwen.constants import (
 )
 from docwen_plugin_optimizer_gongwen.models import ParagraphFeature, RecognitionCandidate
 from docwen_plugin_optimizer_gongwen.recognition.rules import SCORING_RULES
-from docwen_plugin_optimizer_gongwen.utils import starts_with_copy_to_label
+from docwen_plugin_optimizer_gongwen.utils import extract_doc_number_and_signers, starts_with_copy_to_label
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ProgressSink
@@ -345,12 +345,10 @@ class ElementScorer:
 
     def has_doc_number_and_signer(self, pf: ParagraphFeature) -> bool:
         """Check for a document number followed by labelled signer names."""
-        text = pf.text.strip()
-        for dp in _DOCUMENT_NUMBER_PATTERNS:
-            pattern = rf"^({dp})[\s　\t]+签发人[：:]\s*{_NAME_PATTERN}(?:[、\s　]+{_NAME_PATTERN})*$"
-            if re.match(pattern, text):
-                return True
-        return False
+        # The validated number and explicit label provide the evidence. Names
+        # need not satisfy the conservative heuristic for unlabelled prose.
+        doc_number, names = extract_doc_number_and_signers(pf.text)
+        return bool(doc_number and names)
 
     def has_doc_number_and_name(self, pf: ParagraphFeature) -> bool:
         """Check for a document number followed by an unlabelled name."""

@@ -149,17 +149,33 @@ class BodyParagraphFormat:
 
 def inherited_indent_attributes(paragraph: Any) -> dict[str, str]:
     """Read indentation only, without flattening any other style properties."""
+    return _indent_attributes(paragraph, include_direct=False)
+
+
+def effective_indent_attributes(paragraph: Any) -> dict[str, str]:
+    """Resolve direct formatting, styles and defaults for origin measurement."""
+    return _indent_attributes(paragraph, include_direct=True)
+
+
+def _indent_attributes(paragraph: Any, *, include_direct: bool) -> dict[str, str]:
     inherited: dict[str, str] = {}
-    first_line_characters = (qn("w:firstLineChars"), qn("w:hangingChars"))
+    related = [(qn("w:firstLineChars"), qn("w:hangingChars"))]
+    if include_direct:
+        # Measuring the origin also resolves mutually exclusive physical axes.
+        # The projection helper above retains its original attribute payload.
+        related.append((qn("w:firstLine"), qn("w:hanging")))
 
     def inherit(source: Any) -> None:
         # A nearer character declaration selects/cancels the related group;
         # an older opposite-direction character value cannot revive it.
-        owns_first_line = any(name in inherited for name in first_line_characters)
+        blocked = {name for group in related if any(key in inherited for key in group) for name in group}
         for name, value in source.attrib.items():
-            if name not in first_line_characters or not owns_first_line:
+            if name not in blocked:
                 inherited.setdefault(name, value)
 
+    direct = paragraph._p.pPr.ind if paragraph._p.pPr is not None else None
+    if include_direct and direct is not None:
+        inherit(direct)
     style = paragraph.style
     seen: set[Any] = set()
     while style is not None and style._element not in seen:

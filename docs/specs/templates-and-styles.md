@@ -130,17 +130,23 @@ inheritance. Semantic structures (lists, tables,
 quotes, etc.) retain their own indentation and numbering contracts.
 
 Attachment expansion has its own column layout. The standalone `{{附件说明}}` anchor's effective
-left/start indent resolves direct formatting, paragraph-style ancestors and document defaults;
+first-line origin combines the effective left/start and first-line/hanging indents, resolving
+direct formatting, paragraph-style ancestors and document defaults;
 nonzero character units take precedence over the corresponding length fallback. Character units
 are converted using the attachment font size to place the label, number and name columns.
 Generated paragraphs cancel competing inherited character indents locally with character zeroes,
-then set physical hanging indents and tab stops. Template styles and unrelated paragraph properties
-remain intact. A single attachment has no number; multiple attachments and wrapped name lines share
-the name column, including when numbering reaches two digits.
+then set physical hanging indents and literal space padding, without inserting tabs or automatic numbering.
+The leading padding loses one half-character cell for every additional number digit; full-width spaces
+and half-em EN SPACE express those cells. The period is followed by exactly one ordinary U+0020 space.
+The generated number prefix suppresses pair kerning (including inherited `11` contraction), while
+attachment names retain the template's original run formatting.
+Template styles and unrelated paragraph properties remain intact. A single attachment has no number;
+multiple attachments keep periods, name starts and wrapped name lines aligned across 9/10 and 99/100.
 
-附件说明按独立列布局处理：从直接格式、段落样式及文档默认值解析有效左侧缩进，非零字符单位优先于
-对应物理长度，按附件字体字号换算。生成段落局部抵消冲突的继承字符缩进，再设置悬挂缩进及制表位；
-模板样式和其他段落格式保持原样。单附件不编号，多附件及名称续行保持名称列对齐。
+附件说明按独立列布局处理：从直接格式、段落样式及文档默认值解析左侧与首行／悬挂缩进，按有效首行起点定位；非零字符单位优先于
+对应物理长度，按附件字体字号换算。生成段落局部抵消冲突的继承字符缩进，再设置悬挂缩进及空格补位，不插入制表符或自动编号。
+序号每增加一位，前置补位减少半字宽；全角空格与半字宽空格（EN SPACE）表达补位，点后固定一个普通半角空格。
+模板样式和其他段落格式保持原样。单附件不编号，多附件跨10、100时保持点号、名称首字和续行对齐。
 
 The standalone `{{body}}` run may author direct font/character overrides
 separate from its paragraph style. Ordinary body text receives only these

@@ -29,6 +29,9 @@ def attachment_template(
     assert isinstance(normal, ParagraphStyle)
     normal.font.size = Pt(16)
     normal.font.name = "Times New Roman"
+    kern = OxmlElement("w:kern")
+    kern.set(qn("w:val"), "2")
+    normal.element.get_or_add_rPr().insert_element_before(kern, "w:sz", "w:szCs")
     normal.element.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), "SimSun")
     parent = document.styles.add_style("AttachmentBase", WD_STYLE_TYPE.PARAGRAPH)
     child = document.styles.add_style("Attachment", WD_STYLE_TYPE.PARAGRAPH)

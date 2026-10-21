@@ -129,3 +129,96 @@ def test_recipient_does_not_consume_objects_breaks_headings_or_lists(attribute) 
     result = build_yaml(None, features, result)
     assert result.yaml_info["主送机关"] == "省直各单位"
     assert 0 not in result.skip_indices
+
+
+@pytest.mark.parametrize(
+    "earlier",
+    ["承办单位：省财政厅，", "办理联系人为省财政厅，", "工作由省财政厅，", "省财政厅，", "各单位应联系省财政厅，"],
+)
+def test_recipient_keeps_uncertain_agency_suffix_prose_and_requests_review(earlier: str) -> None:
+    from docwen_plugin_optimizer_gongwen.recognition.rounds import run_rounds
+    from docwen_plugin_optimizer_gongwen.recognition.scorer import ElementScorer
+
+    texts = ["关于测试的通知", earlier, "各市人民政府：", "正文内容。"]
+    features = [
+        ParagraphFeature(
+            index=i,
+            text=text,
+            source_index=i,
+            font_name="小标宋" if i == 0 else "仿宋",
+            font_size_pt=22 if i == 0 else 16,
+        )
+        for i, text in enumerate(texts)
+    ]
+    scorer = ElementScorer()
+    result = build_yaml(scorer, features, run_rounds(scorer, features))
+
+    assert result.yaml_info["主送机关"] == "各市人民政府"
+    assert 1 not in result.skip_indices
+    signals = collect_structured_signals(result, scorer, features)
+    assert any(warning["code"] == "GW004" for warning in signals["gongwen_warnings"])
+
+
+@pytest.mark.parametrize("names", ["𠮷田", "John Smith", "𠮷田、John Smith、张三、张三"])
+def test_labelled_composite_signers_survive_the_full_docx_pipeline(names: str) -> None:
+    from docx import Document
+    from docx.shared import Pt
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    first = document.add_paragraph(f"某发〔2026〕1号\t签发人：{names}")
+    first.runs[0].font.name = "仿宋"
+    first.runs[0].font.size = Pt(16)
+    title = document.add_paragraph("关于测试的通知")
+    title.runs[0].font.name = "小标宋"
+    title.runs[0].font.size = Pt(22)
+    document.add_paragraph("各市人民政府：")
+    document.add_paragraph("正文内容。")
+
+    result = convert_docx_to_md_gongwen(document, "signers.docx", options={})
+
+    assert result["success"]
+    assert result["yaml_info"]["发文字号"] == "某发〔2026〕1号"
+    assert result["yaml_info"]["签发人"] == names.split("、")
+    assert "正文内容。" in result["markdown"]
+
+
+@pytest.mark.parametrize("text", ["某发〔2026〕1号 正文内容", "正文内容 签发人：John Smith"])
+def test_unlabelled_or_invalid_document_number_prose_is_not_a_composite_signer(text: str) -> None:
+    from docwen_plugin_optimizer_gongwen.recognition.scorer import ElementScorer
+
+    assert not ElementScorer().has_doc_number_and_signer(ParagraphFeature(index=0, text=text))
+
+
+@pytest.mark.parametrize(
+    "earlier",
+    ["各县（市、区）人民政府，", "省直各单位，", "各应急管理局，", "各自由贸易试验区办公室，", "各教育工作委员会，"],
+)
+def test_clear_collective_address_continuations_keep_legitimate_agency_names(earlier: str) -> None:
+    _features, result = _build([earlier, "各市人民政府："], ["body", "recipient"])
+    assert result.yaml_info["主送机关"] == earlier + "各市人民政府"
+    assert 0 in result.skip_indices
+
+
+def test_uncertain_recipient_prose_remains_in_the_full_docx_markdown_output() -> None:
+    from docx import Document
+    from docx.shared import Pt
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    title = document.add_paragraph("关于测试的通知")
+    title.runs[0].font.name = "小标宋"
+    title.runs[0].font.size = Pt(22)
+    document.add_paragraph("承办单位：省财政厅，")
+    document.add_paragraph("各市人民政府：")
+    document.add_paragraph("正文内容。")
+
+    result = convert_docx_to_md_gongwen(document, "recipient.docx", options={})
+
+    assert result["yaml_info"]["主送机关"] == "各市人民政府"
+    assert "承办单位：省财政厅，" in result["markdown"]
+    assert "正文内容。" in result["markdown"]
+    signals = result["metadata"]["recognition_review_signals"]
+    assert any(warning["code"] == "GW004" for warning in signals["gongwen_warnings"])

@@ -63,7 +63,7 @@ def test_yaml_links_follow_request_scoped_ordinary_link_policy(tmp_path: Path, m
         assert "[项目主页](https://example.com/project)" in observation.text
         assert not observation.hyperlink_targets
     elif mode == "extract_text":
-        assert "抄送：喵喵，钱钱钱" in observation.text
+        assert "抄送：喵喵、钱钱钱" in observation.text
         assert "网站：项目主页" in observation.text
         assert "[[guide|喵喵]]" not in observation.text
         assert "[项目主页](" not in observation.text
@@ -74,7 +74,7 @@ def test_yaml_links_follow_request_scoped_ordinary_link_policy(tmp_path: Path, m
         assert "项目主页" not in observation.text
         assert not observation.hyperlink_targets
     else:
-        assert "抄送：喵喵，钱钱钱" in observation.text
+        assert "抄送：喵喵、钱钱钱" in observation.text
         assert "网站：项目主页" in observation.text
         assert "https://example.com/project" in observation.hyperlink_targets
         assert any(
@@ -86,7 +86,7 @@ def test_yaml_links_follow_request_scoped_ordinary_link_policy(tmp_path: Path, m
 @pytest.mark.parametrize(
     ("wiki_mode", "markdown_mode", "wiki_text", "markdown_text"),
     [
-        ("extract_text", "keep", "抄送：喵喵，钱钱钱", "[项目主页](https://example.com/project)"),
+        ("extract_text", "keep", "抄送：喵喵、钱钱钱", "[项目主页](https://example.com/project)"),
         ("keep", "extract_text", "[[guide|喵喵]]", "网站：项目主页"),
     ],
 )

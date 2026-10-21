@@ -189,7 +189,7 @@ def test_scalar_fields_do_not_stringify_nonempty_lists(key) -> None:
         prepare_gongwen_fields({key: ["甲", "乙"]})
 
 
-@pytest.mark.parametrize("count", [1, 2, 16])
+@pytest.mark.parametrize("count", [1, 2, 16, 100])
 @pytest.mark.parametrize("mode", ["left", "first", "inherited", "characters", "hanging"])
 def test_attachment_label_keeps_effective_first_line_origin(count, mode) -> None:
     document = Document()
@@ -222,6 +222,5 @@ def test_attachment_label_keeps_effective_first_line_origin(count, mode) -> None
     assert all(p.paragraph_format.right_indent == Pt(8) for p in paragraphs)
     if count > 1:
         assert len({p.paragraph_format.left_indent for p in paragraphs}) == 1
-        for p in paragraphs:
-            assert p.paragraph_format.tab_stops[-1].position == p.paragraph_format.left_indent
-    assert all("\u3000" not in p.text for p in paragraphs)
+        assert all(p.paragraph_format.first_line_indent == Pt(-64) for p in paragraphs)
+    assert all("\t" not in p.text for p in paragraphs)

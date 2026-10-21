@@ -46,6 +46,12 @@ continuation lines are retained. Ordered markers normalize to decimal Markdown m
 to `-`. Gongwen heading-number removal/replacement applies only to recognised headings, not to
 ordinary list items.
 
+Copy-recipient expressions retain their authored punctuation and parentheses as strings. Signer text with
+an explicit label next to a validated document number preserves unusual/Latin names and duplicate names
+in source order. Unlabelled prose keeps its conservative recognition rules. Primary-recipient continuation
+consumes only clear collective address text in adjacent body paragraphs; a suspicious agency suffix alone
+leaves the paragraph in the body and emits the human-readable `GW004` review warning.
+
 表格单元格是纯数字不能单独证明其为份号；需要相邻的明确份号标签，或位于文首且后续有密级、
 紧急程度、发文字号等公文版头依据。普通数据表留在正文，合法份号保留前导零字符串。
 普通 Word 列表保留计数、起始/重启、嵌套与续行；有序标记规范为 Markdown 十进制数字，无序标记为

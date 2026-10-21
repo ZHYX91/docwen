@@ -23,8 +23,14 @@ Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry po
 `tests/support/gongwen_template.py` builds a minimal attachment template in code, preserving the conflicting
 character-unit and physical indents found in an actual user template. No binary template or local archive is
 required by CI. `test_gongwen_indentation.py` covers style/ancestor/default/direct inheritance, body/cell anchors,
-one/multiple/two-digit attachments, character-zero cancellation and formatting preservation;
-`test_gongwen_conversion.py` exercises both production Markdown input routes. These structural checks do not
+one/multiple/two-/three-digit attachments, character-zero cancellation and formatting preservation;
+`test_attachment_origin_semantics.py` checks first-line/hanging origins, character-zero length fallbacks
+and document defaults. `test_gongwen_conversion.py` exercises both production Markdown input routes with
+one/multiple attachments and the 9/10 and 99/100 boundaries. `test_attachment_number_padding.py` saves and
+reopens code-generated body/cell templates to check literal space padding, exactly one ordinary space after
+the period, inherited formatting and absence of inserted tabs or automatic numbering.
+Gongwen's `test_field_text_preservation.py` exercises actual DOCX extraction,
+including labelled unusual/Latin signers and uncertain recipient prose retained in the body. These structural checks do not
 prove pagination: selected native Word checks must also verify name columns and long-name continuation lines.
 
 `tests/integration/test_quote_content_mapping.py` validates quote child styles, current native list starts,

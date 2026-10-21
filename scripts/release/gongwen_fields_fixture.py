@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -178,12 +177,13 @@ def verify_gongwen_fields_output(output_path: Path, *, case: GongwenFieldsCase) 
     cell_attachments = [_paragraph_text(paragraph) for paragraph in cell.findall(f"{_WORD}p")]
 
     if case.enabled and not case.empty:
-        # Tabs and spaces may express the same visible numbering separation;
-        # one Word paragraph per attachment and restarting at 1 are mandatory.
+        # Space-padded literal numbering must remain editable ordinary text.
         for location, actual in (("body", body_attachments), ("table", cell_attachments)):
             if len(actual) != 2 or not all(
-                re.fullmatch(pattern, text)
-                for pattern, text in zip((r"\s*附件：\s*1\.\s*任务分工表", r"\s*2\.\s*工作安排表"), actual, strict=True)
+                expected == text
+                for expected, text in zip(
+                    ("附件：1. 任务分工表", "\u3000\u3000\u30002. 工作安排表"), actual, strict=True
+                )
             ):
                 raise RuntimeError(f"gongwen_fields_attachments_mismatch:{case.name}:{location}:{actual!r}")
         first, last = paragraphs.index(_BODY_START), paragraphs.index(_BODY_END)
@@ -191,23 +191,21 @@ def verify_gongwen_fields_output(output_path: Path, *, case: GongwenFieldsCase) 
         for location, nodes in (("body", body_nodes), ("table", cell.findall(f"{_WORD}p"))):
             for index, paragraph in enumerate(nodes):
                 indent = paragraph.find(f"{_WORD}pPr/{_WORD}ind")
-                tab = paragraph.find(f"{_WORD}pPr/{_WORD}tabs/{_WORD}tab")
                 size = paragraph.find(f"{_WORD}r/{_WORD}rPr/{_WORD}sz")
                 bold = paragraph.find(f"{_WORD}r/{_WORD}rPr/{_WORD}b")
                 keep_next = paragraph.find(f"{_WORD}pPr/{_WORD}keepNext")
                 # This fixture authors 16 pt characters and a 12 pt base indent:
-                # the 48 pt label and 24 pt number align text at 84 pt (1680 twips).
+                # the 48 pt label and 16 pt number/period/space place names at 76 pt.
                 if (
                     indent is None
-                    or indent.get(f"{_WORD}left") != "1680"
+                    or indent.get(f"{_WORD}left") != "1520"
                     or indent.get(f"{_WORD}right") != "160"
-                    or indent.get(f"{_WORD}hanging") != ("1440" if index == 0 else "480")
+                    or indent.get(f"{_WORD}hanging") != "1280"
                     or any(
                         indent.get(f"{_WORD}{key}") is not None
                         for key in ("leftChars", "hangingChars", "firstLineChars")
                     )
-                    or tab is None
-                    or tab.get(f"{_WORD}pos") != "1680"
+                    or paragraph.find(f".//{_WORD}tab") is not None
                     or size is None
                     or size.get(f"{_WORD}val") != "32"
                     or bold is None

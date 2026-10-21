@@ -12,15 +12,15 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import Any, cast
 
-from docx.enum.text import WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.oxml.text.paragraph import CT_P
+from docx.oxml.xmlchemy import BaseOxmlElement
 from docx.shared import Emu, Pt, Twips
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
-from docwen_plugin_markdown.template_utils import inherited_indent_attributes
+from docwen_plugin_markdown.template_utils import effective_indent_attributes, inherited_indent_attributes
 from docwen_plugin_markdown.yaml_processor import is_empty_field_value
 
 _PLACEHOLDER = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
@@ -204,10 +204,14 @@ def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[s
             source_run = next(iter(target.runs), None)
         char_width = _font_size(target, source_run)
         inherited = inherited_indent_attributes(target)
-        base_indent = _left_indent(target, char_width, inherited)
+        base_indent = _attachment_origin(target, char_width)
         label_width = 3 * char_width
-        number_width = int((len(str(len(names))) + 2) * char_width / 2) if len(names) > 1 else 0
-        text_indent = base_indent + label_width + number_width
+        # Keep the period and following ordinary space adjacent to the name.
+        # Reserve the label's six half-character cells, reducing the leading
+        # padding by one cell whenever the number gains a digit.
+        padding_cells = max(6, len(str(len(names))) - 1)
+        hanging = label_width if len(names) == 1 else int((padding_cells + 2) * char_width / 2)
+        text_indent = base_indent + hanging
         insertion_index = parent.index(target._p)
 
         for index, name in enumerate(names, 1):
@@ -226,10 +230,46 @@ def render_attachment_placeholders(names: Sequence[str], placeholders: Mapping[s
             if len(names) == 1:
                 run.text = f"附件：{name}"
             else:
-                run.text = f"{'附件：' if index == 1 else ''}{index}.\t{name}"
-                _attachment_tab_stop(paragraph, target, text_indent)
+                prefix = (
+                    "附件：" + _attachment_padding(padding_cells - 6)
+                    if index == 1
+                    else _attachment_padding(padding_cells - len(str(index)) + 1)
+                )
+                run.text = f"{prefix}{index}. "
+                # A template can kern pairs such as "11" more tightly. Keep
+                # literal number cells uniform without changing the name's font.
+                properties = run._r.get_or_add_rPr()
+                kern = properties.find(qn("w:kern"))
+                if kern is None:
+                    new_kern = cast(BaseOxmlElement, OxmlElement("w:kern"))
+                    properties.insert_element_before(
+                        new_kern,
+                        "w:position",
+                        "w:sz",
+                        "w:szCs",
+                        "w:highlight",
+                        "w:u",
+                        "w:effect",
+                        "w:bdr",
+                        "w:shd",
+                        "w:fitText",
+                        "w:vertAlign",
+                        "w:rtl",
+                        "w:cs",
+                        "w:em",
+                        "w:lang",
+                        "w:eastAsianLayout",
+                        "w:specVanish",
+                        "w:oMath",
+                        "w:rPrChange",
+                    )
+                    kern = new_kern
+                kern.set(qn("w:val"), str(int(Emu(char_width).pt * 2) + 1))
+                name_run = paragraph.add_run(name)
+                if source_run is not None and source_run._r.rPr is not None:
+                    name_run._r.insert(0, deepcopy(source_run._r.rPr))
             paragraph.paragraph_format.left_indent = text_indent
-            paragraph.paragraph_format.first_line_indent = -(label_width + number_width if index == 1 else number_width)
+            paragraph.paragraph_format.first_line_indent = -hanging
             # Character-based indents would override the physical layout above.
             indent = paragraph._p.get_or_add_pPr().get_or_add_ind()
             for attribute in ("leftChars", "startChars", "firstLineChars", "hangingChars", "start"):
@@ -371,29 +411,30 @@ def _font_size(paragraph: Any, run: Run | None) -> int:
     return int(Pt(16))
 
 
-def _left_indent(paragraph: Any, char_width: int, inherited: Mapping[str, str]) -> int:
-    attributes = dict(inherited)
-    direct = paragraph._p.pPr.ind if paragraph._p.pPr is not None else None
-    if direct is not None:
-        attributes.update(direct.attrib)
+def _attachment_origin(paragraph: Any, char_width: int) -> int:
+    attributes = effective_indent_attributes(paragraph)
     axis = "start" if any(qn(f"w:{name}") in attributes for name in ("start", "startChars")) else "left"
+    left = _indent_length(attributes, char_width, axis)
+    if int(attributes.get(qn("w:hangingChars"), "0")):
+        first = "hanging"
+    elif int(attributes.get(qn("w:firstLineChars"), "0")):
+        first = "firstLine"
+    else:
+        first = "hanging" if qn("w:hanging") in attributes else "firstLine"
+    offset = _indent_length(attributes, char_width, first)
+    return left + (-offset if first == "hanging" else offset)
+
+
+def _indent_length(attributes: Mapping[str, str], char_width: int, axis: str) -> int:
+    # Character zero cancels earlier character units; the length still applies.
     characters = int(attributes.get(qn(f"w:{axis}Chars"), "0"))
     if characters:
         return round(characters * char_width / 100)
     return int(Twips(int(attributes.get(qn(f"w:{axis}"), "0"))))
 
 
-def _attachment_tab_stop(paragraph: Any, target: Any, position: int) -> None:
-    stops = paragraph.paragraph_format.tab_stops
-    stops.clear_all()
-    properties = [target._p.pPr]
-    style = target.style
-    while style is not None:
-        properties.append(style.element.pPr)
-        style = style.base_style
-    for properties_element in properties:
-        if properties_element is None:
-            continue
-        for stop in properties_element.findall(f"{qn('w:tabs')}/{qn('w:tab')}"):
-            stops.add_tab_stop(Twips(int(stop.get(qn("w:pos")))), WD_TAB_ALIGNMENT.CLEAR)
-    stops.add_tab_stop(position)
+def _attachment_padding(half_characters: int) -> str:
+    # An EN SPACE is half an em, unlike a proportional-font U+0020. Only this
+    # leading padding uses it; the separator after the period is always U+0020.
+    full, half = divmod(half_characters, 2)
+    return "\u3000" * full + "\u2002" * half

@@ -21,12 +21,11 @@ def _write_expected_document(path: Path, *, enabled: bool, empty: bool) -> None:
     from docx import Document
     from docx.shared import Pt
 
-    def layout(paragraph, index):
-        paragraph.paragraph_format.left_indent = Pt(84)
+    def layout(paragraph):
+        paragraph.paragraph_format.left_indent = Pt(76)
         paragraph.paragraph_format.right_indent = Pt(8)
-        paragraph.paragraph_format.first_line_indent = Pt(-72 if index == 0 else -24)
+        paragraph.paragraph_format.first_line_indent = Pt(-64)
         paragraph.paragraph_format.keep_with_next = True
-        paragraph.paragraph_format.tab_stops.add_tab_stop(Pt(84))
         paragraph.runs[0].font.size = Pt(16)
         paragraph.runs[0].bold = True
 
@@ -35,14 +34,14 @@ def _write_expected_document(path: Path, *, enabled: bool, empty: bool) -> None:
     attachments = (
         ([] if enabled else [""])
         if empty
-        else ["附件：1.\t任务分工表", "2.\t工作安排表"]
+        else ["附件：1. 任务分工表", "\u3000\u3000\u30002. 工作安排表"]
         if enabled
         else ["任务分工表 / 工作安排表"]
     )
-    for index, text in enumerate(attachments):
+    for text in attachments:
         paragraph = document.add_paragraph(text)
         if enabled and not empty:
-            layout(paragraph, index)
+            layout(paragraph)
     for text in (
         "DOCWEN ATTACHMENTS END",
         "普通列表：普通甲 / 普通乙",
@@ -61,8 +60,8 @@ def _write_expected_document(path: Path, *, enabled: bool, empty: bool) -> None:
         for text in attachments[1:]:
             cell.add_paragraph(text)
         if enabled and not empty:
-            for index, paragraph in enumerate(cell.paragraphs):
-                layout(paragraph, index)
+            for paragraph in cell.paragraphs:
+                layout(paragraph)
     imprint = document.add_table(rows=1 if enabled and empty else 2, cols=2)
     imprint.cell(0, 0).text = "DOCWEN IMPRINT"
     imprint.cell(0, 1).text = "KEEP THIS ROW"
@@ -109,7 +108,9 @@ def test_gongwen_fields_fixtures_have_independent_config_and_real_templates(tmp_
         ("table_joined", "on-values", "attachments_mismatch"),
         ("wrong_number", "on-values", "attachments_mismatch"),
         ("missing_indent", "on-values", "attachment_layout_mismatch"),
-        ("wrong_tab", "on-values", "attachment_layout_mismatch"),
+        ("wrong_indent", "on-values", "attachment_layout_mismatch"),
+        ("tab_separator", "on-values", "attachments_mismatch"),
+        ("wide_separator", "on-values", "attachments_mismatch"),
         ("lost_font", "on-values", "attachment_layout_mismatch"),
         ("lost_paragraph_format", "on-values", "attachment_layout_mismatch"),
         ("ordinary_separator", "on-values", "scalar_mismatch"),
@@ -138,21 +139,25 @@ def test_gongwen_fields_oracle_rejects_semantic_regressions(
     document = Document(output)
     paragraphs = {paragraph.text: paragraph for paragraph in document.paragraphs}
     if mutation == "body_joined":
-        paragraphs["附件：1.\t任务分工表"].text = "任务分工表、工作安排表"
-        second = paragraphs["2.\t工作安排表"]._p
+        paragraphs["附件：1. 任务分工表"].text = "任务分工表、工作安排表"
+        second = paragraphs["\u3000\u3000\u30002. 工作安排表"]._p
         second.getparent().remove(second)
     elif mutation == "table_joined":
         document.tables[0].cell(0, 0).text = "任务分工表、工作安排表"
     elif mutation == "wrong_number":
         document.tables[0].cell(0, 0).paragraphs[1].text = "1. 工作安排表"
     elif mutation == "missing_indent":
-        paragraphs["附件：1.\t任务分工表"].paragraph_format.first_line_indent = None
-    elif mutation == "wrong_tab":
-        document.tables[0].cell(0, 0).paragraphs[1].paragraph_format.tab_stops.clear_all()
+        paragraphs["附件：1. 任务分工表"].paragraph_format.first_line_indent = None
+    elif mutation == "wrong_indent":
+        document.tables[0].cell(0, 0).paragraphs[1].paragraph_format.left_indent = None
+    elif mutation == "tab_separator":
+        paragraphs["附件：1. 任务分工表"].text = "附件：1.\t任务分工表"
+    elif mutation == "wide_separator":
+        paragraphs["附件：1. 任务分工表"].text = "附件：1.  任务分工表"
     elif mutation == "lost_font":
-        paragraphs["附件：1.\t任务分工表"].runs[0].font.size = None
+        paragraphs["附件：1. 任务分工表"].runs[0].font.size = None
     elif mutation == "lost_paragraph_format":
-        paragraphs["附件：1.\t任务分工表"].paragraph_format.keep_with_next = False
+        paragraphs["附件：1. 任务分工表"].paragraph_format.keep_with_next = False
     elif mutation == "ordinary_separator":
         paragraphs["普通列表：普通甲 / 普通乙"].text = "普通列表：普通甲、普通乙"
     elif mutation == "copy_separator":
