@@ -22,8 +22,13 @@ FIELDS = ("签发人", "主送机关", "抄送机关")
 
 def _fill(document, values, placeholders, *, enabled=True, separator=" / ") -> None:
     fill_template(
-        document, values, [], None, placeholders,
-        gongwen_fields_enabled=enabled, list_separator=separator,
+        document,
+        values,
+        [],
+        None,
+        placeholders,
+        gongwen_fields_enabled=enabled,
+        list_separator=separator,
     )
 
 
@@ -66,6 +71,8 @@ def test_multi_item_fields_override_generic_separator_and_annotate_only_value(ke
     reopened = _roundtrip(document)
     comments = list(reopened.comments)
     assert len(comments) == 1
+    assert reopened.styles["CommentReference"].type == WD_STYLE_TYPE.CHARACTER
+    assert reopened.styles["CommentText"].type == WD_STYLE_TYPE.PARAGRAPH
     assert comments[0].author == "DocWen"
     assert _anchors(reopened) == {str(comments[0].comment_id): "甲、乙、甲"}
     assert all(run.bold for run in paragraph.runs if run.text)
@@ -76,10 +83,16 @@ def test_multi_item_fields_override_generic_separator_and_annotate_only_value(ke
 
 
 @pytest.mark.parametrize("key", FIELDS)
-@pytest.mark.parametrize("value,expected", [
-    ([], ""), (None, ""), (["甲"], "甲"), ([None, " ", "甲"], "甲"),
-    (" 各县（市、区）人民政府，省直各单位 ", " 各县（市、区）人民政府，省直各单位 "),
-])
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ([], ""),
+        (None, ""),
+        (["甲"], "甲"),
+        ([None, " ", "甲"], "甲"),
+        (" 各县（市、区）人民政府，省直各单位 ", " 各县（市、区）人民政府，省直各单位 "),
+    ],
+)
 def test_single_empty_and_authored_strings_are_not_punctuated_or_annotated(key, value, expected) -> None:
     document = Document()
     paragraph = document.add_paragraph(f"保留前文 {{{{{key}}}}} 保留后文")
@@ -101,13 +114,18 @@ def test_multiple_fields_and_literal_markers_in_one_run_keep_original_spans() ->
     document = Document()
     paragraph = document.add_paragraph("{{主送机关}} / {{签发人}} / {{主送机关}}")
     _fill(
-        document, {"主送机关": ["{{签发人}}", "乙单位"], "签发人": ["甲", "乙"]},
+        document,
+        {"主送机关": ["{{签发人}}", "乙单位"], "签发人": ["甲", "乙"]},
         {"主送机关": [paragraph], "签发人": [paragraph]},
     )
     assert paragraph.text == "{{签发人}}、乙单位 / 甲、乙 / {{签发人}}、乙单位"
-    assert sorted(_anchors(_roundtrip(document)).values()) == sorted([
-        "{{签发人}}、乙单位", "甲、乙", "{{签发人}}、乙单位",
-    ])
+    assert sorted(_anchors(_roundtrip(document)).values()) == sorted(
+        [
+            "{{签发人}}、乙单位",
+            "甲、乙",
+            "{{签发人}}、乙单位",
+        ]
+    )
 
 
 def test_cross_run_placeholder_keeps_surrounding_controls_and_existing_comments() -> None:
@@ -121,10 +139,10 @@ def test_cross_run_placeholder_keeps_surrounding_controls_and_existing_comments(
     _fill(document, {"签发人": ["张三", "李四"]}, {"签发人": [paragraph]})
     assert paragraph.text == "前文\t张三、李四\n后文"
     reopened = _roundtrip(document)
-    assert len(reopened.element.body.findall(f".//{qn('w:tab')}")) == 1
-    assert len(reopened.element.body.findall(f".//{qn('w:br')}")) == 1
+    assert len(reopened.element.findall(f".//{qn('w:tab')}")) == 1
+    assert len(reopened.element.findall(f".//{qn('w:br')}")) == 1
     comments = list(reopened.comments)
-    assert [c.text for c in comments][0] == "原批注"
+    assert next(c.text for c in comments) == "原批注"
     inserted = next(c for c in comments if c.author == "DocWen")
     assert _anchors(reopened)[str(inserted.comment_id)] == "张三、李四"
 

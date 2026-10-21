@@ -118,16 +118,11 @@ def gongwen_review_notes(source: Mapping[str, Any]) -> dict[str, str]:
                 "并核对姓名顺序；本程序没有自动排版。"
             )
         else:
-            notes[key] = (
-                f"{key}有多项，已暂用顿号连接。请核对哪些地方应使用顿号、哪些应改成逗号，"
-                "并检查机关排列顺序。"
-            )
+            notes[key] = f"{key}有多项，已暂用顿号连接。请核对哪些地方应使用顿号、哪些应改成逗号，并检查机关排列顺序。"
     return notes
 
 
-def validate_review_placeholders(
-    doc: Any, placeholders: Mapping[str, Sequence[Any]], notes: Mapping[str, str]
-) -> None:
+def validate_review_placeholders(doc: Any, placeholders: Mapping[str, Sequence[Any]], notes: Mapping[str, str]) -> None:
     """Do not silently drop required review comments in unsupported Word parts."""
     for key in notes:
         for paragraph in placeholders.get(key, ()):
@@ -383,13 +378,16 @@ def _attachment_origin(paragraph: Any, char_width: int) -> int:
             # A hanging indent takes precedence over first-line indentation.
             hanging = _indent_measure(indent, char_width, ("hangingChars",), ("hanging",))
             first = (
-                -hanging if hanging is not None
+                -hanging
+                if hanging is not None
                 else _indent_measure(indent, char_width, ("firstLineChars",), ("firstLine",))
             )
     return (left or 0) + (first or 0)
 
 
-def _indent_measure(element: Any, char_width: int, character_names: tuple[str, ...], names: tuple[str, ...]) -> int | None:
+def _indent_measure(
+    element: Any, char_width: int, character_names: tuple[str, ...], names: tuple[str, ...]
+) -> int | None:
     for name in character_names:
         value = element.get(qn(f"w:{name}"))
         if value is not None:

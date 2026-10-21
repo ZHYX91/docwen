@@ -46,7 +46,7 @@ def _write_expected_document(path: Path, *, enabled: bool, empty: bool) -> None:
     for text in (
         "DOCWEN ATTACHMENTS END",
         "普通列表：普通甲 / 普通乙",
-        "抄送：单位甲，单位乙" if enabled else "抄送：单位甲 / 单位乙",
+        "抄送：单位甲、单位乙" if enabled else "抄送：单位甲 / 单位乙",
         "（此件公开发布）" if enabled else "（（此件公开发布））",
         "成文：2026年10月20日" if enabled else "成文：2026-10-20",
         "DOCWEN EMPTY FIELD START",
@@ -156,7 +156,7 @@ def test_gongwen_fields_oracle_rejects_semantic_regressions(
     elif mutation == "ordinary_separator":
         paragraphs["普通列表：普通甲 / 普通乙"].text = "普通列表：普通甲、普通乙"
     elif mutation == "copy_separator":
-        paragraphs["抄送：单位甲，单位乙"].text = "抄送：单位甲 / 单位乙"
+        paragraphs["抄送：单位甲、单位乙"].text = "抄送：单位甲 / 单位乙"
     elif mutation == "double_parentheses":
         paragraphs["（此件公开发布）"].text = "（（此件公开发布））"
     elif mutation == "raw_date":
