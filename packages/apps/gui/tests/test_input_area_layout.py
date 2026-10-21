@@ -1,15 +1,43 @@
 """Input-action geometry during live resize, font changes, and UI scaling."""
 
+from pathlib import Path
+
 import pytest
 from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication
 
+from docwen_core.models import FileRef
 from docwen_gui.styles.theme_manager import ThemeManager
 from docwen_gui.view_models.input_area_vm import InputAreaViewModel
 from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 from docwen_gui.widgets.input_area import InputArea
 
 pytestmark = pytest.mark.gui
+
+
+def test_clear_icon_resets_selection_without_deleting_the_file(qapp: QApplication, qtbot, tmp_path: Path) -> None:
+    main_vm = MainWindowViewModel(controller=None)
+    widget = InputArea(view_model=InputAreaViewModel(main_vm=main_vm))
+    qtbot.addWidget(widget)
+    source = tmp_path / "keep.md"
+    source.write_text("Keep this document", encoding="utf-8")
+    selected = FileRef(path=str(source), format="markdown", category="markdown")
+    main_vm.set_selected_file(selected)
+    widget.view_model.sync_selection([selected], current=True)
+    cleared = QSignalSpy(widget.view_model.files_cleared)
+    try:
+        widget.show()
+        widget.clear_button.setFocus()
+        qtbot.keyClick(widget.clear_button, Qt.Key.Key_Space)
+        assert cleared.count() == 1
+        assert not widget.view_model.selection_message
+        assert not widget._selection_label.text()
+        assert source.read_text(encoding="utf-8") == "Keep this document"
+    finally:
+        widget.close()
+        main_vm.cancel_inspection()
+        qtbot.waitUntil(lambda: not main_vm.inspection_busy)
 
 
 @pytest.mark.parametrize("scale", [90, 100, 110, 125, 150])

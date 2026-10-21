@@ -635,28 +635,6 @@ class TestViewModelWiring:
         # No crash; visual state handled by widget
         assert True
 
-    def test_clear_icon_resets_selection_without_deleting_the_file(
-        self, widget: InputArea, main_vm: MainWindowViewModel, tmp_path: Path, qtbot
-    ) -> None:
-        from PySide6.QtTest import QSignalSpy
-
-        from docwen_core.models import FileRef
-
-        source = tmp_path / "keep.md"
-        source.write_text("Keep this document", encoding="utf-8")
-        selected = FileRef(path=str(source), format="markdown", category="markdown")
-        main_vm.set_selected_file(selected)
-        widget.view_model.sync_selection([selected], current=True)
-        cleared = QSignalSpy(widget.view_model.files_cleared)
-        widget.show()
-        widget.clear_button.setFocus()
-        qtbot.keyClick(widget.clear_button, Qt.Key.Key_Space)
-
-        assert cleared.count() == 1
-        assert not widget.view_model.selection_message
-        assert not widget._selection_label.text()
-        assert source.read_text(encoding="utf-8") == "Keep this document"
-
 
 # ── Public API ────────────────────────────────────────────────────────
 
