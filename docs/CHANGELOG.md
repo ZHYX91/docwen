@@ -5,6 +5,17 @@
 
 ## Unreleased / 未发布
 
+## 0.19.1
+
+- Preserve uncertain recipient prose and explicitly labelled signer names when reading official documents. Keep multi-value field text and punctuation available for review.
+- Align attachment numbers, names and wrapped lines with the template's effective indentation, including the 9/10 and 99/100 boundaries. Use compact space padding and exactly one ordinary space after each number's period.
+- Compact the input toolbar with grouped add/paste actions, an SVG paste chevron and a clear icon; preserve keyboard access and source files when clearing the list.
+- Synchronize multilingual guides with current settings, conversion defaults, task output language and actual button labels; remove the obsolete template-management screenshot from display.
+- 读取公文时保留不确定的主送正文及明确标注的签发人姓名，多项字段文本和标点保留供核对。
+- 附件编号、名称及长名称续行沿用模板有效缩进，覆盖9/10和99/100边界；采用紧凑空格补位，编号点后固定一个普通半角空格。
+- 输入工具栏采用紧凑的添加／粘贴分体操作、SVG箭头和清空图标，保留键盘操作，清空列表不删除源文件。
+- 多语言手册同步当前设置结构、转换默认值、任务输出语言和实际按钮名称，撤下过时的模板管理展示图。
+
 ## 0.19.0
 
 - Restore built-in official-document field formatting in both Markdown-to-Word routes and frozen GUI/CLI packages. Render attachments as separate indented paragraphs in body and table cells; preserve literal values and valid content beside empty fields.
