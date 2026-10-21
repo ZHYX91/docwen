@@ -313,7 +313,7 @@ Hãy giữ Markdown gốc và kiểm tra DOCX tạo ra. Đánh số trong Word d
 ## I. Yêu cầu công việc.
 Cuộc họp yêu cầu các đơn vị nghiêm túc triển khai...
 ```
-Hai dòng trên sẽ được gộp thành một đoạn: "I. Work Requirements." giữ định dạng tiêu đề phụ và "This meeting..." giữ định dạng nội dung.
+Hai dòng trên sẽ được gộp thành một đoạn: "I. Yêu cầu công việc." giữ định dạng tiêu đề phụ và "Cuộc họp..." giữ định dạng nội dung.
 
 **Lưu ý**:
 - Không được có dòng trống giữa tiêu đề phụ và nội dung; nếu có sẽ bị nhận diện thành hai đoạn riêng.

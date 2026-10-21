@@ -311,10 +311,10 @@ Para facilitar el uso a compañeros sin conocimientos técnicos, los encabezados
 
 **Ejemplo**:
 ```markdown
-## I. Work Requirements.
-This meeting requires all units to earnestly implement...
+## I. Requisitos de trabajo.
+Esta reunión exige que todas las unidades cumplan las tareas acordadas...
 ```
-Las dos líneas anteriores se fusionarán en un solo párrafo: "I. Work Requirements." mantiene el formato de subencabezado y "This meeting..." el formato del cuerpo.
+Las dos líneas anteriores se fusionarán en un solo párrafo: "I. Requisitos de trabajo." mantiene el formato de subencabezado y "Esta reunión..." el formato del cuerpo.
 
 **Nota**:
 - No puede haber una línea vacía entre el subencabezado y el cuerpo; de lo contrario, se reconocerán como párrafos separados.
