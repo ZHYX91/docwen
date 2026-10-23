@@ -10,15 +10,9 @@ DocWen は Word、Markdown、Excel などのオフィス形式を扱うローカ
 
 表示言語はアプリの文言と配置を制御します。一般設定の出力言語は、生成ラベル、文書スタイル、校正コメントを個別に制御し、本文は翻訳しません。表示言語を変えても保存済みの出力言語やテンプレートは変わりません。OCR の自動設定は出力言語に従います。通常の Markdown 本文を1行ずつ Word の段落にする設定は、初期状態ではオフです。
 
-## 📖 プロジェクトの背景
+## DocWen でできること
 
-DocWen は、日常の文書整理でよく発生する次のような課題を解決するために作られました：
-- 部門ごとに異なる形式で届く文書を標準化する必要がある。
-- 多様なファイル形式と、それぞれ異なる書式要件を扱う必要がある。
-- イントラネットやオフライン環境、比較的古い機器でも安定して作業する必要がある。
-
-**設計方針**：DocWen は、日常的な変換や文書整理を低い学習コストですぐ使えることを重視します。LaTeX や Pandoc のような専門的な組版・変換システムを置き換えることは目的とせず、一般的な文書作業を分かりやすく直接実行できるようにしながら、技術的な境界を明確に保ちます。
-
+Word と Markdown の相互変換、表計算ファイルや PDF の整理、独自ルールによる校正をローカルで行えます。日常操作には GUI、繰り返す作業には CLI を使います。利用可能な変換は形式とインストール済みソフトによって異なるため、[機能一覧](../capabilities.md)を参照してください。
 ## ✨ 主な機能
 
 - **📄 ドキュメント形式変換** - Word ↔ Markdownの双方向変換。数式変換、双方向セパレーター変換（Markdownの3種類のセパレーターとWordの改ページ、セクション区切り、水平線）に加え、Markdown表の明示的な `<` / `^` 結合マーカーを Word の矩形セル結合へ復元できます。DOCX/DOC/WPS/RTF/ODTなどの形式をサポートします。
@@ -38,6 +32,10 @@ DocWen は、日常の文書整理でよく発生する次のような課題を�
 Markdown 文書のテンプレートと生成オプションを選択します。
 
 ![Markdown から文書を生成](../assets/screenshots/markdown-generation-en.png)
+
+公文書の添付情報の位置合わせ（画面は英語表示）：
+
+![公文書の添付情報の配置設定](../assets/screenshots/official-documents-en.png)
 
 
 更新履歴： [CHANGELOG.md](../CHANGELOG.md) を参照
@@ -276,6 +274,14 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `batch convert\|validate ... --jobs <n> [--continue-on-error]` | バッチ処理の制御です。 |
 | `--json` / `--quiet` / `--timing` | ターミナルスクリプトでJSONを出力する、ログを減らす、処理時間を表示するためのオプションです。 |
 
+
+CLI の追加例です。最適化は公開リソース ID を確認してから指定し、校正結果を保存する場合だけ `--report` を使います。
+
+```bash
+DocWenCLI.exe resources list optimizations --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --optimization gongwen
+DocWenCLI.exe validate input.md --check typo --report report.json
+```
 
 ## 📝 Markdown構文規則
 
@@ -593,7 +599,7 @@ Excelテンプレート内の `{{→Month}}` は、右方向に「1月」、「2
 
 ### プラグインの使い方
 
-DocWen Assistant 3.3 は Windows と Linux のデスクトップ環境をサポートします。Windows の Microsoft Store 版は自動検出を利用でき、Linux では互換性のある展開済みパッケージを手動で選択します。Assistant は現在 macOS をサポートしていません。
+DocWen Assistant は Windows と Linux のデスクトップ環境をサポートします。Windows の Microsoft Store 版は自動検出を利用でき、Linux では互換性のある展開済みパッケージを手動で選択します。Assistant は現在 macOS をサポートしていません。
 
 1.  **最初のクリック** → 変換ツールを起動し、現在のファイルを開きます。
 2.  **ファイルを開いた状態で再度クリック** → 現在の入力ファイルを、そのファイルに置き換えます（単一ファイルモード）。
@@ -601,13 +607,11 @@ DocWen Assistant 3.3 は Windows と Linux のデスクトップ環境をサポ�
 
 ### インストール
 
-まず互換性のある DocWen をインストールしてから、[DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant) をインストールしてください。Assistant 3.3 には DocWen 0.17.0 以降が必要です。プラグインは DocWen 本体をインストールしません。リリースノートで対応バージョンを確認し、公開されているインストール用ファイルをダウンロードしてください。
+DocWen 本体を別途インストールし、対応する[公開済み DocWen Assistant リリース](https://github.com/ZHYX91/obsidian-docwen-assistant/releases)を選んでください。プラグインは本体をインストールしません。互換バージョンはガイドの固定番号ではなくリリースの説明で確認してください。連携には Machine Protocol v2 と Artifact Bundle v3 を使います。
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) を使うと、OpenClaw からお使いのパソコンの DocWen を呼び出してファイルを変換・校正できます。DocWen は別途インストールし、リリースノートに記載された対応バージョンに合うプラグインを選んでください。ファイルは公開済みのリリースページからダウンロードしてください。ソースコードにバージョン番号があっても、そのバージョンをダウンロードできるとは限りません。
-
-プラグイン 3.0 との連携機能を開発する場合は、[Machine Protocol v2 と Artifact Bundle v3](../specs/machine-protocol-v2.md) を参照してください。
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) は、別途インストールした DocWen で OpenClaw からローカルファイルを変換・校正します。[公開済みリリース](https://github.com/ZHYX91/docwen-openclaw/releases)で対応バージョンを確認してください。開発用契約は [Machine Protocol v2 と Artifact Bundle v3](../specs/machine-protocol-v2.md) にあります。
 
 ## ❓ よくある質問 (FAQ)
 
@@ -625,7 +629,7 @@ DocWen Assistant 3.3 は Windows と Linux のデスクトップ環境をサポ�
 
 ### 校正機能が機能しない？
 
--   ドキュメントが .docx または .md 形式であることを確認してください。
+- CLI の `validate` は `.md` と `.docx` を直接検査します。`.doc`、`.wps`、`.rtf`、`.odt` も受け付けますが、利用可能なローカル Office ソフトで先に DOCX に変換します。失敗した場合は変換環境を確認してください。
 -   ドキュメントに編集可能なテキストが含まれているか確認してください。
 -   設定で校正ルールが有効になっていることを確認してください。
 
