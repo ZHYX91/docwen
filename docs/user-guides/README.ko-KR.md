@@ -600,7 +600,7 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 
 ### 플러그인 사용 방법
 
-DocWen Assistant은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
+DocWen Assistant는 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
 
 1.  **처음 클릭** → 변환기를 실행하고 현재 파일을 엽니다.
 2.  **파일을 연 상태에서 다시 클릭** → 현재 입력 파일을 해당 파일로 바꿉니다(단일 파일 모드).
