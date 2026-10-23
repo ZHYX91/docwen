@@ -242,6 +242,11 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 # Test the actual bundle launcher too, independent of the caller's cwd.
                 environment = os.environ.copy()
                 environment.update(QT_QPA_PLATFORM="offscreen", DOCWEN_GUI_DISABLE_STATE_SAVE="1")
+                # Keep verifier fixtures and subprocess scratch paths under this
+                # owned, canonical root rather than macOS's /var temp aliases.
+                gui_temp = run.root / "gui-temp"
+                gui_temp.mkdir()
+                environment.update({key: str(gui_temp) for key in ("TMPDIR", "TMP", "TEMP")})
                 command(
                     [
                         sys.executable,
