@@ -259,10 +259,12 @@ def execute_convert(
     json_mode = bool(getattr(args, "json", False))
     include_timing = bool(getattr(args, "timing", False))
     continue_on_error = bool(getattr(args, "continue_on_error", False))
-    is_batch = len(valid_files) > 1 or bool(getattr(args, "batch", False))
+    # Dispatch based on the *requested* inputs: an invalid sibling must not
+    # turn a multi-input request into a successful single-file request.
+    is_batch = len(files) > 1 or bool(getattr(args, "batch", False))
     jobs = max(1, int(getattr(args, "jobs", 1) or 1))
-    json_invalid_files = invalid_files if json_mode and is_batch else []
-    json_input_files = files if json_invalid_files else None
+    batch_invalid_files = invalid_files if is_batch else []
+    batch_input_files = files if batch_invalid_files else None
 
     progress_cb = create_progress_callback(
         quiet=getattr(args, "quiet", False),
@@ -325,8 +327,8 @@ def execute_convert(
                 continue_on_error=continue_on_error,
                 max_workers=jobs,
                 progress_cb=progress_cb,
-                invalid_files=json_invalid_files,
-                original_input_files=json_input_files,
+                invalid_files=batch_invalid_files,
+                original_input_files=batch_input_files,
                 deadline=deadline,
                 inspections=inspections,
                 routes_by_file=routes_by_file,
