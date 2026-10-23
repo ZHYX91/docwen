@@ -72,19 +72,51 @@ def command(arguments: list[str], *, environment: dict[str, str] | None = None, 
     return result.stdout + result.stderr
 
 
+def macho_files(root: Path) -> list[Path]:
+    files = []
+    for relative, record in inventory(root).items():
+        if record["type"] == "file":
+            with (root / relative).open("rb") as stream:
+                if stream.read(4) in MACHO_MAGICS:
+                    files.append(root / relative)
+    return files
+
+
+def framework_subject(path: Path, root: Path) -> Path:
+    for parent in path.parents:
+        if parent == root:
+            break
+        if parent.name.endswith(".framework"):
+            return parent
+    return path
+
+
+def sign_payload(root: Path) -> None:
+    """Seal frameworks inside out after COLLECT; signing a bare dylib is insufficient."""
+    frameworks: set[Path] = set()
+    for path in macho_files(root):
+        for parent in path.parents:
+            if parent == root:
+                break
+            if parent.name.endswith(".framework"):
+                frameworks.add(parent)
+        if framework_subject(path, root) == path:
+            command(["/usr/bin/codesign", "--force", "--sign", "-", "--timestamp=none", str(path)])
+    for framework in sorted(frameworks, key=lambda path: (-len(path.parts), str(path))):
+        command(["/usr/bin/codesign", "--force", "--sign", "-", "--timestamp=none", str(framework)])
+
+
 def verify_signatures(root: Path, *, app: Path | None = None) -> dict[str, Any]:
-    records = inventory(root)
     binaries = []
-    for relative, record in records.items():
-        if record["type"] != "file":
-            continue
-        path = root / relative
-        with path.open("rb") as stream:
-            if stream.read(4) not in MACHO_MAGICS:
-                continue
+    verified: set[Path] = set()
+    for path in macho_files(root):
+        relative = path.relative_to(root).as_posix()
         architectures = command(["/usr/bin/lipo", "-archs", str(path)]).strip().split()
         require("arm64" in architectures, f"non-arm64 code: {relative}")
-        command(["/usr/bin/codesign", "--verify", "--strict", str(path)])
+        subject = framework_subject(path, root)
+        if subject not in verified:
+            command(["/usr/bin/codesign", "--verify", "--deep", "--strict", str(subject)])
+            verified.add(subject)
         binaries.append(relative)
     require(bool(binaries), "no Mach-O code in package")
     if app is not None:
@@ -146,6 +178,7 @@ def compose_app(payload: Path, root: Path, version: str) -> Path:
             str(macos / "DocWen"),
         ]
     )
+    sign_payload(resources / "payload")
     command(["/usr/bin/codesign", "--force", "--sign", "-", "--timestamp=none", str(app)])
     return app
 
@@ -190,6 +223,7 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 inventory(payload)
                 shutil.copytree(payload, root, dirs_exist_ok=True, symlinks=True)
                 shutil.copyfile(REPO / "docs/user-guides/macos.md", root / "FIRST-OPEN.md")
+                sign_payload(root)
             signatures = verify_signatures(root, app=app)
             write_inventory(root)
             archive = run.root / artifact["name"]

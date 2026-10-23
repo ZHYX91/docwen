@@ -7,6 +7,7 @@ import tarfile
 from pathlib import Path
 
 import pytest
+from scripts.release import macos_package
 from scripts.release.macos_archive import archive_payload, inventory, verify_extracted, write_inventory
 from scripts.release.macos_package import read_contract
 from scripts.release.publication_contract import PublicationError
@@ -79,3 +80,30 @@ def test_contract_cannot_silently_enable_identity_signing(tmp_path: Path) -> Non
     path.write_text(json.dumps(contract), encoding="utf-8")
     with pytest.raises(PublicationError, match="ad-hoc"):
         read_contract(path)
+
+
+@pytest.mark.parametrize("sealed", [False, True])
+def test_framework_verification_requires_the_complete_bundle_resource_seal(tmp_path, monkeypatch, sealed):
+    framework = tmp_path / "QtCore.framework"
+    binary = framework / "Versions/A/QtCore"
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b"\xcf\xfa\xed\xfecode")
+    calls = []
+
+    def run(arguments):
+        calls.append(arguments)
+        if "lipo" in arguments[0]:
+            return "arm64"
+        assert arguments[-1] == str(framework)
+        assert "--deep" in arguments and "--strict" in arguments
+        if not sealed:
+            raise PublicationError("missing framework resource seal")
+        return ""
+
+    monkeypatch.setattr(macos_package, "command", run)
+    if sealed:
+        assert macos_package.verify_signatures(tmp_path)["machOCount"] == 1
+    else:
+        with pytest.raises(PublicationError, match="resource seal"):
+            macos_package.verify_signatures(tmp_path)
+    assert len(calls) == 2

@@ -178,3 +178,17 @@ draft asset checks and independent public readback all include the Mac archives.
 These checks do not establish browser quarantine handling, manual Gatekeeper approval, native
 menu/drag-drop behavior or every macOS/Office version. Retain those limitations in the compact
 package receipt. See [first launch](user-guides/macos.md) and Apple's linked per-app instructions.
+
+For a Mac packaging repair, manual `verify` may select `macos_only=true`: it keeps the
+complete shared source gate and exercises the exact Mac build/package job while skipping
+Windows/Linux builds. This mode produces only the Mac platform artifact, never a full
+publication candidate, tag or Release, and cannot be combined with publish/recovery IDs.
+It allows unaffected, already verified platform builds to remain unchanged. The normal
+release path still requires all three successful producers from one exact source/run.
+
+After PyInstaller COLLECT, Mac packaging signs framework bundles inside out so their
+resource seals describe the collected framework. Verification uses the framework bundle
+as its subject, checks every Mach-O architecture and the outer app seal, and repeats these
+checks after extraction and execution. Native LaunchServices/Cocoa settings startup,
+six GUI conversions and an isolated-HOME default-profile conversion supplement the
+frozen CLI cases. Software versions and the actual source commit are retained in the receipt.

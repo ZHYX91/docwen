@@ -17,9 +17,21 @@ from scripts.release.publication_contract import PublicationError, package_names
 
 
 def route(
-    *, version: str, source_ref: str, event: str, operation: str, artifact_id: str, resume_id: str
+    *,
+    version: str,
+    source_ref: str,
+    event: str,
+    operation: str,
+    artifact_id: str,
+    resume_id: str,
+    macos_only: bool = False,
 ) -> dict[str, str]:
     package_names(version)
+    require(
+        not macos_only
+        or (event == "workflow_dispatch" and operation == "verify" and not artifact_id and not resume_id),
+        "macOS-only is package verification only; no publication or candidate recovery",
+    )
     require(event in {"push", "workflow_dispatch"}, "unsupported publication trigger")
     for identity in (artifact_id, resume_id):
         require(not identity or re.fullmatch(r"[1-9]\d*", identity) is not None, "positive artifact ID required")
@@ -56,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--operation", default="verify")
     parser.add_argument("--artifact-id", default="")
     parser.add_argument("--resume-id", default="")
+    parser.add_argument("--macos-only", choices=("true", "false"), default="false")
     parser.add_argument("--github-output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
@@ -68,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
             operation=args.operation,
             artifact_id=args.artifact_id,
             resume_id=args.resume_id,
+            macos_only=args.macos_only == "true",
         )
         require(re.fullmatch(r"[0-9a-f]{40}", args.commit) is not None, "invalid source commit")
         for ref in ("HEAD", f"{args.source_ref}^{{commit}}"):

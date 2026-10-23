@@ -234,7 +234,12 @@ def test_release_workflow_connects_tag_build_publication_and_independent_readbac
     assert publish["needs"] == ["identity", "verify-release"]
     assert publish["env"]["ARTIFACT_ID"] == "${{ needs.verify-release.outputs.artifact_id || inputs.artifact_id }}"
     assert workflow["on"]["workflow_dispatch"]["inputs"]["operation"]["options"] == ["verify", "publish"]
-    assert set(workflow["on"]["workflow_dispatch"]["inputs"]) == {"operation", "artifact_id", "resume_artifact_id"}
+    assert set(workflow["on"]["workflow_dispatch"]["inputs"]) == {
+        "operation",
+        "artifact_id",
+        "resume_artifact_id",
+        "macos_only",
+    }
     assert "publication.py assemble" in _commands(verify)
     assert "publication.py fetch" in _commands(publish)
     assert "publication.py publish" in _commands(publish)
