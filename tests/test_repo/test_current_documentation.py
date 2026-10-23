@@ -98,7 +98,7 @@ BANNED_CURRENT_TOKENS = (
     "gui-visual-parity-baseline",
     "linux-compatibility-acceptance",
     "三项目证据化审计清单",
-    "AI协作交接",
+    "协作交接",
     "parity_goal_prompt.txt",
     "cli_json_output_schema",
     "docs/i18n/",
@@ -110,7 +110,7 @@ BANNED_CURRENT_TOKENS = (
 def test_current_documentation_inventory_is_complete() -> None:
     missing = sorted(path for path in REQUIRED_DOCS if not (DOCS / path).is_file())
     assert not missing
-    assert {path.name for path in (DOCS / "user-guides").glob("*.md")} == set(LOCALIZED_READMES)
+    assert {path.name for path in (DOCS / "user-guides").glob("*.md")} == set(LOCALIZED_READMES) | {"macos.md"}
     assert {path.name for path in (DOCS / "assets" / "screenshots").glob("*.png")} == SCREENSHOTS
 
 

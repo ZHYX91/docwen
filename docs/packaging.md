@@ -1,14 +1,20 @@
 # Packaging / 打包
 
-DocWen packages one Windows x64 package and two Ubuntu 24.04 x64 packages built from the bundle composition root. The Windows archive contains both GUI and CLI; Ubuntu has GUI+CLI and CLI-only archives. Package verification runs against the produced directory, not the source tree. macOS has no release asset, and its current capability contract reports conversion, validation, numbering, merge, and split as unavailable.
+DocWen packages one Windows x64 package and two Ubuntu 24.04 x64 packages, plus two
+Apple Silicon macOS 14+ packages. The Mac desktop archive contains a complete `DocWen.app`
+with its CLI; a separate archive contains only the CLI. Package verification uses extracted
+release bytes. Mac packages retain ad-hoc signatures, with no Developer ID signing or Apple notarization.
 
-DocWen 的发布目标为一个 Windows x64 完整包和两个 Ubuntu 24.04 x64 包；Windows 包同时包含 GUI 与 CLI，Ubuntu 分为 GUI+CLI 和仅 CLI 两个压缩包。打包验证面向实际产物目录执行，而不是用源码态结果代替。macOS 没有正式附件，当前 capability 契约明确把转换、校对、编号、合并和拆分报告为不可用。
+DocWen 的发布目标为 Windows x64、Ubuntu 24.04 x64 和 Apple 芯片 macOS 14+ arm64。
+Mac 提供 `.app`（含 CLI）和独立 CLI 包；保留 ad-hoc 签名，暂不做 Developer ID 签名或 Apple 公证。
+首次打开说明见 [macOS 安装指南](user-guides/macos.md)。
 
 | Platform / 平台 | Distribution status / 发行状态 | Required validation / 所需验证 |
 | --- | --- | --- |
 | Windows x64 | Release package / 正式发行包 | Exact packaged candidate and automated checks; selected native acceptance recorded separately / 精确打包候选及自动检查；所选原生验收另行记录 |
 | Ubuntu 24.04 x64 | Release package / 正式发行包 | Exact manifest-bound package and post-extract automation; native desktop evidence is recorded separately / 精确清单绑定包与解压后自动化；原生桌面证据另行记录 |
-| macOS x64/arm64 | No release asset / 无正式附件 | Source CI and opt-in packaging experiment only; primary document operations are unavailable / 仅源码 CI 与手动打包实验，主要文档操作不可用 |
+| macOS 14+ arm64 | Ad-hoc signed app + CLI archives / ad-hoc 签名应用与 CLI 包 | Native arm64 build, deep signature verification, safe archive roundtrip and frozen functionality; interactive Finder/Gatekeeper evidence is separate / 原生构建、签名、归档及冻结功能；Finder/Gatekeeper 交互另验 |
+| macOS Intel | No package / 不提供安装包 | Outside this release target / 不在本次发布范围 |
 
 ## Required contents / 必需内容
 
@@ -44,7 +50,7 @@ Repository settings must enable Immutable Releases and an active no-update/no-de
 tags before a version tag is pushed. 仓库设置必须在推送版本标签前启用 Immutable Releases，并启用禁止更新或
 删除数字 `x.y.z` 标签的 ruleset。
 
-The hosted GitHub Release workflow enforces this deterministic baseline before publishing one Windows archive and two Ubuntu 24.04 x64 archives:
+The hosted GitHub Release workflow enforces this deterministic baseline before publishing one Windows archive, two Ubuntu 24.04 x64 archives and two macOS arm64 archives:
 
 1. Shared required source checks (Ruff, test governance, Import-Linter, architecture checks and Pyright for all three targets), one Windows full suite with source/core/GUI coverage reports, and the union of fast and release tests on Linux and macOS. Ordinary CI and release use this same gate.
 2. Windows package resource/layout verification.
@@ -52,11 +58,12 @@ The hosted GitHub Release workflow enforces this deterministic baseline before p
 4. Packaged Windows GUI settings-page construction smoke.
 5. Manifest-bound deterministic Ubuntu archive construction with fixed `DocWen-<version>-linux-x64.tar.gz` and `DocWenCLI-<version>-linux-x64.tar.gz` names.
 6. CLI and GUI verification against fresh directories extracted from those exact Ubuntu archives.
-7. One build per release platform, transported by the producing job's exact artifact ID with digest mismatch rejection, followed by Release SHA-256 generation over all three archives. Reproducibility comparisons are optional engineering checks, not a prerequisite for every release.
+7. Native Apple Silicon app/CLI archive construction, ad-hoc signature and archive checks, and functionality on both extracted Mac payloads as detailed below.
+8. One build per release platform, transported by the producing job's exact artifact ID with digest mismatch rejection, followed by Release SHA-256 generation over all five archives. Reproducibility comparisons are optional engineering checks, not a prerequisite for every release.
 
 Selected native acceptance uses the exact candidate that will be published. Its scope is chosen for each release and can include: source/package CLI parity; OCR and successful-warning CLI paths; GUI startup, settings, notification/OCR, IPC, and successful-warning paths; plus Office, presentation, and SmartDoc routes on a machine where their external dependencies are actually configured. These environment-sensitive checks are recorded separately and are not falsely attributed to the hosted workflow. Visible notification presentation, target-device rendering, and manual UI inspection remain manual evidence.
 
-托管的 GitHub Release 工作流在发布一个 Windows 压缩包和两个 Ubuntu 24.04 x64 压缩包前执行以下确定性基线：
+托管的 GitHub Release 工作流在发布一个 Windows 压缩包、两个 Ubuntu 24.04 x64 压缩包和两个 macOS arm64 压缩包前执行以下确定性基线：
 
 1. 先运行统一必需源码检查（Ruff、测试治理、Import-Linter、架构检查及三个目标平台的 Pyright）；Windows 完整测试只运行一次并生成源码/core/GUI 覆盖率报告，Linux 与 macOS 各运行 fast 和 release 测试的并集。普通 CI 与发布使用同一门禁。
 2. 验证 Windows 打包资源与 Layout 资源。
@@ -64,7 +71,8 @@ Selected native acceptance uses the exact candidate that will be published. Its 
 4. 验证 Windows 打包 GUI 的设置页构造。
 5. 按受版本控制的生产清单确定性构造 Ubuntu 压缩包，并固定为 `DocWen-<version>-linux-x64.tar.gz` 与 `DocWenCLI-<version>-linux-x64.tar.gz`。
 6. 从这两个精确 Ubuntu 压缩包解压到全新目录后，再分别验证 CLI 和 GUI。
-7. 每个发布平台只构建一次，按构建任务输出的 artifact ID 交接并拒绝传输摘要不匹配，再为三个压缩包生成 Release SHA-256。可复现性比对按需研究，不作为每版前提。
+7. 原生 Apple 芯片应用/CLI 归档构建、ad-hoc 签名和归档检查，以及两个 Mac 解压载荷的功能检查，详见下文。
+8. 每个发布平台只构建一次，按构建任务输出的 artifact ID 交接并拒绝传输摘要不匹配，再为五个压缩包生成 Release SHA-256。可复现性比对按需研究，不作为每版前提。
 
 原生验收使用将要发布的同一精确候选，按本版范围选择场景，可包括：源码/打包 CLI 一致性、CLI OCR 与成功警告、GUI 启动、设置、通知/OCR、IPC 与成功警告，以及在外部依赖已真实配置的机器上验证 Office、演示文稿和 SmartDoc 路径。这些环境相关结果单独记录，不能冒充托管工作流已经执行。通知中心可见性、目标设备渲染和人工 UI 检查仍属于人工证据。
 
@@ -149,3 +157,41 @@ The two table models total 15,163,177 uncompressed bytes. They reuse the existin
 The MSIX workflow accepts an optional full `portable_commit` SHA alongside the exact publication `artifact_id`. It defaults to the selected packaging source commit. A packaging-only fix can explicitly select the original portable commit; the normal publication provenance and byte verification still apply. MSIX metadata records `packagingCommit` separately from `sourceCandidate.sourceCommit`. This does not rebuild or replace the portable release.
 
 PRI logical resource URIs use `/Files/assets/msix/...`, while physical candidate values must use Windows backslashes. The Windows SDK regression checks each unmodified PRI candidate against the native Appx package reader; a readable PRI dump alone does not establish that Store can resolve its images.
+
+## macOS production packages / macOS 生产包
+
+`release/macos-production-manifest.v1.json` fixes the arm64/macOS 14 target, two versioned
+`tar.gz` assets, safe internal symlink policy and ad-hoc-only signing policy. The release
+workflow builds the GUI and CLI once on native `macos-14` with the locked Python environment.
+`scripts/release/macos_package.py` composes the app around that unchanged onedir payload.
+The small native launcher forwards arguments by `execv` using its own location, so Finder
+and a shell with a different working directory use the same executable and resource layout.
+The app receives Info.plist metadata, an icon and a final ad-hoc resource seal. It does not
+import a certificate, use Developer ID, run notarytool or require Apple account secrets.
+
+Both archives preserve executable modes and validated relative links, and carry exact payload
+inventories and checksums. Tests run after extraction, require arm64 Mach-O code and valid
+signatures, and rerun conversion, proofreading, numbering, merge/split, output protection and
+selected LibreOffice routes on each frozen CLI. The app launcher and settings smoke also run.
+The app and CLI default to the shared user profile rather than writing inside the signed app.
+The full candidate inventory, selected-platform retrieval, required producer jobs, provenance,
+draft asset checks and independent public readback all include the Mac archives.
+
+These checks do not establish browser quarantine handling, manual Gatekeeper approval, native
+menu/drag-drop behavior or every macOS/Office version. Retain those limitations in the compact
+package receipt. See [first launch](user-guides/macos.md) and Apple's linked per-app instructions.
+
+For a Mac packaging repair, manual `verify` may select `macos_only=true`: it keeps the
+same required static source checks (including all three Pyright targets), runs the macOS
+platform test lane, and exercises the exact Mac build/package job while skipping
+Windows/Linux builds. This mode produces only the Mac platform artifact, never a full
+publication candidate, tag or Release, and cannot be combined with publish/recovery IDs.
+It allows unaffected, already verified platform builds to remain unchanged. The normal
+release path still requires all three successful producers from one exact source/run.
+
+After PyInstaller COLLECT, Mac packaging signs framework bundles inside out so their
+resource seals describe the collected framework. Verification uses the framework bundle
+as its subject, checks every Mach-O architecture and the outer app seal, and repeats these
+checks after extraction and execution. Native LaunchServices/Cocoa settings startup,
+six GUI conversions and an isolated-HOME default-profile conversion supplement the
+frozen CLI cases. Software versions and the actual source commit are retained in the receipt.

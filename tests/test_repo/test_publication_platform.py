@@ -30,6 +30,7 @@ class PlatformGitHub(FakeGitHub):
             21: ("publication-metadata", {MANIFEST_NAME, CHECKSUM_NAME}),
             22: ("windows", {"DocWen-windows-x64.zip"}),
             23: ("linux", {f"DocWen-{VERSION}-linux-x64.tar.gz", f"DocWenCLI-{VERSION}-linux-x64.tar.gz"}),
+            24: ("macos", {f"DocWen-{VERSION}-macos-arm64.tar.gz", f"DocWenCLI-{VERSION}-macos-arm64.tar.gz"}),
         }
         for artifact_id, (label, names) in groups.items():
             buffer = io.BytesIO()
@@ -117,7 +118,7 @@ def platform_candidate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return api, output, receipt, args
 
 
-@pytest.mark.parametrize("platform,artifact_id,count", [("windows", "22", 1), ("linux", "23", 2)])
+@pytest.mark.parametrize("platform,artifact_id,count", [("windows", "22", 1), ("linux", "23", 2), ("macos", "24", 2)])
 def test_selected_platform_download_and_verified_cache_never_fetch_other_platforms(
     platform_candidate, platform, artifact_id, count
 ) -> None:

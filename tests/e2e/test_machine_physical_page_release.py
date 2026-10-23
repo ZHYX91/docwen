@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -13,7 +12,6 @@ pytestmark = [
     pytest.mark.e2e,
     pytest.mark.release_gate,
     pytest.mark.slow,
-    pytest.mark.skipif(sys.platform == "darwin", reason="Physical-page source capabilities are unavailable on macOS"),
 ]
 
 

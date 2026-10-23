@@ -22,7 +22,7 @@ def test_clipboard_generation_picker_exposes_only_common_routes(tmp_path, monkey
         if mixed:
             sources += (RuntimeRouteSource("md", "markdown"),)
         action.setup_for_md_to_document(str(tmp_path / "document.dwclip"), source_inputs=sources)
-        if controller.describe_gui_runtime_capabilities()["runtime"]["platform"] not in {"windows", "linux"}:
+        if controller.describe_gui_runtime_capabilities()["runtime"]["platform"] not in {"windows", "linux", "darwin"}:
             assert action.available_target_formats == []
             assert not action.generation_ready
             return

@@ -49,12 +49,12 @@ def test_lost_write_response_is_reconciled_without_repeating_the_write(session, 
     result = create().publish(notes="Release notes")
     assert result["stage"] == "published-awaiting-readback"
     assert api.downloads == []
-    assert len(api.writes) == 6  # one draft, four public assets, one publish
-    assert len({path for _, path in api.writes}) == 6
+    assert len(api.writes) == 8  # one draft, six public assets, one publish
+    assert len({path for _, path in api.writes}) == 8
     assert clock.delays[:2] == [2, 4]
     assert read_object(receipt)["releaseId"] == 30
     assert create().verify_published()["stage"] == "verified"
-    assert len(api.downloads) == 4
+    assert len(api.downloads) == 6
     assert not any(path.endswith("/immutable-releases") for path in api.reads)
 
 
@@ -149,7 +149,7 @@ def test_process_interruption_after_upload_resumes_the_pending_write(session, mo
     assert read_object(receipt)["pending"].startswith("upload:")
     monkeypatch.setattr(api, "request", original)
     assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
-    assert len(api.writes) == 6
+    assert len(api.writes) == 8
 
 
 @pytest.mark.parametrize("failure", ["lint", "run", "digest", "expired"])
@@ -176,7 +176,7 @@ def test_exact_published_release_is_read_only_until_independent_verification(ses
     assert api.writes == writes
     assert api.downloads == []
     assert create().verify_published()["stage"] == "verified"
-    assert len(api.downloads) == 4
+    assert len(api.downloads) == 6
     assert api.writes == writes
 
 
@@ -194,7 +194,7 @@ def test_nonimmutable_publication_never_reports_verified_or_downloads_assets(ses
     monkeypatch.setattr(api, "request", mutable_release)
     with pytest.raises(PublicationError, match="budget exhausted"):
         create().publish(notes="Release notes")
-    assert len(api.writes) == 6
+    assert len(api.writes) == 8
     assert api.downloads == []
     assert read_object(receipt)["stage"] == "published-awaiting-readback"
 
@@ -270,7 +270,7 @@ def test_branch_candidate_creates_its_tag_once_and_reconciles_interruption(tmp_p
         assert read_object(receipt)["pending"] == "create-tag"
         monkeypatch.setattr(api, "request", request)
     assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
-    assert len(api.writes) == 7
+    assert len(api.writes) == 9
     assert sum(path.endswith("/git/refs") for _, path in api.writes) == 1
     assert api.downloads == []
 
@@ -297,7 +297,7 @@ def test_successful_publish_response_with_wrong_identity_keeps_pending_write(ses
     assert read_object(receipt)["pending"] == "publish"
     monkeypatch.setattr(api, "request", original)
     assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
-    assert len(api.writes) == 6
+    assert len(api.writes) == 8
 
 
 @pytest.mark.parametrize(

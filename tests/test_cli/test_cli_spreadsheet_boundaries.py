@@ -2,7 +2,6 @@
 
 import json
 import os
-import sys
 from pathlib import Path
 
 import pytest
@@ -14,7 +13,6 @@ pytestmark = [
     pytest.mark.e2e,
     pytest.mark.pr_gate,
     pytest.mark.release_gate,
-    pytest.mark.skipif(sys.platform == "darwin", reason="Primary conversion unavailable on macOS"),
 ]
 
 

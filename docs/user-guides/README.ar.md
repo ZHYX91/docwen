@@ -39,7 +39,7 @@ uv sync --frozen --all-extras
 docwen-gui
 ```
 
-ليست حزمة macOS جاهزة رسميًا، ولا تدعم عمليات التحويل الأساسية على macOS حاليًا. لا تضمن حزمة Ubuntu العمل على توزيعات أو معالجات Linux الأخرى.
+تتوفر حزم Apple Silicon macOS 14+ arm64 بتوقيع ad-hoc، دون Developer ID أو توثيق Apple. راجع [التثبيت والفتح الأول](macos.md). لا تتوفر حزمة Intel Mac.
 
 ## العمل من الواجهة الرسومية
 

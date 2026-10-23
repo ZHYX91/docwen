@@ -48,9 +48,7 @@ Changelog: siehe [CHANGELOG.md](../CHANGELOG.md)
 
 **Voraussetzungen**: Python 3.12
 
-**Unterstützte Paketziele**: Dieser Quellstand erstellt Pakete für Windows x64 und Ubuntu 24.04 x64. Andere
-Linux-Distributionen und macOS bleiben Quellcode-/Entwicklungspfade und sind nicht durch das
-Ubuntu-Paket abgedeckt.
+**Paketziele**: Windows x64, Ubuntu 24.04 x64 und Apple Silicon macOS 14+ arm64. Keine Intel-Mac-Pakete.
 
 **Option 1: Mit uv (empfohlen)**
 
@@ -75,9 +73,7 @@ docwen      # CLI-Modus
 
 ### Hinweise für macOS
 
-**Aktuelle Einschränkung**: Unter macOS sind `convert`, `validate`, `number`, `merge` und `split`
-derzeit nicht verfügbar. Die folgenden Hinweise beschreiben nur optionale Abhängigkeiten für
-Entwicklungsexperimente.
+Mac-Pakete sind ad-hoc signiert, ohne Developer ID und Apple-Notarisierung. Siehe [Installation und erster Start](macos.md).
 
 **LibreOffice-Unterstützung (Optional)**
 

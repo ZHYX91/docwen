@@ -52,6 +52,7 @@ def verify_candidate_jobs(payload: dict[str, Any]) -> None:
         "Source identity",
         "Build Windows packages",
         "Build Linux packages",
+        "Build macOS packages",
         "verify-release",
     }
     for name in expected:

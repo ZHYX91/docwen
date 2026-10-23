@@ -5,6 +5,11 @@
 
 ## Unreleased / 未发布
 
+- Add automatic Apple Silicon macOS 14+ app and CLI release archives, with ad-hoc signatures and first-launch instructions; Developer ID signing and Apple notarization are not enabled.
+- 新增 Apple 芯片 macOS 14+ 应用与 CLI 自动发布包，保留 ad-hoc 签名并提供首次打开说明；暂不使用 Developer ID 签名或 Apple 公证。
+- Enable primary macOS operations and keep packaged Mac settings outside the signed application so app replacement preserves the profile.
+- 开放 macOS 主要操作；Mac 包配置保存在签名应用之外，整体替换应用时保留用户资料。
+
 - Require virtualenv 21.14.9 or newer for development tooling to address upstream environment-creation and launcher security advisories.
 - 开发工具依赖 virtualenv 最低版本提高至 21.14.9，修复上游环境创建和启动脚本安全问题。
 

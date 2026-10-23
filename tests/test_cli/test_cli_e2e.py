@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
 
 import openpyxl
@@ -16,11 +15,6 @@ from tests.support.subprocess_runner import run_subprocess
 from docwen_core.version import PRODUCT_VERSION
 
 pytestmark = pytest.mark.e2e
-
-_MACOS_PRIMARY_OPERATION_UNAVAILABLE = pytest.mark.skipif(
-    sys.platform == "darwin",
-    reason="DocWen 0.9 exposes primary document operations only on Windows and Linux",
-)
 
 
 @pytest.fixture(autouse=True)
@@ -89,7 +83,6 @@ def _payload(proc) -> dict[str, object]:
 
 @pytest.mark.pr_gate
 @pytest.mark.release_gate
-@_MACOS_PRIMARY_OPERATION_UNAVAILABLE
 def test_cli_convert_xlsx_to_markdown_document_node(tmp_path: Path) -> None:
     source = tmp_path / "sample.xlsx"
     output_parent = tmp_path / "published"
@@ -112,7 +105,6 @@ def test_cli_convert_xlsx_to_markdown_document_node(tmp_path: Path) -> None:
 
 @pytest.mark.pr_gate
 @pytest.mark.release_gate
-@_MACOS_PRIMARY_OPERATION_UNAVAILABLE
 @pytest.mark.parametrize(
     ("name", "payload"),
     [

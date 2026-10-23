@@ -71,13 +71,22 @@ def file_identity(path: Path) -> dict[str, Any]:
     return {"bytes": after.st_size, "sha256": digest}
 
 
-def package_names(version: str) -> tuple[str, str, str]:
+def package_names(version: str) -> tuple[str, ...]:
     require(bool(re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", version)), "invalid release version")
     return (
         "DocWen-windows-x64.zip",
         f"DocWen-{version}-linux-x64.tar.gz",
         f"DocWenCLI-{version}-linux-x64.tar.gz",
+        f"DocWen-{version}-macos-arm64.tar.gz",
+        f"DocWenCLI-{version}-macos-arm64.tar.gz",
     )
+
+
+def package_platform(name: str, version: str) -> str:
+    """Resolve an exact declared asset, never its archive extension."""
+    names = package_names(version)
+    require(name in names, "unknown package asset")
+    return dict(zip(names, ("windows", "linux", "linux", "macos", "macos"), strict=True))[name]
 
 
 def canonical_json(value: object) -> bytes:
@@ -119,7 +128,7 @@ def assemble(
     records: dict[str, dict[str, Any]] = {}
     sources: dict[str, Path] = {}
     for name in package_names(version):
-        platform = "windows" if name.endswith(".zip") else "linux"
+        platform = package_platform(name, version)
         package = builds / platform / name
         records[name] = file_identity(package)
         sources[name] = package
@@ -134,6 +143,7 @@ def assemble(
                 "uv.lock",
                 "release/windows-production-manifest.v1.json",
                 "release/linux-production-manifest.v1.json",
+                "release/macos-production-manifest.v1.json",
             )
         },
         "origin": {"workflow": WORKFLOW, "runId": run_id, "runAttempt": attempt, "sourceRef": source_ref},
@@ -181,6 +191,7 @@ def verify_manifest(manifest: dict[str, Any], *, repository: str, version: str, 
         "uv.lock",
         "release/windows-production-manifest.v1.json",
         "release/linux-production-manifest.v1.json",
+        "release/macos-production-manifest.v1.json",
     }
     require(set(manifest.get("sourceInputs", {})) == expected_inputs, "source input identities missing")
 

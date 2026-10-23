@@ -48,9 +48,7 @@ Registro de alterações: veja [CHANGELOG.md](../CHANGELOG.md)
 
 **Pré-requisitos**: Python 3.12
 
-**Destinos de pacotes compatíveis**: Este código-fonte gera pacotes para Windows x64 e Ubuntu 24.04 x64.
-Outras distribuições Linux e o macOS continuam como caminhos de código-fonte/desenvolvimento e não
-são abrangidos pelo pacote do Ubuntu.
+**Pacotes**: Windows x64, Ubuntu 24.04 x64 e Apple Silicon macOS 14+ arm64. Sem pacote para Mac Intel.
 
 **Opção 1: Usando uv (recomendado)**
 
@@ -75,8 +73,7 @@ docwen      # Modo CLI
 
 ### Observações para macOS
 
-**Limitação atual**: No macOS, `convert`, `validate`, `number`, `merge` e `split` estão atualmente
-indisponíveis. As notas abaixo documentam apenas dependências opcionais para experimentos de desenvolvimento.
+Os pacotes Mac mantêm assinatura ad-hoc, sem Developer ID ou notarização Apple. Consulte [instalação e primeira abertura](macos.md).
 
 **Suporte ao LibreOffice (Opcional)**
 

@@ -42,7 +42,7 @@ def test_info_json_does_not_initialize_runtime(capsys: pytest.CaptureFixture[str
         "current_platform_supported": True,
         "runtime_check_required": False,
     }
-    convert_supported = platform.system().lower() in {"windows", "linux"}
+    convert_supported = platform.system().lower() in {"windows", "linux", "darwin"}
     assert capabilities["cli.convert"]["state"] == ("runtime_check_required" if convert_supported else "unavailable")
     assert capabilities["cli.convert"]["current_platform_supported"] is convert_supported
     gui_supported = platform.system().lower() == "windows"
@@ -118,12 +118,11 @@ def test_capability_availability_is_effective_for_current_platform(monkeypatch: 
         "cli.split.pdf",
     ):
         operation = capabilities[capability_id]
-        assert operation["platforms"] == ["windows", "linux"]
-        assert operation["current_platform_supported"] is False
-        assert operation["available"] is False
-        assert operation["state"] == "unavailable"
-        assert operation["runtime_check_required"] is False
-        assert "darwin" in operation["reason"].lower()
+        assert operation["platforms"] == ["windows", "linux", "darwin"]
+        assert operation["current_platform_supported"] is True
+        assert operation["available"] is True
+        assert operation["state"] == "runtime_check_required"
+        assert operation["runtime_check_required"] is True
 
 
 @pytest.mark.parametrize("argv", [["--version"], ["info", "--version"]])

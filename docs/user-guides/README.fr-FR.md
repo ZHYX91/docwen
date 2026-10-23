@@ -48,9 +48,7 @@ Journal des modifications : voir [CHANGELOG.md](../CHANGELOG.md)
 
 **Prérequis** : Python 3.12
 
-**Plateformes des paquets pris en charge** : Ce code source produit des paquets Windows x64 et Ubuntu
-24.04 x64. Les autres distributions Linux et macOS restent des voies source/développement, non
-couvertes par le paquet Ubuntu.
+**Paquets** : Windows x64, Ubuntu 24.04 x64 et Apple Silicon macOS 14+ arm64. Aucun paquet Mac Intel.
 
 **Option 1 : Avec uv (recommandé)**
 
@@ -75,9 +73,7 @@ docwen      # Mode CLI
 
 ### Notes pour macOS
 
-**Limitation actuelle** : Sous macOS, `convert`, `validate`, `number`, `merge` et `split` sont
-actuellement indisponibles. Les notes ci-dessous documentent uniquement des dépendances facultatives
-pour les expériences de développement.
+Les paquets Mac gardent une signature ad-hoc, sans Developer ID ni notarisation Apple. Voir [installation et premier lancement](macos.md).
 
 **Support LibreOffice (Optionnel)**
 

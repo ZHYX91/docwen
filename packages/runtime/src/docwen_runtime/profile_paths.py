@@ -96,7 +96,7 @@ def resolve_profile_paths(environment: Mapping[str, str] | None = None) -> Profi
     source: Literal["explicit", "portable", "package", "platform"]
     if data:
         root, source = _absolute(data), "explicit"
-    elif frozen and not _windows_has_package_identity():
+    elif frozen and sys.platform != "darwin" and not _windows_has_package_identity():
         root, source = _absolute(Path(sys.executable).parent / "data"), "portable"
     else:
         root = _absolute(platformdirs.user_data_dir("docwen", appauthor=False))

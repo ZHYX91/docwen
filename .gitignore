@@ -107,3 +107,6 @@ samples/style_injection_output/
 # OpenClaw 插件/Skill
 # ==============================
 /docwen-openclaw/
+
+# Handwritten macOS Finder launcher, not generated Cython output.
+!scripts/release/macos_launcher.c

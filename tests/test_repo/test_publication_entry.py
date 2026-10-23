@@ -11,6 +11,40 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.mark.parametrize(
+    "operation,artifact,resume,event",
+    [
+        ("publish", "", "", "workflow_dispatch"),
+        ("verify", "20", "", "workflow_dispatch"),
+        ("verify", "", "", "push"),
+    ],
+)
+def test_macos_only_cannot_publish_or_recover_a_full_candidate(operation, artifact, resume, event):
+    with pytest.raises(PublicationError, match="package verification only"):
+        route(
+            version="0.12.0",
+            source_ref="refs/heads/mac",
+            event=event,
+            operation=operation,
+            artifact_id=artifact,
+            resume_id=resume,
+            macos_only=True,
+        )
+
+
+def test_macos_only_has_no_publication_or_hosted_readback_route():
+    result = route(
+        version="0.12.0",
+        source_ref="refs/heads/mac",
+        event="workflow_dispatch",
+        operation="verify",
+        artifact_id="",
+        resume_id="",
+        macos_only=True,
+    )
+    assert result["build"] == "true" and result["publish"] == result["verify_hosted"] == "false"
+
+
+@pytest.mark.parametrize(
     "event,operation,ref,artifact,resume,build,publish,verify_hosted",
     [
         ("push", "", "refs/tags/0.12.0", "", "", True, True, False),

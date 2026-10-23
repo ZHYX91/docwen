@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
@@ -18,7 +17,6 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.pr_gate,
     pytest.mark.release_gate,
-    pytest.mark.skipif(sys.platform == "darwin", reason="Primary document operations support Windows and Linux"),
 ]
 
 
