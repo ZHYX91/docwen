@@ -220,7 +220,7 @@ def test_release_workflow_connects_tag_build_publication_and_independent_readbac
     verify, publish, post = jobs["verify-release"], jobs["publish"], jobs["post-verify"]
     assert workflow["concurrency"] == {"group": "release-${{ github.repository }}", "cancel-in-progress": "false"}
     assert jobs["source-checks"]["uses"] == "./.github/workflows/tests.yml"
-    assert jobs["source-checks"]["if"] == "needs.identity.outputs.build == 'true'"
+    assert jobs["source-checks"]["if"] == "needs.identity.outputs.build == 'true' && !inputs.macos_only"
     assert jobs["source-checks"]["needs"] == "identity"
     assert jobs["build-windows"]["needs"] == ["identity", "source-checks"]
     assert workflow["on"]["push"] == {"tags": ["*.*.*"]}
@@ -298,6 +298,12 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     macos = _release_workflow()["jobs"]["build-macos"]
     macos_commands = _commands(macos)
     assert macos["runs-on"] == "macos-14"
+    assert macos["needs"] == ["identity", "source-checks", "macos-source-checks"]
+    assert "needs.macos-source-checks.result == 'success'" in macos["if"]
+    assert "needs.source-checks.result == 'success'" in macos["if"]
+    targeted = _release_workflow()["jobs"]["macos-source-checks"]
+    assert targeted["runs-on"] == "macos-14" and "tools/qa.py --suite platform" in _commands(targeted)
+    assert "--tests-only" not in _commands(targeted) and "--skip" not in _commands(targeted)
     assert macos_commands.count("scripts/build/build.py") == 1
     assert "scripts/release/macos_package.py" in macos_commands
     assert "notarytool" not in macos_commands and "codesign-identity" not in macos_commands

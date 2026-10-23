@@ -180,7 +180,8 @@ menu/drag-drop behavior or every macOS/Office version. Retain those limitations 
 package receipt. See [first launch](user-guides/macos.md) and Apple's linked per-app instructions.
 
 For a Mac packaging repair, manual `verify` may select `macos_only=true`: it keeps the
-complete shared source gate and exercises the exact Mac build/package job while skipping
+same required static source checks (including all three Pyright targets), runs the macOS
+platform test lane, and exercises the exact Mac build/package job while skipping
 Windows/Linux builds. This mode produces only the Mac platform artifact, never a full
 publication candidate, tag or Release, and cannot be combined with publish/recovery IDs.
 It allows unaffected, already verified platform builds to remain unchanged. The normal

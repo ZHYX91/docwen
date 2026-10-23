@@ -68,8 +68,42 @@ jobs:
 
   source-checks:
     needs: identity
-    if: needs.identity.outputs.build == 'true'
+    if: needs.identity.outputs.build == 'true' && !inputs.macos_only
     uses: ./.github/workflows/tests.yml
+
+  macos-source-checks:
+    name: Mac package source checks
+    needs: identity
+    if: needs.identity.outputs.build == 'true' && inputs.macos_only
+    runs-on: macos-14
+    timeout-minutes: 90
+    env:
+      QT_QPA_PLATFORM: offscreen
+      DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.0"
+          python-version: "3.12.13"
+          enable-cache: true
+      - run: brew install libheif
+      - run: uv sync --frozen --extra dev --extra lint --extra test
+      - name: Required source checks and native Mac platform selection
+        run: >-
+          uv run python tools/qa.py --suite platform
+          --pytest-runtime-root "$RUNNER_TEMP/docwen-macos-qa" --own-pytest-runtime
+          --report-output "$RUNNER_TEMP/docwen-macos-source-reports"
+      - name: Save native source check reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: qa-macos-package-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/docwen-macos-source-reports/
+          if-no-files-found: warn
+          retention-days: 14
 
   build-windows:
     if: ${{ !inputs.macos_only }}
@@ -215,7 +249,12 @@ jobs:
     name: Build macOS packages
     outputs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
-    needs: [identity, source-checks]
+    needs: [identity, source-checks, macos-source-checks]
+    if: >-
+      always() && !cancelled() && needs.identity.result == 'success' &&
+      needs.identity.outputs.build == 'true' &&
+      ((inputs.macos_only && needs.macos-source-checks.result == 'success') ||
+       (!inputs.macos_only && needs.source-checks.result == 'success'))
     runs-on: macos-14
     timeout-minutes: 90
     env:

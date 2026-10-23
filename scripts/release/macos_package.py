@@ -265,13 +265,34 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 default_home = run.root / "default-home"
                 default_home.mkdir()
                 default_environment = os.environ.copy()
-                for key in ("DOCWEN_DATA_DIR", "DOCWEN_CONFIG_DIR", "DOCWEN_LOG_DIR", "PYTHONPATH", "PYTHONHOME"):
+                for key in (
+                    "DOCWEN_DATA_DIR",
+                    "DOCWEN_CONFIG_DIR",
+                    "DOCWEN_LOG_DIR",
+                    "DOCWEN_LOG_TO_TEMP",
+                    "PYTHONPATH",
+                    "PYTHONHOME",
+                    "XDG_DATA_HOME",
+                    "XDG_CONFIG_HOME",
+                    "XDG_CACHE_HOME",
+                    "XDG_STATE_HOME",
+                    "XDG_RUNTIME_DIR",
+                ):
                     default_environment.pop(key, None)
                 default_environment.update(
                     HOME=str(default_home), DOCWEN_RUNTIME_ROOT=str(run.root / "default-runtime")
                 )
                 default_input = run.root / "default-profile.md"
                 default_input.write_text(MARKDOWN, encoding="utf-8")
+                # User configs are sparse and deliberately not backfilled on read.
+                # Observe a seeded override instead of assuming startup creates configs/.
+                profile = default_home / "Library/Application Support/docwen"
+                (profile / "configs").mkdir(parents=True)
+                profile_config = profile / "configs/logger.toml"
+                profile_config.write_text(
+                    'enable = true\nfile_prefix = "mac-profile-proof"\ndirectory_mode = "user"\n', encoding="utf-8"
+                )
+                profile_config_identity = file_identity(profile_config)
                 converted = subprocess.run(
                     [
                         str(binary_dir / "DocWenCLI"),
@@ -297,8 +318,10 @@ def package(dist: Path, output: Path, report: Path) -> None:
                     any(TOKEN in paragraph.text for paragraph in default_document.paragraphs),
                     "default-profile output content missing",
                 )
-                profile = default_home / "Library/Application Support/docwen"
-                require((profile / "configs").is_dir(), "packaged Mac did not use the user profile")
+                require(
+                    (profile / "logs/mac-profile-proof.log").is_file(),
+                    "default-profile logger override was not consumed",
+                )
                 native_environment = {
                     "QT_QPA_PLATFORM": "cocoa",
                     "DOCWEN_GUI_DISABLE_STATE_SAVE": "1",
@@ -308,6 +331,12 @@ def package(dist: Path, output: Path, report: Path) -> None:
                     "DOCWEN_DATA_DIR": "",
                     "DOCWEN_CONFIG_DIR": "",
                     "DOCWEN_LOG_DIR": "",
+                    "DOCWEN_LOG_TO_TEMP": "",
+                    "XDG_DATA_HOME": "",
+                    "XDG_CONFIG_HOME": "",
+                    "XDG_CACHE_HOME": "",
+                    "XDG_STATE_HOME": "",
+                    "XDG_RUNTIME_DIR": "",
                     "DOCWEN_RUNTIME_ROOT": str(run.root / "native-runtime"),
                 }
                 launch = ["/usr/bin/open", "-W", "-n"]
@@ -317,6 +346,7 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 from scripts.release.verify_packaged_gui import _verify_settings_smoke_report
 
                 _verify_settings_smoke_report(native_report)
+                require(file_identity(profile_config) == profile_config_identity, "sparse user config was modified")
                 environment["QT_QPA_PLATFORM"] = "cocoa"
                 command(
                     [
