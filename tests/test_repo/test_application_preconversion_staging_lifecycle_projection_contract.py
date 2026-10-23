@@ -20,7 +20,8 @@ def test_preconversion_staging_has_owner_isolation_and_original_index_alignment(
 
     assert "tempfile.TemporaryDirectory(" in controller
     assert 'prefix="docwen_pre_"' in controller
-    assert "staging_dir = Path(temp_owner.name) / str(idx)" in controller
+    assert "physical_temp_root = Path(temp_owner.name).resolve(strict=True)" in controller
+    assert "staging_dir = physical_temp_root / str(idx)" in controller
     assert "tempfile.mkdtemp(" not in controller
     assert "input_indices: list[int]" in controller
     runnable_ref_appends = controller.count("new_refs.append(")

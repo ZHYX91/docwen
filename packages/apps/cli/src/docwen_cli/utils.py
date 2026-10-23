@@ -50,8 +50,16 @@ def expand_paths(raw_paths: list[str]) -> list[str]:
         cleaned = _clean_powershell_drag(raw)
         p = Path(cleaned)
 
-        if _has_glob(cleaned):
-            # Expand glob
+        # A literal file/directory takes precedence over glob syntax.  Names
+        # such as "Report [1].md" are common on Windows and must not select
+        # an unrelated "Report 1.md" through a bracket character class.
+        if p.is_dir():
+            scan = scan_input_directory(p)
+            result.extend(str(entry.resolve()) for entry in scan.files)
+        elif p.exists():
+            result.append(str(p.resolve()))
+        elif _has_glob(cleaned):
+            # Expand glob only when no literal path exists.
             base_dir = Path(".")
             pattern = cleaned
             if os.path.isabs(cleaned):
@@ -63,11 +71,6 @@ def expand_paths(raw_paths: list[str]) -> list[str]:
                         break
             matched = sorted(str(m.resolve()) for m in base_dir.glob(pattern) if m.is_file())
             result.extend(matched)
-        elif p.is_dir():
-            scan = scan_input_directory(p)
-            result.extend(str(entry.resolve()) for entry in scan.files)
-        elif p.exists():
-            result.append(str(p.resolve()))
         else:
             # File may not exist yet (e.g. output target); keep as-is
             result.append(os.path.abspath(cleaned))

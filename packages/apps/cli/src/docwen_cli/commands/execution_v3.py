@@ -78,8 +78,13 @@ def _prepare_args(args: argparse.Namespace) -> None:
     action = _route(args)
     args.command_path = path
     args.action = action
-    if path not in {"convert", "batch convert"}:
-        # The resolved runtime route owns the unique target for named actions.
+    if path in {"merge pdf", "split pdf"}:
+        # PDF actions have a public, unambiguous target.  Keeping it explicit
+        # lets route planning include the OFD/XPS -> PDF normalization step
+        # before the existing PDF-only runtime action.
+        args.to = "pdf"
+    elif path not in {"convert", "batch convert"}:
+        # Other named actions resolve their target from Runtime capabilities.
         args.to = ""
     args.batch = path.startswith("batch ")
 
