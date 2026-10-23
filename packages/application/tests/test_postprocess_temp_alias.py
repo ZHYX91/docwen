@@ -10,7 +10,7 @@ import pytest
 from docx import Document
 
 from docwen_application.postprocess_pipeline import execute_postprocessed_request
-from docwen_core.detection import FileAdmissionPathError, enforce_file_admission, inspect_file
+from docwen_core.detection import FileAdmissionPathError, enforce_file_admission
 from docwen_core.models.artifact import ArtifactManifest
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION, ConversionRequest, OutputPolicy
@@ -30,7 +30,13 @@ def test_proofread_uses_physical_owned_temp_but_rejects_linked_user_input(tmp_pa
     source.write_text("# Original\nProofread this document.\n", encoding="utf-8")
     original = source.read_bytes()
     with pytest.raises(FileAdmissionPathError):
-        inspect_file(str(alias / source.name))
+        enforce_file_admission(
+            ConversionRequest(
+                request_id="linked-user-input",
+                input_refs=[FileRef(path=str(alias / source.name), format="markdown", category="markdown")],
+                target_format="docx",
+            )
+        )
 
     stages = []
 
