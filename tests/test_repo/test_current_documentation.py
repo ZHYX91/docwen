@@ -388,7 +388,6 @@ def test_readmes_do_not_reintroduce_stale_localization_guidance() -> None:
     assert "Export MD" not in vietnamese
 
 
-
 def test_public_guides_explain_supported_proofreading_and_release_selection() -> None:
     """Guides must not narrow CLI validation or pin companion release advice."""
     for path in _public_readme_paths():
@@ -413,7 +412,6 @@ def test_public_guides_explain_supported_proofreading_and_release_selection() ->
     arabic = (DOCS / "user-guides" / "README.ar.md").read_text(encoding="utf-8")
     assert "دليل عربي مختصر" in arabic
     assert "(../../README.md)" in arabic
-
 
 
 def test_current_docs_do_not_depend_on_completed_audit_material() -> None:
