@@ -40,7 +40,7 @@ def test_proofread_uses_physical_owned_temp_but_rejects_linked_user_input(tmp_pa
             output = Path(stage.output_policy.output_dir) / "rendered.docx"
             document = Document()
             document.add_paragraph("Original document")
-            document.save(output)
+            document.save(str(output))
             return ConversionResult(
                 task_id=task_id,
                 success=True,
