@@ -1028,9 +1028,22 @@ class ControlServer:
                 "gui_control_stop_failed",
                 "DocWen GUI control cleanup did not complete safely.",
             ) from shutdown_error
-        if wake_error is not None and not isinstance(
-            wake_error,
-            (ControlNotRunningError, ControlTimeoutError),
+        # The serving thread owns deletion of its managed Unix socket
+        # directory.  The stop wake-up may race that deletion after opening
+        # the directory but before re-checking its identity.  Endpoint
+        # planning then wraps ENOENT as ControlEndpointError.  Only this
+        # vanished-path condition is benign after join, listener cleanup,
+        # and shutdown-error checks have all succeeded; permission and
+        # identity failures must still be reported.
+        closed_managed_directory_race = (
+            self._family == "AF_UNIX"
+            and isinstance(wake_error, ControlEndpointError)
+            and isinstance(wake_error.__cause__, FileNotFoundError)
+        )
+        if (
+            wake_error is not None
+            and not isinstance(wake_error, (ControlNotRunningError, ControlTimeoutError))
+            and not closed_managed_directory_race
         ):
             raise wake_error
 
