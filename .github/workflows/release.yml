@@ -236,13 +236,13 @@ jobs:
       - name: Compose ad-hoc signed app and verify both extracted archives
         run: >-
           uv run python scripts/release/macos_package.py
-          --output publication --report "$RUNNER_TEMP/macos-release-checks.json"
+          --output build/macos-publication --report "$RUNNER_TEMP/macos-release-checks.json"
       - name: Upload verified macOS packages
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: docwen-macos-${{ github.run_id }}-${{ github.run_attempt }}
-          path: publication/*.tar.gz
+          path: build/macos-publication/*.tar.gz
           compression-level: 0
           if-no-files-found: error
           overwrite: false

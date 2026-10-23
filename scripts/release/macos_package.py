@@ -20,8 +20,9 @@ if __package__ in {None, ""}:
 
 from scripts.release.macos_archive import archive_payload, inventory, verify_extracted, write_inventory
 from scripts.release.macos_functional import run_cases
+from scripts.release.macos_functional_cases import MARKDOWN, TOKEN
 from scripts.release.publication_contract import canonical_json, file_identity, require
-from tools.run_lease import managed_run
+from tools.run_lease import lease_payload, managed_run
 
 REPO = Path(__file__).resolve().parents[2]
 MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
@@ -219,12 +220,52 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 # LaunchServices + the native Cocoa plugin, using a fresh profile.
                 # This is local CI launch evidence, not browser quarantine approval.
                 native_report = run.root / "native-settings.json"
+                default_home = run.root / "default-home"
+                default_home.mkdir()
+                default_environment = os.environ.copy()
+                for key in ("DOCWEN_DATA_DIR", "DOCWEN_CONFIG_DIR", "DOCWEN_LOG_DIR", "PYTHONPATH", "PYTHONHOME"):
+                    default_environment.pop(key, None)
+                default_environment.update(
+                    HOME=str(default_home), DOCWEN_RUNTIME_ROOT=str(run.root / "default-runtime")
+                )
+                default_input = run.root / "default-profile.md"
+                default_input.write_text(MARKDOWN, encoding="utf-8")
+                converted = subprocess.run(
+                    [
+                        str(binary_dir / "DocWenCLI"),
+                        "convert",
+                        str(default_input),
+                        "--to",
+                        "docx",
+                        "--output-dir",
+                        str(run.root / "default-output"),
+                        "--json",
+                    ],
+                    env=default_environment,
+                    capture_output=True,
+                    text=True,
+                    timeout=90,
+                )
+                require(converted.returncode == 0, "default-profile conversion failed: " + converted.stderr[-2000:])
+                default_payload = json.loads(converted.stdout)
+                from docx import Document
+
+                default_document = Document(default_payload["data"]["output"])
+                require(
+                    any(TOKEN in paragraph.text for paragraph in default_document.paragraphs),
+                    "default-profile output content missing",
+                )
+                profile = default_home / "Library/Application Support/docwen"
+                require((profile / "configs").is_dir(), "packaged Mac did not use the user profile")
                 native_environment = {
                     "QT_QPA_PLATFORM": "cocoa",
                     "DOCWEN_GUI_DISABLE_STATE_SAVE": "1",
                     "DOCWEN_GUI_TEST_AUTOCLOSE_MS": "5000",
                     "DOCWEN_GUI_TEST_SETTINGS_REPORT": str(native_report),
-                    "DOCWEN_DATA_DIR": str(run.root / "native-profile"),
+                    "HOME": str(default_home),
+                    "DOCWEN_DATA_DIR": "",
+                    "DOCWEN_CONFIG_DIR": "",
+                    "DOCWEN_LOG_DIR": "",
                     "DOCWEN_RUNTIME_ROOT": str(run.root / "native-runtime"),
                 }
                 launch = ["/usr/bin/open", "-W", "-n"]
@@ -234,6 +275,18 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 from scripts.release.verify_packaged_gui import _verify_settings_smoke_report
 
                 _verify_settings_smoke_report(native_report)
+                environment["QT_QPA_PLATFORM"] = "cocoa"
+                command(
+                    [
+                        sys.executable,
+                        str(REPO / "scripts/release/verify_packaged_gui.py"),
+                        "--binary-dir",
+                        str(binary_dir),
+                        "--gongwen-fields-smoke",
+                    ],
+                    environment=environment,
+                    timeout=300,
+                )
             verify_extracted(installed)
             verify_signatures(installed, app=extracted_app)
             require(file_identity(archive) == archive_identity, "candidate archive changed during tests")
@@ -245,9 +298,16 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 "guiSettingsAndLauncher": "passed-offscreen-and-native-launchservices-cocoa"
                 if app
                 else "not-applicable",
+                "nativeGuiConversion": "six-gongwen-fields-cases-passed" if app else "not-applicable",
+                "defaultUserProfile": "passed-with-isolated-home" if app else "not-applicable",
             }
             archives.append(archive)
         output.mkdir(parents=True)
+        (output / ".docwen-temp-lease.json").write_bytes(
+            canonical_json(
+                lease_payload(output, owner="docwen.release.macos", kind="macos-candidate", state="completed-success")
+            )
+        )
         for archive in archives:
             shutil.copyfile(archive, output / archive.name)
         report.parent.mkdir(parents=True, exist_ok=True)
