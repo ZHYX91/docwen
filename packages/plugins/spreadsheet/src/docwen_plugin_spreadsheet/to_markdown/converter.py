@@ -68,6 +68,7 @@ def _find_blocks(df: Any) -> list[Any]:
                 min_r, max_r, min_c, max_c = r, r, c, c
 
                 q = deque([(r, c)])
+                component = {(r, c)}
                 visited.add((r, c))
 
                 while q:
@@ -81,6 +82,7 @@ def _find_blocks(df: Any) -> list[Any]:
                         neighbor_value = df.iat[nr, nc]
                         if _cell_has_value(neighbor_value):
                             visited.add((nr, nc))
+                            component.add((nr, nc))
                             q.append((nr, nc))
                             min_r = min(min_r, nr)
                             max_r = max(max_r, nr)
@@ -88,6 +90,13 @@ def _find_blocks(df: Any) -> list[Any]:
                             max_c = max(max_c, nc)
 
                 block: pd.DataFrame = df.iloc[min_r : max_r + 1, min_c : max_c + 1].copy()  # type: ignore[assignment]
+                # Another disconnected component can sit inside this bounding
+                # rectangle (for example an L-shaped table around one cell).
+                # Do not emit that cell in both blocks.
+                for row_index in range(min_r, max_r + 1):
+                    for column_index in range(min_c, max_c + 1):
+                        if (row_index, column_index) not in component:
+                            block.iat[row_index - min_r, column_index - min_c] = None
                 block.dropna(axis="index", how="all", inplace=True)
                 block.dropna(axis="columns", how="all", inplace=True)
                 blocks.append(block)
@@ -855,7 +864,11 @@ class SpreadsheetToMarkdownConverter:
                     image_link_style = options.get("image_link_style", export_semantics.image_link_style)
                     md_link_style: str = export_semantics.md_file_link_style
 
-                    img_seq = 0
+                    # Sidecar names must be unique across the entire workbook,
+                    # not just within one sheet.  Relocation maps old references
+                    # by name; duplicate names would make later links point at
+                    # the first sheet's sidecar.
+                    img_seq = total_images_extracted
                     main_stem = os.path.splitext(os.path.basename(str(input_path)))[0]
 
                     for img_info in sheet_images:

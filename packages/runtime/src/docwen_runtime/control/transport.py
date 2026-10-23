@@ -991,6 +991,13 @@ class ControlServer:
             return
 
         listener = self._listener
+        # Snapshot ownership before the serving thread can release its Unix
+        # endpoint lease while responding to our wake-up.
+        owned_managed_unix_directory = (
+            self._family == "AF_UNIX"
+            and self._unix_lease is not None
+            and self._unix_lease.plan.directory_name is not None
+        )
         wake_error: BaseException | None = None
         if listener is not None and thread.is_alive():
             # Wake the blocking accept before closing its handle.  Closing a
@@ -1028,9 +1035,22 @@ class ControlServer:
                 "gui_control_stop_failed",
                 "DocWen GUI control cleanup did not complete safely.",
             ) from shutdown_error
-        if wake_error is not None and not isinstance(
-            wake_error,
-            (ControlNotRunningError, ControlTimeoutError),
+        # The serving thread owns deletion of its managed Unix socket
+        # directory.  The stop wake-up may race that deletion after opening
+        # the directory but before re-checking its identity.  Endpoint
+        # planning then wraps ENOENT as ControlEndpointError.  Only this
+        # vanished-path condition is benign after join, listener cleanup,
+        # and shutdown-error checks have all succeeded; permission and
+        # identity failures must still be reported.
+        closed_managed_directory_race = (
+            owned_managed_unix_directory
+            and isinstance(wake_error, ControlEndpointError)
+            and isinstance(wake_error.__cause__, FileNotFoundError)
+        )
+        if (
+            wake_error is not None
+            and not isinstance(wake_error, (ControlNotRunningError, ControlTimeoutError))
+            and not closed_managed_directory_race
         ):
             raise wake_error
 
