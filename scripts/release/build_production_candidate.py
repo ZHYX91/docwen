@@ -29,6 +29,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.build.payload_normalization import normalize_packaged_record_files
+from scripts.release.publication_contract import CHECKSUM_NAME, package_names
 from tools.run_lease import lease_payload, transition
 
 EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
@@ -289,12 +290,7 @@ def verify_source_contracts(repo: Path, manifest: dict[str, Any]) -> dict[str, s
         match is not None and int(match.group(1)) == product["cliJsonProtocolVersion"],
         "cli_json_protocol_projection_mismatch",
     )
-    expected_assets = [
-        "DocWen-windows-x64.zip",
-        f"DocWenCLI-{version}-linux-x64.tar.gz",
-        f"DocWen-{version}-linux-x64.tar.gz",
-        "SHA256SUMS.txt",
-    ]
+    expected_assets = [*package_names(version), CHECKSUM_NAME]
     require(manifest["releaseAssetAllowlist"] == expected_assets, "release_asset_allowlist_drift")
     require(manifest["channels"]["offlineZip"]["assetName"] == expected_assets[0], "offline_asset_name_drift")
     return hashes

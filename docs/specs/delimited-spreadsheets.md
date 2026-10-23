@@ -10,6 +10,12 @@ Before assigning a cell, the builder rejects text longer than 32767 UTF-16 code 
 
 Regression tests save and reopen the accepted 32766/32767 UTF-16 boundaries for ASCII, CJK, supplementary characters (including mixed BMP text) and multiline fields; 32768/40000 are rejected. This proves serialized XLSX roundtrip with the selected library; real Office interoperability remains a separate candidate acceptance boundary.
 
+Markdown-to-XLSX uses the same 32767 UTF-16 text limit before assigning ordinary table cells or template
+YAML, row and column replacements. An oversized final value fails with `MD2XLSX-CELL-TEXT-TOO-LONG` and
+a sheet/row/column location; no partial XLSX is published. Plain Markdown-to-CSV does not impose Excel's
+cell limit. An XLSX-template-to-CSV path still passes through the bounded XLSX workbook and fails rather
+than truncating an oversized replacement.
+
 ## Formula cache diagnostics
 
 XLSX exports read existing cached values and never recalculate formulas or refresh external links. A formula whose cached scalar is unavailable is exported as an empty field with a warning, aggregated across sheets. The warning retains the total count and at most 20 sheet/cell locations. Existing values, including zero, and ordinary blank cells do not warn. An OOXML formula explicitly carrying `t="str"` and an empty `<v>` is a valid empty string; missing `<v>` or an empty numeric cache remains unavailable. This distinction is checked against package XML because openpyxl maps both cases to `None`.

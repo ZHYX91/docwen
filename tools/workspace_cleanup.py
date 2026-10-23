@@ -994,7 +994,13 @@ def _published_candidate_boundary(target: Path, *, workspace: Path, receipt: Pat
     if state.get("pending") is not None or not state.get("releaseId") or state.get("provenance") != "verified":
         raise HousekeepingError("publication_identity_incomplete")
     assets = state.get("assets")
-    if not isinstance(assets, dict) or len(assets) != 4:
+    from scripts.release.publication_contract import CHECKSUM_NAME, PublicationError, package_names
+
+    try:
+        expected_assets = {*package_names(str(state.get("version", ""))), CHECKSUM_NAME}
+    except PublicationError as error:
+        raise HousekeepingError("publication_inventory_incomplete") from error
+    if not isinstance(assets, dict) or set(assets) != expected_assets:
         raise HousekeepingError("publication_inventory_incomplete")
     if {p.name for p in target.iterdir()} != set(assets) | {"candidate.json"}:
         raise HousekeepingError("publication_local_inventory_changed")

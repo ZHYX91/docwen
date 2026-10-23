@@ -15,6 +15,11 @@ DocWen 的源码态与打包态使用同一套 `docwen` 命令树。精确契约
 
 ## Commands / 命令
 
+Existing file and directory arguments are interpreted literally before glob expansion, including names containing
+square brackets. A rejected batch member contributes to the totals and nonzero exit status in every output mode.
+
+真实存在的文件或目录优先按字面路径处理，包括含方括号的名称。批处理中被拒绝的输入在所有输出模式下均计入汇总和非零退出状态。
+
 - `serve --stdio`: run the Content-Length framed Machine Protocol v2 server for external consumers.
 - `info`: report product, protocol, platform and capability metadata without starting the runtime.
 - `doctor`: check base runtime health and report the canonical capability projection.
