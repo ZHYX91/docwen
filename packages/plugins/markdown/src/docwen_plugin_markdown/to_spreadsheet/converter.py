@@ -35,9 +35,9 @@ from docwen_plugin_markdown.common_utils import (
 )
 from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
+    XlsxCellTextTooLongError,
     _plan_rectangular_merges,
     _restore_escaped_merge_marker_literals,
-    XlsxCellTextTooLongError,
     assign_bounded_xlsx_value,
     build_template_workbook,
     process_image_placeholders,
@@ -217,9 +217,7 @@ class MdToXlsxConverter:
                                 if structural_tables
                                 else raw_value
                             )
-                            assign_bounded_xlsx_value(
-                                ws.cell(row=row_idx, column=col_idx), value
-                            )
+                            assign_bounded_xlsx_value(ws.cell(row=row_idx, column=col_idx), value)
 
                     if structural_tables and bool(table.get("structural")):
                         merge_regions, merge_warnings = _plan_rectangular_merges(
