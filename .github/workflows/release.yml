@@ -304,6 +304,13 @@ jobs:
           retention-days: 30
 
   verify-release:
+    # The unused Mac-only source job is skipped in an ordinary release. Override
+    # inherited skip propagation while still requiring every actual producer.
+    if: >-
+      always() && !cancelled() && !inputs.macos_only &&
+      needs.identity.result == 'success' && needs.identity.outputs.build == 'true' &&
+      needs.build-windows.result == 'success' && needs.build-linux.result == 'success' &&
+      needs.build-macos.result == 'success'
     outputs:
       artifact_id: ${{ steps.publication.outputs.artifact-id }}
       artifact_digest: ${{ steps.publication.outputs.artifact-digest }}

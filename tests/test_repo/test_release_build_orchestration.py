@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import sys
 from pathlib import Path
 
@@ -315,6 +316,63 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     assert '"Operating System :: Microsoft :: Windows"' in project_metadata
     assert '"Operating System :: POSIX :: Linux"' in project_metadata
     assert '"Operating System :: MacOS :: MacOS X"' in project_metadata
+
+
+@pytest.mark.parametrize(
+    ("blocked_job", "result", "macos_only", "build", "cancelled", "expected"),
+    [
+        (None, "success", False, True, False, True),
+        (None, "success", True, True, False, False),
+        (None, "success", False, False, False, False),
+        (None, "success", False, True, True, False),
+        *[
+            (job, state, False, True, False, False)
+            for job in ("identity", "build-windows", "build-linux", "build-macos")
+            for state in ("failure", "cancelled", "skipped")
+        ],
+    ],
+)
+def test_release_assembly_handles_optional_ancestor_skip_without_accepting_failed_producers(
+    blocked_job: str | None,
+    result: str,
+    macos_only: bool,
+    build: bool,
+    cancelled: bool,
+    expected: bool,
+) -> None:
+    """Evaluate the configured conjunction, with the unused Mac-only ancestor skipped.
+
+    This is a bounded predicate check, not a GitHub runner emulator. The hosted
+    ordinary release must also actually reach assembly before it is accepted.
+    """
+    job = _release_workflow()["jobs"]["verify-release"]
+    expression = job.get("if", "")
+    # GitHub otherwise inserts success(), which propagates the optional ancestor
+    # skip even when all direct package producers completed successfully.
+    assert "always()" in expression
+    bindings = {
+        "always()": True,
+        "cancelled()": cancelled,
+        "inputs.macos_only": macos_only,
+        "needs.identity.outputs.build == 'true'": build,
+        **{f"needs.{name}.result == 'success'": name != blocked_job or result == "success" for name in job["needs"]},
+    }
+    for atom in sorted(bindings, key=len, reverse=True):
+        expression = expression.replace(atom, str(bindings[atom]))
+    expression = expression.replace("&&", " and ").replace("!", " not ").strip()
+
+    def evaluate(node: ast.AST) -> bool:
+        if isinstance(node, ast.Expression):
+            return evaluate(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, bool):
+            return node.value
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+            return not evaluate(node.operand)
+        if isinstance(node, ast.BoolOp) and isinstance(node.op, ast.And):
+            return all(evaluate(value) for value in node.values)
+        raise AssertionError(f"Unrecognized release predicate: {ast.dump(node)}")
+
+    assert evaluate(ast.parse(expression, mode="eval")) is expected
 
 
 def test_build_main_exits_when_verification_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

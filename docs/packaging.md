@@ -80,7 +80,7 @@ Signing and publication are separate release operations. A successfully built un
 
 ### Candidate reuse and recovery / 候选复用与恢复
 
-Hosted publishing uses `GITHUB_TOKEN` and does not read administration-only repository settings or require an additional PAT. Publication succeeds only after the hosted Release reports a complete immutable state. One independent read-only verification downloads all four hosted assets and compares their exact bytes and provenance; publishing itself checks the platform inventory, sizes and digests without repeating those downloads.
+Hosted publishing uses `GITHUB_TOKEN` and does not read administration-only repository settings or require an additional PAT. Publication succeeds only after the hosted Release reports a complete immutable state. One independent read-only verification downloads all six hosted assets and compares their exact bytes and provenance; publishing itself checks the platform inventory, sizes and digests without repeating those downloads.
 
 Push the numeric version tag at the accepted source commit on the default branch. This one `Release` run invokes the shared ordinary CI gate (including declared release cases), builds each platform once, verifies and attests the packages, publishes those exact bytes, then performs independent readback. The version comes from `pyproject.toml`; a selected numeric tag must match it. Failed, missing, cancelled or skipped required source/build jobs stop publication; configure `Required checks` as a required branch check. The candidate is identified by the producer job's artifact ID and archive digest, with no search of earlier runs. Artifacts are retained for 30 days.
 
