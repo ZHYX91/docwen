@@ -10,6 +10,8 @@
 
 تتحكم لغة الواجهة في نصوص التطبيق واتجاه عرضه فقط. تتحكم لغة إخراج المهمة في الإعدادات العامة بشكل مستقل في التسميات المنشأة وأنماط المستند وتعليقات التدقيق، ولا تترجم النص. لا يؤدي تغيير الواجهة إلى تغيير لغة الإخراج أو القالب المحفوظين. يتبع خيار OCR التلقائي لغة إخراج المهمة. يمكن اختيار إنشاء فقرة Word مستقلة لكل سطر Markdown عادي، وهذا الخيار معطل افتراضيا.
 
+هذا دليل عربي مختصر للمهام الأساسية. تتوفر التفاصيل الكاملة عن الواجهة والخيارات والقوالب في [الدليل الإنجليزي](../../README.md) و[الدليل الصيني المبسط](README.zh-CN.md). وللتأكد من مسارات التحويل المتاحة راجع [جدول القدرات](../capabilities.md).
+
 ## ما الذي يمكن فعله؟
 
 - تحويل ملفات Word إلى Markdown والعكس، مع الحفاظ على العناصر التي تدعمها طريقة التحويل المختارة.
@@ -52,6 +54,10 @@ docwen-gui
 
 ![إنشاء مستند من Markdown](../assets/screenshots/markdown-generation-en.png)
 
+خيارات محاذاة ملاحظات المرفقات في تنسيق المستندات الرسمية (تظهر الصورة واجهة إنجليزية):
+
+![إعداد محاذاة معلومات المرفقات في المستندات الرسمية](../assets/screenshots/official-documents-en.png)
+
 
 النتيجة ليست دائمًا مطابقة للأصل. تأكد من تنسيق الجداول والمعادلات والنص المعترف به عبر OCR قبل استخدام الملف النهائي.
 
@@ -86,6 +92,14 @@ docwen convert sample.docx --to md --output-dir output
 
 للتفاصيل راجع [دليل سطر الأوامر](../cli.md) و[عقد البروتوكول](../specs/machine-protocol-v2.md).
 
+من أمثلة العمل المباشر في سطر الأوامر: لا يُنشأ تقرير التدقيق إلا عند طلب `--report` صراحةً، ويجب فحص موارد التحسين المتاحة قبل اختيارها.
+
+```bash
+docwen resources list optimizations --json
+docwen convert report.docx --to md --output-dir exports --optimization gongwen
+docwen validate input.md --check typo --report report.json
+```
+
 ## صيغة Markdown والامتدادات
 
 يمكن استخدام DocWen مع ملفات Markdown العادية دون إضافات. أما صيغة Structural Tables والجداول المدمجة وتسميات Number Suite والعناوين H7–H9 والحواشي الختامية المميزة فهي **امتدادات اختيارية معطّلة افتراضيًا**.
@@ -96,7 +110,7 @@ docwen convert sample.docx --to md --output-dir output
 
 يدعم ملحق DocWen Assistant سطح المكتب على Windows وLinux، لكنه لا يعمل على نسخة Obsidian للأجهزة المحمولة. كما لا يدعم DocWen Assistant نظام macOS حاليًا.
 
-يمكنك تثبيت [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant) لتحويل الملفات أو تدقيقها من داخل Obsidian. يتطلب Assistant 3.3 إصدار DocWen 0.17.0 أو أحدث. ويمكن استخدام [docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) لتشغيل أدوات DocWen من OpenClaw. **كلتا الإضافتين تحتاجان إلى تثبيت DocWen متوافق على الجهاز**؛ الإضافة وحدها لا تثبّت البرنامج.
+يمكنك تثبيت [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant) لتحويل الملفات أو تدقيقها من داخل Obsidian. اختر إصدارًا من [صفحة الإصدارات المنشورة](https://github.com/ZHYX91/obsidian-docwen-assistant/releases) وتحقق من توافقه مع DocWen المثبت على جهازك، بدلًا من الاعتماد على رقم إصدار ثابت هنا. ويمكن استخدام [docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) لتشغيل أدوات DocWen من OpenClaw؛ تحقق من [الإصدارات المنشورة له](https://github.com/ZHYX91/docwen-openclaw/releases) أيضًا. **كلتا الإضافتين تحتاجان إلى تثبيت DocWen متوافق على الجهاز**؛ الإضافة وحدها لا تثبّت البرنامج.
 
 ## الأمان والخصوصية
 
@@ -107,6 +121,8 @@ docwen convert sample.docx --to md --output-dir output
 تشرح [وثائق البنية](../architecture.md) كيفية عمل الحماية وحدودها. وإذا تعذّر تشغيل البرنامج أو فشل التحويل، فراجع [دليل حل المشكلات](../maintenance/troubleshooting.md).
 
 ## الأسئلة والمساعدة
+
+تدعم CLI `validate` ملفات `.md` و`.docx` مباشرةً. ويمكن تدقيق صيغ Word القديمة (`.doc` و`.wps` و`.rtf` و`.odt`) بعد تحويلها إلى DOCX ببرنامج Office محلي متوافق؛ تحقق من توفر برنامج التحويل أولًا. العملية للقراءة فقط ما لم يُطلب إخراج تقرير صراحةً.
 
 إن فشل التحويل، افحص نوع الملف وحالة برامج Word أو WPS أو LibreOffice المستخدمة. جرّب مجلد إخراج جديدًا؛ ولا تُعد تشغيل عملية كتابة غير مؤكدة قبل مراجعة النتائج الموجودة.
 

@@ -586,8 +586,8 @@ def test_writer_reports_typed_ocr_failure_and_continues_with_later_images(
         source_format="epub",
     )
 
-    assert written["images/first.png"].markdown_link == "![first.png](first.png)"
-    assert written["images/second.png"].markdown_link.endswith("> later image text")
+    assert written["Images/first.png"].markdown_link == "![first.png](first.png)"
+    assert written["Images/second.png"].markdown_link.endswith("> later image text")
     warnings = [d for d in context.progress.diagnostics if d.level == "warning"]
     assert len(warnings) == 1
     diagnostic = warnings[0]
@@ -598,7 +598,7 @@ def test_writer_reports_typed_ocr_failure_and_continues_with_later_images(
     assert "epub image first.png" in diagnostic.message
     assert "deterministic OCR failure" not in diagnostic.message
     assert all(diagnostic.code.startswith("OCR-BEST-EFFORT.") for diagnostic in warnings)
-    assert "later image text" in written["images/second.png"].markdown_link
+    assert "later image text" in written["Images/second.png"].markdown_link
 
 
 def test_writer_warns_that_no_text_may_be_a_missed_best_effort_result(tmp_path, monkeypatch) -> None:

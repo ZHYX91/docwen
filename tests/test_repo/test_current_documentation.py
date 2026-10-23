@@ -388,6 +388,39 @@ def test_readmes_do_not_reintroduce_stale_localization_guidance() -> None:
     assert "Export MD" not in vietnamese
 
 
+def test_public_guides_explain_supported_proofreading_and_release_selection() -> None:
+    """Guides must not narrow CLI validation or pin companion release advice."""
+    for path in _public_readme_paths():
+        guide = path.read_text(encoding="utf-8")
+        prose = re.sub(r"```.*?```", "", guide, flags=re.DOTALL)
+        validation_paragraphs = [paragraph for paragraph in prose.split("\n\n") if "validate" in paragraph]
+        assert any(
+            all(extension in paragraph for extension in (".md", ".docx", ".doc", ".wps", ".rtf", ".odt"))
+            for paragraph in validation_paragraphs
+        ), path.name
+        assert "validate" in guide and "--report" in guide, path.name
+        assert "https://github.com/ZHYX91/obsidian-docwen-assistant/releases" in _named_h2_section(guide, "Obsidian"), (
+            path.name
+        )
+        openclaw_section = _named_h2_section(guide, "Obsidian" if path.name == "README.ar.md" else "OpenClaw")
+        assert "https://github.com/ZHYX91/docwen-openclaw/releases" in openclaw_section, path.name
+        assert "Assistant 3.3" not in guide, path.name
+        assert "Plugin 3.0" not in guide, path.name
+        screenshot = (
+            "docs/assets/screenshots/official-documents-en.png"
+            if path.parent == ROOT
+            else "../assets/screenshots/official-documents-en.png"
+        )
+        assert screenshot in guide, path.name
+        assert "--optimization gongwen" in guide, path.name
+
+    # Arabic is intentionally a compact starting point, not a partial copy
+    # presented as an equally detailed full reference.
+    arabic = (DOCS / "user-guides" / "README.ar.md").read_text(encoding="utf-8")
+    assert "دليل عربي مختصر" in arabic
+    assert "(../../README.md)" in arabic
+
+
 def test_current_docs_do_not_depend_on_completed_audit_material() -> None:
     current_files = [ROOT / "README.md", *DOCS.rglob("*.md")]
     current_files = [path for path in current_files if path.name != "CHANGELOG.md"]

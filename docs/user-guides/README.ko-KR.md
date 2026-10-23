@@ -10,15 +10,9 @@ DocWen은 Word, Markdown, Excel 등 업무용 형식을 위한 로컬 문서·�
 
 인터페이스 언어는 앱의 문구와 배치를 제어합니다. 일반 설정의 작업 출력 언어는 생성 라벨, 문서 스타일 및 교정 주석을 별도로 제어하며 본문을 번역하지 않습니다. 인터페이스 언어를 바꿔도 저장된 출력 언어나 템플릿은 유지됩니다. OCR 자동은 작업 출력 언어를 따릅니다. 일반 Markdown 본문의 각 줄을 Word 단락으로 만드는 옵션은 기본적으로 꺼져 있습니다.
 
-## 📖 프로젝트 배경
+## DocWen으로 할 수 있는 일
 
-이 소프트웨어는 문서 작업 환경에서 자주 겪는 문제를 해결하기 위해 만들어졌습니다:
-- 부서별로 전달되는 문서 형식이 제각각이라 정리/표준화가 필요함
-- 문서 유형이 다양하고 유형별로 요구되는 고정 포맷이 다름
-- 내부망/구형 PC에서도 동작해야 하므로 오프라인 실행이 필요함
-
-**설계 철학**: DocWen은 일상적인 변환과 문서 정리를 쉽게 배우고 바로 사용할 수 있는 흐름에 초점을 둡니다. LaTeX나 Pandoc 같은 전문 조판·변환 시스템을 대체하려는 것이 아니라, 자주 쓰는 문서 작업을 단순하고 명확하게 만들면서 기술적 경계를 분명히 유지하는 것이 목표입니다.
-
+Word와 Markdown을 변환하고, 스프레드시트와 PDF를 정리하거나 사용자 규칙으로 문서를 교정합니다. 일반적인 작업은 GUI, 반복 작업은 CLI를 사용하세요. 가능한 변환은 형식과 설치된 소프트웨어에 따라 다르므로 [기능 목록](../capabilities.md)을 확인하세요.
 ## ✨ 핵심 기능
 
 - **📄 문서 변환** - Word ↔ Markdown 양방향 변환. 수식 변환, 구분선(---/***/___)과 페이지/구역/가로선 매핑을 지원하며, Markdown 표의 명시적 `<` / `^` 병합 표시를 Word의 직사각형 셀 병합으로 복원할 수 있습니다. DOCX/DOC/WPS/RTF/ODT 지원.
@@ -38,6 +32,10 @@ DocWen은 Word, Markdown, Excel 등 업무용 형식을 위한 로컬 문서·�
 Markdown 문서의 템플릿과 생성 옵션을 선택합니다.
 
 ![Markdown에서 문서 생성](../assets/screenshots/markdown-generation-en.png)
+
+공문서 첨부 정보의 정렬 설정(영어 화면):
+
+![공문서 첨부 정보의 정렬 설정](../assets/screenshots/official-documents-en.png)
 
 
 변경 이력: [CHANGELOG.md](../CHANGELOG.md) 참고
@@ -279,6 +277,14 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 `punct_required` 모드의 정확한 기본값은 `。：！？.:!?`입니다. 서식 설정에서 수정할 수 있으며, 값을 비우면 이 모드에서 병합하지 않습니다. 쉼표, 세미콜론, 열거 쉼표, 대시 및 줄임표는 기본값에 포함되지 않습니다.
 
+
+CLI 추가 예시입니다. 최적화는 공개 리소스 ID를 먼저 확인하고, 보고서는 `--report`를 지정할 때만 저장합니다.
+
+```bash
+DocWenCLI.exe resources list optimizations --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --optimization gongwen
+DocWenCLI.exe validate input.md --check typo --report report.json
+```
 
 ## 📝 Markdown 문법 규칙
 
@@ -594,7 +600,7 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 
 ### 플러그인 사용 방법
 
-DocWen Assistant 3.3은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
+DocWen Assistant는 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
 
 1.  **처음 클릭** → 변환기를 실행하고 현재 파일을 엽니다.
 2.  **파일을 연 상태에서 다시 클릭** → 현재 입력 파일을 해당 파일로 바꿉니다(단일 파일 모드).
@@ -602,13 +608,11 @@ DocWen Assistant 3.3은 Windows와 Linux 데스크톱 호스트를 지원합니�
 
 ### 설치
 
-먼저 호환되는 DocWen 버전을 설치한 다음 [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant)를 설치하세요. Assistant 3.3에는 DocWen 0.17.0 이상이 필요하며, 플러그인은 DocWen 본체를 대신 설치하지 않습니다. 릴리스 안내에서 호환되는 버전을 확인하고 공개된 설치 파일을 다운로드하세요.
+DocWen을 따로 설치한 다음 호환되는 [DocWen Assistant 공개 릴리스](https://github.com/ZHYX91/obsidian-docwen-assistant/releases)를 선택하세요. 플러그인이 본체를 설치하지는 않습니다. 이 가이드의 고정 버전 번호가 아니라 릴리스 안내에서 호환 버전을 확인하세요. 연동에는 Machine Protocol v2 및 Artifact Bundle v3를 사용합니다.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw)를 사용하면 OpenClaw가 컴퓨터에 설치된 DocWen으로 파일을 변환하고 교정할 수 있습니다. DocWen을 별도로 설치하고, 릴리스 안내에 호환되는 DocWen 버전이 명시된 플러그인 버전을 선택하세요. 공개된 릴리스 페이지에서 파일을 다운로드하세요. 소스 코드에 버전 번호가 있다고 해서 해당 버전을 바로 다운로드할 수 있는 것은 아닙니다.
-
-플러그인 3.0과 연동하는 기능을 개발하려면 [Machine Protocol v2 및 Artifact Bundle v3](../specs/machine-protocol-v2.md)를 참고하세요.
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw)는 별도로 설치한 DocWen으로 OpenClaw에서 로컬 파일을 변환하고 교정합니다. [공개 릴리스](https://github.com/ZHYX91/docwen-openclaw/releases)에서 호환 버전을 확인하세요. 계약은 [Machine Protocol v2 및 Artifact Bundle v3](../specs/machine-protocol-v2.md)를 참고하세요.
 
 ## ❓ 자주 묻는 질문 (FAQ)
 
@@ -626,7 +630,7 @@ DocWen Assistant 3.3은 Windows와 Linux 데스크톱 호스트를 지원합니�
 
 ### 교정 기능이 동작하지 않나요?
 
--   문서가 `.docx` 또는 `.md` 형식인지 확인합니다.
+- CLI `validate`는 `.md`와 `.docx`를 직접 검사합니다. `.doc`, `.wps`, `.rtf`, `.odt`도 받지만 먼저 사용 가능한 로컬 Office 프로그램으로 DOCX로 변환한 뒤 교정합니다. 실패 시 변환 의존성을 확인하세요.
 -   문서에 편집 가능한 텍스트가 있는지 확인합니다.
 -   설정에서 교정 규칙이 활성화되어 있는지 확인합니다.
 

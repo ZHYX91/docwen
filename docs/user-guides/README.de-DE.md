@@ -10,15 +10,9 @@ DocWen ist ein lokales Werkzeug zur Konvertierung von Dokumenten und Tabellen f�
 
 Die Oberflächensprache steuert Texte und Anordnung der Anwendung. Die separate Ausgabesprache in den allgemeinen Einstellungen steuert erzeugte Beschriftungen, Dokumentstile und Korrekturkommentare, ohne den Inhalt zu übersetzen. Ein Sprachwechsel ändert weder die gespeicherte Ausgabesprache noch die Vorlage. OCR „Automatisch“ folgt der Ausgabesprache. In den Markdown-Einstellungen kann jede gewöhnliche Textzeile optional einen eigenen Word-Absatz bilden; die Option ist standardmäßig aus.
 
-## 📖 Projekthintergrund
+## Wofür DocWen geeignet ist
 
-DocWen entstand für alltägliche Dokumentaufbereitung, bei der typischerweise:
-- Dokumente aus verschiedenen Abteilungen in uneinheitlichen Formaten vereinheitlicht werden müssen;
-- viele Dateitypen mit unterschiedlichen Formatvorgaben vorkommen;
-- die Arbeit offline, im Intranet und auf älterer Hardware möglich sein soll.
-
-**Designphilosophie**: DocWen setzt auf leicht zugängliche, sofort nutzbare Abläufe für alltägliche Konvertierungs- und Aufräumarbeiten. Es soll spezialisierte Satz- oder Konvertierungssysteme wie LaTeX oder Pandoc nicht ersetzen, sondern häufige Dokumentaufgaben verständlich und direkt machen und dabei klare technische Grenzen beibehalten.
-
+Konvertieren Sie lokal Word- und Markdown-Dateien, bereiten Sie Tabellen und PDFs auf oder prüfen Sie Text nach eigenen Regeln. Nutzen Sie die GUI im Alltag und die CLI für wiederholte Aufgaben. Verfügbare Wege und Abhängigkeiten zeigt die [Funktionsübersicht](../capabilities.md).
 ## ✨ Kernfunktionen
 
 - **📄 Dokumentformatkonvertierung** - Bidirektionale Word ↔ Markdown Konvertierung. Unterstützt mathematische Formelkonvertierung, bidirektionale Trennzeichenkonvertierung (Markdowns drei Arten von Trennlinien vs. Words Seitenumbrüche, Abschnittswechsel und horizontale Linien) sowie die Wiederherstellung expliziter Markdown-Tabellenmarker `<` / `^` zu rechteckigen Word-Zellzusammenführungen. Unterstützt Formate wie DOCX/DOC/WPS/RTF/ODT.
@@ -38,6 +32,10 @@ DocWen entstand für alltägliche Dokumentaufbereitung, bei der typischerweise:
 Vorlage und Erstellungsoptionen für Markdown-Dokumente auswählen.
 
 ![Markdown in Dokumente umwandeln](../assets/screenshots/markdown-generation-en.png)
+
+Ausrichtung von Anlagenangaben in den Einstellungen für amtliche Dokumente (englische Oberfläche):
+
+![Ausrichtung von Anlagenangaben in amtlichen Dokumenten](../assets/screenshots/official-documents-en.png)
 
 
 Changelog: siehe [CHANGELOG.md](../CHANGELOG.md)
@@ -280,6 +278,14 @@ Die folgende Tabelle zeigt nur haeufige Befehle. Fuer die vollstaendige Befehlsf
 
 Im Modus `punct_required` lautet die genaue Standardliste `。：！？.:!?`. Sie kann in den Formatierungseinstellungen bearbeitet werden; ein leerer Wert deaktiviert die Zusammenführung in diesem Modus. Komma, Semikolon, Aufzählungskomma, Gedankenstrich und Auslassungspunkte sind standardmäßig ausgeschlossen.
 
+
+Weitere CLI-Beispiele: Optimierungen zuerst über ihre Ressourcenkennung prüfen; ein Korrekturbericht wird nur mit `--report` geschrieben.
+
+```bash
+DocWenCLI.exe resources list optimizations --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --optimization gongwen
+DocWenCLI.exe validate input.md --check typo --report report.json
+```
 
 ## 📝 Markdown-Syntaxkonventionen
 
@@ -596,7 +602,7 @@ Ein begleitendes Obsidian-Plugin wird separat veröffentlicht und arbeitet mit d
 
 ### Bedienung
 
-DocWen Assistant 3.3 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
+DocWen Assistant unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
 
 1.  **Erster Klick** → Konverter starten und die aktuelle Datei öffnen.
 2.  **Erneuter Klick mit geöffneter Datei** → Die bisherige Eingabedatei durch diese Datei ersetzen (Einzeldateimodus).
@@ -604,13 +610,11 @@ DocWen Assistant 3.3 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-St
 
 ### Installation
 
-Installieren Sie zuerst eine kompatible DocWen-Version und anschließend [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant). Assistant 3.3 erfordert DocWen 0.17.0 oder neuer; das Plugin installiert DocWen nicht mit. Prüfen Sie die Versionshinweise und laden Sie die passenden veröffentlichten Installationsdateien herunter.
+Installieren Sie DocWen separat und wählen Sie eine [veröffentlichte DocWen-Assistant-Version](https://github.com/ZHYX91/obsidian-docwen-assistant/releases), die dazu passt. Das Plugin installiert DocWen nicht. Beachten Sie die Kompatibilitätshinweise der ausgewählten Veröffentlichung statt einer Versionsnummer in dieser Anleitung. Integrationen verwenden Machine Protocol v2 und Artifact Bundle v3.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) ermöglicht OpenClaw, mit DocWen lokale Dateien zu konvertieren und zu prüfen. Installieren Sie DocWen separat und wählen Sie eine Plugin-Version, deren Versionshinweise Ihre DocWen-Version als kompatibel nennen. Laden Sie die Dateien von der jeweiligen Release-Seite herunter; eine Versionsnummer im Quellcode bedeutet nicht, dass diese Version bereits zum Download verfügbar ist.
-
-Für die Entwicklung von Integrationen mit Plugin 3.0 siehe [Machine Protocol v2 und Artifact Bundle v3](../specs/machine-protocol-v2.md).
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) verwendet ein separat installiertes DocWen zum Konvertieren und Prüfen lokaler Dateien. Prüfen Sie die [veröffentlichten Plugin-Versionen](https://github.com/ZHYX91/docwen-openclaw/releases) auf Kompatibilität. Der Vertrag für Entwickler steht unter [Machine Protocol v2 und Artifact Bundle v3](../specs/machine-protocol-v2.md).
 
 ## ❓ Häufig gestellte Fragen (FAQ)
 
@@ -628,7 +632,7 @@ Für die Entwicklung von Integrationen mit Plugin 3.0 siehe [Machine Protocol v2
 
 ### Korrekturfunktion funktioniert nicht?
 
--   Bestätigen Sie, dass das Dokument im .docx- oder .md-Format vorliegt.
+- CLI `validate` prüft `.md` und `.docx` direkt. Auch `.doc`, `.wps`, `.rtf` und `.odt` werden akzeptiert, aber zunächst mit einer verfügbaren lokalen Office-Anwendung in DOCX umgewandelt. Prüfen Sie diese Abhängigkeit bei Fehlern.
 -   Prüfen Sie, ob das Dokument bearbeitbaren Text enthält.
 -   Bestätigen Sie, dass Korrekturregeln in den Einstellungen aktiviert sind.
 

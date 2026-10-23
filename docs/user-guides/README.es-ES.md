@@ -10,15 +10,9 @@ DocWen es una herramienta local de conversión de documentos y tablas para Word,
 
 El idioma de la interfaz controla los textos y la disposición de la aplicación. El idioma de salida de la tarea, en los ajustes generales, controla por separado las etiquetas generadas, los estilos y los comentarios de revisión; no traduce el contenido. Cambiar la interfaz conserva el idioma de salida y la plantilla guardados. OCR Automático sigue el idioma de salida. La opción de crear un párrafo de Word por línea de texto Markdown está desactivada por defecto.
 
-## 📖 Contexto del proyecto
+## Para qué sirve DocWen
 
-Este software se diseñó originalmente para resolver problemas comunes en entornos de oficina:
-- Los documentos llegan con formatos inconsistentes y hay que normalizarlos.
-- Hay muchos tipos de archivo y cada uno tiene requisitos de formato distintos.
-- Debe funcionar sin conexión (intranet/equipos antiguos).
-
-**Filosofía de diseño**: DocWen prioriza flujos cotidianos de conversión y organización fáciles de aprender y listos para usar. No pretende sustituir sistemas especializados de composición o conversión como LaTeX o Pandoc; busca hacer directas las tareas documentales frecuentes manteniendo límites técnicos claros.
-
+Convierte Word y Markdown en tu equipo, prepara hojas de cálculo o PDF y revisa textos con tus reglas. Usa la interfaz gráfica para lo habitual y la CLI para repetir operaciones. Las rutas dependen de los formatos y del software instalado: consulta las [capacidades](../capabilities.md).
 ## ✨ Funciones principales
 
 - **📄 Conversión de documentos** - Word ↔ Markdown, con conversión de fórmulas, mapeo de separadores (---/***/___) a saltos de página/sección/líneas horizontales y restauración de marcadores explícitos `<` / `^` de tablas Markdown como combinaciones rectangulares en Word. DOCX/DOC/WPS/RTF/ODT.
@@ -38,6 +32,10 @@ Este software se diseñó originalmente para resolver problemas comunes en entor
 Seleccione una plantilla y las opciones de generación de documentos Markdown.
 
 ![De Markdown a documento](../assets/screenshots/markdown-generation-en.png)
+
+Opciones de alineación de anexos para documentos oficiales (captura en inglés):
+
+![Ajuste de alineación de anexos de documentos oficiales](../assets/screenshots/official-documents-en.png)
 
 
 Registro de cambios: ver [CHANGELOG.md](../CHANGELOG.md)
@@ -279,6 +277,14 @@ La tabla siguiente solo enumera los comandos mas habituales. Para la superficie 
 
 En el modo `punct_required`, la lista predeterminada exacta es `。：！？.:!?`. Puede editarse en la configuración de formato; un valor vacío desactiva la combinación en este modo. Las comas, los puntos y coma, las comas de enumeración, los guiones y los puntos suspensivos se excluyen de forma predeterminada.
 
+
+Otros ejemplos CLI: consulta primero los identificadores de optimización; el informe de revisión solo se guarda si indicas `--report`.
+
+```bash
+DocWenCLI.exe resources list optimizations --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --optimization gongwen
+DocWenCLI.exe validate input.md --check typo --report report.json
+```
 
 ## 📝 Convenciones de Markdown
 
@@ -597,7 +603,7 @@ Hay un plugin complementario de Obsidian publicado por separado que funciona jun
 
 ### Cómo usar el plugin
 
-DocWen Assistant 3.3 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
+DocWen Assistant admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
 
 1.  **Primer clic** → Inicia el convertidor y abre el archivo actual.
 2.  **Otro clic con un archivo abierto** → Sustituye el archivo de entrada actual por ese archivo (modo de archivo único).
@@ -605,13 +611,11 @@ DocWen Assistant 3.3 admite hosts de escritorio Windows y Linux. En Windows, las
 
 ### Instalación
 
-Instala primero una versión compatible de DocWen y después [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant). Assistant 3.3 requiere DocWen 0.17.0 o posterior; el plugin no instala el programa principal. Consulta las notas de la versión para elegir versiones compatibles y descarga los archivos de instalación publicados.
+Instala DocWen por separado y después una [versión publicada de DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant/releases) compatible. El complemento no instala DocWen. Consulta los requisitos de cada publicación en lugar de usar un número fijo de esta guía. La integración utiliza Machine Protocol v2 y Artifact Bundle v3.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) permite que OpenClaw use DocWen en tu equipo para convertir y revisar archivos. Instala DocWen por separado y elige una versión del plugin que indique con qué versiones de DocWen es compatible. Descarga los archivos de la página de versiones publicadas; que aparezca un número de versión en el código fuente no significa que esa versión ya esté disponible para descargar.
-
-Para desarrollar integraciones con el plugin 3.0, consulta [Machine Protocol v2 y Artifact Bundle v3](../specs/machine-protocol-v2.md).
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) usa una instalación aparte de DocWen para convertir y revisar archivos locales. Consulta las [versiones publicadas](https://github.com/ZHYX91/docwen-openclaw/releases) para confirmar compatibilidad y [Machine Protocol v2 y Artifact Bundle v3](../specs/machine-protocol-v2.md) para desarrollar integraciones.
 
 ## ❓ Preguntas frecuentes
 
@@ -629,7 +633,7 @@ Para desarrollar integraciones con el plugin 3.0, consulta [Machine Protocol v2 
 
 ### ¿La función de revisión no funciona?
 
--   Confirma que el documento sea `.docx` o `.md`.
+- CLI `validate` revisa directamente `.md` y `.docx`. También acepta `.doc`, `.wps`, `.rtf` y `.odt`, tras convertirlos a DOCX con un programa Office local compatible. Si falla, comprueba que ese programa esté disponible.
 -   Comprueba que el documento contenga texto editable.
 -   Confirma que las reglas de revisión estén habilitadas en la configuración.
 
