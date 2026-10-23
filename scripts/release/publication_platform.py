@@ -19,6 +19,7 @@ from scripts.release.publication_contract import (
     checksum_bytes,
     file_identity,
     package_names,
+    package_platform,
     read_object,
     require,
     verify_manifest,
@@ -104,9 +105,9 @@ def fetch_platform(
     platform: str,
 ) -> dict[str, Any]:
     """No publication writes; a partial platform directory cannot pass the full release inventory."""
-    require(platform in {"windows", "linux"}, "unknown candidate platform")
+    require(platform in {"windows", "linux", "macos"}, "unknown candidate platform")
     names = set(package_names(version))
-    selected = {name for name in names if name.endswith(".zip") == (platform == "windows")}
+    selected = {name for name in names if package_platform(name, version) == platform}
     prefix = f"/repos/{repository}"
     publication = api.get(f"{prefix}/actions/artifacts/{artifact_id}")
     require(publication.get("id") == artifact_id and publication.get("digest") == digest, "artifact identity mismatch")

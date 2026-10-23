@@ -45,8 +45,8 @@ Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
 **Prerequisites**: Python 3.12
 
 **Package targets**: DocWen provides one Windows x64 GUI+CLI package and separate
-Ubuntu 24.04 x64 GUI+CLI and CLI-only packages. Other Linux
-distributions and macOS remain source/development paths and are not implied by the Ubuntu package.
+Ubuntu 24.04 x64 GUI+CLI and CLI-only packages, plus Apple Silicon macOS 14+ GUI+CLI
+and CLI-only packages. Other Linux distributions and Intel Macs are not package targets.
 
 **Option 1: Using uv (Recommended)**
 
@@ -74,8 +74,12 @@ docwen      # CLI mode
 
 ### macOS Notes
 
-**Current limitation**: On macOS, `convert`, `validate`, `number`, `merge`, and `split` are currently
-unavailable. The notes below only document optional dependencies for development experiments.
+Download the `macos-arm64` archive for Apple Silicon Macs running macOS 14 or later.
+The desktop archive contains `DocWen.app`; move the whole app to Applications.
+Mac packages retain ad-hoc signatures and are **not Developer ID signed or notarized**.
+First launch may require **System Settings → Privacy & Security → Open Anyway** after an
+attempted launch. See [macOS installation and first launch](docs/user-guides/macos.md)
+for checksum checks, CLI use and update instructions.
 
 **LibreOffice support (Optional)**
 

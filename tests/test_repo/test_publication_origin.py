@@ -126,13 +126,13 @@ def test_fetch_publish_and_independent_readback_reuse_one_exact_candidate(
     notes.write_text(f"# Changes\n\n## {VERSION}\nReady\n", encoding="utf-8")
     receipt = tmp_path / "progress.json"
     assert publication.main(["publish", *common, "--receipt", str(receipt), "--notes", str(notes)]) == 0
-    assert len(api.writes) == (7 if branch_candidate else 6)
+    assert len(api.writes) == (9 if branch_candidate else 8)
     assert not api.downloads
     writes = api.writes[:]
     assert publication.main(["verify", *common, "--receipt", str(tmp_path / "readback.json")]) == 0
     assert api.writes == writes
-    assert len(api.downloads) == 4
-    assert len(provenance_commands) == 15
+    assert len(api.downloads) == 6
+    assert len(provenance_commands) == 21
     assert all(command[command.index("--source-ref") + 1] == source_ref for command in provenance_commands)
     run_reads = [path for path in api.reads if "/actions/runs/" in path and "/jobs?" not in path]
     assert run_reads and set(run_reads) == {f"/repos/{REPOSITORY}/actions/runs/10/attempts/1"}

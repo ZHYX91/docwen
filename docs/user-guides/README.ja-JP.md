@@ -48,9 +48,7 @@ Markdown 文書のテンプレートと生成オプションを選択します�
 
 **前提条件**：Python 3.12
 
-**対象境界**：このソースは Windows x64 と Ubuntu 24.04 x64 のパッケージを構築します。
-その他の Linux ディストリビューションと macOS はソース／開発用であり、Ubuntu パッケージの
-サポート対象には含まれません。
+**パッケージ**：Windows x64、Ubuntu 24.04 x64、Apple Silicon macOS 14+ arm64。Intel Mac 版は提供しません。
 
 **方法1：uv を使用（推奨）**
 
@@ -75,8 +73,7 @@ docwen      # CLI モード
 
 ### macOS の注意事項
 
-**現在の制限**：macOS では `convert`、`validate`、`number`、`merge`、`split` は現在利用
-できません。以下は開発実験向けの任意依存関係だけを記載しています。
+Mac 版は ad-hoc 署名を保持し、Developer ID 署名と Apple の公証は行いません。[インストールと初回起動](macos.md)を参照してください。
 
 **LibreOffice サポート（任意）**
 

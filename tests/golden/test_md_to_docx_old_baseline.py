@@ -15,7 +15,6 @@ or a regression (code needs fixing).
 from __future__ import annotations
 
 import shutil
-import sys
 from pathlib import Path
 
 import pytest
@@ -68,10 +67,6 @@ class TestMdToDocxOldBaseline:
                 template.id,
             ]
         )
-        if sys.platform == "darwin":
-            assert exit_code == 6, "macOS must reject its unavailable conversion route"
-            assert not list(output_parent.rglob("*.docx"))
-            return
         assert exit_code == 0, f"CLI conversion failed with exit code {exit_code}"
 
         [new_docx] = output_parent.glob("*/*.docx")

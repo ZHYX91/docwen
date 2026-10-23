@@ -151,7 +151,7 @@ def test_release_workflow_builds_each_supported_package_once_and_runs_packaged_g
     assert isinstance(windows, dict)
     assert isinstance(linux, dict)
 
-    for job in (windows, linux):
+    for job in (windows, linux, jobs["build-macos"]):
         assert "strategy" not in job
         assert job["outputs"] == {"artifact_id": "${{ steps.upload.outputs.artifact-id }}"}
 
@@ -165,6 +165,11 @@ def test_release_workflow_builds_each_supported_package_once_and_runs_packaged_g
         {
             "artifact-ids": "${{ needs.build-linux.outputs.artifact_id }}",
             "path": "builds/linux",
+            "digest-mismatch": "error",
+        },
+        {
+            "artifact-ids": "${{ needs.build-macos.outputs.artifact_id }}",
+            "path": "builds/macos",
             "digest-mismatch": "error",
         },
     ]
@@ -285,14 +290,20 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     assert "^[0-9a-f]{40}$" in msix
     assert "DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
-    assert "DocWen-macos" not in workflow
+    macos = _release_workflow()["jobs"]["build-macos"]
+    macos_commands = _commands(macos)
+    assert macos["runs-on"] == "macos-14"
+    assert macos_commands.count("scripts/build/build.py") == 1
+    assert "scripts/release/macos_package.py" in macos_commands
+    assert "notarytool" not in macos_commands and "codesign-identity" not in macos_commands
+    assert "build-macos" in _release_workflow()["jobs"]["verify-release"]["needs"]
     assert "DocWen packages one Windows x64 package and two Ubuntu 24.04 x64 packages" in packaging
     assert "DocWen 的发布目标为" in packaging
     assert "DocWen provides one Windows x64 GUI+CLI package" in readme
     assert "Ubuntu 24.04 x64 GUI+CLI" in readme
     assert '"Operating System :: Microsoft :: Windows"' in project_metadata
     assert '"Operating System :: POSIX :: Linux"' in project_metadata
-    assert '"Operating System :: MacOS :: MacOS X"' not in project_metadata
+    assert '"Operating System :: MacOS :: MacOS X"' in project_metadata
 
 
 def test_build_main_exits_when_verification_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

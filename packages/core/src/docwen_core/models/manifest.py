@@ -221,7 +221,7 @@ class PluginManifest:
     requires: list[str] = field(default_factory=list)
     """Other plugin ids this plugin depends on (optional)."""
 
-    platforms: tuple[str, ...] = ("windows", "linux")
+    platforms: tuple[str, ...] = ("windows", "linux", "darwin")
     """Product platforms on which the plugin's routes are supported."""
 
     capability_rules: list[RouteCapabilityRule] = field(default_factory=list)
@@ -258,7 +258,7 @@ class PluginManifest:
             author=data.get("author", ""),
             routes=[RouteSpec.from_dict(r) for r in data.get("routes", [])],
             requires=list(data.get("requires", [])),
-            platforms=tuple(data.get("platforms", ("windows", "linux"))),
+            platforms=tuple(data.get("platforms", ("windows", "linux", "darwin"))),
             capability_rules=[RouteCapabilityRule.from_dict(rule) for rule in data.get("capability_rules", [])],
             optimization_resources=[
                 OptimizationResourceSpec.from_dict(resource) for resource in data.get("optimization_resources", [])

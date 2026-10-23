@@ -118,12 +118,11 @@ def test_capability_availability_is_effective_for_current_platform(monkeypatch: 
         "cli.split.pdf",
     ):
         operation = capabilities[capability_id]
-        assert operation["platforms"] == ["windows", "linux"]
-        assert operation["current_platform_supported"] is False
-        assert operation["available"] is False
-        assert operation["state"] == "unavailable"
-        assert operation["runtime_check_required"] is False
-        assert "darwin" in operation["reason"].lower()
+        assert operation["platforms"] == ["windows", "linux", "darwin"]
+        assert operation["current_platform_supported"] is True
+        assert operation["available"] is True
+        assert operation["state"] == "runtime_check_required"
+        assert operation["runtime_check_required"] is True
 
 
 @pytest.mark.parametrize("argv", [["--version"], ["info", "--version"]])

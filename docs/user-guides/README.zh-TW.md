@@ -40,7 +40,7 @@ DocWen 支援 DOCX、XLSX、PDF 和一些舊版辦公、圖片格式，但**並�
 
 **前置條件**：Python 3.12
 
-**安裝套件**：提供 Windows x64 與 Ubuntu 24.04 x64 版本。其他 Linux 發行版與 macOS 需要從原始碼執行，目前沒有正式安裝套件。
+**安裝套件**：提供 Windows x64、Ubuntu 24.04 x64 和 Apple 晶片 macOS 14+ arm64 版本；不提供 Intel Mac 套件。
 
 **使用 uv 安裝**
 
@@ -65,7 +65,7 @@ docwen      # 命令列
 
 ### macOS 安裝說明
 
-**目前限制**：macOS 上的 `convert`、`validate`、`number`、`merge`、`split` 功能目前都無法使用。以下只記錄開發實驗所需的選用相依套件。
+Mac 套件保留 ad-hoc 簽章，未使用 Developer ID 簽章或 Apple 公證。首次開啟與更新方法見 [macOS 安裝指南](macos.md)。
 
 **LibreOffice 支援（可選）**
 

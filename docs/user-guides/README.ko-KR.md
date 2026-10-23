@@ -48,8 +48,7 @@ Markdown 문서의 템플릿과 생성 옵션을 선택합니다.
 
 **전제 조건**: Python 3.12
 
-**대상 범위**: 이 소스는 Windows x64와 Ubuntu 24.04 x64 패키지를 빌드합니다. 다른
-Linux 배포판과 macOS는 소스/개발 경로이며 Ubuntu 패키지의 지원 범위에 포함되지 않습니다.
+**패키지**: Windows x64, Ubuntu 24.04 x64, Apple Silicon macOS 14+ arm64. Intel Mac 패키지는 제공하지 않습니다.
 
 **방법 1: uv 사용 (권장)**
 
@@ -74,7 +73,7 @@ docwen      # CLI 모드
 
 ### macOS 설치 안내
 
-**현재 제한**: macOS에서는 `convert`, `validate`, `number`, `merge`, `split` 기능을 현재 사용할 수 없습니다. 아래 내용은 개발 실험을 위한 선택적 의존성만 설명합니다.
+Mac 패키지는 ad-hoc 서명을 유지하며 Developer ID 서명과 Apple 공증은 사용하지 않습니다. [설치 및 첫 실행](macos.md)을 참고하세요.
 
 **LibreOffice 지원(선택)**
 

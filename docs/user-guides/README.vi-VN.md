@@ -48,8 +48,7 @@ Nhật ký thay đổi: xem [CHANGELOG.md](../CHANGELOG.md)
 
 **Yêu cầu**: Python 3.12
 
-**Nền tảng gói được hỗ trợ**: Mã nguồn này tạo gói cho Windows x64 và Ubuntu 24.04 x64. Các bản phân
-phối Linux khác và macOS vẫn là đường dẫn mã nguồn/phát triển, không thuộc cam kết của gói Ubuntu.
+**Gói cài đặt**: Windows x64, Ubuntu 24.04 x64 và Apple Silicon macOS 14+ arm64. Không có gói cho Intel Mac.
 
 **Cách 1: Sử dụng uv (khuyến nghị)**
 
@@ -74,7 +73,7 @@ docwen      # Chế độ CLI
 
 ### Ghi chú cho macOS
 
-**Giới hạn hiện tại**: Trên macOS, các chức năng `convert`, `validate`, `number`, `merge`, `split` hiện không khả dụng. Phần dưới chỉ ghi các phụ thuộc tùy chọn cho thử nghiệm phát triển.
+Gói Mac giữ chữ ký ad-hoc, không dùng Developer ID hay công chứng Apple. Xem [cài đặt và mở lần đầu](macos.md).
 
 **Hỗ trợ LibreOffice (Tùy chọn)**
 

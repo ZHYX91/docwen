@@ -5,7 +5,7 @@ import hashlib
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from scripts.release.publication_contract import assemble, package_names
+from scripts.release.publication_contract import assemble, package_names, package_platform
 from scripts.release.publication_http import ApiError, GitHub
 
 REPOSITORY = "example/docwen"
@@ -16,13 +16,18 @@ DIGEST = "sha256:" + "b" * 64
 
 def candidate(root: Path, *, source_ref: str = f"refs/tags/{VERSION}") -> tuple[Path, dict]:
     source = root / "source"
-    for name in ("uv.lock", "release/windows-production-manifest.v1.json", "release/linux-production-manifest.v1.json"):
+    for name in (
+        "uv.lock",
+        "release/windows-production-manifest.v1.json",
+        "release/linux-production-manifest.v1.json",
+        "release/macos-production-manifest.v1.json",
+    ):
         path = source / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(name, encoding="utf-8")
     builds = root / "builds"
     for name in package_names(VERSION):
-        platform = "windows" if name.endswith(".zip") else "linux"
+        platform = package_platform(name, VERSION)
         path = builds / platform / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(name.encode("utf-8"))
@@ -100,6 +105,7 @@ class FakeGitHub(GitHub):
             "Source identity",
             "Build Windows packages",
             "Build Linux packages",
+            "Build macOS packages",
             "verify-release",
         ]
         self.jobs = {"total_count": len(names), "jobs": [{"name": name, "conclusion": "success"} for name in names]}

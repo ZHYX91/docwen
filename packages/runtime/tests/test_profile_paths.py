@@ -72,6 +72,7 @@ def test_source_platform_defaults_remain_explicit_and_separate(platform_roots):
 
 @pytest.mark.parametrize("packaged", [False, True])
 def test_archive_copy_and_store_upgrade_resolve_the_correct_profile(tmp_path, monkeypatch, platform_roots, packaged):
+    monkeypatch.setattr(profile_paths.sys, "platform", "win32")
     monkeypatch.setattr(profile_paths.sys, "frozen", True, raising=False)
     monkeypatch.setattr(profile_paths, "_windows_has_package_identity", lambda: packaged)
     observed = []
@@ -181,3 +182,21 @@ def test_unwritable_selected_profile_does_not_write_an_alternative(tmp_path, mon
     assert {path.name: path.read_bytes() for path in root.iterdir() if path.is_file()} == before
     assert not (root / "configs").exists() and not (root / "templates").exists()
     assert all(not path.exists() for path in platform_roots.values())
+
+
+@pytest.mark.parametrize(
+    "executable", ["Applications/DocWen.app/Contents/Resources/payload/DocWen", "download/DocWenCLI"]
+)
+def test_macos_frozen_profile_survives_app_replacement_without_mutating_bundle(
+    tmp_path, monkeypatch, platform_roots, executable
+):
+    monkeypatch.setattr(profile_paths.sys, "platform", "darwin")
+    monkeypatch.setattr(profile_paths.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(profile_paths.sys, "executable", str(tmp_path / executable))
+    profile = profile_paths.resolve_profile_paths({})
+    assert profile.source == "package" and not profile.portable
+    assert profile.root == platform_roots["data"]
+    assert profile.config_dir == profile.root / "configs"
+    assert not (tmp_path / executable).parent.exists()
+    explicit = profile_paths.resolve_profile_paths({"DOCWEN_DATA_DIR": str(tmp_path / "custom")})
+    assert explicit.root == tmp_path / "custom" and explicit.source == "explicit"

@@ -203,11 +203,64 @@ jobs:
           overwrite: false
           retention-days: 30
 
+  build-macos:
+    name: Build macOS packages
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+    needs: [identity, source-checks]
+    runs-on: macos-14
+    timeout-minutes: 90
+    env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
+      DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.0"
+          python-version: "3.12.13"
+          enable-cache: true
+      - name: Require native Apple Silicon and install image/Office dependencies
+        run: |
+          test "$(uname -m)" = arm64
+          brew install libheif
+          brew install --cask libreoffice
+      - name: Install exact lockfile
+        run: uv sync --frozen --extra dev
+      - name: Build GUI and CLI payloads once
+        run: uv run python scripts/build/build.py --skip-cython --version "$RELEASE_VERSION"
+      - name: Compose ad-hoc signed app and verify both extracted archives
+        run: >-
+          uv run python scripts/release/macos_package.py
+          --output publication --report "$RUNNER_TEMP/macos-release-checks.json"
+      - name: Upload verified macOS packages
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: docwen-macos-${{ github.run_id }}-${{ github.run_attempt }}
+          path: publication/*.tar.gz
+          compression-level: 0
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 30
+      - name: Save compact macOS package checks
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: macos-checks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/macos-release-checks.json
+          if-no-files-found: warn
+          retention-days: 30
+
   verify-release:
     outputs:
       artifact_id: ${{ steps.publication.outputs.artifact-id }}
       artifact_digest: ${{ steps.publication.outputs.artifact-digest }}
-    needs: [identity, build-windows, build-linux]
+    needs: [identity, build-windows, build-linux, build-macos]
     env:
       RELEASE_VERSION: ${{ needs.identity.outputs.version }}
     runs-on: ubuntu-24.04
@@ -230,6 +283,12 @@ jobs:
         with:
           artifact-ids: ${{ needs.build-linux.outputs.artifact_id }}
           path: builds/linux
+          digest-mismatch: error
+      - name: Download the verified macOS packages by artifact ID
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          artifact-ids: ${{ needs.build-macos.outputs.artifact_id }}
+          path: builds/macos
           digest-mismatch: error
       - name: Assemble the exact verified candidate
         run: >-

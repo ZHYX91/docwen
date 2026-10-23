@@ -1,14 +1,20 @@
 # Packaging / 打包
 
-DocWen packages one Windows x64 package and two Ubuntu 24.04 x64 packages built from the bundle composition root. The Windows archive contains both GUI and CLI; Ubuntu has GUI+CLI and CLI-only archives. Package verification runs against the produced directory, not the source tree. macOS has no release asset, and its current capability contract reports conversion, validation, numbering, merge, and split as unavailable.
+DocWen packages one Windows x64 package and two Ubuntu 24.04 x64 packages, plus two
+Apple Silicon macOS 14+ packages. The Mac desktop archive contains a complete `DocWen.app`
+with its CLI; a separate archive contains only the CLI. Package verification uses extracted
+release bytes. Mac packages retain ad-hoc signatures, with no Developer ID signing or Apple notarization.
 
-DocWen 的发布目标为一个 Windows x64 完整包和两个 Ubuntu 24.04 x64 包；Windows 包同时包含 GUI 与 CLI，Ubuntu 分为 GUI+CLI 和仅 CLI 两个压缩包。打包验证面向实际产物目录执行，而不是用源码态结果代替。macOS 没有正式附件，当前 capability 契约明确把转换、校对、编号、合并和拆分报告为不可用。
+DocWen 的发布目标为 Windows x64、Ubuntu 24.04 x64 和 Apple 芯片 macOS 14+ arm64。
+Mac 提供 `.app`（含 CLI）和独立 CLI 包；保留 ad-hoc 签名，暂不做 Developer ID 签名或 Apple 公证。
+首次打开说明见 [macOS 安装指南](user-guides/macos.md)。
 
 | Platform / 平台 | Distribution status / 发行状态 | Required validation / 所需验证 |
 | --- | --- | --- |
 | Windows x64 | Release package / 正式发行包 | Exact packaged candidate and automated checks; selected native acceptance recorded separately / 精确打包候选及自动检查；所选原生验收另行记录 |
 | Ubuntu 24.04 x64 | Release package / 正式发行包 | Exact manifest-bound package and post-extract automation; native desktop evidence is recorded separately / 精确清单绑定包与解压后自动化；原生桌面证据另行记录 |
-| macOS x64/arm64 | No release asset / 无正式附件 | Source CI and opt-in packaging experiment only; primary document operations are unavailable / 仅源码 CI 与手动打包实验，主要文档操作不可用 |
+| macOS 14+ arm64 | Ad-hoc signed app + CLI archives / ad-hoc 签名应用与 CLI 包 | Native arm64 build, deep signature verification, safe archive roundtrip and frozen functionality; interactive Finder/Gatekeeper evidence is separate / 原生构建、签名、归档及冻结功能；Finder/Gatekeeper 交互另验 |
+| macOS Intel | No package / 不提供安装包 | Outside this release target / 不在本次发布范围 |
 
 ## Required contents / 必需内容
 
@@ -149,3 +155,26 @@ The two table models total 15,163,177 uncompressed bytes. They reuse the existin
 The MSIX workflow accepts an optional full `portable_commit` SHA alongside the exact publication `artifact_id`. It defaults to the selected packaging source commit. A packaging-only fix can explicitly select the original portable commit; the normal publication provenance and byte verification still apply. MSIX metadata records `packagingCommit` separately from `sourceCandidate.sourceCommit`. This does not rebuild or replace the portable release.
 
 PRI logical resource URIs use `/Files/assets/msix/...`, while physical candidate values must use Windows backslashes. The Windows SDK regression checks each unmodified PRI candidate against the native Appx package reader; a readable PRI dump alone does not establish that Store can resolve its images.
+
+## macOS production packages / macOS 生产包
+
+`release/macos-production-manifest.v1.json` fixes the arm64/macOS 14 target, two versioned
+`tar.gz` assets, safe internal symlink policy and ad-hoc-only signing policy. The release
+workflow builds the GUI and CLI once on native `macos-14` with the locked Python environment.
+`scripts/release/macos_package.py` composes the app around that unchanged onedir payload.
+The small native launcher forwards arguments by `execv` using its own location, so Finder
+and a shell with a different working directory use the same executable and resource layout.
+The app receives Info.plist metadata, an icon and a final ad-hoc resource seal. It does not
+import a certificate, use Developer ID, run notarytool or require Apple account secrets.
+
+Both archives preserve executable modes and validated relative links, and carry exact payload
+inventories and checksums. Tests run after extraction, require arm64 Mach-O code and valid
+signatures, and rerun conversion, proofreading, numbering, merge/split, output protection and
+selected LibreOffice routes on each frozen CLI. The app launcher and settings smoke also run.
+The app and CLI default to the shared user profile rather than writing inside the signed app.
+The full candidate inventory, selected-platform retrieval, required producer jobs, provenance,
+draft asset checks and independent public readback all include the Mac archives.
+
+These checks do not establish browser quarantine handling, manual Gatekeeper approval, native
+menu/drag-drop behavior or every macOS/Office version. Retain those limitations in the compact
+package receipt. See [first launch](user-guides/macos.md) and Apple's linked per-app instructions.

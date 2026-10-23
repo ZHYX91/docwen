@@ -434,7 +434,7 @@ class TestPluginManifestSerialization:
         assert manifest.description == ""
         assert manifest.routes == []
         assert manifest.requires == []
-        assert manifest.platforms == ("windows", "linux")
+        assert manifest.platforms == ("windows", "linux", "darwin")
         assert manifest.capability_rules == []
         assert manifest.optimization_resources == []
 

@@ -180,7 +180,7 @@ def main(argv: list[str] | None = None) -> int:
         if operation in {"fetch-platform", "inspect", "publish", "verify"}:
             command.add_argument("--receipt", type=Path, required=True)
         if operation == "fetch-platform":
-            command.add_argument("--platform", choices=("windows", "linux"), required=True)
+            command.add_argument("--platform", choices=("windows", "linux", "macos"), required=True)
         if operation == "publish":
             command.add_argument("--notes", type=Path, required=True)
             command.add_argument("--resume-artifact-id", type=int)

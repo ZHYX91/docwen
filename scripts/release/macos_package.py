@@ -1,0 +1,267 @@
+"""Compose, ad-hoc sign and verify macOS archives from one existing frozen build."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import platform
+import plistlib
+import shutil
+import subprocess
+import sys
+import tarfile
+import tomllib
+from pathlib import Path
+from typing import Any
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.release.macos_archive import archive_payload, inventory, verify_extracted, write_inventory
+from scripts.release.macos_functional import run_cases
+from scripts.release.publication_contract import canonical_json, file_identity, require
+from tools.run_lease import managed_run
+
+REPO = Path(__file__).resolve().parents[2]
+MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
+
+
+def read_contract(path: Path) -> dict[str, Any]:
+    contract = json.loads(path.read_text(encoding="utf-8"))
+    version = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    require(
+        contract.get("schemaVersion") == 1 and contract.get("manifestId") == "docwen-macos-production",
+        "invalid macOS contract",
+    )
+    require(contract.get("product") == {"name": "DocWen", "version": version}, "macOS contract version mismatch")
+    require(
+        contract.get("target")
+        == {"os": "macos", "minimumVersion": "14.0", "arch": "arm64", "platformTag": "macos-arm64"},
+        "unsupported macOS target",
+    )
+    require(
+        contract.get("signing") == {"identity": "-", "developerId": False, "notarized": False},
+        "ad-hoc signing required",
+    )
+    require(
+        contract.get("bundle")
+        == {"name": "DocWen.app", "identifier": "io.github.ZHYX91.DocWen", "payload": "Contents/Resources/payload"},
+        "unexpected app layout",
+    )
+    require(
+        contract.get("archive") == {"format": "tar.gz", "epoch": 1704067200, "symlinks": "relative-internal-only"},
+        "unexpected archive policy",
+    )
+    require(
+        contract.get("artifacts")
+        == [
+            {"id": kind, "name": f"{prefix}-{version}-macos-arm64.tar.gz", "root": f"{prefix}-{version}-macos-arm64"}
+            for kind, prefix in (("gui-cli", "DocWen"), ("cli-only", "DocWenCLI"))
+        ],
+        "unexpected macOS assets",
+    )
+    return contract
+
+
+def command(arguments: list[str], *, environment: dict[str, str] | None = None, timeout: int = 120) -> str:
+    result = subprocess.run(arguments, env=environment, capture_output=True, text=True, timeout=timeout)
+    require(result.returncode == 0, f"command failed: {arguments[0]}: {result.stderr[-4000:]}")
+    return result.stdout + result.stderr
+
+
+def verify_signatures(root: Path, *, app: Path | None = None) -> dict[str, Any]:
+    records = inventory(root)
+    binaries = []
+    for relative, record in records.items():
+        if record["type"] != "file":
+            continue
+        path = root / relative
+        with path.open("rb") as stream:
+            if stream.read(4) not in MACHO_MAGICS:
+                continue
+        architectures = command(["/usr/bin/lipo", "-archs", str(path)]).strip().split()
+        require("arm64" in architectures, f"non-arm64 code: {relative}")
+        command(["/usr/bin/codesign", "--verify", "--strict", str(path)])
+        binaries.append(relative)
+    require(bool(binaries), "no Mach-O code in package")
+    if app is not None:
+        command(["/usr/bin/codesign", "--verify", "--deep", "--strict", str(app)])
+        description = command(["/usr/bin/codesign", "--display", "--verbose=4", str(app)])
+        require(
+            "Signature=adhoc" in description and "TeamIdentifier=not set" in description,
+            "unexpected app signing identity",
+        )
+    for name in ("DocWen", "DocWenCLI"):
+        for relative in binaries:
+            if Path(relative).name == name:
+                require(
+                    "Signature=adhoc" in command(["/usr/bin/codesign", "-d", "--verbose=4", str(root / relative)]),
+                    "entry point must be ad-hoc signed",
+                )
+    return {"machOCount": len(binaries), "architecture": "arm64", "appSignature": "adhoc" if app else None}
+
+
+def compose_app(payload: Path, root: Path, version: str) -> Path:
+    app = root / "DocWen.app"
+    contents = app / "Contents"
+    macos, resources = contents / "MacOS", contents / "Resources"
+    macos.mkdir(parents=True)
+    resources.mkdir()
+    inventory(payload)  # Validate links before copying anything.
+    shutil.copytree(payload, resources / "payload", symlinks=True)
+    shutil.copyfile(REPO / "docs/user-guides/macos.md", root / "FIRST-OPEN.md")
+    (contents / "Info.plist").write_bytes(
+        plistlib.dumps(
+            {
+                "CFBundleDevelopmentRegion": "en",
+                "CFBundleExecutable": "DocWen",
+                "CFBundleName": "DocWen",
+                "CFBundleIdentifier": "io.github.ZHYX91.DocWen",
+                "CFBundlePackageType": "APPL",
+                "CFBundleShortVersionString": version,
+                "CFBundleVersion": version,
+                "LSMinimumSystemVersion": "14.0",
+                "NSHighResolutionCapable": True,
+                "CFBundleIconFile": "DocWen.icns",
+            },
+            sort_keys=True,
+        )
+    )
+    from PIL import Image
+
+    with Image.open(REPO / "assets/icon.png") as image:
+        image.save(resources / "DocWen.icns", format="ICNS")
+    command(
+        [
+            "/usr/bin/clang",
+            "-arch",
+            "arm64",
+            "-mmacosx-version-min=14.0",
+            "-O2",
+            str(REPO / "scripts/release/macos_launcher.c"),
+            "-o",
+            str(macos / "DocWen"),
+        ]
+    )
+    command(["/usr/bin/codesign", "--force", "--sign", "-", "--timestamp=none", str(app)])
+    return app
+
+
+def package(dist: Path, output: Path, report: Path) -> None:
+    require(platform.system() == "Darwin" and platform.machine() == "arm64", "native Apple Silicon required")
+    contract = read_contract(REPO / "release/macos-production-manifest.v1.json")
+    version = contract["product"]["version"]
+    require(not output.exists() and not report.exists(), "package outputs must be new")
+    (REPO / "build").mkdir(exist_ok=True)
+    with managed_run(
+        REPO / "build", prefix="macos-release-", owner="docwen.release.macos", kind="macos-package"
+    ) as run:
+        results: dict[str, Any] = {
+            "schema": "docwen.macos.release-checks.v1",
+            "host": {"system": platform.system(), "release": platform.mac_ver()[0], "machine": platform.machine()},
+            "contract": file_identity(REPO / "release/macos-production-manifest.v1.json"),
+            "lockfile": file_identity(REPO / "uv.lock"),
+            "packages": {},
+            "limitations": [
+                "No browser quarantine or manual Gatekeeper exception acceptance",
+                "No interactive menu, drag/drop or physical-device acceptance",
+                "No Developer ID signing or notarization",
+            ],
+        }
+        archives = []
+        for artifact in contract["artifacts"]:
+            root = run.root / artifact["root"]
+            root.mkdir()
+            app = None
+            if artifact["id"] == "gui-cli":
+                app = compose_app(dist / f"DocWen_v{version}_macos-arm64", root, version)
+            else:
+                payload = dist / f"DocWenCLI_v{version}_macos-arm64"
+                inventory(payload)
+                shutil.copytree(payload, root, dirs_exist_ok=True, symlinks=True)
+                shutil.copyfile(REPO / "docs/user-guides/macos.md", root / "FIRST-OPEN.md")
+            signatures = verify_signatures(root, app=app)
+            write_inventory(root)
+            archive = run.root / artifact["name"]
+            archive_identity = archive_payload(root, archive, top=artifact["root"], epoch=contract["archive"]["epoch"])
+            extracted = run.root / (artifact["id"] + "-extracted")
+            extracted.mkdir()
+            with tarfile.open(archive) as bundle:
+                bundle.extractall(extracted, filter="data")
+            installed = extracted / artifact["root"]
+            verify_extracted(installed)
+            extracted_app = installed / "DocWen.app" if app else None
+            require(verify_signatures(installed, app=extracted_app) == signatures, "signature drift after extraction")
+            binary_dir = installed / "DocWen.app/Contents/Resources/payload" if app else installed
+            cases = run_cases(binary_dir / "DocWenCLI", run.root / (artifact["id"] + "-cases"), REPO)
+            if app:
+                # Test the actual bundle launcher too, independent of the caller's cwd.
+                environment = os.environ.copy()
+                environment.update(QT_QPA_PLATFORM="offscreen", DOCWEN_GUI_DISABLE_STATE_SAVE="1")
+                command(
+                    [
+                        sys.executable,
+                        str(REPO / "scripts/release/verify_packaged_gui.py"),
+                        "--binary-dir",
+                        str(binary_dir),
+                        "--settings-smoke",
+                    ],
+                    environment=environment,
+                    timeout=180,
+                )
+                environment.update(
+                    DOCWEN_DATA_DIR=str(run.root / "launch-profile"),
+                    DOCWEN_RUNTIME_ROOT=str(run.root / "launch-runtime"),
+                    DOCWEN_GUI_TEST_AUTOCLOSE_MS="2000",
+                )
+                command([str(installed / "DocWen.app/Contents/MacOS/DocWen")], environment=environment, timeout=45)
+                # LaunchServices + the native Cocoa plugin, using a fresh profile.
+                # This is local CI launch evidence, not browser quarantine approval.
+                native_report = run.root / "native-settings.json"
+                native_environment = {
+                    "QT_QPA_PLATFORM": "cocoa",
+                    "DOCWEN_GUI_DISABLE_STATE_SAVE": "1",
+                    "DOCWEN_GUI_TEST_AUTOCLOSE_MS": "5000",
+                    "DOCWEN_GUI_TEST_SETTINGS_REPORT": str(native_report),
+                    "DOCWEN_DATA_DIR": str(run.root / "native-profile"),
+                    "DOCWEN_RUNTIME_ROOT": str(run.root / "native-runtime"),
+                }
+                launch = ["/usr/bin/open", "-W", "-n"]
+                for key, value in native_environment.items():
+                    launch.extend(["--env", f"{key}={value}"])
+                command([*launch, str(extracted_app)], timeout=90)
+                from scripts.release.verify_packaged_gui import _verify_settings_smoke_report
+
+                _verify_settings_smoke_report(native_report)
+            verify_extracted(installed)
+            verify_signatures(installed, app=extracted_app)
+            require(file_identity(archive) == archive_identity, "candidate archive changed during tests")
+            results["packages"][artifact["id"]] = {
+                "asset": artifact["name"],
+                **archive_identity,
+                "signatures": signatures,
+                "cases": cases,
+                "guiSettingsAndLauncher": "passed-offscreen-and-native-launchservices-cocoa"
+                if app
+                else "not-applicable",
+            }
+            archives.append(archive)
+        output.mkdir(parents=True)
+        for archive in archives:
+            shutil.copyfile(archive, output / archive.name)
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_bytes(canonical_json(results))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dist", type=Path, default=REPO / "dist")
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--report", type=Path, required=True)
+    args = parser.parse_args()
+    package(args.dist.resolve(), args.output.resolve(), args.report.resolve())
+
+
+if __name__ == "__main__":
+    main()
