@@ -27,8 +27,13 @@ def test_stop_handles_only_vanished_directory_wake_race_after_clean_shutdown(
 ) -> None:
     from docwen_runtime.control import ControlClient, ControlEndpointError, ControlServer
 
+    # Force fallback managed-directory ownership even when CI provides an
+    # XDG private runtime directory.
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
     server = ControlServer(lambda _action, _payload: {}, app_name=f"dw-owned-dir-race-{uuid4().hex}")
     server.start(timeout=2)
+    assert server._unix_lease is not None
+    assert server._unix_lease.plan.directory_name is not None
     original_request = ControlClient.request
 
     def wake_then_fail(
