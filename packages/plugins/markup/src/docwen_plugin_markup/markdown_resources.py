@@ -87,7 +87,9 @@ class MarkdownResourceWriter:
             resolved_ocr_placement = "image_md"
 
         for resource in resources:
-            source_key = normalize_resource_key(resource.source_key)
+            # EPUB members are case-sensitive ZIP paths; HTML/MHTML continue
+            # using their existing case-insensitive resource lookup policy.
+            source_key = normalize_resource_key(resource.source_key, case_sensitive=source_format == "epub")
             suggested_name = _unique_name(_safe_basename(resource.suggested_name), used_names)
             suffix = PurePosixPath(suggested_name).suffix or ".bin"
             staging_path = context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, suffix)  # pyright: ignore[reportAttributeAccessIssue]
@@ -172,7 +174,9 @@ class MarkdownResourceWriter:
                 artifacts=tuple(item_artifacts),
             )
             written[source_key] = item
-            basename_key = normalize_resource_key(PurePosixPath(source_key).name)
+            basename_key = normalize_resource_key(
+                PurePosixPath(source_key).name, case_sensitive=source_format == "epub"
+            )
             written.setdefault(basename_key, item)
 
         return written
@@ -225,15 +229,15 @@ def _format_image_resource_link(
     return format_image_link(label, target, style=image_link_style)
 
 
-def normalize_resource_key(value: str) -> str:
-    """Normalize container-internal resource references for lookup."""
+def normalize_resource_key(value: str, *, case_sensitive: bool = False) -> str:
+    """Normalize resource references; preserve case for ZIP/EPUB member paths."""
     split = urlsplit(value.replace("\\", "/"))
     path = unquote(split.path).strip()
     parts: list[str] = []
     for part in path.split("/"):
         if part in ("", ".", ".."):
             continue
-        parts.append(part.lower())
+        parts.append(part if case_sensitive else part.lower())
     return "/".join(parts)
 
 
