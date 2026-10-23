@@ -36,7 +36,9 @@ def test_named_pdf_operation_keeps_concrete_route_target(command: str, subcomman
 @pytest.mark.parametrize("source", ["xps", "ofd", "pdf"])
 @pytest.mark.parametrize("action", ["split_pdf", "merge_pdfs"])
 def test_pdf_actions_resolve_composed_layout_routes(
-    monkeypatch: pytest.MonkeyPatch, source: str, action: str,
+    monkeypatch: pytest.MonkeyPatch,
+    source: str,
+    action: str,
 ) -> None:
     catalog = parse_runtime_capability_catalog(bundled_available_runtime_projection())
     monkeypatch.setattr(
