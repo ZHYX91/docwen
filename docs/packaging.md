@@ -50,7 +50,7 @@ Repository settings must enable Immutable Releases and an active no-update/no-de
 tags before a version tag is pushed. 仓库设置必须在推送版本标签前启用 Immutable Releases，并启用禁止更新或
 删除数字 `x.y.z` 标签的 ruleset。
 
-The hosted GitHub Release workflow enforces this deterministic baseline before publishing one Windows archive and two Ubuntu 24.04 x64 archives:
+The hosted GitHub Release workflow enforces this deterministic baseline before publishing one Windows archive, two Ubuntu 24.04 x64 archives and two macOS arm64 archives:
 
 1. Shared required source checks (Ruff, test governance, Import-Linter, architecture checks and Pyright for all three targets), one Windows full suite with source/core/GUI coverage reports, and the union of fast and release tests on Linux and macOS. Ordinary CI and release use this same gate.
 2. Windows package resource/layout verification.
@@ -58,11 +58,12 @@ The hosted GitHub Release workflow enforces this deterministic baseline before p
 4. Packaged Windows GUI settings-page construction smoke.
 5. Manifest-bound deterministic Ubuntu archive construction with fixed `DocWen-<version>-linux-x64.tar.gz` and `DocWenCLI-<version>-linux-x64.tar.gz` names.
 6. CLI and GUI verification against fresh directories extracted from those exact Ubuntu archives.
-7. One build per release platform, transported by the producing job's exact artifact ID with digest mismatch rejection, followed by Release SHA-256 generation over all three archives. Reproducibility comparisons are optional engineering checks, not a prerequisite for every release.
+7. Native Apple Silicon app/CLI archive construction, ad-hoc signature and archive checks, and functionality on both extracted Mac payloads as detailed below.
+8. One build per release platform, transported by the producing job's exact artifact ID with digest mismatch rejection, followed by Release SHA-256 generation over all five archives. Reproducibility comparisons are optional engineering checks, not a prerequisite for every release.
 
 Selected native acceptance uses the exact candidate that will be published. Its scope is chosen for each release and can include: source/package CLI parity; OCR and successful-warning CLI paths; GUI startup, settings, notification/OCR, IPC, and successful-warning paths; plus Office, presentation, and SmartDoc routes on a machine where their external dependencies are actually configured. These environment-sensitive checks are recorded separately and are not falsely attributed to the hosted workflow. Visible notification presentation, target-device rendering, and manual UI inspection remain manual evidence.
 
-托管的 GitHub Release 工作流在发布一个 Windows 压缩包和两个 Ubuntu 24.04 x64 压缩包前执行以下确定性基线：
+托管的 GitHub Release 工作流在发布一个 Windows 压缩包、两个 Ubuntu 24.04 x64 压缩包和两个 macOS arm64 压缩包前执行以下确定性基线：
 
 1. 先运行统一必需源码检查（Ruff、测试治理、Import-Linter、架构检查及三个目标平台的 Pyright）；Windows 完整测试只运行一次并生成源码/core/GUI 覆盖率报告，Linux 与 macOS 各运行 fast 和 release 测试的并集。普通 CI 与发布使用同一门禁。
 2. 验证 Windows 打包资源与 Layout 资源。
@@ -70,7 +71,8 @@ Selected native acceptance uses the exact candidate that will be published. Its 
 4. 验证 Windows 打包 GUI 的设置页构造。
 5. 按受版本控制的生产清单确定性构造 Ubuntu 压缩包，并固定为 `DocWen-<version>-linux-x64.tar.gz` 与 `DocWenCLI-<version>-linux-x64.tar.gz`。
 6. 从这两个精确 Ubuntu 压缩包解压到全新目录后，再分别验证 CLI 和 GUI。
-7. 每个发布平台只构建一次，按构建任务输出的 artifact ID 交接并拒绝传输摘要不匹配，再为三个压缩包生成 Release SHA-256。可复现性比对按需研究，不作为每版前提。
+7. 原生 Apple 芯片应用/CLI 归档构建、ad-hoc 签名和归档检查，以及两个 Mac 解压载荷的功能检查，详见下文。
+8. 每个发布平台只构建一次，按构建任务输出的 artifact ID 交接并拒绝传输摘要不匹配，再为五个压缩包生成 Release SHA-256。可复现性比对按需研究，不作为每版前提。
 
 原生验收使用将要发布的同一精确候选，按本版范围选择场景，可包括：源码/打包 CLI 一致性、CLI OCR 与成功警告、GUI 启动、设置、通知/OCR、IPC 与成功警告，以及在外部依赖已真实配置的机器上验证 Office、演示文稿和 SmartDoc 路径。这些环境相关结果单独记录，不能冒充托管工作流已经执行。通知中心可见性、目标设备渲染和人工 UI 检查仍属于人工证据。
 
