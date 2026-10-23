@@ -33,6 +33,35 @@ _ANGLE_EMAIL_RE = re.compile(r"<([^@\s<>]+@[^@\s<>]+\.[^@\s<>]+)>")
 _ZERO_WIDTH_TRANSLATION = str.maketrans("", "", "\u200b\u200c\u200d\ufeff\u2060")
 _COLUMN_PREFIX = "↓"
 _ROW_PREFIX = "→"
+_XLSX_CELL_TEXT_LIMIT = 32767
+
+
+class XlsxCellTextTooLongError(ValueError):
+    """Reject a value before openpyxl silently truncates the source text."""
+
+    def __init__(self, *, sheet: str, row: int, column: int, length: int) -> None:
+        self.sheet = sheet
+        self.row = row
+        self.column = column
+        self.length = length
+        super().__init__(
+            f"Cell in sheet {sheet!r}, row {row}, column {column} contains "
+            f"{length} UTF-16 code units; Excel allows at most {_XLSX_CELL_TEXT_LIMIT}."
+        )
+
+
+def assign_bounded_xlsx_value(cell: Any, value: Any) -> None:
+    """Check authored text before assigning it to an Excel cell."""
+    if isinstance(value, str):
+        units = len(value.encode("utf-16-le")) // 2
+        if units > _XLSX_CELL_TEXT_LIMIT:
+            raise XlsxCellTextTooLongError(
+                sheet=cell.parent.title,
+                row=cell.row,
+                column=cell.column,
+                length=units,
+            )
+    cell.value = value
 
 
 def build_template_workbook(
@@ -170,7 +199,7 @@ def _replace_yaml_placeholders(workbook: Any, replacements: dict[str, tuple[Any,
                 stripped = original.strip()
                 if stripped in replacements:
                     value, number_format = replacements[stripped]
-                    cell.value = value
+                    assign_bounded_xlsx_value(cell, value)
                     if number_format:
                         cell.number_format = number_format
                     replaced += 1
@@ -184,7 +213,7 @@ def _replace_yaml_placeholders(workbook: Any, replacements: dict[str, tuple[Any,
                     next_value = next_value.replace(placeholder, str(value))
                     text_format = text_format or number_format == numbers.FORMAT_TEXT
                 if next_value != original:
-                    cell.value = next_value
+                    assign_bounded_xlsx_value(cell, next_value)
                     if text_format:
                         cell.number_format = numbers.FORMAT_TEXT
                     replaced += 1
@@ -301,7 +330,7 @@ def _add_protected_comment(cell: Any, consumed_value: Any) -> None:
 
 
 def _assign_cell_value(cell: Any, value: Any, number_format: str | None) -> None:
-    cell.value = value
+    assign_bounded_xlsx_value(cell, value)
     if number_format:
         cell.number_format = number_format
 
@@ -565,7 +594,7 @@ def _promote_template_image_placeholders(workbook: Any, image_scope: str) -> Non
         for row in worksheet.iter_rows():
             for cell in row:
                 if isinstance(cell.value, str) and "{{IMAGE:" in cell.value:
-                    cell.value = _IMAGE_PLACEHOLDER_RE.sub(promote, cell.value)
+                    assign_bounded_xlsx_value(cell, _IMAGE_PLACEHOLDER_RE.sub(promote, cell.value))
 
 
 def process_image_placeholders(
@@ -626,7 +655,7 @@ def process_image_placeholders(
                     next_value = next_value.replace(placeholder, "")
                     inserted += 1
 
-                cell.value = next_value
+                assign_bounded_xlsx_value(cell, next_value)
 
     return inserted
 
@@ -721,7 +750,7 @@ def _clean_remaining_placeholders(workbook: Any) -> int:
 
                 next_value = _PLACEHOLDER_RE.sub(clean, cell.value)
                 if next_value != cell.value:
-                    cell.value = next_value
+                    assign_bounded_xlsx_value(cell, next_value)
                     cleaned += 1
     return cleaned
 

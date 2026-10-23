@@ -37,6 +37,8 @@ from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
     _plan_rectangular_merges,
     _restore_escaped_merge_marker_literals,
+    XlsxCellTextTooLongError,
+    assign_bounded_xlsx_value,
     build_template_workbook,
     process_image_placeholders,
 )
@@ -215,7 +217,9 @@ class MdToXlsxConverter:
                                 if structural_tables
                                 else raw_value
                             )
-                            ws.cell(row=row_idx, column=col_idx, value=value)
+                            assign_bounded_xlsx_value(
+                                ws.cell(row=row_idx, column=col_idx), value
+                            )
 
                     if structural_tables and bool(table.get("structural")):
                         merge_regions, merge_warnings = _plan_rectangular_merges(
@@ -300,6 +304,27 @@ class MdToXlsxConverter:
                 ],
             )
 
+        except XlsxCellTextTooLongError as exc:
+            message = str(exc)
+            logger.warning(message)
+            return ConversionResult(
+                task_id=task_id,
+                success=False,
+                error=ConversionErrorInfo(
+                    error_type="conversion_failed",
+                    message=message,
+                    diagnostic_code="MD2XLSX-CELL-TEXT-TOO-LONG",
+                ),
+                metrics=ConversionMetrics(duration_ms=(time.monotonic() - t_start) * 1000.0),
+                diagnostics=[
+                    ConversionDiagnostic(
+                        level="error",
+                        message=message,
+                        code="MD2XLSX-CELL-TEXT-TOO-LONG",
+                        location=f"{exc.sheet}!R{exc.row}C{exc.column}",
+                    )
+                ],
+            )
         except Exception as exc:
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
             error_text = conversion_error_text(context.request, exc)
