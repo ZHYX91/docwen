@@ -46,7 +46,7 @@ def test_runtime_factory_separates_public_machine_formats_from_gui_internal_rout
             sources=(RuntimeRouteSource("clipboard_document", "markdown"),),
             operation="conversion",
         )
-        if gui_projection["runtime"]["platform"] in {"windows", "linux"}:
+        if gui_projection["runtime"]["platform"] in {"windows", "linux", "darwin"}:
             assert choices.status == "ready"
             assert {"md", "docx", "xlsx", "csv"} <= set(choices.targets)
         else:

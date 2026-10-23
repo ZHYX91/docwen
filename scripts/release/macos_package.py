@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import json
 import os
 import platform
@@ -161,6 +162,13 @@ def package(dist: Path, output: Path, report: Path) -> None:
         results: dict[str, Any] = {
             "schema": "docwen.macos.release-checks.v1",
             "host": {"system": platform.system(), "release": platform.mac_ver()[0], "machine": platform.machine()},
+            "software": {
+                "python": platform.python_version(),
+                "uv": command(["uv", "--version"]).strip(),
+                "pyinstaller": importlib.metadata.version("pyinstaller"),
+                "libreoffice": command(["/Applications/LibreOffice.app/Contents/MacOS/soffice", "--version"]).strip(),
+            },
+            "sourceCommit": command(["git", "-C", str(REPO), "rev-parse", "HEAD"]).strip(),
             "contract": file_identity(REPO / "release/macos-production-manifest.v1.json"),
             "lockfile": file_identity(REPO / "uv.lock"),
             "packages": {},
