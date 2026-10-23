@@ -21,6 +21,8 @@ Documents arrive in different formats, and reformatting them by hand takes time.
 
 DocWen handles DOCX, XLSX, PDF and several older office and image formats. Availability depends on the operation, platform and installed conversion software: not every format converts to every other format. Check [the capability reference](docs/capabilities.md) for details.
 
+For specific steps, use the [CLI reference](docs/cli.md), [format capabilities](docs/capabilities.md), [Markdown compatibility notes](docs/specs/markdown-compatibility.md), or [troubleshooting](docs/maintenance/troubleshooting.md). This page gives an overview before the detailed examples below.
+
 ## Working offline
 
 DocWen processes files on your computer rather than uploading them to a conversion service. Its Python process blocks dependency network calls, while external Office, WPS and LibreOffice processes follow their own system network policies. For sensitive work, keep those programs and your operating system configured accordingly.
@@ -624,7 +626,7 @@ A companion Obsidian plugin is published separately and works in tandem with the
 
 ### Using the plugin
 
-DocWen Assistant 3.3 supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
+DocWen Assistant supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
 
 1.  **First click** → Launch the converter and open the current file.
 2.  **Click again with a file open** → Replace the current input with that file (single-file mode).
@@ -632,11 +634,11 @@ DocWen Assistant 3.3 supports Windows and Linux desktop hosts. Windows Microsoft
 
 ### Installation
 
-Install [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant) and a compatible DocWen release. Assistant 3.3 requires DocWen 0.17.0 or later. The plugin does not install DocWen for you. Check the release notes for compatible versions before downloading. For integration development, these versions use Machine Protocol v2 and Artifact Bundle v3 for conversion results.
+Install DocWen separately, then choose a [published DocWen Assistant release](https://github.com/ZHYX91/obsidian-docwen-assistant/releases) compatible with your DocWen version. The Assistant does not install DocWen. Check its release notes instead of relying on a version number in this guide. Integrations use Machine Protocol v2 and Artifact Bundle v3.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) lets OpenClaw use DocWen to convert and check local files. Install DocWen separately and choose a plugin release that lists a compatible DocWen version. Plugin 3.0 uses Machine Protocol v2 and Artifact Bundle v3. Use the published release assets; a version number in source code does not mean that a release is available.
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) lets OpenClaw convert and proofread local files through an independently installed DocWen. Check the [published plugin releases](https://github.com/ZHYX91/docwen-openclaw/releases) for supported DocWen versions. For integration development, see [Machine Protocol v2 and Artifact Bundle v3](docs/specs/machine-protocol-v2.md).
 
 ## ❓ FAQ
 
@@ -654,7 +656,7 @@ Install [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant) 
 
 ### Proofreading function not working?
 
--   Confirm the document is in .docx or .md format.
+- For CLI `validate`, `.md` and `.docx` can be checked directly. Legacy Word-family `.doc`, `.wps`, `.rtf`, and `.odt` inputs are also accepted after conversion to DOCX; check that the required local Office conversion software is available.
 -   Check if the document contains editable text.
 -   Confirm proofreading rules are enabled in settings.
 

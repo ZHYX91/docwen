@@ -21,6 +21,8 @@ DocWen 在本機轉換辦公檔案。它能把 Word 轉成 Markdown、把 Markdo
 
 DocWen 支援 DOCX、XLSX、PDF 和一些舊版辦公、圖片格式，但**並非所有格式之間都能互轉**。實際取決於操作、系統平台及安裝的轉換軟體，參見[功能說明](../capabilities.md)。
 
+**依工作查找：** [命令列參考](../cli.md)列出可用參數，[格式能力表](../capabilities.md)記錄轉換路線與相依套件，[Markdown 相容性說明](../specs/markdown-compatibility.md)解釋延伸語法，[疑難排解](../maintenance/troubleshooting.md)協助定位失敗。本頁保留常用流程與範例。
+
 ## 離線處理
 
 檔案由本機處理，不需要上傳到線上轉換服務。DocWen 限制自身 Python 程序內相依套件的網路存取；外部啟動的 Office、WPS、LibreOffice 仍遵循它們自身及系統的網路原則。處理敏感檔案時，也應檢查這些外部軟體的設定。
@@ -30,6 +32,10 @@ DocWen 支援 DOCX、XLSX、PDF 和一些舊版辦公、圖片格式，但**並�
 為 Markdown 文件選擇範本和產生選項。
 
 ![Markdown 產生文件](../assets/screenshots/markdown-generation-en.png)
+
+公文字段格式化的附件說明對齊選項（截圖為英文介面）：
+
+![公文字段附件說明的對齊設定](../assets/screenshots/official-documents-en.png)
 
 
 更新日誌：見 [CHANGELOG.md](../CHANGELOG.md)
@@ -270,6 +276,14 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `batch convert\|validate ... --jobs <n> [--continue-on-error]` | 批次處理控制。 |
 | `--json` / `--quiet` / `--timing` | 在終端機指令碼中輸出 JSON、減少日誌，或顯示耗時。 |
 
+
+以下列出兩個常用 CLI 操作：最佳化資源 ID 應先查詢，校對報告必須明確指定 `--report` 才會儲存。
+
+```bash
+DocWenCLI.exe resources list optimizations --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --optimization gongwen
+DocWenCLI.exe validate input.md --check typo --report report.json
+```
 
 ## 📝 Markdown 語法約定
 
@@ -586,7 +600,7 @@ Excel 範本中的 `{{→月份}}` 會依次向右填充"1月"、"2月"、"3月"
 
 ### 使用方式
 
-DocWen Assistant 3.3 支援 Windows 與 Linux 桌面端；Windows Microsoft Store 安裝版可使用自動偵測，Linux 使用手動選取的相容解壓縮套件。Assistant 目前不支援 macOS。
+DocWen Assistant 支援 Windows 與 Linux 桌面端；Windows Microsoft Store 安裝版可使用自動偵測，Linux 使用手動選取的相容解壓縮套件。Assistant 目前不支援 macOS。
 
 1. **首次點選** → 啟動轉換器並開啟目前的檔案
 2. **再次點選（有開啟的檔案）** → 以該檔案取代目前的輸入檔案（單一檔案模式）
@@ -594,11 +608,11 @@ DocWen Assistant 3.3 支援 Windows 與 Linux 桌面端；Windows Microsoft Stor
 
 ### 安裝方法
 
-安裝 [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant) 前，需要先安裝相容的 DocWen。Assistant 3.3 要求 DocWen 0.17.0 或更新版本；外掛不會代為安裝主程式。請依發行說明選擇相容版本。開發整合時，這些版本使用 Machine Protocol v2 通訊，並以 Artifact Bundle v3 回傳轉換結果。
+請先獨立安裝 DocWen，再從 [DocWen Assistant 正式發行頁](https://github.com/ZHYX91/obsidian-docwen-assistant/releases)選擇相容版本。外掛不會代為安裝主程式，適用版本請依發行說明確認，不要依手冊中的固定版本號推斷。整合使用 Machine Protocol v2 和 Artifact Bundle v3。
 
 ## 🔌 OpenClaw（插件 + Skill）
 
-[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) 讓 OpenClaw 呼叫本機 DocWen 轉換和校對檔案。需要另外安裝 DocWen，並依外掛發行說明選擇相容版本。外掛 3.0 使用 Machine Protocol v2 和 Artifact Bundle v3。請下載正式發行的安裝檔；原始碼中的版本號不代表該版本已可下載。
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) 可讓 OpenClaw 使用本機 DocWen 轉換與校對檔案。需另外安裝 DocWen，並從[已發行的外掛版本](https://github.com/ZHYX91/docwen-openclaw/releases)查明相容要求。開發整合請參閱 [Machine Protocol v2 與 Artifact Bundle v3](../specs/machine-protocol-v2.md)。
 
 ## ❓ 常見問題
 
@@ -616,7 +630,7 @@ DocWen Assistant 3.3 支援 Windows 與 Linux 桌面端；Windows Microsoft Stor
 
 ### 校對功能不工作？
 
-- 確認文檔為 .docx 或 .md 格式
+- CLI `validate` 可直接校對 `.md` 和 `.docx`；也接受 `.doc`、`.wps`、`.rtf`、`.odt`，但會先由本機可用的 Office 轉換工具轉成 DOCX。若無法處理舊格式，請先確認轉換相依套件。
 - 檢查文檔是否包含可編輯文本
 - 在設定中確認校對規則已啟用
 

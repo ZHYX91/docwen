@@ -2,7 +2,9 @@
 
 DocWen's macOS packages target **Apple Silicon (arm64), macOS 14 or later**.
 Intel Macs are not a package target. Download the matching assets from
-[DocWen Releases](https://github.com/ZHYX91/docwen/releases); an older release may not contain Mac assets.
+[DocWen Releases](https://github.com/ZHYX91/docwen/releases). Select a release that actually lists
+`macos-arm64` assets: **0.19.2 contains Windows and Linux packages only**. A platform mentioned
+in the source documentation does not add packages to an earlier immutable release.
 
 The packages retain **ad-hoc code signatures**. They are **not Developer ID signed
 or notarized by Apple**. A valid ad-hoc signature does not identify a trusted publisher
@@ -56,6 +58,7 @@ whole-profile override; do not point it into the app bundle.
 
 - 仅提供 Apple 芯片 arm64、macOS 14 及以上的包；不提供 Intel 包。旧版本可能没有 Mac 附件。
 - 保留 ad-hoc 签名，**未使用 Developer ID 签名，也未经过 Apple 公证**。
+- 选择附件中实际列出 `macos-arm64` 的发行版；**0.19.2 只有 Windows 和 Linux 包**，源码文档中的平台说明不会给旧版补添安装包。
 - 下载并核对 SHA-256，解压后将完整 `DocWen.app` 移入“应用程序”。
 - 首次双击后若提示无法验证开发者或无法检查恶意软件，确认来源可信后，到
   **系统设置 → 隐私与安全性 → 仍要打开 → 打开**。受管理设备可能不允许设置例外。
