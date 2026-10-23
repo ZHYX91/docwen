@@ -10,15 +10,9 @@ DocWen là công cụ chuyển đổi tài liệu và bảng biểu cục bộ c
 
 Ngôn ngữ giao diện chỉ điều khiển văn bản và bố cục ứng dụng. Ngôn ngữ đầu ra tác vụ trong cài đặt chung điều khiển riêng nhãn được tạo, kiểu tài liệu và chú thích hiệu đính; không dịch nội dung. Đổi giao diện vẫn giữ ngôn ngữ đầu ra và mẫu đã lưu. OCR Tự động theo ngôn ngữ đầu ra. Tùy chọn tạo một đoạn Word cho mỗi dòng văn bản Markdown thông thường mặc định tắt.
 
-## 📖 Bối cảnh dự án
+## Khi nào nên dùng DocWen?
 
-Phần mềm được tạo ra để giải quyết các vấn đề thường gặp trong công việc văn phòng:
-- Tài liệu từ nhiều nguồn có định dạng không thống nhất, cần chuẩn hoá.
-- Nhiều loại file với yêu cầu định dạng khác nhau.
-- Cần chạy offline trong môi trường intranet/thiết bị cũ.
-
-**Triết lý thiết kế**: DocWen ưu tiên các quy trình chuyển đổi và sắp xếp tài liệu hằng ngày dễ học và có thể dùng ngay. Công cụ không nhằm thay thế các hệ thống dàn trang hoặc chuyển đổi chuyên biệt như LaTeX hay Pandoc; mục tiêu là làm cho các tác vụ tài liệu phổ biến trở nên trực tiếp, rõ ràng và vẫn giữ ranh giới kỹ thuật minh bạch.
-
+Chuyển đổi Word và Markdown trên máy tính, xử lý bảng tính hoặc PDF, và soát lỗi tài liệu theo quy tắc của bạn. Dùng GUI cho việc thường ngày và CLI cho việc lặp lại. Khả năng chuyển đổi phụ thuộc định dạng cùng phần mềm đã cài; xem [bảng khả năng](../capabilities.md).
 ## ✨ Tính năng chính
 
 - **📄 Chuyển đổi tài liệu** - Word ↔ Markdown, hỗ trợ công thức, ánh xạ dấu phân cách (---/***/___) với ngắt trang/ngắt mục/dòng kẻ và khôi phục dấu gộp `<` / `^` trong bảng Markdown thành gộp ô hình chữ nhật trong Word. DOCX/DOC/WPS/RTF/ODT.
@@ -38,6 +32,10 @@ Phần mềm được tạo ra để giải quyết các vấn đề thường g
 Chọn mẫu và các tùy chọn tạo tài liệu từ Markdown.
 
 ![Tạo tài liệu từ Markdown](../assets/screenshots/markdown-generation-en.png)
+
+Tùy chọn căn lề thông tin phụ lục công văn (giao diện tiếng Anh):
+
+![Thiết lập căn lề phụ lục công văn](../assets/screenshots/official-documents-en.png)
 
 
 Nhật ký thay đổi: xem [CHANGELOG.md](../CHANGELOG.md)
@@ -280,6 +278,14 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 
 Trong chế độ `punct_required`, danh sách mặc định chính xác là `。：！？.:!?`. Có thể chỉnh sửa danh sách này trong phần cài đặt định dạng; để trống sẽ tắt việc gộp trong chế độ này. Dấu phẩy, dấu chấm phẩy, dấu liệt kê, dấu gạch ngang và dấu chấm lửng không được bật mặc định.
 
+
+Ví dụ CLI bổ sung: tra cứu ID tối ưu hóa trước khi dùng; chỉ ghi báo cáo soát lỗi khi có `--report`.
+
+```bash
+DocWenCLI.exe resources list optimizations --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --optimization gongwen
+DocWenCLI.exe validate input.md --check typo --report report.json
+```
 
 ## 📝 Quy ước Markdown
 
@@ -598,7 +604,7 @@ Plugin Obsidian đồng hành được phát hành ở repo riêng và hoạt đ
 
 ### Cách dùng plugin
 
-DocWen Assistant 3.3 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
+DocWen Assistant hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
 
 1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và mở file hiện tại.
 2.  **Nhấn lại khi có file đang mở** → Thay file đầu vào hiện tại bằng file đó (chế độ một file).
@@ -606,13 +612,11 @@ DocWen Assistant 3.3 hỗ trợ máy tính để bàn Windows và Linux. Bản M
 
 ### Cài đặt
 
-Cài một phiên bản DocWen tương thích trước, sau đó cài [DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant). Assistant 3.3 yêu cầu DocWen 0.17.0 trở lên; plugin không tự cài chương trình DocWen. Xem ghi chú phát hành để chọn các phiên bản tương thích và tải các file cài đặt đã được công bố.
+Hãy cài DocWen riêng, rồi chọn [bản phát hành DocWen Assistant](https://github.com/ZHYX91/obsidian-docwen-assistant/releases) tương thích. Plugin không cài chương trình chính thay bạn. Đối chiếu yêu cầu của từng bản phát hành thay vì dựa vào phiên bản cố định trong hướng dẫn. Tích hợp dùng Machine Protocol v2 và Artifact Bundle v3.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) cho phép OpenClaw dùng DocWen trên máy tính của bạn để chuyển đổi và soát lỗi file. Cài DocWen riêng và chọn phiên bản plugin có ghi rõ phiên bản DocWen tương thích trong ghi chú phát hành. Tải file từ trang phát hành đã công bố; số phiên bản trong mã nguồn không có nghĩa là phiên bản đó đã có sẵn để tải xuống.
-
-Để phát triển tính năng tích hợp với plugin 3.0, xem [Machine Protocol v2 và Artifact Bundle v3](../specs/machine-protocol-v2.md).
+[docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw) dùng DocWen được cài riêng để chuyển đổi và soát lỗi tệp cục bộ. Xem [các bản phát hành plugin](https://github.com/ZHYX91/docwen-openclaw/releases) để kiểm tra tương thích và [Machine Protocol v2 cùng Artifact Bundle v3](../specs/machine-protocol-v2.md) để phát triển tích hợp.
 
 ## ❓ Câu hỏi thường gặp (FAQ)
 
@@ -630,7 +634,7 @@ Cài một phiên bản DocWen tương thích trước, sau đó cài [DocWen As
 
 ### Chức năng kiểm tra lỗi không hoạt động?
 
--   Xác nhận tài liệu là `.docx` hoặc `.md`.
+- CLI `validate` kiểm tra trực tiếp `.md` và `.docx`. Các định dạng `.doc`, `.wps`, `.rtf`, `.odt` cũng được chấp nhận nhưng cần chuyển sang DOCX trước bằng phần mềm Office cục bộ tương thích. Nếu gặp lỗi, hãy kiểm tra công cụ đó.
 -   Kiểm tra tài liệu có chứa text có thể chỉnh sửa không.
 -   Xác nhận các quy tắc kiểm tra đã bật trong cài đặt.
 
