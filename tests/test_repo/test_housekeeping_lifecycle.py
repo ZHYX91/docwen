@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 import pytest
+from scripts.release.publication_contract import CHECKSUM_NAME, package_names
 from tools import qa, recycle, run_lease, workspace_cleanup
 
 pytestmark = pytest.mark.unit
@@ -69,11 +70,13 @@ def test_publication_retirement_requires_verified_receipt_and_exact_bytes(tmp_pa
     receipt = workspace / "acceptance" / "published.json"
     content = b"payload"
     digest = hashlib.sha256(content).hexdigest()
-    names = ["windows.zip", "linux.tar.gz", "cli.tar.gz", "SHA256SUMS.txt"]
+    version = "0.20.0"
+    names = [*package_names(version), CHECKSUM_NAME]
     for name in [*names, "candidate.json"]:
         (candidate / name).write_bytes(content)
     state = {
         "schema": "docwen-publication-progress-v1",
+        "version": version,
         "stage": "draft-verified",
         "pending": None,
         "provenance": "verified",
@@ -85,11 +88,11 @@ def test_publication_retirement_requires_verified_receipt_and_exact_bytes(tmp_pa
     with pytest.raises(workspace_cleanup.HousekeepingError, match="publication_not_verified"):
         workspace_cleanup.plan_published_candidate(candidate, receipt)
     state["stage"] = "verified"
-    state["assets"]["windows.zip"]["bytes"] += 1
+    state["assets"]["DocWen-windows-x64.zip"]["bytes"] += 1
     receipt.write_text(json.dumps(state))
     with pytest.raises(workspace_cleanup.HousekeepingError, match="publication_asset_changed"):
         workspace_cleanup.plan_published_candidate(candidate, receipt)
-    state["assets"]["windows.zip"]["bytes"] -= 1
+    state["assets"]["DocWen-windows-x64.zip"]["bytes"] -= 1
     receipt.write_text(json.dumps(state))
     saved = workspace_cleanup.plan_published_candidate(candidate, receipt)
     assert saved is not None and candidate.exists()
@@ -97,8 +100,36 @@ def test_publication_retirement_requires_verified_receipt_and_exact_bytes(tmp_pa
     receipt.write_text(json.dumps(state) + "\n")
     with pytest.raises(workspace_cleanup.HousekeepingError, match="publication_receipt_changed"):
         workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
-    (candidate / "windows.zip").write_bytes(b"other")
+    (candidate / "DocWen-windows-x64.zip").write_bytes(b"other")
     with pytest.raises(workspace_cleanup.HousekeepingError, match="publication_asset_changed"):
+        workspace_cleanup.plan_published_candidate(candidate, receipt)
+
+
+@pytest.mark.parametrize("damage", ["missing-mac", "extra", "missing-version"])
+def test_publication_retirement_rejects_incomplete_or_foreign_assets(tmp_path: Path, damage: str) -> None:
+    workspace = tmp_path / ".workspace"
+    candidate = workspace / "artifacts" / "candidate"
+    candidate.mkdir(parents=True)
+    (workspace / "acceptance").mkdir()
+    receipt = workspace / "acceptance" / "published.json"
+    names = [*package_names("0.20.0"), CHECKSUM_NAME]
+    state = {
+        "schema": "docwen-publication-progress-v1",
+        "version": "0.20.0",
+        "stage": "verified",
+        "pending": None,
+        "provenance": "verified",
+        "releaseId": 1,
+        "assets": {name: {} for name in names},
+    }
+    if damage == "missing-mac":
+        del state["assets"]["DocWenCLI-0.20.0-macos-arm64.tar.gz"]
+    elif damage == "extra":
+        state["assets"]["unrelated.zip"] = {}
+    else:
+        del state["version"]
+    receipt.write_text(json.dumps(state))
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="publication_inventory_incomplete"):
         workspace_cleanup.plan_published_candidate(candidate, receipt)
 
 
