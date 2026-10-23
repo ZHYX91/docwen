@@ -9,10 +9,15 @@ import pytest
 from ._input_routes_support import _run_request, _test_png_bytes
 from ._input_routes_support import pipeline as pipeline
 
-pytestmark = pytest.mark.integration
 
-
-def test_epub_image_names_differing_only_in_case_keep_distinct_references(pipeline, tmp_path: Path) -> None:
+@pytest.mark.integration
+@pytest.mark.release_gate
+@pytest.mark.parametrize("inline", [False, True])
+def test_epub_image_names_differing_only_in_case_keep_distinct_references(
+    pipeline,
+    tmp_path: Path,
+    inline: bool,
+) -> None:
     from ebooklib import epub
 
     book = epub.EpubBook()
@@ -21,21 +26,27 @@ def test_epub_image_names_differing_only_in_case_keep_distinct_references(pipeli
     book.set_language("en")
     upper = _test_png_bytes((220, 20, 20))
     lower = _test_png_bytes((20, 20, 220))
-    book.add_item(epub.EpubItem(
-        uid="upper-image", file_name="Images/A.png",
-        media_type="image/png", content=upper,
-    ))
-    book.add_item(epub.EpubItem(
-        uid="lower-image", file_name="Images/a.png",
-        media_type="image/png", content=lower,
-    ))
-    chapter = epub.EpubHtml(title="Images", file_name="chapters/chapter.xhtml", lang="en")
-    chapter.content = (
-        "<html><body><p>Different image members</p>"
-        "<img src='../Images/A.png' alt='upper'/>"
-        "<img src='../Images/a.png' alt='lower'/>"
-        "</body></html>"
+    book.add_item(
+        epub.EpubItem(
+            uid="upper-image",
+            file_name="Images/A.png",
+            media_type="image/png",
+            content=upper,
+        )
     )
+    book.add_item(
+        epub.EpubItem(
+            uid="lower-image",
+            file_name="Images/a.png",
+            media_type="image/png",
+            content=lower,
+        )
+    )
+    chapter = epub.EpubHtml(title="Images", file_name="chapters/chapter.xhtml", lang="en")
+    images_html = "<img src='../Images/A.png' alt='upper'/><img src='../Images/a.png' alt='lower'/>"
+    if inline:
+        images_html = f"<p>Before {images_html} after</p>"
+    chapter.content = f"<html><body><p>Different image members</p>{images_html}</body></html>"
     book.add_item(chapter)
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
