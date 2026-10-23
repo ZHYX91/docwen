@@ -5,6 +5,21 @@
 
 ## Unreleased / 未发布
 
+## 0.20.0
+
+- Honor existing bracketed input paths and include rejected batch members in text, quiet and JSON totals and exit codes.
+- 优先按字面处理带方括号的真实路径；批处理在普通、静默、JSON 模式下统一统计被拒输入并返回失败状态。
+- Export sparse CSV/XLSX cells once, retain distinct OCR sidecars across worksheets, and preserve case-sensitive EPUB image references.
+- 修复稀疏 CSV/XLSX 单元格重复、跨工作表 OCR 配套文件重名及 EPUB 图片路径大小写混淆。
+- Reject oversized Markdown-to-XLSX cell text with a cell location instead of silently truncating it, including template fills.
+- Markdown 转 XLSX（含模板填充）超出单元格文本上限时明确失败并报告位置，不再静默截断。
+- Compose XPS/OFD normalization with CLI PDF merge/split actions and use physical paths for application-owned layout intermediates.
+- CLI 的 PDF 合并/拆分可组合 XPS/OFD 预转换；程序自有版式临时文件使用物理路径。
+- Tolerate a vanished owned Unix control directory only after shutdown completes, while retaining permission, identity and cleanup failures.
+- Unix 控制通道仅在安全关闭完成后容忍自有目录已消失，权限、身份和清理失败仍会上报。
+- Refresh the multilingual workflow guides and bind candidate retirement to the complete published platform inventory.
+- 更新多语言工作流说明，候选退役按完整平台资产清单校验。
+
 - Add automatic Apple Silicon macOS 14+ app and CLI release archives, with ad-hoc signatures and first-launch instructions; Developer ID signing and Apple notarization are not enabled.
 - 新增 Apple 芯片 macOS 14+ 应用与 CLI 自动发布包，保留 ad-hoc 签名并提供首次打开说明；暂不使用 Developer ID 签名或 Apple 公证。
 - Enable primary macOS operations and keep packaged Mac settings outside the signed application so app replacement preserves the profile.

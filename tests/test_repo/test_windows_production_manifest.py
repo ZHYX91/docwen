@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from scripts.release import build_production_candidate as production
 from scripts.release import v4_package_input_build as v4_build
+from scripts.release.publication_contract import CHECKSUM_NAME, package_names
 
 from docwen_core.version import PRODUCT_VERSION
 
@@ -29,12 +30,7 @@ def test_windows_production_manifest_has_one_offline_asset_and_fixed_epoch() -> 
     assert manifest["channels"]["offlineZip"]["timestamp"] == "fixed-reproducibility-epoch"
     assert manifest["channels"]["offlineZip"]["assetName"] == "DocWen-windows-x64.zip"
     assert "DocWenCLI-windows-x64.zip" not in json.dumps(manifest)
-    assert manifest["releaseAssetAllowlist"] == [
-        "DocWen-windows-x64.zip",
-        f"DocWenCLI-{PRODUCT_VERSION}-linux-x64.tar.gz",
-        f"DocWen-{PRODUCT_VERSION}-linux-x64.tar.gz",
-        "SHA256SUMS.txt",
-    ]
+    assert manifest["releaseAssetAllowlist"] == [*package_names(PRODUCT_VERSION), CHECKSUM_NAME]
     assert manifest["toolchain"]["python"] == {
         "implementation": "CPython",
         "fullVersion": "3.12.13",
