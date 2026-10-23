@@ -121,6 +121,7 @@ def make_cases(inputs: dict[str, Path], root: Path, *, scope: str) -> list[Case]
         conversion("rtf-to-md", "rtf", "md", "text")
         return cases
     conversion("md-to-docx", "md", "docx", "docx")
+    conversion("md-to-docx-proofread", "md", "docx", "docx", "--proofread")
     conversion("docx-to-md", "docx", "md", "text")
     conversion("md-to-xlsx", "md", "xlsx", "table")
     conversion("xlsx-to-md", "xlsx", "md", "text")

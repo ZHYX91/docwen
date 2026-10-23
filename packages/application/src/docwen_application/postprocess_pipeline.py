@@ -112,6 +112,9 @@ def _execute_docx_proofread_pipeline(
     render_options.pop(POSTPROCESS_PROOFREAD_OPTION, None)
 
     with tempfile.TemporaryDirectory(prefix="docwen_postprocess_", ignore_cleanup_errors=True) as private_output:
+        # tempfile may use macOS's /var alias. This directory is ours; pass its
+        # physical path to the next admitted stage without relaxing input checks.
+        private_output = str(Path(private_output).resolve(strict=True))
         render_task_id = f"{task_id}-render"
         render_request = replace(
             request,
