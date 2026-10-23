@@ -991,6 +991,13 @@ class ControlServer:
             return
 
         listener = self._listener
+        # Snapshot ownership before the serving thread can release its Unix
+        # endpoint lease while responding to our wake-up.
+        owned_managed_unix_directory = (
+            self._family == "AF_UNIX"
+            and self._unix_lease is not None
+            and self._unix_lease.plan.directory_name is not None
+        )
         wake_error: BaseException | None = None
         if listener is not None and thread.is_alive():
             # Wake the blocking accept before closing its handle.  Closing a
@@ -1036,7 +1043,7 @@ class ControlServer:
         # and shutdown-error checks have all succeeded; permission and
         # identity failures must still be reported.
         closed_managed_directory_race = (
-            self._family == "AF_UNIX"
+            owned_managed_unix_directory
             and isinstance(wake_error, ControlEndpointError)
             and isinstance(wake_error.__cause__, FileNotFoundError)
         )
