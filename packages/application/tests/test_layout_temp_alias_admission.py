@@ -74,7 +74,15 @@ def test_layout_pdf_action_uses_physical_owned_temp_and_keeps_user_path_guard(
         normalize,
     )
     runtime = MagicMock(spec=RuntimePort)
-    runtime.execute.return_value = ConversionResult(task_id="owned-layout-alias", success=True)
+
+    def check_runtime_input(request: ConversionRequest) -> ConversionResult:
+        # Assert real Core admission at the runtime boundary, not only the
+        # path returned by the preconverter.
+        assert request.input_refs[0].format == "pdf"
+        enforce_file_admission(request)
+        return ConversionResult(task_id=request.request_id, success=True)
+
+    runtime.execute.side_effect = check_runtime_input
 
     result = ApplicationController(runtime_port=runtime).execute_single(
         ConversionRequest(
