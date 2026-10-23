@@ -151,11 +151,11 @@ class EpubToMarkdownConverter:
                         seen_artifact_ids.add(artifact.artifact_id)
             basename_links: dict[str, list[str]] = {}
             for resource in resources:
-                normalized = normalize_resource_key(resource.source_key)
+                normalized = normalize_resource_key(resource.source_key, case_sensitive=True)
                 item = written.get(normalized)
                 if item is None:
                     continue
-                basename_key = normalize_resource_key(Path(resource.source_key).name)
+                basename_key = normalize_resource_key(Path(resource.source_key).name, case_sensitive=True)
                 basename_links.setdefault(basename_key, []).append(item.markdown_link)
             for basename_key, links in basename_links.items():
                 if len(links) == 1:
@@ -164,8 +164,8 @@ class EpubToMarkdownConverter:
         else:
             basename_keys: dict[str, int] = {}
             for resource in resources:
-                image_links[normalize_resource_key(resource.source_key)] = ""
-                basename_key = normalize_resource_key(Path(resource.source_key).name)
+                image_links[normalize_resource_key(resource.source_key, case_sensitive=True)] = ""
+                basename_key = normalize_resource_key(Path(resource.source_key).name, case_sensitive=True)
                 basename_keys[basename_key] = basename_keys.get(basename_key, 0) + 1
             for basename_key, count in basename_keys.items():
                 if count == 1:
@@ -481,10 +481,10 @@ def _epub_image_links_for_document(
             resolved = raw_path.lstrip("/")
         else:
             resolved = posixpath.normpath(posixpath.join(document_dir, raw_path))
-        exact_key = normalize_resource_key(resolved)
+        exact_key = normalize_resource_key(resolved, case_sensitive=True)
         link = image_links.get(exact_key)
         if link is not None:
-            scoped[normalize_resource_key(src)] = link
+            scoped[normalize_resource_key(src, case_sensitive=True)] = link
     return scoped
 
 
@@ -586,7 +586,7 @@ def _html_to_md_recursive(element, result: list[str], image_links: dict[str, str
         alt = str(element.get("alt") or "")
         src = str(element.get("src") or "")
         if src:
-            key = normalize_resource_key(src)
+            key = normalize_resource_key(src, case_sensitive=True)
             link = image_links.get(key)
             if link is not None:
                 link = _replace_markdown_image_alt(link, alt)
@@ -636,7 +636,7 @@ def _collect_text(element, result: list[str], image_links: dict[str, str]) -> No
             alt = str(element.get("alt") or "")
             src = str(element.get("src") or "")
             if src:
-                key = normalize_resource_key(src)
+                key = normalize_resource_key(src, case_sensitive=True)
                 link = image_links.get(key)
                 if link is not None:
                     link = _replace_markdown_image_alt(link, alt)
