@@ -110,7 +110,10 @@ BANNED_CURRENT_TOKENS = (
 def test_current_documentation_inventory_is_complete() -> None:
     missing = sorted(path for path in REQUIRED_DOCS if not (DOCS / path).is_file())
     assert not missing
-    assert {path.name for path in (DOCS / "user-guides").glob("*.md")} == set(LOCALIZED_READMES) | {"macos.md"}
+    assert {path.name for path in (DOCS / "user-guides").glob("*.md")} == set(LOCALIZED_READMES) | {
+        "macos.md",
+        "table-merge.md",
+    }
     assert {path.name for path in (DOCS / "assets" / "screenshots").glob("*.png")} == SCREENSHOTS
 
 
