@@ -17,7 +17,7 @@
 | By column | Apply the same rule to columns. |
 | By cell | After alignment, ignore empty incoming cells, keep a nonempty value when the other side is empty, add numbers (including numeric text), keep equal text once, and join other text with a comma. This mode adds values; it is not a record-deduplication mode. |
 
-Alignment is a heuristic based on matching stored cell values, not a primary-key join. Text stays text: `001`, `1`, `1e0` and numeric `1` are different identities in row/column matching. Meaningful spaces in text are retained; text containing only whitespace is considered empty. Two complementary records, such as `Alice, 7, blank` and `Alice, blank, 9`, remain separate so neither unique value disappears. Negative alignment offsets make room for leading fields instead of discarding them.
+Alignment is a heuristic based on matching stored cell values, not a primary-key join. Text stays text: `001`, `1`, `1e0` and numeric `1` are different identities in row/column matching. A real Excel error such as `#N/A` also differs from literal text `#N/A`; coverage, alignment and similarity retain that distinction. Meaningful spaces in text are retained; text containing only whitespace is considered empty. Two complementary records, such as `Alice, 7, blank` and `Alice, blank, 9`, remain separate so neither unique value disappears. Negative alignment offsets make room for leading fields instead of discarding them.
 
 ### Formulas and result checks
 
@@ -52,7 +52,7 @@ For a downloaded package, replace `uv run --frozen docwen` with `DocWenCLI.exe` 
 | 按列 | 对列应用相同规则。 |
 | 按单元格 | 对齐后忽略采集侧空值，一侧为空时保留非空值；数值相加（包含数字文本），相同文本保留一份，其他文本用逗号连接。此模式用于累加值，不用于记录去重。 |
 
-自动对齐根据相同的单元格值推测位置，不是按主键连接。按行或列比较时，文本 `001`、`1`、`1e0` 与数字 `1` 是不同身份；文本中的有效空格保留，只有全为空白的文本视为空。`Alice, 7, 空` 与 `Alice, 空, 9` 这样的互补记录分别保留，避免丢失任何一侧的独有值。负向对齐会为前方字段留出位置，不将其丢弃。
+自动对齐根据相同的单元格值推测位置，不是按主键连接。按行或列比较时，文本 `001`、`1`、`1e0` 与数字 `1` 是不同身份；真实 Excel 错误值（如 `#N/A`）与同名文本也不同，覆盖比较、对齐和相似度计算均保留这一区别。文本中的有效空格保留，只有全为空白的文本视为空。`Alice, 7, 空` 与 `Alice, 空, 9` 这样的互补记录分别保留，避免丢失任何一侧的独有值。负向对齐会为前方字段留出位置，不将其丢弃。
 
 ### 公式与结果核对
 

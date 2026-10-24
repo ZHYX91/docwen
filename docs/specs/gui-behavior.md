@@ -138,7 +138,11 @@ unchanged. Source/model and Qt regressions cover this policy; final packaged GUI
 - A started task shows options from its normalized request, including applicable template, numbering, proofreading and destination values. Local activity details retain this summary; copyable diagnostics keep their existing redacted contract. Table merging displays its real aggregate-input count and value policy before execution, then decision counts from the result. Bounded source positions remain attached to the corresponding collection input even if transient notices are cleared.
 - Template search filters display names and usage hints without changing the selected resource or catalog order. A no-match search does not silently choose another template. Recent templates are limited to five IDs used by started tasks in this session; removed resources disappear from that list. Choosing a recent entry is an explicit user selection and does not update the persisted default.
 
+If a built request fails during admission or startup, its failure card shows that request's frozen summary. If no summary is available, the summary is cleared rather than inherited from an earlier task. Earlier tasks remain in activity history; projecting a failure does not mark the request as started or add its template to session recents.
+
 任务开始时显示规范化请求中的实际模板、编号、校对与输出选项。本地活动详情保留该摘要；可复制诊断继续使用既有脱敏合同。表格汇总在执行前显示实际采集数量与值处理策略，完成后显示结果计数；有界来源位置附着于对应采集文件，即使瞬时通知被清除仍可查看。
+
+已构建的请求在准入或启动阶段失败时，失败卡片显示本次请求的冻结摘要；没有摘要时明确清空，不沿用前一任务的选项。先前任务仍保留在活动记录中；显示失败不会将请求标记为已启动，也不会把其模板加入会话最近使用列表。
 
 模板搜索只按显示名和用途筛选，不更改已选资源和目录顺序；无匹配项时不自动改选。最近使用列表保留当前会话已启动任务使用的最多五个模板 ID，并移除已不在目录中的资源。选择最近项是明确的用户选择，不更改已保存的默认模板。
 - Light and dark themes use identical geometry, with readable hover, pressed, disabled and keyboard-focus states.
