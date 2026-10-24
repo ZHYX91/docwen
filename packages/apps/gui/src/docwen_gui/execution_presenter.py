@@ -297,6 +297,8 @@ class ExecutionPresenter(QObject):
 
     @Slot(str, object)
     def failed(self, error_message: str, context: dict[str, Any]) -> None:
+        # Admission or reservation can fail before started() projects this request.
+        self._info_area_vm.set_execution_summary(str(context.get("request_summary", "")))
         self._task_history.remember(context)
         task_id = context.get("request_id", "")
         file_path = context.get("file_path", "")

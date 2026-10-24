@@ -11,6 +11,7 @@ from zipfile import ZipFile
 
 import openpyxl
 import pytest
+from openpyxl.utils.cell import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 from tests.support.config import FakeConfigView
 from tests.support.execution import FakeExecutionContext
@@ -208,6 +209,126 @@ def _set_typed_value(path: Path, coordinate: str, value: Any, data_type: str) ->
     sheet[coordinate].data_type = data_type
     book.save(path)
     book.close()
+
+
+@pytest.mark.parametrize("mode", ["row", "col"])
+@pytest.mark.parametrize(("base_type", "collect_type"), [("s", "e"), ("e", "s"), ("s", "s"), ("e", "e")])
+def test_coverage_distinguishes_saved_text_and_error_records(tmp_path, mode, base_type, collect_type):
+    paths = [tmp_path / "base.xlsx", tmp_path / "collect.xlsx"]
+    for path, data_type in zip(paths, (base_type, collect_type), strict=True):
+        _write(path, [["Name", "Value"], ["Alice", "#N/A"]], mode)
+        _set_typed_value(path, "B2", "#N/A", data_type)
+        saved = openpyxl.load_workbook(path, data_only=True)
+        assert isinstance(saved.active, Worksheet)
+        assert (saved.active["B2"].value, saved.active["B2"].data_type) == ("#N/A", data_type)
+        saved.close()
+    originals = {path: path.read_bytes() for path in paths}
+
+    result = _run(tmp_path, mode)
+    assert result.success
+    expected_types = [base_type] if base_type == collect_type else [base_type, collect_type]
+    for data_only in (False, True):
+        saved = openpyxl.load_workbook(result.artifacts[0].staging_path, data_only=data_only)
+        try:
+            sheet = saved.active
+            assert isinstance(sheet, Worksheet)
+            records = list(sheet.iter_rows()) if mode == "row" else list(sheet.iter_cols())
+            assert len(records) == 1 + len(expected_types)
+            assert [[(cell.value, cell.data_type) for cell in record] for record in records[1:]] == [
+                [("Alice", "s"), ("#N/A", data_type)] for data_type in expected_types
+            ]
+        finally:
+            saved.close()
+    summary = result.metrics.extra["merge_summaries"][0]
+    assert summary["counts"] == {
+        "added": 0 if base_type == collect_type else 1,
+        "replaced": 0,
+        "skipped": 2 if base_type == collect_type else 1,
+        "combined": 0,
+    }
+    assert all(path.read_bytes() == before for path, before in originals.items())
+
+
+@pytest.mark.parametrize("mode", ["row", "col"])
+@pytest.mark.parametrize("collect_type", ["s", "e"])
+@pytest.mark.parametrize("distance", [1, 20])
+def test_alignment_and_similarity_use_saved_error_types(tmp_path, mode, collect_type, distance):
+    base = tmp_path / "base.xlsx"
+    collect = tmp_path / "collect.xlsx"
+    _write(base, [["#N/A"]], mode)
+    _write(collect, [["#N/A"]], mode)
+    _set_typed_value(base, "A1", "#N/A", "e" if collect_type == "s" else "s")
+    coordinate = f"A{distance + 1}" if mode == "row" else f"{get_column_letter(distance + 1)}1"
+    _set_typed_value(base, coordinate, "#N/A", collect_type)
+    _set_typed_value(collect, "A1", "#N/A", collect_type)
+    originals = {path: path.read_bytes() for path in (base, collect)}
+    base_book = openpyxl.load_workbook(base, data_only=True)
+    collect_book = openpyxl.load_workbook(collect, data_only=True)
+    try:
+        base_ws, collect_ws = base_book.active, collect_book.active
+        assert isinstance(base_ws, Worksheet) and isinstance(collect_ws, Worksheet)
+        converter = TableMergerConverter()
+        offset = (distance, 0) if mode == "row" else (0, distance)
+        assert converter._find_best_offset(base_ws, collect_ws, 1) == offset
+        assert converter._suggest_offset_by_value_matching(base_ws, collect_ws) == offset
+        cells = converter._iter_cells_for_alignment(collect_ws)
+        assert converter._calc_overlap(base_ws, cells, 0, 0) == 0
+        assert converter._calc_overlap(base_ws, cells, *offset) == 1
+        similarity = converter._row_similarity if mode == "row" else converter._col_similarity
+        assert similarity(base_ws, 1, collect_ws, 1, 0) == 0.0
+        assert similarity(base_ws, distance + 1, collect_ws, 1, 0) == 1.0
+    finally:
+        base_book.close()
+        collect_book.close()
+    assert all(path.read_bytes() == before for path, before in originals.items())
+
+
+@pytest.mark.parametrize("mode", ["row", "col"])
+@pytest.mark.parametrize("collect_type", ["s", "e"])
+def test_inserted_record_is_placed_next_to_the_same_error_type(tmp_path, mode, collect_type):
+    base = tmp_path / "base.xlsx"
+    collect = tmp_path / "collect.xlsx"
+    _write(base, [["ID", "Value"], ["old", "#N/A"], ["old", "#N/A"]], mode)
+    _write(collect, [["ID", "Value"], ["incoming", "#N/A"]], mode)
+    other_type = "e" if collect_type == "s" else "s"
+    _set_typed_value(base, "B2", "#N/A", other_type)
+    _set_typed_value(base, "B3" if mode == "row" else "C2", "#N/A", collect_type)
+    _set_typed_value(collect, "B2", "#N/A", collect_type)
+    originals = {path: path.read_bytes() for path in (base, collect)}
+    result = _run(tmp_path, mode)
+    assert result.success
+    saved = openpyxl.load_workbook(result.artifacts[0].staging_path, data_only=True)
+    try:
+        sheet = saved.active
+        assert isinstance(sheet, Worksheet)
+        records = list(sheet.iter_rows()) if mode == "row" else list(sheet.iter_cols())
+        assert [[(cell.value, cell.data_type) for cell in record] for record in records[1:]] == [
+            [("old", "s"), ("#N/A", other_type)],
+            [("old", "s"), ("#N/A", collect_type)],
+            [("incoming", "s"), ("#N/A", collect_type)],
+        ]
+    finally:
+        saved.close()
+    assert all(path.read_bytes() == before for path, before in originals.items())
+
+
+@pytest.mark.parametrize("base_type", ["s", "e"])
+def test_cell_mode_keeps_equal_text_policy_across_error_types(tmp_path, base_type):
+    for name, data_type in (("base", base_type), ("collect", "e" if base_type == "s" else "s")):
+        path = tmp_path / f"{name}.xlsx"
+        _write(path, [["ID", "Value"], ["Alice", "#N/A"]])
+        _set_typed_value(path, "B2", "#N/A", data_type)
+    originals = {path: path.read_bytes() for path in tmp_path.glob("*.xlsx")}
+    result = _run(tmp_path, "cell")
+    assert result.success
+    saved = openpyxl.load_workbook(result.artifacts[0].staging_path, data_only=True)
+    try:
+        sheet = saved.active
+        assert isinstance(sheet, Worksheet)
+        assert (sheet["B2"].value, sheet["B2"].data_type) == ("#N/A", base_type)
+    finally:
+        saved.close()
+    assert all(path.read_bytes() == before for path, before in originals.items())
 
 
 @pytest.mark.parametrize("mode", ["row", "col"])

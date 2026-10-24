@@ -7,15 +7,18 @@ from datetime import date, datetime
 from typing import Any
 
 
-def value_identity(value: Any) -> Any:
+def value_identity(value: Any, *, source_type: str | None = None) -> Any:
     """Compare identities without interpreting textual IDs as floating numbers.
 
     Only blank text is empty. Python's numeric equality compares integers and
     floats without first rounding an integer to a float; booleans stay separate.
+    A saved Excel error is distinct from ordinary text with the same spelling.
     Arithmetic in cell mode has its own, deliberately different policy.
     """
     if value is None or (isinstance(value, str) and not value.strip()):
         return None
+    if source_type == "e":
+        return ("error", str(value))
     if isinstance(value, bool):
         return ("bool", value)
     if isinstance(value, (int, float)):
