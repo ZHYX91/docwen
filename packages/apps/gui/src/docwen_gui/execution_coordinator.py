@@ -7,7 +7,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
-from PySide6.QtCore import QObject, Slot
+from PySide6.QtCore import QObject, Signal, Slot
 
 from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.execution_admission import ExecutionAdmissionError
@@ -43,6 +43,8 @@ def _route_operation_label(target_format: str, action_name: str) -> str:
 
 class ExecutionCoordinator(QObject):
     """One route/admit/reserve/start path for single, batch and aggregate work."""
+
+    request_started = Signal(object)
 
     def __init__(
         self,
@@ -224,6 +226,8 @@ class ExecutionCoordinator(QObject):
             for path in file_paths:
                 self._results.file_status(path, "processing", operation_id=task_id)
             self._action_area_vm.show_cancel()
+            self._results.started(context)
+            self.request_started.emit(request)
             self._info_area_vm.add_message(
                 _t("info_area.history_started", name=context["display_name"]),
                 "info",

@@ -424,7 +424,7 @@ ods_conversion_label = "ODS格式轉換"
 spreadsheet_to_pdf_label = "表格轉PDF"
 
 # 汇总模式选项
-merge_mode_help = "按列/按欄會把傳入列或欄與基礎表比對：傳入項涵蓋基礎項時取代，傳入項被基礎項涵蓋時保留基礎項，否則插入最相近位置。按儲存格會忽略傳入空值、保留非空值、數值相加、相同文字只保留一次，不同非數值文字以逗號連接。"
+merge_mode_help = "自動對齊依實際數值及原樣文字比對，不將文字編號轉為數字。按列或欄：略過相同或已被基準涵蓋的記錄；彙入記錄包含基準的所有值時才取代；互補或衝突記錄分別保留。按儲存格：忽略空值、數值相加（含數字文字）、相同文字保留一份，其他文字以逗號連接。公式結果缺失時停止彙整；現有快取也可能未更新。"
 [settings.spreadsheet.merge_modes]
 by_row = "按行匯總"
 by_column = "按列匯總"
@@ -1052,6 +1052,9 @@ updated_line = "更新：{value}"
 source_tooltip = "來源資料夾：{value}"
 auto_selected_reason = "已依預設設定自動選取 {template_kind} 中的可用範本。"
 open_location = "開啟檔案位置"
+search = "搜尋範本"
+recent = "本次工作階段最近使用"
+search_count = "顯示 {count} / {total} 個範本；篩選不會變更目前選擇"
 
 [components.template_selector_tabbed]
 document_templates = "文件範本"
@@ -1161,6 +1164,7 @@ no_table_selected = "未選中表格"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "目前類別中有 1 個基準檔案及 {count} 個彙入檔案。只彙整各檔案的作用中工作表；保留基準檔案的其他工作表，忽略彙入檔案的其他工作表。合併儲存格會分開並填入左上角的值。"
 [action_area]
 recognize_tables = "辨識表格結構"
 table_model_unavailable = "表格模型無法使用；將保留一般 OCR 文字。"
@@ -1718,6 +1722,14 @@ task_failed_status = "失敗：{message}"
 task_cancelled_status = "已取消"
 version_offline = "離線版"
 window_title = "DocWen 離線版"
+request_summary = "本次工作選項：{value}"
+request_template = "範本：{value}"
+request_remove_numbering = "移除標題編號：{value}"
+request_add_numbering = "新增標題編號：{value}"
+request_proofread = "校對：{value}"
+request_output = "輸出：{value}"
+merge_result_summary = "{source} / {sheet} · {mode}：新增 {added}，取代 {replaced}，略過 {skipped}，合併 {combined}；未知值 0。來源位置請見工作詳細資料。"
+merge_formula_cache_missing = "彙整已停止：公式沒有已儲存的結果。請在試算表軟體中重新計算並儲存後重試；檔案和儲存格位置請見失敗詳細資料。"
 
 [settings.markdown_extensions]
 description = "統一管理產生與讀取 Markdown 的規則。輸出約定適用於所有來源，各轉換路徑的支援程度不同。Word 專用對應另列於下方；原始檔案不會被改寫。"

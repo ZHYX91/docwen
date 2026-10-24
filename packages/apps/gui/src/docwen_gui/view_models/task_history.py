@@ -26,6 +26,7 @@ class FileOutcome:
     updated_at: datetime = field(default_factory=datetime.now)
     output_paths: tuple[str, ...] = ()
     diagnostic: DiagnosticSummary | None = None
+    local_details: tuple[str, ...] = ()
 
 
 @dataclass(slots=True)
@@ -100,6 +101,7 @@ class TaskHistory(QObject):
         skip_reason: str = "",
         output_paths: tuple[str, ...] = (),
         diagnostic: DiagnosticSummary | None = None,
+        local_details: tuple[str, ...] = (),
     ) -> None:
         record = self.get(operation_id)
         if record is not None:
@@ -118,6 +120,7 @@ class TaskHistory(QObject):
                     output_count=len(output_paths) if output_paths else int(bool(output_path)),
                     warning_count=len(warnings),
                 ),
+                local_details=local_details,
             )
             self._sync_snapshot_retention(operation_id, record)
             self.changed.emit()

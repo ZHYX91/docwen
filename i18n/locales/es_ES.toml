@@ -65,6 +65,14 @@ file_admission_confirm_title = "Confirmar el formato de archivo detectado"
 file_admission_confirm_message = "El nombre del archivo y el contenido detectado usan formatos distintos. ¿Procesar con el formato detectado?"
 file_admission_confirm_action = "Procesar como formato detectado"
 file_admission_cancelled = "Se canceló el procesamiento; no se aceptó el formato detectado."
+request_summary = "Opciones de esta tarea: {value}"
+request_template = "Plantilla: {value}"
+request_remove_numbering = "Quitar números de títulos: {value}"
+request_add_numbering = "Añadir números de títulos: {value}"
+request_proofread = "Revisión: {value}"
+request_output = "Salida: {value}"
+merge_result_summary = "{source} / {sheet} · {mode}: añadidos {added}, sustituidos {replaced}, omitidos {skipped}, combinados {combined}; valores desconocidos 0. Consulte las posiciones de origen en los detalles de la tarea."
+merge_formula_cache_missing = "Combinación detenida: una fórmula no tiene un resultado guardado. Recalcule y guarde el libro en una hoja de cálculo y vuelva a intentarlo. El archivo y las celdas aparecen en los detalles del error."
 [common]
 action_file_count = "{action} ({count} archivos)"
 app_name = "DocWen"
@@ -479,7 +487,7 @@ ods_conversion_label = "Conversión de formato ODS"
 spreadsheet_to_pdf_label = "Hoja de cálculo a PDF"
 
 # 汇总模式选项
-merge_mode_help = "Por fila/columna compara las filas/columnas entrantes con la base: si la entrante cubre la base la reemplaza; si la base cubre la entrante se conserva la base; en otro caso se inserta cerca de la coincidencia más próxima. Por celda ignora entradas vacías, conserva el valor no vacío, suma números, conserva una sola vez textos iguales y une textos no numéricos distintos con coma."
+merge_mode_help = "La alineación compara números guardados y texto exacto; no interpreta los identificadores de texto como números. Filas/columnas: omitir registros iguales o ya contenidos, sustituir solo si el registro entrante contiene todos los valores base y conservar por separado los registros complementarios o en conflicto. Celdas: ignorar vacíos, sumar números (incluido el texto numérico), conservar una copia del texto igual y unir los demás textos con una coma. Si falta el resultado de una fórmula, se detiene la combinación; los resultados guardados pueden estar desactualizados."
 [settings.spreadsheet.merge_modes]
 by_row = "Combinar por filas"
 by_column = "Combinar por columnas"
@@ -1111,6 +1119,9 @@ source_tooltip = "Carpeta de origen: {value}"
 auto_selected_reason = "Se seleccionó una plantilla disponible en {template_kind} según la configuración predeterminada."
 
 open_location = "Abrir ubicación del archivo"
+search = "Buscar plantillas"
+recent = "Usadas en esta sesión"
+search_count = "{count} de {total} plantillas · el filtro no cambia la selección"
 
 [components.template_selector_tabbed]
 document_templates = "Doc"
@@ -1220,6 +1231,7 @@ no_table_selected = "No hay tabla seleccionada"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "1 archivo base y {count} archivos para incorporar en la categoría actual. Solo se combinan las hojas activas; se conservan las demás hojas del archivo base y se omiten las demás hojas de los archivos entrantes. Las celdas combinadas se separan y se rellenan con el valor superior izquierdo."
 [action_area]
 recognize_tables = "Reconocer estructura de tablas"
 table_model_unavailable = "Modelos de tablas no disponibles; se conservará el texto OCR."

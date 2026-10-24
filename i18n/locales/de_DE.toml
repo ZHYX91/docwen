@@ -424,7 +424,7 @@ ods_conversion_label = "ODS-Konvertierung"
 spreadsheet_to_pdf_label = "Tabelle zu PDF"
 
 # 汇总模式选项
-merge_mode_help = "Nach Zeile/Spalte gleicht eingehende Zeilen/Spalten mit der Basistabelle ab: Deckt der eingehende Eintrag den Basiseintrag ab, wird ersetzt; wird er vom Basiseintrag abgedeckt, bleibt die Basis erhalten; sonst wird er nahe der ähnlichsten Stelle eingefügt. Nach Zelle ignoriert leere Eingaben, behält nichtleere Werte, addiert Zahlen, behält gleichen Text einmal und verbindet unterschiedlichen nichtnumerischen Text mit Komma."
+merge_mode_help = "Die Ausrichtung vergleicht gespeicherte Zahlen und exakten Text; Textkennungen werden nicht als Zahlen interpretiert. Zeilen/Spalten: gleiche oder bereits enthaltene Datensätze überspringen; nur ersetzen, wenn der neue Datensatz alle Basiswerte enthält; ergänzende oder widersprüchliche Datensätze getrennt behalten. Zellen: Leerwerte ignorieren, Zahlen einschließlich Zahlentext addieren, gleichen Text einmal behalten, anderen Text mit Kommas verbinden. Fehlende Formelergebnisse stoppen die Zusammenführung; vorhandene Ergebnisse können veraltet sein."
 [settings.spreadsheet.merge_modes]
 by_row = "Nach Zeile"
 by_column = "Nach Spalte"
@@ -1053,6 +1053,9 @@ updated_line = "Aktualisiert: {value}"
 source_tooltip = "Quellordner: {value}"
 auto_selected_reason = "Eine verfügbare Vorlage in {template_kind} wurde anhand der Standardeinstellungen ausgewählt."
 open_location = "Dateispeicherort öffnen"
+search = "Vorlagen suchen"
+recent = "In dieser Sitzung zuletzt verwendet"
+search_count = "{count} von {total} Vorlagen · Filtern ändert die Auswahl nicht"
 
 [components.template_selector_tabbed]
 document_templates = "Dokument"
@@ -1162,6 +1165,7 @@ no_table_selected = "Keine Tabelle"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "1 Basisdatei und {count} Sammeldateien in der aktuellen Kategorie. Nur aktive Blätter werden zusammengeführt; weitere Basisblätter bleiben erhalten, weitere Sammelblätter werden ignoriert. Verbundene Zellen werden getrennt und mit dem Wert oben links gefüllt."
 [action_area]
 recognize_tables = "Tabellenstruktur erkennen"
 table_model_unavailable = "Tabellenmodelle nicht verfügbar; der OCR-Text bleibt erhalten."
@@ -1719,6 +1723,14 @@ task_failed_status = "Fehlgeschlagen: {message}"
 task_cancelled_status = "Abgebrochen"
 version_offline = "Offline-Version"
 window_title = "DocWen Offline-Version"
+request_summary = "Optionen dieses Auftrags: {value}"
+request_template = "Vorlage: {value}"
+request_remove_numbering = "Überschriftennummern entfernen: {value}"
+request_add_numbering = "Überschriftennummern hinzufügen: {value}"
+request_proofread = "Korrekturprüfung: {value}"
+request_output = "Ausgabe: {value}"
+merge_result_summary = "{source} / {sheet} · {mode}: hinzugefügt {added}, ersetzt {replaced}, übersprungen {skipped}, kombiniert {combined}; unbekannte Werte 0. Quellpositionen stehen in den Auftragsdetails."
+merge_formula_cache_missing = "Zusammenführung gestoppt: Für eine Formel fehlt das gespeicherte Ergebnis. Die Arbeitsmappe in einer Tabellenkalkulation neu berechnen und speichern, dann erneut versuchen. Datei und Zellen stehen in den Fehlerdetails."
 
 [settings.markdown_extensions]
 description = "Gemeinsame Regeln zum Erzeugen und Lesen von Markdown. Die Ausgabevorgaben sind quellunabhängig, werden aber nicht von allen Konvertierungen vollständig unterstützt. Word-spezifische Zuordnungen stehen separat darunter. Quelldateien bleiben unverändert."

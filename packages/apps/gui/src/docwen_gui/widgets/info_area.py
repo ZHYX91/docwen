@@ -169,6 +169,10 @@ class InfoArea(QWidget):
         self._output_destination_label.setObjectName("infoOutputDestination")
         self._output_destination_label.hide()
         overview_layout.addWidget(self._output_destination_label)
+        self._execution_summary_label = MiddleElidedLabel("", status_section)
+        self._execution_summary_label.setObjectName("infoExecutionSummary")
+        self._execution_summary_label.hide()
+        overview_layout.addWidget(self._execution_summary_label)
         self._progress = QProgressBar(status_section)
         self._progress.setObjectName("infoTaskProgress")
         self._progress.setTextVisible(False)
@@ -282,6 +286,9 @@ class InfoArea(QWidget):
         self._output_row.setVisible(vm.show_output_file)
         self._output_destination_label.set_full_text(vm.output_destination_hint)
         self._output_destination_label.setVisible(bool(vm.output_destination_hint))
+        self._execution_summary_label.set_full_text(vm.execution_summary)
+        self._execution_summary_label.setAccessibleName(vm.execution_summary)
+        self._execution_summary_label.setVisible(bool(vm.execution_summary))
         self._content_card.setTone(
             vm.status_tone
             if vm.status_tone in {"primary", "success", "warning", "danger", "info", "secondary"}

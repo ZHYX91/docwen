@@ -66,6 +66,11 @@ def test_merge_controls_follow_mode_and_eligible_count(widget, vm, category, fmt
             for count in (1, 2, 1):
                 vm.set_aggregate_counts({action: count})
                 assert button.isEnabled() == (count >= 2)
+                if category == "spreadsheet":
+                    assert widget._merge_scope_label is not None
+                    assert widget._merge_scope_label.text() == t(
+                        "conversion_panel.spreadsheet.merge_scope", count=max(0, count - 1)
+                    )
                 notice = widget._extra_group.findChild(QLabel, "aggregateAvailabilityNotice")
                 assert notice is not None
                 assert notice.isHidden() == (count >= 2)

@@ -265,13 +265,15 @@ def test_standalone_transparent_dpr2_image_preserves_physical_pixels_and_store_l
     qapp.clipboard().setMimeData(mime)
 
     observed: list[tuple[int, int, float]] = []
-    original = window._paste_standalone_clipboard_image
+    from docwen_gui.clipboard_paste import ClipboardPasteHandler
 
-    def record_and_publish(frozen) -> None:
+    original = ClipboardPasteHandler._paste_standalone_clipboard_image
+
+    def record_and_publish(handler, frozen) -> None:
         observed.append((frozen.width, frozen.height, frozen.device_pixel_ratio))
-        original(frozen)
+        original(handler, frozen)
 
-    monkeypatch.setattr(window, "_paste_standalone_clipboard_image", record_and_publish)
+    monkeypatch.setattr(ClipboardPasteHandler, "_paste_standalone_clipboard_image", record_and_publish)
     window._on_paste_requested()
     assert observed == [(96, 64, 2.0)], [(row.message_type, row.message) for row in window._info_area_vm.history_rows]
     first = _selected(window, qtbot)

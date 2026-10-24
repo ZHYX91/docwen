@@ -148,6 +148,17 @@ class TabbedTemplateSelector(QWidget):
                 return (self._current_tab, resource_id)
         return None
 
+    def template_label(self, resource_id: str) -> str:
+        for details in self._template_details_cache.values():
+            if resource_id in details:
+                return details[resource_id].display_name or resource_id
+        return resource_id
+
+    def mark_used(self, resource_id: str) -> None:
+        for selector in self._selectors.values():
+            if selector.has_template(resource_id):
+                selector.mark_used(resource_id)
+
     def consume_last_selection_feedback(self) -> tuple[str, str, TemplateSelectionFeedback] | None:
         feedback = self._last_selection_feedback
         self._last_selection_feedback = None

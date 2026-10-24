@@ -103,6 +103,7 @@ def _find_unavailable_formula_caches(
     formula_workbook: Any,
     *,
     input_path: str,
+    sheet_names: list[str] | None = None,
     location_limit: int = 20,
     cancel_check: Callable[[], None] | None = None,
 ) -> tuple[int, list[str]]:
@@ -113,7 +114,7 @@ def _find_unavailable_formula_caches(
     known_empty = empty_string_caches(input_path, cancel_check=cancel_check)
     count = 0
     locations: list[str] = []
-    for sheet_name in formula_workbook.sheetnames:
+    for sheet_name in formula_workbook.sheetnames if sheet_names is None else sheet_names:
         formula_sheet = formula_workbook[sheet_name]
         values_sheet = values_workbook[sheet_name]
         for row_index, row in enumerate(formula_sheet.iter_rows(), 1):

@@ -64,6 +64,14 @@ file_admission_cancelled = "O processamento foi cancelado; o formato detectado n
 # =============================================================================
 # 通用文本
 # =============================================================================
+request_summary = "Opções desta tarefa: {value}"
+request_template = "Modelo: {value}"
+request_remove_numbering = "Remover números dos títulos: {value}"
+request_add_numbering = "Adicionar números aos títulos: {value}"
+request_proofread = "Revisão: {value}"
+request_output = "Saída: {value}"
+merge_result_summary = "{source} / {sheet} · {mode}: adicionados {added}, substituídos {replaced}, ignorados {skipped}, combinados {combined}; valores desconhecidos 0. As posições de origem estão nos detalhes da tarefa."
+merge_formula_cache_missing = "Combinação interrompida: uma fórmula não tem resultado salvo. Recalcule e salve a pasta de trabalho em um editor de planilhas e tente novamente. Consulte o arquivo e as células nos detalhes da falha."
 [common]
 action_file_count = "{action} ({count} arquivos)"
 app_name = "DocWen"
@@ -478,7 +486,7 @@ ods_conversion_label = "Conversão ODS"
 spreadsheet_to_pdf_label = "Planilha para PDF"
 
 # 汇总模式选项
-merge_mode_help = "Por linha/coluna compara linhas/colunas recebidas com a base: se a entrada cobre a base, substitui; se a base cobre a entrada, mantém a base; caso contrário, insere perto da correspondência mais próxima. Por célula ignora entradas vazias, mantém o valor não vazio, soma números, mantém texto igual uma vez e junta textos não numéricos diferentes com vírgula."
+merge_mode_help = "O alinhamento compara números salvos e texto exato; identificadores de texto não são convertidos em números. Linhas/colunas: ignorar registros iguais ou já contidos, substituir apenas quando o registro recebido contiver todos os valores da base e manter separados os registros complementares ou conflitantes. Células: ignorar vazios, somar números (inclusive texto numérico), manter uma cópia de texto igual e unir outros textos com vírgula. Resultados de fórmulas ausentes interrompem a combinação; os resultados salvos podem estar desatualizados."
 [settings.spreadsheet.merge_modes]
 by_row = "Por linha"
 by_column = "Por coluna"
@@ -1105,6 +1113,9 @@ updated_line = "Atualizado: {value}"
 source_tooltip = "Pasta de origem: {value}"
 auto_selected_reason = "Foi selecionado um modelo disponível em {template_kind} conforme as configurações padrão."
 open_location = "Abrir local do arquivo"
+search = "Pesquisar modelos"
+recent = "Usados nesta sessão"
+search_count = "{count} de {total} modelos · filtrar não altera a seleção"
 
 [components.template_selector_tabbed]
 document_templates = "Documento"
@@ -1214,6 +1225,7 @@ no_table_selected = "Sem tabela"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "1 arquivo base e {count} arquivos de coleta na categoria atual. Somente as planilhas ativas são combinadas; as demais planilhas da base são mantidas e as dos arquivos de coleta são ignoradas. Células mescladas são separadas e preenchidas com o valor do canto superior esquerdo."
 [action_area]
 recognize_tables = "Reconhecer estrutura de tabelas"
 table_model_unavailable = "Modelos de tabela indisponíveis; o texto OCR será preservado."

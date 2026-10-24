@@ -42,32 +42,25 @@ Changelog: siehe [CHANGELOG.md](../CHANGELOG.md)
 
 ## 🚀 Schnellstart
 
-### Installation aus Quellcode
+### Herunterladen und starten
 
-**Voraussetzungen**: Python 3.12
+Das passende Archiv steht unter [Releases](https://github.com/ZHYX91/docwen/releases). Pakete unterstützen **Windows x64**, **Ubuntu 24.04 x64** und **Apple Silicon mit macOS 14+**; Python ist dafür nicht erforderlich. Das gesamte Archiv entpacken: unter Windows `DocWen.exe` öffnen, unter Ubuntu `./DocWen` starten, unter macOS `DocWen.app` nach Programme verschieben und die [Startanleitung](macos.md) beachten. Für Ubuntu und macOS gibt es auch reine CLI-Pakete. Andere Linux-Distributionen und Intel-Macs sind keine Paketziele.
 
-**Paketziele**: Windows x64, Ubuntu 24.04 x64 und Apple Silicon macOS 14+ arm64. Keine Intel-Mac-Pakete.
+Die verfügbaren Dateien unterscheiden sich je nach Version. Wählen Sie ein tatsächlich für Ihr System aufgeführtes Archiv; ältere Versionen enthalten möglicherweise kein macOS-Paket.
 
-**Option 1: Mit uv (empfohlen)**
+### Aus dem Quellcode starten
 
-Installieren Sie [uv](https://docs.astral.sh/uv/getting-started/), dann:
+Für Entwicklung oder eine Quellinstallation werden **Python 3.12** und **uv 0.12.0** benötigt. Im Repository ausführen:
 
 ```bash
 git clone https://github.com/ZHYX91/docwen.git
 cd docwen
 uv sync --frozen --all-extras
+uv run --frozen docwen-gui
+uv run --frozen docwen --help
 ```
 
-Quellcode, Tests und Builds von DocWen unterstützen nur die eingecheckte Sperrdatei mit `uv 0.12.0`; `pip install -e` wird nicht unterstützt.
-
-### Programm starten
-
-Für das Windows-Paket: Doppelklicken Sie auf `DocWen.exe`, um die GUI zu starten. Nach Installation aus Quellcode:
-
-```bash
-docwen-gui  # GUI-Modus
-docwen      # CLI-Modus
-```
+`uv run --frozen` verwendet die synchronisierte Umgebung ohne manuelle Aktivierung. CI und Produktions-Builds nutzen uv 0.12.0; zur Abhängigkeitspflege sind kompatible 0.12.x-Versionen möglich. `pip install -e` wird nicht unterstützt, da pip die gezielte Abhängigkeitsausschlussregel nicht anwenden kann.
 
 ### Hinweise für macOS
 
@@ -78,14 +71,9 @@ Mac-Pakete sind ad-hoc signiert, ohne Developer ID und Apple-Notarisierung. Sieh
 Um ältere Formate wie `.doc` und `.xls` zu konvertieren, installieren Sie LibreOffice:  
 Download: https://www.libreoffice.org/download/
 
-**HEIC-Bildunterstützung (Optional)**
+**HEIC/HEIF-Bilder**
 
-Um HEIC/HEIF-Bilder zu verarbeiten:
-
-```bash
-brew install libheif
-pip install pillow-heif
-```
+Fertige Pakete verwenden ihr mitgeliefertes Bild-Backend. Den installierten Build mit `DocWenCLI doctor --json` prüfen (macOS-CLI-Pfad siehe Anleitung unten). Eine Installation von `pillow-heif` im System-Python ändert das Paket nicht. Bei Quellinstallationen installiert `uv sync --frozen --all-extras` bereits `pillow-heif`. Meldet das Backend unter macOS eine fehlende native Bibliothek, `brew install libheif` ausführen und mit `uv run --frozen docwen doctor --json` erneut prüfen. Entscheidend sind der tatsächliche Build und das Backend.
 
 ### Voraussetzungen für die Linux-GUI
 
@@ -93,8 +81,8 @@ pip install pillow-heif
 Voraussetzungen erweitern die Zusage nicht auf andere Distributionen oder Architekturen.
 
 - Eine Desktop-Umgebung ist installiert (GNOME, KDE, XFCE usw.)
-- Die GUI basiert auf PySide6 (Qt6) und hängt nicht mehr von Python Tk ab. Falls beim Start Systembibliotheken fehlen, installieren Sie die im Fehler genannten Qt-Laufzeitabhängigkeiten (häufig OpenGL/X11-bezogen).
-- Auf headless Servern sollten Sie den CLI-Einstieg `docwen` statt der GUI verwenden; in Windows-Paketen steht zusätzlich `DocWenCLI.exe` bereit.
+- Die GUI basiert auf PySide6 (Qt6). Falls beim Start Systembibliotheken fehlen, installieren Sie die im Fehler genannten Qt-Laufzeitabhängigkeiten (häufig OpenGL/X11-bezogen).
+- Ohne Desktop-Umgebung `./DocWenCLI` im entpackten CLI-Paket oder `uv run --frozen docwen` im Quellverzeichnis verwenden.
 
 ### Schnellstartanleitung
 
@@ -123,7 +111,7 @@ Voraussetzungen erweitern die Zusage nicht auf andere Distributionen oder Archit
 
 ## 🖥️ Verwendung der grafischen Oberfläche
 
-Die meisten Benutzer verwenden diese Software über die grafische Oberfläche. Hier ist die detaillierte Bedienungsanleitung.
+Beim Start eines Auftrags erscheinen dessen tatsächliche Optionen. Vorlagen lassen sich nach Name oder Verwendungshinweis suchen. „In dieser Sitzung zuletzt verwendet“ enthält Vorlagen gestarteter Aufträge und ändert keine Standardvorlage. Für Tabellen siehe [Umfang, Modi und Ergebniskontrolle](table-merge.md).
 
 ### Schnittstellenübersicht
 
@@ -137,7 +125,7 @@ Das Programm verwendet ein **adaptives dreispaltiges Layout**:
 
 ### Grundlegender Arbeitsablauf
 
-1.  **Programm starten**: Doppelklicken Sie auf `DocWen.exe` (Windows-Paket) oder führen Sie `docwen-gui` aus.
+1.  **Programm starten**: Doppelklicken Sie auf `DocWen.exe` (Windows-Paket) oder führen Sie `uv run --frozen docwen-gui` aus.
 2.  **Datei importieren**:
     -   Methode 1: Ziehen Sie Dateien direkt in das Fenster.
     -   Methode 2: Klicken Sie auf die Schaltfläche "Hinzufügen" im Drag-and-Drop-Bereich, um Dateien auszuwählen.
@@ -192,6 +180,8 @@ Das Bedienfeld passt die verfügbaren Optionen automatisch basierend auf dem Dat
 ---
 
 ## 🔧 CLI-Verwendung
+
+CLI-Beispiele verwenden den Namen `docwen`. Im Quellverzeichnis `uv run --frozen` voranstellen; im heruntergeladenen Paket `DocWenCLI.exe` (Windows) oder `./DocWenCLI` (Linux/macOS) verwenden.
 
 Die Kommandozeile (CLI) eignet sich zum Prüfen und Konvertieren von Dateien im Terminal sowie für lokale Automatisierungsskripte. Für die Einbindung in andere Apps verwenden Sie die unten beschriebene Machine-Protocol-Schnittstelle.
 

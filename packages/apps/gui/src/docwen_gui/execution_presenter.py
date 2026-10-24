@@ -106,6 +106,8 @@ def _localized_failure_message(error: object | None = None) -> str:
     stable_code = diagnostic_code or error_type
     if stable_code == "OUTPUT_ATOMIC_PUBLISH_UNSUPPORTED":
         return _t("main_window.output_filesystem_unsupported")
+    if stable_code == "MERGE-FORMULA-CACHE-MISSING":
+        return _t("main_window.merge_formula_cache_missing")
     return f"{base} [{stable_code}]" if stable_code else base
 
 
@@ -142,6 +144,10 @@ class ExecutionPresenter(QObject):
                 _t("main_window.ocr_quality_notice"), "info", operation_id=context.get("request_id", "")
             )
 
+    def started(self, context: dict[str, Any]) -> None:
+        """Present the frozen request, without rereading widgets or settings."""
+        self._info_area_vm.set_execution_summary(str(context.get("request_summary", "")))
+
     @Slot(object, object)
     def finished(self, result: object, context: dict[str, Any]) -> None:
         from docwen_core.models.result import ConversionResult
@@ -166,11 +172,13 @@ class ExecutionPresenter(QObject):
 
         if result.success:
             self._show_ocr_notice([result], context)
+            self._show_merge_summary(result, context)
             output_path = self._output_path(result)
             result_paths = result_output_paths(result)
             warning_messages = _result_warning_messages(result)
             completion_tone = "warning" if warning_messages else "success"
-            for path in file_paths:
+            merge_details = [item.message for item in result.diagnostics if item.code == "MERGE-SUMMARY"]
+            for index, path in enumerate(file_paths):
                 self.file_status(
                     path,
                     "completed",
@@ -180,6 +188,7 @@ class ExecutionPresenter(QObject):
                     error_message="",
                     warnings=tuple(warning_messages),
                     diagnostic=DiagnosticSummary.from_result(result, output_count=len(result_paths)),
+                    local_details=(merge_details[index - 1],) if 0 < index <= len(merge_details) else (),
                 )
             self._info_area_vm.add_message(
                 _t("info_area.history_completed", name=context.get("display_name", Path(file_path).name)),
@@ -222,6 +231,7 @@ class ExecutionPresenter(QObject):
             if context.get("open_after_done") and output_path:
                 self.open_output.emit(output_path)
             self.completed.emit(context)
+
         else:
             self._unsuccessful(result, context)
             result_error = result.error
@@ -233,6 +243,57 @@ class ExecutionPresenter(QObject):
                 ),
             )
             self.completed.emit(context)
+
+    def _show_merge_summary(self, result: ConversionResult, context: dict[str, Any]) -> None:
+        summaries = result.metrics.extra.get("merge_summaries", [])
+        if not isinstance(summaries, list):
+            return
+        source_paths = context.get("file_paths", [])
+        if not context.get("aggregate") or not isinstance(source_paths, (list, tuple)):
+            return
+        # Metrics are extensible plugin data. Render at most one summary per
+        # actual collection input, and never let malformed optional evidence
+        # prevent the task's authoritative completion state from being shown.
+        summary_limit = max(0, len(source_paths) - 1)
+        messages: list[str] = []
+        modes = {
+            "row": _t("settings.spreadsheet.merge_modes.by_row"),
+            "col": _t("settings.spreadsheet.merge_modes.by_column"),
+            "cell": _t("settings.spreadsheet.merge_modes.by_cell"),
+        }
+        for summary in summaries[:summary_limit]:
+            if not isinstance(summary, dict):
+                continue
+            counts = summary.get("counts")
+            source_name, sheet, mode = summary.get("source_name"), summary.get("sheet"), summary.get("mode")
+            if (
+                not isinstance(source_name, str)
+                or not 0 < len(source_name) <= 1024
+                or not isinstance(sheet, str)
+                or not 0 < len(sheet) <= 256
+                or not isinstance(mode, str)
+                or mode not in modes
+                or not isinstance(counts, dict)
+                or any(
+                    type(counts.get(key)) is not int or not 0 <= counts[key] <= (2**63 - 1)
+                    for key in ("added", "replaced", "skipped", "combined")
+                )
+            ):
+                continue
+            message = _t(
+                "main_window.merge_result_summary",
+                source=source_name,
+                sheet=sheet,
+                mode=modes[mode],
+                added=counts["added"],
+                replaced=counts["replaced"],
+                skipped=counts["skipped"],
+                combined=counts["combined"],
+            )
+            self._info_area_vm.add_message(message, "info", operation_id=context.get("request_id", ""))
+            messages.append(message)
+        if messages:
+            self._info_area_vm.set_execution_summary(" · ".join(messages))
 
     @Slot(str, object)
     def failed(self, error_message: str, context: dict[str, Any]) -> None:
@@ -511,6 +572,7 @@ class ExecutionPresenter(QObject):
             skip_reason=str(values.get("skip_reason") or ""),
             output_paths=tuple(values.get("output_paths") or ()),
             diagnostic=values.pop("diagnostic", None),
+            local_details=tuple(values.pop("local_details", ())),
         )
         self._batch_list_vm.set_file_status(path, status, **values)
 

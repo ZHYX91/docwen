@@ -61,6 +61,14 @@ file_admission_confirm_title = "Confirmer le format de fichier détecté"
 file_admission_confirm_message = "Le nom du fichier et le contenu détecté utilisent des formats différents. Traiter selon le format détecté ?"
 file_admission_confirm_action = "Traiter selon le format détecté"
 file_admission_cancelled = "Le traitement a été annulé ; le format détecté n’a pas été accepté."
+request_summary = "Options de cette tâche : {value}"
+request_template = "Modèle : {value}"
+request_remove_numbering = "Supprimer les numéros de titres : {value}"
+request_add_numbering = "Ajouter des numéros de titres : {value}"
+request_proofread = "Relecture : {value}"
+request_output = "Sortie : {value}"
+merge_result_summary = "{source} / {sheet} · {mode} : ajouts {added}, remplacements {replaced}, ignorés {skipped}, combinés {combined} ; valeurs inconnues 0. Les positions sources figurent dans les détails de la tâche."
+merge_formula_cache_missing = "Fusion arrêtée : une formule ne possède pas de résultat enregistré. Recalculez et enregistrez le classeur dans un tableur, puis réessayez. Le fichier et les cellules figurent dans les détails de l’échec."
 [common]
 action_file_count = "{action} ({count} fichiers)"
 app_name = "DocWen"
@@ -475,7 +483,7 @@ ods_conversion_label = "Conversion ODS"
 spreadsheet_to_pdf_label = "Tableau vers PDF"
 
 # 汇总模式选项
-merge_mode_help = "Par ligne/colonne compare les lignes/colonnes entrantes à la base : si l’élément entrant couvre la base il la remplace ; s’il est couvert par la base, la base est conservée ; sinon il est inséré près de la correspondance la plus proche. Par cellule ignore les entrées vides, garde la valeur non vide, additionne les nombres, garde une seule fois les textes égaux et joint les textes non numériques différents par une virgule."
+merge_mode_help = "L’alignement compare les nombres enregistrés et le texte exact ; les identifiants textuels ne sont pas convertis en nombres. Lignes/colonnes : ignorer les enregistrements identiques ou déjà contenus, remplacer uniquement si l’enregistrement entrant contient toutes les valeurs de référence, conserver séparément les enregistrements complémentaires ou contradictoires. Cellules : ignorer les vides, additionner les valeurs numériques, y compris le texte numérique, garder une seule fois le texte identique et joindre les autres textes par une virgule. Un résultat de formule manquant arrête la fusion ; les résultats enregistrés peuvent être anciens."
 [settings.spreadsheet.merge_modes]
 by_row = "Par ligne"
 by_column = "Par colonne"
@@ -1104,6 +1112,9 @@ updated_line = "Mis à jour : {value}"
 source_tooltip = "Dossier source : {value}"
 auto_selected_reason = "Un modèle disponible dans {template_kind} a été sélectionné selon les paramètres par défaut."
 open_location = "Ouvrir l’emplacement du fichier"
+search = "Rechercher des modèles"
+recent = "Utilisés dans cette session"
+search_count = "{count} modèles sur {total} · le filtre ne change pas la sélection"
 
 [components.template_selector_tabbed]
 document_templates = "Document"
@@ -1213,6 +1224,7 @@ no_table_selected = "Pas de tableau"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "1 fichier de référence et {count} fichiers à intégrer dans la catégorie actuelle. Seules les feuilles actives sont fusionnées ; les autres feuilles de référence sont conservées et celles des fichiers à intégrer sont ignorées. Les cellules fusionnées sont séparées et remplies avec la valeur en haut à gauche."
 [action_area]
 recognize_tables = "Reconnaître la structure des tableaux"
 table_model_unavailable = "Modèles de tableaux indisponibles ; le texte OCR sera conservé."

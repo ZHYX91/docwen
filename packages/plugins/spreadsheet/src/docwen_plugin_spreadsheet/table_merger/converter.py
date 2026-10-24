@@ -10,9 +10,13 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import date, datetime
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+from docwen_core.errors import CancellationRequested
+from docwen_plugin_spreadsheet.table_merger.inputs import MissingFormulaCacheError, load_merge_workbook
+from docwen_plugin_spreadsheet.table_merger.semantics import MergeSummary, coverage_relation, value_identity
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -42,9 +46,9 @@ class TableMergerConverter:
     def convert(self, context: ConverterContext) -> Any:
         """Run the table merge operation.
 
-        Expects exactly one input_ref (base file) with collect_files
-        provided through options or multiple input_refs (first as base,
-        rest as collection files).
+        The first input is the base; every remaining input is a collection.
+        Only active worksheets are merged. Other base sheets are retained as
+        cached values, while other collection sheets are not collected.
 
         Args:
             context: The plugin execution context.
@@ -91,8 +95,9 @@ class TableMergerConverter:
             f"Table merge: base={os.path.basename(base_path)}, collect={len(collect_paths)} files, mode={mode_str}"
         )
 
+        wb = None
+        summaries: list[MergeSummary] = []
         try:
-            from docwen_plugin_spreadsheet.csv_xlsx.converter import _load_admitted_xlsx
             from docwen_plugin_spreadsheet.format_conversion.converter import SmartSheetConverter
 
             prepared_paths: list[str] = []
@@ -116,7 +121,11 @@ class TableMergerConverter:
             collect_paths = prepared_paths[1:]
 
             try:
-                wb = _load_admitted_xlsx(base_path, data_only=True)
+                wb = load_merge_workbook(
+                    base_path, base=True, cancel_check=context.cancellation.check, source_name=base_source_path
+                )
+            except (MissingFormulaCacheError, CancellationRequested):
+                raise
             except Exception as exc:
                 raise RuntimeError(f"Failed to merge '{Path(base_path).name}': {exc}") from exc
             base_ws = wb.active
@@ -133,30 +142,59 @@ class TableMergerConverter:
                 context.logger.info(f"  Merging: {os.path.basename(collect_file)}")
 
                 try:
-                    collect_wb = _load_admitted_xlsx(collect_file, data_only=True)
+                    collect_wb = load_merge_workbook(
+                        collect_file,
+                        base=False,
+                        cancel_check=context.cancellation.check,
+                        source_name=source_paths[i + 1],
+                    )
+                except (MissingFormulaCacheError, CancellationRequested):
+                    raise
                 except Exception as exc:
                     raise RuntimeError(f"Failed to merge '{Path(collect_file).name}': {exc}") from exc
-                collect_ws = collect_wb.active
-                if collect_ws is None:
+                try:
+                    collect_ws = collect_wb.active
+                    if collect_ws is None:
+                        raise RuntimeError(f"Failed to merge '{Path(collect_file).name}': no active worksheet")
+
+                    self._unmerge_all_cells(collect_ws)
+                    row_offset, col_offset = self._find_best_offset(base_ws, collect_ws, offset_range)
+                    # Make room for leading collection fields instead of
+                    # clipping them at worksheet row/column zero.
+                    if row_offset < 0 and mode != self.MODE_BY_ROW:
+                        base_ws.insert_rows(1, -row_offset)
+                        row_offset = 0
+                    if col_offset < 0 and mode != self.MODE_BY_COLUMN:
+                        base_ws.insert_cols(1, -col_offset)
+                        col_offset = 0
+                    summary = MergeSummary(
+                        Path(source_paths[i + 1]).name, collect_ws.title, mode_str, row_offset, col_offset
+                    )
+                    merge = {
+                        self.MODE_BY_ROW: self._merge_by_row,
+                        self.MODE_BY_COLUMN: self._merge_by_column,
+                        self.MODE_BY_CELL: self._merge_by_cell,
+                    }[mode]
+                    merge(
+                        base_ws,
+                        collect_ws,
+                        row_offset,
+                        col_offset,
+                        summary=summary,
+                        cancel_check=context.cancellation.check,
+                    )
+                    summaries.append(summary)
+                finally:
                     collect_wb.close()
-                    continue
 
-                self._unmerge_all_cells(collect_ws)
-
-                # Find best alignment
-                row_offset, col_offset = self._find_best_offset(base_ws, collect_ws, offset_range)
-
-                # Execute merge
-                if mode == self.MODE_BY_ROW:
-                    self._merge_by_row(base_ws, collect_ws, row_offset, col_offset)
-                elif mode == self.MODE_BY_COLUMN:
-                    self._merge_by_column(base_ws, collect_ws, row_offset, col_offset)
-                elif mode == self.MODE_BY_CELL:
-                    self._merge_by_cell(base_ws, collect_ws, row_offset, col_offset)
-
-                collect_wb.close()
-
+        except CancellationRequested:
+            if wb is not None:
+                wb.close()
+            raise
         except Exception as exc:
+            if wb is not None:
+                wb.close()
+            code = "MERGE-FORMULA-CACHE-MISSING" if isinstance(exc, MissingFormulaCacheError) else "MERGE-PARSE-ERROR"
             context.logger.error(f"Table merge processing failed: {exc}")
             return ConversionResult(
                 task_id=task_id,
@@ -164,18 +202,23 @@ class TableMergerConverter:
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
                     message=str(exc),
-                    diagnostic_code="MERGE-PARSE-ERROR",
+                    diagnostic_code=code,
                 ),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
                         message=f"Table merge processing failed: {exc}",
-                        code="MERGE-PARSE-ERROR",
+                        code=code,
+                        location=exc.location if isinstance(exc, MissingFormulaCacheError) else "",
                     ),
                 ],
+                metrics=ConversionMetrics(
+                    extra={"unknown_formula_values": exc.count} if isinstance(exc, MissingFormulaCacheError) else {}
+                ),
             )
 
         # ── Write merged result to staging ────────────────────────────
+        assert wb is not None
         context.progress.report_progress(90.0, "Writing merged result...")
         output_path = context.workspace.create_artifact_path("primary", ".xlsx")
         try:
@@ -234,13 +277,26 @@ class TableMergerConverter:
                     message=(f"Merged {len(collect_paths)} files into base ({mode_str} mode)"),
                     code="MERGE-OK",
                 ),
+                *[
+                    ConversionDiagnostic(
+                        level="info",
+                        message=summary.message(),
+                        code="MERGE-SUMMARY",
+                        location=f"{summary.source_name}: {summary.sheet}",
+                    )
+                    for summary in summaries
+                ],
             ],
             error=None,
             metrics=ConversionMetrics(
                 duration_ms=0.0,
                 input_bytes=sum(os.path.getsize(p) for p in source_paths if os.path.isfile(p)),
                 output_bytes=os.path.getsize(output_path) if os.path.isfile(output_path) else 0,
-                extra={"collect_count": len(collect_paths), "mode": mode_str},
+                extra={
+                    "collect_count": len(collect_paths),
+                    "mode": mode_str,
+                    "merge_summaries": [summary.to_dict() for summary in summaries],
+                },
             ),
         )
 
@@ -313,27 +369,7 @@ class TableMergerConverter:
 
     @staticmethod
     def _normalize_for_alignment(value: Any) -> Any:
-        """Normalize a cell value for alignment comparison."""
-        if value is None:
-            return None
-        if isinstance(value, bool):
-            return ("bool", value)
-        if isinstance(value, (int, float)):
-            return ("num", float(value))
-        if isinstance(value, (date, datetime)):
-            return ("date", value.isoformat())
-        if isinstance(value, str):
-            s = value.strip()
-            if not s:
-                return None
-            try:
-                return ("num", float(s))
-            except Exception:
-                return ("str", s)
-        s = str(value).strip()
-        if not s:
-            return None
-        return ("str", s)
+        return value_identity(value)
 
     def _suggest_offset_by_value_matching(
         self,
@@ -383,10 +419,24 @@ class TableMergerConverter:
 
     # ── Merge by row ──────────────────────────────────────────────────
 
-    def _merge_by_row(self, base_ws: Any, collect_ws: Any, row_offset: int, col_offset: int) -> None:
+    def _merge_by_row(
+        self,
+        base_ws: Any,
+        collect_ws: Any,
+        row_offset: int,
+        col_offset: int,
+        *,
+        summary: MergeSummary | None = None,
+        cancel_check: Callable[[], None] | None = None,
+    ) -> None:
         """Merge collection rows into base, inserting at most similar positions."""
         for collect_row_idx in range(1, collect_ws.max_row + 1):
+            if cancel_check is not None:
+                cancel_check()
+            location = f"row {collect_row_idx}"
             if self._is_row_empty(collect_ws, collect_row_idx):
+                if summary is not None:
+                    summary.record("skipped", location)
                 continue
 
             covered = False
@@ -396,14 +446,20 @@ class TableMergerConverter:
                     continue
                 if coverage == "collect_covers_base":
                     self._replace_row(base_ws, base_row_idx, collect_ws, collect_row_idx, col_offset)
+                    if summary is not None:
+                        summary.record("replaced", location)
                     covered = True
                     break
-                elif coverage == "base_covers_collect":
+                elif coverage in {"equal", "base_covers_collect"}:
+                    if summary is not None:
+                        summary.record("skipped", location)
                     covered = True
                     break
 
             if not covered:
                 self._insert_at_most_similar_row(base_ws, collect_ws, collect_row_idx, col_offset)
+                if summary is not None:
+                    summary.record("added", location)
 
     @staticmethod
     def _is_row_empty(ws: Any, row_idx: int) -> bool:
@@ -456,9 +512,7 @@ class TableMergerConverter:
                 if base_val != collect_val:
                     return "conflict"
 
-        if collect_has_unique and not base_has_unique:
-            return "collect_covers_base"
-        return "base_covers_collect"
+        return coverage_relation(base_unique=base_has_unique, collect_unique=collect_has_unique)
 
     @staticmethod
     def _replace_row(base_ws: Any, base_row: int, collect_ws: Any, collect_row: int, col_offset: int) -> None:
@@ -536,9 +590,17 @@ class TableMergerConverter:
         collect_ws: Any,
         row_offset: int,
         col_offset: int,
+        *,
+        summary: MergeSummary | None = None,
+        cancel_check: Callable[[], None] | None = None,
     ) -> None:
         for collect_col_idx in range(1, collect_ws.max_column + 1):
+            if cancel_check is not None:
+                cancel_check()
+            location = f"column {collect_col_idx}"
             if self._is_col_empty(collect_ws, collect_col_idx):
+                if summary is not None:
+                    summary.record("skipped", location)
                 continue
 
             covered = False
@@ -548,14 +610,20 @@ class TableMergerConverter:
                     continue
                 if coverage == "collect_covers_base":
                     self._replace_column(base_ws, base_col_idx, collect_ws, collect_col_idx, row_offset)
+                    if summary is not None:
+                        summary.record("replaced", location)
                     covered = True
                     break
-                elif coverage == "base_covers_collect":
+                elif coverage in {"equal", "base_covers_collect"}:
+                    if summary is not None:
+                        summary.record("skipped", location)
                     covered = True
                     break
 
             if not covered:
                 self._insert_at_most_similar_column(base_ws, collect_ws, collect_col_idx, row_offset)
+                if summary is not None:
+                    summary.record("added", location)
 
     @staticmethod
     def _is_col_empty(ws: Any, col_idx: int) -> bool:
@@ -607,9 +675,7 @@ class TableMergerConverter:
                 if base_val != collect_val:
                     return "conflict"
 
-        if collect_has_unique and not base_has_unique:
-            return "collect_covers_base"
-        return "base_covers_collect"
+        return coverage_relation(base_unique=base_has_unique, collect_unique=collect_has_unique)
 
     @staticmethod
     def _replace_column(base_ws: Any, base_col: int, collect_ws: Any, collect_col: int, row_offset: int) -> None:
@@ -687,10 +753,17 @@ class TableMergerConverter:
         collect_ws: Any,
         row_offset: int,
         col_offset: int,
+        *,
+        summary: MergeSummary | None = None,
+        cancel_check: Callable[[], None] | None = None,
     ) -> None:
         for row in collect_ws.iter_rows():
+            if cancel_check is not None:
+                cancel_check()
             for cell in row:
                 if cell.value is None or str(cell.value).strip() == "":
+                    if summary is not None:
+                        summary.record("skipped", cell.coordinate)
                     continue
                 base_row = cell.row + row_offset
                 base_col = cell.column + col_offset
@@ -698,7 +771,17 @@ class TableMergerConverter:
                     continue
                 base_cell = base_ws.cell(base_row, base_col)
                 if type(base_cell).__name__ != "MergedCell":
-                    base_cell.value = self._merge_cell_values(base_cell.value, cell.value)
+                    original = base_cell.value
+                    base_cell.value = self._merge_cell_values(original, cell.value)
+                    if summary is not None:
+                        decision = (
+                            "added"
+                            if value_identity(original) is None
+                            else "skipped"
+                            if value_identity(original) == value_identity(base_cell.value)
+                            else "combined"
+                        )
+                        summary.record(decision, cell.coordinate)
 
     @staticmethod
     def _merge_cell_values(base_value: Any, collect_value: Any) -> Any:

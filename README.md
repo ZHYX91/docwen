@@ -42,37 +42,25 @@ Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
 
 ## 🚀 Quick Start
 
-### Installation from Source
+### Download and run
 
-**Prerequisites**: Python 3.12
+Download the matching archive from [Releases](https://github.com/ZHYX91/docwen/releases). Packages support **Windows x64**, **Ubuntu 24.04 x64** and **Apple Silicon macOS 14+**. No Python installation is required. Extract the complete archive: on Windows open `DocWen.exe`; on Ubuntu run `./DocWen`; on macOS move `DocWen.app` to Applications and follow the [first-launch guide](docs/user-guides/macos.md). Ubuntu and macOS also have separate CLI-only archives. Other Linux distributions and Intel Macs are not package targets.
 
-**Package targets**: DocWen provides one Windows x64 GUI+CLI package and separate
-Ubuntu 24.04 x64 GUI+CLI and CLI-only packages, plus Apple Silicon macOS 14+ GUI+CLI
-and CLI-only packages. Other Linux distributions and Intel Macs are not package targets.
+Release assets vary by version; choose an archive actually listed for your system. Older releases may not include macOS packages.
 
-**Option 1: Using uv (Recommended)**
+### Run from source
 
-Install the production-pinned `uv 0.12.0`, then:
+For development or a source installation, install **Python 3.12** and **uv 0.12.0**, then run these commands from the repository:
 
 ```bash
 git clone https://github.com/ZHYX91/docwen.git
 cd docwen
 uv sync --frozen --all-extras
+uv run --frozen docwen-gui
+uv run --frozen docwen --help
 ```
 
-DocWen CI and production builds use exactly `uv 0.12.0`; dependency/lock maintenance may use a compatible `uv 0.12.x` so automated security updates can refresh the checked-in lock without changing the production toolchain.
-`pip install -e` is unsupported because pip cannot apply the repository's scoped dependency exclusion.
-
-### Launch Program
-
-On the Windows packaged release, double-click `DocWen.exe` to start the graphical interface. On
-Ubuntu 24.04 x64, extract `DocWen-<version>-linux-x64.tar.gz` and run `./DocWen`; the companion
-`DocWenCLI-<version>-linux-x64.tar.gz` is the CLI-only package. Download the matching assets from [DocWen Releases](https://github.com/ZHYX91/docwen/releases). If installed from source, run:
-
-```bash
-docwen-gui  # GUI mode
-docwen      # CLI mode
-```
+Use `uv run --frozen` to run commands in the synchronized environment without activating it. CI and production builds use uv 0.12.0; dependency maintenance accepts compatible 0.12.x versions. `pip install -e` is unsupported because pip cannot apply this repository’s scoped dependency exclusion.
 
 ### macOS Notes
 
@@ -88,14 +76,9 @@ for checksum checks, CLI use and update instructions.
 To convert legacy formats like `.doc` and `.xls`, install LibreOffice:  
 Download: https://www.libreoffice.org/download/
 
-**HEIC image support (Optional)**
+**HEIC/HEIF images**
 
-To process HEIC/HEIF images:
-
-```bash
-brew install libheif
-pip install pillow-heif
-```
+Packaged apps use their bundled image backend. Check the installed build with `DocWenCLI doctor --json` (use the CLI path below on macOS); installing `pillow-heif` into system Python does not change the app. For source installs, `uv sync --frozen --all-extras` already installs `pillow-heif`. On macOS, install `libheif` with `brew install libheif` if the backend reports that the native library is missing, then check again with `uv run --frozen docwen doctor --json`. Availability still depends on the actual build and backend.
 
 ### Linux GUI Prerequisites
 
@@ -103,8 +86,8 @@ pip install pillow-heif
 These prerequisites do not extend that support claim to another Linux distribution or architecture.
 
 - Desktop environment installed (GNOME, KDE, XFCE, etc.)
-- GUI uses PySide6 (Qt6) and no longer depends on Python Tk. If startup fails due to missing system libraries, install the Qt runtime dependencies indicated by the error (commonly OpenGL/X11 related).
-- For headless Ubuntu 24.04 systems, use `DocWenCLI` from the CLI-only archive instead of the GUI.
+- GUI uses PySide6 (Qt6). If startup fails due to missing system libraries, install the Qt runtime dependencies indicated by the error (commonly OpenGL/X11 related).
+- For headless Ubuntu 24.04 systems, run `./DocWenCLI` from the CLI-only archive, or `uv run --frozen docwen` from a source checkout.
 
 ### Quick Start Guide
 
@@ -133,7 +116,7 @@ These prerequisites do not extend that support claim to another Linux distributi
 
 ## 🖥️ Graphical Interface Usage
 
-Most users use this software through the graphical interface. Here is the detailed operation guide.
+Task options appear when a request starts and come from that request. Search templates by name or usage hint; **Recently used in this session** lists templates used by started tasks and does not change your default. For spreadsheet aggregation, see [merge scope, modes and result checks](docs/user-guides/table-merge.md).
 
 ### Interface Overview
 
@@ -147,7 +130,7 @@ The program uses an **adaptive three-column layout**:
 
 ### Basic Operation Flow
 
-1.  **Launch Program**: Double-click `DocWen.exe` (Windows packaged release) or run `docwen-gui`.
+1.  **Launch Program**: Double-click `DocWen.exe` (Windows packaged release) or run `uv run --frozen docwen-gui`.
 2.  **Import File**:
     -   Method 1: Drag and drop files directly into the window.
     -   Method 2: Click the "Add" button in the drag-and-drop area to select files.
@@ -214,6 +197,8 @@ Under **Markdown syntax**, **Each line as a paragraph** optionally turns ordinar
 ---
 
 ## 🔧 Command Line Usage
+
+CLI examples use `docwen` as the command name. From this source checkout, prefix it with `uv run --frozen`; in a downloaded package, use `DocWenCLI.exe` (Windows) or `./DocWenCLI` (Linux/macOS).
 
 Use the command line (CLI) to inspect files, convert them from a terminal, or automate repeated tasks. For integrations with other apps, use the Machine Protocol described below.
 

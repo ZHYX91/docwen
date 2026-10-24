@@ -65,6 +65,14 @@ file_admission_cancelled = "已取消处理；未接受检测到的格式。"
 # =============================================================================
 # 通用文本
 # =============================================================================
+request_summary = "本次任务选项：{value}"
+request_template = "模板：{value}"
+request_remove_numbering = "清除标题编号：{value}"
+request_add_numbering = "添加标题编号：{value}"
+request_proofread = "校对：{value}"
+request_output = "输出：{value}"
+merge_result_summary = "{source} / {sheet} · {mode}：新增 {added}，替换 {replaced}，跳过 {skipped}，合并 {combined}；未知值 0。来源位置见任务详情。"
+merge_formula_cache_missing = "汇总已停止：公式没有已保存的结果。请在电子表格软件中重新计算并保存后重试；文件和单元格位置见失败详情。"
 [common]
 action_file_count = "{action}（{count} 个文件）"
 app_name = "DocWen"
@@ -479,7 +487,7 @@ ods_conversion_label = "ODS格式转换"
 spreadsheet_to_pdf_label = "表格转PDF"
 
 # 汇总模式选项
-merge_mode_help = "按行/按列会把传入行或列与基础表匹配：传入项覆盖基础项时替换，传入项被基础项覆盖时保留基础项，否则插入到最相近位置。按单元格会忽略传入空值、保留非空值、数值相加、相同文本只保留一次，不同非数值文本用逗号连接。"
+merge_mode_help = "自动对齐按实际数值和原样文本匹配，不把文本编号转成数字。按行或列：相同或已被基表包含的记录跳过；采集记录包含基表的全部值时才替换；互补或冲突记录分别保留。按单元格：忽略空值，数值相加（包括数字文本），相同文本保留一份，其他文本用逗号连接。公式结果缺失时停止汇总；已有缓存也可能未更新。"
 [settings.spreadsheet.merge_modes]
 by_row = "按行汇总"
 by_column = "按列汇总"
@@ -1106,6 +1114,9 @@ auto_selected_reason = "已按默认设置自动选择 {template_kind} 中的可
 open_location = "打开文件位置"
 
 # 选项卡式模板选择器
+search = "搜索模板"
+recent = "本次会话最近使用"
+search_count = "显示 {count} / {total} 个模板；筛选不会更改当前选择"
 [components.template_selector_tabbed]
 document_templates = "文档模板"
 spreadsheet_templates = "表格模板"
@@ -1214,6 +1225,7 @@ no_table_selected = "未选中表格"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "当前类别中 1 个基表和 {count} 个采集文件。只汇总各文件的活动工作表；保留基表的其他工作表，忽略采集文件的其他工作表。合并单元格会拆开，并填入左上角的值。"
 [action_area]
 recognize_tables = "识别表格结构"
 table_model_unavailable = "表格模型不可用；将保留普通 OCR 文本。"
