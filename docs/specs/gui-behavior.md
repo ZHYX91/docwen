@@ -85,9 +85,18 @@ committed before output navigation and completion notifications.
 
 ## Settings ownership / 设置归属
 
-The fifteen pages follow this order: general, incoming text, incoming documents, incoming spreadsheets, incoming images, incoming layout files, incoming other files, proofreading, Markdown syntax, templates, links, Markdown resources, conversion software, file saving, logging. Incoming text owns Markdown content formatting, heading merging, table styling and template filling; incoming documents own DOCX content retention. Markdown syntax owns only syntax and extension policies. Global OCR language belongs to Markdown resources, and all eight converter priority lists belong to conversion software. Numbering editor changes refresh both incoming text and document pages without resetting unrelated drafts.
+The navigation groups follow `NAVIGATION_GROUPS` in `widgets/settings/dialog.py`:
 
-十五页按“常规 → 传入文本 → 传入文档 → 传入表格 → 传入图片 → 传入版式文件 → 传入其他文件 → 校对 → Markdown 语法 → 模板 → 链接 → Markdown 资源 → 转换软件 → 文件保存 → 日志”排列。传入文本负责 Markdown 内容格式、标题合并、表格样式和模板填充；传入文档负责 DOCX 内容保留。Markdown 语法只管理语法与扩展策略。全局 OCR 语言归入 Markdown 资源，八组转换器优先级归入转换软件。编号编辑器改动同步刷新传入文本和文档页，并保留其他草稿。
+| Group / 分组 | Pages in order / 页顺序 |
+| --- | --- |
+| Basics / 基础 | General, File saving, Templates, Conversion software, Logging / 常规、文件保存、模板、转换软件、日志 |
+| Input types / 输入类型 | Incoming text, documents, spreadsheets, images, fixed-layout files, other files / 传入文本、文档、表格、图片、版式文件、其他文件 |
+| Content / 内容 | Markdown syntax, Link, OCR and images, Proofread / Markdown 语法、链接、OCR 与图片、校对 |
+| Specialized / 专项 | Official documents, Invoices / 公文、发票 |
+
+Incoming text owns Markdown content formatting, heading merging, table styling and generic template filling; incoming documents own DOCX content retention. Markdown syntax owns syntax and extension policies. Global OCR language and Markdown image output belong to **OCR and images**. All eight converter priority lists belong to Conversion software. Official documents owns its field-formatting switch. Numbering editor changes refresh incoming text and document pages without resetting unrelated drafts.
+
+传入文本负责 Markdown 内容格式、标题合并、表格样式及通用模板填充；传入文档负责 DOCX 内容保留。Markdown 语法管理语法与扩展策略。全局 OCR 语言及 Markdown 图片输出归属“OCR 与图片”，八组转换器优先级归属“转换软件”，公文字段开关归属“公文”。编号编辑器改动同步刷新传入文本和文档页，并保留其他草稿。
 
 The four proofreading rule sets expose edit, import and export together. The paired punctuation editor names opening and closing symbols. Imports validate TOML and preview additions, conflicts and retained entries before the user chooses merge or replacement. Invalid merges are unavailable; cancellation or a changed source preserves existing data. Saves compare preview source inside the configuration transaction. Exports use the complete effective editable source, including comments, independently of editor filters.
 
@@ -122,10 +131,20 @@ Markdown-to-document proofreading switches initialize from the injected configur
 choice belongs to the current operation, including a toggle back to its initial value. Committed settings changes
 refresh only switches the user has not changed; widget projection blocks signals and does not count as a manual
 choice. Unsaved or canceled settings drafts have no effect. Changing only the target format retains these choices;
-a new input or operation context initializes again from saved defaults. Only DOCX requests carry these switches,
+a new input or operation context initializes again from saved defaults. Markdown requests for DOCX/DOC/ODT/RTF/WPS carry these switches; proofreading runs on the intermediate DOCX before any required final bridge conversion, which must be available,
 and disabling all four creates no post-conversion proofreading stage. Existing request-over-config priority stays
 unchanged. Source/model and Qt regressions cover this policy; final packaged GUI verification remains separate.
 - The workspace previews committed output-directory settings. Template selection has a persistent check marker and a visible selected name. Idle feedback shows a compact ready-state card header; its body expands when work starts and remains open for results. Existing activity and non-default output hints remain reachable while idle.
+- A started task shows options from its normalized request, including applicable template, numbering, proofreading and destination values. Local activity details retain this summary; copyable diagnostics keep their existing redacted contract. Table merging displays its real aggregate-input count and value policy before execution, then decision counts from the result. Bounded source positions remain attached to the corresponding collection input even if transient notices are cleared.
+- Template search filters display names and usage hints without changing the selected resource or catalog order. A no-match search does not silently choose another template. Recent templates are limited to five IDs used by started tasks in this session; removed resources disappear from that list. Choosing a recent entry is an explicit user selection and does not update the persisted default.
+
+If a built request fails during admission or startup, its failure card shows that request's frozen summary. If no summary is available, the summary is cleared rather than inherited from an earlier task. Earlier tasks remain in activity history; projecting a failure does not mark the request as started or add its template to session recents.
+
+任务开始时显示规范化请求中的实际模板、编号、校对与输出选项。本地活动详情保留该摘要；可复制诊断继续使用既有脱敏合同。表格汇总在执行前显示实际采集数量与值处理策略，完成后显示结果计数；有界来源位置附着于对应采集文件，即使瞬时通知被清除仍可查看。
+
+已构建的请求在准入或启动阶段失败时，失败卡片显示本次请求的冻结摘要；没有摘要时明确清空，不沿用前一任务的选项。先前任务仍保留在活动记录中；显示失败不会将请求标记为已启动，也不会把其模板加入会话最近使用列表。
+
+模板搜索只按显示名和用途筛选，不更改已选资源和目录顺序；无匹配项时不自动改选。最近使用列表保留当前会话已启动任务使用的最多五个模板 ID，并移除已不在目录中的资源。选择最近项是明确的用户选择，不更改已保存的默认模板。
 - Light and dark themes use identical geometry, with readable hover, pressed, disabled and keyboard-focus states.
 - Theme-independent design tokens and shared control geometry own dimensions and spacing. Theme colour changes reuse the same complete button box model; new themes do not redeclare padding or minimum sizes.
 

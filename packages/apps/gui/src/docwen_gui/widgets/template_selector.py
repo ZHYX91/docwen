@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import PushButton
+from qfluentwidgets import PushButton, SearchLineEdit
 
 from docwen_gui.styles.ui_scale import set_metric
 
@@ -105,6 +105,7 @@ class TemplateSelector(QWidget):
         self._pending_selection_source: str | None = None
         self._pending_selection_explanation: str | None = None
         self._load_error: tuple[str, str] | None = None
+        self._recent: list[str] = []
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -137,6 +138,20 @@ class TemplateSelector(QWidget):
         layout.addWidget(self._empty_state)
 
         # ── 模板列表 ────────────────────────────────────────────────────
+        self._search = SearchLineEdit(self)
+        self._search.setObjectName("templateSelectorSearch")
+        self._search.setPlaceholderText(t("components.template_selector.search"))
+        self._search.setAccessibleName(t("components.template_selector.search"))
+        self._search.textChanged.connect(self._filter_templates)
+        layout.addWidget(self._search)
+        self._recent_button = PushButton(t("components.template_selector.recent"), self)
+        self._recent_button.clicked.connect(self._show_recent)
+        self._recent_button.hide()
+        layout.addWidget(self._recent_button)
+        self._search_status = QLabel(self)
+        self._search_status.setWordWrap(True)
+        self._search_status.hide()
+        layout.addWidget(self._search_status)
         self._list = QListWidget()
         self._list.setObjectName("templateSelectorList")
         self._list.setProperty("docwenTemplateList", True)
@@ -170,6 +185,8 @@ class TemplateSelector(QWidget):
 
         layout.addWidget(self._footer_row)
 
+        self.setTabOrder(self._search, self._recent_button)
+        self.setTabOrder(self._recent_button, self._list)
         self.setTabOrder(self._list, self._manage_button)
         self._show_empty_state()
 
@@ -204,6 +221,48 @@ class TemplateSelector(QWidget):
                 self.select_template(self._selected, selection_source="restore")
         else:
             self._show_empty_state()
+        self._recent = [name for name in self._recent if name in template_names]
+        self._recent_button.setVisible(bool(self._recent))
+        self._filter_templates()
+
+    def mark_used(self, resource_id: str) -> None:
+        """Remember started tasks in this session; never change the default."""
+        if self.has_template(resource_id):
+            self._recent = [resource_id, *[name for name in self._recent if name != resource_id]][:5]
+            self._recent_button.setVisible(True)
+
+    def _show_recent(self) -> None:
+        menu = QMenu(self._recent_button)
+        for name in self._recent:
+            details = self._template_details.get(name)
+            action = menu.addAction(details.display_name if details and details.display_name else name)
+            action.triggered.connect(lambda _checked=False, resource_id=name: self._select_recent(resource_id))
+        menu.exec(self._recent_button.mapToGlobal(self._recent_button.rect().bottomLeft()))
+
+    def _select_recent(self, resource_id: str) -> None:
+        self._search.clear()
+        self.select_template(resource_id, selection_source="user")
+        self._list.setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def _filter_templates(self, *_args: object) -> None:
+        query = self._search.text().strip().casefold()
+        count = 0
+        # Hiding rows is a view operation; selection and the default ID stay
+        # intact even when the selected template is outside the filter.
+        for index in range(self._list.count()):
+            item = self._list.item(index)
+            if item is None:
+                continue
+            name = self._get_item_template_name(item) or ""
+            details = self._template_details.get(name)
+            text = f"{item.text()} {details.usage_hint or ''}" if details else item.text()
+            visible = query in text.casefold()
+            item.setHidden(not visible)
+            count += visible
+        self._search_status.setText(
+            t("components.template_selector.search_count", count=count, total=self._list.count())
+        )
+        self._search_status.setVisible(bool(query))
 
     def show_load_error(self, summary: str, detail: str) -> None:
         """Render an unavailable state distinct from a successful empty list."""
@@ -267,12 +326,16 @@ class TemplateSelector(QWidget):
     # ── Internal: visibility ──────────────────────────────────────────────────
 
     def _show_template_list(self) -> None:
+        self._search.setVisible(True)
         self._empty_state.setVisible(False)
         self._list.setVisible(True)
         self._footer_row.setVisible(True)
         self._details_label.setVisible(bool(self._details_label.text()))
 
     def _show_empty_state(self) -> None:
+        self._search.setVisible(False)
+        self._recent_button.setVisible(False)
+        self._search_status.setVisible(False)
         self._list.setVisible(False)
         self._empty_state.setVisible(True)
         self._clear_selection_labels()

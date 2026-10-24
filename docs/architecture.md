@@ -54,6 +54,35 @@ GUI 编排模块统一单文件、批量与合并的路线/接纳/保留/启动�
 与线程生命周期，后台线程只执行冻结请求。结果呈现模块先提交任务历史、列表状态与导航目标，再发出打开结果和桌面通知信号。
 结果展示与线程清理分别处理；取消或启动报错不能销毁仍运行的线程。
 
+`clipboard_paste` owns capture, rich-content projection and submission through the existing
+input ViewModel. The window's managed store keeps its inspection, execution and history
+leases; the paste handler owns no second file list or output writer. `execution_summary`
+projects only the normalized request's options. The presenter displays that snapshot when
+the task starts and displays merge counts from the completed result. Template recents are
+session-only views of started tasks and never write the persisted default template.
+
+`clipboard_paste` 负责捕获、富内容投影及向既有输入 ViewModel 提交。窗口管理的 Store 继续持有检测、
+执行和历史租约；粘贴处理器不维护第二份文件列表，也不写转换输出。`execution_summary` 只投影规范化请求
+中的选项，呈现器在启动时展示该快照，并从完成结果显示汇总计数。最近使用模板仅是当前会话已启动任务的视图，
+不改写持久化的默认模板。
+
+Word title/subtitle extraction and localized YAML front matter live in
+`docwen_plugin_document.to_markdown.metadata`; the converter retains policy selection,
+body rendering and artifact ownership. Spreadsheet coverage and decision evidence live in
+`table_merger.semantics`; workbook loading reuses the CSV/XLSX formula-cache check and stops
+before producing an artifact if a needed result is unknown. See the [merge guide](user-guides/table-merge.md).
+
+Word 标题/副标题提取及本地化 YAML 前言由 `docwen_plugin_document.to_markdown.metadata` 负责；
+转换器继续拥有策略选择、正文渲染及产物。表格覆盖关系与处理证据由 `table_merger.semantics` 负责；
+工作簿读取复用 CSV/XLSX 的公式缓存检查，所需结果未知时在生成产物前停止。参见[汇总指南](user-guides/table-merge.md)。
+
+Plugin registration keeps last-registration-wins for a repeated ID. The complete next
+route index is built before replacing registry state, so removed routes cannot resolve
+to the new plugin. Registration order among different IDs is unchanged.
+
+重复插件 ID 保持后注册替换前注册的策略。先构造完整的新路由索引，再替换注册状态，避免已移除的路由
+指向新插件；不同 ID 之间的注册顺序不变。
+
 Application conversion planning separates typed requests and results (`conversion_contracts`), capability
 bindings (`conversion_capabilities`), option validation (`conversion_options`), runtime request construction
 (`conversion_requests`), and the plan/accept/execute/cancel lifecycle (`conversion_service`). Plans own copies

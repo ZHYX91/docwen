@@ -44,7 +44,17 @@ managed computers may require administrator assistance.
 No Python installation is needed for either package. LibreOffice is optional and must
 be installed separately for legacy Office formats and Office-to-PDF routes; macOS
 packages do not use Windows Word/WPS COM automation. OCR models are bundled for offline use.
-HEIC/HEIF support remains conditional on the installed image backend.
+HEIC/HEIF support depends on the image backend included in the installed build. Check it with:
+
+```bash
+/Applications/DocWen.app/Contents/Resources/payload/DocWenCLI doctor --json
+```
+
+Installing `pillow-heif` into system Python does not add it to a packaged app. A source
+checkout obtains it through `uv sync --frozen --all-extras`; if that backend reports a
+missing native `libheif`, install it with `brew install libheif` and check the source
+environment with `uv run --frozen docwen doctor --json`. Discovery reports backend
+availability; it is not a decoding test of every HEIC/HEIF variant.
 
 ## Settings and updates
 
@@ -66,6 +76,7 @@ whole-profile override; do not point it into the app bundle.
 - “将损坏电脑”、恶意软件或“已损坏”提示不能直接视作普通首次打开提醒，应先核查下载与签名。
 - 配置和日志默认保存在 `~/Library/Application Support/docwen`；退出应用后整体替换 `.app` 即可更新，保留用户资料。
 - GUI/CLI 不需要安装 Python。旧 Office 格式及 Office 转 PDF 需另行安装 LibreOffice；独立 CLI 也受系统安全策略限制。
+- HEIC/HEIF 取决于成品包内的图片后端。使用上方 app 内 CLI 的 `doctor --json` 检查；给系统 Python 安装 `pillow-heif` 不会改变成品包。源码环境通过 `uv sync --frozen --all-extras` 安装依赖；仅在后端提示缺少原生库时使用 `brew install libheif`，再以 `uv run --frozen docwen doctor --json` 复查。能力检测不等于逐一验证所有 HEIC/HEIF 编码变体。
 
 CI checks extracted package contents, signatures and selected functionality. Offscreen
 GUI checks do not prove interactive Finder, browser quarantine, manual security approval,

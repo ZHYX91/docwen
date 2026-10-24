@@ -80,6 +80,143 @@ def test_records_search_filter_sort_and_open_details(activity):
     assert history.get("one").failure_details
 
 
+def test_merge_locations_and_request_summary_survive_notice_eviction_without_becoming_copyable(activity):
+    history, feedback, model, _dialog = activity
+    history.remember(
+        {
+            "request_id": "merge",
+            "file_paths": ["/base.xlsx", "/collect.xlsx"],
+            "aggregate": True,
+            "target_format": "xlsx",
+            "request_summary": "Template: Report · Output: /exports",
+        }
+    )
+    history.record("merge", "/base.xlsx", "completed")
+    history.record("merge", "/collect.xlsx", "completed", local_details=("added=1; source Sheet!row 2",))
+    feedback.clear_history()
+    collection = next(record for record in model.records if record.source_path == "/collect.xlsx")
+    assert "source Sheet!row 2" in collection.details
+    assert "Template: Report" in collection.details
+    assert collection.diagnostic is not None
+    copied = collection.diagnostic.to_text()
+    assert all(value not in copied for value in ("Sheet", "Report", "/exports"))
+
+
+def test_presenter_attaches_merge_decisions_to_the_matching_collection(main_window):
+    from docwen_core.models.result import ConversionDiagnostic, ConversionMetrics, ConversionResult
+
+    paths = ["/base.xlsx", "/first.xlsx", "/second.xlsx"]
+    context = {
+        "request_id": "merge",
+        "file_path": paths[0],
+        "file_paths": paths,
+        "aggregate": True,
+        "total_count": 3,
+        "target_format": "xlsx",
+        "display_name": "base.xlsx",
+        "request_summary": "Output: /exports",
+    }
+    result = ConversionResult(
+        task_id="merge",
+        success=True,
+        diagnostics=[
+            ConversionDiagnostic(level="info", code="MERGE-SUMMARY", message="first: added row 2"),
+            ConversionDiagnostic(level="info", code="MERGE-SUMMARY", message="second: replaced row 4"),
+        ],
+        metrics=ConversionMetrics(
+            extra={
+                "merge_summaries": [
+                    {
+                        "source_name": "first.xlsx",
+                        "sheet": "Sheet",
+                        "mode": "row",
+                        "counts": {"added": 1, "replaced": 0, "skipped": 0, "combined": 0},
+                    },
+                    {
+                        "source_name": "second.xlsx",
+                        "sheet": "Sheet",
+                        "mode": "row",
+                        "counts": {"added": 0, "replaced": 1, "skipped": 0, "combined": 0},
+                    },
+                ]
+            }
+        ),
+    )
+    main_window._results.finished(result, context)
+    main_window._info_area_vm.clear_history()
+    record = main_window._task_history.get("merge")
+    assert record is not None
+    assert record.outcomes[paths[0]].local_details == ()
+    assert record.outcomes[paths[1]].local_details == ("first: added row 2",)
+    assert record.outcomes[paths[2]].local_details == ("second: replaced row 4",)
+    assert "first.xlsx" in main_window._info_area_vm.execution_summary
+    assert "second.xlsx" in main_window._info_area_vm.execution_summary
+
+
+@pytest.mark.parametrize(
+    "malformed",
+    [None, {}, "summary", {"counts": {}}, {"added": -1}, {"added": "1"}, {"added": True}, {"added": 2**100}],
+)
+def test_malformed_optional_merge_metrics_do_not_block_success(main_window, malformed):
+    from docwen_core.models.result import ConversionMetrics, ConversionResult
+
+    summary = {
+        "source_name": "collect.xlsx",
+        "sheet": "Sheet",
+        "mode": "row",
+        "counts": {"added": 1, "replaced": 0, "skipped": 0, "combined": 0},
+    }
+    if isinstance(malformed, dict) and "added" in malformed:
+        summary["counts"].update(malformed)
+        malformed = summary
+    paths = ["/base.xlsx", "/collect.xlsx"]
+    context = {
+        "request_id": "malformed-metrics",
+        "file_path": paths[0],
+        "file_paths": paths,
+        "aggregate": True,
+        "total_count": 2,
+        "target_format": "xlsx",
+        "display_name": "base.xlsx",
+    }
+    result = ConversionResult(
+        task_id="malformed-metrics",
+        success=True,
+        metrics=ConversionMetrics(extra={"merge_summaries": [malformed]}),
+    )
+    main_window._results.finished(result, context)
+    record = main_window._task_history.get("malformed-metrics")
+    assert record is not None
+    assert all(record.outcomes[path].status == "completed" for path in paths)
+    assert main_window._info_area_vm.task_summary.state == "success"
+    assert main_window._info_area_vm.execution_summary == ""
+
+
+def test_merge_metrics_render_only_the_actual_collection_count(main_window):
+    from docwen_core.models.result import ConversionMetrics, ConversionResult
+
+    result = ConversionResult(
+        task_id="bounded",
+        success=True,
+        metrics=ConversionMetrics(
+            extra={
+                "merge_summaries": [
+                    {
+                        "source_name": source,
+                        "sheet": "Sheet",
+                        "mode": "row",
+                        "counts": {"added": 1, "replaced": 0, "skipped": 0, "combined": 0},
+                    }
+                    for source in ("collect.xlsx", "unexpected.xlsx")
+                ],
+            }
+        ),
+    )
+    main_window._results._show_merge_summary(result, {"aggregate": True, "file_paths": ["/base.xlsx", "/collect.xlsx"]})
+    assert "collect.xlsx" in main_window._info_area_vm.execution_summary
+    assert "unexpected.xlsx" not in main_window._info_area_vm.execution_summary
+
+
 def test_animation_does_not_reset_selected_detail_or_text_selection(activity, qtbot):
     _, feedback, _model, dialog = activity
     dialog.show_records(failures_only=True, operation_id="one")

@@ -65,6 +65,14 @@ file_admission_cancelled = "Đã hủy xử lý; định dạng đã phát hiệ
 # =============================================================================
 # 通用文本
 # =============================================================================
+request_summary = "Tùy chọn tác vụ này: {value}"
+request_template = "Mẫu: {value}"
+request_remove_numbering = "Xóa số tiêu đề: {value}"
+request_add_numbering = "Thêm số tiêu đề: {value}"
+request_proofread = "Soát lỗi: {value}"
+request_output = "Đầu ra: {value}"
+merge_result_summary = "{source} / {sheet} · {mode}: thêm {added}, thay thế {replaced}, bỏ qua {skipped}, kết hợp {combined}; giá trị chưa biết 0. Vị trí nguồn có trong chi tiết tác vụ."
+merge_formula_cache_missing = "Đã dừng gộp vì công thức chưa có kết quả được lưu. Hãy tính lại và lưu sổ làm việc trong phần mềm bảng tính rồi thử lại. Xem tên tệp và vị trí ô trong chi tiết lỗi."
 [common]
 action_file_count = "{action} ({count} tệp)"
 app_name = "DocWen"
@@ -479,7 +487,7 @@ ods_conversion_label = "Chuyển đổi định dạng ODS"
 spreadsheet_to_pdf_label = "Bảng tính → PDF"
 
 # 汇总模式选项
-merge_mode_help = "Theo hàng/cột so khớp hàng/cột đầu vào với bảng gốc: đầu vào bao phủ mục gốc thì thay thế; mục gốc bao phủ đầu vào thì giữ mục gốc; nếu không thì chèn gần vị trí giống nhất. Theo ô bỏ qua đầu vào trống, giữ giá trị không trống, cộng số, giữ văn bản giống nhau một lần và nối văn bản không phải số khác nhau bằng dấu phẩy."
+merge_mode_help = "Căn chỉnh so sánh số đã lưu và văn bản chính xác; mã dạng văn bản không được đổi thành số. Theo hàng/cột: bỏ qua bản ghi giống nhau hoặc đã được bao hàm, chỉ thay thế khi bản ghi mới chứa mọi giá trị của bản gốc, giữ riêng các bản ghi bổ sung hoặc xung đột. Theo ô: bỏ qua ô trống, cộng số (kể cả văn bản dạng số), giữ văn bản giống nhau một lần và nối văn bản khác bằng dấu phẩy. Thiếu kết quả công thức sẽ dừng gộp; kết quả đã lưu vẫn có thể đã cũ."
 [settings.spreadsheet.merge_modes]
 by_row = "Trộn theo hàng"
 by_column = "Trộn theo cột"
@@ -1107,6 +1115,9 @@ source_tooltip = "Thư mục nguồn: {value}"
 auto_selected_reason = "Đã chọn mẫu khả dụng trong {template_kind} theo thiết lập mặc định."
 
 open_location = "Mở vị trí tệp"
+search = "Tìm mẫu"
+recent = "Đã dùng gần đây trong phiên này"
+search_count = "{count}/{total} mẫu · lọc không thay đổi lựa chọn"
 
 [components.template_selector_tabbed]
 document_templates = "Tài"
@@ -1216,6 +1227,7 @@ no_table_selected = "Chưa chọn bảng"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "1 tệp gốc và {count} tệp thu thập trong nhóm hiện tại. Chỉ gộp các trang tính đang hoạt động; giữ các trang khác của tệp gốc và bỏ qua các trang khác của tệp thu thập. Ô đã gộp được tách và điền bằng giá trị ở góc trên trái."
 [action_area]
 recognize_tables = "Nhận dạng cấu trúc bảng"
 table_model_unavailable = "Không có mô hình bảng; văn bản OCR thông thường sẽ được giữ lại."

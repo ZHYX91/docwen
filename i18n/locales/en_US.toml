@@ -65,6 +65,14 @@ file_admission_cancelled = "Processing was cancelled; the detected format was no
 # =============================================================================
 # 通用文本
 # =============================================================================
+request_summary = "Task options: {value}"
+request_template = "Template: {value}"
+request_remove_numbering = "Remove heading numbers: {value}"
+request_add_numbering = "Add heading numbers: {value}"
+request_proofread = "Proofread: {value}"
+request_output = "Output: {value}"
+merge_result_summary = "{source} / {sheet} · {mode}: added {added}, replaced {replaced}, skipped {skipped}, combined {combined}; unknown values 0. Source locations are in task details."
+merge_formula_cache_missing = "Merge stopped because a formula has no saved result. Recalculate and save the workbook in a spreadsheet application, then retry. See failure details for the file and cell locations."
 [common]
 action_file_count = "{action} ({count} files)"
 app_name = "DocWen"
@@ -479,7 +487,7 @@ ods_conversion_label = "ODS Format Conversion"
 spreadsheet_to_pdf_label = "Spreadsheet to PDF"
 
 # 汇总模式选项
-merge_mode_help = "By row/column matches incoming rows/columns against the base: a covering incoming item replaces the base item, a covered incoming item keeps the base, otherwise it is inserted near the closest match. By cell ignores incoming blanks, keeps the nonblank value, adds numbers, keeps equal text once, and joins differing nonnumeric text with a comma."
+merge_mode_help = "Alignment matches stored numbers and exact text; text IDs are not parsed as numbers. By row/column, skip equal or already-covered records, replace only when the incoming record contains every base value, and retain complementary or conflicting records separately. By cell, ignore blanks, add numeric values (including numeric text), keep equal text once, and join other text with a comma. Missing formula results stop the merge; existing caches may be out of date."
 [settings.spreadsheet.merge_modes]
 by_row = "Merge by Row"
 by_column = "Merge by Column"
@@ -1105,6 +1113,9 @@ auto_selected_reason = "Selected an available template in {template_kind} using 
 open_location = "Open file location"
 
 # 选项卡式模板选择器
+search = "Search templates"
+recent = "Recently used in this session"
+search_count = "{count} of {total} templates · filtering does not change the selection"
 [components.template_selector_tabbed]
 document_templates = "Doc"
 spreadsheet_templates = "Sheet"
@@ -1213,6 +1224,7 @@ no_table_selected = "No table selected"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "1 reference + {count} collection files in the current category. Merge active worksheets only; retain other reference sheets and ignore other collection sheets. Merged cells are expanded with their top-left value."
 [action_area]
 recognize_tables = "Recognize table structure"
 table_model_unavailable = "Table models unavailable; plain OCR text will be retained."

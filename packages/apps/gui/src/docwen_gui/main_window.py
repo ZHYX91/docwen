@@ -381,243 +381,16 @@ class MainWindow(QWidget):
             self._clipboard_store.sync_visible(tuple(ref.path for ref in self._view_model.files))
 
     def _on_paste_requested(self, *, plain_text_only: bool = False) -> None:
-        if self._execution.busy or self._action_area_vm.cancel_visible:
-            self._info_area_vm.add_message(_t("components.file_drop.input_busy"), "warning")
-            return
-        clipboard = QApplication.clipboard()
-        mime_data = clipboard.mimeData()
-        if not plain_text_only and mime_data is not None and mime_data.hasUrls():
-            file_paths = self._input_area_vm.extract_urls_from_mime_data(mime_data.urls())
-            if file_paths:
-                self._paste_file_paths(file_paths)
-                return
+        from docwen_gui.clipboard_paste import ClipboardPasteHandler
 
-        capture = None
-        if not plain_text_only and mime_data is not None:
-            from docwen_gui.clipboard_capture import freeze_clipboard_mime
-
-            capture = freeze_clipboard_mime(mime_data)
-            if self._try_structured_clipboard_paste(capture):
-                return
-            if capture.image is not None:
-                self._paste_standalone_clipboard_image(capture.image)
-                return
-            if capture.image_error_code and capture.plain_text is None:
-                self._info_area_vm.add_message(
-                    _t(
-                        "clipboard.image_invalid",
-                        "Clipboard image data is invalid or exceeds the supported size.",
-                    ),
-                    "danger",
-                )
-                return
-
-        text = capture.plain_text if capture is not None else (mime_data.text() if mime_data is not None else None)
-        if text is None:
-            self._info_area_vm.add_message(
-                _t("components.file_drop.clipboard_non_text", "The clipboard does not contain plain text."),
-                "warning",
-            )
-            return
-        if not text.strip():
-            self._info_area_vm.add_message(
-                _t(
-                    "components.file_drop.clipboard_empty",
-                    "The clipboard text is empty.",
-                ),
-                "warning",
-            )
-            return
-        try:
-            store = self._clipboard_store_for_paste()
-            snapshot = store.create(
-                text,
-                display_name_template=_t(
-                    "components.file_drop.clipboard_name",
-                    "Clipboard Markdown {index}.md",
-                    index="{index}",
-                ),
-            )
-        except (OSError, TypeError, ValueError):
-            self._info_area_vm.add_message(
-                _t(
-                    "components.file_drop.clipboard_create_failed",
-                    "Clipboard text could not be prepared as a Markdown input.",
-                ),
-                "danger",
-            )
-            return
-
-        def completed(outcome) -> None:
-            if not outcome.added:
-                store.discard_if_unowned(snapshot.path)
-            self._sync_clipboard_visible_inputs()
-
-        from docwen_core.detection import inspect_utf8_markdown_snapshot
-
-        self._input_area_vm.add_files(
-            [snapshot.path],
-            completed=completed,
-            file_inspector=inspect_utf8_markdown_snapshot,
-        )
-
-    def _try_structured_clipboard_paste(self, capture) -> bool:
-        """Handle one already-frozen rich clipboard document."""
-
-        from docwen_core.models.clipboard_document import (
-            ClipboardImageRef,
-            clipboard_document_preview,
-            clipboard_document_to_bytes,
-            iter_clipboard_inlines,
-        )
-        from docwen_gui.clipboard_rich_document import (
-            ClipboardRichDocumentError,
-            project_frozen_rich_document,
-        )
-
-        try:
-            decision = project_frozen_rich_document(capture)
-        except ClipboardRichDocumentError:
-            self._info_area_vm.add_message(
-                _t(
-                    "clipboard.structured_invalid",
-                    "Clipboard table/image structure is invalid and was not imported.",
-                ),
-                "danger",
-            )
-            return True
-        if decision.plain_fallback:
-            self._info_area_vm.add_message(
-                _t(
-                    "clipboard.structured_plain_fallback",
-                    "Rich table/image structure could not be matched reliably to plain text; the complete plain text was kept.",
-                ),
-                "warning",
-            )
-            return False
-        projection = decision.projection
-        if not decision.handled or projection is None:
-            return False
-
-        document = projection.document
-        try:
-            payload = clipboard_document_to_bytes(document)
-            store = self._clipboard_store_for_paste()
-            bundle = store.create_bundle(
-                payload,
-                display_name_template=_t(
-                    "components.file_drop.clipboard_document_name",
-                    "Clipboard Document {index}.dwclip",
-                    index="{index}",
-                ),
-                preview=clipboard_document_preview(document),
-                resources=projection.resources,
-            )
-        except (OSError, TypeError, ValueError):
-            self._info_area_vm.add_message(
-                _t(
-                    "clipboard.structured_invalid",
-                    "Clipboard table/image structure is invalid and was not imported.",
-                ),
-                "danger",
-            )
-            return True
-
-        missing_count = sum(
-            isinstance(item, ClipboardImageRef) and item.resource_id is None
-            for item in iter_clipboard_inlines(document)
-        )
-
-        def completed(outcome) -> None:
-            if not outcome.added:
-                store.discard_if_unowned(bundle.main.path)
-            else:
-                if projection.html_only:
-                    self._info_area_vm.add_message(
-                        _t(
-                            "clipboard.structured_html_only",
-                            "The clipboard had no plain-text body; validated HTML was used as the content source.",
-                        ),
-                        "warning",
-                    )
-                if missing_count:
-                    self._info_area_vm.add_message(
-                        _t("clipboard.images_omitted", count=missing_count),
-                        "warning",
-                    )
-            self._sync_clipboard_visible_inputs()
-
-        from docwen_core.detection import inspect_structured_clipboard_snapshot
-
-        self._input_area_vm.add_files(
-            [bundle.main.path],
-            completed=completed,
-            file_inspector=inspect_structured_clipboard_snapshot,
-        )
-        return True
-
-    def _paste_standalone_clipboard_image(self, frozen) -> None:
-        """Publish one normalized Qt image through the ordinary PNG route."""
-
-        try:
-            store = self._clipboard_store_for_paste()
-            snapshot = store.create_binary(
-                frozen.payload,
-                suffix=".png",
-                display_name_template=_t(
-                    "components.file_drop.clipboard_image_name",
-                    "Clipboard Image {index}.png",
-                    index="{index}",
-                ),
-                preview=f"{frozen.width}×{frozen.height} PNG",
-            )
-        except (OSError, TypeError, ValueError):
-            self._info_area_vm.add_message(
-                _t(
-                    "clipboard.image_invalid",
-                    "Clipboard image data is invalid or exceeds the supported size.",
-                ),
-                "danger",
-            )
-            return
-
-        def completed(outcome) -> None:
-            if not outcome.added:
-                store.discard_if_unowned(snapshot.path)
-            self._sync_clipboard_visible_inputs()
-
-        self._input_area_vm.add_files([snapshot.path], completed=completed)
-
-    def _paste_file_paths(self, file_paths: list[str]) -> None:
-        """Paste one captured local-file list through normal file admission."""
-
-        needs_batch = self._input_area_vm.mode == "single" and (len(file_paths) != 1 or Path(file_paths[0]).is_dir())
-        if not needs_batch:
-            self._input_area_vm.add_files(file_paths)
-            return
-
-        # Show the ordinary non-mutating rejection first. Declining the mode
-        # switch therefore preserves both the current input and its feedback.
-        self._input_area_vm.add_files(file_paths)
-        from docwen_gui.dialogs.feedback import confirm
-
-        reason = (
-            _t("messages.no_folder_in_single_mode", "Single mode does not support folders")
-            if len(file_paths) == 1 and Path(file_paths[0]).is_dir()
-            else _t("components.file_drop.single_mode_only_one", "Please select exactly one file in single mode")
-        )
-        if not confirm(
-            _t("components.file_drop.batch_mode", "Batch"),
-            reason,
+        ClipboardPasteHandler(
+            input_area_vm=self._input_area_vm,
+            store_for_paste=self._clipboard_store_for_paste,
+            busy=lambda: self._execution.busy or self._action_area_vm.cancel_visible,
+            message=self._info_area_vm.add_message,
+            sync_visible=self._sync_clipboard_visible_inputs,
             parent=self,
-            confirm_label=_t("components.file_drop.batch_mode", "Batch"),
-        ):
-            return
-
-        # Use the captured list. The clipboard may have changed while the
-        # confirmation dialog was open and must not be read a second time.
-        self._input_area_vm.set_mode("batch")
-        self._input_area_vm.add_files(file_paths)
+        ).paste(plain_text_only=plain_text_only)
 
     def _prepare_clipboard_output_policy(
         self,
@@ -849,6 +622,9 @@ class MainWindow(QWidget):
             selected_template=lambda: (
                 self._template_selector.get_selected_template_resource() if self._template_selector else None
             ),
+            template_label=lambda resource_id: (
+                self._template_selector.template_label(resource_id) if self._template_selector else resource_id
+            ),
             source_label=self._clipboard_source_label,
             synthetic_input=self._is_clipboard_input,
             snapshot_bundle=self._clipboard_bundle,
@@ -877,6 +653,13 @@ class MainWindow(QWidget):
             parent=self,
         )
         self._execution.result_ready.connect(self._results.finished)
+        self._workflow.request_started.connect(
+            lambda request: (
+                self._template_selector.mark_used(str(request.options.get("template_name", "")))
+                if self._template_selector
+                else None
+            )
+        )
         self._execution.failed.connect(self._results.failed)
         self._results.open_output.connect(lambda path: self._open_path(path, open_parent=True))
         self._results.completed.connect(lambda context: self._maybe_notify_task_completion(context))

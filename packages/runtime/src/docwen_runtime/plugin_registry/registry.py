@@ -41,7 +41,8 @@ class PluginRegistry:
         """Register a plugin and all its routes.
 
         If a plugin with the same ``plugin_id`` is already registered,
-        it is replaced (last-register-wins).
+        it and its complete route set are replaced (last-register-wins).
+        A replacement retains its registration order relative to other IDs.
 
         Args:
             plugin: A concrete ``ConverterPlugin`` instance.
@@ -49,22 +50,24 @@ class PluginRegistry:
         manifest = plugin.manifest
         pid = manifest.plugin_id
 
-        self._plugins[pid] = plugin
-
-        for route in manifest.routes:
-            self._route_registry.register(route, pid)
+        replacements = {**self._plugins, pid: plugin}
+        self._replace_plugins(replacements)
 
     def unregister(self, plugin_id: str) -> None:
         """Remove a plugin and all its routes.
 
         No-op if *plugin_id* is not registered.
         """
-        self._plugins.pop(plugin_id, None)
-        # Rebuild route registry from remaining plugins
-        self._route_registry = RouteRegistry()
-        for pid, plugin in self._plugins.items():
+        self._replace_plugins({pid: plugin for pid, plugin in self._plugins.items() if pid != plugin_id})
+
+    def _replace_plugins(self, plugins: dict[str, ConverterPlugin]) -> None:
+        """Build the next index before publishing either registry view."""
+        routes = RouteRegistry()
+        for pid, plugin in plugins.items():
             for route in plugin.manifest.routes:
-                self._route_registry.register(route, pid)
+                routes.register(route, pid)
+        self._plugins = plugins
+        self._route_registry = routes
 
     # ── Lookup ─────────────────────────────────────────────────────
 

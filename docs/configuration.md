@@ -28,7 +28,9 @@ DocWen 在 `configs/` 提供不可变基础 TOML，并把用户覆盖写入所�
 4. Request-affecting values are frozen before external or concurrent work starts.
 5. Secrets and sensitive paths must not be echoed in diagnostics.
 
-配置文件与消费方的完整映射可通过 `docwen inspect --json` 和 registry 源码核对。
+Configuration-file ownership is declared in `docwen_runtime.config.registry`. `docwen inspect FILE --json` inspects an input file; it does not list configuration consumers.
+
+配置文件归属由 `docwen_runtime.config.registry` 声明。`docwen inspect FILE --json` 检查输入文件，不用于列出配置消费方。
 
 The packaged base contains the files declared by the registry, including `configs/text.toml`, `configs/ocr.toml`, `configs/template_fill.toml`, `configs/numbering/add.toml` and `configs/numbering/cleanup.toml`. Chinese official-document field formatting is built into `docwen_plugin_markdown.gongwen_fields` and called directly by `docwen_plugin_markdown.template_filler`. Configuration does not load Python field processors.
 
@@ -40,9 +42,9 @@ General settings keep interface language (`gui.language.locale`) separate from t
 
 常规设置分别管理界面语言 `gui.language.locale` 与任务输出语言 `conversion.output_locale`。后者控制生成标签和文档样式，显式任务参数优先。旧配置首次升级时冻结原先保存的语言，新配置默认 `zh_CN`；详见[语言职责](specs/task-language.md)。
 
-OCR language is shared by every input format through `ocr.language` in `ocr.toml`, owned by the Markdown resources settings page. Word and spreadsheet template filling share `template_fill.list_separator` in `template_fill.toml`, owned by incoming text settings. Empty separators and intentional spaces are preserved. Document YAML/frontmatter is unchanged.
+OCR language is shared by every input format through `ocr.language` in `ocr.toml`, owned by the **OCR and images** settings page. Word and spreadsheet template filling share `template_fill.list_separator` in `template_fill.toml`, owned by incoming text settings. Empty separators and intentional spaces are preserved. Document YAML/frontmatter is unchanged.
 
-OCR 语言由所有传入格式共用，通过 `ocr.toml` 中的 `ocr.language` 设置，归属“Markdown 资源”。Word 与表格模板填充共用 `template_fill.toml` 中的 `template_fill.list_separator`，归属“传入文本”；空字符串和有意输入的空格原样保留。文档 YAML/frontmatter 不变。
+OCR 语言由所有传入格式共用，通过 `ocr.toml` 中的 `ocr.language` 设置，归属“OCR 与图片”。Word 与表格模板填充共用 `template_fill.toml` 中的 `template_fill.list_separator`，归属“传入文本”；空字符串和有意输入的空格原样保留。文档 YAML/frontmatter 不变。
 
 The removed keys `image.ocr_language` and `conversion.md_to_docx.list_separator` are rejected by validation; there are no aliases or automatic migrations. Other keys retain functional namespaces even when their settings page changes. Resetting an input page preserves converter priorities; the conversion software page owns all eight priority lists. Numbering and proofreading editor saves remain immediate transactions, independent of unrelated settings drafts.
 

@@ -187,6 +187,7 @@ class ConversionPanel(QWidget):
         # Spreadsheet section sub-widgets
         self._merge_mode_group: QButtonGroup = _cast(QButtonGroup, None)
         self._reference_table_label: QLabel = _cast(QLabel, None)
+        self._merge_scope_label: QLabel = _cast(QLabel, None)
         self._spreadsheet_password_edit: QLineEdit = _cast(QLineEdit, None)
         self._spreadsheet_protection_loss_checkbox: QCheckBox = _cast(QCheckBox, None)
 
@@ -480,6 +481,7 @@ class ConversionPanel(QWidget):
             "_pdf_quality_group",
             "_merge_mode_group",
             "_reference_table_label",
+            "_merge_scope_label",
             "_spreadsheet_password_edit",
             "_spreadsheet_protection_loss_checkbox",
             "_merge_pdfs_button",
@@ -583,10 +585,21 @@ class ConversionPanel(QWidget):
         self._sync_layout_controls()
         self._sync_aggregate_actions()
         self._sync_execution_labels()
+        self._sync_merge_scope()
 
     def set_execution_count(self, count: int) -> None:
         self._execution_count = count
         self._sync_execution_labels()
+        self._sync_merge_scope()
+
+    def _sync_merge_scope(self) -> None:
+        if self._merge_scope_label is not None:
+            self._merge_scope_label.setText(
+                _t(
+                    "conversion_panel.spreadsheet.merge_scope",
+                    count=max(0, self._vm.aggregate_count("merge_tables") - 1),
+                )
+            )
 
     def _sync_execution_labels(self) -> None:
         for button in (
@@ -1101,6 +1114,15 @@ class ConversionPanel(QWidget):
         ref_label.setWordWrap(True)
         self._reference_table_label = ref_label
         extra_layout.addWidget(ref_label)
+        self._merge_scope_label = QLabel(self)
+        self._merge_scope_label.setObjectName("conversionDetailLabel")
+        self._merge_scope_label.setWordWrap(True)
+        extra_layout.addWidget(self._merge_scope_label)
+        self._sync_merge_scope()
+        policy_label = QLabel(_t("settings.spreadsheet.merge_mode_help"), self)
+        policy_label.setObjectName("conversionDetailLabel")
+        policy_label.setWordWrap(True)
+        extra_layout.addWidget(policy_label)
 
     # ── Image Section ───────────────────────────────────────────────────
 

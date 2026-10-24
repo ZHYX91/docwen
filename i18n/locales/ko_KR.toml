@@ -424,7 +424,7 @@ ods_conversion_label = "ODS 형식 변환"
 spreadsheet_to_pdf_label = "스프레드시트 → PDF"
 
 # 汇总模式选项
-merge_mode_help = "행/열 기준은 들어오는 행/열을 기본 표와 비교합니다. 들어온 항목이 기본 항목을 포함하면 대체하고, 기본 항목이 들어온 항목을 포함하면 기본 항목을 유지하며, 그 외에는 가장 비슷한 위치 근처에 삽입합니다. 셀 기준은 빈 입력을 무시하고 비어 있지 않은 값을 유지하며, 숫자는 더하고 같은 텍스트는 한 번만 유지하고 서로 다른 비숫자 텍스트는 쉼표로 연결합니다."
+merge_mode_help = "위치 정렬은 저장된 숫자와 정확히 일치하는 텍스트를 사용하며 텍스트 식별자를 숫자로 변환하지 않습니다. 행/열: 같거나 이미 포함된 레코드는 건너뛰고, 수집 레코드가 기준의 모든 값을 포함할 때만 교체합니다. 상호 보완하거나 충돌하는 레코드는 별도로 보존합니다. 셀: 빈 값은 무시하고 숫자(숫자 텍스트 포함)는 더하며, 같은 텍스트는 한 번만 남기고 다른 텍스트는 쉼표로 연결합니다. 수식 결과가 없으면 중단합니다. 저장된 결과도 오래된 값일 수 있습니다."
 [settings.spreadsheet.merge_modes]
 by_row = "행 기준 병합"
 by_column = "열 기준 병합"
@@ -1053,6 +1053,9 @@ updated_line = "업데이트: {value}"
 source_tooltip = "원본 폴더: {value}"
 auto_selected_reason = "기본 설정에 따라 {template_kind}에서 사용 가능한 템플릿을 선택했습니다."
 open_location = "파일 위치 열기"
+search = "템플릿 검색"
+recent = "이번 세션에서 최근 사용"
+search_count = "{total}개 중 {count}개 표시 · 필터는 선택을 변경하지 않습니다"
 
 [components.template_selector_tabbed]
 document_templates = "문서"
@@ -1162,6 +1165,7 @@ no_table_selected = "선택된 표가 없습니다"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "현재 범주의 기준 파일 1개와 수집 파일 {count}개가 대상입니다. 활성 시트만 병합하며 기준 파일의 다른 시트는 보존하고 수집 파일의 다른 시트는 무시합니다. 병합된 셀은 분리한 뒤 왼쪽 위 값으로 채웁니다."
 [action_area]
 recognize_tables = "표 구조 인식"
 table_model_unavailable = "표 모델을 사용할 수 없습니다. 일반 OCR 텍스트를 유지합니다."
@@ -1719,6 +1723,14 @@ file_admission_confirm_title = "감지된 파일 형식 확인"
 file_admission_confirm_message = "파일 이름과 감지된 내용의 형식이 다릅니다. 감지된 형식으로 처리할까요?"
 file_admission_confirm_action = "감지된 형식으로 처리"
 file_admission_cancelled = "처리가 취소되었습니다. 감지된 형식은 승인되지 않았습니다."
+request_summary = "이번 작업 설정: {value}"
+request_template = "템플릿: {value}"
+request_remove_numbering = "제목 번호 제거: {value}"
+request_add_numbering = "제목 번호 추가: {value}"
+request_proofread = "교정: {value}"
+request_output = "출력: {value}"
+merge_result_summary = "{source} / {sheet} · {mode}: 추가 {added}, 교체 {replaced}, 건너뜀 {skipped}, 결합 {combined}, 알 수 없는 값 0. 원본 위치는 작업 세부 정보에서 확인하세요."
+merge_formula_cache_missing = "수식의 저장된 결과가 없어 병합을 중단했습니다. 스프레드시트 프로그램에서 통합 문서를 다시 계산하고 저장한 다음 재시도하세요. 파일과 셀 위치는 오류 세부 정보에 표시됩니다."
 
 [settings.markdown_extensions]
 description = "Markdown 생성과 읽기에 사용하는 공통 규칙입니다. 출력 규칙은 입력 형식과 독립적이지만 변환 경로마다 지원 범위가 다릅니다. Word 전용 매핑은 아래에 별도로 표시합니다. 원본 파일은 변경하지 않습니다."

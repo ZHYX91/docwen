@@ -10,12 +10,23 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import date, datetime
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from docwen_core.errors import CancellationRequested
+from docwen_plugin_spreadsheet.table_merger.inputs import MissingFormulaCacheError, load_merge_workbook
+from docwen_plugin_spreadsheet.table_merger.semantics import MergeSummary, coverage_relation, value_identity
+
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
+
+
+def _write_scalar(cell: Any, value: Any, source_type: str | None = None) -> None:
+    """Write saved values without reinterpreting literal text as formulas or errors."""
+    cell.value = value
+    if isinstance(value, str):
+        cell.data_type = "e" if source_type == "e" else "s"
 
 
 class TableMergerConverter:
@@ -42,9 +53,9 @@ class TableMergerConverter:
     def convert(self, context: ConverterContext) -> Any:
         """Run the table merge operation.
 
-        Expects exactly one input_ref (base file) with collect_files
-        provided through options or multiple input_refs (first as base,
-        rest as collection files).
+        The first input is the base; every remaining input is a collection.
+        Only active worksheets are merged. Other base sheets are retained as
+        cached values, while other collection sheets are not collected.
 
         Args:
             context: The plugin execution context.
@@ -91,8 +102,9 @@ class TableMergerConverter:
             f"Table merge: base={os.path.basename(base_path)}, collect={len(collect_paths)} files, mode={mode_str}"
         )
 
+        wb = None
+        summaries: list[MergeSummary] = []
         try:
-            from docwen_plugin_spreadsheet.csv_xlsx.converter import _load_admitted_xlsx
             from docwen_plugin_spreadsheet.format_conversion.converter import SmartSheetConverter
 
             prepared_paths: list[str] = []
@@ -116,7 +128,11 @@ class TableMergerConverter:
             collect_paths = prepared_paths[1:]
 
             try:
-                wb = _load_admitted_xlsx(base_path, data_only=True)
+                wb = load_merge_workbook(
+                    base_path, base=True, cancel_check=context.cancellation.check, source_name=base_source_path
+                )
+            except (MissingFormulaCacheError, CancellationRequested):
+                raise
             except Exception as exc:
                 raise RuntimeError(f"Failed to merge '{Path(base_path).name}': {exc}") from exc
             base_ws = wb.active
@@ -133,30 +149,59 @@ class TableMergerConverter:
                 context.logger.info(f"  Merging: {os.path.basename(collect_file)}")
 
                 try:
-                    collect_wb = _load_admitted_xlsx(collect_file, data_only=True)
+                    collect_wb = load_merge_workbook(
+                        collect_file,
+                        base=False,
+                        cancel_check=context.cancellation.check,
+                        source_name=source_paths[i + 1],
+                    )
+                except (MissingFormulaCacheError, CancellationRequested):
+                    raise
                 except Exception as exc:
                     raise RuntimeError(f"Failed to merge '{Path(collect_file).name}': {exc}") from exc
-                collect_ws = collect_wb.active
-                if collect_ws is None:
+                try:
+                    collect_ws = collect_wb.active
+                    if collect_ws is None:
+                        raise RuntimeError(f"Failed to merge '{Path(collect_file).name}': no active worksheet")
+
+                    self._unmerge_all_cells(collect_ws)
+                    row_offset, col_offset = self._find_best_offset(base_ws, collect_ws, offset_range)
+                    # Make room for leading collection fields instead of
+                    # clipping them at worksheet row/column zero.
+                    if row_offset < 0 and mode != self.MODE_BY_ROW:
+                        base_ws.insert_rows(1, -row_offset)
+                        row_offset = 0
+                    if col_offset < 0 and mode != self.MODE_BY_COLUMN:
+                        base_ws.insert_cols(1, -col_offset)
+                        col_offset = 0
+                    summary = MergeSummary(
+                        Path(source_paths[i + 1]).name, collect_ws.title, mode_str, row_offset, col_offset
+                    )
+                    merge = {
+                        self.MODE_BY_ROW: self._merge_by_row,
+                        self.MODE_BY_COLUMN: self._merge_by_column,
+                        self.MODE_BY_CELL: self._merge_by_cell,
+                    }[mode]
+                    merge(
+                        base_ws,
+                        collect_ws,
+                        row_offset,
+                        col_offset,
+                        summary=summary,
+                        cancel_check=context.cancellation.check,
+                    )
+                    summaries.append(summary)
+                finally:
                     collect_wb.close()
-                    continue
 
-                self._unmerge_all_cells(collect_ws)
-
-                # Find best alignment
-                row_offset, col_offset = self._find_best_offset(base_ws, collect_ws, offset_range)
-
-                # Execute merge
-                if mode == self.MODE_BY_ROW:
-                    self._merge_by_row(base_ws, collect_ws, row_offset, col_offset)
-                elif mode == self.MODE_BY_COLUMN:
-                    self._merge_by_column(base_ws, collect_ws, row_offset, col_offset)
-                elif mode == self.MODE_BY_CELL:
-                    self._merge_by_cell(base_ws, collect_ws, row_offset, col_offset)
-
-                collect_wb.close()
-
+        except CancellationRequested:
+            if wb is not None:
+                wb.close()
+            raise
         except Exception as exc:
+            if wb is not None:
+                wb.close()
+            code = "MERGE-FORMULA-CACHE-MISSING" if isinstance(exc, MissingFormulaCacheError) else "MERGE-PARSE-ERROR"
             context.logger.error(f"Table merge processing failed: {exc}")
             return ConversionResult(
                 task_id=task_id,
@@ -164,18 +209,23 @@ class TableMergerConverter:
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
                     message=str(exc),
-                    diagnostic_code="MERGE-PARSE-ERROR",
+                    diagnostic_code=code,
                 ),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
                         message=f"Table merge processing failed: {exc}",
-                        code="MERGE-PARSE-ERROR",
+                        code=code,
+                        location=exc.location if isinstance(exc, MissingFormulaCacheError) else "",
                     ),
                 ],
+                metrics=ConversionMetrics(
+                    extra={"unknown_formula_values": exc.count} if isinstance(exc, MissingFormulaCacheError) else {}
+                ),
             )
 
         # ── Write merged result to staging ────────────────────────────
+        assert wb is not None
         context.progress.report_progress(90.0, "Writing merged result...")
         output_path = context.workspace.create_artifact_path("primary", ".xlsx")
         try:
@@ -234,13 +284,26 @@ class TableMergerConverter:
                     message=(f"Merged {len(collect_paths)} files into base ({mode_str} mode)"),
                     code="MERGE-OK",
                 ),
+                *[
+                    ConversionDiagnostic(
+                        level="info",
+                        message=summary.message(),
+                        code="MERGE-SUMMARY",
+                        location=f"{summary.source_name}: {summary.sheet}",
+                    )
+                    for summary in summaries
+                ],
             ],
             error=None,
             metrics=ConversionMetrics(
                 duration_ms=0.0,
                 input_bytes=sum(os.path.getsize(p) for p in source_paths if os.path.isfile(p)),
                 output_bytes=os.path.getsize(output_path) if os.path.isfile(output_path) else 0,
-                extra={"collect_count": len(collect_paths), "mode": mode_str},
+                extra={
+                    "collect_count": len(collect_paths),
+                    "mode": mode_str,
+                    "merge_summaries": [summary.to_dict() for summary in summaries],
+                },
             ),
         )
 
@@ -288,7 +351,7 @@ class TableMergerConverter:
                 continue
             if b_row > base_ws.max_row or b_col > base_ws.max_column:
                 continue
-            b_val = self._normalize_for_alignment(base_ws.cell(b_row, b_col).value)
+            b_val = self._cell_identity(base_ws.cell(b_row, b_col))
             if b_val is not None and c_val == b_val:
                 overlap += 1
         return overlap
@@ -299,7 +362,7 @@ class TableMergerConverter:
         cells = getattr(ws, "_cells", None)
         it = cells.values() if isinstance(cells, dict) else (cell for row in ws.iter_rows() for cell in row)
         for cell in it:
-            v = self._normalize_for_alignment(cell.value)
+            v = self._cell_identity(cell)
             if v is None:
                 continue
             row = getattr(cell, "row", None)
@@ -312,28 +375,8 @@ class TableMergerConverter:
         return result
 
     @staticmethod
-    def _normalize_for_alignment(value: Any) -> Any:
-        """Normalize a cell value for alignment comparison."""
-        if value is None:
-            return None
-        if isinstance(value, bool):
-            return ("bool", value)
-        if isinstance(value, (int, float)):
-            return ("num", float(value))
-        if isinstance(value, (date, datetime)):
-            return ("date", value.isoformat())
-        if isinstance(value, str):
-            s = value.strip()
-            if not s:
-                return None
-            try:
-                return ("num", float(s))
-            except Exception:
-                return ("str", s)
-        s = str(value).strip()
-        if not s:
-            return None
-        return ("str", s)
+    def _cell_identity(cell: Any) -> Any:
+        return value_identity(cell.value, source_type=cell.data_type)
 
     def _suggest_offset_by_value_matching(
         self,
@@ -374,19 +417,34 @@ class TableMergerConverter:
         for merged_range in merged_ranges:
             top_left = worksheet.cell(row=merged_range.min_row, column=merged_range.min_col)
             merged_value = top_left.value
+            merged_type = top_left.data_type
             worksheet.unmerge_cells(str(merged_range))
             for row in range(merged_range.min_row, merged_range.max_row + 1):
                 for col in range(merged_range.min_col, merged_range.max_col + 1):
                     cell = worksheet.cell(row=row, column=col)
                     if type(cell).__name__ != "MergedCell":
-                        cell.value = merged_value
+                        _write_scalar(cell, merged_value, merged_type)
 
     # ── Merge by row ──────────────────────────────────────────────────
 
-    def _merge_by_row(self, base_ws: Any, collect_ws: Any, row_offset: int, col_offset: int) -> None:
+    def _merge_by_row(
+        self,
+        base_ws: Any,
+        collect_ws: Any,
+        row_offset: int,
+        col_offset: int,
+        *,
+        summary: MergeSummary | None = None,
+        cancel_check: Callable[[], None] | None = None,
+    ) -> None:
         """Merge collection rows into base, inserting at most similar positions."""
         for collect_row_idx in range(1, collect_ws.max_row + 1):
+            if cancel_check is not None:
+                cancel_check()
+            location = f"row {collect_row_idx}"
             if self._is_row_empty(collect_ws, collect_row_idx):
+                if summary is not None:
+                    summary.record("skipped", location)
                 continue
 
             covered = False
@@ -396,14 +454,20 @@ class TableMergerConverter:
                     continue
                 if coverage == "collect_covers_base":
                     self._replace_row(base_ws, base_row_idx, collect_ws, collect_row_idx, col_offset)
+                    if summary is not None:
+                        summary.record("replaced", location)
                     covered = True
                     break
-                elif coverage == "base_covers_collect":
+                elif coverage in {"equal", "base_covers_collect"}:
+                    if summary is not None:
+                        summary.record("skipped", location)
                     covered = True
                     break
 
             if not covered:
                 self._insert_at_most_similar_row(base_ws, collect_ws, collect_row_idx, col_offset)
+                if summary is not None:
+                    summary.record("added", location)
 
     @staticmethod
     def _is_row_empty(ws: Any, row_idx: int) -> bool:
@@ -432,9 +496,7 @@ class TableMergerConverter:
 
         max_col = max(base_ws.max_column, collect_ws.max_column + col_offset)
         for col_idx in range(1, max_col + 1):
-            base_val = self._normalize_for_alignment(
-                base_ws.cell(base_row, col_idx).value if col_idx <= base_ws.max_column else None
-            )
+            base_val = self._cell_identity(base_ws.cell(base_row, col_idx)) if col_idx <= base_ws.max_column else None
             base_empty = base_val is None
 
             cc = col_idx - col_offset
@@ -443,7 +505,7 @@ class TableMergerConverter:
                     base_has_unique = True
                 continue
 
-            collect_val = self._normalize_for_alignment(collect_ws.cell(collect_row, cc).value)
+            collect_val = self._cell_identity(collect_ws.cell(collect_row, cc))
             collect_empty = collect_val is None
 
             if base_empty and collect_empty:
@@ -456,9 +518,7 @@ class TableMergerConverter:
                 if base_val != collect_val:
                     return "conflict"
 
-        if collect_has_unique and not base_has_unique:
-            return "collect_covers_base"
-        return "base_covers_collect"
+        return coverage_relation(base_unique=base_has_unique, collect_unique=collect_has_unique)
 
     @staticmethod
     def _replace_row(base_ws: Any, base_row: int, collect_ws: Any, collect_row: int, col_offset: int) -> None:
@@ -468,7 +528,8 @@ class TableMergerConverter:
                 continue
             cell = base_ws.cell(base_row, base_col)
             if type(cell).__name__ != "MergedCell":
-                cell.value = collect_ws.cell(collect_row, col_idx).value
+                source = collect_ws.cell(collect_row, col_idx)
+                _write_scalar(cell, source.value, source.data_type)
 
     def _insert_at_most_similar_row(
         self,
@@ -493,7 +554,8 @@ class TableMergerConverter:
                 continue
             cell = base_ws.cell(insert_pos, base_col)
             if type(cell).__name__ != "MergedCell":
-                cell.value = collect_ws.cell(collect_row, col_idx).value
+                source = collect_ws.cell(collect_row, col_idx)
+                _write_scalar(cell, source.value, source.data_type)
 
     def _row_similarity(
         self,
@@ -510,8 +572,8 @@ class TableMergerConverter:
             be = True
             bv = None
             if col_idx <= base_ws.max_column:
-                bv = base_ws.cell(base_row, col_idx).value
-                be = bv is None or str(bv).strip() == ""
+                bv = self._cell_identity(base_ws.cell(base_row, col_idx))
+                be = bv is None
 
             cc = col_idx - col_offset
             if cc < 1 or cc > collect_ws.max_column:
@@ -519,11 +581,11 @@ class TableMergerConverter:
                     total += 1
                 continue
 
-            cv = collect_ws.cell(collect_row, cc).value
-            ce = cv is None or str(cv).strip() == ""
+            cv = self._cell_identity(collect_ws.cell(collect_row, cc))
+            ce = cv is None
             total += 1
 
-            if (be and ce) or (not be and not ce and str(bv).strip() == str(cv).strip()):
+            if (be and ce) or (not be and not ce and bv == cv):
                 match += 1
 
         return match / total if total > 0 else 0.0
@@ -536,9 +598,17 @@ class TableMergerConverter:
         collect_ws: Any,
         row_offset: int,
         col_offset: int,
+        *,
+        summary: MergeSummary | None = None,
+        cancel_check: Callable[[], None] | None = None,
     ) -> None:
         for collect_col_idx in range(1, collect_ws.max_column + 1):
+            if cancel_check is not None:
+                cancel_check()
+            location = f"column {collect_col_idx}"
             if self._is_col_empty(collect_ws, collect_col_idx):
+                if summary is not None:
+                    summary.record("skipped", location)
                 continue
 
             covered = False
@@ -548,14 +618,20 @@ class TableMergerConverter:
                     continue
                 if coverage == "collect_covers_base":
                     self._replace_column(base_ws, base_col_idx, collect_ws, collect_col_idx, row_offset)
+                    if summary is not None:
+                        summary.record("replaced", location)
                     covered = True
                     break
-                elif coverage == "base_covers_collect":
+                elif coverage in {"equal", "base_covers_collect"}:
+                    if summary is not None:
+                        summary.record("skipped", location)
                     covered = True
                     break
 
             if not covered:
                 self._insert_at_most_similar_column(base_ws, collect_ws, collect_col_idx, row_offset)
+                if summary is not None:
+                    summary.record("added", location)
 
     @staticmethod
     def _is_col_empty(ws: Any, col_idx: int) -> bool:
@@ -583,9 +659,7 @@ class TableMergerConverter:
 
         max_row = max(base_ws.max_row, collect_ws.max_row + row_offset)
         for row_idx in range(1, max_row + 1):
-            base_val = self._normalize_for_alignment(
-                base_ws.cell(row_idx, base_col).value if row_idx <= base_ws.max_row else None
-            )
+            base_val = self._cell_identity(base_ws.cell(row_idx, base_col)) if row_idx <= base_ws.max_row else None
             base_empty = base_val is None
 
             cr = row_idx - row_offset
@@ -594,7 +668,7 @@ class TableMergerConverter:
                     base_has_unique = True
                 continue
 
-            collect_val = self._normalize_for_alignment(collect_ws.cell(cr, collect_col).value)
+            collect_val = self._cell_identity(collect_ws.cell(cr, collect_col))
             collect_empty = collect_val is None
 
             if base_empty and collect_empty:
@@ -607,9 +681,7 @@ class TableMergerConverter:
                 if base_val != collect_val:
                     return "conflict"
 
-        if collect_has_unique and not base_has_unique:
-            return "collect_covers_base"
-        return "base_covers_collect"
+        return coverage_relation(base_unique=base_has_unique, collect_unique=collect_has_unique)
 
     @staticmethod
     def _replace_column(base_ws: Any, base_col: int, collect_ws: Any, collect_col: int, row_offset: int) -> None:
@@ -619,7 +691,8 @@ class TableMergerConverter:
                 continue
             cell = base_ws.cell(base_row, base_col)
             if type(cell).__name__ != "MergedCell":
-                cell.value = collect_ws.cell(row_idx, collect_col).value
+                source = collect_ws.cell(row_idx, collect_col)
+                _write_scalar(cell, source.value, source.data_type)
 
     def _insert_at_most_similar_column(
         self,
@@ -644,7 +717,8 @@ class TableMergerConverter:
                 continue
             cell = base_ws.cell(base_row, insert_pos)
             if type(cell).__name__ != "MergedCell":
-                cell.value = collect_ws.cell(row_idx, collect_col).value
+                source = collect_ws.cell(row_idx, collect_col)
+                _write_scalar(cell, source.value, source.data_type)
 
     def _col_similarity(
         self,
@@ -661,8 +735,8 @@ class TableMergerConverter:
             be = True
             bv = None
             if row_idx <= base_ws.max_row:
-                bv = base_ws.cell(row_idx, base_col).value
-                be = bv is None or str(bv).strip() == ""
+                bv = self._cell_identity(base_ws.cell(row_idx, base_col))
+                be = bv is None
 
             cr = row_idx - row_offset
             if cr < 1 or cr > collect_ws.max_row:
@@ -670,11 +744,11 @@ class TableMergerConverter:
                     total += 1
                 continue
 
-            cv = collect_ws.cell(cr, collect_col).value
-            ce = cv is None or str(cv).strip() == ""
+            cv = self._cell_identity(collect_ws.cell(cr, collect_col))
+            ce = cv is None
             total += 1
 
-            if (be and ce) or (not be and not ce and str(bv).strip() == str(cv).strip()):
+            if (be and ce) or (not be and not ce and bv == cv):
                 match += 1
 
         return match / total if total > 0 else 0.0
@@ -687,10 +761,17 @@ class TableMergerConverter:
         collect_ws: Any,
         row_offset: int,
         col_offset: int,
+        *,
+        summary: MergeSummary | None = None,
+        cancel_check: Callable[[], None] | None = None,
     ) -> None:
         for row in collect_ws.iter_rows():
+            if cancel_check is not None:
+                cancel_check()
             for cell in row:
                 if cell.value is None or str(cell.value).strip() == "":
+                    if summary is not None:
+                        summary.record("skipped", cell.coordinate)
                     continue
                 base_row = cell.row + row_offset
                 base_col = cell.column + col_offset
@@ -698,28 +779,43 @@ class TableMergerConverter:
                     continue
                 base_cell = base_ws.cell(base_row, base_col)
                 if type(base_cell).__name__ != "MergedCell":
-                    base_cell.value = self._merge_cell_values(base_cell.value, cell.value)
+                    original = base_cell.value
+                    value, source_type = self._merge_cell_values(
+                        original, cell.value, base_cell.data_type, cell.data_type
+                    )
+                    _write_scalar(base_cell, value, source_type)
+                    if summary is not None:
+                        decision = (
+                            "added"
+                            if value_identity(original) is None
+                            else "skipped"
+                            if value_identity(original) == value_identity(base_cell.value)
+                            else "combined"
+                        )
+                        summary.record(decision, cell.coordinate)
 
     @staticmethod
-    def _merge_cell_values(base_value: Any, collect_value: Any) -> Any:
-        """Merge two cell values: numbers add, text concatenates."""
+    def _merge_cell_values(
+        base_value: Any, collect_value: Any, base_type: str, collect_type: str
+    ) -> tuple[Any, str | None]:
+        """Merge saved scalars and retain the origin type when one value survives."""
         be = base_value is None or str(base_value).strip() == ""
         ce = collect_value is None or str(collect_value).strip() == ""
         if be and ce:
-            return None
+            return None, None
         if be:
-            return collect_value
+            return collect_value, collect_type
         if ce:
-            return base_value
+            return base_value, base_type
 
         base_num = TableMergerConverter._try_number(base_value)
         col_num = TableMergerConverter._try_number(collect_value)
         if base_num is not None and col_num is not None:
-            return base_num + col_num
+            return base_num + col_num, None
 
         if str(base_value).strip() == str(collect_value).strip():
-            return base_value
-        return f"{base_value},{collect_value}"
+            return base_value, base_type
+        return f"{base_value},{collect_value}", "s"
 
     @staticmethod
     def _try_number(value: Any) -> float | int | None:
