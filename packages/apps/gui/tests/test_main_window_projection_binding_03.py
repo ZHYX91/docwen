@@ -28,6 +28,84 @@ from ._main_window_projection_binding_support import (
 
 
 class TestRuntimeRequestBinding:
+    @pytest.mark.parametrize("failure_stage", ["admission", "reservation"])
+    @pytest.mark.parametrize("has_summary", [True, False])
+    def test_prestart_failure_projects_its_own_frozen_summary(
+        self, window, tmp_path, monkeypatch, failure_stage, has_summary
+    ) -> None:
+        from types import SimpleNamespace
+
+        from docwen_core.models.request import OutputPolicy
+        from docwen_core.models.result import ConversionResult
+        from docwen_gui.execution_admission import ExecutionAdmissionError
+
+        template_ids = {name: f"template.docx.{letter * 64}" for name, letter in (("Alpha", "a"), ("Beta", "b"))}
+        labels = {resource_id: name for name, resource_id in template_ids.items()}
+        monkeypatch.setattr(window._requests, "_template_label", labels.__getitem__)
+
+        def build(name, directory, remove_numbering):
+            source = tmp_path / f"{name}.md"
+            source.write_text(f"# {name}\n", encoding="utf-8")
+            return window._requests.single(
+                file_path=str(source),
+                target_format="docx",
+                action_name="",
+                options={"template_name": template_ids[name], "remove_numbering": remove_numbering},
+                output_policy=OutputPolicy(output_dir=str(tmp_path / directory)),
+            )
+
+        request_a, context_a = build("Alpha", "A-dir", False)
+        vm = window._info_area_vm
+        window._results.started(context_a)
+        # Normal reservation projects started() before begin_task().
+        vm.begin_task(operation_id=request_a.request_id, current_file="Alpha.md", total_count=1)
+        assert vm.execution_summary == context_a["request_summary"]
+        assert "Alpha" in vm.execution_summary and "A-dir" in vm.execution_summary
+        window._results.finished(ConversionResult(task_id=request_a.request_id, success=True), context_a)
+
+        request_b, context_b = build("Beta", "B-dir", True)
+        expected = context_b["request_summary"] if has_summary else ""
+        if not has_summary:
+            context_b.pop("request_summary")
+        started = []
+        window._workflow.request_started.connect(started.append)
+
+        if failure_stage == "admission":
+
+            def reject(_request):
+                raise ExecutionAdmissionError("Rejected B before execution")
+
+            monkeypatch.setattr(window, "_confirm_request_admission", reject)
+            assert not window._workflow._admit(request_b, context_b)
+        else:
+
+            def reject_reservation(_request, **_kwargs):
+                raise RuntimeError("Cannot reserve B")
+
+            assert not window._workflow.launch(
+                controller=SimpleNamespace(prepare_execution_cancellation=reject_reservation),
+                request=request_b,
+                context=context_b,
+                project_reserved_execution=lambda: pytest.fail("Rejected reservation must not start"),
+            )
+
+        assert vm.task_summary.operation_id == request_b.request_id
+        assert vm.task_summary.state == "failed"
+        assert vm.execution_summary == expected
+        assert "Alpha" not in vm.execution_summary and "A-dir" not in vm.execution_summary
+        if has_summary:
+            assert "Beta" in vm.execution_summary and "B-dir" in vm.execution_summary
+        label = window.info_area._execution_summary_label
+        assert label.full_text == expected
+        assert label.accessibleName() == expected
+        assert label.isHidden() is (not has_summary)
+        assert not window._execution.threads
+        assert started == []
+        assert {record.operation_id for record in window._activity_model.records} >= {
+            request_a.request_id,
+            request_b.request_id,
+        }
+
     @pytest.mark.parametrize("failure", ["missing", "unreadable", "changed"])
     def test_admission_failure_replaces_previous_output_and_records_input(
         self, window, tmp_path, monkeypatch, failure

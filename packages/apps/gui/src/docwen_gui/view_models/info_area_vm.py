@@ -173,6 +173,7 @@ class InfoAreaViewModel(QObject):
         super().__init__(parent)
         self.max_messages: int = 100
         self._output_destination_hint = ""
+        self._execution_summary = ""
         self._activity_counts = (0, 0)
         self._batch_mode = False
 
@@ -230,6 +231,15 @@ class InfoAreaViewModel(QObject):
     @property
     def output_destination_hint(self) -> str:
         return self._output_destination_hint
+
+    @property
+    def execution_summary(self) -> str:
+        return self._execution_summary
+
+    def set_execution_summary(self, text: str) -> None:
+        if text != self._execution_summary:
+            self._execution_summary = text
+            self.state_changed.emit()
 
     @property
     def output_file_text(self) -> str:
@@ -437,6 +447,7 @@ class InfoAreaViewModel(QObject):
         self._history_rows.clear()
         self._last_message_signature = None
         self._output_destination_hint = ""
+        self._execution_summary = ""
 
         self._transient_generation += 1
         self._clear_transient_state()
@@ -620,6 +631,7 @@ class InfoAreaViewModel(QObject):
     def clear_task_summary(self) -> None:
         """Clear the task summary and return to idle/history display."""
         self._task_summary = TaskSummaryState()
+        self._execution_summary = ""
         self._guide_actions.clear()
         self._refresh_status()
 

@@ -42,32 +42,25 @@ Nhật ký thay đổi: xem [CHANGELOG.md](../CHANGELOG.md)
 
 ## 🚀 Bắt đầu nhanh
 
-### Cài đặt từ mã nguồn
+### Tải xuống và chạy
 
-**Yêu cầu**: Python 3.12
+Tải gói phù hợp từ [Releases](https://github.com/ZHYX91/docwen/releases). Có gói cho **Windows x64**, **Ubuntu 24.04 x64** và **Apple Silicon macOS 14+**, không cần cài Python. Giải nén toàn bộ: mở `DocWen.exe` trên Windows, chạy `./DocWen` trên Ubuntu; trên Mac, chuyển `DocWen.app` vào Applications rồi làm theo [hướng dẫn mở lần đầu](macos.md). Ubuntu và macOS còn có gói chỉ chứa CLI. Các bản Linux khác và Mac Intel không thuộc nền tảng đóng gói.
 
-**Gói cài đặt**: Windows x64, Ubuntu 24.04 x64 và Apple Silicon macOS 14+ arm64. Không có gói cho Intel Mac.
+Các tệp phát hành khác nhau tùy phiên bản. Hãy chọn tệp thực sự được liệt kê cho hệ điều hành của bạn; phiên bản cũ có thể chưa có gói macOS.
 
-**Cách 1: Sử dụng uv (khuyến nghị)**
+### Chạy từ mã nguồn
 
-Cài đặt [uv](https://docs.astral.sh/uv/getting-started/), sau đó:
+Để phát triển hoặc cài từ nguồn, cài **Python 3.12** và **uv 0.12.0**, rồi chạy trong kho mã:
 
 ```bash
 git clone https://github.com/ZHYX91/docwen.git
 cd docwen
 uv sync --frozen --all-extras
+uv run --frozen docwen-gui
+uv run --frozen docwen --help
 ```
 
-Mã nguồn, kiểm thử và bản dựng DocWen chỉ hỗ trợ tệp khóa trong kho với `uv 0.12.0`; `pip install -e` không được hỗ trợ.
-
-### Khởi chạy chương trình
-
-Với bản đóng gói trên Windows: nhấp đúp `DocWen.exe` để mở GUI. Sau khi cài từ mã nguồn:
-
-```bash
-docwen-gui  # Chế độ GUI
-docwen      # Chế độ CLI
-```
+`uv run --frozen` sử dụng môi trường đã đồng bộ mà không cần kích hoạt thủ công. CI và bản dựng sản phẩm dùng uv 0.12.0; bảo trì phụ thuộc cho phép bản 0.12.x tương thích. Không hỗ trợ `pip install -e` vì pip không áp dụng được quy tắc loại trừ phụ thuộc cụ thể của kho mã.
 
 ### Ghi chú cho macOS
 
@@ -78,14 +71,9 @@ Gói Mac giữ chữ ký ad-hoc, không dùng Developer ID hay công chứng App
 Nếu cần chuyển đổi các định dạng cũ như `.doc`, `.xls`, hãy cài LibreOffice:  
 Tải về: https://www.libreoffice.org/download/
 
-**Hỗ trợ ảnh HEIC (Tùy chọn)**
+**Ảnh HEIC/HEIF**
 
-Để xử lý ảnh HEIC/HEIF:
-
-```bash
-brew install libheif
-pip install pillow-heif
-```
+Gói phát hành dùng bộ xử lý ảnh đi kèm. Kiểm tra bản đã cài bằng `DocWenCLI doctor --json` (đường dẫn CLI trên Mac nằm trong hướng dẫn bên dưới). Cài `pillow-heif` vào Python hệ thống không thay đổi ứng dụng đóng gói. Với mã nguồn, `uv sync --frozen --all-extras` đã cài `pillow-heif`. Nếu bộ xử lý trên macOS báo thiếu thư viện gốc, chạy `brew install libheif` rồi kiểm tra lại bằng `uv run --frozen docwen doctor --json`. Khả năng sử dụng phụ thuộc vào bản dựng và bộ xử lý thực tế.
 
 ### Yêu cầu cho bản GUI trên Linux
 
@@ -93,8 +81,8 @@ pip install pillow-heif
 không mở rộng cam kết sang bản phân phối hoặc kiến trúc khác.
 
 - Có môi trường desktop (GNOME, KDE, XFCE, ...)
-- GUI dùng PySide6 (Qt6) và không còn phụ thuộc vào Python Tk. Nếu khởi động lỗi vì thiếu thư viện hệ thống, hãy cài các thư viện cần thiết để chạy Qt theo thông báo lỗi (thường liên quan OpenGL/X11).
-- Với máy chủ headless, hãy ưu tiên entry CLI `docwen` thay vì GUI; bản đóng gói Windows cũng cung cấp `DocWenCLI.exe`.
+- GUI dùng PySide6 (Qt6). Nếu khởi động lỗi vì thiếu thư viện hệ thống, hãy cài các thư viện cần thiết để chạy Qt theo thông báo lỗi (thường liên quan OpenGL/X11).
+- Nếu không có môi trường desktop, chạy `./DocWenCLI` trong thư mục gói CLI đã giải nén, hoặc `uv run --frozen docwen` trong thư mục mã nguồn.
 
 ### Hướng dẫn nhanh
 
@@ -123,7 +111,7 @@ không mở rộng cam kết sang bản phân phối hoặc kiến trúc khác.
 
 ## 🖥️ Sử dụng giao diện đồ hoạ
 
-Hầu hết người dùng sử dụng phần mềm qua giao diện đồ hoạ. Dưới đây là hướng dẫn chi tiết.
+Khi tác vụ bắt đầu, các tùy chọn từ yêu cầu thực tế sẽ được hiển thị. Có thể tìm mẫu theo tên hoặc gợi ý sử dụng; “Đã dùng gần đây trong phiên này” liệt kê mẫu của tác vụ đã bắt đầu mà không đổi mẫu mặc định. Với bảng tính, xem [phạm vi, chế độ và kiểm tra kết quả gộp](table-merge.md).
 
 ### Tổng quan giao diện
 
@@ -137,7 +125,7 @@ Chương trình dùng **bố cục 3 cột thích ứng**:
 
 ### Quy trình thao tác cơ bản
 
-1.  **Khởi chạy**: Nhấp đúp `DocWen.exe` (Windows đóng gói) hoặc chạy `docwen-gui`.
+1.  **Khởi chạy**: Nhấp đúp `DocWen.exe` (Windows đóng gói) hoặc chạy `uv run --frozen docwen-gui`.
 2.  **Nhập file**:
     -   Cách 1: Kéo thả file vào cửa sổ.
     -   Cách 2: Nhấn nút "Thêm" trong vùng kéo thả để chọn file.
@@ -192,6 +180,8 @@ Trang **OCR và hình ảnh** quản lý nhận dạng chung và xuất hình �
 ---
 
 ## 🔧 Sử dụng CLI
+
+Ví dụ CLI dùng tên lệnh `docwen`. Trong thư mục mã nguồn, thêm `uv run --frozen` ở trước; với gói phát hành, dùng `DocWenCLI.exe` trên Windows hoặc `./DocWenCLI` trên Linux/macOS.
 
 Giao diện dòng lệnh (CLI) cho phép kiểm tra và chuyển đổi file từ terminal hoặc tự động hóa công việc cục bộ bằng script. Để tích hợp DocWen với ứng dụng khác, hãy dùng giao diện Machine Protocol bên dưới.
 
