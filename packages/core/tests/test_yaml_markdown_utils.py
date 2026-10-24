@@ -19,10 +19,47 @@ from docwen_core.markdown_utils import (
 )
 from docwen_core.yaml_tools import (
     extract_yaml,
+    format_yaml_scalar,
     generate_basic_yaml_frontmatter,
 )
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "00000001",
+        "00123456",
+        "2604700000000392402353",
+        "-1",
+        "1.2",
+        "1e3",
+        "2026-10-24",
+        "on",
+        "off",
+        "true",
+        "null",
+        r"Report: C:\new\docs",
+        r"C:\Users\name",
+        'it\'s "quoted"',
+        "line\nbreak\twith\x00control",
+        "paragraph\u2029separator",
+        " leading and trailing ",
+        "",
+    ],
+)
+def test_shared_scalar_encoder_preserves_string_value_and_type(value: str) -> None:
+    parsed = yaml.safe_load(f"value: {format_yaml_scalar(value)}")
+    assert type(parsed["value"]) is str
+    assert parsed["value"] == value
+
+
+@pytest.mark.parametrize("value", [False, True])
+def test_shared_scalar_encoder_preserves_explicit_boolean_type(value: bool) -> None:
+    parsed = yaml.safe_load(f"value: {format_yaml_scalar(value)}")
+    assert parsed["value"] is value
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # F-I2b-001: extract_yaml

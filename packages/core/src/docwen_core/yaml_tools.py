@@ -42,7 +42,7 @@ def _quoted_yaml_string(value: str) -> str:
     )
 
 
-def _format_yaml_scalar(value: str | bool) -> str:
+def format_yaml_scalar(value: str | bool) -> str:
     """Render *value* as one deterministic YAML scalar.
 
     Ordinary human-readable names retain the existing plain-scalar shape.
@@ -114,11 +114,11 @@ def generate_basic_yaml_frontmatter(
         label_title = yaml_key_labels.get("title")
         if isinstance(label_title, str) and label_title.strip():
             title_key = label_title.strip()
-    safe_file_stem = _format_yaml_scalar(file_stem)
+    safe_file_stem = format_yaml_scalar(file_stem)
     lines = ["---", f"{title_key}: {safe_file_stem}", "aliases:", f"  - {safe_file_stem}"]
     if extra:
         for key, value in extra.items():
-            lines.append(f"{key}: {_format_yaml_scalar(value)}")
+            lines.append(f"{key}: {format_yaml_scalar(value)}")
     lines.append("---")
     lines.append("")
     lines.append("")
