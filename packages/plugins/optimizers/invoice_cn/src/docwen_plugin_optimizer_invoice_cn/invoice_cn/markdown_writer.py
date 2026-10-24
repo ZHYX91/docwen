@@ -2,51 +2,13 @@
 
 from __future__ import annotations
 
+from docwen_core.yaml_tools import format_yaml_scalar
+
 
 def _format_yaml_value(value: str) -> str:
-    """Format a string value for safe YAML inclusion.
-
-    Returns the value quoted if it contains characters that need quoting,
-    otherwise returns it bare.
-    """
+    """Preserve a normalized invoice string with the shared Core encoder."""
     v = str(value).strip()
-    if not v:
-        return "''"
-    # Characters that require quoting in YAML
-    if any(
-        ch in v
-        for ch in (
-            ":",
-            "#",
-            "{",
-            "}",
-            "[",
-            "]",
-            ",",
-            "&",
-            "*",
-            "?",
-            "|",
-            "-",
-            "<",
-            ">",
-            "=",
-            "!",
-            "%",
-            "@",
-            "`",
-            "'",
-            '"',
-        )
-    ):
-        # Use single-quoted style, escaping internal single quotes
-        escaped = v.replace("'", "''")
-        return f"'{escaped}'"
-    if v.lower() in ("true", "false", "yes", "no", "null", "~"):
-        return f"'{v}'"
-    if v[0] in "0123456789" and any(ch in v for ch in ".:"):
-        return f"'{v}'"
-    return v
+    return format_yaml_scalar(v) if v else "''"
 
 
 def _build_yaml_frontmatter(
