@@ -503,6 +503,9 @@ def test_consumer_facing_options_are_discovered_resolved_and_validated(tmp_path:
         "template_name",
         "heading_merge_mode",
     }
+    for capability_id in (MARKDOWN_TO_DOCX_CAPABILITY_ID, MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID):
+        locale_schema = capabilities[capability_id].options_schema["properties"]["locale"]
+        assert "default" not in locale_schema
     plan = service.plan(
         _request(
             source,

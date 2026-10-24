@@ -523,7 +523,7 @@ def _validated_resolved_v4_options(options: dict[str, Any], style_catalog: Any) 
             "resolved-v4 conversion requires a request-owned document style catalog",
         )
 
-    locale = options.get("locale", "zh_CN")
+    locale = options.get("locale", style_catalog.locale)
     if type(locale) is not str or locale not in SHIPPED_STYLE_LOCALES:
         raise ResolvedConversionV4Unsupported(
             "MD2DOCX-RESOLVED-V4-OPTIONS-INVALID",

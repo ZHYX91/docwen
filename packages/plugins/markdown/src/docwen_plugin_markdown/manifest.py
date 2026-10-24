@@ -202,7 +202,6 @@ RESOLVED_V4_MD_TO_DOCX_OPTIONS_SCHEMA: dict = {
         "locale": {
             "type": "string",
             "enum": list(SHIPPED_STYLE_LOCALES),
-            "default": "zh_CN",
         },
         "template_name": {
             "type": "string",

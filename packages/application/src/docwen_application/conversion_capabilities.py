@@ -201,7 +201,6 @@ _MARKDOWN_TO_DOCX_OPTIONS = _strict_options(
         "locale": {
             "type": "string",
             "enum": list(SHIPPED_STYLE_LOCALES),
-            "default": "zh_CN",
         },
         "template_name": {
             "type": "string",
