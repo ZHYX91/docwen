@@ -20,7 +20,7 @@ def test_unmerge_failure_is_not_silently_accepted() -> None:
         @staticmethod
         def cell(*, row: int, column: int) -> SimpleNamespace:
             del row, column
-            return SimpleNamespace(value="merged")
+            return SimpleNamespace(value="merged", data_type="s")
 
         @staticmethod
         def unmerge_cells(_range: str) -> None:

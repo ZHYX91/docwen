@@ -131,7 +131,7 @@ Markdown-to-document proofreading switches initialize from the injected configur
 choice belongs to the current operation, including a toggle back to its initial value. Committed settings changes
 refresh only switches the user has not changed; widget projection blocks signals and does not count as a manual
 choice. Unsaved or canceled settings drafts have no effect. Changing only the target format retains these choices;
-a new input or operation context initializes again from saved defaults. Only DOCX requests carry these switches,
+a new input or operation context initializes again from saved defaults. Markdown requests for DOCX/DOC/ODT/RTF/WPS carry these switches; proofreading runs on the intermediate DOCX before any required final bridge conversion, which must be available,
 and disabling all four creates no post-conversion proofreading stage. Existing request-over-config priority stays
 unchanged. Source/model and Qt regressions cover this policy; final packaged GUI verification remains separate.
 - The workspace previews committed output-directory settings. Template selection has a persistent check marker and a visible selected name. Idle feedback shows a compact ready-state card header; its body expands when work starts and remains open for results. Existing activity and non-default output hints remain reachable while idle.

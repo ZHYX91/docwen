@@ -109,29 +109,22 @@ def _find_unavailable_formula_caches(
 ) -> tuple[int, list[str]]:
     """Find formula cells whose cached scalar value is unavailable to openpyxl."""
 
-    from .formula_cache import empty_string_caches
+    from .formula_cache import visit_formula_caches
 
-    known_empty = empty_string_caches(input_path, cancel_check=cancel_check)
+    # Keep the two-view caller contract; formula locations come from stored XML,
+    # not iter_rows(), which fills every absent cell in a sparse worksheet.
     count = 0
     locations: list[str] = []
-    for sheet_name in formula_workbook.sheetnames if sheet_names is None else sheet_names:
-        formula_sheet = formula_workbook[sheet_name]
-        values_sheet = values_workbook[sheet_name]
-        for row_index, row in enumerate(formula_sheet.iter_rows(), 1):
-            if cancel_check is not None and row_index % _CANCEL_CHECK_ROW_INTERVAL == 0:
-                cancel_check()
-            for column_index, formula_cell in enumerate(row, 1):
-                if cancel_check is not None and column_index % 1000 == 0:
-                    cancel_check()
-                if formula_cell.data_type != "f":
-                    continue
-                if values_sheet[formula_cell.coordinate].value is not None:
-                    continue
-                if (sheet_name, formula_cell.coordinate) in known_empty:
-                    continue
-                count += 1
-                if len(locations) < location_limit:
-                    locations.append(f"{sheet_name}!{formula_cell.coordinate}")
+
+    def visit(sheet_name: str, coordinate: str, known_empty: bool) -> None:
+        nonlocal count
+        if known_empty or values_workbook[sheet_name][coordinate].value is not None:
+            return
+        count += 1
+        if len(locations) < location_limit:
+            locations.append(f"{sheet_name}!{coordinate}")
+
+    visit_formula_caches(input_path, visit, sheet_names=sheet_names, cancel_check=cancel_check)
     return count, locations
 
 

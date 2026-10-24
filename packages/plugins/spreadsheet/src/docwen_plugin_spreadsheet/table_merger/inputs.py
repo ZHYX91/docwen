@@ -31,10 +31,14 @@ def load_merge_workbook(
     source_name: str | None = None,
 ) -> Any:
     """Check every retained base sheet, or only the collected active sheet."""
+    from openpyxl.worksheet.worksheet import Worksheet
+
     values, formulas = _load_xlsx_views(path)
     try:
         active = formulas.active
-        sheets = None if base else ([active.title] if active is not None else [])
+        if not isinstance(active, Worksheet):
+            raise ValueError("Table merging requires an active worksheet.")
+        sheets = None if base else [active.title]
         count, locations = _find_unavailable_formula_caches(
             values, formulas, input_path=path, sheet_names=sheets, cancel_check=cancel_check
         )

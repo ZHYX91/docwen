@@ -22,6 +22,13 @@ if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
 
 
+def _write_scalar(cell: Any, value: Any, source_type: str | None = None) -> None:
+    """Write saved values without reinterpreting literal text as formulas or errors."""
+    cell.value = value
+    if isinstance(value, str):
+        cell.data_type = "e" if source_type == "e" else "s"
+
+
 class TableMergerConverter:
     """Merge multiple table files into a single XLSX output.
 
@@ -410,12 +417,13 @@ class TableMergerConverter:
         for merged_range in merged_ranges:
             top_left = worksheet.cell(row=merged_range.min_row, column=merged_range.min_col)
             merged_value = top_left.value
+            merged_type = top_left.data_type
             worksheet.unmerge_cells(str(merged_range))
             for row in range(merged_range.min_row, merged_range.max_row + 1):
                 for col in range(merged_range.min_col, merged_range.max_col + 1):
                     cell = worksheet.cell(row=row, column=col)
                     if type(cell).__name__ != "MergedCell":
-                        cell.value = merged_value
+                        _write_scalar(cell, merged_value, merged_type)
 
     # ── Merge by row ──────────────────────────────────────────────────
 
@@ -522,7 +530,8 @@ class TableMergerConverter:
                 continue
             cell = base_ws.cell(base_row, base_col)
             if type(cell).__name__ != "MergedCell":
-                cell.value = collect_ws.cell(collect_row, col_idx).value
+                source = collect_ws.cell(collect_row, col_idx)
+                _write_scalar(cell, source.value, source.data_type)
 
     def _insert_at_most_similar_row(
         self,
@@ -547,7 +556,8 @@ class TableMergerConverter:
                 continue
             cell = base_ws.cell(insert_pos, base_col)
             if type(cell).__name__ != "MergedCell":
-                cell.value = collect_ws.cell(collect_row, col_idx).value
+                source = collect_ws.cell(collect_row, col_idx)
+                _write_scalar(cell, source.value, source.data_type)
 
     def _row_similarity(
         self,
@@ -685,7 +695,8 @@ class TableMergerConverter:
                 continue
             cell = base_ws.cell(base_row, base_col)
             if type(cell).__name__ != "MergedCell":
-                cell.value = collect_ws.cell(row_idx, collect_col).value
+                source = collect_ws.cell(row_idx, collect_col)
+                _write_scalar(cell, source.value, source.data_type)
 
     def _insert_at_most_similar_column(
         self,
@@ -710,7 +721,8 @@ class TableMergerConverter:
                 continue
             cell = base_ws.cell(base_row, insert_pos)
             if type(cell).__name__ != "MergedCell":
-                cell.value = collect_ws.cell(row_idx, collect_col).value
+                source = collect_ws.cell(row_idx, collect_col)
+                _write_scalar(cell, source.value, source.data_type)
 
     def _col_similarity(
         self,
@@ -772,7 +784,10 @@ class TableMergerConverter:
                 base_cell = base_ws.cell(base_row, base_col)
                 if type(base_cell).__name__ != "MergedCell":
                     original = base_cell.value
-                    base_cell.value = self._merge_cell_values(original, cell.value)
+                    value, source_type = self._merge_cell_values(
+                        original, cell.value, base_cell.data_type, cell.data_type
+                    )
+                    _write_scalar(base_cell, value, source_type)
                     if summary is not None:
                         decision = (
                             "added"
@@ -784,25 +799,27 @@ class TableMergerConverter:
                         summary.record(decision, cell.coordinate)
 
     @staticmethod
-    def _merge_cell_values(base_value: Any, collect_value: Any) -> Any:
-        """Merge two cell values: numbers add, text concatenates."""
+    def _merge_cell_values(
+        base_value: Any, collect_value: Any, base_type: str, collect_type: str
+    ) -> tuple[Any, str | None]:
+        """Merge saved scalars and retain the origin type when one value survives."""
         be = base_value is None or str(base_value).strip() == ""
         ce = collect_value is None or str(collect_value).strip() == ""
         if be and ce:
-            return None
+            return None, None
         if be:
-            return collect_value
+            return collect_value, collect_type
         if ce:
-            return base_value
+            return base_value, base_type
 
         base_num = TableMergerConverter._try_number(base_value)
         col_num = TableMergerConverter._try_number(collect_value)
         if base_num is not None and col_num is not None:
-            return base_num + col_num
+            return base_num + col_num, None
 
         if str(base_value).strip() == str(collect_value).strip():
-            return base_value
-        return f"{base_value},{collect_value}"
+            return base_value, base_type
+        return f"{base_value},{collect_value}", "s"
 
     @staticmethod
     def _try_number(value: Any) -> float | int | None:
