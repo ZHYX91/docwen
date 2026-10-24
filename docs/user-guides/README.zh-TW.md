@@ -42,32 +42,25 @@ DocWen 支援 DOCX、XLSX、PDF 和一些舊版辦公、圖片格式，但**並�
 
 ## 🚀 快速開始
 
-### 從原始碼安裝
+### 下載成品並啟動
 
-**前置條件**：Python 3.12
+從 [Releases](https://github.com/ZHYX91/docwen/releases) 下載符合系統的壓縮檔。支援 **Windows x64**、**Ubuntu 24.04 x64** 與 **Apple 晶片 macOS 14+**，不需安裝 Python。完整解壓縮後，Windows 開啟 `DocWen.exe`，Ubuntu 執行 `./DocWen`；Mac 將 `DocWen.app` 移到「應用程式」，依[首次啟動指南](macos.md)開啟。Ubuntu 與 macOS 另有純命令列套件。其他 Linux 發行版與 Intel Mac 不屬於安裝包目標。
 
-**安裝套件**：提供 Windows x64、Ubuntu 24.04 x64 和 Apple 晶片 macOS 14+ arm64 版本；不提供 Intel Mac 套件。
+各版本提供的附件可能不同，請以所選發行版實際列出的系統包為準；舊版可能沒有 macOS 包。
 
-**使用 uv 安裝**
+### 從原始碼執行
 
-安裝 [uv](https://docs.astral.sh/uv/getting-started/)，然後：
+需要開發或從原始碼安裝時，先安裝 **Python 3.12** 與 **uv 0.12.0**，再於儲存庫中執行：
 
 ```bash
 git clone https://github.com/ZHYX91/docwen.git
 cd docwen
 uv sync --frozen --all-extras
+uv run --frozen docwen-gui
+uv run --frozen docwen --help
 ```
 
-請使用 `uv 0.12.0` 和倉庫中的鎖定檔安裝相依套件。測試與正式建置使用此版本；維護相依套件時可使用相容的 `uv 0.12.x`。`pip install -e` 無法套用本倉庫的相依套件排除規則，因此不支援這種安裝方式。
-
-### 啟動程式
-
-從 [Releases 頁面](https://github.com/ZHYX91/docwen/releases) 下載對應套件。Windows 版雙擊 `DocWen.exe`；Ubuntu 24.04 x64 圖形版解壓縮後執行 `./DocWen`，無桌面環境時使用獨立的 `DocWenCLI` 套件。從原始碼安裝後可執行：
-
-```bash
-docwen-gui  # 圖形介面
-docwen      # 命令列
-```
+`uv run --frozen` 使用已同步的環境，不需手動啟用。測試與正式建置使用 uv 0.12.0；依賴維護可用相容的 0.12.x。`pip install -e` 無法套用此儲存庫的依賴排除規則，因此不支援此方式。
 
 ### macOS 安裝說明
 
@@ -78,14 +71,9 @@ Mac 套件保留 ad-hoc 簽章，未使用 Developer ID 簽章或 Apple 公證�
 如需轉換 `.doc`、`.xls` 等舊格式，請安裝 LibreOffice：  
 下載地址：https://www.libreoffice.org/download/
 
-**HEIC 圖片支援（可選）**
+**HEIC/HEIF 圖片**
 
-如需處理 HEIC/HEIF 格式圖片：
-
-```bash
-brew install libheif
-pip install pillow-heif
-```
+成品包使用內附的圖片後端。以 `DocWenCLI doctor --json` 檢查目前版本（Mac 的 CLI 路徑請見下方指南）；在系統 Python 安裝 `pillow-heif` 不會變更成品包。原始碼安裝的 `uv sync --frozen --all-extras` 已包含 `pillow-heif`。若 macOS 後端回報缺少原生函式庫，再執行 `brew install libheif`，並以 `uv run --frozen docwen doctor --json` 複查。實際可用性仍取決於目前建置與後端。
 
 ### Linux GUI 版本前置條件
 
@@ -93,8 +81,8 @@ pip install pillow-heif
 不會把支援承諾擴展到其他發行版或架構。
 
 - 已安裝桌面環境（GNOME、KDE、XFCE 等均可）
-- GUI 基於 PySide6（Qt6），不再依賴 Python Tk；如啟動時提示缺少系統函式庫，請依錯誤訊息安裝對應的 Qt 執行期依賴（常見為 OpenGL/X11 相關函式庫）。
-- 純伺服器（無顯示環境）建議優先使用 `docwen` CLI 入口而非 GUI；Windows 打包版同時提供 `DocWenCLI.exe`。
+- GUI 基於 PySide6（Qt6）；如啟動時提示缺少系統函式庫，請依錯誤訊息安裝對應的 Qt 執行期依賴（常見為 OpenGL/X11 相關函式庫）。
+- 沒有桌面環境時，在命令列包目錄執行 `./DocWenCLI`；原始碼環境使用 `uv run --frozen docwen`。
 
 ### 快速入門指南
 
@@ -123,7 +111,7 @@ pip install pillow-heif
 
 ## 🖥️ 圖形介面使用
 
-大部分用戶通過圖形介面使用本軟體，以下是詳細的操作指南。
+工作開始時會顯示來自實際請求的選項摘要。範本可依名稱或用途搜尋；「本次工作階段最近使用」列出已啟動工作所用的範本，不變更預設範本。表格彙整範圍、模式及結果核對方式請見[彙整指南](table-merge.md)。
 
 ### 介面概覽
 
@@ -137,7 +125,7 @@ pip install pillow-heif
 
 ### 基本操作流程
 
-1. **啟動程式**：雙擊 `DocWen.exe`（Windows 打包版）或執行 `docwen-gui`
+1. **啟動程式**：雙擊 `DocWen.exe`（Windows 打包版）或執行 `uv run --frozen docwen-gui`
 2. **導入文件**：
    - 方式一：直接拖拽文件到窗口
    - 方式二：點擊拖拽區域的"添加"按鈕選擇文件
@@ -192,6 +180,8 @@ pip install pillow-heif
 ---
 
 ## 🔧 命令列使用
+
+下方 CLI 範例以 `docwen` 作為命令名稱。於原始碼目錄執行時加上 `uv run --frozen`；使用成品包時改為 Windows 的 `DocWenCLI.exe` 或 Linux/macOS 的 `./DocWenCLI`。
 
 使用命令列（CLI）可以在終端機檢查檔案、執行轉換，或編寫指令碼處理重複工作。與其他軟體整合時，請使用下文的 Machine Protocol 介面。
 

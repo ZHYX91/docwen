@@ -121,6 +121,10 @@ class ActivityRecordsModel(QAbstractTableModel):
                     details.append(outcome.error_message)
                 if outcome and outcome.skip_reason:
                     details.append(outcome.skip_reason)
+                if summary := task.context.get("request_summary"):
+                    details.append(str(summary))
+                if outcome:
+                    details.extend(outcome.local_details)
                 details.extend(warnings)
                 details.extend(messages)
                 records.append(

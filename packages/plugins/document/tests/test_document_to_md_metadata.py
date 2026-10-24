@@ -21,6 +21,7 @@ from docx import Document
 from docwen_core.cancellation import CancellationToken
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import ConversionRequest, OutputPolicy
+from docwen_plugin_document.to_markdown.metadata import build_yaml_header, extract_title_metadata, format_yaml_value
 
 pytestmark = pytest.mark.contract
 
@@ -30,15 +31,12 @@ pytestmark = pytest.mark.contract
 
 
 class TestFormatYamlValue:
-    """Tests for ``_format_yaml_value`` static method."""
+    """Tests for ``format_yaml_value`` metadata helper."""
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        from docwen_plugin_document.to_markdown.converter import (
-            DocxToMarkdownConverter,
-        )
 
-        self._fmt = DocxToMarkdownConverter._format_yaml_value
+        self._fmt = format_yaml_value
 
     def test_plain_text_passes_through(self):
         assert self._fmt("hello") == "hello"
@@ -114,15 +112,12 @@ class TestFormatYamlValue:
 
 
 class TestBuildYamlHeader:
-    """Tests for ``_build_yaml_header`` static method."""
+    """Tests for ``build_yaml_header`` metadata helper."""
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        from docwen_plugin_document.to_markdown.converter import (
-            DocxToMarkdownConverter,
-        )
 
-        self._build = DocxToMarkdownConverter._build_yaml_header
+        self._build = build_yaml_header
 
     def test_normal_header(self):
         result = self._build(
@@ -227,15 +222,12 @@ class TestBuildYamlHeader:
 
 
 class TestExtractTitleMetadata:
-    """Tests for ``_extract_title_metadata`` static method."""
+    """Tests for ``extract_title_metadata`` metadata helper."""
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        from docwen_plugin_document.to_markdown.converter import (
-            DocxToMarkdownConverter,
-        )
 
-        self._extract = DocxToMarkdownConverter._extract_title_metadata
+        self._extract = extract_title_metadata
 
     def _build_doc_with_styles(self, styles_and_texts, tmp_path):
         """Create a DOCX with given (style_name, text) tuples."""
@@ -352,9 +344,9 @@ class TestTitleSubtitleBodyRendering:
         doc2 = Document(str(path))
         converter = DocxToMarkdownConverter()
 
-        # _extract_title_metadata should NOT capture Title since it comes after
+        # extract_title_metadata should NOT capture Title since it comes after
         # a Norma paragraph
-        metadata, skip = converter._extract_title_metadata(doc2, str(path))
+        metadata, skip = extract_title_metadata(doc2, str(path))
         assert metadata["title"] == "title_body"  # fallback to filename
         assert 0 not in skip  # Normal paragraph
         assert 1 not in skip  # Title paragraph not at document start
@@ -409,7 +401,7 @@ class TestTitleSubtitleBodyRendering:
 
         doc2 = Document(str(path))
         converter = DocxToMarkdownConverter()
-        _metadata, skip = converter._extract_title_metadata(doc2, str(path))
+        _metadata, skip = extract_title_metadata(doc2, str(path))
 
         from tests.support.config import FakeConfigView
         from tests.support.execution import FakeExecutionContext

@@ -311,8 +311,11 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     assert "build-macos" in _release_workflow()["jobs"]["verify-release"]["needs"]
     assert "DocWen packages one Windows x64 package and two Ubuntu 24.04 x64 packages" in packaging
     assert "DocWen 的发布目标为" in packaging
-    assert "DocWen provides one Windows x64 GUI+CLI package" in readme
-    assert "Ubuntu 24.04 x64 GUI+CLI" in readme
+    download_section = readme.split("### Download and run\n", 1)[1].split("\n### ", 1)[0]
+    assert all(target in download_section for target in ("Windows x64", "Ubuntu 24.04 x64", "Apple Silicon macOS 14+"))
+    assert "Ubuntu and macOS also have separate CLI-only archives" in download_section
+    assert "Release assets vary by version" in download_section
+    assert "Older releases may not include macOS packages" in download_section
     assert '"Operating System :: Microsoft :: Windows"' in project_metadata
     assert '"Operating System :: POSIX :: Linux"' in project_metadata
     assert '"Operating System :: MacOS :: MacOS X"' in project_metadata

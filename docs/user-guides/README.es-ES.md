@@ -42,32 +42,25 @@ Registro de cambios: ver [CHANGELOG.md](../CHANGELOG.md)
 
 ## 🚀 Inicio rápido
 
-### Instalación desde el código fuente
+### Descargar y ejecutar
 
-**Requisitos previos**: Python 3.12
+Descargue el archivo correspondiente desde [Releases](https://github.com/ZHYX91/docwen/releases). Los paquetes admiten **Windows x64**, **Ubuntu 24.04 x64** y **Apple Silicon con macOS 14+**, sin instalar Python. Extraiga el archivo completo: abra `DocWen.exe` en Windows, ejecute `./DocWen` en Ubuntu; en macOS mueva `DocWen.app` a Aplicaciones y siga la [guía de primer inicio](macos.md). Ubuntu y macOS también ofrecen paquetes solo CLI. Otras distribuciones Linux y los Mac Intel no son destinos de los paquetes.
 
-**Paquetes**: Windows x64, Ubuntu 24.04 x64 y Apple Silicon macOS 14+ arm64. Sin paquete para Mac Intel.
+Los archivos disponibles varían según la versión. Elija un archivo que aparezca para su sistema; las versiones antiguas pueden no incluir paquetes para macOS.
 
-**Opción 1: Usando uv (recomendado)**
+### Ejecutar desde el código fuente
 
-Instala [uv](https://docs.astral.sh/uv/getting-started/), luego:
+Para desarrollar o instalar desde el código fuente, instale **Python 3.12** y **uv 0.12.0** y ejecute lo siguiente en el repositorio:
 
 ```bash
 git clone https://github.com/ZHYX91/docwen.git
 cd docwen
 uv sync --frozen --all-extras
+uv run --frozen docwen-gui
+uv run --frozen docwen --help
 ```
 
-El código fuente, las pruebas y las compilaciones de DocWen solo admiten el archivo de bloqueo incluido con `uv 0.12.0`; `pip install -e` no es compatible.
-
-### Iniciar el programa
-
-En la versión empaquetada de Windows: haz doble clic en `DocWen.exe` para abrir la interfaz gráfica. Tras la instalación desde el código fuente:
-
-```bash
-docwen-gui  # Modo GUI
-docwen      # Modo CLI
-```
+`uv run --frozen` usa el entorno sincronizado sin activarlo manualmente. La CI y las compilaciones de producción usan uv 0.12.0; el mantenimiento de dependencias admite versiones 0.12.x compatibles. `pip install -e` no se admite porque pip no puede aplicar la exclusión específica de dependencias del repositorio.
 
 ### Notas para macOS
 
@@ -78,14 +71,9 @@ Los paquetes Mac conservan firmas ad-hoc, sin Developer ID ni notarización de A
 Para convertir formatos heredados como `.doc` y `.xls`, instala LibreOffice:  
 Descarga: https://www.libreoffice.org/download/
 
-**Soporte de imágenes HEIC (Opcional)**
+**Imágenes HEIC/HEIF**
 
-Para procesar imágenes HEIC/HEIF:
-
-```bash
-brew install libheif
-pip install pillow-heif
-```
+Los paquetes usan su propio motor de imágenes. Compruebe la versión instalada con `DocWenCLI doctor --json` (ruta CLI de macOS en la guía inferior). Instalar `pillow-heif` en Python del sistema no modifica la aplicación. Desde el código fuente, `uv sync --frozen --all-extras` ya instala `pillow-heif`. Si el motor de macOS indica que falta una biblioteca nativa, ejecute `brew install libheif` y compruebe de nuevo con `uv run --frozen docwen doctor --json`. La disponibilidad depende de la compilación y el motor reales.
 
 ### Requisitos previos del GUI en Linux
 
@@ -93,8 +81,8 @@ pip install pillow-heif
 x64. Estos requisitos no amplían ese compromiso a otras distribuciones o arquitecturas.
 
 - Entorno de escritorio instalado (GNOME, KDE, XFCE, etc.)
-- La GUI usa PySide6 (Qt6) y ya no depende de Python Tk. Si el arranque falla por bibliotecas del sistema ausentes, instala las dependencias de Qt indicadas por el error (normalmente relacionadas con OpenGL/X11).
-- Para servidores headless, prioriza la entrada CLI `docwen` en lugar de la GUI; las compilaciones empaquetadas de Windows también incluyen `DocWenCLI.exe`.
+- La GUI usa PySide6 (Qt6). Si el arranque falla por bibliotecas del sistema ausentes, instala las dependencias de Qt indicadas por el error (normalmente relacionadas con OpenGL/X11).
+- Sin entorno de escritorio, ejecute `./DocWenCLI` desde el paquete CLI extraído, o `uv run --frozen docwen` desde el código fuente.
 
 ### Guía de inicio rápido
 
@@ -123,7 +111,7 @@ x64. Estos requisitos no amplían ese compromiso a otras distribuciones o arquit
 
 ## 🖥️ Uso de la interfaz gráfica
 
-La mayoría de los usuarios utilizan el software a través de la interfaz gráfica. A continuación se muestra una guía detallada.
+Al iniciar una tarea se muestran sus opciones reales. Busque plantillas por nombre o uso; « Usadas en esta sesión » muestra las de tareas iniciadas sin cambiar la predeterminada. Para tablas, consulte [el alcance, los modos y la comprobación de resultados](table-merge.md).
 
 ### Vista general de la interfaz
 
@@ -137,7 +125,7 @@ El programa utiliza un **diseño adaptativo de tres columnas**:
 
 ### Flujo básico de operación
 
-1.  **Inicia el programa**: Doble clic en `DocWen.exe` (Windows empaquetado) o ejecuta `docwen-gui`.
+1.  **Inicia el programa**: Doble clic en `DocWen.exe` (Windows empaquetado) o ejecuta `uv run --frozen docwen-gui`.
 2.  **Importa un archivo**:
     -   Método 1: Arrastra el archivo a la ventana.
     -   Método 2: Pulsa "Añadir" en la zona de arrastre para seleccionar archivos.
@@ -191,6 +179,8 @@ Abre la configuración con el icono de la parte inferior de la ventana o **Ctrl+
 ---
 
 ## 🔧 Uso de la CLI
+
+Los ejemplos CLI usan el nombre `docwen`. En el directorio de código fuente, anteponga `uv run --frozen`; en un paquete, use `DocWenCLI.exe` (Windows) o `./DocWenCLI` (Linux/macOS).
 
 La línea de comandos (CLI) permite revisar y convertir archivos desde el terminal y automatizar tareas locales. Para integrar DocWen con otras aplicaciones, usa la interfaz Machine Protocol descrita a continuación.
 

@@ -70,6 +70,12 @@ class TestPluginRegistry:
         reg.register(md2)
         assert len(reg) == 1
         assert reg.get("docwen_plugin_markdown") is md2
+        assert reg.find_plugin("markdown", "docx") is None
+        assert reg.find_manifest("markdown", "xlsx") is None
+        assert reg.find_plugin("markdown", "pdf") is md2
+        assert reg.list_manifests() == [md2.manifest]
+        reg.register(md2)
+        assert len(reg.route_registry.list_routes()) == 1
 
     def test_unregister(self, md_plugin: FakePlugin, docx_plugin: FakePlugin) -> None:
         reg = PluginRegistry()

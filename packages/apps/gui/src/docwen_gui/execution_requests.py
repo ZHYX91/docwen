@@ -103,6 +103,7 @@ class ExecutionRequestBuilder:
         *,
         file_contexts: Callable[[], dict[str, tuple[str, str]]],
         selected_template: Callable[[], tuple[str, str] | None],
+        template_label: Callable[[str], str] | None = None,
         source_label: Callable[[str], str | None] | None = None,
         synthetic_input: Callable[[str], bool] | None = None,
         snapshot_bundle: Callable[[str], ClipboardSnapshotBundle | None] | None = None,
@@ -111,6 +112,7 @@ class ExecutionRequestBuilder:
         self._batch_list_vm = batch_list_vm
         self._file_contexts = file_contexts
         self._selected_template = selected_template
+        self._template_label = template_label or (lambda resource_id: resource_id)
         self._source_label = source_label or (lambda _path: None)
         self._synthetic_input = synthetic_input or (lambda _path: False)
         self._snapshot_bundle = snapshot_bundle or (lambda _path: None)
@@ -240,6 +242,11 @@ class ExecutionRequestBuilder:
             "open_after_done": output_policy.open_after_done,
             "input_refs": [ref.to_dict() for ref in request.input_refs],
         }
+        from docwen_gui.execution_summary import request_summary
+
+        context["request_summary"] = request_summary(
+            request, template_label=self._template_label(str(request_options.get("template_name", "")))
+        )
         clipboard_bundles = tuple(
             bundle for path in source_paths if (bundle := self._snapshot_bundle(path)) is not None
         )

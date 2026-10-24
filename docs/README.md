@@ -14,6 +14,8 @@ DocWen 文档只描述当前产品、受支持契约和维护门禁。实现与�
 
 ## Product and development / 产品与开发
 
+- [Merge spreadsheets: scope, modes and results / 表格汇总：范围、模式与结果](user-guides/table-merge.md)
+- [macOS installation and first launch / macOS 安装与首次打开](user-guides/macos.md)
 - [Overview / 概览](overview.md)
 - [Capabilities / 能力矩阵](capabilities.md)
 - [CLI](cli.md)

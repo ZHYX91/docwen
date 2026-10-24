@@ -42,32 +42,25 @@ Markdown 문서의 템플릿과 생성 옵션을 선택합니다.
 
 ## 🚀 빠른 시작
 
-### 소스에서 설치
+### 다운로드하여 실행
 
-**전제 조건**: Python 3.12
+[Releases](https://github.com/ZHYX91/docwen/releases)에서 환경에 맞는 압축 파일을 받으세요. **Windows x64**, **Ubuntu 24.04 x64**, **Apple Silicon macOS 14+** 패키지를 제공하며 Python 설치는 필요 없습니다. 전체 압축을 푼 뒤 Windows에서는 `DocWen.exe`, Ubuntu에서는 `./DocWen`을 실행하세요. Mac에서는 `DocWen.app`을 응용 프로그램으로 옮긴 뒤 [첫 실행 안내](macos.md)를 따르세요. Ubuntu와 macOS에는 CLI 전용 패키지도 있습니다. 다른 Linux 배포판과 Intel Mac은 패키지 대상이 아닙니다.
 
-**패키지**: Windows x64, Ubuntu 24.04 x64, Apple Silicon macOS 14+ arm64. Intel Mac 패키지는 제공하지 않습니다.
+제공되는 파일은 버전마다 다릅니다. 사용 중인 시스템용으로 실제 등록된 파일을 선택하세요. 이전 버전에는 macOS 패키지가 없을 수 있습니다.
 
-**방법 1: uv 사용 (권장)**
+### 소스에서 실행
 
-[uv](https://docs.astral.sh/uv/getting-started/)를 설치한 후:
+개발하거나 소스에서 설치하려면 **Python 3.12**와 **uv 0.12.0**을 설치한 뒤 저장소에서 실행하세요.
 
 ```bash
 git clone https://github.com/ZHYX91/docwen.git
 cd docwen
 uv sync --frozen --all-extras
+uv run --frozen docwen-gui
+uv run --frozen docwen --help
 ```
 
-DocWen 소스, 테스트 및 빌드는 저장소 잠금 파일과 `uv 0.12.0`만 지원합니다. `pip install -e`는 지원되지 않습니다.
-
-### 프로그램 실행
-
-Windows 패키지 버전에서는 `DocWen.exe`를 더블클릭하여 GUI를 실행합니다. 소스에서 설치한 경우:
-
-```bash
-docwen-gui  # GUI 모드
-docwen      # CLI 모드
-```
+`uv run --frozen`은 동기화된 환경을 사용하므로 수동 활성화가 필요 없습니다. CI와 제품 빌드는 uv 0.12.0을, 의존성 관리는 호환되는 0.12.x를 사용합니다. `pip install -e`는 저장소의 특정 의존성 제외 규칙을 적용할 수 없어 지원하지 않습니다.
 
 ### macOS 설치 안내
 
@@ -78,14 +71,9 @@ Mac 패키지는 ad-hoc 서명을 유지하며 Developer ID 서명과 Apple 공�
 `.doc`, `.xls` 같은 구형 포맷 변환이 필요하다면 LibreOffice를 설치하세요:  
 다운로드: https://www.libreoffice.org/download/
 
-**HEIC 이미지 지원(선택)**
+**HEIC/HEIF 이미지**
 
-HEIC/HEIF 이미지를 처리하려면:
-
-```bash
-brew install libheif
-pip install pillow-heif
-```
+배포 패키지는 자체 이미지 백엔드를 사용합니다. `DocWenCLI doctor --json`으로 설치된 빌드를 확인하세요(Mac CLI 경로는 아래 안내 참조). 시스템 Python에 `pillow-heif`를 설치해도 배포 앱은 바뀌지 않습니다. 소스의 `uv sync --frozen --all-extras`에는 이미 `pillow-heif`가 포함되어 있습니다. macOS 백엔드가 네이티브 라이브러리 누락을 알리면 `brew install libheif`를 실행한 뒤 `uv run --frozen docwen doctor --json`으로 다시 확인하세요. 실제 지원 여부는 빌드와 백엔드에 따라 달라집니다.
 
 ### Linux GUI 버전 사전 준비
 
@@ -93,8 +81,8 @@ pip install pillow-heif
 이 요구 사항은 다른 배포판이나 아키텍처로 지원 범위를 확장하지 않습니다.
 
 - 데스크톱 환경이 설치되어 있어야 합니다(GNOME, KDE, XFCE 등)
-- GUI는 PySide6(Qt6) 기반이며 더 이상 Python Tk에 의존하지 않습니다. 시작 시 시스템 라이브러리가 부족하다는 오류가 나면, 오류 메시지에 표시된 Qt 런타임 의존성(보통 OpenGL/X11 관련)을 설치하세요.
-- 헤드리스 서버에서는 GUI 대신 CLI 진입점 `docwen` 사용을 우선하세요. Windows 패키지 빌드에는 `DocWenCLI.exe`도 포함됩니다.
+- GUI는 PySide6(Qt6) 기반입니다. 시작 시 시스템 라이브러리가 부족하다는 오류가 나면, 오류 메시지에 표시된 Qt 런타임 의존성(보통 OpenGL/X11 관련)을 설치하세요.
+- 데스크톱 환경이 없으면 압축을 푼 CLI 패키지에서 `./DocWenCLI`를, 소스 디렉터리에서는 `uv run --frozen docwen`을 실행하세요.
 
 ### 빠른 시작 가이드
 
@@ -123,7 +111,7 @@ pip install pillow-heif
 
 ## 🖥️ 그래픽 인터페이스 사용
 
-대부분의 사용자는 그래픽 인터페이스로 이 소프트웨어를 사용합니다. 아래는 상세한 사용 가이드입니다.
+작업을 시작하면 실제 요청의 설정 요약이 표시됩니다. 템플릿은 이름이나 용도로 검색할 수 있습니다. “이번 세션에서 최근 사용”은 시작한 작업의 템플릿을 표시하며 기본 템플릿을 바꾸지 않습니다. 표 병합은 [범위, 모드 및 결과 확인 안내](table-merge.md)를 참고하세요.
 
 ### 인터페이스 개요
 
@@ -137,7 +125,7 @@ pip install pillow-heif
 
 ### 기본 작업 흐름
 
-1.  **프로그램 실행**: `DocWen.exe`(Windows 패키지) 더블클릭 또는 `docwen-gui` 실행.
+1.  **프로그램 실행**: `DocWen.exe`(Windows 패키지) 더블클릭 또는 `uv run --frozen docwen-gui` 실행.
 2.  **파일 가져오기**:
     -   방법 1: 파일을 창으로 드래그합니다.
     -   방법 2: 드래그 영역의 "추가" 버튼을 눌러 파일을 선택합니다.
@@ -191,6 +179,8 @@ pip install pillow-heif
 ---
 
 ## 🔧 명령줄 사용
+
+CLI 예시는 명령 이름으로 `docwen`을 사용합니다. 소스 디렉터리에서는 앞에 `uv run --frozen`을 붙이고, 배포 패키지에서는 Windows의 `DocWenCLI.exe` 또는 Linux/macOS의 `./DocWenCLI`로 바꾸세요.
 
 명령줄(CLI)에서는 터미널에서 파일을 확인하고 변환하거나 로컬 작업을 스크립트로 자동화할 수 있습니다. 다른 앱과 연동할 때는 아래의 Machine Protocol 인터페이스를 사용하세요.
 

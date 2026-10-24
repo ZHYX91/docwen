@@ -424,7 +424,7 @@ ods_conversion_label = "ODS形式変換"
 spreadsheet_to_pdf_label = "スプレッドシートからPDF"
 
 # 汇总模式选项
-merge_mode_help = "行/列単位では入力行/列を基準表と照合します。入力側が基準側を包含すれば置換し、基準側が入力側を包含すれば基準を保持し、それ以外は最も近い位置へ挿入します。セル単位では入力の空値を無視し、非空値を保持し、数値は加算、同じ文字列は一度だけ保持し、異なる非数値文字列はカンマで連結します。"
+merge_mode_help = "位置合わせは保存された数値と完全一致のテキストを使い、文字列の識別子を数値に変換しません。行・列単位：同一または既に含まれるレコードはスキップし、取り込み側が基準の全値を含む場合だけ置換します。相互補完・競合するレコードは別々に保持します。セル単位：空白は無視し、数値（数値文字列を含む）は加算、同じテキストは一つにし、他のテキストはコンマで連結します。数式結果がない場合は停止します。保存済み結果も古い可能性があります。"
 [settings.spreadsheet.merge_modes]
 by_row = "行で結合"
 by_column = "列で結合"
@@ -1053,6 +1053,9 @@ updated_line = "更新: {value}"
 source_tooltip = "参照元フォルダー：{value}"
 auto_selected_reason = "既定の設定に基づき、{template_kind} の利用可能なテンプレートを選択しました。"
 open_location = "ファイルの場所を開く"
+search = "テンプレートを検索"
+recent = "このセッションで最近使用"
+search_count = "{total} 件中 {count} 件を表示・絞り込みで選択は変わりません"
 
 [components.template_selector_tabbed]
 document_templates = "文書"
@@ -1162,6 +1165,7 @@ no_table_selected = "テーブルが選択されていません"
 # =============================================================================
 # 操作面板区域
 # =============================================================================
+merge_scope = "現在のカテゴリの基準ファイル 1 件と取り込みファイル {count} 件が対象です。各ファイルのアクティブシートのみ集約し、基準ファイルの他のシートは保持、取り込み側の他のシートは無視します。結合セルは解除し、左上の値で埋めます。"
 [action_area]
 recognize_tables = "表の構造を認識"
 table_model_unavailable = "表認識モデルを利用できません。通常の OCR テキストを保持します。"
@@ -1719,6 +1723,14 @@ file_admission_confirm_title = "検出したファイル形式を確認"
 file_admission_confirm_message = "ファイル名と検出した内容の形式が異なります。検出した形式として処理しますか？"
 file_admission_confirm_action = "検出した形式で処理"
 file_admission_cancelled = "処理をキャンセルしました。検出した形式は承認されていません。"
+request_summary = "今回のタスク設定：{value}"
+request_template = "テンプレート：{value}"
+request_remove_numbering = "見出し番号の削除：{value}"
+request_add_numbering = "見出し番号の追加：{value}"
+request_proofread = "校正：{value}"
+request_output = "出力：{value}"
+merge_result_summary = "{source} / {sheet} · {mode}：追加 {added}、置換 {replaced}、スキップ {skipped}、結合 {combined}、不明な値 0。入力元の位置はタスク詳細に表示されます。"
+merge_formula_cache_missing = "数式の保存済み結果がないため、集約を停止しました。表計算ソフトでブックを再計算して保存し、再試行してください。ファイル名とセル位置はエラー詳細を確認してください。"
 
 [settings.markdown_extensions]
 description = "Markdown の生成と読み取りの共通ルールです。出力規則は入力元に依存しませんが、対応範囲は変換経路によって異なります。Word 専用の対応付けは下に分けて表示します。元のファイルは書き換えません。"
