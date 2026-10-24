@@ -5,6 +5,27 @@
 
 ## Unreleased / 未发布
 
+## 0.21.0
+
+- Preserve complementary spreadsheet records, exact text identifiers and the distinction between literal error-code text and real Excel errors when comparing, aligning and writing row/column merges.
+- 表格按行或列汇总保留互补记录、原样文本编号及文字错误码与真实 Excel 错误的区别，覆盖比较、自动对齐和写出使用一致的身份规则。
+- Stop a merge before producing output when a required saved formula result is missing; distinguish valid empty-string caches, retain inactive reference chartsheets, and scan stored formula cells without filling sparse worksheet rectangles.
+- 所需公式保存结果缺失时，在生成汇总产物前停止；区分有效空字符串缓存，保留基表的非活动图表工作表，扫描实际公式单元格时不再补齐稀疏工作表的外接矩形。
+- Retain leading fields after negative alignment offsets and report per-source added, replaced, skipped and combined counts with bounded source positions and alignment details.
+- 负向对齐为前方字段留出位置；按来源报告新增、替换、跳过和合并数量，并保留有界来源位置及对齐详情。
+- Show frozen task options and merge results in the GUI and local activity details. Admission or startup failures show the failed request's own summary, while copyable diagnostics retain their redacted contract.
+- GUI 与本地活动详情显示冻结的本次任务选项及汇总结果；准入或启动失败显示当前失败请求的摘要，可复制诊断继续遵循脱敏约定。
+- Search templates by display name or usage hint and choose from up to five templates used by started tasks in the current session without changing the persisted default.
+- 支持按显示名称或用途搜索模板，并从当前会话已启动任务使用的最多五个模板中选择，不改写已保存的默认模板。
+- Preserve DOCX title, subtitle and alias strings and invoice metadata through YAML output and reading, including leading-zero identifiers, long numbers, date-like text, quotes, backslashes and embedded line breaks where the writer retains them.
+- DOCX 标题、副标题、别名及发票元数据经 YAML 输出和读取后保留字符串类型与内容，涵盖前导零编号、长数字、日期外观文本、引号、反斜杠及写入器原本保留的内部换行。
+- Let both Machine Markdown-to-DOCX capabilities inherit Core's frozen task output language when locale is omitted; explicit task overrides remain authoritative and interface language stays independent.
+- 两条 Machine Markdown 转 DOCX 能力在省略 locale 时继承 Core 冻结的任务输出语言；显式任务覆盖继续优先，界面语言保持独立。
+- Replace the complete route set when registering the same plugin ID again, and separate clipboard paste handling while retaining the existing admission and snapshot ownership paths.
+- 重复注册相同插件 ID 时替换完整路由集合；剪贴板粘贴处理独立为专用模块，继续沿用既有准入与快照所有权路径。
+- Refresh multilingual download/source-install instructions, macOS first-launch guidance and the spreadsheet merge guide; clarify proofreading on intermediate DOCX before supported DOC/DOCX/ODT/RTF/WPS delivery.
+- 更新多语言下载与源码安装说明、macOS 首次启动指南及表格汇总指南；明确支持的 DOC/DOCX/ODT/RTF/WPS 交付前在中间 DOCX 执行校对。
+
 ## 0.20.0
 
 - Honor existing bracketed input paths and include rejected batch members in text, quiet and JSON totals and exit codes.
