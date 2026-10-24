@@ -101,6 +101,12 @@ protocol faults. A conversion failure after task acceptance uses `task/failed` w
 `category` and `code`. A successful terminal notification contains one complete Bundle. Failed and cancelled
 tasks do not publish partial Bundles.
 
+For both source Markdown and resolved-document DOCX capabilities, `locale` is an optional explicit task-language
+override. An omitted locale stays absent from `plan.effective_options` and the accepted request; its schema has no
+language default. Execution resolves that omission from Core's frozen `conversion.output_locale` setting, with
+`zh_CN` retained for new profiles. A consumer's interface language does not supply this option. Planning does not
+freeze the complete Core configuration; the application controller captures it when executing the accepted task.
+
 ## OCR-capable Machine options
 
 DOCX-to-Markdown publishes this exact closed property set:
