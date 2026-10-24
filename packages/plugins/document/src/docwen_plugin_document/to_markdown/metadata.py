@@ -8,45 +8,18 @@ from __future__ import annotations
 
 from typing import Any
 
+from docwen_core.yaml_tools import format_yaml_scalar
+
 
 def format_yaml_value(value: Any) -> str:
-    """Format a value as a YAML-safe string.
+    """Preserve a normalized metadata string using Core's YAML scalar encoder.
 
-    Wraps values in single quotes when they contain characters that
-    YAML parsers would misinterpret (leading ``[``, ``{``, ``#``,
-    ``&``, ``*``, ``!``, ``|``, ``>``, ``%``, ``@``, ````` ``,
-    ``'``, ``"``, ``:``, or trailing ``#`` with preceding space).
-    Handles None/empty gracefully.
-
-    Used by ``build_yaml_header`` for safe YAML front matter.
+    Retain this writer's line/whitespace normalization and empty-field policy.
     """
     if value is None:
         return ""
-    s = str(value).replace("\n", " ").replace("\r", "")
-    s = s.strip()
-    if not s:
-        return ""
-
-    special_lead = {"[", "{", "#", "&", "*", "!", "|", ">", "%", "@", "`"}
-    needs_quote = (
-        s[0] in special_lead
-        or (len(s) > 1 and s[0] == "-" and (s[1].isspace() or s[1] == " "))
-        or "'" in s
-        or '"' in s
-        or ": " in s
-        or s.endswith(":")
-        or " #" in s
-        or s.lower() in ("true", "false", "null", "yes", "no", "on", "off", "~")
-        or s.isdigit()
-        or (s.startswith("0") and len(s) > 1 and s[1].isdigit())
-    )
-
-    if needs_quote:
-        if '"' not in s:
-            return f'"{s}"'
-        escaped = s.replace("'", "''")
-        return f"'{escaped}'"
-    return s
+    s = str(value).replace("\n", " ").replace("\r", "").strip()
+    return format_yaml_scalar(s) if s else ""
 
 
 def build_yaml_header(

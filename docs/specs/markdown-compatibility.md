@@ -1222,6 +1222,14 @@ Inline markers, table-cell/textbox/header/footer markers and duplicate body mark
 
 The separately validated resolved-v4 port retains its explicit full-document rendering contract, including its existing append behavior without a body marker; this authored-Markdown rule does not redirect or weaken that port.
 
+## Generated YAML strings
+
+DOCX title, subtitle and alias values, and invoice metadata values, are string fields. After each writer's existing title and whitespace normalization, the shared Core scalar encoder preserves their text and string type when YAML is read again. This includes leading-zero identifiers, long numbers, dates, booleans written as text, quotes and backslashes. Numeric-looking and date-looking text remains string data.
+
+The writers retain their existing empty-field policies: DOCX metadata uses an empty YAML scalar for a missing title/subtitle; invoice metadata omits empty values unless `include_empty` requests an empty string. Core's explicitly boolean extra fields remain booleans. Parsing user-authored YAML and its typed values is unchanged.
+
+DOCX 的标题、副标题、别名以及发票元数据均按字符串字段输出。保留各写入器既有的标题与空白规范化规则，再由 Core 的统一标量编码器保留文字及字符串类型；前导零编号、长数字、日期或布尔外观的文字、引号和反斜杠不会因再次读取 YAML 而改变含义。缺省字段和用户自写 YAML 的类型处理规则保持不变。
+
 ## YAML field links
 
 Authored Markdown-to-DOCX applies ordinary Wiki and Markdown link policies independently to string leaves used by template fields, before field-specific list/punctuation formatting. `keep` retains literal syntax, `extract_text` inserts display text, `remove` removes the link, and `hyperlink` produces a real DOCX relationship where the ordinary-link contract provides a navigable target. Numbers, booleans, dates, keys and container structure are preserved; embedded resources are not expanded from YAML.

@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 from docx import Document
 
 from docwen_core.cancellation import CancellationToken
@@ -88,18 +89,14 @@ class TestFormatYamlValue:
     def test_leading_zero_number_gets_quoted(self):
         assert self._fmt("0123") == '"0123"'
 
-    def test_single_quote_gets_double_quoted(self):
-        assert self._fmt("it's") == '"it\'s"'
+    def test_single_quote_roundtrips(self):
+        assert yaml.safe_load(self._fmt("it's")) == "it's"
 
-    def test_double_quote_gets_single_quoted(self):
-        assert self._fmt('say "hello"') == "'say \"hello\"'"
+    def test_double_quote_roundtrips(self):
+        assert yaml.safe_load(self._fmt('say "hello"')) == 'say "hello"'
 
-    def test_both_quotes_escaped_with_single(self):
-        """When both quote types present, use single quotes with '' escape."""
-        result = self._fmt('it\'s "ok"')
-        # Should use single-quote wrapping: 'it''s "ok"'
-        assert result.startswith("'") and result.endswith("'")
-        assert "''" in result  # escaped single quote
+    def test_both_quotes_roundtrip(self):
+        assert yaml.safe_load(self._fmt('it\'s "ok"')) == 'it\'s "ok"'
 
     def test_newline_stripped(self):
         assert "\n" not in self._fmt("line1\nline2")

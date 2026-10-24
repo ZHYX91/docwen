@@ -68,12 +68,16 @@ session-only views of started tasks and never write the persisted default templa
 
 Word title/subtitle extraction and localized YAML front matter live in
 `docwen_plugin_document.to_markdown.metadata`; the converter retains policy selection,
-body rendering and artifact ownership. Spreadsheet coverage and decision evidence live in
+body rendering and artifact ownership. Document metadata and invoice writers share
+`docwen_core.yaml_tools.format_yaml_scalar` for string-safe scalar encoding; each writer
+retains its own normalization and empty-field policy. Spreadsheet coverage and decision evidence live in
 `table_merger.semantics`; workbook loading reuses the CSV/XLSX formula-cache check and stops
 before producing an artifact if a needed result is unknown. See the [merge guide](user-guides/table-merge.md).
 
 Word 标题/副标题提取及本地化 YAML 前言由 `docwen_plugin_document.to_markdown.metadata` 负责；
-转换器继续拥有策略选择、正文渲染及产物。表格覆盖关系与处理证据由 `table_merger.semantics` 负责；
+转换器继续拥有策略选择、正文渲染及产物。文档元数据与发票写入器共用 Core 的
+`yaml_tools.format_yaml_scalar` 保留标量字符串，各自保留原有规范化和空字段规则。
+表格覆盖关系与处理证据由 `table_merger.semantics` 负责；
 工作簿读取复用 CSV/XLSX 的公式缓存检查，所需结果未知时在生成产物前停止。参见[汇总指南](user-guides/table-merge.md)。
 
 Plugin registration keeps last-registration-wins for a repeated ID. The complete next
