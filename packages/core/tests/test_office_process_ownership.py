@@ -5,6 +5,7 @@ import sys
 import time
 from collections import deque
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,6 +14,84 @@ from docwen_core import office_bridge, windows_process
 from docwen_core.windows_process import WindowsProcessIdentity
 
 pytestmark = pytest.mark.unit
+
+
+class _Handle:
+    """Portable stand-in for the explicitly accepted PyHANDLE type."""
+
+    def __int__(self) -> int:
+        return 123
+
+
+def _pid_lookup(monkeypatch: pytest.MonkeyPatch, calls: list[object]) -> None:
+    def window_process(hwnd: object) -> tuple[int, int]:
+        calls.append(hwnd)
+        return 10, 42
+
+    monkeypatch.setitem(sys.modules, "pywintypes", SimpleNamespace(HANDLEType=_Handle))
+    monkeypatch.setitem(sys.modules, "win32process", SimpleNamespace(GetWindowThreadProcessId=window_process))
+
+
+@pytest.mark.parametrize("attribute", ["Hwnd", "HWND"])
+def test_com_pid_accepts_known_handle_property_spellings(monkeypatch: pytest.MonkeyPatch, attribute: str) -> None:
+    calls: list[object] = []
+    _pid_lookup(monkeypatch, calls)
+    assert office_bridge._get_com_app_pid(SimpleNamespace(**{attribute: 123})) == 42
+    assert calls == [123]
+
+
+def test_com_pid_ignores_method_wrapper_and_reads_powerpoint_hwnd(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[object] = []
+    _pid_lookup(monkeypatch, calls)
+
+    def wrong_case_method() -> None:
+        pytest.fail("Ownership lookup must not call an ambiguous COM method")
+
+    assert office_bridge._get_com_app_pid(SimpleNamespace(Hwnd=wrong_case_method, HWND=123)) == 42
+    assert calls == [123]
+
+
+def test_com_pid_accepts_integer_conversion_only_for_verified_pyhandle_type(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[object] = []
+    _pid_lookup(monkeypatch, calls)
+    handle = _Handle()
+    assert office_bridge._get_com_app_pid(SimpleNamespace(HWND=handle)) == 42
+    assert calls == [123]
+
+
+@pytest.mark.parametrize("invalid", [True, False, 0, "123", object()])
+def test_com_pid_rejects_nonhandles_without_native_lookup(monkeypatch: pytest.MonkeyPatch, invalid: object) -> None:
+    calls: list[object] = []
+    _pid_lookup(monkeypatch, calls)
+    assert office_bridge._get_com_app_pid(SimpleNamespace(Hwnd=invalid)) is None
+    assert calls == []
+
+
+def test_com_pid_does_not_coerce_arbitrary_integer_like_objects(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[object] = []
+    _pid_lookup(monkeypatch, calls)
+
+    class Untrusted:
+        def __int__(self) -> int:
+            pytest.fail("Ownership lookup must not coerce an arbitrary COM object")
+
+    assert office_bridge._get_com_app_pid(SimpleNamespace(Hwnd=Untrusted())) is None
+    assert calls == []
+
+
+def test_com_pid_tries_exact_hwnd_after_other_property_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[object] = []
+    _pid_lookup(monkeypatch, calls)
+
+    class PowerPoint:
+        HWND = 123
+
+        @property
+        def Hwnd(self) -> None:
+            raise AttributeError("case-sensitive COM map")
+
+    assert office_bridge._get_com_app_pid(PowerPoint()) == 42
+    assert calls == [123]
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows process identity API")

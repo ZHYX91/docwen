@@ -245,18 +245,25 @@ def _is_cancel_requested(cancel: object | None) -> bool:
 
 def _get_com_app_pid(app: object) -> int | None:
     try:
+        import pywintypes  # type: ignore
         import win32process  # type: ignore
     except ImportError:
         return None
 
-    try:
-        hwnd = getattr(app, "Hwnd", None)
-        if not hwnd:
-            return None
-        _thread_id, process_id = win32process.GetWindowThreadProcessId(hwnd)
-        return int(process_id) if process_id else None
-    except Exception:
-        return None
+    # The dynamic COM wrapper's property maps are case sensitive: Word/Excel
+    # expose Hwnd, while PowerPoint exposes HWND. A mismatched name can produce
+    # a method wrapper instead of a handle; never invoke or coerce that object.
+    for attribute in ("Hwnd", "HWND"):
+        try:
+            hwnd = getattr(app, attribute, None)
+            if not (type(hwnd) is int or isinstance(hwnd, pywintypes.HANDLEType)) or not hwnd:
+                continue
+            _thread_id, process_id = win32process.GetWindowThreadProcessId(int(hwnd))
+            if process_id:
+                return int(process_id)
+        except Exception:
+            continue
+    return None
 
 
 def _try_com_conversion(
