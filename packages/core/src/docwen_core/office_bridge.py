@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Literal, Protocol
 
 from docwen_core.detection import SUPPORTED_EXTENSION_FORMATS
+from docwen_core.office_macro_security import OfficeMacroPolicyError, ensure_excel_input_has_no_xlm
 from docwen_core.windows_process import WindowsProcessIdentity
 
 AppType = Literal["word", "excel", "powerpoint"]
@@ -38,6 +39,10 @@ _OFFICE_PUBLICATION_PREFIX = ".dw-publish-"
 _LIBREOFFICE_PROFILE_PREFIX = ".dw-lo-profile-"
 _LIBREOFFICE_OUTPUT_PREFIX = ".dw-lo-output-"
 _LIBREOFFICE_RESULT_PREFIX = ".dw-lo-result-"
+_LIBREOFFICE_MACRO_POLICY = """  <item oor:path="/org.openoffice.Office.Common/Security/Scripting">
+    <prop oor:name="DisableMacrosExecution" oor:op="fuse"><value>true</value></prop>
+  </item>
+"""
 _LIBREOFFICE_TIMES_FORMULA_PROFILE = """<?xml version="1.0" encoding="UTF-8"?>
 <oor:items xmlns:oor="http://openoffice.org/2001/registry"
            xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -89,6 +94,12 @@ class BridgeResult:
     error_code: str = ""
     cleanup_message: str = ""
     cleanup_failed: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class _OfficeSecurityFailure:
+    error_code: str
+    message: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -257,13 +268,20 @@ def _try_com_conversion(
     app_type: AppType,
     suppress_new_revisions: bool = False,
     on_process_owned: Callable[[WindowsProcessIdentity], None] | None = None,
-) -> str | None:
+) -> str | _OfficeSecurityFailure | None:
+    if app_type == "excel":
+        try:
+            ensure_excel_input_has_no_xlm(Path(input_path))
+        except OfficeMacroPolicyError as exc:
+            return _OfficeSecurityFailure("OFFICE_INPUT_MACRO_POLICY_REJECTED", str(exc))
     pythoncom, win32_client = _import_win32()
     if pythoncom is None or win32_client is None:
         return None
 
     app: Any = None
     doc_or_wb: Any = None
+    probe_document: Any = None
+    probe_path: Path | None = None
     owned_process: WindowsProcessIdentity | None = None
     try:
         pythoncom.CoInitialize()  # pyright: ignore[reportAttributeAccessIssue]
@@ -271,16 +289,22 @@ def _try_com_conversion(
         app = win32_client.DispatchEx(prog_id)
         app_pid = _get_com_app_pid(app)
         if app_pid is None and app_type == "word":
-            # Word exposes Hwnd on its document Window, not Application. Open
-            # only this attempt's private read-only copy before identifying it;
-            # never change application settings or quit an unowned server.
-            doc_or_wb = app.Documents.Open(
-                str(Path(input_path).resolve()),
+            # Word exposes Hwnd on its document Window, not Application. A
+            # generated RTF has no macros, fields, links or attached template.
+            # Do not open the actual input or use Normal.dotm to obtain a PID.
+            descriptor, probe_name = tempfile.mkstemp(
+                prefix=".dw-word-probe-", suffix=".rtf", dir=Path(input_path).parent
+            )
+            probe_path = Path(probe_name)
+            with os.fdopen(descriptor, "wb") as probe:
+                probe.write(b"{\\rtf1\\ansi DocWen ownership probe.}")
+            probe_document = app.Documents.Open(
+                str(probe_path.resolve()),
                 ReadOnly=True,
                 ConfirmConversions=False,
                 AddToRecentFiles=False,
             )
-            app_pid = _get_com_app_pid(doc_or_wb.Windows.Item(1))
+            app_pid = _get_com_app_pid(probe_document.Windows.Item(1))
         if app_pid is None:
             return None
         owned_process = WindowsProcessIdentity.capture(app_pid, started_after_ns=started_at)
@@ -288,6 +312,20 @@ def _try_com_conversion(
             return None
         if on_process_owned is not None:
             on_process_owned(owned_process)
+        if probe_document is not None:
+            probe_document.Close(SaveChanges=False)
+            probe_document = None
+        # DisplayAlerts does not suppress macro security. Set and read back
+        # ForceDisable only after ownership, before opening any real input.
+        # Keep it set through Close/Quit; this process is never reused.
+        try:
+            app.AutomationSecurity = 3
+            if app.AutomationSecurity != 3:
+                raise OfficeMacroPolicyError("AutomationSecurity did not retain ForceDisable.")
+        except Exception as exc:
+            return _OfficeSecurityFailure(
+                "OFFICE_AUTOMATION_SECURITY_UNAVAILABLE", f"Cannot enforce macro disabling for {prog_id}: {exc}"
+            )
         with contextlib.suppress(Exception):
             app.Visible = False
         with contextlib.suppress(Exception):
@@ -301,7 +339,7 @@ def _try_com_conversion(
                 IgnoreReadOnlyRecommended=True,
                 AddToMru=False,
             )
-        elif app_type == "word" and doc_or_wb is None:
+        elif app_type == "word":
             doc_or_wb = app.Documents.Open(
                 str(Path(input_path).resolve()),
                 ReadOnly=True,
@@ -339,6 +377,9 @@ def _try_com_conversion(
     except Exception:
         return None
     finally:
+        if probe_document is not None:
+            with contextlib.suppress(Exception):
+                probe_document.Close(SaveChanges=False)
         if doc_or_wb is not None:
             with contextlib.suppress(Exception):
                 if app_type == "powerpoint":
@@ -349,6 +390,9 @@ def _try_com_conversion(
             with contextlib.suppress(Exception):
                 app.Quit()
             owned_process.terminate_if_running(grace_ms=5000)
+        if probe_path is not None:
+            with contextlib.suppress(OSError):
+                probe_path.unlink(missing_ok=True)
         if pythoncom is not None:
             with contextlib.suppress(Exception):
                 pythoncom.CoUninitialize()  # pyright: ignore[reportAttributeAccessIssue]
@@ -364,7 +408,7 @@ def _com_conversion_worker(
     suppress_new_revisions: bool,
 ) -> None:
     """Run one synchronous COM attempt behind a killable process boundary."""
-    result: str | None = None
+    result: str | _OfficeSecurityFailure | None = None
     try:
         result = _try_com_conversion(
             input_path,
@@ -438,7 +482,7 @@ def _try_com_conversion_bounded(
     suppress_new_revisions: bool = False,
     cancel: object | None = None,
     timeout_s: float = COM_CONVERSION_TIMEOUT_S,
-) -> str | None:
+) -> str | _OfficeSecurityFailure | None:
     """Run COM conversion with a hard timeout and cooperative parent cancellation.
 
     The cancellation view deliberately stays in the parent because core's token is
@@ -486,7 +530,7 @@ def _try_com_conversion_bounded(
                     owned_process = message
                     continue
                 process.join(timeout=_COM_WORKER_STOP_TIMEOUT_S)
-                return message if isinstance(message, str) else None
+                return message if isinstance(message, (str, _OfficeSecurityFailure)) else None
             if not process.is_alive():
                 return None
     finally:
@@ -726,12 +770,14 @@ def _writer_conversion_needs_times_formula_fallback(input_path: Path, convert_to
 
 
 def _prepare_libreoffice_profile(profile_path: Path, *, times_formula_fallback: bool) -> None:
-    if not times_formula_fallback:
-        return
     profile_user = profile_path / "user"
     profile_user.mkdir(parents=True, exist_ok=True)
+    profile = _LIBREOFFICE_TIMES_FORMULA_PROFILE
+    if not times_formula_fallback:
+        profile = profile[: profile.index("  <item")] + "</oor:items>\n"
+    profile = profile.replace("</oor:items>", _LIBREOFFICE_MACRO_POLICY + "</oor:items>")
     (profile_user / "registrymodifications.xcu").write_text(
-        _LIBREOFFICE_TIMES_FORMULA_PROFILE,
+        profile,
         encoding="utf-8",
         newline="\n",
     )
@@ -785,7 +831,7 @@ def _try_libreoffice_conversion(
     convert_to: str,
     cancel: object | None = None,
     timeout_s: float = LIBREOFFICE_CONVERSION_TIMEOUT_S,
-) -> str | None:
+) -> str | _OfficeSecurityFailure | None:
     if _is_cancel_requested(cancel):
         return None
 
@@ -798,6 +844,7 @@ def _try_libreoffice_conversion(
     conversion_dir: Path | None = None
     staged_output: Path | None = None
     process_succeeded = False
+    security_failure: _OfficeSecurityFailure | None = None
     try:
         output.parent.mkdir(parents=True, exist_ok=True)
         # LibreOffice on Windows can terminate with 0xC0000409 when the
@@ -807,10 +854,16 @@ def _try_libreoffice_conversion(
         # stays beside the requested output to preserve same-volume staging.
         profile_dir = Path(tempfile.mkdtemp(prefix=_LIBREOFFICE_PROFILE_PREFIX))
         conversion_dir = Path(tempfile.mkdtemp(prefix=_LIBREOFFICE_OUTPUT_PREFIX, dir=output.parent))
-        _prepare_libreoffice_profile(
-            profile_dir,
-            times_formula_fallback=_writer_conversion_needs_times_formula_fallback(Path(input_path), convert_to),
-        )
+        try:
+            _prepare_libreoffice_profile(
+                profile_dir,
+                times_formula_fallback=_writer_conversion_needs_times_formula_fallback(Path(input_path), convert_to),
+            )
+        except OSError as exc:
+            security_failure = _OfficeSecurityFailure(
+                "OFFICE_MACRO_PROFILE_UNAVAILABLE", f"Cannot prepare macro-disabled LibreOffice profile: {exc}"
+            )
+            raise
         process_succeeded = _run_libreoffice_process(
             [
                 soffice,
@@ -844,6 +897,8 @@ def _try_libreoffice_conversion(
         profile_removed = profile_dir is None or _remove_libreoffice_profile(profile_dir)
         conversion_removed = conversion_dir is None or _remove_temp_tree(conversion_dir)
 
+    if security_failure is not None:
+        return security_failure
     if not profile_removed or not conversion_removed or not process_succeeded or staged_output is None:
         if staged_output is not None:
             with contextlib.suppress(OSError):
@@ -873,6 +928,8 @@ def _convert_with_fallback(
     libreoffice_timeout_s: float = LIBREOFFICE_CONVERSION_TIMEOUT_S,
 ) -> BridgeResult:
     com_deadline = time.monotonic() + max(com_timeout_s, 0.0)
+    security_failures: list[str] = []
+    security_error_code = ""
     for candidate in com_candidates:
         if _is_cancel_requested(cancel):
             return BridgeResult(
@@ -894,8 +951,11 @@ def _convert_with_fallback(
             cancel=cancel,
             timeout_s=remaining_timeout_s,
         )
-        if result:
+        if isinstance(result, str):
             return BridgeResult(True, output_path=result, backend=candidate.name)
+        if isinstance(result, _OfficeSecurityFailure):
+            security_failures.append(f"{candidate.name}: {result.message}")
+            security_error_code = result.error_code
         if _is_cancel_requested(cancel):
             return BridgeResult(
                 False,
@@ -912,8 +972,11 @@ def _convert_with_fallback(
             cancel=cancel,
             timeout_s=libreoffice_timeout_s,
         )
-        if result:
+        if isinstance(result, str):
             return BridgeResult(True, output_path=result, backend="LibreOffice")
+        if isinstance(result, _OfficeSecurityFailure):
+            security_failures.append(f"LibreOffice: {result.message}")
+            security_error_code = result.error_code
         if _is_cancel_requested(cancel):
             return BridgeResult(
                 False,
@@ -924,8 +987,12 @@ def _convert_with_fallback(
 
     return BridgeResult(
         False,
-        message=("No external office backend succeeded. Install Microsoft Office/WPS (Windows COM) or LibreOffice."),
-        error_code="OFFICE_BACKEND_FAILED",
+        message=(
+            "; ".join(security_failures)
+            if security_failures
+            else "No external office backend succeeded. Install Microsoft Office/WPS (Windows COM) or LibreOffice."
+        ),
+        error_code=security_error_code or "OFFICE_BACKEND_FAILED",
     )
 
 
@@ -957,6 +1024,7 @@ def _convert_with_backend_priority_canonical_input(
         )
 
     messages: list[str] = []
+    security_error_code = ""
     attempted_backend_ids: list[str] = []
     available_backend_ids: list[str] = []
     remaining_com_timeout_s = max(com_timeout_s, 0.0)
@@ -1024,6 +1092,12 @@ def _convert_with_backend_priority_canonical_input(
             return result
         if result.message:
             messages.append(f"{backend_id}: {result.message}")
+        if result.error_code in {
+            "OFFICE_INPUT_MACRO_POLICY_REJECTED",
+            "OFFICE_AUTOMATION_SECURITY_UNAVAILABLE",
+            "OFFICE_MACRO_PROFILE_UNAVAILABLE",
+        }:
+            security_error_code = result.error_code
 
     message = f"{failure_subject} did not succeed."
     if messages:
@@ -1033,7 +1107,7 @@ def _convert_with_backend_priority_canonical_input(
         message=message,
         attempted_backend_ids=tuple(attempted_backend_ids),
         available_backend_ids=tuple(available_backend_ids),
-        error_code="OFFICE_BACKEND_FAILED",
+        error_code=security_error_code or "OFFICE_BACKEND_FAILED",
     )
 
 

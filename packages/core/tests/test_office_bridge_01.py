@@ -5,6 +5,7 @@ from __future__ import annotations
 from ._office_bridge_support import (
     Path,
     _mock_owned_process,
+    _write_macro_free_workbook,
     pytest,
 )
 
@@ -277,7 +278,7 @@ def test_try_com_conversion_uses_fixed_format_for_excel_pdf(
 
     input_path = tmp_path / "input.xlsx"
     output_path = tmp_path / "output.pdf"
-    input_path.write_bytes(b"xlsx")
+    _write_macro_free_workbook(input_path)
 
     class _PythonCom:
         @staticmethod
@@ -350,7 +351,7 @@ def test_try_com_conversion_opens_spreadsheets_read_only_without_updating_links(
 
     input_path = tmp_path / "linked.xlsx"
     output_path = tmp_path / "linked.xls"
-    input_path.write_bytes(b"xlsx")
+    _write_macro_free_workbook(input_path)
     open_options: dict[str, object] = {}
 
     class _PythonCom:

@@ -42,14 +42,17 @@ def test_com_without_ownership_does_not_change_or_quit_application(
     )
     assert result is None
     if pid is None:
-        app.Documents.Open.assert_called_once_with(
-            str(tmp_path / "in.doc"), ReadOnly=True, ConfirmConversions=False, AddToRecentFiles=False
-        )
+        app.Documents.Open.assert_called_once()
+        probe_path = Path(app.Documents.Open.call_args.args[0])
+        assert probe_path.parent == tmp_path
+        assert probe_path.suffix == ".rtf"
+        assert not probe_path.exists()
         app.Documents.Open.return_value.Close.assert_called_once_with(SaveChanges=False)
     else:
         assert app.mock_calls == []
     app.Quit.assert_not_called()
     assert "Visible" not in app.__dict__
+    assert "AutomationSecurity" not in app.__dict__
     client.Dispatch.assert_not_called()
 
 
@@ -57,8 +60,21 @@ def test_word_identifies_its_private_document_window_before_changing_application
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     app = MagicMock()
-    document = app.Documents.Open.return_value
-    window = document.Windows.Item.return_value
+    probe = MagicMock()
+    document = MagicMock()
+    window = probe.Windows.Item.return_value
+    input_path = tmp_path / "in.doc"
+
+    def opened(path: str, **kwargs: object) -> MagicMock:
+        if path == str(input_path):
+            assert app.AutomationSecurity == 3
+            probe.Close.assert_called_once_with(SaveChanges=False)
+            return document
+        assert Path(path).read_bytes() == b"{\\rtf1\\ansi DocWen ownership probe.}"
+        assert "AutomationSecurity" not in app.__dict__
+        return probe
+
+    app.Documents.Open.side_effect = opened
     client = MagicMock()
     client.DispatchEx.return_value = app
     identity = WindowsProcessIdentity(200, 1234)
@@ -72,20 +88,23 @@ def test_word_identifies_its_private_document_window_before_changing_application
     def notified(owned: WindowsProcessIdentity) -> None:
         assert owned is identity
         assert "Visible" not in app.__dict__
+        assert "AutomationSecurity" not in app.__dict__
         document.SaveAs.assert_not_called()
 
     assert office_bridge._try_com_conversion(
-        str(tmp_path / "in.doc"),
+        str(input_path),
         str(output),
         prog_id="Word.Application",
         save_format=16,
         app_type="word",
         on_process_owned=notified,
     ) == str(output)
-    app.Documents.Open.assert_called_once()
-    document.Windows.Item.assert_called_once_with(1)
+    assert app.Documents.Open.call_count == 2
+    probe.Windows.Item.assert_called_once_with(1)
+    probe.Close.assert_called_once_with(SaveChanges=False)
     document.Close.assert_called_once_with(SaveChanges=False)
     app.Quit.assert_called_once()
+    assert not list(tmp_path.glob(".dw-word-probe-*"))
 
 
 def test_com_does_not_fall_back_to_shared_dispatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
