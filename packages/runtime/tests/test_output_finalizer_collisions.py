@@ -92,12 +92,15 @@ def test_dangling_entry_created_after_prepare_is_skipped(tmp_path: Path, monkeyp
     real_publish = OutputFinalizer._publish_no_clobber
     attempts: list[str] = []
     missing = output / "missing-target.xlsx"
+    original_link: list[tuple[str, int, int]] = []
 
     def publish_after_competing_link(source: str, destination: str) -> None:
         attempts.append(Path(destination).name)
         assert len(attempts) <= 3, "publication retried the competing link"
         if len(attempts) == 1:
             _dangling_link(Path(destination), missing)
+            identity = Path(destination).lstat()
+            original_link.append((os.readlink(destination), identity.st_dev, identity.st_ino))
         real_publish(source, destination)
 
     monkeypatch.setattr(OutputFinalizer, "_publish_no_clobber", staticmethod(publish_after_competing_link))
@@ -110,7 +113,10 @@ def test_dangling_entry_created_after_prepare_is_skipped(tmp_path: Path, monkeyp
     assert result.success, result.diagnostics
     assert attempts == ["report.xlsx", "report_001.xlsx"]
     assert (output / "report.xlsx").is_symlink()
-    assert os.readlink(output / "report.xlsx") == str(missing)
+    # Windows readlink returns the substitution path with a \\?\ prefix.
+    # Compare the original link bytes/identity instead of its display spelling.
+    identity = (output / "report.xlsx").lstat()
+    assert (os.readlink(output / "report.xlsx"), identity.st_dev, identity.st_ino) == original_link[0]
     assert not missing.exists()
     assert (output / "report_001.xlsx").read_bytes() == staging.read_bytes()
     assert not list(output.glob(".__docwen-finalizer-*"))
