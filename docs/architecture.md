@@ -141,3 +141,36 @@ Implementation references / 实现参考：
 - [GUI entry point / 图形界面入口](../packages/bundle/src/docwen_bundle/gui_entry.py) and [CLI entry point / 命令行入口](../packages/bundle/src/docwen_bundle/cli_entry.py)
 - [Packaged startup hook / 打包启动钩子](../packages/bundle/src/docwen_bundle/pyi_runtime_egress_guard.py)
 - [Local desktop control / 本机桌面控制](../packages/runtime/src/docwen_runtime/ipc/single_instance.py)
+
+## External Office macro policy / 外部 Office 宏策略
+
+The Office bridge opens its private input copy only after confirming ownership of the COM process
+and setting and reading back `AutomationSecurity=3` (ForceDisable). When Word has no application
+window handle, a fixed, generated RTF probe supplies a document window for process identification;
+the probe is closed before the actual input opens. An unowned server receives no application-setting
+changes or Quit call. Failure to enforce the policy rejects that backend.
+
+Excel's ForceDisable does not cover Excel 4.0 macros. Before COM opens a spreadsheet, a bounded
+inspection rejects macro sheets, encryption and unrecognized or ambiguous framing. BIFF5/8 checks
+compare declared sheet types with actual substreams; OOXML checks content types and relationships.
+CSV must decode as text without binary controls or ambiguous SYLK/XML/RTF prefixes. Inspection is
+limited to a 128 MiB container, 64 MiB BIFF/CSV, 10000 ZIP entries and 4 MiB per XML / 16 MiB total XML.
+These conservative refusals can reduce COM compatibility; they do not certify arbitrary Office files
+as safe. Other configured backends remain eligible only through their own policy gate.
+
+Every disposable LibreOffice profile sets `DisableMacrosExecution=true` and retains applicable font
+substitution. Failure to prepare the profile prevents launching LibreOffice. Exhausted backend
+attempts retain the specific macro-policy diagnostic. This policy does not extend the Python network
+guard to external applications or replace an operating-system sandbox. Installed Word, Excel, WPS and
+LibreOffice behavior, including VBA/XLM suppression and ordinary conversion, requires separate host
+acceptance; source tests prove inspection and call ordering only.
+
+Office 桥接仅在确认 COM 进程归属、写入并读回 `AutomationSecurity=3` 后打开私有输入副本。
+Word 没有应用窗口句柄时先打开固定生成的无宏 RTF 探针以确认 PID，关闭探针后才打开实际输入；
+不更改或退出未归属的应用实例。无法设置禁宏策略时拒绝该后端。
+
+Excel 4.0 宏不在 ForceDisable 的保证内，因此 COM 前还检查有界 BIFF5/8、OOXML 和 CSV 内容；
+宏表、加密、未知或歧义结构均拒绝。限制为容器 128 MiB、BIFF/CSV 64 MiB、ZIP 10000 项、
+单份 XML 4 MiB／总 XML 16 MiB；严格拒绝可能降低 COM 兼容性，不构成任意文档安全认证。
+其他后端只能通过各自安全策略继续尝试。临时 LibreOffice 资料明确禁用宏执行并保留字体替换；
+资料准备失败不启动进程。真实宿主的宏抑制与普通转换需单独验收，源码替身只证明检查和调用顺序。

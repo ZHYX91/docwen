@@ -527,7 +527,7 @@ Gerencie modelos DOCX/XLSX em **Configurações → Modelos**: ativação, ordem
 
 **Suporte multilíngue**: Os espaços reservados título e corpo suportam múltiplos idiomas, ex: título pode ser `{{Título}}`, `{{title}}`, `{{标题}}`, etc., corpo pode ser `{{Corpo}}`, `{{body}}`, `{{正文}}`, etc.
 
-#### Espaços Reservados de Modelo Excel (meta de paridade legada)
+#### Espaços Reservados de Modelo Excel
 
 Modelos XLSX aceitam campos YAML, placeholders verticais `{{↓campo}}` e horizontais `{{→campo}}`, placeholders de imagem e células mescladas ou protegidas.
 

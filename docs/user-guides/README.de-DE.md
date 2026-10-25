@@ -527,7 +527,7 @@ Verwalten Sie DOCX/XLSX-Vorlagen unter **Einstellungen → Vorlagen**: aktiviere
 
 **Mehrsprachige Unterstützung**: Die Platzhalter für Titel und Inhalt unterstützen mehrere Sprachen, z.B. Titel kann `{{Titel}}`, `{{title}}`, `{{标题}}` usw. sein, Inhalt kann `{{Inhalt}}`, `{{body}}`, `{{正文}}` usw. sein.
 
-#### Excel-Vorlagenplatzhalter (Ziel zur Wiederherstellung früherer Funktionsgleichheit)
+#### Excel-Vorlagenplatzhalter
 
 XLSX-Vorlagen unterstützen YAML-Feldplatzhalter, vertikale `{{↓Feld}}`- und horizontale `{{→Feld}}`-Tabellenspalten-Platzhalter, Bildplatzhalter sowie verbundene und geschützte Zellen.
 

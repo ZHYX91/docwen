@@ -208,8 +208,12 @@ class EpubToMarkdownConverter:
         for item_id, _linear in book.spine:
             try:
                 item = book.get_item_with_id(item_id)
-                if item:
-                    spine_items.append(item)
+                if item is None:
+                    # EbookLib returns None for a missing manifest ID; it does
+                    # not raise. Treat this just like an unsuccessful lookup
+                    # so a partly valid spine cannot silently omit chapters.
+                    raise LookupError(f"Missing EPUB manifest item: {item_id}")
+                spine_items.append(item)
             except Exception as exc:
                 spine_lookup_failures += 1
                 degraded_diagnostics.append(

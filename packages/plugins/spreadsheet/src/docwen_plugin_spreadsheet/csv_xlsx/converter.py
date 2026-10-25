@@ -20,12 +20,12 @@ from typing import TYPE_CHECKING, Any
 
 from docwen_core.errors import CancellationRequested
 from docwen_plugin_spreadsheet.delimited import decoded_samples
+from docwen_plugin_spreadsheet.xlsx_text import XLSX_CELL_TEXT_LIMIT, xlsx_cell_text_length
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
 
 
-_XLSX_CELL_TEXT_LIMIT = 32767
 _XLSX_MAX_COLUMNS = 16384
 _XLSX_MAX_ROWS = 1048576
 _CANCEL_CHECK_ROW_INTERVAL = 1000
@@ -66,7 +66,7 @@ class DelimitedCellTextTooLongError(ValueError):
         self.row = row
         self.column = column
         self.length = length
-        self.limit = _XLSX_CELL_TEXT_LIMIT
+        self.limit = XLSX_CELL_TEXT_LIMIT
         super().__init__(
             f"Cell text at row {row}, column {column} has {length} UTF-16 code units; "
             f"Excel supports at most {self.limit} UTF-16 code units in one cell."
@@ -171,8 +171,8 @@ def _build_delimited_workbook(
                     for c_idx, value in enumerate(row, 1):
                         if cancel_check is not None and c_idx % 1000 == 0:
                             cancel_check()
-                        text_length = len(value.encode("utf-16-le")) // 2
-                        if text_length > _XLSX_CELL_TEXT_LIMIT:
+                        text_length = xlsx_cell_text_length(value)
+                        if text_length > XLSX_CELL_TEXT_LIMIT:
                             raise DelimitedCellTextTooLongError(
                                 row=r_idx,
                                 column=c_idx,

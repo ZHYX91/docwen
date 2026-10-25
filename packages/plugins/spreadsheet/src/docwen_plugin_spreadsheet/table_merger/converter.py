@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from docwen_core.errors import CancellationRequested
 from docwen_plugin_spreadsheet.table_merger.inputs import MissingFormulaCacheError, load_merge_workbook
 from docwen_plugin_spreadsheet.table_merger.semantics import MergeSummary, coverage_relation, value_identity
+from docwen_plugin_spreadsheet.table_merger.text_limits import MergeCellTextTooLongError, check_cell_text
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -24,6 +25,8 @@ if TYPE_CHECKING:
 
 def _write_scalar(cell: Any, value: Any, source_type: str | None = None) -> None:
     """Write saved values without reinterpreting literal text as formulas or errors."""
+    if isinstance(value, str):
+        check_cell_text(value, sheet=cell.parent.title, coordinate=cell.coordinate)
     cell.value = value
     if isinstance(value, str):
         cell.data_type = "e" if source_type == "e" else "s"
@@ -104,6 +107,7 @@ class TableMergerConverter:
 
         wb = None
         summaries: list[MergeSummary] = []
+        merged_sources = [Path(base_source_path).name]
         try:
             from docwen_plugin_spreadsheet.format_conversion.converter import SmartSheetConverter
 
@@ -144,6 +148,7 @@ class TableMergerConverter:
 
             for i, collect_file in enumerate(collect_paths):
                 context.cancellation.check()
+                merged_sources.append(Path(source_paths[i + 1]).name)
                 progress = 50.0 * (i / max(len(collect_paths), 1))
                 context.progress.report_progress(progress, f"Merging file {i + 1}/{len(collect_paths)}")
                 context.logger.info(f"  Merging: {os.path.basename(collect_file)}")
@@ -201,22 +206,32 @@ class TableMergerConverter:
         except Exception as exc:
             if wb is not None:
                 wb.close()
-            code = "MERGE-FORMULA-CACHE-MISSING" if isinstance(exc, MissingFormulaCacheError) else "MERGE-PARSE-ERROR"
-            context.logger.error(f"Table merge processing failed: {exc}")
+            code = "MERGE-PARSE-ERROR"
+            message = str(exc)
+            if isinstance(exc, MissingFormulaCacheError):
+                code = "MERGE-FORMULA-CACHE-MISSING"
+            elif isinstance(exc, MergeCellTextTooLongError):
+                code = "MERGE-XLSX-CELL-TEXT-TOO-LONG"
+                message = f"{exc} Merge inputs: {', '.join(merged_sources)}."
+            context.logger.error(f"Table merge processing failed: {message}")
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
-                    message=str(exc),
+                    message=message,
                     diagnostic_code=code,
                 ),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
-                        message=f"Table merge processing failed: {exc}",
+                        message=f"Table merge processing failed: {message}",
                         code=code,
-                        location=exc.location if isinstance(exc, MissingFormulaCacheError) else "",
+                        location=(
+                            exc.location
+                            if isinstance(exc, (MissingFormulaCacheError, MergeCellTextTooLongError))
+                            else ""
+                        ),
                     ),
                 ],
                 metrics=ConversionMetrics(

@@ -22,6 +22,18 @@ def _mock_owned_process(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(WindowsProcessIdentity, "terminate_if_running", lambda self, **kwargs: None)
 
 
+def _write_macro_free_workbook(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr(
+            "[Content_Types].xml",
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            '<Override PartName="/xl/workbook.xml" '
+            'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            "</Types>",
+        )
+        archive.writestr("xl/workbook.xml", "<workbook/>")
+
+
 def _write_formula_writer_container(
     path: Path,
     *,
@@ -55,6 +67,7 @@ __all__ = (
     "Path",
     "_mock_owned_process",
     "_write_formula_writer_container",
+    "_write_macro_free_workbook",
     "os",
     "pytest",
     "pytestmark",

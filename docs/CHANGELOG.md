@@ -5,6 +5,21 @@
 
 ## Unreleased / 未发布
 
+## 0.21.1
+
+- Reject merged spreadsheet cell text above Excel's 32767 UTF-16 limit before writing, with the sheet, cell and contributing input names in the diagnostic.
+- 表格汇总在写入前拒绝超过 Excel 32767 UTF-16 单元上限的最终单元格文本，并报告工作表、单元格与参与输入名称。
+- Recover readable EPUB chapters when a spine entry is missing, while retaining the chapter-order warning and original sources.
+- EPUB spine 条目缺失时补齐可读取章节，保留章节顺序警告和原始输入。
+- Treat dangling symbolic links as occupied output names and stop collision retries on cancellation; retain already published files with an explicit partial-result failure.
+- 输出命名将悬空符号链接视为已占用，碰撞重试响应取消；已交付文件予以保留，并明确报告部分结果失败。
+- Require owned COM processes to accept macro disabling before opening real inputs, inspect Excel inputs for the Excel 4.0 macro exception, and configure disposable LibreOffice profiles to disable macro execution. Unsupported or ambiguous COM inputs can continue only through another policy-controlled backend.
+- COM 仅在确认进程归属并成功设置禁用宏后打开实际输入；Excel 输入增加针对 Excel 4.0 宏例外的检查，临时 LibreOffice 资料设置禁用宏执行。不支持或有歧义的 COM 输入只能继续尝试其他同样受策略保护的后端。
+- Remove obsolete spreadsheet-template status labels from six translated guides.
+- 移除六份翻译指南中过时的表格模板状态标题。
+- Update development and build dependencies to filelock 4.2.1, virtualenv 21.14.13 and setuptools 84.1.0 for their upstream security fixes.
+- 开发与构建依赖更新为 filelock 4.2.1、virtualenv 21.14.13 和 setuptools 84.1.0，纳入上游安全修复。
+
 ## 0.21.0
 
 - Preserve complementary spreadsheet records, exact text identifiers and the distinction between literal error-code text and real Excel errors when comparing, aligning and writing row/column merges.

@@ -82,6 +82,8 @@ def test_libreoffice_conversion_seeds_owned_formula_font_profile(
         assert "Liberation Serif" in registry_text
         assert "Times New Roman" in registry_text
         assert "<value>true</value>" in registry_text
+        assert 'oor:path="/org.openoffice.Office.Common/Security/Scripting"' in registry_text
+        assert 'oor:name="DisableMacrosExecution" oor:op="fuse"><value>true</value>' in registry_text
         observed_profiles.append(profile_path)
         output_dir = Path(args[args.index("--outdir") + 1])
         (output_dir / f"{Path(args[-1]).stem}.pdf").write_bytes(b"%PDF-1.4")

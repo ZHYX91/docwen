@@ -16,6 +16,13 @@ a sheet/row/column location; no partial XLSX is published. Plain Markdown-to-CSV
 cell limit. An XLSX-template-to-CSV path still passes through the bounded XLSX workbook and fails rather
 than truncating an oversized replacement.
 
+Table merges validate final string values against the same UTF-16 limit before assignment, including
+text accumulated from multiple inputs in cell-merge mode. An oversized value fails with
+`MERGE-XLSX-CELL-TEXT-TOO-LONG`, the target sheet/cell and the input names processed so far; the
+diagnostic never includes the cell contents. Runtime publishes no XLSX from the failed merge and
+preserves existing outputs and source workbooks. Accepted values retain the existing numeric-addition,
+text-deduplication and concatenation rules.
+
 ## Formula cache diagnostics
 
 XLSX exports read existing cached values and never recalculate formulas or refresh external links. A formula whose cached scalar is unavailable is exported as an empty field with a warning, aggregated across sheets. The warning retains the total count and at most 20 sheet/cell locations. Existing values, including zero, and ordinary blank cells do not warn. An OOXML formula explicitly carrying `t="str"` and an empty `<v>` is a valid empty string; missing `<v>` or an empty numeric cache remains unavailable. This distinction is checked against package XML because openpyxl maps both cases to `None`.

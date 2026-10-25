@@ -28,7 +28,10 @@ def test_owned_pillow_requirements_exclude_affected_decoders(owner: str) -> None
     assert "14.0.0" not in pillow.specifier
 
 
-@pytest.mark.parametrize("dependency,floor", [("pillow", "13.0.0"), ("virtualenv", "21.14.9")])
+@pytest.mark.parametrize(
+    "dependency,floor",
+    [("pillow", "13.0.0"), ("virtualenv", "21.14.13"), ("filelock", "4.2.1"), ("setuptools", "84.1.0")],
+)
 def test_locked_and_installed_dependencies_meet_security_floor(dependency: str, floor: str) -> None:
     lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
     selected = next(package["version"] for package in lock["package"] if package["name"] == dependency)
@@ -44,5 +47,17 @@ def test_dev_virtualenv_requirement_excludes_affected_environment_builders() -> 
 
     assert "21.14.7" not in virtualenv.specifier
     assert "21.14.8" not in virtualenv.specifier
-    assert "21.14.9" in virtualenv.specifier
-    assert "21.14.10" in virtualenv.specifier
+    assert "21.14.9" not in virtualenv.specifier
+    assert "21.14.12" not in virtualenv.specifier
+    assert "21.14.13" in virtualenv.specifier
+    assert "21.14.14" in virtualenv.specifier
+
+
+def test_build_and_dev_setuptools_requirements_exclude_affected_wheel_installers() -> None:
+    config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    for entries in (config["build-system"]["requires"], config["project"]["optional-dependencies"]["dev"]):
+        requirements = [Requirement(value) for value in entries]
+        setuptools = next(requirement for requirement in requirements if requirement.name.lower() == "setuptools")
+        assert "83.0.0" not in setuptools.specifier
+        assert "84.0.0" not in setuptools.specifier
+        assert "84.1.0" in setuptools.specifier
