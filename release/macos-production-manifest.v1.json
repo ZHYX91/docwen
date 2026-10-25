@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "manifestId": "docwen-macos-production",
-  "product": {"name": "DocWen", "version": "0.21.0"},
+  "product": {"name": "DocWen", "version": "0.21.1"},
   "target": {"os": "macos", "minimumVersion": "14.0", "arch": "arm64", "platformTag": "macos-arm64"},
   "signing": {"identity": "-", "developerId": false, "notarized": false},
   "bundle": {"name": "DocWen.app", "identifier": "io.github.ZHYX91.DocWen", "payload": "Contents/Resources/payload"},
   "archive": {"format": "tar.gz", "epoch": 1704067200, "symlinks": "relative-internal-only"},
   "artifacts": [
-    {"id": "gui-cli", "name": "DocWen-0.21.0-macos-arm64.tar.gz", "root": "DocWen-0.21.0-macos-arm64"},
-    {"id": "cli-only", "name": "DocWenCLI-0.21.0-macos-arm64.tar.gz", "root": "DocWenCLI-0.21.0-macos-arm64"}
+    {"id": "gui-cli", "name": "DocWen-0.21.1-macos-arm64.tar.gz", "root": "DocWen-0.21.1-macos-arm64"},
+    {"id": "cli-only", "name": "DocWenCLI-0.21.1-macos-arm64.tar.gz", "root": "DocWenCLI-0.21.1-macos-arm64"}
   ]
 }
