@@ -17,6 +17,8 @@
 - COM 仅在确认进程归属并成功设置禁用宏后打开实际输入；Excel 输入增加针对 Excel 4.0 宏例外的检查，临时 LibreOffice 资料设置禁用宏执行。不支持或有歧义的 COM 输入只能继续尝试其他同样受策略保护的后端。
 - Remove obsolete spreadsheet-template status labels from six translated guides.
 - 移除六份翻译指南中过时的表格模板状态标题。
+- Update development and build dependencies to filelock 4.2.1, virtualenv 21.14.13 and setuptools 84.1.0 for their upstream security fixes.
+- 开发与构建依赖更新为 filelock 4.2.1、virtualenv 21.14.13 和 setuptools 84.1.0，纳入上游安全修复。
 
 ## 0.21.0
 
