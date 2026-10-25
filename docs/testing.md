@@ -20,6 +20,21 @@ Tests are grouped by primary behavior family and execution cost. The default rep
 
 Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry point pins the repository's pytest configuration and root fixtures even when every selected path belongs to a single workspace package.
 
+`test_table_merger_text_limits.py` saves and reopens actual XLSX files and exercises Runtime publication
+at the final merged-string boundary. `test_epub_spine_integrity.py` uses the real EPUB reader with a
+missing spine member and checks chapter order, diagnostics and published Markdown. These generated
+files are deterministic regressions; they do not replace native Office acceptance.
+
+`test_output_finalizer_collisions.py` covers real output-name contention, dangling symbolic links,
+cancellation before publication and TaskManager's partial-publication result. Windows environments
+without symbolic-link privilege report that specific case as skipped.
+
+Office macro-policy tests cover bounded BIFF/OLE/ZIP/CSV inspection, COM ownership and call ordering,
+failure diagnostics and the disposable LibreOffice profile. They use harmless generated inputs and
+host doubles, and never establish that installed Office or WPS actually suppresses VBA or Excel 4.0
+macros. Candidate acceptance must separately cover the affected installed backends, safe marker
+samples, first-open ownership, ordinary conversion and preservation of existing user processes.
+
 `tests/support/gongwen_template.py` builds a minimal attachment template in code, preserving the conflicting
 character-unit and physical indents found in an actual user template. No binary template or local archive is
 required by CI. `test_gongwen_indentation.py` covers style/ancestor/default/direct inheritance, body/cell anchors,

@@ -528,7 +528,7 @@ Gestiona las plantillas DOCX/XLSX en **Configuración → Plantillas**: activar,
 
 **Soporte multilingüe**: Los marcadores de título y cuerpo admiten múltiples idiomas, por ejemplo, título `{{title}}`, `{{标题}}`, `{{Titel}}`, etc., cuerpo `{{body}}`, `{{正文}}`, `{{Inhalt}}`, etc.
 
-#### Marcadores de posición en plantillas Excel (objetivo de paridad legado)
+#### Marcadores de posición en plantillas Excel
 
 Las plantillas XLSX admiten campos YAML, placeholders verticales `{{↓campo}}` y horizontales `{{→campo}}`, placeholders de imagen y celdas combinadas o protegidas.
 
