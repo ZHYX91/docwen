@@ -161,6 +161,22 @@ def test_biff_rejects_encryption_even_without_macro_sheet() -> None:
         _biff_workbook(declared_kind=3),
         _biff_workbook(actual_kind=0x7777),
     ],
+    ids=[
+        "empty",
+        "short-header",
+        "short-bof",
+        "unknown-version",
+        "incomplete-biff8-bof",
+        "missing-globals",
+        "truncated-record",
+        "oversized-record",
+        "missing-eof",
+        "nonempty-eof",
+        "record-after-eof",
+        "trailing-byte",
+        "unknown-declared-kind",
+        "unknown-actual-kind",
+    ],
 )
 def test_biff_rejects_unknown_or_incomplete_framing(payload: bytes) -> None:
     with pytest.raises(security.OfficeMacroPolicyError):
@@ -287,12 +303,22 @@ def test_ooxml_rejects_xlm_in_each_metadata_channel(tmp_path: Path, source: str)
         security.ensure_excel_input_has_no_xlm(path)
 
 
-@pytest.mark.parametrize("invalid_name", ["XL/workbook.XML", "xl/../hidden.xml", "/hidden.xml", "xl\\hidden.xml"])
+@pytest.mark.parametrize(
+    "invalid_name", ["XL/workbook.XML", "xl/../hidden.xml", "/hidden.xml", "xl\\hidden.xml", "xl/hi\0den.xml"]
+)
 def test_ooxml_rejects_ambiguous_package_paths(tmp_path: Path, invalid_name: str) -> None:
     entries = _xlsx_entries()
-    entries[invalid_name] = b"<x/>"
+    stored_name = invalid_name.replace("\\", "/").replace("\0", "d")
+    entries[stored_name] = b"<x/>"
+    path = _write_zip(tmp_path / "input.xlsx", entries)
+    if stored_name != invalid_name:
+        # Write raw ZIP names: ZipInfo would normalize/truncate these names
+        # when asked to construct the fixture through writestr directly.
+        payload = path.read_bytes()
+        assert payload.count(stored_name.encode()) == 2
+        path.write_bytes(payload.replace(stored_name.encode(), invalid_name.encode()))
     with pytest.raises(security.OfficeMacroPolicyError, match="Ambiguous"):
-        security.ensure_excel_input_has_no_xlm(_write_zip(tmp_path / "input.xlsx", entries))
+        security.ensure_excel_input_has_no_xlm(path)
 
 
 @pytest.mark.parametrize(

@@ -194,9 +194,18 @@ def _check_zip_workbook(path: Path) -> None:
             raise OfficeMacroPolicyError("Spreadsheet package exceeds the macro inspection budget.")
         names: dict[str, zipfile.ZipInfo] = {}
         for entry in entries:
-            name = entry.filename
+            # ZipInfo normalizes Windows separators and truncates NUL suffixes
+            # in filename. Inspect its original decoded name before trusting
+            # that normalized view as a package identity.
+            name = entry.orig_filename
             key = name.casefold()
-            if key in names or "\\" in name or name.startswith("/") or ".." in name.split("/"):
+            if (
+                name != entry.filename
+                or key in names
+                or "\\" in name
+                or name.startswith("/")
+                or ".." in name.split("/")
+            ):
                 raise OfficeMacroPolicyError("Ambiguous spreadsheet package paths cannot be inspected safely.")
             names[key] = entry
             if "macrosheets" in name.casefold().split("/"):

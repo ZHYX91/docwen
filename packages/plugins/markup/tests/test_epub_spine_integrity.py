@@ -87,7 +87,9 @@ def test_missing_spine_ids_preserve_readable_chapters_and_diagnostics(
     assert paragraphs == [f"Readable body {name}." for name in expected]
     assert "Navigation sentinel." not in markdown
     diagnostics = [entry for entry in result.diagnostics if entry.code == "EPUB2MD-SPINE-ITEM-FALLBACK"]
-    assert [entry.location for entry in diagnostics] == missing
+    # Runtime deduplicates identical diagnostics while retaining occurrence
+    # counts in metrics and artifact metadata.
+    assert [entry.location for entry in diagnostics] == list(dict.fromkeys(missing))
     assert all(entry.level == "warning" and entry.location in entry.message for entry in diagnostics)
     assert result.metrics.extra["spine_lookup_failure_count"] == len(missing)
     assert result.metrics.extra["degradation_count"] == len(missing)
