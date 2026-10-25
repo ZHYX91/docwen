@@ -14,10 +14,14 @@ _PROGIDS = {
     "Microsoft Word": "Word.Application",
     "msoffice_excel": "Excel.Application",
     "Microsoft Excel": "Excel.Application",
+    "msoffice_powerpoint": "PowerPoint.Application",
+    "Microsoft PowerPoint": "PowerPoint.Application",
     "wps_writer": "Kwps.Application",
     "WPS Writer": "Kwps.Application",
     "wps_spreadsheets": "Ket.Application",
     "WPS Spreadsheets": "Ket.Application",
+    "wps_presentation": "Kwpp.Application",
+    "WPS Presentation": "Kwpp.Application",
 }
 
 
@@ -42,6 +46,22 @@ def _com_executable(prog_id: str) -> Path:
     return Path(match.group(1) or match.group(2)).resolve(strict=True)
 
 
+def _windows_file_version(executable: Path) -> str:
+    import win32api
+
+    metadata = win32api.GetFileVersionInfo(str(executable), "\\")
+    high, low = metadata.get("FileVersionMS"), metadata.get("FileVersionLS")
+    if (
+        type(high) is not int
+        or type(low) is not int
+        or not 0 <= high <= 0xFFFFFFFF
+        or not 0 <= low <= 0xFFFFFFFF
+        or (high == 0 and low == 0)
+    ):
+        raise RuntimeError("office_version_empty_or_invalid")
+    return ".".join(str(value) for value in (high >> 16, high & 65535, low >> 16, low & 65535))
+
+
 def office_host_identity(backend: str) -> dict[str, Any]:
     """Do not launch COM or modify Office state merely to identify its version."""
     if backend.casefold() == "libreoffice":
@@ -51,20 +71,20 @@ def office_host_identity(backend: str) -> dict[str, Any]:
         if executable is None:
             raise RuntimeError("office_version_backend_missing")
         executable = Path(executable).resolve(strict=True)
-        process = subprocess.run(
-            [str(executable), "--version"], capture_output=True, text=True, errors="replace", check=True, timeout=20
-        )
-        version = process.stdout.strip()
-        basis = "selected LibreOffice executable --version"
+        if os.name == "nt":
+            version = _windows_file_version(executable)
+            basis = "selected LibreOffice executable FileVersion"
+        else:
+            process = subprocess.run(
+                [str(executable), "--version"], capture_output=True, text=True, errors="replace", check=True, timeout=20
+            )
+            version = process.stdout.strip()
+            basis = "selected LibreOffice executable --version"
     else:
         if os.name != "nt" or backend not in _PROGIDS:
             raise RuntimeError(f"office_version_backend_unknown:{backend}")
-        import win32api
-
         executable = _com_executable(_PROGIDS[backend])
-        metadata = win32api.GetFileVersionInfo(str(executable), "\\")
-        high, low = metadata["FileVersionMS"], metadata["FileVersionLS"]
-        version = ".".join(str(value) for value in (high >> 16, high & 65535, low >> 16, low & 65535))
+        version = _windows_file_version(executable)
         basis = "registered COM server executable FileVersion"
     if not version:
         raise RuntimeError("office_version_empty")
