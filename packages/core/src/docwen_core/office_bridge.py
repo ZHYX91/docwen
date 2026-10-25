@@ -245,6 +245,7 @@ def _is_cancel_requested(cancel: object | None) -> bool:
 
 def _get_com_app_pid(app: object) -> int | None:
     try:
+        import pythoncom  # type: ignore
         import pywintypes  # type: ignore
         import win32process  # type: ignore
     except ImportError:
@@ -256,6 +257,26 @@ def _get_com_app_pid(app: object) -> int | None:
     for attribute in ("Hwnd", "HWND"):
         try:
             hwnd = getattr(app, attribute, None)
+        except Exception:
+            hwnd = None
+        if not (type(hwnd) is int or isinstance(hwnd, pywintypes.HANDLEType)):
+            try:
+                # Some servers expose this documented property as a method in
+                # pywin32's dynamic map. Read only the named handle property,
+                # with an explicit property-get invocation and integer result.
+                dispatch = getattr(app, "_oleobj_", None)
+                if dispatch is None:
+                    continue
+                hwnd = dispatch.InvokeTypes(
+                    dispatch.GetIDsOfNames(attribute),
+                    0,
+                    pythoncom.DISPATCH_PROPERTYGET,
+                    (pythoncom.VT_I4, 0),
+                    (),
+                )
+            except Exception:
+                continue
+        try:
             if not (type(hwnd) is int or isinstance(hwnd, pywintypes.HANDLEType)) or not hwnd:
                 continue
             _thread_id, process_id = win32process.GetWindowThreadProcessId(int(hwnd))

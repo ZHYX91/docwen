@@ -29,6 +29,7 @@ def _pid_lookup(monkeypatch: pytest.MonkeyPatch, calls: list[object]) -> None:
         return 10, 42
 
     monkeypatch.setitem(sys.modules, "pywintypes", SimpleNamespace(HANDLEType=_Handle))
+    monkeypatch.setitem(sys.modules, "pythoncom", SimpleNamespace(DISPATCH_PROPERTYGET=2, VT_I4=3))
     monkeypatch.setitem(sys.modules, "win32process", SimpleNamespace(GetWindowThreadProcessId=window_process))
 
 
@@ -92,6 +93,67 @@ def test_com_pid_tries_exact_hwnd_after_other_property_raises(monkeypatch: pytes
 
     assert office_bridge._get_com_app_pid(PowerPoint()) == 42
     assert calls == [123]
+
+
+def test_com_pid_reads_named_typed_property_without_calling_dynamic_method(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[object] = []
+    _pid_lookup(monkeypatch, calls)
+    property_calls: list[object] = []
+
+    class Dispatch:
+        def GetIDsOfNames(self, name: str) -> int:
+            property_calls.append(name)
+            return 987
+
+        def InvokeTypes(self, *args: object) -> int:
+            property_calls.append(args)
+            return 123
+
+    def method() -> None:
+        pytest.fail("A dynamic method wrapper must never be invoked")
+
+    app = SimpleNamespace(Hwnd=method, HWND=method, _oleobj_=Dispatch())
+    assert office_bridge._get_com_app_pid(app) == 42
+    assert property_calls == ["Hwnd", (987, 0, 2, (3, 0), ())]
+    assert calls == [123]
+
+
+@pytest.mark.parametrize("value", [True, "123", object(), None])
+def test_com_pid_rejects_untrusted_typed_property_result(monkeypatch: pytest.MonkeyPatch, value: object) -> None:
+    calls: list[object] = []
+    _pid_lookup(monkeypatch, calls)
+    property_names: list[str] = []
+
+    class Dispatch:
+        def GetIDsOfNames(self, name: str) -> int:
+            property_names.append(name)
+            return 987
+
+        def InvokeTypes(self, *args: object) -> object:
+            assert args == (987, 0, 2, (3, 0), ())
+            return value
+
+    assert office_bridge._get_com_app_pid(SimpleNamespace(_oleobj_=Dispatch())) is None
+    assert property_names == ["Hwnd", "HWND"]
+    assert calls == []
+
+
+def test_com_pid_typed_property_failure_never_guesses_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[object] = []
+    _pid_lookup(monkeypatch, calls)
+    property_names: list[str] = []
+
+    class Dispatch:
+        def GetIDsOfNames(self, name: str) -> int:
+            property_names.append(name)
+            raise OSError("No documented handle property")
+
+        def InvokeTypes(self, *args: object) -> None:
+            pytest.fail("An unresolved property must never be invoked")
+
+    assert office_bridge._get_com_app_pid(SimpleNamespace(_oleobj_=Dispatch())) is None
+    assert property_names == ["Hwnd", "HWND"]
+    assert calls == []
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows process identity API")
