@@ -64,6 +64,7 @@ class _PreparedArtifact:
     protected_input_path: str | None = None
     protected_input_key: str | None = None
     authorized_input_key: str | None = None
+    cancellation: CancellationTokenView | None = None
 
 
 if sys.platform == "win32":
@@ -305,11 +306,26 @@ class OutputFinalizer:
                     )
 
             self._check_cancellation(cancellation)
-            for item in prepared:
+            for index, item in enumerate(prepared):
                 try:
                     final_artifact, written_bytes = self._commit_prepared(item, output_dir, policy.overwrite_mode)
                     final_artifacts.append(final_artifact)
                     total_output_bytes += written_bytes
+                except CancellationRequested:
+                    if not final_artifacts:
+                        raise
+                    # Earlier individual files are already authoritative. Keep
+                    # their manifests and report partial publication, rather
+                    # than returning a cancellation that hides committed bytes.
+                    failed_artifacts += len(prepared) - index
+                    diagnostics.append(
+                        ConversionDiagnostic(
+                            level="error",
+                            message="Output publication stopped after cancellation; completed outputs were kept.",
+                            code="FINALIZER_RETRY_CANCELLED",
+                        )
+                    )
+                    break
                 except Exception as exc:
                     failed_artifacts += 1
                     diagnostics.append(
@@ -855,12 +871,13 @@ class OutputFinalizer:
                 destination=destination,
                 rename_base=rename_base,
                 reuse=reused[0],
+                cancellation=cancellation,
             )
 
         cls._check_input_destination(destination, protected_input_path, protected_input_key)
 
         io_destination = cls._io_path(destination)
-        if io_destination.exists():
+        if cls._entry_exists(destination):
             if overwrite_mode != "rename" and not io_destination.is_file():
                 raise IsADirectoryError(f"Existing output target is not a file: {destination}")
             if overwrite_mode == "skip":
@@ -873,9 +890,10 @@ class OutputFinalizer:
                     protected_input_path=protected_input_path,
                     protected_input_key=protected_input_key,
                     authorized_input_key=authorized_input_key,
+                    cancellation=cancellation,
                 )
             if overwrite_mode == "rename":
-                destination = cls._rename_path(destination)
+                destination = cls._rename_path(destination, cancellation=cancellation)
             elif overwrite_mode == "error":
                 raise FileExistsError(f"Output target already exists: {destination}")
 
@@ -904,6 +922,7 @@ class OutputFinalizer:
             protected_input_path=protected_input_path,
             protected_input_key=protected_input_key,
             authorized_input_key=authorized_input_key,
+            cancellation=cancellation,
         )
 
     @classmethod
@@ -942,7 +961,10 @@ class OutputFinalizer:
             cls._check_prepared_destination(item, destination)
             os.replace(cls._io_path(item.temp_path), cls._io_path(destination))
         else:
+            collided_paths: set[str] = set()
             while True:
+                if collided_paths:
+                    cls._check_cancellation(item.cancellation)
                 try:
                     cls._check_prepared_destination(item, destination)
                     cls._publish_no_clobber(item.temp_path, destination)
@@ -950,7 +972,12 @@ class OutputFinalizer:
                 except FileExistsError:
                     if overwrite_mode != "rename":
                         raise
-                    destination = cls._rename_path(item.rename_base or destination)
+                    collided_paths.add(destination)
+                    destination = cls._rename_path(
+                        item.rename_base or item.destination,
+                        excluded=collided_paths,
+                        cancellation=item.cancellation,
+                    )
                     cls._ensure_contained(output_dir, destination)
         if not cls._io_path(item.temp_path).exists():
             item.temp_path = None
@@ -1207,14 +1234,32 @@ class OutputFinalizer:
         if os.path.normcase(common) != os.path.normcase(output_real):
             raise ValueError(f"Resolved artifact path escapes output directory: {final_path!r}")
 
-    @staticmethod
-    def _rename_path(path: str) -> str:
-        if not OutputFinalizer._io_path(path).exists():
-            return path
+    @classmethod
+    def _entry_exists(cls, path: str) -> bool:
+        """Check directory-entry occupancy without following a leaf link.
+
+        Unlike ``exists``/``lexists``, access and inspection errors are not
+        interpreted as an available output name.
+        """
+        try:
+            cls._io_path(path).lstat()
+        except FileNotFoundError:
+            return False
+        return True
+
+    @classmethod
+    def _rename_path(
+        cls,
+        path: str,
+        *,
+        excluded: set[str] | None = None,
+        cancellation: CancellationTokenView | None = None,
+    ) -> str:
         base, ext = os.path.splitext(path)
-        counter = 1
+        counter = 0
         while True:
-            candidate = f"{base}_{counter:03d}{ext}"
-            if not OutputFinalizer._io_path(candidate).exists():
+            cls._check_cancellation(cancellation)
+            candidate = path if counter == 0 else f"{base}_{counter:03d}{ext}"
+            if (excluded is None or candidate not in excluded) and not cls._entry_exists(candidate):
                 return candidate
             counter += 1
