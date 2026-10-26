@@ -16,10 +16,15 @@ def resolve_mhtml_uri(base_uri: str, reference: str) -> str:
     return urljoin(base_uri, reference)
 
 
+def content_id_identity(header: str) -> str:
+    """A Content-ID header is already the literal identifier, never URL-decoded."""
+    return "cid:" + header.strip().strip("<>")
+
+
 def mhtml_resource_identity(reference: str, *, base_uri: str = "") -> str:
     reference = reference.strip()
     if reference.lower().startswith("cid:"):
-        return "cid:" + unquote(reference[4:]).strip().strip("<>")
+        return "cid:" + unquote(reference[4:], errors="strict")
     uri = urlsplit(resolve_mhtml_uri(base_uri, reference))
     # URI schemes and DNS names are insensitive to case; paths and queries
     # are not. Fragments identify positions within the same MIME resource.

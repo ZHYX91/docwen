@@ -34,7 +34,7 @@ from docwen_runtime.engine.route_resolver import RouteResolver
 from docwen_runtime.engine.task_manager import TaskManager
 from docwen_runtime.output.finalizer import OutputFinalizer
 from docwen_runtime.plugin_registry.registry import PluginRegistry
-from docwen_runtime.templates import TemplateRegistry
+from docwen_runtime.templates import TemplateManager, TemplateRegistry
 from docwen_runtime.templates.state import user_templates_dir
 from docwen_runtime.workspace.manager import WorkspaceManager
 
@@ -222,6 +222,86 @@ def test_clipboard_xlsx_overflow_preserves_existing_same_name_workbook(tmp_path:
     assert result.error is not None and result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
     assert sentinel.read_bytes() == original
     assert list(Path(rejected.output_policy.output_dir).rglob("*.xlsx")) == [sentinel]
+
+
+def test_imported_template_retained_text_is_checked_before_replacing_prior_result(tmp_path: Path) -> None:
+    controller = _controller(tmp_path)
+    identity = ConversionIdentity.create(
+        task_id="retained-template",
+        source_stem="retained-template",
+        source_format="clipboard_document",
+        created_at=datetime(2026, 10, 26, tzinfo=UTC),
+    )
+    first = replace(
+        _request(
+            tmp_path,
+            request_id="retained-template",
+            target="xlsx",
+            html=b"<table><tr><td>Existing sentinel</td></tr></table>",
+        ),
+        conversion_identity=identity,
+    )
+    sentinel = _primary(controller.execute_single(first))
+    sentinel_bytes = sentinel.read_bytes()
+    incoming = tmp_path / "retained-template.xlsx"
+    template = Workbook()
+    template.active.title = "Template"
+    template.active["Z100"] = "😀" * 16384
+    template.save(incoming)
+    incoming_bytes = incoming.read_bytes()
+    imported = TemplateManager.default().import_template(incoming)
+    imported_bytes = imported.path.read_bytes()
+    request = replace(
+        _request(
+            tmp_path,
+            request_id="retained-template",
+            target="xlsx",
+            html=b"<table><tr><td>ok</td></tr></table>",
+            options={"template_name": imported.id},
+        ),
+        conversion_identity=identity,
+    )
+    result = controller.execute_single(request)
+    assert not result.success and not result.artifacts
+    assert result.error is not None and result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
+    assert "Template" in result.error.message and "row 100, column 26" in result.error.message
+    assert sentinel.read_bytes() == sentinel_bytes
+    assert incoming.read_bytes() == incoming_bytes and imported.path.read_bytes() == imported_bytes
+    assert list(Path(request.output_policy.output_dir).rglob("*.xlsx")) == [sentinel]
+
+
+def test_imported_template_boundary_formulas_and_sparse_retained_cells_remain_exact(tmp_path: Path) -> None:
+    incoming = tmp_path / "sparse-boundary.xlsx"
+    template = Workbook()
+    sheet = template.active
+    sheet.title = "Template"
+    value = "😀" * 16383 + "x"
+    sheet["Z100"] = value
+    sheet["Z101"] = "=1+2"
+    sheet["XFD1048576"] = "far retained cell"
+    template.save(incoming)
+    imported = TemplateManager.default().import_template(incoming)
+    original = imported.path.read_bytes()
+    result = _controller(tmp_path).execute_single(
+        _request(
+            tmp_path,
+            request_id="sparse-boundary",
+            target="xlsx",
+            html=b"<table><tr><td>ok</td></tr></table>",
+            options={"template_name": imported.id},
+        )
+    )
+    workbook = load_workbook(_primary(result))
+    try:
+        for name in ["Template", "Table 1"]:
+            output = workbook[name]
+            assert output["Z100"].value == value
+            assert output["Z101"].value == "=1+2" and output["Z101"].data_type == "f"
+            assert output["XFD1048576"].value == "far retained cell"
+            assert len(output._cells) <= 4
+    finally:
+        workbook.close()
+    assert imported.path.read_bytes() == original
 
 
 def test_docx_preserves_native_header_shape_and_reversible_html_associations(tmp_path: Path) -> None:

@@ -21,10 +21,23 @@ class XlsxCellTextTooLongError(ValueError):
         )
 
 
-def assign_bounded_xlsx_value(cell: Any, value: Any) -> None:
-    """Check the final value, before any assignment to openpyxl."""
+def check_xlsx_cell_text(cell: Any, value: Any) -> None:
+    """Check a text scalar without assigning or changing its cell type."""
     if isinstance(value, str):
         units = len(value.encode("utf-16-le")) // 2
         if units > XLSX_CELL_TEXT_LIMIT:
             raise XlsxCellTextTooLongError(sheet=cell.parent.title, row=cell.row, column=cell.column, length=units)
+
+
+def check_workbook_text_capacity(workbook: Any) -> None:
+    """Include retained template cells without expanding sparse worksheet ranges."""
+    for sheet in workbook.worksheets:
+        for cell in sheet._cells.values():
+            if cell.data_type != "f":
+                check_xlsx_cell_text(cell, cell.value)
+
+
+def assign_bounded_xlsx_value(cell: Any, value: Any) -> None:
+    """Check the final value, before any assignment to openpyxl."""
+    check_xlsx_cell_text(cell, value)
     cell.value = value

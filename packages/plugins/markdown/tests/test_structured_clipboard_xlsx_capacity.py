@@ -13,7 +13,7 @@ from docwen_core.models.clipboard_document import ClipboardImageRef, ClipboardRe
 from docwen_plugin_markdown.structured_clipboard_images import BoundClipboardImage, ClipboardImageOccurrenceInfo
 from docwen_plugin_markdown.structured_clipboard_output_images import add_xlsx_images
 from docwen_plugin_markdown.structured_clipboard_xlsx import prepare_projection_workbook
-from docwen_plugin_markdown.xlsx_text import XlsxCellTextTooLongError
+from docwen_plugin_markdown.xlsx_text import XlsxCellTextTooLongError, check_workbook_text_capacity
 
 pytestmark = pytest.mark.contract
 
@@ -40,3 +40,17 @@ def test_image_semantics_checks_final_logical_path(tmp_path: Path, units: int) -
         workbook = load_workbook(output)
         assert workbook["Image Semantics"]["D2"].value == logical_path
         workbook.close()
+
+
+def test_final_capacity_check_does_not_expand_sparse_cells_or_retype_formulas() -> None:
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    sheet = workbook.active
+    assert sheet is not None
+    sheet["XFD1048576"] = "sparse"
+    sheet["A1"] = "=1+2"
+    before = dict(sheet._cells)
+    check_workbook_text_capacity(workbook)
+    assert sheet._cells == before
+    assert sheet["A1"].value == "=1+2" and sheet["A1"].data_type == "f"

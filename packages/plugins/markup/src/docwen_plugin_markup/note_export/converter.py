@@ -26,7 +26,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from docwen_core.text.placeholders import placeholder_namespace, restore_placeholders
+from docwen_core.text.placeholders import restore_placeholders
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -375,32 +375,9 @@ class EnexToMarkdownConverter:
         HTML fragment.  Strip the XML envelope and replace ``<en-media>`` tags
         with collision-checked text placeholders resolved once after conversion.
         """
-        if not enml:
-            return "", {}
-        from html import unescape
+        from docwen_plugin_markup.note_export.enml import normalize_enml
 
-        namespace = placeholder_namespace(
-            unescape(enml) + re.sub(r"<[^>]*>", "", unescape(enml)), prefix="DOCWENENEXRESOURCE"
-        )
-        token_resources: dict[str, str] = {}
-        s = enml
-        s = re.sub(r"^\s*<\?xml[^>]*\?>", "", s, flags=re.IGNORECASE)
-        s = re.sub(r"^\s*<!DOCTYPE[^>]*>", "", s, flags=re.IGNORECASE)
-        s = re.sub(r"^\s*<en-note\b[^>]*>", "", s, flags=re.IGNORECASE)
-        s = re.sub(r"</en-note>\s*$", "", s, flags=re.IGNORECASE)
-
-        def resource_placeholder(match: re.Match[str]) -> str:
-            token = f"{namespace}{len(token_resources) + 1}TOKEN"
-            token_resources[token] = match.group(2).lower()
-            return token
-
-        s = re.sub(
-            r"<en-media\b[^>]*\bhash\s*=\s*(['\"])([0-9a-fA-F]{32})\1[^>]*/?>",
-            resource_placeholder,
-            s,
-            flags=re.IGNORECASE,
-        )
-        return s.strip(), token_resources
+        return normalize_enml(enml)
 
     @staticmethod
     def _write_resources(

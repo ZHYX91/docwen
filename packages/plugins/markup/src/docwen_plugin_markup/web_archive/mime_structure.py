@@ -19,6 +19,10 @@ class MhtmlPart:
     related_ancestors: tuple[tuple[int, ...], ...]
 
 
+class UnsupportedHtmlRepresentation(ValueError):
+    """A structurally valid alternative cannot be rendered as HTML."""
+
+
 def _cid(value: object) -> str:
     return str(value or "").strip().strip("<>")
 
@@ -58,11 +62,15 @@ def _html_root(part: Message) -> Message:
     if kind == "multipart/alternative":
         # RFC 2046 orders alternatives by increasing preference. Select the
         # last supported representation, never an unrelated HTML sibling.
+        if not children:
+            raise ValueError("MHTML root alternative has no body parts")
         for child in reversed(children):
-            if child.get_content_type().lower() in {"text/html", "multipart/related", "multipart/alternative"}:
+            try:
                 return _html_root(child)
-        raise ValueError("MHTML root alternative has no supported HTML representation")
-    raise ValueError("MHTML selected root has no usable text/html body (unsupported representation)")
+            except UnsupportedHtmlRepresentation:
+                continue
+        raise UnsupportedHtmlRepresentation("MHTML root alternative has no supported HTML representation")
+    raise UnsupportedHtmlRepresentation("MHTML selected root has no usable text/html body (unsupported representation)")
 
 
 def parse_mhtml_structure(raw: bytes) -> tuple[MhtmlPart, list[MhtmlPart]]:

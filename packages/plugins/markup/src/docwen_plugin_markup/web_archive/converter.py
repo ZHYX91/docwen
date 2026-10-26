@@ -34,7 +34,11 @@ from urllib.request import url2pathname
 
 from docwen_core.text.placeholders import placeholder_namespace, restore_placeholders
 from docwen_plugin_markup.web_archive.mime_structure import parse_mhtml_structure
-from docwen_plugin_markup.web_archive.resource_identity import mhtml_resource_identity, resolve_mhtml_uri
+from docwen_plugin_markup.web_archive.resource_identity import (
+    content_id_identity,
+    mhtml_resource_identity,
+    resolve_mhtml_uri,
+)
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -188,13 +192,20 @@ class HtmlToMarkdownConverter:
         extra_diagnostics = []
         if missing.get("count", 0):
             positions = ", ".join(str(index) for index in missing["positions"])
+            retention = (
+                "Original links were retained."
+                if missing.get("links_retained", True)
+                else "No image links were emitted for these references."
+            )
+            if missing.get("ocr_requested", False):
+                retention += " OCR could not run for these references."
             extra_diagnostics.append(
                 ConversionDiagnostic(
                     level="warning",
                     code="HTML-LOCAL-IMAGE-UNAVAILABLE",
                     message=(
                         f"{missing['count']} local image reference(s) could not be packaged; "
-                        f"image positions: {positions}. Original links were retained."
+                        f"image positions: {positions}. {retention}"
                     ),
                 )
             )
@@ -370,7 +381,9 @@ class HtmlToMarkdownConverter:
         document_uri = root_part.base_uri
         resource_refs: list[tuple[MarkdownResource, list[str]]] = []
         alias_keys: dict[str, set[str]] = {}
-        for idx, entry in enumerate(parts):
+        resources_by_key: dict[str, MarkdownResource] = {}
+        needs_image_data = (keep_images and image_mode != "omit") or enable_ocr
+        for idx, entry in enumerate(parts if needs_image_data else []):
             if idx % 10 == 0:
                 context.cancellation.check()
             part = entry.message
@@ -386,14 +399,15 @@ class HtmlToMarkdownConverter:
                 name = Path(filename).name
             if not name:
                 name = f"part{idx}.{ctype.split('/', 1)[-1]}"
-            refs = [entry.location] if entry.location else []
+            refs = [mhtml_resource_identity(entry.location)] if entry.location else []
             content_id = str(part.get("Content-ID") or "").strip().strip("<>")
             if content_id:
-                refs.append("cid:" + content_id)
+                refs.append(content_id_identity(content_id))
             resource = MarkdownResource(
                 source_key=f"mhtml-part-{idx}", suggested_name=name, media_type=ctype, data=payload
             )
             resource_refs.append((resource, refs))
+            resources_by_key[resource.source_key] = resource
             # Basename compatibility is separate from URI/CID identity and is
             # available only for genuinely named resources, never generated names.
             alias = _mhtml_basename(entry.location) if entry.location else (Path(filename).name if filename else "")
@@ -412,7 +426,7 @@ class HtmlToMarkdownConverter:
 
         aux_artifacts: list[Any] = []
         prewritten_image_links: dict[str, str] = {}
-        if keep_images or enable_ocr:
+        if needs_image_data:
             import lxml.html as lxml_html
 
             doc = lxml_html.document_fromstring(
@@ -425,8 +439,7 @@ class HtmlToMarkdownConverter:
             for resource, refs in resource_refs:
                 if not resource.media_type.startswith("image/"):
                     continue
-                for ref in refs:
-                    key = mhtml_resource_identity(ref)
+                for key in refs:
                     previous = by_identity.get(key)
                     if previous is not None and previous.data != resource.data:
                         ambiguous.add(key)
@@ -455,7 +468,7 @@ class HtmlToMarkdownConverter:
                             raise ValueError("MHTML referenced image basename is ambiguous")
                         if len(candidates) == 1:
                             selected_key = next(iter(candidates))
-                            resource = next(item for item, _refs in resource_refs if item.source_key == selected_key)
+                            resource = resources_by_key[selected_key]
                 if resource is not None:
                     source_resources[source_ref] = resource
             selected = {resource.source_key for resource in source_resources.values()}
@@ -533,7 +546,13 @@ def _prepare_html_image_links(
     token_to_link: dict[str, str] = {}
     resource_entries: list[tuple[str, MarkdownResource]] = []
     image_count = 0
-    missing_local: dict[str, Any] = {"count": 0, "positions": []}
+    image_links_enabled = keep_images and image_mode != "omit"
+    missing_local: dict[str, Any] = {
+        "count": 0,
+        "positions": [],
+        "links_retained": image_links_enabled,
+        "ocr_requested": enable_ocr,
+    }
     authored = (
         html_text + etree.tostring(doc, encoding="unicode", method="text") + etree.tostring(doc, encoding="unicode")
     )
@@ -547,7 +566,7 @@ def _prepare_html_image_links(
         token = f"{namespace}{image_count}TOKEN"
         token_to_link[token] = ""
 
-        if keep_images or enable_ocr:
+        if image_links_enabled or enable_ocr:
             prewritten_link = prewritten_image_links.get(src)
             if prewritten_link is not None:
                 token_to_link[token] = prewritten_link
@@ -721,7 +740,12 @@ def _html_image_uri(*, src: str, html_path: str, base_href: str | None) -> str:
         if urlparse(base).scheme == "file":
             reference = reference.replace("\\", "/")
             match = re.match(r"^/([A-Za-z]:)(?:/|$)", urlparse(base).path)
-            if match and reference.startswith("/") and not reference.startswith("//"):
+            if (
+                match
+                and reference.startswith("/")
+                and not reference.startswith("//")
+                and not re.match(r"^/[A-Za-z]:(?:/|$)", reference)
+            ):
                 reference = "/" + match.group(1) + reference
         return urljoin(base, reference)
 

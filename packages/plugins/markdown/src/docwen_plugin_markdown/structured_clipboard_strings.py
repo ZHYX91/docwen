@@ -12,6 +12,8 @@ from zipfile import ZipFile
 
 from lxml import etree
 
+from docwen_plugin_markdown.xlsx_text import check_workbook_text_capacity
+
 _SHEET_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 _OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 _PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
@@ -48,6 +50,7 @@ def save_workbook_preserving_empty_strings(workbook: Any, output_path: str | Pat
     only for cells explicitly holding that string before serialization.
     Formula cells and genuine None values never enter this set.
     """
+    check_workbook_text_capacity(workbook)
     authored: dict[str, set[str]] = {
         sheet.title: {cell.coordinate for cell in sheet._cells.values() if cell.data_type == "s" and cell.value == ""}
         for sheet in workbook.worksheets

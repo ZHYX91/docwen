@@ -40,7 +40,11 @@ from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
     build_template_workbook,
     process_image_placeholders,
 )
-from docwen_plugin_markdown.xlsx_text import XlsxCellTextTooLongError, assign_bounded_xlsx_value
+from docwen_plugin_markdown.xlsx_text import (
+    XlsxCellTextTooLongError,
+    assign_bounded_xlsx_value,
+    check_workbook_text_capacity,
+)
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -245,6 +249,7 @@ class MdToXlsxConverter:
             input_stem = _source_stem(context)
             suggested_name = f"{input_stem}.xlsx"
 
+            check_workbook_text_capacity(wb)
             wb.save(output_path)
 
             output_bytes = Path(output_path).stat().st_size
