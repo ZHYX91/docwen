@@ -10,6 +10,8 @@ from typing import Any
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils.cell import range_boundaries
 
+from docwen_plugin_markdown.xlsx_text import assign_bounded_xlsx_value
+
 
 @dataclass(slots=True)
 class StructuredProjectionWorkbook:
@@ -120,12 +122,14 @@ def materialize_order_rows(
 
 def write_string_matrix(sheet: Any, headers: tuple[str, ...], rows: list[tuple[str, ...]]) -> None:
     for column, value in enumerate(headers, 1):
-        cell = sheet.cell(1, column, value)
+        cell = sheet.cell(1, column)
+        assign_bounded_xlsx_value(cell, value)
         cell.data_type = "s"
         cell.number_format = "@"
     for row_index, values in enumerate(rows, 2):
         for column, value in enumerate(values, 1):
-            cell = sheet.cell(row_index, column, value)
+            cell = sheet.cell(row_index, column)
+            assign_bounded_xlsx_value(cell, value)
             cell.data_type = "s"
             cell.number_format = "@"
 

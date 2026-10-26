@@ -35,13 +35,12 @@ from docwen_plugin_markdown.common_utils import (
 )
 from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
-    XlsxCellTextTooLongError,
     _plan_rectangular_merges,
     _restore_escaped_merge_marker_literals,
-    assign_bounded_xlsx_value,
     build_template_workbook,
     process_image_placeholders,
 )
+from docwen_plugin_markdown.xlsx_text import XlsxCellTextTooLongError, assign_bounded_xlsx_value
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext

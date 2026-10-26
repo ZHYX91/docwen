@@ -412,12 +412,13 @@ class ExecutionCoordinator(QObject):
             return False
 
     def _report_output_policy_config_error(self) -> None:
-        self._info_area_vm.add_message(
-            _t(
-                "main_window.output_settings_unavailable",
-                "Output settings could not be loaded; the request was not started.",
-            ),
-            "error",
+        message = _t(
+            "main_window.output_settings_unavailable",
+            "Output settings could not be loaded; the request was not started.",
+        )
+        self._info_area_vm.add_message(message, "error")
+        self._info_area_vm.set_transient_message(
+            "error:output-policy-config", message, message_type="error", ttl_ms=5000, force_refresh=True
         )
 
     @Slot(dict)

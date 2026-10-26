@@ -167,3 +167,9 @@ Shared checkboxes preserve Qt keyboard/accessibility behavior and draw their ind
 ## Regression / 回归
 
 Widget/view-model and Runtime integration tests cover deterministic clipboard, ownership, routing and publication behavior. GUI smoke, screenshots and physical desktop interaction remain the authority for final host-dependent layout and clipboard interaction. In particular, minimum-width, Large text, 150% application scale, long translations, Light/Dark themes, Tab order and physical clipboard conversion require Computer Use or equivalent desktop acceptance; automated Qt tests do not claim that pass. Current reference screenshots are stored under `docs/assets/screenshots/`.
+
+### Spreadsheet text capacity
+
+Structured clipboard XLSX output checks each final composed string before assigning it to openpyxl, including table cells and the Document Order, Table Semantics and Image Semantics worksheets. The limit is 32767 UTF-16 code units per cell, including paragraph separators and generated projection text. An overflow reports the worksheet and cell without including authored content, returns failure and publishes no partial workbook. Exact boundary values remain intact after save/reopen. This is an XLSX output constraint; it does not reduce the clipboard model's admission budget or constrain Markdown/CSV output.
+
+An output-settings read failure displays an immediate notice that the request did not start. A previously completed task retains its identity, result and actions; the notice appears separately and remains in history after its brief display expires.

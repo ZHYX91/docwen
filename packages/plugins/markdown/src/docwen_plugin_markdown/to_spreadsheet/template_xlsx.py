@@ -21,6 +21,7 @@ from docwen_core.detection import detect_content_format
 from docwen_core.formats import CATEGORY_IMAGE, get_category
 from docwen_core.yaml_tools import extract_yaml
 from docwen_plugin_markdown.common_utils import parse_md_tables, parse_raw_md_tables
+from docwen_plugin_markdown.xlsx_text import assign_bounded_xlsx_value
 from docwen_plugin_markdown.yaml_processor import ensure_title_fallback
 
 _PLACEHOLDER_RE = re.compile(r"\{\{([^}]+)\}\}")
@@ -33,35 +34,6 @@ _ANGLE_EMAIL_RE = re.compile(r"<([^@\s<>]+@[^@\s<>]+\.[^@\s<>]+)>")
 _ZERO_WIDTH_TRANSLATION = str.maketrans("", "", "\u200b\u200c\u200d\ufeff\u2060")
 _COLUMN_PREFIX = "↓"
 _ROW_PREFIX = "→"
-_XLSX_CELL_TEXT_LIMIT = 32767
-
-
-class XlsxCellTextTooLongError(ValueError):
-    """Reject a value before openpyxl silently truncates the source text."""
-
-    def __init__(self, *, sheet: str, row: int, column: int, length: int) -> None:
-        self.sheet = sheet
-        self.row = row
-        self.column = column
-        self.length = length
-        super().__init__(
-            f"Cell in sheet {sheet!r}, row {row}, column {column} contains "
-            f"{length} UTF-16 code units; Excel allows at most {_XLSX_CELL_TEXT_LIMIT}."
-        )
-
-
-def assign_bounded_xlsx_value(cell: Any, value: Any) -> None:
-    """Check authored text before assigning it to an Excel cell."""
-    if isinstance(value, str):
-        units = len(value.encode("utf-16-le")) // 2
-        if units > _XLSX_CELL_TEXT_LIMIT:
-            raise XlsxCellTextTooLongError(
-                sheet=cell.parent.title,
-                row=cell.row,
-                column=cell.column,
-                length=units,
-            )
-    cell.value = value
 
 
 def build_template_workbook(

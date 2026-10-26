@@ -32,6 +32,9 @@ from importlib.util import find_spec
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote, urljoin, urlparse
+from urllib.request import url2pathname
+
+from docwen_plugin_markup.web_archive.resource_identity import mhtml_resource_identity
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -338,14 +341,13 @@ class HtmlToMarkdownConverter:
         from docwen_plugin_markup.markdown_resources import (
             MarkdownResource,
             MarkdownResourceWriter,
-            normalize_resource_key,
         )
 
         raw = Path(mhtml_path).read_bytes()
         msg = BytesParser(policy=policy.default).parsebytes(raw)
 
         html_content: str | None = None
-        replacements: dict[str, str] = {}
+        document_uri = str(msg.get("Content-Base") or msg.get("Content-Location") or "")
         resource_refs: list[tuple[MarkdownResource, list[str]]] = []
 
         parts = list(msg.walk()) if msg.is_multipart() else [msg]
@@ -370,6 +372,7 @@ class HtmlToMarkdownConverter:
                     )
                     if candidate.strip():
                         html_content = candidate
+                        document_uri = urljoin(document_uri, str(part.get("Content-Location") or ""))
                 continue
 
             content_location = part.get("Content-Location")
@@ -391,7 +394,7 @@ class HtmlToMarkdownConverter:
                     subtype = ctype.split("/", 1)[1]
                     if subtype:
                         ext = f".{subtype.split(';', 1)[0].strip()}"
-                name = f"part{len(replacements) + 1}{ext}"
+                name = f"part{idx}{ext}"
 
             refs: list[str] = []
             if content_location:
@@ -402,7 +405,7 @@ class HtmlToMarkdownConverter:
                 if cid:
                     refs.append(f"cid:{cid}")
 
-            source_key = refs[0] if refs else name or f"part{idx}"
+            source_key = f"mhtml-part-{idx}"
             resource_refs.append(
                 (
                     MarkdownResource(
@@ -431,18 +434,36 @@ class HtmlToMarkdownConverter:
         aux_artifacts: list[Any] = []
         prewritten_image_links: dict[str, str] = {}
         if keep_images or enable_ocr:
-            image_sources = _extract_html_image_sources(html_content or "")
-            normalized_image_sources = {normalize_resource_key(source) for source in image_sources}
-            referenced_resources: list[tuple[MarkdownResource, list[str]]] = []
+            import lxml.html as lxml_html
+
+            doc = lxml_html.document_fromstring(
+                html_content.encode("utf-8"), parser=lxml_html.HTMLParser(encoding="utf-8")
+            )
+            base_uri = urljoin(document_uri, _extract_base_href_from_doc(doc) or "")
+            image_sources = _extract_html_image_sources(html_content)
+            by_identity: dict[str, MarkdownResource] = {}
+            ambiguous: set[str] = set()
             for resource, refs in resource_refs:
                 if not resource.media_type.startswith("image/"):
                     continue
-                candidates = [resource.source_key, resource.suggested_name, *refs]
-                if any(
-                    candidate in image_sources or normalize_resource_key(candidate) in normalized_image_sources
-                    for candidate in candidates
-                ):
-                    referenced_resources.append((resource, refs))
+                for ref in refs:
+                    key = mhtml_resource_identity(ref, base_uri=document_uri)
+                    previous = by_identity.get(key)
+                    if previous is not None and previous.data != resource.data:
+                        ambiguous.add(key)
+                    by_identity[key] = resource
+            source_resources: dict[str, MarkdownResource] = {}
+            for source_ref in image_sources:
+                key = mhtml_resource_identity(source_ref, base_uri=base_uri)
+                if key in ambiguous:
+                    raise ValueError("MHTML archive has conflicting referenced image resource identities")
+                resource = by_identity.get(key)
+                if resource is not None:
+                    source_resources[source_ref] = resource
+            selected = {resource.source_key for resource in source_resources.values()}
+            referenced_resources = [
+                (resource, refs) for resource, refs in resource_refs if resource.source_key in selected
+            ]
 
             resources = [resource for resource, _refs in referenced_resources]
             written_resources = MarkdownResourceWriter().write_all(
@@ -457,19 +478,16 @@ class HtmlToMarkdownConverter:
                 source_format="mhtml",
                 keep_resource_artifacts=keep_images,
             )
-            for resource, refs in referenced_resources:
-                item = written_resources.get(normalize_resource_key(resource.source_key))
-                if item is None:
-                    continue
-                aux_artifacts.extend(item.artifacts)
-                prewritten_image_links[item.suggested_name] = item.markdown_link
-                for ref in refs:
-                    replacements[ref] = item.suggested_name
+            for resource, _refs in referenced_resources:
+                item = written_resources.get(resource.source_key)
+                if item is not None:
+                    aux_artifacts.extend(item.artifacts)
+            for source_ref, resource in source_resources.items():
+                item = written_resources.get(resource.source_key)
+                if item is not None:
+                    prewritten_image_links[source_ref] = item.markdown_link
 
-        # Apply replacements in HTML content
-        for k, v in replacements.items():
-            html_content = html_content.replace(k, v)
-
+        # Keep authored body/code text intact. The image pass binds only img src.
         html_output_path = tmp_dir / "content.html"
         html_output_path.write_text(html_content, encoding="utf-8")
 
@@ -677,13 +695,22 @@ def _is_remote_url(value: str) -> bool:
     return parsed.scheme in {"http", "https"}
 
 
+def _file_uri_path(uri: str) -> Path | None:
+    parsed = urlparse(uri)
+    authority = parsed.netloc
+    if authority and authority.lower() != "localhost":
+        # Network shares are Windows paths; never reinterpret one as a local
+        # POSIX path or fetch an archive's remote resource.
+        return Path(url2pathname(f"//{authority}{parsed.path}")) if os.name == "nt" else None
+    if os.name != "nt" and re.match(r"^/[A-Za-z]:", parsed.path):
+        return None
+    return Path(url2pathname(parsed.path))
+
+
 def _resolve_local_path(*, src: str, html_path: str, base_href: str | None, resource_dir: str | None) -> Path | None:
     parsed = urlparse(src)
     if parsed.scheme == "file":
-        try:
-            return Path(unquote(parsed.path.lstrip("/")))
-        except Exception:
-            return None
+        return _file_uri_path(src)
 
     if parsed.scheme:
         return None
@@ -692,13 +719,8 @@ def _resolve_local_path(*, src: str, html_path: str, base_href: str | None, reso
     raw_path = unquote(raw_path).replace("\\", "/")
     html_dir = Path(html_path).parent
 
-    if raw_path.startswith("/") and base_href and base_href.startswith("file:"):
-        try:
-            base_parsed = urlparse(base_href)
-            root = Path(unquote(base_parsed.path.lstrip("/"))).parent
-            return root / raw_path.lstrip("/")
-        except Exception:
-            return None
+    if base_href and urlparse(base_href).scheme == "file":
+        return _file_uri_path(urljoin(base_href, src))
 
     # HTML relative paths are anchored at the HTML document. A detected
     # companion directory is only a fallback for bare resource names; using it

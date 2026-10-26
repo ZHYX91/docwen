@@ -122,6 +122,69 @@ def _primary(result) -> Path:
     return Path(next(item for item in result.artifacts if item.is_primary).staging_path)
 
 
+@pytest.mark.parametrize("custom_template", [False, True])
+@pytest.mark.parametrize("projection", ["table", "order", "semantics"])
+@pytest.mark.parametrize(
+    "value",
+    ["x" * 32767, "😀" * 16383 + "x", "中" * 32768, "😀" * 16384],
+    ids=["ascii-limit", "utf16-limit", "cjk-over", "utf16-over"],
+)
+def test_clipboard_xlsx_final_strings_have_excel_capacity_boundary(
+    tmp_path: Path, custom_template: bool, projection: str, value: str
+) -> None:
+    options = {}
+    template_path = None
+    template_bytes = None
+    if custom_template:
+        directory = user_templates_dir()
+        directory.mkdir(parents=True, exist_ok=True)
+        template_path = directory / "capacity.xlsx"
+        template = Workbook()
+        template.save(template_path)
+        template_bytes = template_path.read_bytes()
+        options["template_name"] = _template_id("xlsx", template_path.name)
+    html = {
+        "table": f"<table><tr><td>{value}</td></tr></table>",
+        "order": f"<p>{value}</p>",
+        "semantics": f'<table><tr><th id="{value}">header</th></tr></table>',
+    }[projection].encode("utf-8")
+    request = _request(tmp_path, request_id="capacity", target="xlsx", html=html, options=options)
+    source = Path(request.input_refs[0].path)
+    source_bytes = source.read_bytes()
+    result = _controller(tmp_path).execute_single(request)
+    assert source.read_bytes() == source_bytes
+    if template_path is not None:
+        assert template_path.read_bytes() == template_bytes
+    if len(value.encode("utf-16-le")) // 2 > 32767:
+        assert not result.success
+        assert result.error is not None
+        assert result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
+        assert len(result.error.message) < 300
+        assert "32767" in result.error.message
+        assert not result.artifacts
+        output_dir = Path(request.output_policy.output_dir)
+        assert not output_dir.exists() or not any(output_dir.iterdir())
+    else:
+        workbook = load_workbook(_primary(result))
+        sheet, coordinate = {
+            "table": ("Table 1", "A1"),
+            "order": ("Document Order", "C2"),
+            "semantics": ("Table Semantics", "K2"),
+        }[projection]
+        assert workbook[sheet][coordinate].value == value
+        workbook.close()
+
+
+def test_clipboard_xlsx_checks_composed_paragraphs_and_leaves_markdown_unlimited(tmp_path: Path) -> None:
+    html = ("<table><tr><td><p>" + "x" * 16384 + "</p><p>" + "y" * 16384 + "</p></td></tr></table>").encode()
+    controller = _controller(tmp_path)
+    result = controller.execute_single(_request(tmp_path, request_id="composed", target="xlsx", html=html))
+    assert not result.success
+    assert result.error is not None and result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
+    markdown = controller.execute_single(_request(tmp_path, request_id="unlimited", target="md", html=html))
+    assert "y" * 16384 in _primary(markdown).read_text(encoding="utf-8")
+
+
 def test_docx_preserves_native_header_shape_and_reversible_html_associations(tmp_path: Path) -> None:
     result = _controller(tmp_path).execute_single(
         _request(
