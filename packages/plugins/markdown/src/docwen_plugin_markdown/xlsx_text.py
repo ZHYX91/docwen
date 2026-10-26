@@ -37,6 +37,11 @@ def check_workbook_text_capacity(workbook: Any) -> None:
                 check_xlsx_cell_text(cell, cell.value)
 
 
+def existing_xlsx_cells(worksheet: Any) -> list[Any]:
+    """Snapshot populated cells in row order without expanding sparse ranges."""
+    return [cell for _position, cell in sorted(worksheet._cells.items())]
+
+
 def assign_bounded_xlsx_value(cell: Any, value: Any) -> None:
     """Check the final value, before any assignment to openpyxl."""
     check_xlsx_cell_text(cell, value)

@@ -21,7 +21,7 @@ from docwen_core.detection import detect_content_format
 from docwen_core.formats import CATEGORY_IMAGE, get_category
 from docwen_core.yaml_tools import extract_yaml
 from docwen_plugin_markdown.common_utils import parse_md_tables, parse_raw_md_tables
-from docwen_plugin_markdown.xlsx_text import assign_bounded_xlsx_value
+from docwen_plugin_markdown.xlsx_text import assign_bounded_xlsx_value, existing_xlsx_cells
 from docwen_plugin_markdown.yaml_processor import ensure_title_fallback
 
 _PLACEHOLDER_RE = re.compile(r"\{\{([^}]+)\}\}")
@@ -138,14 +138,13 @@ def _yaml_replacements(
 ) -> dict[str, tuple[Any, str | None]]:
     field_names: set[str] = set()
     for worksheet in workbook.worksheets:
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if not isinstance(cell.value, str):
+        for cell in existing_xlsx_cells(worksheet):
+            if not isinstance(cell.value, str):
+                continue
+            for match in _PLACEHOLDER_RE.findall(cell.value):
+                if match.startswith((_COLUMN_PREFIX, _ROW_PREFIX, "IMAGE:", "IMAGE@")):
                     continue
-                for match in _PLACEHOLDER_RE.findall(cell.value):
-                    if match.startswith((_COLUMN_PREFIX, _ROW_PREFIX, "IMAGE:", "IMAGE@")):
-                        continue
-                    field_names.add(match)
+                field_names.add(match)
 
     ensure_title_fallback(yaml_data, placeholder_names=field_names, source_stem=source_stem)
 
@@ -163,32 +162,31 @@ def _yaml_replacements(
 def _replace_yaml_placeholders(workbook: Any, replacements: dict[str, tuple[Any, str | None]]) -> int:
     replaced = 0
     for worksheet in workbook.worksheets:
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if not isinstance(cell.value, str) or not cell.value:
-                    continue
-                original = cell.value
-                stripped = original.strip()
-                if stripped in replacements:
-                    value, number_format = replacements[stripped]
-                    assign_bounded_xlsx_value(cell, value)
-                    if number_format:
-                        cell.number_format = number_format
-                    replaced += 1
-                    continue
+        for cell in existing_xlsx_cells(worksheet):
+            if not isinstance(cell.value, str) or not cell.value:
+                continue
+            original = cell.value
+            stripped = original.strip()
+            if stripped in replacements:
+                value, number_format = replacements[stripped]
+                assign_bounded_xlsx_value(cell, value)
+                if number_format:
+                    cell.number_format = number_format
+                replaced += 1
+                continue
 
-                next_value = original
-                text_format = False
-                for placeholder, (value, number_format) in replacements.items():
-                    if placeholder not in next_value:
-                        continue
-                    next_value = next_value.replace(placeholder, str(value))
-                    text_format = text_format or number_format == numbers.FORMAT_TEXT
-                if next_value != original:
-                    assign_bounded_xlsx_value(cell, next_value)
-                    if text_format:
-                        cell.number_format = numbers.FORMAT_TEXT
-                    replaced += 1
+            next_value = original
+            text_format = False
+            for placeholder, (value, number_format) in replacements.items():
+                if placeholder not in next_value:
+                    continue
+                next_value = next_value.replace(placeholder, str(value))
+                text_format = text_format or number_format == numbers.FORMAT_TEXT
+            if next_value != original:
+                assign_bounded_xlsx_value(cell, next_value)
+                if text_format:
+                    cell.number_format = numbers.FORMAT_TEXT
+                replaced += 1
     return replaced
 
 
@@ -198,18 +196,17 @@ def _fill_column_placeholders(workbook: Any, columns: dict[str, list[tuple[Any, 
     protected_skipped = 0
     for worksheet in workbook.worksheets:
         cells_to_fill: list[tuple[Any, list[tuple[Any, str | None]]]] = []
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if not isinstance(cell.value, str):
-                    continue
-                field_name = _whole_cell_placeholder_name(cell.value)
-                if field_name is None:
-                    continue
-                if not field_name.startswith(_COLUMN_PREFIX):
-                    continue
-                header = field_name[len(_COLUMN_PREFIX) :]
-                if header in columns:
-                    cells_to_fill.append((cell, columns[header]))
+        for cell in existing_xlsx_cells(worksheet):
+            if not isinstance(cell.value, str):
+                continue
+            field_name = _whole_cell_placeholder_name(cell.value)
+            if field_name is None:
+                continue
+            if not field_name.startswith(_COLUMN_PREFIX):
+                continue
+            header = field_name[len(_COLUMN_PREFIX) :]
+            if header in columns:
+                cells_to_fill.append((cell, columns[header]))
 
         for anchor, values in cells_to_fill:
             current_row = anchor.row
@@ -242,18 +239,17 @@ def _fill_row_placeholders(workbook: Any, columns: dict[str, list[tuple[Any, str
     protected_skipped = 0
     for worksheet in workbook.worksheets:
         cells_to_fill: list[tuple[Any, list[tuple[Any, str | None]]]] = []
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if not isinstance(cell.value, str):
-                    continue
-                field_name = _whole_cell_placeholder_name(cell.value)
-                if field_name is None:
-                    continue
-                if not field_name.startswith(_ROW_PREFIX):
-                    continue
-                header = field_name[len(_ROW_PREFIX) :]
-                if header in columns:
-                    cells_to_fill.append((cell, columns[header]))
+        for cell in existing_xlsx_cells(worksheet):
+            if not isinstance(cell.value, str):
+                continue
+            field_name = _whole_cell_placeholder_name(cell.value)
+            if field_name is None:
+                continue
+            if not field_name.startswith(_ROW_PREFIX):
+                continue
+            header = field_name[len(_ROW_PREFIX) :]
+            if header in columns:
+                cells_to_fill.append((cell, columns[header]))
 
         for anchor, values in cells_to_fill:
             current_col = anchor.column
@@ -351,16 +347,15 @@ def _find_column_placeholder_regions(workbook: Any, headers: list[str]) -> list[
 
     for worksheet in workbook.worksheets:
         grouped: dict[int, dict[str, Any]] = defaultdict(dict)
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if not isinstance(cell.value, str):
-                    continue
-                field_name = _whole_cell_placeholder_name(cell.value)
-                if field_name is None:
-                    continue
-                for header, placeholder_name in placeholders.items():
-                    if field_name == placeholder_name:
-                        grouped[cell.row][header] = cell
+        for cell in existing_xlsx_cells(worksheet):
+            if not isinstance(cell.value, str):
+                continue
+            field_name = _whole_cell_placeholder_name(cell.value)
+            if field_name is None:
+                continue
+            for header, placeholder_name in placeholders.items():
+                if field_name == placeholder_name:
+                    grouped[cell.row][header] = cell
 
         for row_index, header_cells in grouped.items():
             if any(header not in header_cells for header in headers):
@@ -563,10 +558,9 @@ def _promote_template_image_placeholders(workbook: Any, image_scope: str) -> Non
         return f"{{{{{marker}:{encoded_path}{separator}{dimensions}}}}}"
 
     for worksheet in workbook.worksheets:
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if isinstance(cell.value, str) and "{{IMAGE:" in cell.value:
-                    assign_bounded_xlsx_value(cell, _IMAGE_PLACEHOLDER_RE.sub(promote, cell.value))
+        for cell in existing_xlsx_cells(worksheet):
+            if isinstance(cell.value, str) and "{{IMAGE:" in cell.value:
+                assign_bounded_xlsx_value(cell, _IMAGE_PLACEHOLDER_RE.sub(promote, cell.value))
 
 
 def process_image_placeholders(
@@ -589,45 +583,44 @@ def process_image_placeholders(
     marker = "{{IMAGE:" if image_scope is None else f"{{{{IMAGE@{image_scope}:"
 
     for worksheet in workbook.worksheets:
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if not isinstance(cell.value, str) or marker not in cell.value:
+        for cell in existing_xlsx_cells(worksheet):
+            if not isinstance(cell.value, str) or marker not in cell.value:
+                continue
+
+            next_value = cell.value
+            for match in placeholder_re.finditer(cell.value):
+                payload = match.group(1)
+                placeholder = match.group(0)
+                image_path, width, height = _parse_image_payload(
+                    payload,
+                    decode_path=image_scope is not None,
+                )
+                resolved_path = _resolve_image_path(image_path, reference_dir)
+
+                if resolved_path is None or not _is_image_content(resolved_path):
+                    next_value = next_value.replace(placeholder, "")
                     continue
 
-                next_value = cell.value
-                for match in placeholder_re.finditer(cell.value):
-                    payload = match.group(1)
-                    placeholder = match.group(0)
-                    image_path, width, height = _parse_image_payload(
-                        payload,
-                        decode_path=image_scope is not None,
-                    )
-                    resolved_path = _resolve_image_path(image_path, reference_dir)
-
-                    if resolved_path is None or not _is_image_content(resolved_path):
-                        next_value = next_value.replace(placeholder, "")
-                        continue
-
-                    try:
-                        image = XlsxImage(str(resolved_path))
-                    except Exception:
-                        next_value = next_value.replace(placeholder, "")
-                        continue
-
-                    if width is not None or height is not None:
-                        image.width, image.height = _scale_image(image.width, image.height, width, height)
-                    elif image.width > 200:
-                        scale = 200 / image.width
-                        image.width = 200
-                        image.height = int(image.height * scale)
-
-                    image.anchor = cell.coordinate
-                    worksheet.add_image(image)
-                    _fit_cell_to_image(worksheet, cell, image.width, image.height)
+                try:
+                    image = XlsxImage(str(resolved_path))
+                except Exception:
                     next_value = next_value.replace(placeholder, "")
-                    inserted += 1
+                    continue
 
-                assign_bounded_xlsx_value(cell, next_value)
+                if width is not None or height is not None:
+                    image.width, image.height = _scale_image(image.width, image.height, width, height)
+                elif image.width > 200:
+                    scale = 200 / image.width
+                    image.width = 200
+                    image.height = int(image.height * scale)
+
+                image.anchor = cell.coordinate
+                worksheet.add_image(image)
+                _fit_cell_to_image(worksheet, cell, image.width, image.height)
+                next_value = next_value.replace(placeholder, "")
+                inserted += 1
+
+            assign_bounded_xlsx_value(cell, next_value)
 
     return inserted
 
@@ -709,21 +702,20 @@ def _fit_cell_to_image(worksheet: Any, cell: Any, width: int, height: int) -> No
 def _clean_remaining_placeholders(workbook: Any) -> int:
     cleaned = 0
     for worksheet in workbook.worksheets:
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if not isinstance(cell.value, str) or "{{" not in cell.value:
-                    continue
+        for cell in existing_xlsx_cells(worksheet):
+            if not isinstance(cell.value, str) or "{{" not in cell.value:
+                continue
 
-                def clean(match: re.Match[str]) -> str:
-                    token = match.group(1)
-                    if token.startswith(("IMAGE:", "IMAGE@")):
-                        return match.group(0)
-                    return ""
+            def clean(match: re.Match[str]) -> str:
+                token = match.group(1)
+                if token.startswith(("IMAGE:", "IMAGE@")):
+                    return match.group(0)
+                return ""
 
-                next_value = _PLACEHOLDER_RE.sub(clean, cell.value)
-                if next_value != cell.value:
-                    assign_bounded_xlsx_value(cell, next_value)
-                    cleaned += 1
+            next_value = _PLACEHOLDER_RE.sub(clean, cell.value)
+            if next_value != cell.value:
+                assign_bounded_xlsx_value(cell, next_value)
+                cleaned += 1
     return cleaned
 
 
