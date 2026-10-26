@@ -22,6 +22,7 @@ import tempfile
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TypedDict
 from urllib.parse import unquote, urljoin, urlparse
 from urllib.request import url2pathname
 
@@ -637,6 +638,11 @@ def _ocr_image_link(
     return f"{image_link}\n\n{ocr_text}\n"
 
 
+class HtmlImageProjection(TypedDict):
+    html: str
+    token_map: dict[str, str]
+
+
 def preprocess_html_images(
     *,
     html_text: str,
@@ -653,7 +659,7 @@ def preprocess_html_images(
     current_locale: str = "zh_CN",
     recognize_tables: bool = True,
     table_merge_strategy: str = "fill",
-) -> dict[str, str]:
+) -> HtmlImageProjection:
     """Preprocess ``<img>`` elements in *html_text* for Markdown conversion.
 
     Iterates every ``<img>`` tag, builds a Markdown image link via
@@ -668,7 +674,12 @@ def preprocess_html_images(
     ``markdownify``) and then replace each token with its value.
     """
     import re
+    from html import unescape
 
+    from docwen_core.text.placeholders import placeholder_namespace
+
+    authored = unescape(html_text) + re.sub(r"<[^>]*>", "", unescape(html_text))
+    namespace = placeholder_namespace(authored, prefix="DOCWENIMG")
     token_map: dict[str, str] = {}
     original_basename = Path(html_path).stem
     base_href = _extract_base_href(html_text)
@@ -686,7 +697,7 @@ def preprocess_html_images(
             return img_tag
 
         image_index += 1
-        token = f"DOCWENIMG{image_index:04d}"
+        token = f"{namespace}{image_index:04d}TOKEN"
         md_link = build_image_markdown(
             src=src,
             html_path=html_path,
@@ -710,4 +721,4 @@ def preprocess_html_images(
         return token
 
     processed = re.sub(r"<img\s[^>]*/?\s*>", _replace_img, html_text, flags=re.IGNORECASE)
-    return {"html": processed, "token_map": token_map}  # pyright: ignore[reportReturnType]
+    return {"html": processed, "token_map": token_map}

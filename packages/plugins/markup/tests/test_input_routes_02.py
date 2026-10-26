@@ -59,7 +59,7 @@ class TestEnexToMd:
         """Only the ENML body fragment should be sent to markdownify."""
         from docwen_plugin_markup.note_export.converter import EnexToMarkdownConverter
 
-        html = EnexToMarkdownConverter._normalize_enml_to_html(
+        html, token_resources = EnexToMarkdownConverter._normalize_enml_to_html(
             """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
 <en-note><p>Body</p><en-media hash="ABCDEFABCDEFABCDEFABCDEFABCDEFAB" type="image/png"/></en-note>"""
@@ -70,7 +70,8 @@ class TestEnexToMd:
         assert "<en-note" not in html
         assert "</en-note>" not in html
         assert "<p>Body</p>" in html
-        assert '<img src="__DOCWEN_RES_abcdefabcdefabcdefabcdefabcdefab__" />' in html
+        assert list(token_resources.values()) == ["abcdefabcdefabcdefabcdefabcdefab"]
+        assert next(iter(token_resources)) in html
 
     @pytest.mark.integration
     def test_enex_conversion_succeeds(self, pipeline, sample_enex_file, tmp_path) -> None:

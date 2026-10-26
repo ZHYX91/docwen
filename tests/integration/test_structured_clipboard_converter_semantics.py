@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import csv
+from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -17,6 +19,7 @@ from docwen_core.docx_parsing.document_semantics import extract_semantic_table_m
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_core.models.clipboard_document import CLIPBOARD_DOCUMENT_MEDIA_TYPE, clipboard_document_to_bytes
+from docwen_core.models.document_node import ConversionIdentity
 from docwen_core.models.file_ref import (
     MANAGED_INPUT_SHA256_METADATA_KEY,
     MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
@@ -183,6 +186,42 @@ def test_clipboard_xlsx_checks_composed_paragraphs_and_leaves_markdown_unlimited
     assert result.error is not None and result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
     markdown = controller.execute_single(_request(tmp_path, request_id="unlimited", target="md", html=html))
     assert "y" * 16384 in _primary(markdown).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("overflow", ["x" * 32768, "😀" * 16384], ids=["ascii", "nonbmp"])
+def test_clipboard_xlsx_overflow_preserves_existing_same_name_workbook(tmp_path: Path, overflow: str) -> None:
+    identity = ConversionIdentity.create(
+        task_id="same-name",
+        source_stem="same-name",
+        source_format="clipboard_document",
+        created_at=datetime(2026, 10, 26, tzinfo=UTC),
+    )
+    controller = _controller(tmp_path)
+    first = replace(
+        _request(
+            tmp_path,
+            request_id="same-name",
+            target="xlsx",
+            html=b"<table><tr><td>Existing result sentinel</td></tr></table>",
+        ),
+        conversion_identity=identity,
+    )
+    sentinel = _primary(controller.execute_single(first))
+    original = sentinel.read_bytes()
+    rejected = replace(
+        _request(
+            tmp_path,
+            request_id="same-name",
+            target="xlsx",
+            html=f"<table><tr><td>{overflow}</td></tr></table>".encode(),
+        ),
+        conversion_identity=identity,
+    )
+    result = controller.execute_single(rejected)
+    assert not result.success and not result.artifacts
+    assert result.error is not None and result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
+    assert sentinel.read_bytes() == original
+    assert list(Path(rejected.output_policy.output_dir).rglob("*.xlsx")) == [sentinel]
 
 
 def test_docx_preserves_native_header_shape_and_reversible_html_associations(tmp_path: Path) -> None:

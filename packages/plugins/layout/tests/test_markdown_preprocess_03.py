@@ -320,8 +320,8 @@ class TestPreprocessHtmlImages:
             output_folder="/tmp/out",
         )
         assert "<img" not in result["html"]
-        assert "DOCWENIMG0001" in result["html"]
-        assert "DOCWENIMG0001" in result["token_map"]
+        assert len(result["token_map"]) == 1
+        assert next(iter(result["token_map"])) in result["html"]
 
     def test_multiple_imgs_get_unique_tokens(self) -> None:
         from docwen_plugin_layout.preprocess import preprocess_html_images
@@ -332,9 +332,7 @@ class TestPreprocessHtmlImages:
             html_path="/tmp/doc.html",
             output_folder="/tmp/out",
         )
-        assert "DOCWENIMG0001" in result["html"]
-        assert "DOCWENIMG0002" in result["html"]
-        assert "DOCWENIMG0003" in result["html"]
+        assert len(set(result["token_map"])) == 3
         assert len(result["token_map"]) == 3
         for token in result["token_map"]:
             assert token in result["html"]
@@ -375,7 +373,7 @@ class TestPreprocessHtmlImages:
         )
         token_map: object = result["token_map"]  # type helper
         assert isinstance(token_map, dict)
-        token = token_map.get("DOCWENIMG0001", "")
+        token = next(iter(token_map.values()))
         assert "cdn.example.com/logo.png" in token
 
     def test_base_href_resolution_in_html(self, tmp_path: Path) -> None:
@@ -396,5 +394,5 @@ class TestPreprocessHtmlImages:
         )
         token_map2: object = result["token_map"]  # type helper
         assert isinstance(token_map2, dict)
-        token = token_map2.get("DOCWENIMG0001", "")
+        token = next(iter(token_map2.values()))
         assert "cdn.example.com/site/images/logo.png" in token
