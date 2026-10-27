@@ -34,7 +34,9 @@ from docwen_plugin_markdown.common_utils import (
     write_table_to_csv,
 )
 from docwen_plugin_markdown.template_policy import template_list_separator
+from docwen_plugin_markdown.to_spreadsheet.image_plan import XlsxImageTextPlan, image_scope_without_literal_collision
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
+    _plain_text_from_markup,
     _plan_rectangular_merges,
     _restore_escaped_merge_marker_literals,
     build_template_workbook,
@@ -42,7 +44,6 @@ from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
 )
 from docwen_plugin_markdown.xlsx_text import (
     XlsxCellTextTooLongError,
-    assign_bounded_xlsx_value,
     check_workbook_text_capacity,
 )
 
@@ -129,6 +130,7 @@ class MdToXlsxConverter:
             content, input_bytes = read_input_markdown(input_path)
             yaml_front, markdown_body = split_yaml_front_matter_source(content)
             image_scope = secrets.token_urlsafe(24)
+            image_scope = image_scope_without_literal_collision(image_scope, content + _plain_text_from_markup(content))
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),
@@ -200,6 +202,7 @@ class MdToXlsxConverter:
                 else:
                     actual_table_count = len(tables)
 
+                image_plan = XlsxImageTextPlan()
                 wb = Workbook()
                 # Remove default sheet
                 wb.remove(wb.active)  # pyright: ignore[reportArgumentType]
@@ -220,7 +223,7 @@ class MdToXlsxConverter:
                                 if structural_tables
                                 else raw_value
                             )
-                            assign_bounded_xlsx_value(ws.cell(row=row_idx, column=col_idx), value)
+                            image_plan.assign(ws.cell(row=row_idx, column=col_idx), value)
 
                     if structural_tables and bool(table.get("structural")):
                         merge_regions, merge_warnings = _plan_rectangular_merges(
@@ -239,6 +242,7 @@ class MdToXlsxConverter:
                     wb,
                     input_path,
                     image_scope=image_scope,
+                    image_plan=image_plan,
                 )
 
             # ── Write to staging ────────────────────────────────────
@@ -374,6 +378,7 @@ class MdToCsvConverter:
             content, input_bytes = read_input_markdown(input_path)
             yaml_front, markdown_body = split_yaml_front_matter_source(content)
             image_scope = secrets.token_urlsafe(24)
+            image_scope = image_scope_without_literal_collision(image_scope, content + _plain_text_from_markup(content))
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),

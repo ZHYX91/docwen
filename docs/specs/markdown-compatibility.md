@@ -4,6 +4,12 @@ DocWen supports a documented Markdown subset for conversion to and from office f
 
 DocWen 为 Office 双向转换支持一组明确的 Markdown 子集。语法、链接、图片、编号和模板行为在每个请求开始前冻结。
 
+## Spreadsheet image text / 表格图片与文本
+
+Markdown-to-XLSX treats template-declared images and images produced by the active link policy as drawings separate from the final cell text. Temporary scoped/quoted image markers remain outside openpyxl while YAML, row/column filling and merges are planned. Only surviving cell drafts are consumed, then the actual text is checked against Excel's 32,767 UTF-16-unit limit before assignment and again before save. Internal marker length does not reduce a user's text capacity. A genuine overflow still fails without replacing an earlier published workbook. Authored marker-like text does not acquire permission to read an image, and repeated trusted image occurrences retain separate drawings.
+
+Markdown→XLSX 将模板自身声明的图片及当前链接策略生成的图片作为独立 drawing 处理。YAML、纵横填充及合并阶段的临时图片标记保存在工作簿外；只处理最终仍存在的单元格草稿，再对实际文本执行赋值前和保存前的 32767 UTF-16 单元检查。内部标记长度不挤占正文容量，真实超限仍明确失败并保留既有产物。正文中的字面标记不获得读图权限，重复的受信任图片分别保留 drawing。
+
 ## Supported structures / 支持结构
 
 - headings, paragraphs, emphasis, code, quotes and horizontal rules;
