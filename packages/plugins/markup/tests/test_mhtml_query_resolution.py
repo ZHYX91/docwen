@@ -123,3 +123,67 @@ def test_synthetic_scheme_case_and_explicit_authorities_remain_distinct(
     base: str, reference: str, expected: str
 ) -> None:
     assert resolve_mhtml_uri(base, reference) == expected
+
+
+@pytest.mark.parametrize(
+    ("base", "chosen", "decoy"),
+    [
+        ("http://a/b/c/d;p?q", "http:g", "http://a/b/c/g"),
+        ("", "http:g", "http:/g"),
+        ("", "http:/g", "http:///g"),
+        ("http://a/b/c?red", "///g", "http://a/g"),
+    ],
+)
+def test_scheme_absolute_resource_identities_do_not_borrow_base_or_add_authority(
+    pipeline, tmp_path: Path, base: str, chosen: str, decoy: str
+) -> None:
+    correct, wrong = _test_png_bytes((240, 0, 0)), _test_png_bytes((0, 0, 240))
+    archive = MIMEMultipart("related", type="text/html")
+    if base:
+        archive["Content-Base"] = base
+    archive.attach(MIMEText(f'<p>Absolute resource</p><img src="{chosen}">', "html", "utf-8"))
+    for location, data in [(chosen, correct), (decoy, wrong)]:
+        part = MIMEImage(data, _subtype="png")
+        part["Content-Location"] = location
+        archive.attach(part)
+    source = tmp_path / "absolute-scheme.mhtml"
+    source.write_bytes(archive.as_bytes())
+    output = tmp_path / "output"
+    output.mkdir()
+    result = _run_request(pipeline[1], source, "mhtml", output)
+    assert result.success, result.error
+    assert [Path(item.staging_path).read_bytes() for item in result.artifacts if item.kind == "image"] == [correct]
+
+
+@pytest.mark.parametrize("reference", ["http:g", "http:/g", "http:///g"])
+def test_scheme_absolute_components_survive_resolution_and_identity(reference: str) -> None:
+    assert resolve_mhtml_uri("http://a/b/c/d;p?q", reference) == reference
+    assert mhtml_resource_identity(reference) == reference
+
+
+@pytest.mark.parametrize(
+    ("reference", "expected"),
+    [("//", "http://"), ("///g", "http:///g"), ("//?", "http://?"), ("///g?x", "http:///g?x")],
+)
+def test_explicit_empty_relative_authority_does_not_inherit_base_parts(reference: str, expected: str) -> None:
+    assert resolve_mhtml_uri("http://a/b/c?red#old", reference) == expected
+
+
+@pytest.mark.parametrize("reference", ["p.png", "p.png?", "p.png#", "p.png?rev=1", "p.png#v"])
+def test_qualified_missing_images_cannot_erase_empty_components_via_basename(
+    pipeline, tmp_path: Path, reference: str
+) -> None:
+    payload = _test_png_bytes()
+    archive = MIMEMultipart("related", type="text/html")
+    archive.attach(MIMEText(f'<img src="{reference}">', "html", "utf-8"))
+    image = MIMEImage(payload, _subtype="png")
+    image["Content-Location"] = "other/p.png"
+    archive.attach(image)
+    source = tmp_path / "qualified.mhtml"
+    source.write_bytes(archive.as_bytes())
+    output = tmp_path / "output"
+    output.mkdir()
+    result = _run_request(pipeline[1], source, "mhtml", output)
+    assert result.success, result.error
+    images = [Path(item.staging_path).read_bytes() for item in result.artifacts if item.kind == "image"]
+    assert images == ([payload] if reference == "p.png" else [])

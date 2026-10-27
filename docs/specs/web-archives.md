@@ -10,9 +10,13 @@ Keep MIME parentage when resolving Content-Location. Each part uses its own encl
 
 Synthetic and absolute bases follow the same [RFC 3986 section 5.2.2](https://www.rfc-editor.org/rfc/rfc3986#section-5.2.2) query rules. An empty-path reference without its own query inherits the base query; an explicit empty `?` clears it and remains distinct from an absent query. Relative paths use their own query. Fragments are preserved during resolution and removed only when comparing resource identities, so a fragment-only reference cannot silently select an unqueried sibling image.
 
+A reference declaring its own scheme remains absolute, including when that scheme matches its MIME parent's. Recomposition retains absent versus explicitly empty authority and rootless versus rooted paths: `http:g`, `http:/g` and `http:///g` do not become one resource. A real authority matching the internal synthetic carrier's hostname also keeps its identity. This does not add path canonicalization or network retrieval.
+
 Only resources in the same or surrounding related scope may satisfy the selected HTML. Preserve host, query and path case in identity; do not percent-decode URI identity into filesystem paths. CID references match Content-ID only, not a Content-Location whose text starts with `cid:`. Raw Content-ID headers retain literal identifiers; only the HTML cid URL is decoded, exactly once, following [RFC 2392 section 2](https://www.rfc-editor.org/rfc/rfc2392.html#section-2). A literal `%2F` header differs from `/`. Output-safe filenames remain separate from resource identity.
 
 Exact URI/CID matching has priority. Compatibility fallback is limited to a bare relative filename without query or fragment and one uniquely named resource, with case preserved. A missing absolute URI, CID or qualified path cannot discard its identity through basename fallback. An actually referenced ambiguous identity or basename fails rather than selecting arbitrary image bytes; unused conflicting resources do not block unrelated content.
+
+An explicit empty query or fragment still qualifies a reference: missing `p.png?` or `p.png#` cannot silently use a similarly named resource from another directory. Exact matching still ignores fragment text as described above.
 
 ## Local HTML base and missing resources
 

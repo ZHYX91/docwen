@@ -458,8 +458,8 @@ class HtmlToMarkdownConverter:
                     if (
                         not parsed_source.scheme
                         and not parsed_source.netloc
-                        and not parsed_source.query
-                        and not parsed_source.fragment
+                        and "?" not in source_ref
+                        and "#" not in source_ref
                         and "/" not in parsed_source.path
                         and "\\" not in parsed_source.path
                     ):
