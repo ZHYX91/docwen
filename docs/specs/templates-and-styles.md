@@ -37,6 +37,14 @@ preserves the current format tab. A missing or disabled default is cleared witho
 
 ## Managed identity / 受管身份
 
+### XLSX image references and protected fills / XLSX 图片引用与保护格填充
+
+XLSX image markers resolve relative files beside the actual selected template (or the source Markdown for an ordinary table export). That neighbor takes priority over a same-named working-directory file, even when the neighbor is not a valid image. Only an absent neighbor permits the legacy CWD fallback; absolute paths keep their own identity. A protected cell consumes its input without overwriting its value or inserting a drawing. Its explanatory comment shows readable image basenames instead of internal transport markers or encoded paths and is limited to 500 characters.
+
+XLSX 图片标记中的相对文件首先在实际选中模板旁解析，普通表格导出则在源 Markdown 旁解析。同名工作目录文件不能覆盖该邻居，即使邻居不是有效图片；只有邻居缺席才使用既有 CWD 兼容查找，绝对路径保持自身身份。保护格仍消费输入，但不覆盖原值或插图；说明注释显示可读图片文件名，不输出内部传输标记或转义路径，最长 500 个字符。
+
+### DOCX style identity / DOCX 样式身份
+
 Every managed style has one identity chain:
 
 ```text

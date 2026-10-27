@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from urllib.parse import unquote, urljoin, urlsplit
+from urllib.parse import unquote, urlsplit
 
 
 def _query_defined(uri: str) -> bool:
@@ -35,42 +35,69 @@ def _compose_uri(
     return uri
 
 
+def _remove_dot_segments(path: str) -> str:
+    """RFC 3986 5.2.4, without folding ordinary empty or escaped segments."""
+    output: list[str] = []
+    cursor, end = 0, len(path)
+    while cursor < end:
+        if path.startswith("../", cursor):
+            cursor += 3
+        elif path.startswith(("./", "/./"), cursor):
+            cursor += 2
+        elif path.startswith("/../", cursor):
+            cursor += 3
+            if output:
+                output.pop()
+        elif (cursor + 2 == end and path.startswith("/.", cursor)) or (
+            cursor + 3 == end and path.startswith("/..", cursor)
+        ):
+            if path.startswith("/..", cursor) and output:
+                output.pop()
+            output.append("/")
+            break
+        elif (cursor + 1 == end and path[cursor] == ".") or (cursor + 2 == end and path.startswith("..", cursor)):
+            break
+        else:
+            boundary = path.find("/", cursor + 1 if path[cursor] == "/" else cursor)
+            if boundary == -1:
+                boundary = end
+            output.append(path[cursor:boundary])
+            cursor = boundary
+    return "".join(output)
+
+
 def resolve_mhtml_uri(base_uri: str, reference: str) -> str:
-    """Resolve even RFC 2557's synthetic base, which urljoin does not know."""
+    """Merge URI components locally, preserving synthetic and empty-path identity."""
     base_uri = base_uri or "thismessage:/"
-    base = urlsplit(base_uri)
-    ref = urlsplit(reference)
-    ref_authority = _authority_defined(reference)
-    synthetic = base.scheme == "thismessage" and not ref.scheme
-    join_base = base_uri
-    if synthetic:
-        join_base = _compose_uri(
-            "https",
-            base.netloc or "docwen-mhtml.invalid",
-            base.path or "/",
-            base.query,
-            query_defined=_query_defined(base_uri),
-        )
-    resolved = ref if ref.scheme or ref_authority else urlsplit(urljoin(join_base, reference))
-    query_defined = _query_defined(reference)
-    query = ref.query
-    if not (ref.scheme or ref_authority or ref.path or query_defined):
-        query, query_defined = base.query, _query_defined(base_uri)
-    if synthetic:
-        authority = ref.netloc if ref_authority else base.netloc
-        scheme = "thismessage"
-    else:
-        authority = resolved.netloc
-        scheme = base.scheme if ref_authority and not ref.scheme else resolved.scheme
-    # RFC 3986 5.2.2 distinguishes an absent query from an explicit empty one;
-    # urllib's urljoin alone treats '?' as though its query were absent.
+    base, ref = urlsplit(base_uri), urlsplit(reference)
+    authority_defined = _authority_defined(reference)
+    scheme, authority, path = ref.scheme, ref.netloc, ref.path
+    query, query_defined = ref.query, _query_defined(reference)
+    if not ref.scheme:
+        scheme = base.scheme
+        if not authority_defined:
+            authority, authority_defined = base.netloc, _authority_defined(base_uri)
+            if not path:
+                path = base.path
+                if not query_defined:
+                    query, query_defined = base.query, _query_defined(base_uri)
+            else:
+                if not path.startswith("/"):
+                    prefix = "/" if authority_defined and not base.path else base.path.rpartition("/")[0]
+                    if base.path and "/" in base.path:
+                        prefix += "/"
+                    path = prefix + path
+                path = _remove_dot_segments(path)
+    # Existing explicit scheme/authority identities remain literal. Only a
+    # merged relative path has its complete dot segments processed; generic
+    # normalization must not collapse a resource's authored path identity.
     return _compose_uri(
         scheme,
         authority,
-        resolved.path,
+        path,
         query,
         query_defined=query_defined,
-        authority_defined=(ref_authority if ref.scheme or ref_authority else _authority_defined(base_uri)),
+        authority_defined=authority_defined,
         fragment=ref.fragment,
         fragment_defined="#" in reference,
     )

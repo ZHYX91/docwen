@@ -84,9 +84,11 @@ def build_template_workbook(
     )
     yaml_replaced = _replace_yaml_placeholders(workbook, yaml_replacements, image_plan)
     column_filled, column_merged_skipped, column_protected_skipped = _fill_column_placeholders(
-        workbook, table_columns, image_plan
+        workbook, table_columns, image_plan, image_scope=image_scope
     )
-    row_filled, row_merged_skipped, row_protected_skipped = _fill_row_placeholders(workbook, table_columns, image_plan)
+    row_filled, row_merged_skipped, row_protected_skipped = _fill_row_placeholders(
+        workbook, table_columns, image_plan, image_scope=image_scope
+    )
     markdown_merges_applied, markdown_merge_warnings = _apply_markdown_table_merge_plans(
         workbook, merge_plans, template_merged_ranges
     )
@@ -209,7 +211,11 @@ def _replace_yaml_placeholders(
 
 
 def _fill_column_placeholders(
-    workbook: Any, columns: dict[str, list[tuple[Any, str | None]]], image_plan: XlsxImageTextPlan
+    workbook: Any,
+    columns: dict[str, list[tuple[Any, str | None]]],
+    image_plan: XlsxImageTextPlan,
+    *,
+    image_scope: str | None = None,
 ) -> tuple[int, int, int]:
     filled = 0
     merged_skipped = 0
@@ -240,7 +246,7 @@ def _fill_column_placeholders(
                 target = worksheet.cell(row=current_row, column=anchor.column)
                 value, number_format = values[data_index]
                 if _is_cell_protected(worksheet, target):
-                    _add_protected_comment(target, value)
+                    _add_protected_comment(target, value, image_scope=image_scope)
                     data_index += 1
                     current_row += 1
                     protected_skipped += 1
@@ -254,7 +260,11 @@ def _fill_column_placeholders(
 
 
 def _fill_row_placeholders(
-    workbook: Any, columns: dict[str, list[tuple[Any, str | None]]], image_plan: XlsxImageTextPlan
+    workbook: Any,
+    columns: dict[str, list[tuple[Any, str | None]]],
+    image_plan: XlsxImageTextPlan,
+    *,
+    image_scope: str | None = None,
 ) -> tuple[int, int, int]:
     filled = 0
     merged_skipped = 0
@@ -285,7 +295,7 @@ def _fill_row_placeholders(
                 target = worksheet.cell(row=anchor.row, column=current_col)
                 value, number_format = values[data_index]
                 if _is_cell_protected(worksheet, target):
-                    _add_protected_comment(target, value)
+                    _add_protected_comment(target, value, image_scope=image_scope)
                     data_index += 1
                     current_col += 1
                     protected_skipped += 1
@@ -315,8 +325,14 @@ def _is_cell_protected(worksheet: Any, cell: Any) -> bool:
         return False
 
 
-def _add_protected_comment(cell: Any, consumed_value: Any) -> None:
-    cell.comment = Comment(f"Protected cell skipped; consumed value: {consumed_value}", "DocWen")
+def _add_protected_comment(cell: Any, consumed_value: Any, *, image_scope: str | None = None) -> None:
+    def describe_image(match: re.Match[str]) -> str:
+        image_path, _width, _height = _parse_image_payload(match.group(1), decode_path=image_scope is not None)
+        return "Image: " + image_path.replace("\\", "/").rsplit("/", 1)[-1]
+
+    readable = _image_placeholder_re(image_scope).sub(describe_image, str(consumed_value))
+    text = "Protected cell skipped; consumed value: " + readable
+    cell.comment = Comment(text if len(text) <= 500 else text[:499] + "…", "DocWen")
 
 
 def _assign_cell_value(cell: Any, value: Any, number_format: str | None, image_plan: XlsxImageTextPlan) -> None:
@@ -596,9 +612,10 @@ def process_image_placeholders(
 ) -> int:
     """Replace canonical image placeholders with drawings anchored to their cells.
 
-    Relative image paths are resolved beside *reference_path*.  This makes the
+    Relative image paths first resolve beside *reference_path*. Only a missing
+    neighbor permits the legacy working-directory fallback. This makes the
     same implementation usable for template workbooks and ordinary Markdown
-    table exports.
+    table exports without letting CWD collisions override their own images.
     """
     from openpyxl.drawing.image import Image as XlsxImage
 
@@ -678,7 +695,7 @@ def _resolve_image_path(image_path: str, template_dir: Path) -> Path | None:
     if candidate.is_absolute():
         return candidate if candidate.is_file() else None
 
-    for base in (Path.cwd(), template_dir):
+    for base in (template_dir, Path.cwd()):
         resolved = (base / candidate).resolve()
         if resolved.is_file():
             return resolved
