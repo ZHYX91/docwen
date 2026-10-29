@@ -116,6 +116,8 @@ def _extract_note_content(
         run_texts: list[str] = []
         separator_expected = False
         for run in child.iter(f"{{{w_ns}}}r"):
+            if _run_is_hidden(run):
+                continue
             if run.find(f"{{{w_ns}}}{ref_tag}") is not None:
                 separator_expected = True
                 continue

@@ -222,7 +222,7 @@ class TestBuildImageMarkdown:
             keep_images=True,
             image_link_style="wiki_link",
         )
-        assert result == "[[https://x.com/a.png]]"
+        assert result == "[[https://x.com/a.png|https://x.com/a.png]]"
 
     def test_ocr_uses_request_language_and_locale(
         self,

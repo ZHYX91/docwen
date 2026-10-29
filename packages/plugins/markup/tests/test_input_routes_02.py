@@ -321,7 +321,7 @@ class TestEnexToMd:
 
         assert result.success
         content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
-        assert "[[test_image.png]]" in content
+        assert [line for line in content.splitlines() if line.startswith("[[")] == ["[[test_image.png|test_image.png]]"]
         assert "![test_image.png](test_image.png)" not in content
 
     @pytest.mark.parametrize(

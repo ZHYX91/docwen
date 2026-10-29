@@ -10,6 +10,7 @@ import yaml
 
 from docwen_core.text.image_markdown import generate_image_markdown
 from docwen_core.text.splitting import split_once
+from docwen_plugin_optimizer_gongwen.formula_utils import render_formula_atoms, split_formula_atoms
 
 if TYPE_CHECKING:
     from docwen_core.export_semantics import MarkdownExportSemantics
@@ -121,8 +122,13 @@ def render(
             output_parts.append("")
             continue
 
-        # Formula rendering
-        if pf and pf.has_formula and pf.formula_latex:
+        # Real extraction supplies ordered atoms. The summary fields below
+        # remain a compatibility path for callers without source XML.
+        if pf and pf.formula_atoms:
+            line = render_formula_atoms(pf.formula_atoms)
+
+        # Compatibility summary for callers without extracted source atoms.
+        if pf and not pf.formula_atoms and pf.has_formula and pf.formula_latex:
             if pf.formula_type == "block":
                 output_parts.append(f"$$\n{pf.formula_latex}\n$$")
             else:
@@ -143,9 +149,18 @@ def render(
             # only applies the explicit character boundary to this same source
             # feature so later images/formulas/skip flags cannot shift indices.
             if pf.heading_body_boundary is not None:
-                heading_content, mixed_body_content = split_once(line, pf.heading_body_boundary)
-                heading_content = heading_content.strip()
-                mixed_body_content = mixed_body_content.strip()
+                if pf.formula_atoms:
+                    heading_atoms, body_atoms = split_formula_atoms(
+                        pf.formula_atoms,
+                        pf.heading_body_boundary,
+                        include_boundary_math=pf.heading_body_boundary_source == "run_format",
+                    )
+                    heading_content = render_formula_atoms(heading_atoms)
+                    mixed_body_content = render_formula_atoms(body_atoms)
+                else:
+                    heading_content, mixed_body_content = split_once(line, pf.heading_body_boundary)
+                    heading_content = heading_content.strip()
+                    mixed_body_content = mixed_body_content.strip()
             else:
                 heading_content, mixed_body_content = line, ""
 

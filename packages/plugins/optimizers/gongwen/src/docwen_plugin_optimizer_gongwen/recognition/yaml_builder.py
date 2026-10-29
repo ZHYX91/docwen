@@ -13,11 +13,12 @@ from typing import TYPE_CHECKING
 from docwen_plugin_optimizer_gongwen.utils import (
     convert_date_format,
     extract_after_colon,
-    extract_combined_id,
     extract_doc_number_and_name,
     extract_doc_number_and_signers,
     extract_printing_line,
     extract_signers_from_text,
+    looks_like_combined_id,
+    parse_combined_id,
     process_attachment_item,
     process_copy_to,
     remove_brackets,
@@ -96,6 +97,11 @@ def build_yaml(
 
     skip_indices: list[int] = []
     attachment_list_indices: list[int] = []
+    result.preserved_source_indices = {
+        feature.index: "incomplete_combined_id"
+        for feature in features
+        if looks_like_combined_id(feature.text) and parse_combined_id(feature.text) is None
+    }
 
     for para_idx, candidate in sorted(result.candidates.items()):
         text = features[para_idx].text.strip() if para_idx < len(features) else ""
@@ -103,13 +109,26 @@ def build_yaml(
         yaml_key: str | None = None
         is_scalar: bool = True
 
+        # Structural recognition owns only fully represented source. A
+        # formula-bearing paragraph cannot disappear merely because its text
+        # alone resembles metadata; attachment bodies have their own consumer.
+        if para_idx in result.preserved_source_indices:
+            continue
+        if features[para_idx].has_formula and element_type not in {"body", "attachment_content"}:
+            result.preserved_source_indices[para_idx] = "formula_bearing_metadata"
+            continue
+
         # ── Composite fields ──────────────────────────────────────
         if element_type == "combined_id":
-            copy_id, doc_number = extract_combined_id(text)
-            if copy_id and not yaml_info["份号"]:
-                yaml_info["份号"] = copy_id
-            if doc_number and not yaml_info["发文字号"]:
-                yaml_info["发文字号"] = doc_number
+            parsed = parse_combined_id(text)
+            if parsed is None:
+                result.preserved_source_indices[para_idx] = "incomplete_combined_id"
+                continue
+            if yaml_info["份号"] not in ("", parsed.copy_id) or yaml_info["发文字号"] not in ("", parsed.doc_number):
+                result.preserved_source_indices[para_idx] = "conflicting_combined_id"
+                continue
+            yaml_info["份号"] = parsed.copy_id
+            yaml_info["发文字号"] = parsed.doc_number
             skip_indices.append(para_idx)
             continue
 
@@ -243,16 +262,6 @@ def build_yaml(
         # Structural paragraphs are excluded from body rendering
         if element_type not in ("body",):
             skip_indices.append(para_idx)
-
-    # ── Extract clean document number from combined fields ──
-    if yaml_info["发文字号"]:
-        doc_num = yaml_info["发文字号"]
-        m = re.search(
-            r"([A-Za-z一-鿿]+[〔\(\[【]\d{4}[〕\)\]】]\d+号?)",
-            str(doc_num),
-        )
-        if m:
-            yaml_info["发文字号"] = m.group(1)
 
     title = str(yaml_info["标题"]).strip()
     aliases = yaml_info["aliases"]

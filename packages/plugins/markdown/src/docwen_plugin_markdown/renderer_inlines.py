@@ -390,7 +390,11 @@ def _render_inline_math(parent, child: dict[str, Any], renderer_instance: Any) -
     raw = child.get("raw", "") or child.get("text", "")
     if raw.strip():
         style_reference = getattr(renderer_instance, "inline_formula_style_reference", None)
-        render_inline_formula(parent, raw.strip(), style_reference=style_reference)
+        native = render_inline_formula(parent, raw.strip(), style_reference=style_reference)
+        if not native and renderer_instance is not None:
+            renderer_instance._warnings.append(
+                ("MD2DOCX-FORMULA-TEXT-FALLBACK", "An unsupported formula was preserved as its original LaTeX text.")
+            )
 
 
 def _render_inline_html(parent, child: dict[str, Any]) -> None:
@@ -413,7 +417,7 @@ def _render_footnote_ref(parent, child: dict[str, Any], renderer_instance: Any) 
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def render_formula(doc, node: dict[str, Any], *, block_style=None) -> None:
+def render_formula(doc, node: dict[str, Any], *, block_style=None) -> bool:
     """Render a block-level formula as OMML in a new paragraph.
 
     Args:
@@ -423,7 +427,7 @@ def render_formula(doc, node: dict[str, Any], *, block_style=None) -> None:
     from docwen_plugin_markdown.to_docx.formula_renderer import render_block_formula
 
     raw = node.get("text", "") or node.get("raw", "")
-    render_block_formula(doc, raw.strip(), block_style=block_style)
+    return render_block_formula(doc, raw.strip(), block_style=block_style)
 
 
 # ═══════════════════════════════════════════════════════════════════════════

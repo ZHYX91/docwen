@@ -507,6 +507,28 @@ def _build_document_with_resources(
             )
             fragment_ordinal += 1
             continue
+        if artifact.kind == "auxiliary" and (
+            artifact.metadata.get("source_kind") == "embedded_resource"
+            or (
+                artifact.metadata.get("source_format") == "pptx"
+                and artifact.metadata.get("payload") == "chart_workbook"
+                and artifact.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        ):
+            # These producers explicitly retain original embedded bytes. A
+            # filename or generic auxiliary kind is not a resource contract.
+            draft_artifacts.append(_draft_artifact(artifact, "resource"))
+            relations.append(
+                BundleRelation(
+                    type="resource_of",
+                    source_artifact_id=artifact.artifact_id,
+                    target_artifact_id=preferred.artifact_id,
+                    role="original",
+                    ordinal=resource_ordinal,
+                )
+            )
+            resource_ordinal += 1
+            continue
         raise BundleMappingError(
             "conversion_failed",
             "artifact_semantics_unknown",

@@ -26,10 +26,15 @@ def _convert_mathml_to_omml_node(mathml_node, omml_parent) -> None:
         children = list(mathml_node)
         _process_children_to_omml(children, omml_parent)
 
-    elif tag in ("mi", "mn", "mo"):
+    elif tag in ("mi", "mn", "mo", "mtext"):
         run = etree.SubElement(omml_parent, _mk_omml("r"))
+        if tag == "mtext":
+            run_properties = etree.SubElement(run, _mk_omml("rPr"))
+            etree.SubElement(run_properties, _mk_omml("nor"))
         text_elem = etree.SubElement(run, _mk_omml("t"))
         text_elem.text = mathml_node.text or ""
+        if tag == "mtext" or any(character.isspace() for character in text_elem.text):
+            text_elem.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
 
     elif tag == "mfrac":
         frac = etree.SubElement(omml_parent, _mk_omml("f"))
@@ -132,7 +137,11 @@ def _convert_mathml_to_omml_node(mathml_node, omml_parent) -> None:
             _convert_mathml_to_omml_node(child, e_elem)
 
     else:
-        # Unknown tag: recurse into children
+        # Transparent containers may carry modeled children. An unknown
+        # leaf must not silently remove part of an otherwise nonempty formula.
+        if len(mathml_node) == 0:
+            logger.warning("Unsupported MathML leaf %s; preserve the source formula", tag)
+            raise ValueError(f"unsupported MathML leaf: {tag}")
         for child in mathml_node:
             _convert_mathml_to_omml_node(child, omml_parent)
 

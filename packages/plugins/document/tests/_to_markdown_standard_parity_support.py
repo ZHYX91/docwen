@@ -174,6 +174,8 @@ def _make_pstyle_numbering_index(
     idx = NumberingIndex.__new__(NumberingIndex)
     idx._num_to_abstract = {num_id: abs_id}
     idx._num_level_overrides = {}
+    idx._style_numbering = {}
+    idx._style_lookup_cache = {}
     idx._abstract_num_style_links = {}
     idx._abstract_levels = {
         abs_id: {

@@ -513,6 +513,21 @@ class DocxSemanticsV3Recovery:
         )
         return text if semantic else None
 
+    def paragraph_reference_spans(
+        self, paragraph_element: Any, *, emit_references: bool = True
+    ) -> dict[Any, tuple[Any, str]]:
+        """Project proven references onto their original sibling XML ranges."""
+        spans: dict[Any, tuple[Any, str]] = {}
+        recover_paragraph_children(
+            list(paragraph_element),
+            target_ids_by_bookmark=self._target_ids_by_bookmark,
+            emit_references=emit_references,
+            soft_tokens_by_tag=self._soft_tokens_by_tag if emit_references else {},
+            occurrence_tokens_by_tag=self._occurrence_tokens_by_tag if emit_references else {},
+            reference_spans=spans,
+        )
+        return spans
+
     def render_fenced_source(self, paragraph_element: Any) -> str | None:
         """Recover an exact authored fence only from authenticated carrier evidence."""
 

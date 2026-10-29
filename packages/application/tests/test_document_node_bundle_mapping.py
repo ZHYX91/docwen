@@ -124,3 +124,48 @@ def test_obsolete_node_manifest_is_not_mapped_as_a_resource(tmp_path: Path, prof
     with pytest.raises(BundleMappingError) as caught:
         build_bundle_draft(profile=profile, output_media_type="text/markdown", artifacts=(primary, obsolete))
     assert caught.value.code == code
+
+
+@pytest.mark.parametrize(
+    "metadata,media_type,accepted",
+    [
+        ({"source_kind": "embedded_resource"}, "application/octet-stream", True),
+        ({"source_kind": "embedded_resource"}, "text/markdown", True),
+        (
+            {"source_format": "pptx", "payload": "chart_workbook"},
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            True,
+        ),
+        ({}, "application/octet-stream", False),
+        ({"source_key": "photo.bin"}, "application/octet-stream", False),
+        ({"source_format": "pptx", "payload": "unknown"}, "application/octet-stream", False),
+        ({"source_format": "pptx", "payload": "chart_workbook"}, "text/markdown", False),
+    ],
+)
+def test_only_declared_original_resources_receive_existing_bundle_semantics(
+    tmp_path: Path, metadata, media_type: str, accepted: bool
+) -> None:
+    primary = ArtifactManifest(
+        "main", "primary", str(tmp_path / "main.md"), "main.md", "text/markdown", is_primary=True
+    )
+    resource = ArtifactManifest(
+        "original", "auxiliary", str(tmp_path / "original.bin"), "original.bin", media_type, metadata=metadata
+    )
+    if not accepted:
+        with pytest.raises(BundleMappingError) as caught:
+            build_bundle_draft(
+                profile="document_with_resources", output_media_type="text/markdown", artifacts=(primary, resource)
+            )
+        assert caught.value.code == "artifact_semantics_unknown"
+        return
+    draft = build_bundle_draft(
+        profile="document_with_resources", output_media_type="text/markdown", artifacts=(primary, resource)
+    )
+    validate_artifact_bundle_draft(draft)
+    assert [(item.artifact_id, item.kind) for item in draft.artifacts] == [
+        ("main", "document"),
+        ("original", "resource"),
+    ]
+    assert [(item.source_artifact_id, item.target_artifact_id, item.type, item.role) for item in draft.relations] == [
+        ("original", "main", "resource_of", "original")
+    ]

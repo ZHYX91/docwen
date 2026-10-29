@@ -370,7 +370,7 @@ class TestFormatImageLink:
 
     def test_wiki_link(self) -> None:
         link = format_image_link("alt", "photo.png", style="wiki_link")
-        assert link == "[[photo.png]]"
+        assert link == "[[photo.png|alt]]"
 
     def test_markdown_embed(self) -> None:
         link = format_image_link("alt", "photo.png", style="markdown_embed")
@@ -393,3 +393,50 @@ class TestFormatImageLink:
             link = format_image_link("test", "file.png", style=style)
             assert len(link) > 0
             assert "file.png" in link
+
+
+@pytest.mark.parametrize(
+    ("target", "raw_resource_path", "expected_target"),
+    [
+        ("assets/photo%20one.png", False, "assets/photo%20one.png"),
+        ("assets/photo%20one.png", True, "assets/photo%2520one.png"),
+        ("assets/photo space.png", False, "assets/photo space.png"),
+        ("assets/photo space%.png", True, "assets/photo%20space%25.png"),
+        ("assets/already%2520.png", False, "assets/already%2520.png"),
+        ("assets/photo [front]|100%.png", True, "assets/photo%20%5Bfront%5D%7C100%25.png"),
+        (
+            "https://example.invalid/a%20b.png?q=A%7CB#author%29fragment",
+            False,
+            "https://example.invalid/a%20b.png?q=A%7CB#author%29fragment",
+        ),
+        (
+            "https://example.invalid/a[1]|b.png?q=%25#part",
+            False,
+            "https://example.invalid/a%5B1%5D%7Cb.png?q=%25#part",
+        ),
+        ("data:image/png;base64,AA+/==", False, "data:image/png;base64,AA+/=="),
+    ],
+)
+def test_wiki_image_target_role_preserves_raw_path_or_reference_identity(
+    target: str, raw_resource_path: bool, expected_target: str
+) -> None:
+    link = format_image_link("A|[B]&amp;\r\n", target, style="wiki_link", raw_resource_path=raw_resource_path)
+    assert link == f"[[{expected_target}|A&#124;&#91;B&#93;&amp;amp;&#13;&#10;]]"
+
+
+@pytest.mark.parametrize("raw_resource_path", [False, True])
+def test_empty_image_alias_is_explicit_and_wiki_embed_keeps_its_existing_target(raw_resource_path: bool) -> None:
+    assert (
+        format_image_link("", "photo.png", style="wiki_link", raw_resource_path=raw_resource_path) == "[[photo.png|]]"
+    )
+    target = "assets/photo%20 [front]|100%.png"
+    assert format_image_link("alt", target, style="wiki_embed", raw_resource_path=raw_resource_path) == f"![[{target}]]"
+
+
+def test_raw_file_image_markdown_keeps_literal_percent_and_uses_shared_wiki_alias() -> None:
+    from docwen_core.text.image_markdown import generate_image_markdown
+
+    assert (
+        generate_image_markdown(image_path="photo%20 [front]|100%.png", image_link_style="wiki_link", alt_text="")
+        == "[[photo%2520%20%5Bfront%5D%7C100%25.png|]]"
+    )

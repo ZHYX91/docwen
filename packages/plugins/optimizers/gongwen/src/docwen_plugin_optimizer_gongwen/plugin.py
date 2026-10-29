@@ -23,6 +23,7 @@ _REVIEW_REASON_LABELS: dict[str, str] = {
     "close_unique_match": "存在相近候选",
     "used_fallback": "使用了回退识别",
     "low_confidence_pass": "存在低置信度识别",
+    "source_content_preserved": "部分原文已保留正文待核对",
 }
 
 
@@ -158,6 +159,18 @@ class GongwenOptimizerPlugin:
                         code="GONGWEN-NEEDS-REVIEW",
                     )
                 )
+
+            for warning in review_signals["gongwen_warnings"]:
+                if warning["code"] == "GW005":
+                    reasons = warning["details"]["paragraph_reasons"]
+                    diagnostics.append(
+                        ConversionDiagnostic(
+                            level="warning",
+                            message=warning["message"],
+                            code="GONGWEN-SOURCE-CONTENT-PRESERVED",
+                            location=";".join(f"paragraph:{index}:{reason}" for index, reason in reasons.items()),
+                        )
+                    )
 
             # Write output to staging
             output_path = context.workspace.create_artifact_path("primary", ".md")

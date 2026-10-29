@@ -68,6 +68,7 @@ from docwen_core.links._resolver import (
     normalize_link_target,
     resolve_file_path,
 )
+from docwen_core.links._resource_targets import rewrite_markdown_resource_targets
 from docwen_core.links._source_document import (
     MarkdownBlockLine,
     MarkdownHeadingRange,
@@ -131,6 +132,7 @@ __all__ = [
     "resolve_embedded_links",
     "resolve_file_path",
     "restore_table_safe_breaks",
+    "rewrite_markdown_resource_targets",
     "split_alt_text_and_size",
     "split_markdown_block_segments",
     "split_markdown_inline_segments",

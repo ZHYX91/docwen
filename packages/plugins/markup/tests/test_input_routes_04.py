@@ -432,7 +432,7 @@ class TestHtmlToMd:
         assert Path(image_artifacts[0].staging_path).exists()
 
         content = markdown_path.read_text(encoding="utf-8")
-        assert "[[picture.png]]" in content
+        assert [line for line in content.splitlines() if line.startswith("[[")] == ["[[picture.png|picture.png]]"]
         assert "![picture.png](picture.png)" not in content
         assert str(Path(ws_mgr.root_dir)) not in content
 
@@ -573,6 +573,8 @@ class TestHtmlToMd:
         assert [a for a in result.artifacts if a.kind == "auxiliary"] == []
 
         content = markdown_path.read_text(encoding="utf-8")
-        assert "[[https://example.com/image.png]]" in content
+        assert [line for line in content.splitlines() if line.startswith("[[")] == [
+            "[[https://example.com/image.png|https://example.com/image.png]]"
+        ]
         assert "![https://example.com/image.png](https://example.com/image.png)" not in content
         assert str(Path(ws_mgr.root_dir)) not in content

@@ -73,9 +73,10 @@ HEITI_FONTS = ["黑体", "华文黑体"]
 
 # Regex patterns
 RE_DOC_NUMBER = re.compile(
-    r"[A-Za-z一-鿿]+[发办函通示件]?"
-    r"[〔《【［［（（〔\[]\d{4}[〕》】］］））〕\]]"
-    r"\d+[号号＃ ]*"
+    r"[A-Za-z一-鿿][A-Za-z一-鿿0-9]*\s*"
+    r"(?:〔\s*\d{4}\s*〕|\[\s*\d{4}\s*\]|\(\s*\d{4}\s*\)|"
+    r"（\s*\d{4}\s*）|【\s*\d{4}\s*】|［\s*\d{4}\s*］|"
+    r"《\s*\d{4}\s*》|\d{4}\s*[-－])\s*\d+\s*号"
 )
 RE_DATE = re.compile(r"\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日")
 RE_PRINTING_DATE = re.compile(r"(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)\s*[印印发]")

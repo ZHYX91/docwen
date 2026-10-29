@@ -97,6 +97,8 @@ def _make_index() -> NumberingIndex:
     idx._num_to_abstract = {"10": "0", "20": "1"}
     idx._abstract_num_style_links = {}
     idx._num_level_overrides = {}
+    idx._style_numbering = {}
+    idx._style_lookup_cache = {}
     idx._abstract_levels = {
         "0": {
             0: {"numFmt": "chineseCountingThousand", "lvlText": "%1、", "pStyle": ""},
@@ -218,7 +220,7 @@ def test_lookup_by_abstract_finds_existing():
     assert result is not None
     assert result.num_fmt == "chineseCountingThousand"
     assert result.lvl_text == "%1、"
-    assert result.num_id == "10"  # mapped from _num_to_abstract
+    assert result.num_id == ""  # an abstract definition has no concrete instance identity
     assert result.abstract_num_id == "0"
     assert result.ilvl == 0
 
@@ -317,24 +319,25 @@ def test_render_numbering_text_multi_level():
     assert result == "一.3 "
 
 
-def test_render_numbering_text_empty_lvltext_fallback():
-    """Empty lvlText falls back to preview_numbering_text."""
+@pytest.mark.parametrize("template,expected", [("", " "), (None, "7 ")])
+def test_render_numbering_text_distinguishes_empty_and_missing_lvltext(template, expected):
+    """Only an absent template uses the native format's default number."""
     idx = _make_index()
     level = NumberingLevel(
         num_id="10",
         abstract_num_id="0",
         ilvl=0,
         num_fmt="decimal",
-        lvl_text="",
+        lvl_text=template,
     )
     result = idx.render_numbering_text(level, 7)
-    assert result == "7 "
+    assert result == expected
 
 
-def test_render_numbering_text_missing_sibling_level():
-    """When a sibling level doesn't exist, counter starts at 1."""
+def test_render_numbering_text_ignores_future_level_without_inventing_counter():
+    """Higher-level placeholders are ignored even when their definition exists."""
     idx = _make_index()
-    # Level with %2 placeholder but ilvl=0 — sibling at ilvl=1 doesn't exist
+    # %2 is outside ilvl=0; punctuation remains part of the literal template.
     level = NumberingLevel(
         num_id="20",
         abstract_num_id="1",
@@ -343,24 +346,27 @@ def test_render_numbering_text_missing_sibling_level():
         lvl_text="%1.%2",
     )
     result = idx.render_numbering_text(level, 1)
-    # %1 → current ilvl 0 = 1 → "1", %2 → sibling ilvl 1 doesn't exist → val=1 → "1"
-    assert result == "1.1 "
+    assert result == "1. "
 
 
-def test_render_numbering_text_all_nine_placeholders():
-    """lvlText can contain %1 through %9 — all resolve with appropriate fallback."""
+def test_render_numbering_text_all_nine_applicable_placeholders():
+    """At ilvl=8 all nine native placeholders are applicable, including parents."""
     idx = _make_index()
     level = NumberingLevel(
         num_id="10",
         abstract_num_id="0",
-        ilvl=0,
+        ilvl=8,
         num_fmt="decimal",
         lvl_text="%1.%2.%3.%4.%5.%6.%7.%8.%9",
     )
-    # %1 → current ilvl 0 → counter_value=2 → sibling fmt is chineseCountingThousand → "二"
-    # %2-%9 → siblings at ilvl 1-8 don't exist (only ilvl 1 exists, rest don't) → val=1, fmt fallback → "1"
-    result = idx.render_numbering_text(level, 2)
-    assert result == "二.1.1.1.1.1.1.1.1 "
+    result = idx.render_numbering_text(level, 2, parent_counters={index: index + 3 for index in range(8)})
+    assert result == "三.4.5.6.7.8.9.10.2 "
+
+
+def test_render_numbering_text_current_effective_format_does_not_route_back_to_abstract():
+    idx = _make_index()
+    level = NumberingLevel(num_id="10", abstract_num_id="0", ilvl=0, num_fmt="decimal", lvl_text="%1.%2.%9")
+    assert idx.render_numbering_text(level, 2) == "2.. "
 
 
 def test_render_numbering_text_sibling_from_parent_counters():
@@ -449,6 +455,49 @@ def test_real_numbering_xml_drives_exact_markdown_sequence(tmp_path: Path) -> No
         "4.4) Child",
         "4.5) Child again",
         "4.5.5) Deep",
-        "    4. Direct list",
+        "    4.6) Direct list",
     ]
     assert rendered[1::2] == [""] * 6
+
+
+def test_unrelated_malformed_style_level_does_not_poison_concrete_numbering(tmp_path: Path) -> None:
+    doc = Document()
+    num_id, _level_two, _level_three = _install_numbering_fixture(doc)
+    broken = doc.styles.add_style("Unrelated malformed list", WD_STYLE_TYPE.PARAGRAPH)
+    properties = OxmlElement("w:pPr")
+    binding = OxmlElement("w:numPr")
+    raw_level = OxmlElement("w:ilvl")
+    raw_level.set(qn("w:val"), "invalid-unused-level")
+    identifier = OxmlElement("w:numId")
+    identifier.set(qn("w:val"), num_id)
+    binding.extend((raw_level, identifier))
+    properties.append(binding)
+    broken.element.append(properties)
+    source = tmp_path / "unused-malformed-style.docx"
+    doc.save(str(source))
+
+    reopened = Document(str(source))
+    index = NumberingIndex(reopened)
+    actual = index.lookup(num_id, 0)
+    assert actual is not None
+    assert (actual.num_id, actual.start, actual.lvl_text) == (num_id, 3, "%1.")
+    assert index.lookup_by_style_id(broken.style_id) is None
+
+
+def test_most_specific_style_association_is_not_merged_with_its_base(tmp_path: Path) -> None:
+    doc = Document()
+    num_id, level_two, level_three = _install_numbering_fixture(doc)
+    styles = {
+        style.style_id: cast(ParagraphStyle, style) for style in doc.styles if style.type == WD_STYLE_TYPE.PARAGRAPH
+    }
+    styles[level_three].base_style = styles[level_two]
+    doc.add_paragraph("Own level", style=styles[level_three])
+    source = tmp_path / "specific-style-association.docx"
+    doc.save(str(source))
+
+    reopened = Document(str(source))
+    index = NumberingIndex(reopened)
+    specific = index.lookup_by_style_id(level_three)
+    assert specific is not None
+    assert (specific.num_id, specific.ilvl, specific.p_style, specific.start) == (num_id, 2, level_three, 5)
+    assert index.render_numbering_text(specific, 5) == "3.4.5) "

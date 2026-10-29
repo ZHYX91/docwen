@@ -40,7 +40,11 @@ Gongwen produces one combined attachment node, without an attachment number or t
     通知_附件_20260907_180000_fromDocx.md
 ```
 
-Attachment titles remain in the content. Other auxiliary Markdown outputs are child nodes. Images and other linked resources retain safe names within the root, and Markdown links are rewritten relative to their final logical paths. Link relocation applies only to known local artifact targets: URI-scheme targets plus scheme-relative or UNC network targets remain byte-for-byte unchanged even when malformed or when their basename matches a local artifact; relocation does not require a target to pass complete URL validation. The raw target is split at the literal fragment marker before matching. Only the local path portion is percent-decoded for artifact lookup, the authored fragment spelling is preserved verbatim, and structural delimiters in the new local relative path are percent-escaped. This keeps encoded filename characters such as `%23` and `%3A` distinct from URI structure and avoids decoding `%29` / `%22` into Markdown or HTML delimiters.
+Attachment titles remain in the content. Other auxiliary Markdown outputs are child nodes. Images and other linked resources retain safe names within the root, and Markdown links are rewritten relative to their final logical paths. Link relocation applies only to known local artifact targets: URI-scheme targets plus scheme-relative or UNC network targets remain byte-for-byte unchanged even when malformed or when their basename matches a local artifact; relocation does not require a target to pass complete URL validation. The raw target is split at literal query and fragment markers before matching. Only the local path portion is percent-decoded for artifact lookup, the authored query and fragment spelling is preserved verbatim, and structural delimiters in the new local relative path are percent-escaped. This keeps encoded filename characters such as `%23` and `%3A` distinct from URI structure and avoids decoding `%29` / `%22` into Markdown or HTML delimiters.
+
+Relocation matches a producer-declared path identity exactly after separator normalization and one path-only percent decode. A missing qualified path never falls back to its basename. A bare basename is eligible only when it names one declared artifact; an actually referenced ambiguous alias rejects publication. Unused conflicts do not reject unrelated content. The same Core full-source ownership and link grammar protects YAML, comments, code examples and container-scoped fences. Real Markdown/Wiki destinations and actual HTML `src`/`href` attributes may relocate; code samples, raw-text HTML blocks and attribute lookalikes stay literal. BOM and original line endings are retained.
+
+重定位在路径分隔符规范化及仅路径部分的一次百分号解码后，精确匹配生产者声明的资源身份。未匹配的限定路径不得降成 basename；裸 basename 仅可指向唯一声明产物，实际引用的歧义别名拒绝发布，未被引用的冲突不影响无关正文。使用 Core 同一完整源码所有权及链接语法保护 YAML、注释、代码示例和容器围栏；只改真实 Markdown/Wiki 目标和 HTML `src`/`href` 属性。HTML 原始文字块、属性内伪链接、BOM 与原换行保持不变。
 
 ## Publication and collisions
 
@@ -68,3 +72,8 @@ The runtime assigns final byte counts and SHA-256 in its in-memory artifact desc
 The separately enabled audit export (`output.manifest.save_to_output`) remains supported. Its redacted `manifest.json` is prepared in the same directory transaction, receives a collision-free name and integrity identity, and maps to a supplementary Bundle resource entry. An audit preparation failure publishes nothing. A temporary cleanup failure after successful reuse returns success with a visible warning, not a failed conversion that invites another write.
 
 Readers accept only Bundle v3 and preserve validated relative paths. This contract contains no knowledge-base-specific storage concepts.
+
+
+Producer-declared original embedded resources (including archive attachments) and native PPTX chart workbooks map to the existing `resource_of/original` Bundle role. OCR sidecars retain their distinct fragment role. Generic unknown auxiliaries still fail closed; filenames alone do not grant semantics. This mapping does not add a Machine capability or change the Bundle schema.
+
+生产者明确声明的原始嵌入资源（含归档附件）及原生 PPTX 图表 workbook 使用既有 `resource_of/original` Bundle 角色；OCR 侧车保持独立 fragment 角色。未知 auxiliary 继续拒绝，不凭文件名授予语义；此映射不新增 Machine 能力或修改 Bundle schema。

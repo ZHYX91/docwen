@@ -8,7 +8,9 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
+from html import escape
 from typing import Any
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,8 @@ VALID_LINK_STYLES: tuple[str, ...] = (
     "markdown_embed",
     "markdown_link",
 )
+
+_WIKI_REFERENCE_ESCAPES = str.maketrans({"[": "%5B", "]": "%5D", "|": "%7C", "\r": "%0D", "\n": "%0A"})
 
 _DEFAULT_YAML_LIST_SEPARATOR: str = "、"
 _DEFAULT_IMAGE_EXTRACTION_MODE: str = "file"
@@ -538,11 +542,18 @@ def format_image_link(
     alt: str,
     target: str,
     style: str = "wiki_embed",
+    *,
+    raw_resource_path: bool = False,
 ) -> str:
     """Format an image link in the requested *style*.
 
+    A reference target already owns its percent escapes, query and fragment.
+    For Wiki links only, ``raw_resource_path`` explicitly identifies an
+    unencoded producer-owned file path whose literal percent signs must be
+    encoded once. Other styles retain their existing target contract.
+
     ``wiki_embed`` → ``![[target]]``
-    ``wiki_link`` → ``[[target]]``
+    ``wiki_link`` → ``[[target|alt]]``
     ``markdown_embed`` → ``![alt](target)``
     ``markdown_link`` → ``[alt](target)``
     """
@@ -550,7 +561,12 @@ def format_image_link(
     if normalized == "wiki_embed":
         return f"![[{target}]]"
     if normalized == "wiki_link":
-        return f"[[{target}]]"
+        wiki_target = (
+            quote(target, safe="/:@!$&'()*+,;=-._~") if raw_resource_path else target.translate(_WIKI_REFERENCE_ESCAPES)
+        )
+        alias = escape(alt, quote=False).replace("|", "&#124;").replace("[", "&#91;").replace("]", "&#93;")
+        alias = alias.replace("\r", "&#13;").replace("\n", "&#10;")
+        return f"[[{wiki_target}|{alias}]]"
     if normalized == "markdown_embed":
         return f"![{alt}]({target})"
     # markdown_link

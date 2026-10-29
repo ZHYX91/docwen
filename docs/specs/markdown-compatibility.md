@@ -1365,3 +1365,55 @@ DOCX 的标题、副标题、别名以及发票元数据均按字符串字段输
 Authored Markdown-to-DOCX applies ordinary Wiki and Markdown link policies independently to string leaves used by template fields, before field-specific list/punctuation formatting. `keep` retains literal syntax, `extract_text` inserts display text, `remove` removes the link, and `hyperlink` produces a real DOCX relationship where the ordinary-link contract provides a navigable target. Numbers, booleans, dates, keys and container structure are preserved; embedded resources are not expanded from YAML.
 
 Only links explicitly selected by the policy are materialized. Existing template text is not reparsed as Markdown. Split text runs, run breaks and special attachment fields retain their surrounding structure and formatting. An inserted hyperlink inside an existing hyperlink is rejected rather than nesting invalid OOXML. Declared-input requests retain their no-local-lookup boundary; unused fields do not trigger resolution. DOCX metadata receives display text, never internal projection markers. Spreadsheet YAML behavior is unchanged by this DOCX change.
+
+
+## Native resource and table text export / 原生资源与表格文本导出
+
+Native resource extraction uses one request-owned collision-free name inventory. Generated image `wiki_link` output keeps target left and occurrence alias right, including explicit empty alt; Wiki delimiters are encoded. Existing `wiki_embed` spelling and embed semantics are unchanged. Image producers distinguish a raw resource path (literal percent signs are encoded once) from an already formed reference (existing percent escapes, query and fragment remain intact apart from Wiki syntax delimiters). The same serializer preserves each structured-clipboard occurrence alias, including the empty string. Native PPTX chart/table cells use one final literal-encoding boundary for pipes, backslashes, line breaks and inline syntax. Embedded workbooks retain their bytes.
+
+原生资源提取使用本请求的不冲突命名库存。生成图片的 `wiki_link` 输出中，目标在左、occurrence alias 在右，显式空 alt 保持为空，Wiki 分隔符编码；已有 `wiki_embed` 写法与嵌入语义保持不变。图片生产者明确区分原始资源路径（字面百分号只编码一次）与既成引用（除 Wiki 语法分隔符外，保留已有百分号转义、query 与 fragment）；结构化剪贴板使用同一序列化入口，逐 occurrence 保留 alias，包括空字符串。原生 PPTX 图表和表格在最终单元格边界统一编码 pipe、反斜线、换行与行内语法；内嵌 workbook 保留原字节。
+
+
+## Native DOCX content and numbering / 原生 DOCX 内容与编号
+
+Native DrawingML and VML textboxes retain their real paragraph occurrences in document order, including equal text at the same anchor or in different boxes. `mc:AlternateContent` contributes one supported Choice representation, or its Fallback when no supported Choice yields textbox text; equal paragraph text is not a deduplication key.
+
+原生 DrawingML 与 VML 文本框按实际 XML 顺序保留每次段落出现；同一锚点、同框或不同框中的相同文字均不是去重理由。`mc:AlternateContent` 只贡献一个受支持的 Choice 表示；没有受支持的 Choice 文本时再使用 Fallback。
+
+Native list and Heading prefixes use the effective level of the bound concrete `numId`, including level/start overrides and explicit paragraph-style `numPr`. Each concrete instance owns its counters, shared by its direct and style-bound paragraphs. A style association without a unique concrete binding is not permission to guess the first abstract-numbering instance. An explicit empty `lvlText` emits no number; an absent template may use the format's default number. A placeholder above the current level contributes no counter text, while literal punctuation and the level suffix remain. Supported parent placeholders use the same concrete instance's effective format and start. A proven ordinary-list marker owning a Heading precedes its Markdown hashes; it does not enter the Heading text, and that list counter advances once.
+
+原生列表与标题前缀读取所绑定 concrete `numId` 的有效层级，包括层级/start override 与段落样式的显式 `numPr`。每个 concrete 实例单独计数，同实例的直接绑定与样式绑定段落共享该计数；无法唯一确定实例的样式关联不得任取 abstract 的首实例。显式空 `lvlText` 不生成数字，缺失模板才可使用格式的缺省数字。高于当前层级的 placeholder 不贡献计数文字，模板字面标点与层级 suffix 保留；合法祖先 placeholder 从同一 concrete 实例读取有效格式及起始值。已证明的普通列表拥有 Heading 时，列表标记位于 Markdown 标题井号之前，不进入标题正文，同一项的列表计数只推进一次。
+
+The supported visible projection suppresses directly enabled `w:vanish` runs in body paragraphs and notes. An empty visible result stays empty; it must not revive raw hidden text. `w:vanish w:val="false"`/`"0"` remain visible. This does not promise all style-inherited visibility or revision semantics. Native code-style paragraph groups keep their literal body (with line-ending normalization) and choose one safe fence using the complete body, following the documented fence serialization policy; a following normal paragraph or page/section separator remains outside the code block.
+
+受支持的可见投影在正文段落和脚尾注中排除直接启用 `w:vanish` 的 run。可见结果为空即保持为空，不得回退原始隐藏文字；`w:vanish w:val="false"`/`"0"` 仍可见。此约定不扩张为全部样式继承可见性或修订语义。原生代码样式连续段落保留字面正文（换行统一），按照完整正文与既有围栏序列化规则选择一个安全围栏；其后普通段落及页/节分隔仍位于代码块之外。
+
+
+## Text and math source ownership / 文本与公式的源所有权
+
+MathML `mtext` retains literal text and whitespace, including units and conditions. DOCX output marks these as normal-text math runs and preserves their spacing. Native formula import keeps TeX control words lexically separate from following ASCII identifiers in ordinary groups, scripts and matrix cells. An unsupported MathML leaf on Markdown-to-DOCX export preserves the original LaTeX as visible text with `MD2DOCX-FORMULA-TEXT-FALLBACK`; a nonempty partial formula is not success. This defines a supported subset, not every LaTeX command.
+
+MathML `mtext` 保留字面文本及空白，包括单位与条件；DOCX 写出普通文本数学 run 并保留空格。原生公式导入在普通分组、上下标与矩阵单元格中保留 TeX 控制词和后续 ASCII 标识符的词法边界。Markdown→DOCX 导出遇到无法表示的 MathML 叶节点时，保留原 LaTeX 为可见文本并发出 `MD2DOCX-FORMULA-TEXT-FALLBACK`，不得以非空的残缺公式报告成功；此能力不覆盖全部 LaTeX 命令。
+
+Gongwen extraction owns text and math occurrences in XML order. Text before, between and after inline formulas survives regardless of paragraph length; an outer `oMathPara` owns its nested math once. Combined copy/document-number recognition and extraction share one full-line parse, before request heading cleanup can claim a leading copy ID. Consume the paragraph only after both fields represent its source completely; conflicting or uncertain combined fields and formula-bearing metadata remain visible with a precise source-preservation diagnostic. Existing missing-field warnings still apply. Copy IDs retain leading zeros as strings. These rules do not add rich formula extraction to Gongwen's existing plain-text table projection.
+
+公文提取按 XML 顺序拥有文本与公式 occurrence。行内公式前、中、后的正文不因段落字数消失；外层 `oMathPara` 只消费一次嵌套公式。合并份号／文号的识别与提取共用完整行解析，并先于请求中的标题编号清理确定原文归属，避免把前导份号当作标题前缀剥离；两个字段完整表示原文后才消费段落。字段冲突、不完整或含公式的元数据保留正文，并给出精确的源保留诊断；既有缺字段提示继续生效，份号的前导零保持字符串。此约定不把现有公文表格的纯文本投影扩张为富公式提取。
+
+Authenticated quote references project only their proven XML ranges into the shared run renderer. Actual `w:br`/`w:cr` inside an anchored paragraph use `<br>` with reference output enabled or disabled; literal text and code remain literal, and the shared renderer's default newline behavior is unchanged. Closing paragraph and container IDs precede trailing native page/section separators, so the recovered source remains a valid semantic input. This does not create heading IDs, ordinary-anchor Word bookmarks or table citation support.
+
+已认证 quote 引用只按证明过的 XML 范围交给共享 run renderer。带锚点段落中的真实 `w:br`／`w:cr` 在引用输出开关两态均使用 `<br>`；字面文本与代码不改写，共享 renderer 默认换行不变。收束的段落及容器 ID 位于尾部原生页／节分隔符之前，恢复源仍可合法进入语义计划；不补造标题 ID、不新增普通锚点 Word bookmark 或表内 citation。
+
+
+## Shared visible text and container boundaries / 共享可见文字与容器边界
+
+Supported semantic references preserve their authenticated reference spelling while surrounding paragraph text follows the same visible-run projection as ordinary prose. A directly hidden suffix must not return through reference recovery, including page-separated paragraphs and the existing legacy reference reader. Visibility-disabled (`<w:vanish w:val="0"/>`) runs remain visible.
+
+受支持的语义引用保留已认证的引用写法；引用周围的段落文字仍遵循普通正文使用的可见 run 投影。直接隐藏的后缀不得因恢复引用而重现，分页段落和已有旧版引用读取也遵守此规则。`<w:vanish w:val="0"/>` 的 run 仍可见。
+
+Native code-style paragraph groups treat visible characters as literal code: checkbox glyphs and hyperlink labels do not acquire Markdown checkbox/link decorations. Direct hidden-run filtering and native break handling still apply. Ordinary body paragraphs retain their existing checkbox projection. Fence selection uses the complete resulting literal body.
+
+原生代码样式段落组把可见字符视作字面代码：复选框字符和超链接的可见标签不新增 Markdown 复选框或链接装饰。直接隐藏 run 的过滤及原生换行处理仍生效；普通正文继续使用已有的复选框投影。安全围栏根据最终完整字面正文选择。
+
+Trailing native page/section separators follow closing source IDs at the depth of the containers that remain open. Closing an inner quote must not split an authenticated outer quote into separate Markdown blocks or narrow its recovered source range. When every enclosing container closes, the separator is emitted at the document root. An inline paragraph ID is not another list/quote layer.
+
+原生段落尾的分页/分节分隔跟随已收口的源码 ID，并处于仍未结束的容器深度。内层引用结束时，不得把已认证的外层引用拆成多个 Markdown 块或缩窄它恢复后的源码范围。全部外层容器结束后，分隔位于文档顶层。行内段落 ID 不是额外的列表或引用结构层。

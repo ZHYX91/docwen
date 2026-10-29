@@ -377,6 +377,8 @@ def _render_paragraph_run_segments(
     math_renderer: Callable[[Any], str | None] | None = None,
     root_element: Any | None = None,
     line_break_text: str = "\n",
+    reference_spans: dict[Any, tuple[Any, str]] | None = None,
+    literal_text: bool = False,
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
@@ -409,10 +411,12 @@ def _render_paragraph_run_segments(
             math_renderer=math_renderer,
             root_element=child,
             line_break_text=line_break_text,
+            reference_spans=reference_spans,
+            literal_text=literal_text,
         )
         for index, text in enumerate(hyperlink_segments):
             if text:
-                _append(f"[{text}]({url})" if url else text)
+                _append(f"[{text}]({url})" if url and not literal_text else text)
             if index < len(hyperlink_segments) - 1:
                 if split_page_breaks:
                     segments.append([])
@@ -421,14 +425,25 @@ def _render_paragraph_run_segments(
 
     def _process_children(parent: Any) -> None:
         children = list(parent)
+        spans = (reference_spans or {}) if not literal_text else {}
+        positions = {child: index for index, child in enumerate(children)} if spans else {}
         consumed_through = -1
         for index, child in enumerate(children):
             if index <= consumed_through:
                 continue
+            reference = spans.get(child)
+            if reference is not None:
+                last, token = reference
+                end = positions.get(last)
+                if end is None or end < index:
+                    raise ValueError("authenticated reference range is not in its original sibling container")
+                _append(token)
+                consumed_through = end
+                continue
             tag = child.tag.split("}")[-1] if child.tag and "}" in child.tag else (child.tag or "")
 
             if tag == "r":
-                resolver = getattr(note_extractor, "get_noteref_text", None)
+                resolver = getattr(note_extractor, "get_noteref_text", None) if not literal_text else None
                 resolved = _complex_note_reference(children, index, resolver) if resolver is not None else None
                 if resolved is not None:
                     reference, consumed_through = resolved
@@ -438,7 +453,7 @@ def _render_paragraph_run_segments(
             elif tag == "hyperlink":
                 _process_hyperlink(child)
             elif tag == "fldSimple":
-                resolver = getattr(note_extractor, "get_noteref_text", None)
+                resolver = getattr(note_extractor, "get_noteref_text", None) if not literal_text else None
                 visible_runs = (
                     len(child) > 0
                     and all(
@@ -495,6 +510,9 @@ def _render_paragraph_run_segments(
 
     def _append_run_text(run: Any, text: str) -> None:
         w_ns = NS_W
+        if literal_text:
+            _append(text)
+            return
 
         # ── M1: Task list checkbox detection ────────────────────────────
         # Unicode checkbox characters (detect before any formatting)
@@ -566,12 +584,12 @@ def _render_paragraph_run_segments(
             elif tag in ("br", "cr"):
                 _flush_text()
                 _handle_break(child)
-            elif tag == "footnoteReference" and note_extractor is not None:
+            elif tag == "footnoteReference" and note_extractor is not None and not literal_text:
                 _flush_text()
                 w_id = child.get(f"{{{w_ns}}}id")
                 if w_id is not None:
                     _append(note_extractor.get_reference_text("footnote", int(w_id)))
-            elif tag == "endnoteReference" and note_extractor is not None:
+            elif tag == "endnoteReference" and note_extractor is not None and not literal_text:
                 _flush_text()
                 w_id = child.get(f"{{{w_ns}}}id")
                 if w_id is not None:
@@ -592,6 +610,8 @@ def render_paragraph_runs(
     syntax_config: DocxMarkdownSyntaxConfig,
     style_detector_config: StyleDetectorConfig | None = None,
     math_renderer: Callable[[Any], str | None] | None = None,
+    reference_spans: dict[Any, tuple[Any, str]] | None = None,
+    literal_text: bool = False,
 ) -> str:
     """Render paragraph XML children in order, producing Markdown text.
 
@@ -617,6 +637,8 @@ def render_paragraph_runs(
         style_detector_config=style_detector_config,
         split_page_breaks=False,
         math_renderer=math_renderer,
+        reference_spans=reference_spans,
+        literal_text=literal_text,
     )[0]
 
 
@@ -629,6 +651,8 @@ def render_paragraph_runs_split_on_page_breaks(
     style_detector_config: StyleDetectorConfig | None = None,
     math_renderer: Callable[[Any], str | None] | None = None,
     line_break_text: str = "\n",
+    reference_spans: dict[Any, tuple[Any, str]] | None = None,
+    literal_text: bool = False,
 ) -> list[str]:
     """Render rich Markdown segments separated at accepted page breaks.
 
@@ -647,4 +671,6 @@ def render_paragraph_runs_split_on_page_breaks(
         split_page_breaks=True,
         math_renderer=math_renderer,
         line_break_text=line_break_text,
+        reference_spans=reference_spans,
+        literal_text=literal_text,
     )

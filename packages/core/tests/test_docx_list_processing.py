@@ -121,10 +121,10 @@ def _make_mock_para_without_numpr(style_id: str = "1Heading1"):
     return para
 
 
-def test_detect_list_item_pstyle_fallback_returns_abs_num_id():
+def test_detect_list_item_pstyle_fallback_keeps_concrete_num_id():
     """When a paragraph has no numPr but its style links to numbering via
     pStyle, detect_list_item falls back to lookup_by_style_id and returns
-    a synthetic ``abs_{abstract_num_id}`` numId."""
+    the same concrete numId as an explicit paragraph binding."""
     para = _make_mock_para_without_numpr("1Heading1")
 
     num_idx = MagicMock()
@@ -138,7 +138,7 @@ def test_detect_list_item_pstyle_fallback_returns_abs_num_id():
     num_idx.lookup_by_style_id.return_value = level_info
 
     num_id, ilvl, list_type = detect_list_item(para, numbering_index=num_idx)
-    assert num_id == "abs_1"
+    assert num_id == "20"
     assert ilvl == 0
     assert list_type == "ordered"
 
@@ -158,7 +158,7 @@ def test_detect_list_item_pstyle_fallback_bullet():
     num_idx.lookup_by_style_id.return_value = level_info
 
     num_id, ilvl, list_type = detect_list_item(para, numbering_index=num_idx)
-    assert num_id == "abs_2"
+    assert num_id == "5"
     assert ilvl == 0
     assert list_type == "bullet"
 

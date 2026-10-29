@@ -302,6 +302,24 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         )
         return text if semantic else None
 
+    def paragraph_reference_spans(
+        self, paragraph_element: Any, *, emit_references: bool = True
+    ) -> dict[Any, tuple[Any, str]]:
+        """Project proven references onto their original sibling XML ranges."""
+        spans: dict[Any, tuple[Any, str]] = {}
+        recover_paragraph_children(
+            list(paragraph_element),
+            target_ids_by_bookmark=self._target_ids_by_bookmark,
+            emit_references=emit_references,
+            soft_tokens_by_tag={
+                **(self._soft_tokens_by_tag if emit_references else {}),
+                **self._resolved_v4_inline_tokens,
+            },
+            occurrence_tokens_by_tag=self._occurrence_tokens_by_tag if emit_references else {},
+            reference_spans=spans,
+        )
+        return spans
+
     def _prove_target_headings(self, document: Any, targets: list[Any]) -> None:
         from docx.text.paragraph import Paragraph
 
@@ -644,6 +662,15 @@ def _ordinary_list_bindings(document: Any) -> frozenset[tuple[str, str]]:
     return frozenset(bindings)
 
 
+def ordinary_container_list_bindings(document: Any) -> frozenset[tuple[str, str]]:
+    """Return strictly modeled native list bindings for one loaded package.
+
+    Consumers freeze this inventory for the request; IDs or style names alone
+    do not distinguish native container lists from Heading numbering.
+    """
+    return _ordinary_list_bindings(document)
+
+
 def _parse_resolved_v4_caption(
     paragraph: Any,
     kind: str,
@@ -861,4 +888,5 @@ def _valid_sequence_instruction(instruction: str, counter: str) -> bool:
 
 __all__ = [
     "ResolvedNumberingV4Recovery",
+    "ordinary_container_list_bindings",
 ]

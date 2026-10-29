@@ -525,7 +525,7 @@ def build_image_markdown(
                         ocr_language=ocr_language,
                         current_locale=current_locale,
                     )
-                return format_image_link(filename, filename, style=image_link_style)
+                return format_image_link(filename, filename, style=image_link_style, raw_resource_path=True)
         except OSError:
             return ""
 
@@ -573,7 +573,7 @@ def build_image_markdown(
             recognize_tables=recognize_tables,
             table_merge_strategy=table_merge_strategy,
         )
-    return format_image_link(filename, filename, style=image_link_style)
+    return format_image_link(filename, filename, style=image_link_style, raw_resource_path=True)
 
 
 def _ocr_image_link(
@@ -604,7 +604,7 @@ def _ocr_image_link(
     from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning, run_ocr_outcome
     from docwen_core.text.table_recognition import enrich_ocr_table_structure
 
-    image_link = format_image_link(filename, filename, style=image_link_style)
+    image_link = format_image_link(filename, filename, style=image_link_style, raw_resource_path=True)
 
     if not keep_images:
         return image_link

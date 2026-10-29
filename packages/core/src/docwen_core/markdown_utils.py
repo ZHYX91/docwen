@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import logging
 import re
+import string
 import urllib.parse
+from html import escape
 
 logger = logging.getLogger(__name__)
 
@@ -143,3 +145,24 @@ def format_md_file_link(
 
     logger.debug("Formatted md file link: %r → %r (style=%s)", filename, result, style)
     return result
+
+
+def encode_markdown_table_cell(value: str) -> str:
+    """Encode one native plain-text cell exactly once at serialization.
+
+    Backslashes and inline syntax remain visible text, pipes cannot add a
+    column, and source line breaks become explicit in-cell breaks. The input
+    is raw cell text, never previously escaped Markdown.
+    """
+    text = value.replace("\r\n", "\n").replace("\r", "\n").replace("\v", "\n")
+    parts: list[str] = []
+    for char in text:
+        if char == "\n":
+            parts.append("<br>")
+        elif char in "&<>":
+            parts.append(escape(char, quote=False))
+        elif char in string.punctuation:
+            parts.append("\\" + char)
+        else:
+            parts.append(char)
+    return "".join(parts)

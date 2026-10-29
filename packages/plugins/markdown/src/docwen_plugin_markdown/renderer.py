@@ -1238,7 +1238,10 @@ class MdToDocxRenderer:
 
     def _handle_block_latex(self, node: dict[str, Any]):
         """Render block LaTeX as OMML equation."""
-        render_formula(self._doc, node, block_style=self._formula_block_style)
+        if not render_formula(self._doc, node, block_style=self._formula_block_style):
+            self._warnings.append(
+                ("MD2DOCX-FORMULA-TEXT-FALLBACK", "An unsupported formula was preserved as its original LaTeX text.")
+            )
         # Return the last paragraph (created by render_formula)
         paragraph = self._doc.paragraphs[-1] if self._doc.paragraphs else None
         if paragraph is None:

@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.text.placeholders import restore_placeholders
+from docwen_plugin_markup.markdown_resources import MarkdownResourceWriter
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -45,8 +46,8 @@ class _EnexResource:
 class EnexToMarkdownConverter:
     """Convert an ENEX (Evernote Export) file to Markdown.
 
-    Each ENEX note becomes one Markdown file.  Embedded resources
-    (images, attachments) are extracted to the staging directory.
+    All ENEX notes form one Markdown document. Embedded resources
+    share request-owned names in the staging directory.
     """
 
     def convert(self, context: ConverterContext) -> Any:
@@ -273,6 +274,7 @@ class EnexToMarkdownConverter:
         note_titles: list[str] = []
         total_resources = 0
         total_notes = len(list(root.findall("note")))
+        resource_writer = MarkdownResourceWriter()
 
         for idx, note_el in enumerate(root.findall("note"), 1):
             context.cancellation.check()
@@ -309,6 +311,7 @@ class EnexToMarkdownConverter:
                 ocr_language=ocr_language,
                 current_locale=current_locale,
                 image_link_style=image_link_style,
+                writer=resource_writer,
             )
             md_body = restore_placeholders(
                 md_body, {token: res_map.get(digest, "") for token, digest in token_resources.items()}
@@ -393,6 +396,7 @@ class EnexToMarkdownConverter:
         ocr_language: str,
         current_locale: str,
         image_link_style: str | None,
+        writer: MarkdownResourceWriter | None = None,
     ) -> dict[str, str]:
         """Write embedded ENEX resources to staging and populate aux_artifacts.
 
@@ -403,7 +407,6 @@ class EnexToMarkdownConverter:
         """
         from docwen_plugin_markup.markdown_resources import (
             MarkdownResource,
-            MarkdownResourceWriter,
         )
 
         out: dict[str, str] = {}
@@ -423,7 +426,7 @@ class EnexToMarkdownConverter:
                 )
             )
 
-        written = MarkdownResourceWriter().write_all(
+        written = (writer or MarkdownResourceWriter()).write_all(
             context,
             resources_to_write,
             image_link_style=image_link_style,

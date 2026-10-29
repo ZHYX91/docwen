@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import posixpath
 import re
-from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime
 from html import escape, unescape
@@ -13,7 +12,7 @@ from html.entities import html5
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
 
-from docwen_core.links import split_markdown_block_segments
+from docwen_core.links import rewrite_markdown_resource_targets
 from docwen_core.models import (
     DOCUMENT_NODE_SCHEMA,
     ArtifactManifest,
@@ -25,13 +24,6 @@ from docwen_core.models import (
 )
 
 MARKDOWN_MEDIA_TYPE = "text/markdown"
-
-_MARKDOWN_LINK = re.compile(r"(?P<prefix>!?\[[^\]\n]*\]\()(?P<target><[^<>\n]*>|[^)\s]+)(?P<suffix>[^)]*\))")
-_WIKI_LINK = re.compile(r"(?P<prefix>!?\[\[)(?P<body>[^\]\n]+)(?P<suffix>\]\])")
-_HTML_LINK = re.compile(
-    r"(?P<prefix>\b(?:src|href)\s*=\s*[\"'])(?P<target>[^\"']+)(?P<suffix>[\"'])",
-    re.IGNORECASE,
-)
 
 _WINDOWS_DRIVE_TARGET = re.compile(r"^[A-Za-z]:[\\/]")
 _URI_SCHEME_TARGET = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
@@ -232,16 +224,18 @@ def relocated_markdown_bytes(
     if artifact.logical_path is None:
         return raw
     source_parent = PurePosixPath(artifact.logical_path).parent.as_posix()
-    replacements: dict[str, str] = {}
+    declared_targets: dict[str, set[str]] = {}
     for target in artifacts:
         if target.logical_path is None or target.artifact_id == artifact.artifact_id:
             continue
         relative = posixpath.relpath(target.logical_path, start=source_parent)
         for old in _artifact_reference_names(target):
-            replacements.setdefault(old, relative)
-    if not replacements:
+            declared_targets.setdefault(_reference_identity(old), set()).add(relative)
+    if not declared_targets:
         return bom + text.encode("utf-8")
-    rewritten = _rewrite_known_links(text, replacements)
+    replacements = {name: next(iter(paths)) for name, paths in declared_targets.items() if len(paths) == 1}
+    ambiguous = {name for name, paths in declared_targets.items() if len(paths) > 1}
+    rewritten = _rewrite_known_links(text, replacements, ambiguous=ambiguous)
     return bom + rewritten.encode("utf-8")
 
 
@@ -282,6 +276,7 @@ def _artifact_reference_names(artifact: ArtifactManifest) -> set[str]:
     source_name = artifact.metadata.get("source_suggested_name")
     if isinstance(source_name, str) and source_name:
         values.add(source_name)
+        values.add(PurePosixPath(source_name.replace("\\", "/")).name)
     return {value for value in values if value}
 
 
@@ -310,96 +305,35 @@ def _serialize_local_link_path(path: str) -> str:
     return "".join(result)
 
 
-def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
-    normalized = {key.replace("\\", "/"): value for key, value in replacements.items()}
+def _reference_identity(value: str) -> str:
+    normalized = value.replace("\\", "/")
+    offset = 0
+    while normalized.startswith("./", offset):
+        offset += 2
+    return normalized[offset:]
 
-    def replace_target(raw: str) -> str:
-        raw_path, marker, raw_anchor = raw.partition("#")
-        if _is_external_link_target(raw):
+
+def _rewrite_known_links(text: str, replacements: dict[str, str], *, ambiguous: set[str] | None = None) -> str:
+    normalized = {_reference_identity(key): value for key, value in replacements.items()}
+    ambiguous = {_reference_identity(key) for key in (ambiguous or set())}
+
+    def replace_target(raw: str, syntax: str) -> str:
+        semantic = _decode_html_attribute(raw) if syntax == "html" else raw
+        if _is_external_link_target(semantic):
             return raw
-        decoded_path = unquote(raw_path).replace("\\", "/")
-        replacement = normalized.get(decoded_path) or normalized.get(PurePosixPath(decoded_path).name)
+        path_and_query, marker, anchor = semantic.partition("#")
+        path, query_marker, query = path_and_query.partition("?")
+        decoded_path = _reference_identity(unquote(path))
+        if decoded_path in ambiguous:
+            raise ValueError(f"ambiguous producer-declared artifact reference: {path}")
+        replacement = normalized.get(decoded_path)
         if replacement is None:
             return raw
         serialized = _serialize_local_link_path(replacement)
-        return serialized + (f"#{raw_anchor}" if marker else "")
+        serialized += (f"?{query}" if query_marker else "") + (f"#{anchor}" if marker else "")
+        return escape(serialized, quote=True) if syntax == "html" else serialized
 
-    def markdown_sub(match: re.Match[str]) -> str:
-        target = match.group("target")
-        if target.startswith("<") and target.endswith(">"):
-            target = f"<{replace_target(target[1:-1])}>"
-        else:
-            target = replace_target(target)
-        return f"{match.group('prefix')}{target}{match.group('suffix')}"
-
-    def wiki_sub(match: re.Match[str]) -> str:
-        body = match.group("body")
-        target, separator, alias = body.partition("|")
-        replaced = replace_target(target.strip())
-        suffix = f"|{alias}" if separator else ""
-        return f"{match.group('prefix')}{replaced}{suffix}{match.group('suffix')}"
-
-    def html_sub(match: re.Match[str]) -> str:
-        raw = match.group("target")
-        semantic = _decode_html_attribute(raw)
-        replaced = replace_target(semantic)
-        target = raw if replaced == semantic else escape(replaced, quote=True)
-        return f"{match.group('prefix')}{target}{match.group('suffix')}"
-
-    def rewrite_visible(segment: str) -> str:
-        segment = _MARKDOWN_LINK.sub(markdown_sub, segment)
-        segment = _WIKI_LINK.sub(wiki_sub, segment)
-        return _HTML_LINK.sub(html_sub, segment)
-
-    rewritten_blocks: list[str] = []
-    for block_text, is_literal_block in split_markdown_block_segments(text):
-        if is_literal_block:
-            rewritten_blocks.append(block_text)
-        else:
-            rewritten_blocks.append(_rewrite_outside_inline_code(block_text, rewrite_visible))
-    return "".join(rewritten_blocks)
-
-
-def _rewrite_outside_inline_code(text: str, rewrite: Callable[[str], str]) -> str:
-    """Apply rewrite only outside closed Markdown code spans."""
-
-    output: list[str] = []
-    cursor = 0
-    visible_start = 0
-    while cursor < len(text):
-        opening = text.find("`", cursor)
-        if opening < 0:
-            break
-        opening_end = opening
-        while opening_end < len(text) and text[opening_end] == "`":
-            opening_end += 1
-        delimiter_length = opening_end - opening
-        closing = _matching_backtick_delimiter(text, opening_end, delimiter_length)
-        if closing is None:
-            cursor = opening_end
-            continue
-        output.append(rewrite(text[visible_start:opening]))
-        close_end = closing + delimiter_length
-        output.append(text[opening:close_end])
-        visible_start = close_end
-        cursor = close_end
-    output.append(rewrite(text[visible_start:]))
-    return "".join(output)
-
-
-def _matching_backtick_delimiter(text: str, start: int, delimiter_length: int) -> int | None:
-    cursor = start
-    while cursor < len(text):
-        tick = text.find("`", cursor)
-        if tick < 0:
-            return None
-        run_end = tick
-        while run_end < len(text) and text[run_end] == "`":
-            run_end += 1
-        if run_end - tick == delimiter_length:
-            return tick
-        cursor = run_end
-    return None
+    return rewrite_markdown_resource_targets(text, replace_target)
 
 
 __all__ = [

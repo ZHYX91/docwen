@@ -131,6 +131,16 @@ def _report_ocr_best_effort(progress: ProgressSink | None, status: object, *, lo
 
 def _attachment_line_text(feature: Any, *, remove_numbering: bool) -> str:
     """Return attachment text without silently losing a retained prefix."""
+    if feature.formula_atoms:
+        from docwen_plugin_optimizer_gongwen.formula_utils import render_formula_atoms
+
+        line = render_formula_atoms(feature.formula_atoms)
+        if not remove_numbering and feature.heading_level > 0 and feature.heading_numbering_text:
+            line = feature.heading_numbering_text + line
+        if feature.list_marker:
+            prefix = "    " * feature.list_level + feature.list_marker + " "
+            return prefix + line.replace("\n", "\n" + " " * len(prefix))
+        return line
     if not remove_numbering and feature.heading_level > 0 and feature.heading_numbering_text:
         return feature.raw_text or f"{feature.heading_numbering_text}{feature.text}"
     return feature.text

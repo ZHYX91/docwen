@@ -356,3 +356,48 @@ Round-two regressions cover final retained template text through real TemplateMa
 Markdown XLSX template scans visit existing cells in row/column order rather than materializing their bounding rectangle. A saved sparse template with a last-row/last-column sentinel exercises YAML, row/column and image placeholders, formula preservation and final save/reopen; the guard fails before an accidental dense scan can allocate the empty grid.
 
 `test_xlsx_image_text_plan.py` combines near-limit text with real template/table images and URL-quoted Unicode paths. It checks final ASCII/non-BMP limits, exact drawing bytes, literal marker trust, overwritten/protected cells, placeholder discovery order, duplicate drawings, sparse cells and the internal CSV-template helper. Temporary scope strings never enter openpyxl; output assertions save and reopen real workbooks. `test_mhtml_query_resolution.py` checks actual PNG bytes through Runtime under paired synthetic/absolute bases, empty query/fragment delimiters and relative paths.
+
+
+## Native content and resource regression / 原生内容与资源回归
+
+The file regressions in `test_native_docx_reading_contract.py`, `test_formula_and_gongwen_source_content.py`,
+`test_resource_identity_pipeline.py` and `test_semantic_quote_break_recovery.py` build real minimal OOXML/ENEX/PPTX
+inputs and follow production conversion, finalization and Bundle publication. Independent ZIP/XML facts, exact
+text/order, mathematical tokens, Markdown table ASTs and destination-to-resource byte hashes are the oracles.
+Quote tests inspect physical carriers and break nodes before fresh reading and production source replanning.
+`test_resource_relocation_boundaries.py` deliberately supplies declared manifests to isolate finalizer ownership,
+ambiguous-alias rejection and exact non-target byte preservation; it is not a native host or Machine session.
+The OCR sidecar case substitutes only the typed OCR engine outcome; resource allocation, file writes and Bundle
+hash checks remain real. The native attachment fixture contains actual DOCX bytes, not text with an invented MIME.
+`test_mathml_text_and_tokens.py` supplies independent MathML leaf and lexical-boundary expectations.
+
+这些回归使用真实最小 OOXML／ENEX／PPTX，经生产转换、finalizer 与 Bundle 发布，按 ZIP/XML 原始事实、完整
+正文／次数／顺序、数学 token、独立 Markdown table AST 及最终目标→资源 SHA 核验。quote 在 fresh reader
+之前检查物理 carrier 和 break 节点，再调用生产 replan。重定位边界测试显式提供声明 manifest，只证明
+finalizer 的所有权、歧义拒绝和非目标字节保留，不冒充宿主或 Machine session。OCR 用例只替换引擎的 typed
+outcome，后续命名、实际写入与 Bundle 摘要均为真实链；普通附件使用真实 DOCX 字节，不依赖虚构 MIME。
+MathML 叶及控制词边界另用独立预期检查。以上不替代真实 Office、Qt、Obsidian、跨平台或最终候选验收。
+
+The related `test_gongwen_formula_structure.py` and `test_gongwen_request_source_ownership.py` pass the same
+production ConfigPort snapshot to ApplicationController and Runtime. They pair shipped heading-cleanup rules
+with an explicit empty-rule request; configuring only the runtime loader does not establish the request snapshot.
+`test_visible_semantics_and_literal_code.py` checks exact visible paragraph and code AST content around real
+legacy/v3 references, while `test_nested_quote_separator_ownership.py` checks complete parent/child source ranges
+across trailing page/section separators. `test_heading_list_numbering_identity.py` independently checks native
+Heading text and effective list numbering before asserting list/Heading structure and counter progression.
+
+公文结构与源归属回归把同一生产 ConfigPort 快照交给 ApplicationController 与 Runtime，同时检查已发布的
+标题清理规则和显式空规则请求；仅配置 runtime loader 不代表请求已携带该快照。可见语义／字面代码回归
+在真实旧版与 v3 引用周边检查精确正文和代码 AST，嵌套 quote 回归核验尾部页／节分隔两侧完整父子范围；
+列表内标题回归先独立检查原生 Heading 正文及有效编号，再检查列表／标题结构和实际计数推进。
+
+`test_clipboard_wiki_image_resource_identity.py` uses generated PNGs and an explicit typed ClipboardDocument,
+then the real input store, Runtime, finalizer and Bundle. It independently checks every Wiki occurrence's target,
+empty/nonempty alias, source hash and surrounding text, including repeated resources and real output-root
+contention. It does not claim a native OS clipboard capture. Shared formatter regressions distinguish raw resource
+paths from already encoded references, preserving literal percent identity, URI query/fragment and existing embeds.
+
+结构化剪贴板 Wiki 回归使用生成 PNG 与显式 typed ClipboardDocument，经真实 input store、Runtime、finalizer
+及 Bundle，逐 occurrence 独立检查目标、空／非空 alias、原资源摘要与周围正文，并覆盖重复资源和实际输出根
+冲突；不把该结构输入称作原生系统剪贴板抓取。共享格式化回归区分原始资源路径与已编码引用，分别保留字面
+百分号身份、URI query／fragment 及既有 embed 语义。

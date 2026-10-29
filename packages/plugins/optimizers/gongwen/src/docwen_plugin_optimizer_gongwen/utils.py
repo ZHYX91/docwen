@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from dataclasses import dataclass
 
 from docwen_plugin_optimizer_gongwen.constants import (
     COPY_TO_LABELS,
@@ -48,16 +49,37 @@ def extract_after_colon(text: str) -> str:
     return text
 
 
-def extract_combined_id(text: str) -> tuple[str, str]:
-    """Split a compact ``份号 + 发文字号`` line without guessing by spaces."""
+@dataclass(frozen=True, slots=True)
+class CombinedId:
+    copy_id: str
+    doc_number: str
 
+
+def parse_combined_id(text: str) -> CombinedId | None:
+    """Return both fields only when their grammar owns the complete line."""
     match = re.fullmatch(r"\s*(\d+)\s*(?=[A-Za-z一-鿿])(.+?)\s*", text)
     if match is None:
-        return "", ""
+        return None
     copy_id, doc_number = match.groups()
     if RE_DOC_NUMBER.fullmatch(doc_number) is None:
-        return "", ""
-    return copy_id, doc_number.strip()
+        return None
+    return CombinedId(copy_id, doc_number)
+
+
+def looks_like_combined_id(text: str) -> bool:
+    """Identify an uncertain header candidate without consuming its source."""
+    return bool(
+        re.match(
+            r"^\s*\d+\s*[A-Za-z一-鿿][A-Za-z一-鿿0-9]*\s*"
+            r"(?:[〔［【《（(\[]\s*\d{1,4}|\d{4}\s*[-－])",
+            text,
+        )
+    )
+
+
+def extract_combined_id(text: str) -> tuple[str, str]:
+    parsed = parse_combined_id(text)
+    return (parsed.copy_id, parsed.doc_number) if parsed is not None else ("", "")
 
 
 def extract_doc_number_and_signers(text: str) -> tuple[str, list[str]]:

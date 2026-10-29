@@ -32,6 +32,10 @@ Companion-folder fallback applies only to ordinary relative file references with
 
 HTML, MHTML and ENEX image projection must preserve body/code text that resembles internal placeholders. Use a per-conversion namespace checked against authored text, decoded HTML/ENML text and relevant attributes. Restore generated placeholders in one pass so a generated link cannot be processed by a later replacement. Omit/disabled-image modes remove the image occurrence, not authored text. ENEX resource validation derives references only from parsed en-media elements and actual hash attributes. Comments, CDATA and attribute lookalikes cannot register dependencies. ENML uses an Expat-backed TreeBuilder with external entity resolution and parameter-entity parsing disabled; internal entity declarations are rejected before expansion. Standard external ENML doctype identifiers are not fetched. Common named HTML characters are normalized outside comments/CDATA, while literal code is preserved. Actual missing resources still fail, including in omit mode.
 
+ENEX keeps each note's hash-to-resource binding until the complete merged document has been built. Images, non-image attachments and OCR Markdown sidecars allocate names from one request-owned inventory, including names allocated by earlier notes. Different bytes with the same source filename remain distinguishable in final links; repeated occurrences of the same bytes may share a resource. Finalizer relocation does not infer note ownership from filenames.
+
+ENEX 在合并文档完成前保留每条 note 的 hash→资源绑定。图片、普通附件和 OCR Markdown 侧车共享本请求的命名库存，包含前面 note 已分配的名称。同源文件名但不同字节必须在最终链接中保持可区分；相同字节的重复出现可合法复用资源。Finalizer 不通过文件名猜测 note 归属。
+
 The Layout HTML helper uses the same pure Core namespace/restoration functions. Its final helper output is covered by regression tests; there is currently no production caller of that helper, so these tests do not establish a PDF/Office route or native host result.
 
 ## Regression boundaries

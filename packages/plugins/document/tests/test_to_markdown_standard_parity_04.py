@@ -457,9 +457,9 @@ def test_heading_pstyle_numbering_respects_remove_numbering():
     assert "总体要求" in output
 
 
-def test_regular_paragraph_pstyle_numbering_via_abs_num_id():
+def test_regular_paragraph_pstyle_numbering_keeps_concrete_binding():
     """Regular paragraph whose style maps to numbering via pStyle
-    gets the numbering prefix rendered (step 8, abs_ numId path)."""
+    gets its concrete numbering prefix rendered on the pStyle layout path."""
     doc = Document()
     para = doc.add_paragraph("第一条内容")
     _inject_pPr_without_numPr(para)

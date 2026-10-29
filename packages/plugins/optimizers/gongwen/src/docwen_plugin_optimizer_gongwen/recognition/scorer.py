@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 from docwen_plugin_optimizer_gongwen.constants import (
     NON_UNIQUE_SCORE_THRESHOLD,
+    RE_DOC_NUMBER,
     ROUND1_ELEMENTS,
     ROUND2_ELEMENTS,
     ROUND3_ELEMENTS,
@@ -23,25 +24,15 @@ from docwen_plugin_optimizer_gongwen.constants import (
 from docwen_plugin_optimizer_gongwen.models import ParagraphFeature, RecognitionCandidate
 from docwen_plugin_optimizer_gongwen.recognition.rules import SCORING_RULES
 from docwen_plugin_optimizer_gongwen.utils import (
+    extract_doc_number_and_name,
     extract_doc_number_and_signers,
     extract_printing_line,
+    parse_combined_id,
     starts_with_copy_to_label,
 )
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ProgressSink
-
-# ── Document number patterns (from old ElementScorer) ─────────────────
-_DOCUMENT_NUMBER_PATTERNS = (
-    r"[一-龥A-Za-z0-9]+〔\d{4}〕\s*\d*\s*号",
-    r"[一-龥A-Za-z0-9]+\[\d{4}\]\s*\d*\s*号",
-    r"[一-龥A-Za-z0-9]+\(\d{4}\)\s*\d*\s*号",
-    r"[一-龥A-Za-z0-9]+\d{4}-\s*\d*\s*号",
-    r"[一-龥A-Za-z0-9]+〔\d{4}〕[\s　]*[\d]*[\s　]*号",
-    r"[一-龥A-Za-z0-9]+\[\d{4}\][\s　]*[\d]*[\s　]*号",
-)
-
-_DOCUMENT_NUMBER_FULL_PATTERNS = tuple(re.compile(f"^{p}\\s*$") for p in _DOCUMENT_NUMBER_PATTERNS)
 
 # ── Authority suffixes (from old ends_with keyword list) ──────────────
 _AUTHORITY_SUFFIXES = [
@@ -274,18 +265,7 @@ class ElementScorer:
 
     def has_combined_ids(self, pf: ParagraphFeature) -> bool:
         """Check whether text combines a copy ID and document number."""
-        text = pf.text.strip()
-        copy_id_patterns = [
-            r"\d+[\s　\t]*",
-            r"\d+[\s　\t]+\d+[\s　\t]*",
-        ]
-        for cp in copy_id_patterns:
-            for dp in _DOCUMENT_NUMBER_PATTERNS:
-                full = re.compile(f"^({cp})({dp})\\s*$")
-                m = full.match(text)
-                if m:
-                    return True
-        return False
+        return parse_combined_id(pf.text) is not None
 
     def is_numeric_sequence(self, pf: ParagraphFeature) -> bool:
         """Check whether text is a pure numeric copy-ID sequence."""
@@ -373,7 +353,7 @@ class ElementScorer:
     def is_document_number_format(self, pf: ParagraphFeature) -> bool:
         """Check whether the whole text matches a document number."""
         text = pf.text.strip()
-        return any(pattern.match(text) for pattern in _DOCUMENT_NUMBER_FULL_PATTERNS)
+        return RE_DOC_NUMBER.fullmatch(text) is not None
 
     def has_doc_number_and_signer(self, pf: ParagraphFeature) -> bool:
         """Check for a document number followed by labelled signer names."""
@@ -384,12 +364,8 @@ class ElementScorer:
 
     def has_doc_number_and_name(self, pf: ParagraphFeature) -> bool:
         """Check for a document number followed by an unlabelled name."""
-        text = pf.text.strip()
-        for dp in _DOCUMENT_NUMBER_PATTERNS:
-            pattern = rf"^({dp})[\s　\t]+{_NAME_PATTERN}$"
-            if re.match(pattern, text):
-                return True
-        return False
+        doc_number, name = extract_doc_number_and_name(pf.text)
+        return bool(doc_number and _NAME_RE.fullmatch(name))
 
     def starts_with_signer_label(self, pf: ParagraphFeature) -> bool:
         """Check whether text starts with a signer label."""
