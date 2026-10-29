@@ -376,6 +376,7 @@ def _render_paragraph_run_segments(
     split_page_breaks: bool,
     math_renderer: Callable[[Any], str | None] | None = None,
     root_element: Any | None = None,
+    line_break_text: str = "\n",
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
@@ -392,7 +393,9 @@ def _render_paragraph_run_segments(
         if split_page_breaks and break_type == "page":
             segments.append([])
         else:
-            _parts().append("\n")
+            # Only an actual OOXML break receives this projection. Literal
+            # w:t text and already-rendered code/formatting remain untouched.
+            _parts().append(line_break_text)
 
     def _process_hyperlink(child: Any) -> None:
         url = resolve_hyperlink_target(para, child) or ""
@@ -405,6 +408,7 @@ def _render_paragraph_run_segments(
             split_page_breaks=split_page_breaks,
             math_renderer=math_renderer,
             root_element=child,
+            line_break_text=line_break_text,
         )
         for index, text in enumerate(hyperlink_segments):
             if text:
@@ -624,6 +628,7 @@ def render_paragraph_runs_split_on_page_breaks(
     syntax_config: DocxMarkdownSyntaxConfig,
     style_detector_config: StyleDetectorConfig | None = None,
     math_renderer: Callable[[Any], str | None] | None = None,
+    line_break_text: str = "\n",
 ) -> list[str]:
     """Render rich Markdown segments separated at accepted page breaks.
 
@@ -641,4 +646,5 @@ def render_paragraph_runs_split_on_page_breaks(
         style_detector_config=style_detector_config,
         split_page_breaks=True,
         math_renderer=math_renderer,
+        line_break_text=line_break_text,
     )

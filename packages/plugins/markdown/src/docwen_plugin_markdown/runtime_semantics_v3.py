@@ -385,16 +385,25 @@ def _ordinary_anchor_owner_path(anchor: dict[str, Any]) -> tuple[tuple[str, int,
     ]
     block_range = anchor["block_range"]
     segments.append((str(anchor["block_kind"]), int(block_range["start"]), int(block_range["end"])))
+    # The position in this source-generated path is the structural depth.
+    # Distinct quote ancestors can cover exactly the same source range; keep
+    # both positions so longest-prefix parent selection does not collapse them.
+    # A terminal container self remains invalid: supported inline item owners
+    # omit their own segment, and a nested post-block marker extends its real
+    # ancestor beyond the owned container's complete range.
+    terminal_depth = len(segments) - 1
     previous: tuple[str, int, int] | None = None
-    for segment in segments:
-        _kind, start, end = segment
+    for depth, segment in enumerate(segments):
+        kind, start, end = segment
+        if depth < terminal_depth and kind not in {"list", "list_item", "block_quote", "callout"}:
+            raise RuntimeSemanticsV3Unsupported("ordinary-anchor container path contains a non-container kind")
         if start < 0 or end <= start:
             raise RuntimeSemanticsV3Unsupported("ordinary-anchor source topology has an invalid range")
         if previous is not None:
             _previous_kind, previous_start, previous_end = previous
             if start < previous_start or end > previous_end:
                 raise RuntimeSemanticsV3Unsupported("ordinary-anchor source topology is not laminar")
-            if segment == previous:
+            if depth == terminal_depth and segment == previous:
                 raise RuntimeSemanticsV3Unsupported("ordinary-anchor container path contains its own block")
         previous = segment
     return tuple(segments)
@@ -755,10 +764,16 @@ def _lift_container_anchors(nodes: list[dict[str, Any]]) -> None:
         if not isinstance(children, list):
             continue
         _lift_container_anchors(children)
-        if node.get("type") not in {"block_quote", "list", "list_item"}:
+        owner_kind = {
+            "block_quote": "block_quote",
+            "list": "list",
+            "list_item": "list_item",
+            "task_list_item": "list_item",
+        }.get(str(node.get("type")))
+        if owner_kind is None:
             continue
         owners = list(_direct_anchor_owners(children))
-        if node.get("type") == "list_item":
+        if owner_kind == "list_item":
             # A lead paragraph may identify the complete item while later
             # paragraphs or objects retain their own ordinary IDs. Only the
             # unique item owner is eligible to move onto this container.
@@ -768,11 +783,7 @@ def _lift_container_anchors(nodes: list[dict[str, Any]]) -> None:
         if len(owners) != 1:
             continue
         anchor = owners[0]["_docwen_v3_ordinary_anchor"]
-        expected = {
-            "block_quote": "block_quote",
-            "list": "list",
-            "list_item": "list_item",
-        }[str(node["type"])]
+        expected = owner_kind
         if node.get("type") == "block_quote" and anchor.get("block_kind") == "callout":
             expected = "callout"
         if anchor.get("block_kind") != expected:
@@ -811,12 +822,15 @@ def _direct_anchor_owners(nodes: list[dict[str, Any]]):
     """Yield marker owners through transparent paragraph/block-text shells."""
 
     for node in nodes:
+        # A structured node already owns its complete block. Lifting it again
+        # would steal a nested container's ID or overwrite its parent's ID.
+        if node.get("type") not in {"paragraph", "block_text"}:
+            continue
         if node.get("_docwen_v3_ordinary_anchor") is not None:
             yield node
-        if node.get("type") in {"paragraph", "block_text"}:
-            children = node.get("children")
-            if isinstance(children, list):
-                yield from _direct_anchor_owners(children)
+        children = node.get("children")
+        if isinstance(children, list):
+            yield from _direct_anchor_owners(children)
 
 
 def _plain_children(children: list[dict[str, Any]]) -> str:

@@ -1395,21 +1395,44 @@ class DocxToMarkdownConverter:
                 if cb_md:
                     lines.append(cb_md)
                     lines.append("")
+            anchor_groups = self._semantic_v3_recovery.ordinary_anchor_groups(para_element)
+            source_anchor = self._semantic_v3_recovery.source_anchor(para_element)
+            inline_anchor_id: str | None = None
+            if (
+                source_anchor is not None
+                and source_anchor.owner_kind == "ordinary_anchor"
+                and (
+                    source_anchor.block_kind == "paragraph"
+                    or (source_anchor.block_kind == "list_item" and (not anchor_groups or anchor_groups[0].index == 0))
+                )
+            ):
+                inline_anchor_id = source_anchor.source_id
             quote_parts = (
                 self._render_page_break_parts(
                     para,
                     preserve_formatting=self._preserve_formatting,
                     style_detector_config=style_detector_config,
+                    line_break_text="<br>" if inline_anchor_id is not None else "\n",
                 )
                 if para is not None and (has_page_break or semantic_reference_text is None)
                 else [
                     ("text", semantic_reference_text.strip() if semantic_reference_text is not None else paragraph_text)
                 ]
             )
+            if inline_anchor_id is not None:
+                # Keep the paragraph/item ID on prose, before any trailing
+                # page or section separator. Whole-container IDs are emitted
+                # separately by the body walker after their final child.
+                for part_index in range(len(quote_parts) - 1, -1, -1):
+                    part_type, part = quote_parts[part_index]
+                    if part_type == "text" and part.strip():
+                        quote_parts[part_index] = ("text", f"{part} ^{inline_anchor_id}")
+                        break
+                else:
+                    raise ValueError("an authenticated inline quote anchor has no visible paragraph content")
             level = style_value if isinstance(style_value, int) else 1
             prefix = ">" * max(level, 1)
             quote_indent = " " * self._list_indent_spaces * paragraph_list_context_level
-            anchor_groups = self._semantic_v3_recovery.ordinary_anchor_groups(para_element)
             owner_kinds = tuple(group.anchor.block_kind for group in anchor_groups)
             list_inside_quote = owner_kinds[:2] in {
                 ("list", "block_quote"),
@@ -1829,6 +1852,7 @@ class DocxToMarkdownConverter:
         *,
         preserve_formatting: bool | None = None,
         style_detector_config: Any = None,
+        line_break_text: str = "\n",
     ) -> list[tuple[str, str]]:
         """Render page-separated paragraph parts without losing rich content."""
         from docwen_plugin_document.shared.markdown_runs import (
@@ -1851,6 +1875,7 @@ class DocxToMarkdownConverter:
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
             math_renderer=_render_formula,
+            line_break_text=line_break_text,
         )
         parts: list[tuple[str, str]] = []
         for index, segment in enumerate(segments):

@@ -411,11 +411,16 @@ owns only that paragraph and retains the enclosing list and item in its `contain
 block, formula, heading or paragraph must not expand that later paragraph's anchor to the complete item.
 The leading item's anchor and a later paragraph anchor may coexist with their distinct identities and parent-child
 relationship; the later anchor does not prevent the leading anchor from owning the complete item.
+This includes checked and unchecked task items: the visible task state and all child blocks remain inside the
+complete-item owner. Its DOCX carrier begins with a paragraph and may contain paragraph or table continuations;
+table-only, table-first and unauthenticated wrapper shapes remain invalid.
 
 生产原文路线中，列表项的首个非空子块若为普通段落，该段落可用行内 ID 标识完整列表项。已有正文块之后的
 普通段落，其行内 ID 仅标识该段落，`container_path` 仍保留外围列表与列表项。前置表格、代码、公式、标题或
 段落不能把后续段落的锚点扩大为完整列表项。
 首段的列表项锚点可与后续段落锚点共存，分别保留身份和父子关系；后续锚点不使首段丢失完整列表项所有权。
+该规则同样适用于已完成和未完成的任务项：可见任务状态及全部子块都属于完整列表项。其 DOCX 载体以段落
+开头，后续可含段落或表格；只有表格、以表格开头或含未认证包装节点的形状仍拒绝。
 
 An ordinary anchor identifies only its Markdown block:
 
@@ -428,6 +433,14 @@ It participates in ordinary Markdown navigation or embedding through `[[Page#^im
 caption counter or Word bookmark/`SEQ`/`REF` projection. The same rule applies to ordinary anchors on paragraphs,
 tables, equations, fenced-code blocks, lists, block quotes, and callouts. DocWen preserves this source navigation for
 Markdown round-trip; it does not manufacture a Word-native target where the source has no semantic owner.
+An authenticated paragraph ID inside a quote is retained on its prose when exporting to Markdown, independently
+of the caption/reference output switch. Native line breaks in that paragraph use the existing `<br>` form so the
+inline ID still identifies one paragraph; literal code text is not rewritten. Page or section separators remain
+outside the inline ID, while complete-container IDs keep their post-block placement.
+
+引用内已认证的段落 ID 在导出 Markdown 时仍附在正文上，不受题注／引用输出开关影响。该段落的原生行换行
+使用既有 `<br>` 形式，使行内 ID 继续标识一个段落；代码字面文字不被改写。分页或分节分隔符不接收该行内
+ID，完整容器的 ID 仍保持块后位置。
 
 Every object in the closed source-oracle `anchors` array additionally requires `container_path`. It is an ordered
 outermost-to-innermost array of closed source-only segments. A segment has exactly `block_kind` and `block_range`;
@@ -449,6 +462,12 @@ Source ranges along a path are laminar and may be strictly contained or equal; e
 structural levels. Crossing ranges, a self segment, an unknown segment kind, or a parent inferred only from range,
 block kind, or output order fails closed. This source-only path is how the neutral runtime derives nesting before any
 DOCX element exists.
+The ordered ancestor positions preserve depth, including consecutive quote ancestors with identical coordinates.
+The terminal owner is checked separately: repeating its own container coordinate as the final ancestor is invalid.
+Already-bound structural owners are not marker carriers to lift into another enclosing container.
+
+路径中祖先的位置保留结构深度，包括连续且坐标相同的不同引用层。终端 owner 单独检查：把它自身的容器坐标
+再写作最后一个祖先仍属非法。已经绑定的结构 owner 不再作为待提升的标记载体移到外层容器。
 
 DOCX recovery has one exact resource-less image carrier: `![image omitted]()`. The ASCII-lowercase alt text
 `image omitted` and empty destination are both fixed; no other empty-destination image is this carrier. When an

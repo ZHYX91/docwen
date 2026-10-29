@@ -62,6 +62,7 @@ from docwen_core.docx_numbering_import import (
     ProofOnlyHeadingImport,
     _integer_attribute,
     _parse_level,
+    _reject_unmodeled_numbering_topology,
     import_heading_without_source_mutation,
 )
 from docwen_core.docx_numbering_occurrence import (
@@ -552,9 +553,27 @@ def _ordinary_list_bindings(document: Any) -> frozenset[tuple[str, str]]:
         numbering = document.part.numbering_part.element
     except (AttributeError, KeyError, NotImplementedError):
         return frozenset()
+    referenced_num_ids = {
+        node.get(qn("w:val"))
+        for paragraph in document.element.body.iter(qn("w:p"))
+        for node in paragraph.findall(f"{qn('w:pPr')}/{qn('w:numPr')}/{qn('w:numId')}")
+    }
+    instances: dict[str, list[Any]] = {}
+    for node in numbering.findall(qn("w:num")):
+        num_id = node.get(qn("w:numId"))
+        if num_id in referenced_num_ids:
+            instances.setdefault(num_id, []).append(node)
+    referenced_abstract_ids = {
+        reference.get(qn("w:val"))
+        for nodes in instances.values()
+        if len(nodes) == 1
+        for reference in nodes[0].findall(qn("w:abstractNumId"))
+    }
     abstract_nodes: dict[str, list[Any]] = {}
     for node in numbering.findall(qn("w:abstractNum")):
-        abstract_nodes.setdefault(node.get(qn("w:abstractNumId")), []).append(node)
+        abstract_id = node.get(qn("w:abstractNumId"))
+        if abstract_id in referenced_abstract_ids:
+            abstract_nodes.setdefault(abstract_id, []).append(node)
     ordinary_levels: dict[str, frozenset[str]] = {}
     for abstract_id, nodes in abstract_nodes.items():
         if len(nodes) != 1:
@@ -562,6 +581,10 @@ def _ordinary_list_bindings(document: Any) -> frozenset[tuple[str, str]]:
         [node] = nodes
         try:
             _integer_attribute(node, "abstractNumId", minimum=0)
+            # Keep the selected subtree attached: exact ancestry includes its
+            # real numbering parent. Unused definitions cannot revoke an
+            # otherwise valid ordinary-list binding.
+            _reject_unmodeled_numbering_topology(node)
         except DocxNumberingImportError:
             continue
         kinds = node.findall(qn("w:multiLevelType"))
@@ -587,15 +610,13 @@ def _ordinary_list_bindings(document: Any) -> frozenset[tuple[str, str]]:
             and node.find(qn("w:numStyleLink")) is None
         ):
             ordinary_levels[abstract_id] = frozenset(level_ids)
-    instances: dict[str, list[Any]] = {}
-    for node in numbering.findall(qn("w:num")):
-        instances.setdefault(node.get(qn("w:numId")), []).append(node)
     bindings: set[tuple[str, str]] = set()
     for num_id, nodes in instances.items():
         if len(nodes) != 1:
             continue
         try:
             _integer_attribute(nodes[0], "numId", minimum=1)
+            _reject_unmodeled_numbering_topology(nodes[0])
         except DocxNumberingImportError:
             continue
         references = nodes[0].findall(qn("w:abstractNumId"))

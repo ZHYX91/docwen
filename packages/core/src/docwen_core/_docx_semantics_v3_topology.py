@@ -308,8 +308,13 @@ def prove_ordinary_anchor_group(
         valid = len(logical) == 1 and logical[0].tag == qn("w:tbl")
     elif block_kind == "paragraph":
         valid = len(logical) == 1 and logical[0].tag == qn("w:p")
-    elif block_kind in {"image", "equation", "code_block", "list_item"}:
+    elif block_kind in {"image", "equation", "code_block"}:
         valid = bool(logical) and all(item.tag == qn("w:p") for item in logical)
+    elif block_kind == "list_item":
+        # A complete item starts with its marker paragraph and may retain
+        # native tables among its continuation blocks. Other shapes remain
+        # invalid, including a table-only item or an unproven SDT wrapper.
+        valid = logical[0].tag == qn("w:p") and all(item.tag in {qn("w:p"), qn("w:tbl")} for item in logical)
     elif block_kind in {"list", "block_quote", "callout"}:
         valid = all(item.tag in {qn("w:p"), qn("w:tbl")} for item in logical)
     else:

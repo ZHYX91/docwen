@@ -161,12 +161,17 @@ explicit resolved occurrence/citation signals continue to select the strict v4 p
 ambiguous numbering references do not receive the ordinary-list exemption. A valid resolved package containing
 only headings needs no caption-style registry; it still proves its Heading targets and native numbering, while
 caption-bearing packages must retain their separate authenticated caption bindings.
+Before granting the ordinary-list exemption, the referenced native instance and abstract-definition subtrees also
+pass the recursive style-link, markup-compatibility and modeled-ancestry guard while retaining their actual parents.
+Unrelated unused definitions do not revoke an otherwise proven ordinary binding.
 
 原文路线的原生列表项也可包含 Heading 段落。普通 `numPr` 本身不是 resolved-v4 版本信号：唯一绑定到原生
 hybrid 列表、各级均无 Heading `pStyle` 所有权的段落仍由既有语义 reader 读取。resolved 标题定义的样式
 所有权及显式 resolved occurrence／citation 信号继续选择严格 v4 证明；缺失、重复或有歧义的编号引用
 不享受普通列表的分流。合法的纯标题 resolved 包不需要题注样式注册表，但仍证明标题目标与原生编号；
 含题注的包继续要求其独立认证的题注绑定。
+授予普通列表分流前，被引用的原生实例及抽象定义子树还须通过递归样式链接、markup-compatibility 与已建模
+节点祖先检查，并保留真实父层。无关且未使用的定义不撤销其他已证明的普通绑定。
 
 Every enabled caption materialization has exactly
 `type,counter,number_format,sequence_action,start_value,restart_heading_level,restart_heading_style,chapter_heading_level,chapter_heading_style,chapter_separator,chapter_cached_number,sequence_cached_number,localized_label,label_separator`.

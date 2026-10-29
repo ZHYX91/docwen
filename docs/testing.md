@@ -74,6 +74,24 @@ H1／H6 列表标题，避免只对 H7–H9 特判。
 段落；首段原有完整列表项所有权保留单独正控，不放宽 carrier 证明。
 真实文件还将整项锚点与后续段落锚点配对，覆盖空列表标记；认证后的嵌套 SDT 必须保留两个身份与精确父子关系。
 
+`test_task_anchor_ownership.py` and `test_task_anchor_file_contract.py` pair ordinary, checked and unchecked items
+with later paragraph IDs. Actual packages retain task state, every child block and the distinct nested carriers;
+duplicate lead markers remain refusals. `test_docx_list_item_carrier_shape.py` accepts a leading paragraph followed
+by native tables/paragraphs, while rejecting table-first shapes, unproven wrappers, fields/bookmarks and crossing.
+`test_runtime_quote_owner_paths.py` preserves equal-range ancestor depth and rejects terminal self, invalid kinds,
+crossing and ambiguous parents. `test_nested_quote_anchor_packages.py` and `test_quote_anchor_recovery_content.py`
+inspect native content, maps and physical parent-child edges before fresh reading, including quoted IDs, actual
+line breaks versus literal code, and IDs before page/section separators. `test_docx_ordinary_list_topology.py` uses
+real v3 sessions and fresh packages to pair recursively malformed referenced numbering with equivalent unused
+definitions; valid start-zero, decimal/bullet and low/high ID controls retain exact content and target identity.
+
+上述任务项回归同时检查普通项、已完成／未完成状态、后续段落 ID、完整子块及嵌套载体；重复首段标记仍拒绝。
+列表项载体以段落开头并保留表格／段落续块，表格起始、未认证包装、字段／书签及 crossing 分别有负控。
+引用回归保留同界祖先的深度，拒绝 terminal self、非法种类、crossing 与歧义父节点；真实包先独立检查内容、
+map 和物理父子边，再读取 ID、真实换行与代码字面值，并核对 ID 在分页／分节符之前。编号分流以实际 v3
+session 和 fresh package 检查递归坏子树及未使用定义对照，合法零起点、decimal／bullet、低／高编号 ID
+保留正文与目标身份。以上均不替代真实 Office 或最终候选验收。
+
 `test_runtime_heading_dialect.py` checks the production source adapter before semantic markers are inserted:
 disabled/enabled H7–H9 boundaries, caption and anchor examples inside complete code spans, the following real
 caption's independent range and counter, and valid/invalid fenced carriers. Frozen-oracle behavior remains a
