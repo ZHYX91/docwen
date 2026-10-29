@@ -43,11 +43,11 @@ replacement for a missing earlier payload; an empty reused path is not authority
 保存计划或 acceptance-closeout 入口收口有主原始目录。重跑属于新证据，不能替代已缺失的旧 payload；
 同路径下后来出现的空目录不构成重建租约或删除授权。
 
-`test_config_durable_transaction_recovery.py` exercises actual journal replacement followed by a failed
+`test_config_durable_transaction_recovery.py` and `test_config_compensation_recovery.py` exercise actual journal replacement followed by a failed
 directory barrier, real first-file compensation and abrupt child-process exit, then recovery in a new process.
 It checks exact bytes, modes, logical symlink identity, trusted state and retained journal ownership; a failed
 first recovery is retried independently. `test_config_transaction_safety.py` covers failure to make rollback
-`PREPARED` durable before or after replacement. `test_template_manager.py` applies the same crash boundary to
+`PREPARED` durable before or after replacement. `test_template_transaction_recovery.py` applies the same crash boundary to
 file-plus-catalog identity, and checks committed cleanup warnings using saved/reopened DOCX inputs, final bytes,
 IDs, order and defaults. `test_template_management_ui.py` checks actual Qt import counts and separately visible
 cleanup warnings. Directory-barrier and trash-service failures are injected boundaries; they do not establish
@@ -524,7 +524,7 @@ merges retain their separate geometry. The fresh DOCX package checks do not clai
 
 ### CLI cancellation, publication and admitted workflows / CLI 取消、发布与准入工作流
 
-`test_cli_deadline_v3.py` drives the real composed CLI in child processes with bounded phase gates around
+`test_cli_deadline_integration.py` drives the real composed CLI in child processes with bounded phase gates around
 worker start, CSV conversion and actual OutputFinalizer publication. Saved XLSX matrices and aligned per-input
 results establish earlier success, later cancellation and unstarted inputs. Linux SIGINT is measured separately
 from Windows Ctrl+C, which these tests do not establish. A separate delayed-worker test checks that bounded
@@ -535,12 +535,12 @@ CLI 截止回归使用真实组合入口的子进程，仅在 worker 启动、CS
 重开的 XLSX 矩阵与逐输入结果证明先前成功、后续取消及未启动状态。Linux SIGINT 与 Windows Ctrl+C 分开，
 本组不建立后者的宿主证据。延迟 worker 对照检查有界等待结束后仍保留取消身份，直至真正退出。
 
-`test_validate_execute_02.py` checks inspection, admission and real Runtime report publication for neutral Markdown,
+`test_validate_admitted_workflow.py` checks inspection, admission and real Runtime report publication for neutral Markdown,
 inline code, a single list, headings and plain text, including original-byte hashes and independent source ranges.
 `test_cli_document_proofread_publication.py` examines real private DOCX content and comments before a final public
 commit. Its ODT writer is explicitly an Office-boundary double with an independently inspected ODF package;
 it proves pipeline/publication behavior, not an installed Office conversion. Missing-bridge cases cover all four
-legacy target admissions. Native Office save/reopen remains separate. Logging namespace checks use actual file
+legacy target admissions. Native Office save/reopen remains separate. `test_runtime_logging_sinks.py` uses actual file
 and console sinks in a child process, so no logging-global state leaks back into the test process.
 
 校对回归对普通 Markdown、行内代码、单列表、标题与纯文本走实际检查、准入和 Runtime 报告发布，独立核对
@@ -548,6 +548,11 @@ and console sinks in a child process, so no logging-global state leaks back into
 Office 边界替身，以独立 ODF 包检查输出，只证明管线及发布行为，不证明安装的 Office 转换能力。缺 bridge
 对照覆盖四种旧文档目标准入；原生保存重开另验。日志命名空间用子进程中的真实文件及 console sink 检查，
 不向测试主进程泄漏 logging 全局状态。
+
+The real CLI deadline, admitted-workflow and logging-sink modules carry `integration` and `release_gate`,
+so platform QA continues to select these cases after separating them from unit/contract modules.
+Function parameters, assertions and platform skips remain unchanged; focused selection uses the module
+paths in `PYTEST_ADDOPTS` with `--suite full` to include every selected primary family.
 
 The cancellation tests also exercise real SIGINT inside executor submission, after submission returns, while
 Application returns a reservation and while Deadline returns its captured handle. The real controller then reuses
