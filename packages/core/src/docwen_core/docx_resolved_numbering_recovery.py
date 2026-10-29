@@ -12,6 +12,7 @@ from typing import Any, cast
 from zipfile import ZipFile
 
 from docwen_core import _docx_semantics_v3_fenced as fenced
+from docwen_core._docx_resolved_recovery_blocks import prove_resolved_recovery_blocks_v4
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -214,6 +215,15 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 inline_tokens=inline_tokens,
             )
 
+        proven_nested_blocks, proven_machine_nodes, reserved_semantic_elements = prove_resolved_recovery_blocks_v4(
+            document.element.body,
+            targets=targets,
+            anchors=anchors,
+            occurrences=occurrences,
+            standalone_occurrences=standalone_occurrences,
+            inline_tags=frozenset(inline_tokens),
+            caption_styles=caption_styles,
+        )
         recovery = cast(
             ResolvedNumberingV4Recovery,
             cls._bind_document_evidence(
@@ -229,6 +239,9 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 caption_parser=parse_caption,
                 standalone_target_tags=frozenset(addressable_standalone_tags),
                 proven_table_role_nodes=role_nodes,
+                proven_nested_blocks=proven_nested_blocks,
+                proven_machine_nodes=proven_machine_nodes,
+                reserved_semantic_elements=reserved_semantic_elements,
             ),
         )
         recovery._resolved_v4_inline_tokens = inline_tokens
@@ -314,15 +327,10 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         body = document.element.body
         physical = [
             item
-            for item in body
-            if item.tag == qn("w:sdt") and (sdt_tag(item) or "").startswith("docwen-numbering-occurrence-v1:")
-        ]
-        nested = [
-            item
             for item in body.iter(qn("w:sdt"))
             if (sdt_tag(item) or "").startswith("docwen-numbering-occurrence-v1:")
         ]
-        if physical != nested or [sdt_tag(item) for item in physical] != [item.tag for item in occurrences]:
+        if [sdt_tag(item) for item in physical] != [item.tag for item in occurrences]:
             raise DocxSemanticsV3Error("resolved-v4 occurrence physical order/cardinality differs from its map")
         if not occurrences:
             return
@@ -379,15 +387,10 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         addressable = [item for item in occurrences if item.target_id is not None]
         physical = [
             item
-            for item in body
-            if item.tag == qn("w:sdt") and (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
-        ]
-        nested = [
-            item
             for item in body.iter(qn("w:sdt"))
             if (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
         ]
-        if physical != nested or [sdt_tag(item) for item in physical] != [item.tag for item in idless]:
+        if [sdt_tag(item) for item in physical] != [item.tag for item in idless]:
             raise DocxSemanticsV3Error("resolved-v4 standalone-caption physical order/cardinality differs from its map")
         if not occurrences:
             return

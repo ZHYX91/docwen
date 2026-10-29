@@ -283,31 +283,6 @@ def _normalize_table_style_key(builtin_key: str) -> str:
     return "three_line_table"
 
 
-def _markdown_image_alt_texts(markdown: str) -> list[str]:
-    """Capture authored image alt text before link materialization."""
-
-    return [
-        "".join(str(child.get("raw", "") or child.get("text", "")) for child in image.get("children", []))
-        for image in _iter_ast_images(parse_markdown_text(markdown, auto_link_bare_url=False))
-    ]
-
-
-def _iter_ast_images(nodes: list[dict[str, Any]]):
-    for node in nodes:
-        if node.get("type") == "image":
-            yield node
-        children = node.get("children")
-        if isinstance(children, list):
-            yield from _iter_ast_images(children)
-
-
-def _restore_markdown_image_alt_texts(ast: list[dict[str, Any]], alt_texts: list[str]) -> None:
-    """Restore alts lost by path-only image placeholder materialization."""
-
-    for image, alt_text in zip(_iter_ast_images(ast), alt_texts, strict=False):
-        image["children"] = [{"type": "text", "raw": alt_text}]
-
-
 def _resolve_quote_style_levels(config: object) -> dict[int, int]:
     """Resolve configured ``quote_N`` style keys to semantic levels.
 
@@ -779,20 +754,32 @@ class MdToDocxConverter:
 
             if remove_num and render_body:
                 progress.report_progress(10.0, "Removing heading numbering")
-                content = remove_md_numbering(content, rules=cleanup_rules)
+                content = remove_md_numbering(
+                    content,
+                    rules=cleanup_rules,
+                    extended_headings=extensions.extended_headings,
+                    structural_tables=extensions.structural_tables,
+                )
                 cancellable.check()
 
             if add_num and render_body:
                 if render_mode == "word_native":
                     # Word adds the resolved scheme; source text remains clean.
                     if not remove_num:
-                        content = remove_md_numbering(content, rules=cleanup_rules)
+                        content = remove_md_numbering(
+                            content,
+                            rules=cleanup_rules,
+                            extended_headings=extensions.extended_headings,
+                            structural_tables=extensions.structural_tables,
+                        )
                 else:
                     try:
                         content = add_md_numbering(
                             content,
                             scheme=scheme,
                             registry=context.numbering_registry,
+                            extended_headings=extensions.extended_headings,
+                            structural_tables=extensions.structural_tables,
                         )
                     except NumberingSchemeResolutionError as exc:
                         return _numbering_resolution_failure(task_id, t_start, exc)
@@ -810,7 +797,6 @@ class MdToDocxConverter:
             cleaned_ast = []
             note_ctx = NoteContext()
             if render_body:
-                source_image_alt_texts = _markdown_image_alt_texts(md_body)
                 cancellable.check()
 
                 # Numbering may have changed the full shielded source. Use the
@@ -832,6 +818,8 @@ class MdToDocxConverter:
                     target_format="docx",
                     temp_dir=str(workspace.staging_dir),
                     image_scope=image_scope,
+                    extended_headings=extensions.extended_headings,
+                    structural_tables=extensions.structural_tables,
                     protect_source_comments=True,
                     cancellation_check=cancellable.check,
                     declared_image=(
@@ -845,6 +833,8 @@ class MdToDocxConverter:
                 md_body = materialize_image_placeholders(
                     md_body,
                     image_scope=image_scope,
+                    extended_headings=extensions.extended_headings,
+                    structural_tables=extensions.structural_tables,
                 )
 
                 # 2d. Validate the cross-project footnote/endnote contract and
@@ -870,7 +860,6 @@ class MdToDocxConverter:
                 cancellable.check()
                 raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)
                 cancellable.check()
-                _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
                 try:
                     raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
                 except RuntimeSemanticsV3InvariantError as exc:

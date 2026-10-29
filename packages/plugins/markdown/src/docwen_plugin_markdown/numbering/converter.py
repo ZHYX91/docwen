@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.models.artifact import (
     ARTIFACT_KIND_PRIMARY,
     ArtifactManifest,
@@ -81,10 +82,7 @@ class MdNumberingProcessor:
             input_path = workspace.input_path
             progress.report_progress(10.0, "Reading Markdown input")
             content, input_bytes = read_input_markdown(input_path)
-            # The legacy numbering processor writes normalized LF output; the
-            # authenticated read is byte-faithful, so normalize here instead
-            # of in the shared reader used by the fenced-source carriers.
-            content = content.replace("\r\n", "\n").replace("\r", "\n")
+            extensions = resolve_markdown_extensions(options, context.config, direction="input")
 
             # ── Process ─────────────────────────────────────────────
             processed = content
@@ -96,13 +94,21 @@ class MdNumberingProcessor:
                 processed = remove_md_numbering(
                     processed,
                     rules=getattr(context, "heading_cleanup_rules", ()) or (),
+                    extended_headings=extensions.extended_headings,
+                    structural_tables=extensions.structural_tables,
                 )
                 operations.append("remove_numbering")
 
             if add_num:
                 cancellable.check()
                 progress.report_progress(70.0, "Adding heading numbering")
-                processed = add_md_numbering(processed, scheme, registry=context.numbering_registry)
+                processed = add_md_numbering(
+                    processed,
+                    scheme,
+                    registry=context.numbering_registry,
+                    extended_headings=extensions.extended_headings,
+                    structural_tables=extensions.structural_tables,
+                )
                 operations.append(f"add_numbering({scheme})")
 
             # ── Write to staging ────────────────────────────────────

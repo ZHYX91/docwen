@@ -666,7 +666,15 @@ class DocxToMarkdownConverter:
                 declaration += f" {caption.title}"
             if caption.source_id is not None:
                 declaration += f" ^{caption.source_id}"
-            return declaration
+            owners = self._semantic_v3_recovery.ordinary_anchor_groups(caption.caption_element)
+            prefix = _nested_ordinary_anchor_marker_prefix(
+                tuple(
+                    group
+                    for group in owners
+                    if group.anchor.block_kind in {"block_quote", "callout", "list", "list_item"}
+                )
+            )
+            return f"{prefix}{declaration}"
 
         for idx, child in enumerate(body_elements):
             # Check cancellation periodically
@@ -681,6 +689,16 @@ class DocxToMarkdownConverter:
                 recovered_caption = self._semantic_v3_recovery.caption_for_element(child)
                 if recovered_caption is not None and not recovered_caption.object_elements:
                     lines.extend((_v3_caption_declaration(recovered_caption), ""))
+                # Figure captions follow their native carrier physically. A
+                # container that ends here still needs its source anchor even
+                # though the caption declaration was emitted with the object.
+                anchor_groups = self._semantic_v3_recovery.ordinary_anchor_groups(child)
+                for group_position, group in enumerate(anchor_groups):
+                    if group.index == len(group.elements) - 1:
+                        prefix = _nested_ordinary_anchor_marker_prefix(anchor_groups[group_position + 1 :])
+                        if ">" in prefix:
+                            lines.append(prefix.rstrip())
+                        lines.extend(("", f"{prefix}^{group.anchor.source_id}", ""))
                 _append_textboxes(body_textboxes_by_anchor.get(idx, []))
                 continue
 

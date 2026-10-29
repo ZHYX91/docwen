@@ -1,8 +1,9 @@
-"""Authenticated Markdown source semantics for ``docwen.markdown_semantics.v3``.
+"""Production source semantics with explicit v3 and Number Suite policies.
 
 This module intentionally parses authored source before Mistune or the generic
-link preprocessor.  The v3 oracle needs lossless tokens and Unicode code-point
-ranges; an AST produced by a renderer is too late to recover either fact.
+link preprocessor, using the request's Markdown dialect. Lossless tokens and
+Unicode code-point ranges cannot be recovered from the renderer's AST. The
+separate ``document_semantics_v3`` module remains the frozen source oracle.
 
 The API is source-only.  It does not scan a Workspace, open linked pages, look
 up citations, or project Word fields.  An adapter that owns those domains may
@@ -15,11 +16,12 @@ import base64
 import hashlib
 import re
 import unicodedata
+from bisect import bisect_right
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
-from docwen_core.links import split_markdown_block_segments
+from docwen_core.links import markdown_source_owners
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_markdown.document_semantics_v3 import (
     ExternalCitationResolution,
@@ -30,7 +32,6 @@ from docwen_plugin_markdown.document_semantics_v3 import (
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     project_fenced_source_v3,
 )
-from docwen_plugin_markdown.literal_source_spans import literal_source_spans
 
 SEMANTICS_SCHEMA = "docwen.markdown_semantics.v3"
 SEMANTICS_SCHEMA_ID = "urn:docwen:schema:markdown-semantics:v3"
@@ -45,6 +46,7 @@ _CITATION_KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 _CAPTION_RE = re.compile(r"^(Figure|Table|Equation|Code):(.*)$", re.IGNORECASE)
 _NUMBER_SUITE_CAPTION_RE = re.compile(r"^(?: {0,3})(Figure|Table|Equation|Code):(?:[ \t]+)(.*\S|\S)[ \t]*$")
 _HEADING_RE = re.compile(r"^( {0,3})(#{1,9})(?!#)[ \t]+(.+?)\s*$")
+_STANDARD_HEADING_RE = re.compile(r"^( {0,3})(#{1,6})(?!#)[ \t]+(.+?)\s*$")
 _FENCE_RE = re.compile(r"^( {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)$")
 _QUOTE_PREFIX_RE = re.compile(r"^ {0,3}>[ \t]?")
 _UNSUPPORTED_LINE_SEPARATOR_RE = re.compile(r"\r(?!\n)|[\v\f\x1c-\x1e\x85\u2028\u2029]")
@@ -172,9 +174,14 @@ def analyze_markdown_semantics_v3(
     lines = _split_lines(semantic_source)
     caption_re = _NUMBER_SUITE_CAPTION_RE if consumer_profile == "number_suite_direct" else _CAPTION_RE
     dialect = extensions or MarkdownExtensions.obsidian()
+    # Classify candidates against original-source ownership before a caption,
+    # anchor or paragraph boundary can manufacture an inert runtime marker.
+    source_literals = _literal_shield_ranges(semantic_source, dialect)
     blocks = _scan_blocks(
         lines,
+        literal_ranges=source_literals,
         structural_tables=dialect.structural_tables,
+        extended_headings=dialect.extended_headings,
         caption_re=caption_re,
         captions_top_level_only=consumer_profile == "number_suite_direct",
     )
@@ -220,6 +227,7 @@ def analyze_markdown_semantics_v3(
             title, anchor = _extract_inline_anchor(
                 block.data["content"],
                 absolute_start=int(block.data["content_start"]),
+                literal_ranges=source_literals,
             )
             title = title.strip()
             heading_counters[level - 1] += 1
@@ -281,6 +289,7 @@ def analyze_markdown_semantics_v3(
         content, anchor = _extract_inline_anchor(
             block.data["content"],
             absolute_start=int(block.data["content_start"]),
+            literal_ranges=source_literals,
         )
         if anchor is None and consumer_profile == "number_suite_direct":
             authored_content = str(block.data["content"])
@@ -415,7 +424,7 @@ def analyze_markdown_semantics_v3(
             "list",
         }:
             continue
-        inline = _block_inline_anchor(block)
+        inline = _block_inline_anchor(block, literal_ranges=source_literals)
         if inline is None:
             continue
         token, token_range = inline
@@ -423,6 +432,7 @@ def analyze_markdown_semantics_v3(
             blocks,
             block,
             token_range,
+            literal_ranges=source_literals,
         ):
             continue
         excluded_inline_ranges.append(token_range)
@@ -551,7 +561,13 @@ def analyze_markdown_semantics_v3(
     references: list[dict[str, Any]] = []
     citations: list[dict[str, Any]] = []
 
-    excluded = _merge_ranges(excluded_inline_ranges + _literal_shield_ranges(semantic_source, blocks))
+    excluded = _merge_ranges(
+        [
+            *excluded_inline_ranges,
+            *source_literals,
+            *(SourceRange(block.start, block.end) for block in blocks if block.kind in {"code_block", "fenced_block"}),
+        ]
+    )
     semantic_matches = list(_SEMANTIC_REFERENCE_RE.finditer(semantic_source))
     occupied: list[SourceRange] = []
     for match in semantic_matches:
@@ -871,7 +887,9 @@ def _split_lines(source: str) -> list[_Line]:
 def _scan_blocks(
     lines: Sequence[_Line],
     *,
+    literal_ranges: Sequence[SourceRange] = (),
     structural_tables: bool = False,
+    extended_headings: bool = True,
     caption_re: re.Pattern[str] = _CAPTION_RE,
     captions_top_level_only: bool = False,
 ) -> list[_Block]:
@@ -880,7 +898,9 @@ def _scan_blocks(
         container_path=(),
         container_segments=(),
         paragraph_kind="paragraph",
+        literal_ranges=literal_ranges,
         structural_tables=structural_tables,
+        extended_headings=extended_headings,
         caption_re=caption_re,
         captions_top_level_only=captions_top_level_only,
         allow_caption_declarations=True,
@@ -902,7 +922,9 @@ def _scan_container_blocks(
     container_path: tuple[tuple[str, int], ...],
     container_segments: tuple[tuple[str, int, int], ...],
     paragraph_kind: str,
+    literal_ranges: Sequence[SourceRange] = (),
     structural_tables: bool = False,
+    extended_headings: bool = True,
     caption_re: re.Pattern[str] = _CAPTION_RE,
     captions_top_level_only: bool = False,
     allow_caption_declarations: bool = True,
@@ -910,6 +932,7 @@ def _scan_container_blocks(
     from docwen_plugin_markdown.common_utils import structural_table_block_end
 
     blocks: list[_Block] = []
+    heading_re = _HEADING_RE if extended_headings else _STANDARD_HEADING_RE
     source_lines = [item.text for item in lines]
     index = 0
     while index < len(lines):
@@ -918,7 +941,7 @@ def _scan_container_blocks(
             blocks.append(_Block("blank", line.source_start, line.end, index, index, line.text, {}))
             index += 1
             continue
-        anchor_match = _ANCHOR_ONLY_CANDIDATE_RE.fullmatch(line.text)
+        anchor_match = _visible_block_candidate(_ANCHOR_ONLY_CANDIDATE_RE, line, "token", literal_ranges)
         if anchor_match is not None:
             token_start = line.start + anchor_match.start("token")
             token_end = line.start + anchor_match.end("token")
@@ -1043,7 +1066,7 @@ def _scan_container_blocks(
                 )
                 index = end_index + 1
                 continue
-        heading = _HEADING_RE.fullmatch(line.text)
+        heading = _visible_block_candidate(heading_re, line, 2, literal_ranges)
         if heading is not None:
             content_start = line.start + heading.start(3)
             blocks.append(
@@ -1059,7 +1082,7 @@ def _scan_container_blocks(
             )
             index += 1
             continue
-        caption = caption_re.fullmatch(line.text) if allow_caption_declarations else None
+        caption = _visible_block_candidate(caption_re, line, 1, literal_ranges) if allow_caption_declarations else None
         if caption is not None and re.search(r"\{#[^{}\s]+\}[ \t]*$", caption.group(2)):
             # Historical Pandoc-style attributes are ordinary current source.
             # Only the explicit migration module may reinterpret them.
@@ -1190,12 +1213,16 @@ def _scan_container_blocks(
 
         end_index = index
         while end_index + 1 < len(lines) and lines[end_index + 1].text.strip():
-            candidate = lines[end_index + 1].text
+            candidate_line = lines[end_index + 1]
+            candidate = candidate_line.text
             if (
-                _HEADING_RE.fullmatch(candidate)
-                or (allow_caption_declarations and caption_re.fullmatch(candidate))
+                _visible_block_candidate(heading_re, candidate_line, 2, literal_ranges)
+                or (
+                    allow_caption_declarations
+                    and _visible_block_candidate(caption_re, candidate_line, 1, literal_ranges)
+                )
                 or _match_fence_opener_v3(candidate)
-                or _ANCHOR_ONLY_CANDIDATE_RE.fullmatch(candidate)
+                or _visible_block_candidate(_ANCHOR_ONLY_CANDIDATE_RE, candidate_line, "token", literal_ranges)
                 or _QUOTE_PREFIX_RE.match(candidate) is not None
                 or candidate.lstrip().startswith("$$")
                 or _LIST_ITEM_RE.match(candidate)
@@ -1233,7 +1260,9 @@ def _scan_container_blocks(
                     container_path=child_path,
                     container_segments=child_segments,
                     paragraph_kind="container_text",
+                    literal_ranges=literal_ranges,
                     structural_tables=structural_tables,
+                    extended_headings=extended_headings,
                     caption_re=caption_re,
                     captions_top_level_only=captions_top_level_only,
                     allow_caption_declarations=not captions_top_level_only,
@@ -1255,13 +1284,31 @@ def _scan_container_blocks(
                         container_path=item_path,
                         container_segments=item_segments,
                         paragraph_kind="list_item",
+                        literal_ranges=literal_ranges,
                         structural_tables=structural_tables,
+                        extended_headings=extended_headings,
                         caption_re=caption_re,
                         captions_top_level_only=captions_top_level_only,
                         allow_caption_declarations=not captions_top_level_only,
                     )
                 )
     return [*blocks, *nested]
+
+
+def _source_offset_is_literal(offset: int, literal_ranges: Sequence[SourceRange]) -> bool:
+    """Query the one sorted ownership inventory without rescanning the source."""
+
+    index = bisect_right(literal_ranges, offset, key=lambda span: span.start) - 1
+    return index >= 0 and offset < literal_ranges[index].end
+
+
+def _visible_block_candidate(
+    pattern: re.Pattern[str], line: _Line, group: int | str, literal_ranges: Sequence[SourceRange]
+) -> re.Match[str] | None:
+    match = pattern.fullmatch(line.text)
+    if match is None or _source_offset_is_literal(line.start + match.start(group), literal_ranges):
+        return None
+    return match
 
 
 def _strip_quote_prefix(line: _Line) -> _Line:
@@ -1330,11 +1377,15 @@ def _continuation_prefix_length(text: str, width: int) -> int:
     return consumed if columns >= width else 0
 
 
-def _extract_inline_anchor(text: str, *, absolute_start: int) -> tuple[str, tuple[str, SourceRange] | None]:
+def _extract_inline_anchor(
+    text: str, *, absolute_start: int, literal_ranges: Sequence[SourceRange] = ()
+) -> tuple[str, tuple[str, SourceRange] | None]:
     match = _INLINE_ANCHOR_CANDIDATE_RE.search(text)
     if match is None:
         return text, None
     token_range = SourceRange(absolute_start + match.start("token"), absolute_start + match.end("token"))
+    if _source_offset_is_literal(token_range.start, literal_ranges):
+        return text, None
     return text[: match.start("space")], (match.group("token"), token_range)
 
 
@@ -1353,13 +1404,21 @@ def _strip_valid_inline_anchor_text(text: str) -> tuple[str, str | None]:
     return text[: match.start("space")], match.group("token")
 
 
-def _block_inline_anchor(block: _Block) -> tuple[str, SourceRange] | None:
+def _block_inline_anchor(
+    block: _Block, *, literal_ranges: Sequence[SourceRange] = ()
+) -> tuple[str, SourceRange] | None:
     last_line = block.text.split("\n")[-1]
     match = _INLINE_ANCHOR_CANDIDATE_RE.search(last_line)
     if match is None:
         return None
     absolute_start = int(block.data.get("last_line_start", block.start))
-    return match.group("token"), SourceRange(absolute_start + match.start("token"), absolute_start + match.end("token"))
+    token_range = SourceRange(absolute_start + match.start("token"), absolute_start + match.end("token"))
+    # A marker appended to a pseudo fence closer is rejected structural
+    # syntax, not a code-body anchor. Keep that existing rejection while
+    # excluding genuine code-owned suffixes from ordinary anchor ownership.
+    if _source_offset_is_literal(token_range.start, literal_ranges) and not block.data.get("invalid_pseudo_closer"):
+        return None
+    return match.group("token"), token_range
 
 
 def _ordinary_anchor_owner_range(block: _Block) -> SourceRange:
@@ -1425,7 +1484,13 @@ def _container_path_projection(block: _Block) -> list[dict[str, Any]]:
     ]
 
 
-def _has_nested_inline_owner(blocks: Sequence[_Block], structural: _Block, token_range: SourceRange) -> bool:
+def _has_nested_inline_owner(
+    blocks: Sequence[_Block],
+    structural: _Block,
+    token_range: SourceRange,
+    *,
+    literal_ranges: Sequence[SourceRange] = (),
+) -> bool:
     structural_path = tuple(structural.data["container_path"])
     for candidate in blocks:
         candidate_path = tuple(candidate.data["container_path"])
@@ -1438,7 +1503,7 @@ def _has_nested_inline_owner(blocks: Sequence[_Block], structural: _Block, token
             )
             if candidate_range == token_range:
                 return True
-        inline = _block_inline_anchor(candidate)
+        inline = _block_inline_anchor(candidate, literal_ranges=literal_ranges)
         if inline is not None and inline[1] == token_range:
             return True
     return False
@@ -1926,34 +1991,26 @@ def _citation_item(
     return record
 
 
-def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[SourceRange]:
+def _literal_shield_ranges(source: str, extensions: MarkdownExtensions) -> list[SourceRange]:
     """Return source ranges where reference-looking text is literal."""
 
-    ranges = [SourceRange(block.start, block.end) for block in blocks if block.kind in {"code_block", "fenced_block"}]
-    offset = 0
-    for segment, protected in split_markdown_block_segments(source):
-        if protected:
-            ranges.append(SourceRange(offset, offset + len(segment)))
-        offset += len(segment)
-
-    # Comment delimiters inside code are literal.  Scan the remaining syntax
-    # against a length-preserving projection so an unclosed delimiter in a
-    # code block cannot swallow later authored references.
-    characters = list(source)
-    for span in ranges:
-        for index in range(span.start, span.end):
-            if characters[index] not in "\r\n":
-                characters[index] = " "
-    projected_source = "".join(characters)
     patterns = (
         re.compile(r"(?<!\\)(?:\\\\)*\\@\[\[[^\]\r\n]+\]\]"),
         re.compile(r"(?<!\\)(?:\\\\)*\\@[A-Za-z0-9][A-Za-z0-9_-]{0,127}"),
         re.compile(r"(?<!\\)(?:\\\\)*\\\[@[^\]\r\n]+\]"),
     )
-    ranges.extend(
-        SourceRange(start, end)
-        for start, end in literal_source_spans(projected_source, metadata_patterns=patterns, semantic_url_suffix=True)
-    )
+    ranges = [
+        SourceRange(owner.start, owner.end)
+        for owner in markdown_source_owners(
+            source,
+            metadata_patterns=patterns,
+            semantic_url_suffix=True,
+            full_document=True,
+            structural_tables=extensions.structural_tables,
+            extended_headings=extensions.extended_headings,
+        )
+        if owner.kind != "wikilink"
+    ]
 
     return _merge_ranges(ranges)
 

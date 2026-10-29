@@ -259,7 +259,9 @@ def prove_owned_block_parent(child: Any, tag: str, body: Any, parent_sdt: Any | 
         raise DocxSemanticsV3Error("owned block SDT has an invalid nesting owner")
 
 
-def logical_group_elements(blocks: tuple[Any, ...]) -> tuple[Any, ...]:
+def logical_group_elements(
+    blocks: tuple[Any, ...], *, proven_nested_blocks: dict[Any, tuple[Any, ...]] | None = None
+) -> tuple[Any, ...]:
     """Recursively flatten authenticated nested ordinary-anchor slots."""
 
     from docx.oxml.ns import qn
@@ -268,11 +270,17 @@ def logical_group_elements(blocks: tuple[Any, ...]) -> tuple[Any, ...]:
 
     output: list[Any] = []
     for block in blocks:
-        if block.tag == qn("w:sdt") and (sdt_tag(block) or "").startswith(ANCHOR_TAG_PREFIX):
+        if proven_nested_blocks is not None and block in proven_nested_blocks:
+            output.extend(
+                logical_group_elements(proven_nested_blocks[block], proven_nested_blocks=proven_nested_blocks)
+            )
+        elif block.tag == qn("w:sdt") and (sdt_tag(block) or "").startswith(ANCHOR_TAG_PREFIX):
+            if proven_nested_blocks is not None:
+                raise DocxSemanticsV3Error("inner ordinary-anchor SDT is absent from authenticated block inventory")
             content = block.find(qn("w:sdtContent"))
             if content is None or not list(content):
                 raise DocxSemanticsV3Error("inner ordinary-anchor SDT has no logical content")
-            output.extend(logical_group_elements(tuple(content)))
+            output.extend(logical_group_elements(tuple(content), proven_nested_blocks=proven_nested_blocks))
         else:
             output.append(block)
     return tuple(output)
@@ -284,6 +292,8 @@ def prove_ordinary_anchor_group(
     *,
     allowed_heading_bookmark_name: str | None = None,
     proven_table_role_nodes: frozenset[Any] = frozenset(),
+    proven_nested_blocks: dict[Any, tuple[Any, ...]] | None = None,
+    proven_machine_nodes: frozenset[Any] = frozenset(),
 ) -> tuple[Any, ...]:
     """Prove one anchor's recursively flattened logical kind and zero fields."""
 
@@ -291,7 +301,7 @@ def prove_ordinary_anchor_group(
 
     from docx.oxml.ns import qn
 
-    logical = logical_group_elements(blocks)
+    logical = logical_group_elements(blocks, proven_nested_blocks=proven_nested_blocks)
     if not logical:
         raise DocxSemanticsV3Error("ordinary anchor has an empty logical block")
     if block_kind == "table":
@@ -306,8 +316,8 @@ def prove_ordinary_anchor_group(
         valid = False
     if not valid:
         raise DocxSemanticsV3Error("ordinary-anchor group has wrong block kind or cardinality")
+    role_nodes = proven_table_role_nodes | proven_machine_nodes
     for item in logical:
-        role_nodes = proven_table_role_nodes
         starts = [node for node in item.iter(qn("w:bookmarkStart")) if node not in role_nodes]
         ends = [node for node in item.iter(qn("w:bookmarkEnd")) if node not in role_nodes]
         has_disallowed_bookmark = bool(starts or ends) and (
@@ -316,7 +326,9 @@ def prove_ordinary_anchor_group(
             or len(ends) != 1
         )
         if has_disallowed_bookmark or any(
-            re.search(r"\b(?:SEQ|REF)\b", field.text or "", re.IGNORECASE) for field in item.iter(qn("w:instrText"))
+            re.search(r"\b(?:SEQ|REF)\b", field.text or "", re.IGNORECASE)
+            for field in item.iter(qn("w:instrText"))
+            if field not in proven_machine_nodes
         ):
             raise DocxSemanticsV3Error("ordinary anchor must not contain a bookmark, SEQ, or REF field")
     return logical

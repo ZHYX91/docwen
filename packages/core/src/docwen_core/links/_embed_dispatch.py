@@ -148,6 +148,8 @@ def process_single_embed(
     process_links: Callable[..., str] | None = None,
     declared_image: Callable[[str, str], str] | None = None,
     literal_text: Callable[[str], str] | None = None,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
 ) -> str | None:
     """Dispatch a single embedded link to the correct processor.
 
@@ -205,7 +207,7 @@ def process_single_embed(
             image_path,
             original_link,
             mode=image_mode,
-            display_text=display_text or Path(unquote(link_target)).name,
+            display_text=display_text if display_text is not None else Path(unquote(link_target)).name,
             width=width,
             height=height,
             image_scope=image_scope,
@@ -350,6 +352,8 @@ def process_single_embed(
             detect_circular=detect_circular,
             table_safe=table_safe,
             literal_text=literal_text,
+            structural_tables=structural_tables,
+            extended_headings=extended_headings,
         )
 
     # Unknown content type — caller decides.  Keep the user-authored suffix in
@@ -406,6 +410,8 @@ def resolve_embedded_links(
     declared_image: Callable[[str, str], str] | None = None,
     _table_context_scoped: bool = False,
     literal_text: Callable[[str], str] | None = None,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
 ) -> str:
     """Scan Markdown *content* for ``![[...]]`` wiki-embed links and resolve
     every one via :func:`process_single_embed`.
@@ -478,9 +484,13 @@ def resolve_embedded_links(
                 table_safe=table_safe,
                 image_scope=image_scope,
                 literal_text=literal_text,
+                structural_tables=structural_tables,
+                extended_headings=extended_headings,
             )
 
-        return _map_visible_markdown(inner_content, _resolve_visible)
+        return _map_visible_markdown(
+            inner_content, _resolve_visible, structural_tables=structural_tables, extended_headings=extended_headings
+        )
 
     parts: list[str] = []
     cursor = 0
@@ -529,6 +539,8 @@ def resolve_embedded_links(
             table_safe=in_table,
             image_scope=image_scope,
             process_links=process_links if process_links is not None else _recurse,
+            structural_tables=structural_tables,
+            extended_headings=extended_headings,
             declared_image=declared_image,
             literal_text=literal_text,
         )

@@ -239,6 +239,28 @@ field. The standalone authority creates no hidden ID or bookmark and is the only
 target/occurrence; deleting a carrier from an ordinary bound target therefore fails closed rather than silently
 turning it into a standalone caption. Caption style or physical adjacency alone is insufficient.
 
+Ordinary-anchor and exact fenced-source inventories are projected independently of legacy caption/reference
+diagnostics before building the runtime carrier plan. A valid standalone caption cannot discard unrelated source
+carriers. The resolved document and plan remain the semantic authority; the writer must account for every expected
+anchor and fence before publication, not only the carriers it happened to bind. Ordinary anchors preserve Markdown
+source navigation/recovery metadata and still create no Word bookmark or navigation field.
+
+Caption objects are bound after permitted renderer decoration and sizing. Their snapshots remain immutable after
+that boundary. Recovery unfolds only mapped, envelope-validated block carriers and proves their parent roles,
+native slots and inline ownership before returning content. Semantic caption kind does not constrain the supported
+physical carrier kind. A container anchor ending at a trailing Figure caption is emitted even when the declaration
+was already placed before its object in recovered Markdown. Unknown wrappers and missing, duplicated, reordered or
+altered evidence still fail closed.
+
+普通锚点与精确 fenced-source 库存先独立于旧题注／引用诊断投影，再建立运行时载体计划。合法 standalone
+题注不能清空无关源载体；已解析 document 和 plan 继续承担语义权威。发布前须核对全部预期锚点和围栏，
+不能只证明恰好已绑定的部分。普通锚点保留 Markdown 源导航／恢复元数据，仍不生成 Word 书签或导航域。
+
+题注对象在合法渲染装饰和尺寸处理完成后绑定，此后的快照不可变。读取只展开映射与封套已认证的块载体，
+并在返回正文前证明父级角色、原生槽位和行内所有权；题注语义种类不限制已支持的物理载体种类。结束于后置
+Figure 题注的容器锚点，即使题注声明已在恢复的 Markdown 中移到对象之前，也必须交付。未知封装以及缺失、
+重复、错序或被修改的证据仍明确拒绝。
+
 DocWen never writes a derived number into Markdown, rewrites a Heading, interprets a WikiLink, or runs an upstream
 resolver. Any provider consumes the same Conversion Port, export plan, corpus, and physical acceptance contract.
 

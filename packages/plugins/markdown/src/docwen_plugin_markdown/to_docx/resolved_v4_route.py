@@ -86,7 +86,6 @@ from docwen_plugin_markdown.to_docx.bibliography import (
 from docwen_plugin_markdown.to_docx.converter import (
     MEDIA_TYPE_DOCX,
     _inject_docx_metadata,
-    _markdown_image_alt_texts,
     _normalize_table_style_key,
     _option_or_config,
     _request_heading_merge_punctuation,
@@ -95,7 +94,6 @@ from docwen_plugin_markdown.to_docx.converter import (
     _resolve_quote_style_levels,
     _resolve_table_style_name,
     _resolve_template_style_keys,
-    _restore_markdown_image_alt_texts,
 )
 from docwen_plugin_markdown.to_docx.managed_styles import (
     ManagedStyleCompletionError,
@@ -302,12 +300,10 @@ def _render_resolved_v4_docx(
     md_body = normalize_note_syntax(md_body, typed_endnotes=extensions.typed_endnotes)
 
     context.progress.report_progress(25.0, "Parsing authenticated Markdown projection")
-    source_image_alt_texts = _markdown_image_alt_texts(md_body)
     # Resolved heading/caption records are explicit semantic input, not inferred Markdown syntax.
     raw_ast = parse_markdown_text(
         md_body, auto_link_bare_url=False, extensions=replace(extensions, extended_headings=True)
     )
-    _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
     raw_ast = apply_resolved_source_carriers_v4(raw_ast, projection.source_carrier_plan)
     raw_ast = apply_resolved_runtime_v4(raw_ast, projection.runtime_plan)
     prove_resolved_v4_image_inventory(raw_ast, projection)
@@ -369,6 +365,16 @@ def _render_resolved_v4_docx(
     session = ResolvedNumberingDocxSession(
         doc,
         prepared.port,
+        expected_ordinary_anchor_ids=tuple(
+            str(marker.payload["id"])
+            for marker in projection.source_carrier_plan.runtime_plan.markers
+            if marker.role == "ordinary_anchor"
+        ),
+        expected_fenced_source_tags=tuple(
+            str(marker.payload["record"]["tag"])
+            for marker in projection.source_carrier_plan.runtime_plan.markers
+            if marker.role == "fenced_source"
+        ),
         heading_style_ids={level: managed_styles.style_id(f"heading_{level}") for level in range(1, 10)},
         heading_style_names={
             f"heading_{level}": managed_styles.get(f"heading_{level}").name or "" for level in range(1, 10)

@@ -7,22 +7,18 @@ validates the remaining text, and outputs a JSON proofread report.
 from __future__ import annotations
 
 import json
-import re
 from bisect import bisect_right
 from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from docwen_core.links import markdown_source_projection
+from docwen_core.markdown_extensions import resolve_markdown_extensions
+
 if TYPE_CHECKING:
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import ProofreadConverterContext
     from docwen_plugin_proofread.text_validator import TextError
-
-# ── Regex patterns for Markdown sanitization ───────────────────────────
-
-_FENCE_RE = re.compile(r"^[ \t]*(```+|~~~+)")
-_IMAGE_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)]*)\)")
-_MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]*)\)")
 
 _REPORT_SCHEMA = "docwen.proofread_report.v2"
 _SOURCE_ENCODING = "utf-8"
@@ -125,7 +121,10 @@ class MarkdownValidator:
         text = source_bytes.decode(_SOURCE_ENCODING, errors=_SOURCE_DECODE_ERRORS)
 
         # ── Sanitize Markdown ──────────────────────────────────────────
-        sanitized = _sanitize_markdown(text)
+        extensions = resolve_markdown_extensions(context.request.options, context.config, direction="input")
+        sanitized = _sanitize_markdown(
+            text, structural_tables=extensions.structural_tables, extended_headings=extensions.extended_headings
+        )
         context.logger.info(f"Sanitized MD: original {len(text)} chars → {len(sanitized.sanitized_text)} chars")
 
         # ── Validate ───────────────────────────────────────────────────
@@ -295,28 +294,17 @@ def _build_report_issue(sanitized: _SanitizedMarkdown, error: TextError, issue_r
     return issue
 
 
-def _sanitize_markdown(text: str) -> _SanitizedMarkdown:
+def _sanitize_markdown(
+    text: str, *, structural_tables: bool = False, extended_headings: bool = False
+) -> _SanitizedMarkdown:
     """Remove code blocks, YAML frontmatter, and inline code/links from *text*.
 
     Keeps newlines so line numbers stay correct.
     """
     text = text or ""
-    body_offset = 1 if text.startswith("﻿") else 0
-    body = text[body_offset:]
-
-    spans: list[tuple[int, int]] = []
-    spans.extend((start + body_offset, end + body_offset) for start, end in _find_yaml_front_matter_span(body))
-    spans.extend((start + body_offset, end + body_offset) for start, end in _find_fenced_code_spans(body))
-    spans = _merge_spans(spans)
-
-    chars = list(text)
-    if body_offset:
-        chars[0] = " "
-
-    for start, end in spans:
-        _blank_range_keep_newlines(chars, start, end)
-
-    _blank_inline_code_and_links(chars, text, spans)
+    chars = list(
+        markdown_source_projection(text, structural_tables=structural_tables, extended_headings=extended_headings)
+    )
     _blank_markdown_escaped_pairing_symbols(chars, text)
 
     sanitized = "".join(chars)
@@ -366,154 +354,3 @@ def _compute_line_starts(text: str) -> list[int]:
             starts.append(i + 1)
         i += 1
     return starts
-
-
-# ── YAML frontmatter ───────────────────────────────────────────────────
-
-
-def _find_yaml_front_matter_span(text: str) -> list[tuple[int, int]]:
-    if not text.startswith("---"):
-        return []
-    if not _line_is_front_matter_delimiter(text, 0):
-        return []
-    for line_start, line_end in _iter_line_spans(text):
-        if line_start == 0:
-            continue
-        if _line_is_front_matter_delimiter(text, line_start):
-            return [(0, line_end)]
-    return [(0, len(text))]
-
-
-def _line_is_front_matter_delimiter(text: str, line_start: int) -> bool:
-    line = text[line_start:]
-    if line.startswith("---"):
-        i = line_start + 3
-        while i < len(text) and text[i] not in "\r\n":
-            if not text[i].isspace():
-                return False
-            i += 1
-        return True
-    return False
-
-
-# ── Fenced code blocks ─────────────────────────────────────────────────
-
-
-def _find_fenced_code_spans(text: str) -> list[tuple[int, int]]:
-    spans: list[tuple[int, int]] = []
-    current_fence: str | None = None
-    current_start = 0
-
-    for line_start, line_end in _iter_line_spans(text):
-        line = text[line_start:line_end]
-        m = _FENCE_RE.match(line)
-        if not m:
-            continue
-        fence = m.group(1)
-        if current_fence is None:
-            current_fence = fence
-            current_start = line_start
-            continue
-        if fence and current_fence and fence[0] == current_fence[0]:
-            spans.append((current_start, line_end))
-            current_fence = None
-
-    if current_fence is not None:
-        spans.append((current_start, len(text)))
-
-    return spans
-
-
-# ── Inline code and links ──────────────────────────────────────────────
-
-
-def _blank_inline_code_and_links(chars: list[str], original: str, spans: list[tuple[int, int]]) -> None:
-    for line_start, line_end in _iter_line_spans(original):
-        if _pos_in_spans(line_start, spans):
-            continue
-        _blank_inline_code_in_range(chars, line_start, line_end)
-        _blank_links_in_range(chars, original, line_start, line_end)
-
-
-def _blank_inline_code_in_range(chars: list[str], start: int, end: int) -> None:
-    open_tick: int | None = None
-    for i in range(start, end):
-        if chars[i] in ("\n", "\r"):
-            break
-        if chars[i] != "`":
-            continue
-        if open_tick is None:
-            open_tick = i
-        else:
-            _blank_range_keep_newlines(chars, open_tick, i + 1)
-            open_tick = None
-
-
-def _blank_links_in_range(chars: list[str], original: str, start: int, end: int) -> None:
-    segment = original[start:end]
-    for m in list(_IMAGE_LINK_RE.finditer(segment)):
-        _blank_link_match(chars, original, start, m)
-    for m in list(_MD_LINK_RE.finditer(segment)):
-        if m.start() > 0 and segment[m.start() - 1] == "!":
-            continue
-        _blank_link_match(chars, original, start, m)
-
-
-def _blank_link_match(chars: list[str], original: str, base: int, match: re.Match[str]) -> None:
-    m0s, m0e = match.span(0)
-    g1s, g1e = match.span(1)
-    abs_m0s = base + m0s
-    abs_m0e = base + m0e
-    abs_g1s = base + g1s
-    abs_g1e = base + g1e
-    _blank_range_keep_newlines(chars, abs_m0s, abs_m0e)
-    for i in range(abs_g1s, abs_g1e):
-        chars[i] = original[i]
-
-
-# ── Generic helpers ────────────────────────────────────────────────────
-
-
-def _iter_line_spans(text: str):
-    pos = 0
-    for line in text.splitlines(keepends=True):
-        start = pos
-        pos += len(line)
-        yield start, pos
-    if text and not text.endswith(("\n", "\r")):
-        return
-
-
-def _merge_spans(spans: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    if not spans:
-        return []
-    spans = sorted(spans)
-    merged: list[tuple[int, int]] = []
-    cur_s, cur_e = spans[0]
-    for s, e in spans[1:]:
-        if s <= cur_e:
-            cur_e = max(cur_e, e)
-        else:
-            merged.append((cur_s, cur_e))
-            cur_s, cur_e = s, e
-    merged.append((cur_s, cur_e))
-    return merged
-
-
-def _blank_range_keep_newlines(chars: list[str], start: int, end: int) -> None:
-    n = len(chars)
-    start = max(0, min(start, n))
-    end = max(0, min(end, n))
-    for i in range(start, end):
-        if chars[i] in ("\n", "\r"):
-            continue
-        chars[i] = " "
-
-
-def _pos_in_spans(pos: int, spans: list[tuple[int, int]]) -> bool:
-    for s, e in spans:
-        if s <= pos < e:
-            return True
-        if pos < s:
-            return False
-    return False

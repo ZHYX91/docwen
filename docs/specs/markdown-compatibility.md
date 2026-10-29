@@ -23,6 +23,16 @@ Markdown→XLSX 将模板自身声明的图片及当前链接策略生成的图�
   structure-owned Heading and caption semantic targets;
 - one exclusive `{{ bibliography }}` template paragraph when an already-presented typed bibliography resource is supplied.
 
+Inline formatting containers, including highlight, underline, superscript and subscript, recursively retain their
+supported formulas, images, hyperlinks and note references. Image descriptions belong to each authored occurrence,
+including mixed Wiki/Markdown images, repeated resources and explicit empty Markdown alt text. Task-list items
+retain their visible `[ ]` / `[x]` state, child blocks and order using native lists; the state markers are text,
+not interactive Word controls.
+
+高亮、下划线与上下标等行内样式容器递归保留受支持的公式、图片、超链接及注释引用。图片描述按源码中的
+每次出现绑定，覆盖 Wiki/Markdown 混排、重复资源及显式空 alt。任务项使用原生列表保留可见的 `[ ]` / `[x]`
+状态、子块与顺序；状态标记为文本，不承诺 Word 交互控件。
+
 ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions that map one-to-one to Word
 `Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
 direct `outlineLvl=0..8` values and outline levels inherited through paragraph styles.
@@ -53,6 +63,33 @@ DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标�
 - Source syntax and target rendering are compared semantically unless exact text is the contract.
 - Unsupported constructs remain visible as text or emit a warning; they must not disappear silently.
 - Configuration and per-request options have one precedence chain and no process-global fallback after admission.
+
+Authored-source numbering, embedded heading/block selection and Markdown proofreading share full-source lexical
+ownership. YAML front matter, HTML blocks/comments and literal code examples cannot introduce headings or anchor IDs.
+Inline code pairs equal-length backtick runs within its inline block; a closing fence must use the same character,
+at least the opening length and only trailing whitespace. An unclosed fence inside a list or quote ends when that
+container ends, so later top-level links remain eligible for the requested policy. Numbering applies edits only to
+actual heading content ranges and preserves all other source characters, BOM and line endings. Proofreading keeps
+zero-based Unicode-code-point coordinates, including through CRLF and multiline literals; visible link labels remain
+eligible for text checks while their syntax and destinations do not.
+Inline scopes use the frozen input dialect. Standalone numbering and proofreading use their declared
+configuration surface; this does not add request options to either route. H7–H9 interrupt a paragraph only when
+extended headings are enabled; otherwise a legal multiline code span may include those literal lines. The source
+runtime adapter honors the same ownership before inserting semantic markers, while the frozen v3 oracle and
+resolved-v4 input contracts remain separate. Separate ordinary table cells cannot form a code span across
+their boundary; a table-like construct that the selected Structural Tables grammar leaves as a paragraph retains
+that paragraph's literal code span instead.
+
+源文件编号、嵌入标题／块选择与 Markdown 校对共享完整源码的词法所有权。YAML 头部、HTML 块／注释与字面
+代码示例不产生标题或锚点 ID。行内代码在所属行内块中以等长反引号配对；关闭围栏须使用相同字符、长度不短于
+开启围栏且末尾仅有空白。列表或引用内未闭合的围栏在容器结束时结束保护，后续顶层链接仍执行请求中的策略。
+编号仅修改真实标题的内容范围，其余源码字符、BOM 与换行保持不变。校对在 CRLF 和跨行字面区域中仍保留
+零基 Unicode-code-point 坐标；可见链接标签参与文字检查，链接语法和目标不参与。
+行内作用域采用本次冻结的输入方言；独立编号和校对使用各自已声明的配置面，不因此新增请求选项。
+H7–H9 仅在扩展开启时中断段落，关闭时合法跨行代码可包含这些字面行。源文件运行时适配层在插入语义标记前
+遵守同一所有权；冻结 v3 oracle 与 resolved-v4 输入合同继续独立。
+普通表格的不同单元格不能跨界配对代码；所选 Structural Tables
+语法未识别为表格而保留成段落的内容，继续保留该段落中的字面代码区域。
 
 ## Mermaid document rendering / Mermaid 文档渲染
 
@@ -108,6 +145,13 @@ objects and overrides only explicitly supplied booleans. The four keys are `stru
 | Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
 | H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
 | Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
+
+Ordinary pipe tables inside quote and list containers remain available when Structural Tables input is disabled.
+The opt-in controls advanced table roles and merge syntax; it does not gate ordinary nested table recognition.
+Fenced examples remain literal under either setting.
+
+关闭 Structural Tables 输入时，仍识别引用和列表内的普通管道表格。该开关控制高级表头角色和合并语法，
+不限制普通嵌套表格的识别；两种设置下的围栏示例都保持字面代码。
 
 The neutral-document port is already resolved semantic input: its explicit heading/caption/reference records are
 authoritative, like Word's explicit structures, rather than inferred from Markdown spellings. Its untyped tables
@@ -310,6 +354,11 @@ does not encode kind: `fig-`, `tbl-`, `eq-`, and `code-` are neither reserved no
 containing `.`, `_`, or `/`, empty IDs, and IDs longer than 128 characters are invalid. IDs are generated only when
 a user operation requires one. An external record, file, workspace, or node identity is never projected as a
 Markdown anchor merely because it exists.
+
+Ordinary heading embeds retain the first matching real heading when the same visible title occurs more than once;
+literal examples do not participate. The unique authored-title selector of semantic references is a separate contract.
+普通标题嵌入在多个真实可见标题同名时仍选择首个匹配，字面示例不参与；语义引用的唯一 authored-title 选择规则
+是独立合同，不套用于普通标题嵌入。
 
 Placement follows the [Obsidian block-link rules](https://obsidian.md/help/links). Only a simple paragraph or a
 paragraph containing exactly one Markdown image/Obsidian image embed uses one space plus `^id` at the end of its

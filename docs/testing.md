@@ -20,6 +20,46 @@ Tests are grouped by primary behavior family and execution cost. The default rep
 
 Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry point pins the repository's pytest configuration and root fixtures even when every selected path belongs to a single workspace package.
 
+`test_markdown_full_source_ownership.py` and `test_source_ownership_consumers.py` assert exact non-heading source
+preservation, real embedded section/block content and link removal across container exits. The proofreading report
+contract adds visible-text positives and literal-code negatives with independently calculated source ranges and
+input byte hashes. These tests include front matter, HTML/comments, unequal fence lengths, multiple backticks,
+container scopes, BOM and CRLF; they do not use a second invocation of the implementation to build the expected text.
+
+源码所有权回归独立断言非标题范围保持不变、实际嵌入正文与容器退出后的链接策略。校对同时覆盖应报告的可见
+文字及不应报告的代码，按输入直接计算坐标和字节摘要，避免以同一实现生成期望。
+
+`test_runtime_heading_dialect.py` checks the production source adapter before semantic markers are inserted:
+disabled/enabled H7–H9 boundaries, caption and anchor examples inside complete code spans, the following real
+caption's independent range and counter, and valid/invalid fenced carriers. Frozen-oracle behavior remains a
+separate assertion. The visible-content integration tests independently inspect the resulting DOCX text before
+using the reader; equivalent fenced output is accepted only with the exact complete code body.
+
+源适配层回归在插入语义标记前检查实际输入方言、完整代码内的伪题注和伪锚点，以及后续真题注的坐标与计数；
+合法围栏载体和非法结束行均有独立断言。冻结 oracle 保留单独对照。集成回归先检查实际 DOCX 正文，再检查
+reader 的完整代码正文，不以等价的行内／围栏拼写差异误判内容丢失。
+
+`test_machine_input_role_order.py` drives the real Application/Runtime/Bundle path with source and resource handles
+in different positions, then independently checks published DOCX text, image bytes and Bundle hashes. Invalid
+roles, kinds and cardinalities still publish nothing. `test_markdown_visible_content.py` checks native package
+contents before invoking the real reader: default/disabled/enabled nested pipe tables, rich inline containers,
+task-list children and each drawing's own image relationship and description. Explicit `markdown_embed` output is
+used when asserting recovered image alt text; the default Wiki image policy does not promise an alias.
+
+`test_resolved_carrier_roundtrip.py` separates successful writing, independent ZIP/XML inventory and real reading.
+Its legal nested carriers and standalone captions are paired with unknown-parent, duplicate, misplaced, missing-map
+and altered-field refusals. `test_docx_resolved_binding_boundaries.py` rejects missing source-carrier bindings and
+post-bind object mutations while preserving an earlier output. Bookmark-allocation regressions measure real
+inventory calls alongside exact native heading text and globally unique IDs; call counts alone are not the content
+oracle. Request-local allocations and controlled table writers share reservations, while completed/reopened package
+proofs rebuild their physical inventory and reject late name/ID/orphan collisions. These generated-file checks do
+not establish Office save/reopen, Obsidian integration, platform process behavior or final-candidate acceptance.
+
+上述回归分别核对真实 ConversionService→Runtime→Bundle 路径、独立 ZIP/XML 内容及真实 reader；无效角色和载体仍拒绝。
+书签成本测试同时断言真实内容及全局唯一身份，不以替身调用次数替代产物正确性。请求内分配与受控表格写入者
+共享预约，但完成／重开证明仍读取新的全包物理库存。生成文件回归不替代 Office 保存重开、Obsidian、各平台
+进程或最终候选验收。
+
 `test_table_merger_text_limits.py` saves and reopens actual XLSX files and exercises Runtime publication
 at the final merged-string boundary. `test_epub_spine_integrity.py` uses the real EPUB reader with a
 missing spine member and checks chapter order, diagnostics and published Markdown. These generated

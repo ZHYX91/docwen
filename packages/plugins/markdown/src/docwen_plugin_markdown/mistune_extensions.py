@@ -34,11 +34,12 @@ from mistune.plugins.formatting import (
 from mistune.plugins.formatting import (
     superscript as _superscript,
 )
+from mistune.plugins.table import table_in_list, table_in_quote
 
+from docwen_core.links import markdown_table_cell_ranges, markdown_table_delimiter
 from docwen_core.markdown_extensions import MarkdownExtensions
 
 _EXTENDED_ATX_HEADING_TRIM = re.compile(r"(\s+|^)#+\s*$")
-_STRUCTURAL_TABLE_DELIMITER_CELL = re.compile(r"^:?-+:?$")
 _STRUCTURAL_TABLE_BLOCK = (
     r"^ {0,3}(?P<structural_table_rows>"
     r"(?:[^\n]*\|[^\n]*(?:\n|$)){2,})"
@@ -153,102 +154,17 @@ def plugin_extended_atx_headings(md: mistune.Markdown) -> None:
     )
 
 
-def _has_exact_backtick_closer(line: str, start: int, run_length: int) -> bool:
-    cursor = start
-    while cursor < len(line):
-        tick = line.find("`", cursor)
-        if tick < 0:
-            return False
-        run_end = tick
-        while run_end < len(line) and line[run_end] == "`":
-            run_end += 1
-        if run_end - tick == run_length:
-            return True
-        cursor = run_end
-    return False
-
-
 def _structural_pipe_row(line: str) -> list[str] | None:
-    """Split one Structural Tables row without consuming escaped/code pipes."""
+    """Use the same source cell ownership as request-scoped link processing."""
 
     if "|" not in line:
         return None
-    segments: list[str] = []
-    current: list[str] = []
-    escaped = False
-    code_ticks = 0
-    index = 0
-    while index < len(line):
-        character = line[index]
-        if character == "`" and (code_ticks or not escaped):
-            run = 1
-            while index + run < len(line) and line[index + run] == "`":
-                run += 1
-            current.extend("`" * run)
-            if code_ticks == 0:
-                if _has_exact_backtick_closer(line, index + run, run):
-                    code_ticks = run
-            elif code_ticks == run:
-                code_ticks = 0
-            index += run
-            continue
-        if code_ticks:
-            current.append(character)
-            index += 1
-            continue
-        if escaped:
-            current.append(character)
-            escaped = False
-            index += 1
-            continue
-        if character == "\\":
-            current.append(character)
-            escaped = True
-            index += 1
-            continue
-        if character == "|":
-            segments.append("".join(current))
-            current = []
-        else:
-            current.append(character)
-        index += 1
-    segments.append("".join(current))
-    if segments and not segments[0].strip():
-        segments.pop(0)
-    if segments and not segments[-1].strip():
-        segments.pop()
-    return segments or None
+    ranges = markdown_table_cell_ranges(line, structural_tables=True)
+    return [line[start:end] for start, end in ranges] or None
 
 
 def _structural_delimiter(line: str) -> tuple[list[str | None], int] | None:
-    cells = _structural_pipe_row(line)
-    if cells is None:
-        return None
-    boundaries = [index for index, cell in enumerate(cells) if cell == ""]
-    if any(not cell and cell != "" for cell in cells):  # pragma: no cover - defensive type boundary
-        return None
-    if any(cell != "" and not cell.strip() for cell in cells):
-        return None
-    if len(boundaries) > 1:
-        return None
-    boundary = boundaries[0] if boundaries else None
-    if boundary is not None and (boundary == 0 or boundary == len(cells) - 1):
-        return None
-    tokens = [cell for index, cell in enumerate(cells) if index != boundary]
-    if not tokens or any(_STRUCTURAL_TABLE_DELIMITER_CELL.fullmatch(token.strip()) is None for token in tokens):
-        return None
-    alignments: list[str | None] = []
-    for token in tokens:
-        stripped = token.strip()
-        if stripped.startswith(":") and stripped.endswith(":"):
-            alignments.append("center")
-        elif stripped.startswith(":"):
-            alignments.append("left")
-        elif stripped.endswith(":"):
-            alignments.append("right")
-        else:
-            alignments.append(None)
-    return alignments, 0 if boundary is None else boundary
+    return markdown_table_delimiter(line, structural_tables=True)
 
 
 def _structural_table_cell(text: str, alignment: str | None, *, head: bool) -> dict[str, Any]:
@@ -338,7 +254,7 @@ def plugin_structural_tables(md: mistune.Markdown) -> None:
     for nested_rules_name in ("block_quote_rules", "list_rules"):
         nested_rules = getattr(md.block, nested_rules_name, None)
         if isinstance(nested_rules, list) and "structural_table" not in nested_rules:
-            nested_rules.append("structural_table")
+            md.block.insert_rule(nested_rules, "structural_table", before="table")
 
 
 def plugin_obsidian_comment_blocks(md: mistune.Markdown, *, hide_content: bool) -> None:
@@ -431,6 +347,8 @@ def create_extended_markdown(
     dialect = extensions or MarkdownExtensions.obsidian()
     plugins: list[Any] = [
         "table",
+        table_in_quote,
+        table_in_list,
         "footnotes",
         "strikethrough",
         "task_lists",

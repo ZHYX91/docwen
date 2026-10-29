@@ -105,10 +105,14 @@ def prepare_runtime_semantics_v3(
                 source,
                 input_id=input_id,
                 extensions=extensions,
-                consumer_profile="number_suite_direct",
+                consumer_profile=consumer_profile,
                 heading_number_provider=heading_number_provider,
             )
-            if consumer_profile == "number_suite_direct"
+            # An explicit dialect belongs to the production source adapter.
+            # Its block grammar must agree with the visible parser before any
+            # source marker is inserted. Unspecified legacy calls retain the
+            # frozen oracle, as does the separate v4 carrier-only entry point.
+            if extensions is not None or consumer_profile == "number_suite_direct"
             else analyze_markdown_semantics_v3(
                 source,
                 input_id=input_id,
@@ -117,6 +121,35 @@ def prepare_runtime_semantics_v3(
         )
     except ValueError as exc:
         raise RuntimeSemanticsV3Unsupported(str(exc)) from exc
+    return _prepare_analyzed_runtime_plan(source, analysis)
+
+
+def prepare_runtime_source_carriers_v3(source: str, *, input_id: str) -> RuntimeSemanticsV3Plan:
+    """Plan frozen physical carriers independently of legacy semantic policy.
+
+    The resolved port owns captions/references. Its carrier-only adapter must
+    project that authority before the frozen runtime's error short circuit,
+    otherwise an unrelated caption diagnostic discards anchors and fences.
+    The source oracle and the ordinary v3 entry point remain unchanged.
+    """
+
+    try:
+        full_analysis = analyze_markdown_semantics_v3(source, input_id=input_id)
+    except ValueError as exc:
+        raise RuntimeSemanticsV3Unsupported(str(exc)) from exc
+    analysis = MarkdownSemanticsV3Analysis(
+        projection={**full_analysis.projection, "targets": [], "references": [], "citations": []},
+        diagnostics=tuple(
+            item
+            for item in full_analysis.diagnostics
+            if not str(item["code"]).startswith(("docwen.markdown.caption.", "docwen.markdown.cross_reference."))
+        ),
+        literal_ranges=(),
+    )
+    return _prepare_analyzed_runtime_plan(source, analysis)
+
+
+def _prepare_analyzed_runtime_plan(source: str, analysis: MarkdownSemanticsV3Analysis) -> RuntimeSemanticsV3Plan:
     body_start = markdown_semantics_body_start_v3(source)
     if analysis.has_errors:
         return RuntimeSemanticsV3Plan(

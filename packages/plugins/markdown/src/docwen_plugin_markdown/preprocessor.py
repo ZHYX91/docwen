@@ -29,7 +29,13 @@ def _image_placeholder_re(image_scope: str | None) -> re.Pattern[str]:
     return re.compile(rf"\{{\{{IMAGE@{re.escape(image_scope)}:([^{{}}\r\n]+)\}}\}}")
 
 
-def _rewrite_non_code_markdown(text: str, rewrite: Callable[[str], str]) -> str:
+def _rewrite_non_code_markdown(
+    text: str,
+    rewrite: Callable[[str], str],
+    *,
+    extended_headings: bool = False,
+    structural_tables: bool = False,
+) -> str:
     """Apply an inline rewrite only to ordinary Markdown source.
 
     ``split_markdown_inline_segments`` protects renderer atoms such as code,
@@ -39,11 +45,13 @@ def _rewrite_non_code_markdown(text: str, rewrite: Callable[[str], str]) -> str:
     """
 
     result: list[str] = []
-    for block_text, is_literal_block in split_markdown_block_segments(text):
+    for block_text, is_literal_block in split_markdown_block_segments(text, extended_headings=extended_headings):
         if is_literal_block:
             result.append(block_text)
             continue
-        for inline_text, is_protected_atom in split_markdown_inline_segments(block_text):
+        for inline_text, is_protected_atom in split_markdown_inline_segments(
+            block_text, extended_headings=extended_headings, structural_tables=structural_tables
+        ):
             result.append(inline_text if is_protected_atom else rewrite(inline_text))
     return "".join(result)
 
@@ -52,6 +60,8 @@ def materialize_image_placeholders(
     md_body: str,
     *,
     image_scope: str | None = None,
+    extended_headings: bool = False,
+    structural_tables: bool = False,
 ) -> str:
     """Turn core image placeholders into table-safe Markdown images.
 
@@ -75,6 +85,8 @@ def materialize_image_placeholders(
             placeholder_re,
             decode_path=image_scope is not None,
         ),
+        extended_headings=extended_headings,
+        structural_tables=structural_tables,
     )
 
 
@@ -86,7 +98,7 @@ def _replace_image_placeholders(
 ) -> str:
     def replace(match: re.Match[str]) -> str:
         payload = match.group(1)
-        image_path, width, height = _parse_image_placeholder_payload(
+        image_path, width, height, authored_alt = _parse_image_placeholder_payload(
             payload,
             decode_path=decode_path,
         )
@@ -95,7 +107,11 @@ def _replace_image_placeholders(
 
         normalized_path = image_path.replace("\\", "/")
         markdown_path = quote(normalized_path, safe="/:._-~") if decode_path else normalized_path
-        alt_text = Path(normalized_path).name.replace("[", r"\[").replace("]", r"\]")
+        alt_text = (
+            authored_alt
+            if authored_alt is not None
+            else Path(normalized_path).name.replace("[", r"\[").replace("]", r"\]")
+        )
         title = ""
         if width is not None or height is not None:
             size = f"{width or ''}x{height or ''}"
@@ -109,21 +125,30 @@ def _parse_image_placeholder_payload(
     payload: str,
     *,
     decode_path: bool = False,
-) -> tuple[str, int | None, int | None]:
+) -> tuple[str, int | None, int | None, str | None]:
+    alt_text = None
+    if decode_path:
+        # Scoped paths and alt labels are percent-encoded, so raw pipes only
+        # belong to fields. Table escaping must be removed before decoding.
+        payload = payload.replace(r"\|", "|")
+        metadata = payload.rsplit("|", 1)
+        if len(metadata) == 2 and metadata[1].startswith("alt="):
+            payload = metadata[0]
+            alt_text = unquote(metadata[1][4:])
     parts = payload.rsplit("|", 2)
     if len(parts) != 3:
         image_path = payload
         if decode_path:
             image_path = unquote(image_path)
-        return image_path, None, None
+        return image_path, None, None, alt_text
     image_path, width_text, height_text = parts
     if (width_text and not width_text.isdigit()) or (height_text and not height_text.isdigit()):
         image_path = payload
         if decode_path:
             image_path = unquote(image_path)
-        return image_path, None, None
+        return image_path, None, None, alt_text
     if decode_path:
         image_path = unquote(image_path)
     width = int(width_text) if width_text else None
     height = int(height_text) if height_text else None
-    return image_path, width, height
+    return image_path, width, height, alt_text

@@ -568,7 +568,8 @@ def _source_allows_ownership(
         )
     if inner.role == "anchor":
         return (
-            _RAW_TARGET_KIND.get(inner.source_kind) == outer.source_kind
+            inner.source_kind in _RAW_TARGET_KIND
+            and outer.source_kind in {"figure", "table", "equation", "code_block"}
             and outer.source_start <= inner.source_start
             and inner.source_end <= outer.source_end
         )

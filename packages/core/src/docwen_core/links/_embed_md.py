@@ -130,6 +130,8 @@ def process_embedded_md_file(
     detect_circular: bool = True,
     table_safe: bool = False,
     literal_text: Callable[[str], str] | None = None,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
 ) -> str:
     """Process an embedded Markdown file reference and return replacement text.
 
@@ -220,7 +222,9 @@ def process_embedded_md_file(
 
             # ── section / block extraction ────────────────────────────
             if heading:
-                extracted = extract_section_by_heading(content, heading)
+                extracted = extract_section_by_heading(
+                    content, heading, structural_tables=structural_tables, extended_headings=extended_headings
+                )
                 if extracted is None:
                     logger.warning("Requested Markdown embed section was not found")
                     return present(
@@ -235,7 +239,9 @@ def process_embedded_md_file(
                 content = extracted
                 logger.info("Extracted Markdown embed section (%d chars)", len(content))
             elif block_id:
-                extracted = extract_block_by_id(content, block_id)
+                extracted = extract_block_by_id(
+                    content, block_id, structural_tables=structural_tables, extended_headings=extended_headings
+                )
                 if extracted is None:
                     logger.warning("Requested Markdown embed block was not found")
                     return present(
