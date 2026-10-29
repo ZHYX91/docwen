@@ -787,7 +787,9 @@ class MdToDocxConverter:
             # ── Stage 1: YAML extraction ───────────────────────────────
             progress.report_progress(15.0, "Extracting YAML front matter")
             cancellable.check()
-            yaml_dict, md_body = extract_yaml_front_matter(content)
+            # Consume the complete document's signature only in this render
+            # projection. A leading U+FEFF after YAML is authored body text.
+            yaml_dict, md_body = extract_yaml_front_matter(content.removeprefix("\ufeff"))
             cancellable.check()
             link_config = _request_link_config(context.config)
 
@@ -858,7 +860,9 @@ class MdToDocxConverter:
                 # 2g. Parse with extended mistune
                 progress.report_progress(30.0, "Parsing Markdown")
                 cancellable.check()
-                raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)
+                raw_ast = parse_markdown_text(
+                    md_body, auto_link_bare_url=False, extensions=extensions, consume_initial_bom=False
+                )
                 cancellable.check()
                 try:
                     raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)

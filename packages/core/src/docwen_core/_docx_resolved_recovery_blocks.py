@@ -102,11 +102,12 @@ def prove_resolved_recovery_blocks_v4(
     # Admit their exact main-story paragraph candidates here; _recover_captions
     # must then prove style, field skeleton, and adjacent native object before
     # returning. Table-cell paragraphs and arbitrary SDT content are excluded.
-    machine_owners.extend(
-        block
-        for block in logical_group_elements(tuple(body), proven_nested_blocks=contents)
-        if block.tag == qn("w:p") and caption_kind_for_paragraph_style(block, caption_styles) is not None
-    )
+    if caption_styles:
+        machine_owners.extend(
+            block
+            for block in logical_group_elements(tuple(body), proven_nested_blocks=contents)
+            if block.tag == qn("w:p") and caption_kind_for_paragraph_style(block, caption_styles) is not None
+        )
     machine_owners.extend(wrapper for wrapper in body.iter(qn("w:sdt")) if sdt_tag(wrapper) in inline_tags)
     machine_nodes = frozenset(
         node

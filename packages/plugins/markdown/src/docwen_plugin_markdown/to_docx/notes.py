@@ -844,7 +844,7 @@ def process_md_body_with_notes(
     """
     from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 
-    ast_nodes = parse_markdown_text(normalize_note_syntax(md_body))
+    ast_nodes = parse_markdown_text(normalize_note_syntax(md_body), consume_initial_bom=False)
     return extract_notes_from_ast(ast_nodes)
 
 

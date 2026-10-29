@@ -292,7 +292,7 @@ def _render_resolved_v4_docx(
     projection = compose_resolved_v4_markdown(prepared, resources)
 
     context.progress.report_progress(15.0, "Extracting YAML front matter")
-    yaml_dict, md_body = extract_yaml_front_matter(projection.markdown)
+    yaml_dict, md_body = extract_yaml_front_matter(projection.markdown.removeprefix("\ufeff"))
     # The exact-two port owns a different input envelope, but the authored
     # Markdown inside that envelope still obeys the same frozen note syntax as
     # the source-file route.  Normalize only the request-local parser
@@ -302,7 +302,10 @@ def _render_resolved_v4_docx(
     context.progress.report_progress(25.0, "Parsing authenticated Markdown projection")
     # Resolved heading/caption records are explicit semantic input, not inferred Markdown syntax.
     raw_ast = parse_markdown_text(
-        md_body, auto_link_bare_url=False, extensions=replace(extensions, extended_headings=True)
+        md_body,
+        auto_link_bare_url=False,
+        extensions=replace(extensions, extended_headings=True),
+        consume_initial_bom=False,
     )
     raw_ast = apply_resolved_source_carriers_v4(raw_ast, projection.source_carrier_plan)
     raw_ast = apply_resolved_runtime_v4(raw_ast, projection.runtime_plan)

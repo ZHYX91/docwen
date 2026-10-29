@@ -21,7 +21,13 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
-from docwen_core.links import markdown_source_owners
+from docwen_core.links import (
+    MarkdownBlockLine,
+    MarkdownHeadingRange,
+    markdown_heading_ranges,
+    markdown_source_context_lines,
+    markdown_source_owners,
+)
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_markdown.document_semantics_v3 import (
     ExternalCitationResolution,
@@ -45,8 +51,6 @@ _ID_RE = re.compile(r"^[A-Za-z0-9-]{1,128}$")
 _CITATION_KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 _CAPTION_RE = re.compile(r"^(Figure|Table|Equation|Code):(.*)$", re.IGNORECASE)
 _NUMBER_SUITE_CAPTION_RE = re.compile(r"^(?: {0,3})(Figure|Table|Equation|Code):(?:[ \t]+)(.*\S|\S)[ \t]*$")
-_HEADING_RE = re.compile(r"^( {0,3})(#{1,9})(?!#)[ \t]+(.+?)\s*$")
-_STANDARD_HEADING_RE = re.compile(r"^( {0,3})(#{1,6})(?!#)[ \t]+(.+?)\s*$")
 _FENCE_RE = re.compile(r"^( {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)$")
 _QUOTE_PREFIX_RE = re.compile(r"^ {0,3}>[ \t]?")
 _UNSUPPORTED_LINE_SEPARATOR_RE = re.compile(r"\r(?!\n)|[\v\f\x1c-\x1e\x85\u2028\u2029]")
@@ -118,6 +122,13 @@ class _Line:
     source_start: int
 
 
+@dataclass(frozen=True, slots=True)
+class _SourceInventory:
+    source: str
+    rows: Mapping[int, MarkdownBlockLine]
+    headings: Mapping[int, MarkdownHeadingRange]
+
+
 @dataclass(slots=True)
 class _Block:
     kind: str
@@ -177,8 +188,24 @@ def analyze_markdown_semantics_v3(
     # Classify candidates against original-source ownership before a caption,
     # anchor or paragraph boundary can manufacture an inert runtime marker.
     source_literals = _literal_shield_ranges(semantic_source, dialect)
+    contexts = markdown_source_context_lines(
+        semantic_source, structural_tables=dialect.structural_tables, extended_headings=dialect.extended_headings
+    )
+    inventory = _SourceInventory(
+        semantic_source,
+        {line.source_start: context for line, context in zip(lines, contexts, strict=bool(semantic_source))},
+        {
+            heading.start: heading
+            for heading in markdown_heading_ranges(
+                semantic_source,
+                structural_tables=dialect.structural_tables,
+                extended_headings=dialect.extended_headings,
+            )
+        },
+    )
     blocks = _scan_blocks(
         lines,
+        inventory=inventory,
         literal_ranges=source_literals,
         structural_tables=dialect.structural_tables,
         extended_headings=dialect.extended_headings,
@@ -222,13 +249,16 @@ def analyze_markdown_semantics_v3(
                 literal_ranges.append(token_range)
                 semantic_anchor_marker_ranges.add((token_range.start, token_range.end))
             continue
-        if block.kind == "heading":
+        if block.kind in {"heading", "source_heading"}:
             level = int(block.data["level"])
-            title, anchor = _extract_inline_anchor(
-                block.data["content"],
-                absolute_start=int(block.data["content_start"]),
-                literal_ranges=source_literals,
-            )
+            if block.kind == "heading":
+                title, anchor = _extract_inline_anchor(
+                    block.data["content"],
+                    absolute_start=int(block.data["content_start"]),
+                    literal_ranges=source_literals,
+                )
+            else:
+                title, anchor = str(block.data["content"]), None
             title = title.strip()
             heading_counters[level - 1] += 1
             for position in range(level, 9):
@@ -240,6 +270,10 @@ def analyze_markdown_semantics_v3(
             )
             active_heading_titles = active_heading_titles[: level - 1]
             active_heading_titles.append(title)
+            # Setext and empty headings participate in visible numbering but
+            # do not acquire a new stable semantic target merely by counting.
+            if block.kind == "source_heading" or (not title and anchor is None):
+                continue
             if anchor is None:
                 anchor = _standalone_semantic_anchor(blocks, index)
             record_end = block.end
@@ -418,6 +452,8 @@ def analyze_markdown_semantics_v3(
     for block in blocks:
         if block.kind in {
             "heading",
+            "source_heading",
+            "source_block",
             "caption_declaration",
             "anchor_marker",
             "blank",
@@ -855,10 +891,11 @@ def _split_lines(source: str) -> list[_Line]:
     for number, raw in enumerate(source.splitlines(keepends=True), start=1):
         text = raw.rstrip("\r\n")
         content_end = offset + len(text)
+        bom = int(offset == 0 and text.startswith("\ufeff"))
         lines.append(
             _Line(
-                text=text,
-                start=offset,
+                text=text[bom:],
+                start=offset + bom,
                 content_end=content_end,
                 end=offset + len(raw),
                 number=number,
@@ -887,6 +924,7 @@ def _split_lines(source: str) -> list[_Line]:
 def _scan_blocks(
     lines: Sequence[_Line],
     *,
+    inventory: _SourceInventory,
     literal_ranges: Sequence[SourceRange] = (),
     structural_tables: bool = False,
     extended_headings: bool = True,
@@ -895,6 +933,7 @@ def _scan_blocks(
 ) -> list[_Block]:
     blocks = _scan_container_blocks(
         lines,
+        inventory=inventory,
         container_path=(),
         container_segments=(),
         paragraph_kind="paragraph",
@@ -919,6 +958,7 @@ def _scan_blocks(
 def _scan_container_blocks(
     lines: Sequence[_Line],
     *,
+    inventory: _SourceInventory,
     container_path: tuple[tuple[str, int], ...],
     container_segments: tuple[tuple[str, int, int], ...],
     paragraph_kind: str,
@@ -932,13 +972,81 @@ def _scan_container_blocks(
     from docwen_plugin_markdown.common_utils import structural_table_block_end
 
     blocks: list[_Block] = []
-    heading_re = _HEADING_RE if extended_headings else _STANDARD_HEADING_RE
+    # Core counts each list item as one container, while the semantic source
+    # projection also retains its enclosing list as a carrier segment.
+    depth = sum(kind != "list" for kind, _start in container_path)
     source_lines = [item.text for item in lines]
     index = 0
+    has_nonblank_block = False
     while index < len(lines):
         line = lines[index]
         if not line.text.strip():
             blocks.append(_Block("blank", line.source_start, line.end, index, index, line.text, {}))
+            index += 1
+            continue
+        is_lead_block = not has_nonblank_block
+        has_nonblank_block = True
+        row = inventory.rows[line.source_start]
+        if len(row.containers) > depth:
+            owner = row.containers[depth]
+            end_index = index
+            while end_index + 1 < len(lines):
+                following = inventory.rows[lines[end_index + 1].source_start]
+                if len(following.containers) <= depth or following.containers[:depth] != row.containers[:depth]:
+                    break
+                sibling = following.containers[depth]
+                if sibling.kind != owner.kind:
+                    break
+                if owner.kind == "quote" and sibling.identity != owner.identity:
+                    break
+                if owner.kind == "list" and sibling.marker != owner.marker:
+                    break
+                end_index += 1
+            if owner.kind == "quote":
+                block_kind = "callout" if re.match(r"^\s*>\s*\[!", line.text, re.IGNORECASE) else "block_quote"
+            else:
+                block_kind = "list"
+            blocks.append(
+                _Block(
+                    block_kind,
+                    line.source_start,
+                    lines[end_index].end,
+                    index,
+                    end_index,
+                    "\n".join(item.text for item in lines[index : end_index + 1]),
+                    {
+                        "last_line_start": lines[end_index].start,
+                        "container_indent": len(line.text) - len(line.text.lstrip()),
+                    },
+                )
+            )
+            index = end_index + 1
+            continue
+        heading = inventory.headings.get(line.source_start)
+        if heading is not None:
+            end_index = index
+            while end_index + 1 < len(lines) and lines[end_index + 1].source_start < heading.end:
+                end_index += 1
+            content = (
+                inventory.source[heading.text_start : heading.text_end]
+                if heading.style == "atx"
+                else "\n".join(inventory.source[start:end] for start, end in heading.text_ranges)
+            )
+            blocks.append(
+                _Block(
+                    "heading" if heading.style == "atx" else "source_heading",
+                    heading.start,
+                    heading.end,
+                    index,
+                    end_index,
+                    "\n".join(item.text for item in lines[index : end_index + 1]),
+                    {"level": heading.level, "content": content, "content_start": heading.text_start},
+                )
+            )
+            index = end_index + 1
+            continue
+        if row.block_kind in {"literal", "html_block", "indented_code", "thematic_break"}:
+            blocks.append(_Block("source_block", line.source_start, line.end, index, index, line.text, {}))
             index += 1
             continue
         anchor_match = _visible_block_candidate(_ANCHOR_ONLY_CANDIDATE_RE, line, "token", literal_ranges)
@@ -963,7 +1071,7 @@ def _scan_container_blocks(
             )
             index += 1
             continue
-        fence_match = _match_fence_opener_v3(line.text)
+        fence_match = _match_fence_opener_v3(line.text) if row.block_kind == "fenced_code" else None
         if fence_match is not None:
             character = fence_match.group("fence")[0]
             length = len(fence_match.group("fence"))
@@ -1027,7 +1135,7 @@ def _scan_container_blocks(
             )
             index = end_index + 1
             continue
-        if line.text.lstrip().startswith("$$"):
+        if row.block_kind == "math_block":
             if _MATH_SINGLE_RE.fullmatch(line.text):
                 blocks.append(
                     _Block(
@@ -1066,22 +1174,6 @@ def _scan_container_blocks(
                 )
                 index = end_index + 1
                 continue
-        heading = _visible_block_candidate(heading_re, line, 2, literal_ranges)
-        if heading is not None:
-            content_start = line.start + heading.start(3)
-            blocks.append(
-                _Block(
-                    "heading",
-                    line.source_start,
-                    line.end,
-                    index,
-                    index,
-                    line.text,
-                    {"level": len(heading.group(2)), "content": heading.group(3), "content_start": content_start},
-                )
-            )
-            index += 1
-            continue
         caption = _visible_block_candidate(caption_re, line, 1, literal_ranges) if allow_caption_declarations else None
         if caption is not None and re.search(r"\{#[^{}\s]+\}[ \t]*$", caption.group(2)):
             # Historical Pandoc-style attributes are ordinary current source.
@@ -1146,51 +1238,6 @@ def _scan_container_blocks(
             )
             index = end_index + 1
             continue
-        if _QUOTE_PREFIX_RE.match(line.text) is not None:
-            end_index = index
-            while end_index + 1 < len(lines) and _QUOTE_PREFIX_RE.match(lines[end_index + 1].text) is not None:
-                end_index += 1
-            quote_kind = "callout" if re.match(r"^\s*>\s*\[!", line.text, re.IGNORECASE) else "block_quote"
-            blocks.append(
-                _Block(
-                    quote_kind,
-                    line.source_start,
-                    lines[end_index].end,
-                    index,
-                    end_index,
-                    "\n".join(item.text for item in lines[index : end_index + 1]),
-                    {
-                        "last_line_start": lines[end_index].start,
-                        "container_indent": len(line.text) - len(line.text.lstrip()),
-                    },
-                )
-            )
-            index = end_index + 1
-            continue
-        if _LIST_ITEM_RE.match(line.text):
-            end_index = index
-            while end_index + 1 < len(lines):
-                following = lines[end_index + 1].text
-                if not following.strip() or _LIST_ITEM_RE.match(following) or following.startswith(("  ", "\t")):
-                    end_index += 1
-                    continue
-                break
-            blocks.append(
-                _Block(
-                    "list",
-                    line.source_start,
-                    lines[end_index].end,
-                    index,
-                    end_index,
-                    "\n".join(item.text for item in lines[index : end_index + 1]),
-                    {
-                        "last_line_start": lines[end_index].start,
-                        "container_indent": len(line.text) - len(line.text.lstrip()),
-                    },
-                )
-            )
-            index = end_index + 1
-            continue
         image_source = _strip_valid_inline_anchor_text(line.text)[0]
         if _IMAGE_RE.fullmatch(image_source):
             blocks.append(
@@ -1214,24 +1261,27 @@ def _scan_container_blocks(
         end_index = index
         while end_index + 1 < len(lines) and lines[end_index + 1].text.strip():
             candidate_line = lines[end_index + 1]
-            candidate = candidate_line.text
+            candidate_row = inventory.rows[candidate_line.source_start]
             if (
-                _visible_block_candidate(heading_re, candidate_line, 2, literal_ranges)
+                candidate_line.source_start in inventory.headings
+                or len(candidate_row.containers) > depth
+                or candidate_row.block_kind
+                in {"fenced_code", "html_block", "indented_code", "thematic_break", "literal"}
                 or (
                     allow_caption_declarations
                     and _visible_block_candidate(caption_re, candidate_line, 1, literal_ranges)
                 )
-                or _match_fence_opener_v3(candidate)
                 or _visible_block_candidate(_ANCHOR_ONLY_CANDIDATE_RE, candidate_line, "token", literal_ranges)
-                or _QUOTE_PREFIX_RE.match(candidate) is not None
-                or candidate.lstrip().startswith("$$")
-                or _LIST_ITEM_RE.match(candidate)
+                or candidate_row.block_kind == "math_block"
             ):
                 break
             end_index += 1
         blocks.append(
             _Block(
-                paragraph_kind,
+                # An inline ID on the lead paragraph may own the complete
+                # list item. Later paragraphs are separate blocks, including
+                # when the item starts with a table, fence, math or heading.
+                "paragraph" if paragraph_kind == "list_item" and not is_lead_block else paragraph_kind,
                 line.source_start,
                 lines[end_index].end,
                 index,
@@ -1257,6 +1307,7 @@ def _scan_container_blocks(
             nested.extend(
                 _scan_container_blocks(
                     quote_lines,
+                    inventory=inventory,
                     container_path=child_path,
                     container_segments=child_segments,
                     paragraph_kind="container_text",
@@ -1271,7 +1322,9 @@ def _scan_container_blocks(
         elif block.kind == "list":
             list_path = (*container_path, ("list", block.start))
             list_segments = (*container_segments, ("list", block.start, block.end))
-            for item_lines in _split_list_items(lines[block.first_line : block.last_line + 1]):
+            for item_lines in _split_list_items(
+                lines[block.first_line : block.last_line + 1], inventory=inventory, depth=depth
+            ):
                 if not item_lines:
                     continue
                 item_start = item_lines[0].source_start
@@ -1281,6 +1334,7 @@ def _scan_container_blocks(
                 nested.extend(
                     _scan_container_blocks(
                         item_lines,
+                        inventory=inventory,
                         container_path=item_path,
                         container_segments=item_segments,
                         paragraph_kind="list_item",
@@ -1326,26 +1380,32 @@ def _strip_quote_prefix(line: _Line) -> _Line:
     )
 
 
-def _split_list_items(lines: Sequence[_Line]) -> list[list[_Line]]:
+def _split_list_items(lines: Sequence[_Line], *, inventory: _SourceInventory, depth: int) -> list[list[_Line]]:
     if not lines:
         return []
-    first_match = _LIST_ITEM_RE.match(lines[0].text)
-    if first_match is None:
-        return []
-    base_indent = len(first_match.group("indent"))
     groups: list[list[_Line]] = []
     current: list[_Line] = []
-    marker_width = first_match.end()
+    marker_width = 0
+    item_identity: int | None = None
     for line in lines:
-        match = _LIST_ITEM_RE.match(line.text)
-        is_sibling = match is not None and len(match.group("indent")) == base_indent
+        row = inventory.rows[line.source_start]
+        owner = row.containers[depth]
+        owner_identity = owner.identity
+        is_sibling = owner_identity != item_identity
         if is_sibling:
             if current:
                 groups.append(current)
             current = []
-            assert match is not None
-            marker_width = match.end()
-            consumed = marker_width
+            item_identity = owner_identity
+            marker_width = owner.indent
+            # Container qualification and its visual indent are already
+            # authoritative.  Consume those columns without re-requiring a
+            # separator on an empty marker or all padding before code text.
+            consumed = 0
+            columns = 0
+            while consumed < len(line.text) and columns < marker_width:
+                columns += 4 - columns % 4 if line.text[consumed] == "\t" else 1
+                consumed += 1
         elif not line.text.strip():
             consumed = len(line.text)
         else:

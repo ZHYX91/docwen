@@ -37,6 +37,19 @@ ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions tha
 `Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
 direct `outlineLvl=0..8` values and outline levels inherited through paragraph styles.
 
+When extended headings are enabled, the same H7–H9 grammar applies at the document root and inside quotes,
+list items and their supported nesting, with or without an authored ID. When disabled, those lines remain
+paragraph text in every container. Empty ATX headings still count as headings; adding a number retains the
+required separator after the opening hashes and preserves closing hashes, container prefixes and line endings.
+A single initial UTF-8 BOM remains part of authored-source identity and offsets; the AST projection consumes
+that encoding signature before interpreting the first block. A BOM inside document content remains literal text.
+
+扩展标题开启时，H7–H9 在文档顶层、引用、列表项及受支持的嵌套中使用同一语法，不以是否带作者 ID 区分。
+关闭时，这些行在各类容器中都保持普通段落。空 ATX 标题仍参与标题计数；添加编号保留开启井号后的必要
+分隔空格，以及关闭井号、容器前缀和原换行。
+单个起始 UTF-8 BOM 保留在源文件身份和坐标中；AST 投影先消费这个编码标记再识别首块，正文内部的 BOM
+仍保持字面文字。
+
 Setext headings use the parser's complete paragraph and underline grammar, including multiline titles. Code
 examples, lists and ATX headings cannot be reclassified by a text preprocessor. Heading/body merging applies only
 to an actual heading followed immediately by an ordinary paragraph; blank lines and other block types stop it.
@@ -80,6 +93,18 @@ resolved-v4 input contracts remain separate. Separate ordinary table cells canno
 their boundary; a table-like construct that the selected Structural Tables grammar leaves as a paragraph retains
 that paragraph's literal code span instead.
 
+Paragraph eligibility and container continuation are shared block facts. A nonempty ordered item starting at
+`1.` or `1)` can interrupt a paragraph; a different start remains paragraph text there, while genuine siblings
+inside an established list keep their separate blocks. Lazy paragraph continuation does not discard its list
+owner. Fenced and HTML literals retain that owner until the actual container boundary, without reopening a
+paragraph merely because their body contains ordinary-looking text. A thematic break is not paragraph content
+for a following Setext underline. A Setext heading owns all its eligible title lines, then closes the inline
+scope at its underline: backticks cannot pair with the next paragraph.
+
+Heading navigation compares visible inline text. URL and email autolinks contribute their visible address;
+valid HTML tags do not contribute tag spelling. Escaped angles and code spans retain their literal text. The
+existing first-actual-match rule applies only after this visible title has been determined.
+
 源文件编号、嵌入标题／块选择与 Markdown 校对共享完整源码的词法所有权。YAML 头部、HTML 块／注释与字面
 代码示例不产生标题或锚点 ID。行内代码在所属行内块中以等长反引号配对；关闭围栏须使用相同字符、长度不短于
 开启围栏且末尾仅有空白。列表或引用内未闭合的围栏在容器结束时结束保护，后续顶层链接仍执行请求中的策略。
@@ -90,6 +115,15 @@ H7–H9 仅在扩展开启时中断段落，关闭时合法跨行代码可包含
 遵守同一所有权；冻结 v3 oracle 与 resolved-v4 输入合同继续独立。
 普通表格的不同单元格不能跨界配对代码；所选 Structural Tables
 语法未识别为表格而保留成段落的内容，继续保留该段落中的字面代码区域。
+
+段落资格和容器续行由共享块状态决定。非空有序项只有以 `1.` 或 `1)` 开始时才能中断现有段落；其他起点
+在该位置仍是段落文字，已建立列表中的真实同级项则各自拥有块边界。段落的 lazy 续行不丢失列表所有者；
+围栏与 HTML 字面块保留所有者直到实际容器边界，正文看似普通文字也不重新开启段落。分隔线不能成为
+后续 Setext 下划线的标题正文。Setext 拥有完整的合法多行标题，并在下划线处关闭行内作用域，反引号不能
+跨到下一段落配对。
+
+标题导航比较可见行内文字。URL／邮箱自动链接贡献可见地址，合法 HTML 标签不贡献标签拼写；转义尖括号
+及代码区间保留字面文字。既有“首个真实匹配”规则在确定可见标题之后应用。
 
 ## Mermaid document rendering / Mermaid 文档渲染
 
@@ -371,6 +405,18 @@ diagnostic. An ID is never appended to the closing `$$` or closing code fence. T
 list/quote/callout container path. A caption declaration retains its own inline `^id`; an object's distinct ordinary
 anchor remains attached to the object.
 
+On the production source-native route, an ordinary paragraph that is a list item's first nonblank child may carry
+the inline ID for the complete item. After an earlier content block, an inline ID on a later ordinary paragraph
+owns only that paragraph and retains the enclosing list and item in its `container_path`. A preceding table, code
+block, formula, heading or paragraph must not expand that later paragraph's anchor to the complete item.
+The leading item's anchor and a later paragraph anchor may coexist with their distinct identities and parent-child
+relationship; the later anchor does not prevent the leading anchor from owning the complete item.
+
+生产原文路线中，列表项的首个非空子块若为普通段落，该段落可用行内 ID 标识完整列表项。已有正文块之后的
+普通段落，其行内 ID 仅标识该段落，`container_path` 仍保留外围列表与列表项。前置表格、代码、公式、标题或
+段落不能把后续段落的锚点扩大为完整列表项。
+首段的列表项锚点可与后续段落锚点共存，分别保留身份和父子关系；后续锚点不使首段丢失完整列表项所有权。
+
 An ordinary anchor identifies only its Markdown block:
 
 ```md
@@ -580,6 +626,16 @@ undeclared and rejected there.
 Provider-neutral authored Markdown Heading targets use ATX levels 1..9; levels 7..9 are DocWen extensions to
 CommonMark. Heading target materialization, caption restart binding, and chapter-number binding accept the same 1..9
 range and map to Word `Heading 1`..`Heading 9`.
+
+Source-native heading numbering and direct semantic reference caches consume the same ordered inventory of
+actual headings. Setext and empty headings advance the appropriate counters even when they do not introduce
+an addressable Heading target, and an empty formatting template does not remove a heading from that inventory.
+The configured visible prefix and the semantic cache therefore share the same preceding headings and hierarchy.
+This does not add Setext semantic targets or Word bookmarks for ordinary source anchors.
+
+原文路线的标题编号与 direct 语义引用缓存消费同一个有序真实标题库存。Setext 与空标题即使不产生可寻址
+Heading 目标，也推进对应计数；格式模板为空不意味着该标题从库存中消失。因此可见编号和引用缓存共享
+前置标题与层级状态。本规则不新增 Setext 语义目标，也不为普通源锚点新增 Word 书签。
 
 ### Fenced code serialization / 围栏代码序列化
 

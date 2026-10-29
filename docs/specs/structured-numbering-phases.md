@@ -154,6 +154,20 @@ Each definition emits `w:multiLevelType="multilevel"`. Level `start`, mapped `nu
 Instance start entries become `w:lvlOverride w:ilvl="N-1"/w:startOverride w:val="V"`. Missing/extra level XML or a
 different effective number is invalid, not an accepted host normalization.
 
+A native list child may also be a Heading paragraph on the source-native route. Its ordinary `numPr` is not by
+itself a resolved-v4 version signal: a unique native hybrid list binding whose levels have no Heading `pStyle`
+ownership remains with the historical semantic reader. The resolved Heading definition's style ownership and
+explicit resolved occurrence/citation signals continue to select the strict v4 proof. Missing, duplicate or
+ambiguous numbering references do not receive the ordinary-list exemption. A valid resolved package containing
+only headings needs no caption-style registry; it still proves its Heading targets and native numbering, while
+caption-bearing packages must retain their separate authenticated caption bindings.
+
+原文路线的原生列表项也可包含 Heading 段落。普通 `numPr` 本身不是 resolved-v4 版本信号：唯一绑定到原生
+hybrid 列表、各级均无 Heading `pStyle` 所有权的段落仍由既有语义 reader 读取。resolved 标题定义的样式
+所有权及显式 resolved occurrence／citation 信号继续选择严格 v4 证明；缺失、重复或有歧义的编号引用
+不享受普通列表的分流。合法的纯标题 resolved 包不需要题注样式注册表，但仍证明标题目标与原生编号；
+含题注的包继续要求其独立认证的题注绑定。
+
 Every enabled caption materialization has exactly
 `type,counter,number_format,sequence_action,start_value,restart_heading_level,restart_heading_style,chapter_heading_level,chapter_heading_style,chapter_separator,chapter_cached_number,sequence_cached_number,localized_label,label_separator`.
 `type` is `simple_seq|chapter_seq`; `counter` is the kind-bound `Figure|Table|Equation|Code`; and `sequence_action`

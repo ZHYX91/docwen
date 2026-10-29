@@ -29,6 +29,51 @@ container scopes, BOM and CRLF; they do not use a second invocation of the imple
 源码所有权回归独立断言非标题范围保持不变、实际嵌入正文与容器退出后的链接策略。校对同时覆盖应报告的可见
 文字及不应报告的代码，按输入直接计算坐标和字节摘要，避免以同一实现生成期望。
 
+`test_markdown_block_lifecycle.py` and `test_heading_block_numbering_contract.py` check paragraph eligibility,
+ordered-list interruption versus established siblings, lazy/container literal boundaries, complete Setext titles,
+empty ATX syntax and visible autolink heading selection. `test_markdown_block_scope.py` checks the corresponding
+proofreading ranges and fixes against authored offsets, with BOM and LF/CRLF variants. Literal continuations and
+actual container exits are paired; a dedented line alone is not assumed to end a list-owned literal.
+
+`test_heading_inventory_alignment.py` compares the direct semantic plan, actual parser and visible numbering for
+the same ordered heading inventory, including Setext, empty headings and disabled formatting templates. It checks
+enabled/disabled H7–H9 inside quotes and lists. `test_markdown_block_heading_contract.py` follows real file
+conversion through the writer, then independently inspects native OOXML heading styles, exact body/code text,
+REF instructions and displayed caches before using the reader. It checks source-byte preservation and both
+addressable and unaddressed extended headings. Parser agreement or a same-pipeline round trip alone does not
+establish those final-content expectations; these generated-file checks do not replace installed Office tests.
+
+`test_docx_heading_reader_routing.py` separately writes source-native list headings and resolved heading-only
+packages with real semantic sessions. Independent numbering XML and target-map assertions precede reader checks;
+ordinary list IDs cannot identify a protocol version, and missing or damaged resolved evidence remains a refusal.
+Heading-only recovery does not require unrelated caption bindings. The file conversion lane also covers ordinary
+H1/H6 list headings, so enabling H7–H9 cannot hide the shared reader boundary behind a level-specific exception.
+
+`test_markdown_bom_projection.py` distinguishes a complete source's encoding signature from a fragment's leading
+U+FEFF. YAML hyperlink labels and note/document OPC parts retain that literal character; the file conversion tests
+also retain a body-leading U+FEFF after YAML, both with and without a separate source signature. Container-math
+regressions preserve native OMML and ordinary source-anchor metadata without promoting nested direct-profile
+caption declarations or creating new Word bookmarks for ordinary anchors.
+List continuation regressions separately inspect the physical ordinary-anchor carrier: after a table, code block,
+formula, heading or earlier paragraph, the later paragraph's ID owns exactly its own paragraph. The leading
+paragraph's existing complete-item ownership has a separate positive control; carrier proof is not weakened.
+Real package checks also pair a complete-item anchor with a later paragraph anchor, including an empty list marker;
+the authenticated nested SDTs must retain both identities and the exact parent-child relationship.
+
+块生命周期与编号回归分别检查段落资格、有序列表中断与同级项、lazy／字面块的容器边界、完整 Setext、
+空 ATX 语法及可见自动链接标题。校对回归按原文独立计算 BOM、LF／CRLF 坐标与替换值，将仍属字面块的
+续行与真实退出配对，不仅凭去缩进判定退出。语义回归联合检查真实标题库存、可见编号及引用缓存，包括
+空格式模板和容器内 H7–H9 开关。文件集成在 reader 之前独立检查 OOXML 标题样式、完整正文／代码、REF
+指令与显示缓存，保留源文件字节；解析器自洽和同管线往返都不能单独替代这些内容断言或真实 Office 验收。
+reader 分流回归另用真实语义 session 写出普通列表标题与纯标题 resolved 包，先独立检查编号 XML 和目标
+map，再验证读取；不把列表编号 ID 当版本标志，缺失或损坏的 resolved 证据仍拒绝。文件路线同时覆盖
+H1／H6 列表标题，避免只对 H7–H9 特判。
+完整源 BOM 与片段首 U+FEFF 分别测试：YAML 链接 label、注释／正文 OPC part 和 YAML 之后的正文仍保留
+字面字符。容器公式检查原生 OMML 与普通源锚点恢复，不提升 direct 路线的嵌套题注，也不新增普通锚点书签。
+列表续段另独立检查普通锚点的实际 carrier：在表格、代码、公式、标题或前段之后，后续段落 ID 只包围自身
+段落；首段原有完整列表项所有权保留单独正控，不放宽 carrier 证明。
+真实文件还将整项锚点与后续段落锚点配对，覆盖空列表标记；认证后的嵌套 SDT 必须保留两个身份与精确父子关系。
+
 `test_runtime_heading_dialect.py` checks the production source adapter before semantic markers are inserted:
 disabled/enabled H7–H9 boundaries, caption and anchor examples inside complete code spans, the following real
 caption's independent range and counter, and valid/invalid fenced carriers. Frozen-oracle behavior remains a

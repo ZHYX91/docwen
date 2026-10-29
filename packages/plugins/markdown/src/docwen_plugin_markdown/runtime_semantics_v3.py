@@ -723,11 +723,13 @@ def _bind_post_block_anchors(nodes: list[dict[str, Any]]) -> list[dict[str, Any]
     for node in nodes:
         anchor = node.get("_docwen_v3_ordinary_anchor")
         if (
-            node.get("type") in {"paragraph", "_docwen_v3_caption_declaration"}
+            node.get("type") in {"paragraph", "block_text", "_docwen_v3_caption_declaration"}
             and anchor is not None
             and anchor.get("placement") == "post_block"
         ):
-            is_marker_only = node.get("type") == "paragraph" and not _plain_children(node.get("children", []))
+            is_marker_only = node.get("type") in {"paragraph", "block_text"} and not _plain_children(
+                node.get("children", [])
+            )
             is_caption_boundary = node.get("type") == "_docwen_v3_caption_declaration"
             if not (is_marker_only or is_caption_boundary):
                 output.append(node)
@@ -756,6 +758,13 @@ def _lift_container_anchors(nodes: list[dict[str, Any]]) -> None:
         if node.get("type") not in {"block_quote", "list", "list_item"}:
             continue
         owners = list(_direct_anchor_owners(children))
+        if node.get("type") == "list_item":
+            # A lead paragraph may identify the complete item while later
+            # paragraphs or objects retain their own ordinary IDs. Only the
+            # unique item owner is eligible to move onto this container.
+            owners = [owner for owner in owners if owner["_docwen_v3_ordinary_anchor"].get("block_kind") == "list_item"]
+            if len(owners) > 1:
+                raise RuntimeSemanticsV3Unsupported("a list item has multiple ordinary-anchor owners")
         if len(owners) != 1:
             continue
         anchor = owners[0]["_docwen_v3_ordinary_anchor"]

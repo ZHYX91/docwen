@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import html
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from docwen_core.links._block_context import (
     SETEXT_HEADING_RE,
@@ -18,9 +18,12 @@ from docwen_core.links._block_context import (
     match_atx_heading,
     yaml_front_matter_end,
 )
-from docwen_core.links._markdown_inline import matching_backtick_run_end, parse_inline_link
-
-_PARAGRAPH_INTERRUPT = re.compile(r" {0,3}(?:>|`{3,}|~{3,}|\$\$|[-+*][ \t]+|\d+[.)][ \t]+)")
+from docwen_core.links._markdown_inline import (
+    _ANGLE_AUTOLINK_RE,
+    _INLINE_HTML_RE,
+    matching_backtick_run_end,
+    parse_inline_link,
+)
 
 
 def _blank(source: str) -> str:
@@ -76,9 +79,19 @@ def markdown_source_context_lines(
         row = context.line(
             line[bom:],
             allow_new=block is None or block.start >= probe,
-            allow_lazy=block is None,
+            allow_lazy=True,
+            literal=block is not None and block.start < probe,
         )
-        rows.append(MarkdownBlockLine(row.content, row.content_start + bom, row.containers, row.lazy))
+        if block is not None:
+            context.end_paragraph()
+            if block.start >= probe and row.block_kind == "paragraph" and row.content.lstrip(" ").startswith("$$"):
+                # The full-source block inventory already proved a complete
+                # display-math block. Keep its opener visible to structural
+                # consumers without letting its body reopen a paragraph.
+                row = replace(row, block_kind="math_block", paragraph_continuation=False)
+            elif row.block_kind not in {"fenced_code", "html_block", "indented_code", "literal", "blank"}:
+                row = replace(row, block_kind="literal", paragraph_continuation=False)
+        rows.append(replace(row, content_start=row.content_start + bom))
         offset += len(line)
     return rows
 
@@ -93,6 +106,7 @@ class MarkdownHeadingRange:
     style: str
     text_ranges: tuple[tuple[int, int], ...] = ()
     container_indent: int = 0
+    requires_separator: bool = False
 
 
 def markdown_heading_ranges(
@@ -122,11 +136,11 @@ def markdown_heading_ranges(
         atx = match_atx_heading(visible, extended_headings=extended_headings)
         original_line = source[content_start : offset + len(line.rstrip("\r\n"))]
         original_atx = match_atx_heading(original_line, extended_headings=extended_headings)
-        if atx is not None and original_atx is not None:
+        if block_line.block_kind == "atx_heading" and atx is not None and original_atx is not None:
             text_start = content_start + original_atx.end()
             text_end = offset + len(line.rstrip("\r\n"))
             raw_title = source[text_start:text_end]
-            closing = re.search(r"[ \t]+#+[ \t]*$", raw_title)
+            closing = re.search(r"(?:^|[ \t]+)#+[ \t]*$", raw_title)
             if closing is not None:
                 text_end = text_start + closing.start()
             text_end = text_start + len(source[text_start:text_end].rstrip(" \t"))
@@ -140,13 +154,14 @@ def markdown_heading_ranges(
                     "atx",
                     ((text_start, text_end),),
                     container_indent,
+                    original_atx.end() == original_atx.end(1),
                 )
             )
             paragraph = []
         elif (
-            (underline := SETEXT_HEADING_RE.fullmatch(visible)) is not None
+            block_line.block_kind == "setext_heading"
+            and (underline := SETEXT_HEADING_RE.fullmatch(visible)) is not None
             and SETEXT_HEADING_RE.fullmatch(original_line) is not None
-            and not block_line.lazy
             and paragraph
         ):
             start, text_start, _first_end = paragraph[0]
@@ -162,12 +177,7 @@ def markdown_heading_ranges(
                 )
             )
             paragraph = []
-        elif (
-            visible.strip()
-            and atx is None
-            and _PARAGRAPH_INTERRUPT.match(visible) is None
-            and not visible.startswith(("    ", "\t"))
-        ):
+        elif block_line.block_kind == "paragraph" and visible.strip():
             paragraph.append(
                 (
                     offset,
@@ -216,10 +226,21 @@ def markdown_heading_text(source: str) -> str:
             literal(value)
             cursor = end
             continue
+        if source[cursor] == "<":
+            autolink = _ANGLE_AUTOLINK_RE.match(source, cursor)
+            if autolink is not None:
+                literal(autolink.group(0)[1:-1])
+                cursor = autolink.end()
+                continue
+            tag = _INLINE_HTML_RE.match(source, cursor)
+            if tag is not None:
+                if re.match(r"<br(?:\s|/?>)", tag.group(0), flags=re.IGNORECASE):
+                    parts.append(" ")
+                cursor = tag.end()
+                continue
         parts.append(source[cursor])
         cursor += 1
     text = "".join(parts)
-    text = re.sub(r"<(?:br\s*/?|[^>]+)>", " ", text)
     text = re.sub(r"(\*{1,3}|~~|==)(?=\S)(.+?)(?<=\S)\1", r"\2", text, flags=re.DOTALL)
     text = re.sub(r"(?<!\w)(_{1,3})(?=\S)(.+?)(?<=\S)\1(?!\w)", r"\2", text, flags=re.DOTALL)
     text = html.unescape(text)

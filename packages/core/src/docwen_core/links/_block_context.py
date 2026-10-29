@@ -7,16 +7,127 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import pairwise
 
-from docwen_core.links._markdown_inline import _is_backslash_escaped, matching_backtick_run_end
+from docwen_core.links._markdown_inline import _INLINE_HTML_RE, _is_backslash_escaped, matching_backtick_run_end
 
 _QUOTE = re.compile(r" {0,3}>[ \t]?")
-_LIST = re.compile(r" {0,3}(?P<marker>[-+*]|[0-9]{1,9}[.)])(?P<padding>[ \t]+)")
+_LIST = re.compile(r" {0,3}(?P<marker>[-+*]|[0-9]{1,9}[.)])(?P<padding>[ \t]+|$)")
+_FENCED_CODE_START = re.compile(r" {0,3}(`{3,}|~{3,})([^\r\n]*)")
+# The production Mistune BlockParser stops descending after twenty containers.
+_MAX_CONTAINER_DEPTH = 20
 THEMATIC_BREAK_RE = re.compile(r" {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$")
 ATX_HEADING_RE = re.compile(r" {0,3}(#{1,9})(?!#)(?:[ \t]+|$)")
 SETEXT_HEADING_RE = re.compile(r" {0,3}(=+|-+)[ \t]*$")
 TABLE_DELIMITER_RE = re.compile(r" {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$")
 _YAML_OPEN = re.compile(r"(?:\ufeff)?---[ \t]*(?:\r\n|\r|\n)")
 _YAML_CLOSE = re.compile(r"---[ \t]*(?:\r\n|\r|\n|$)")
+
+
+_HTML_PRE_TAGS = frozenset({"pre", "script", "style", "textarea"})
+_HTML_BLOCK_TAGS = frozenset(
+    {
+        "address",
+        "article",
+        "aside",
+        "base",
+        "basefont",
+        "blockquote",
+        "body",
+        "caption",
+        "center",
+        "col",
+        "colgroup",
+        "dd",
+        "details",
+        "dialog",
+        "dir",
+        "div",
+        "dl",
+        "dt",
+        "fieldset",
+        "figcaption",
+        "figure",
+        "footer",
+        "form",
+        "frame",
+        "frameset",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "head",
+        "header",
+        "hr",
+        "html",
+        "iframe",
+        "legend",
+        "li",
+        "link",
+        "main",
+        "menu",
+        "menuitem",
+        "meta",
+        "nav",
+        "noframes",
+        "ol",
+        "optgroup",
+        "option",
+        "p",
+        "param",
+        "section",
+        "source",
+        "summary",
+        "table",
+        "tbody",
+        "td",
+        "tfoot",
+        "th",
+        "thead",
+        "title",
+        "tr",
+        "track",
+        "ul",
+    }
+)
+
+
+def html_block_mode(
+    line: str,
+    *,
+    allow_type7: bool,
+) -> tuple[str | None, bool] | None:
+    """Return ``(end marker, until blank)`` for a Mistune HTML block start."""
+    leading = re.match(r"^ {0,3}", line)
+    assert leading is not None
+    content = line[leading.end() :]
+    if content.startswith("<!--"):
+        return "-->", False
+    if content.startswith("<?"):
+        return "?>", False
+    if content.startswith("<![CDATA["):
+        return "]]>", False
+    if re.match(r"<![A-Z]", content):
+        return ">", False
+
+    match = re.match(
+        r"</?([A-Za-z][A-Za-z0-9-]*)\b",
+        content,
+        re.IGNORECASE,
+    )
+    if match is None:
+        return None
+    marker = match.group(0).lower()
+    tag = (match.group(1) or "").lower()
+    if tag in _HTML_PRE_TAGS and not marker.startswith("</"):
+        return f"</{tag}>", False
+    if tag in _HTML_BLOCK_TAGS or tag in _HTML_PRE_TAGS:
+        return None, True
+    candidate = line.lstrip(" ").rstrip(" \t\r\n")
+    generic_self_closing = candidate.startswith("<") and not candidate.startswith("</") and candidate.endswith("/>")
+    if allow_type7 and not generic_self_closing and _INLINE_HTML_RE.fullmatch(candidate) is not None:
+        return None, True
+    return None
 
 
 def match_atx_heading(line: str, *, extended_headings: bool = False) -> re.Match[str] | None:
@@ -44,6 +155,7 @@ class _Container:
     indent: int
     identity: int
     marker: str = ""
+    requires_marker: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +164,19 @@ class MarkdownBlockLine:
     content_start: int
     containers: tuple[_Container, ...]
     lazy: bool = False
+    block_kind: str = "paragraph"
+    paragraph_continuation: bool = False
+
+
+def _starts_fenced_code(line: str) -> bool:
+    match = _FENCED_CODE_START.match(line)
+    return bool(match and (match.group(1)[0] == "~" or "`" not in match.group(2)))
+
+
+def _list_interrupts_paragraph(match: re.Match[str], line: str) -> bool:
+    """A list needs a nonempty first item, and ordered lists must start at one."""
+    marker = match.group("marker")
+    return bool(line[match.end() :].strip() and (not marker[0].isdigit() or int(marker[:-1]) == 1))
 
 
 def _indent_end(line: str, start: int, columns: int) -> int | None:
@@ -71,8 +196,10 @@ def _indent_end(line: str, start: int, columns: int) -> int | None:
 class MarkdownBlockContext:
     """Track actual list/quote owners, including exits of unclosed code fences.
 
-    Fenced blocks cannot use paragraph lazy continuation. Callers disable new
-    containers while reading a literal block so its sample markers stay data.
+    Container extraction and paragraph eligibility are distinct lifecycles.
+    In particular, a list may own unindented literal payload until a blank or
+    interrupting block ends the item. Such payload never opens a paragraph.
+    Callers disable new containers inside literals so sample markers stay data.
     """
 
     def __init__(self, *, extended_headings: bool = False) -> None:
@@ -82,68 +209,94 @@ class MarkdownBlockContext:
         self._paragraph_open = False
         self._previous_content = ""
         self._table_columns = 0
+        self._blank_containers: set[int] = set()
 
-    def line(self, line: str, *, allow_new: bool = True, allow_lazy: bool = False) -> MarkdownBlockLine:
+    def line(
+        self,
+        line: str,
+        *,
+        allow_new: bool = True,
+        allow_lazy: bool = False,
+        literal: bool = False,
+    ) -> MarkdownBlockLine:
         offset = 0
         active: list[_Container] = []
+        blank_containers: set[int] = set()
+        lazy = False
+        quote_lazy = False
         for container in self._containers:
+            remainder = line[offset:].rstrip("\r\n")
             if container.kind == "quote":
                 match = _QUOTE.match(line, offset)
-                if match is None:
+                if match is not None:
+                    offset = match.end()
+                elif (
+                    allow_lazy
+                    and not container.requires_marker
+                    and container.identity not in self._blank_containers
+                    and remainder.strip()
+                    and not self._container_interrupts(remainder, quote=True)
+                ):
+                    lazy = quote_lazy = True
+                else:
                     break
-                offset = match.end()
             else:
                 end = _indent_end(line, offset, container.indent)
                 if end is None:
-                    if line[offset:].strip():
+                    if not remainder.strip():
+                        end = len(line.rstrip("\r\n"))
+                    elif (
+                        allow_lazy
+                        and container.identity not in self._blank_containers
+                        and not self._container_interrupts(remainder, quote=False)
+                    ):
+                        end = offset
+                        lazy = True
+                    else:
                         break
-                    end = len(line.rstrip("\r\n"))
                 offset = end
             active.append(container)
+            if not line[offset:].strip():
+                blank_containers.add(container.identity)
 
-        lazy = False
-        remainder = line[offset:].rstrip("\r\n")
-        if (
-            allow_lazy
-            and self._paragraph_open
-            and len(active) < len(self._containers)
-            and remainder.strip()
-            and not match_atx_heading(remainder, extended_headings=self._extended_headings)
-            and not _QUOTE.match(remainder)
-            and not _LIST.match(remainder)
-            and not THEMATIC_BREAK_RE.fullmatch(remainder)
-            and not re.match(r" {0,3}(?:`{3,}|~{3,})", remainder)
-        ):
-            active = list(self._containers)
-            lazy = True
-
-        if allow_new:
-            while offset < len(line):
+        paragraph_continuation = self._paragraph_open and tuple(active) == self._containers
+        if allow_new and not literal and not lazy:
+            while offset < len(line) and len(active) < _MAX_CONTAINER_DEPTH:
                 quote = _QUOTE.match(line, offset)
                 if quote is not None:
-                    active.append(self._new_container("quote", 0))
+                    child = line[quote.end() :].rstrip("\r\n")
+                    requires_marker = (
+                        not child.strip() or _starts_fenced_code(child) or _indent_end(child, 0, 4) is not None
+                    )
+                    active.append(self._new_container("quote", 0, requires_marker=requires_marker))
                     offset = quote.end()
+                    paragraph_continuation = False
                     continue
-                if THEMATIC_BREAK_RE.fullmatch(line[offset:].rstrip("\r\n")):
+                remainder = line[offset:].rstrip("\r\n")
+                if THEMATIC_BREAK_RE.fullmatch(remainder) or (
+                    paragraph_continuation and SETEXT_HEADING_RE.fullmatch(remainder)
+                ):
                     break
-                item = _LIST.match(line, offset)
-                if item is None:
+                item = _LIST.match(remainder)
+                if item is None or (paragraph_continuation and not _list_interrupts_paragraph(item, remainder)):
                     break
-                end = item.end()
+                end = offset + item.end()
                 whitespace = item.group("padding")
                 # More than four spaces after a marker leave an indented code
                 # prefix after the one mandatory separator.
                 if len(whitespace.expandtabs(4)) > 4:
-                    end = item.start("padding") + 1
-                indent = len(line[offset:end].expandtabs(4))
+                    end = offset + item.start("padding") + 1
+                indent = len(line[offset:end].expandtabs(4)) + int(not whitespace)
                 marker = item.group("marker")
                 active.append(self._new_container("list", indent, marker[-1]))
                 offset = end
+                paragraph_continuation = False
 
         containers = tuple(active)
         content = line[offset:].rstrip("\r\n")
         if containers != self._containers:
             self._table_columns = 0
+            self._previous_content = ""
         if (
             TABLE_DELIMITER_RE.fullmatch(content)
             and "|" in self._previous_content
@@ -154,20 +307,54 @@ class MarkdownBlockContext:
             "|" not in content or len(markdown_table_cell_ranges(content)) != self._table_columns
         ):
             self._table_columns = 0
-        self._paragraph_open = bool(
-            content.strip()
-            and not self._table_columns
-            and not match_atx_heading(content, extended_headings=self._extended_headings)
-            and not THEMATIC_BREAK_RE.fullmatch(content)
-            and not re.match(r" {0,3}(?:`{3,}|~{3,})", content)
-        )
+        if literal:
+            kind = "literal"
+        elif not content.strip():
+            kind = "blank"
+        elif match_atx_heading(content, extended_headings=self._extended_headings):
+            kind = "atx_heading"
+        elif paragraph_continuation and not quote_lazy and SETEXT_HEADING_RE.fullmatch(content):
+            kind = "setext_heading"
+        elif THEMATIC_BREAK_RE.fullmatch(content):
+            kind = "thematic_break"
+        elif _starts_fenced_code(content):
+            kind = "fenced_code"
+        elif html_block_mode(content, allow_type7=not paragraph_continuation) is not None:
+            kind = "html_block"
+        elif not paragraph_continuation and _indent_end(content, 0, 4) is not None:
+            kind = "indented_code"
+        elif self._table_columns:
+            kind = "table"
+        else:
+            kind = "paragraph"
+        self._paragraph_open = kind == "paragraph"
         self._previous_content = content
         self._containers = containers
-        return MarkdownBlockLine(line[offset:], offset, containers, lazy)
+        self._blank_containers = blank_containers
+        return MarkdownBlockLine(line[offset:], offset, containers, lazy, kind, paragraph_continuation)
 
-    def _new_container(self, kind: str, indent: int, marker: str = "") -> _Container:
+    def end_paragraph(self) -> None:
+        """Record a literal block handled by the caller, never its sample text."""
+        self._paragraph_open = False
+        self._previous_content = ""
+
+    def _container_interrupts(self, line: str, *, quote: bool) -> bool:
+        # These are the production container extraction rules, which differ
+        # from paragraph interruption. A sibling ordered item may start at any
+        # number; an unmarked quote ATX line remains in that quote's child parse.
+        return bool(
+            THEMATIC_BREAK_RE.fullmatch(line)
+            or _starts_fenced_code(line)
+            or _LIST.match(line)
+            or html_block_mode(line, allow_type7=False) is not None
+            or (
+                not quote and (_QUOTE.match(line) or match_atx_heading(line, extended_headings=self._extended_headings))
+            )
+        )
+
+    def _new_container(self, kind: str, indent: int, marker: str = "", *, requires_marker: bool = False) -> _Container:
         self._next_identity += 1
-        return _Container(kind, indent, self._next_identity, marker)
+        return _Container(kind, indent, self._next_identity, marker, requires_marker)
 
 
 def markdown_inline_regions(
@@ -176,7 +363,8 @@ def markdown_inline_regions(
     """Inline parser scopes after opaque blocks have been masked in place.
 
     Blank lines, new container items, ATX headings, thematic breaks and table
-    cells end an inline scope. Setext titles keep their paragraph scope.
+    cells end an inline scope. A Setext title keeps its complete paragraph
+    scope, then ends it at the underline rather than joining the next block.
     """
     boundaries = {0, len(source)}
     context = MarkdownBlockContext(extended_headings=extended_headings)
@@ -185,16 +373,13 @@ def markdown_inline_regions(
     rows: list[tuple[int, int, MarkdownBlockLine]] = []
     for line in source.splitlines(keepends=True):
         row = context.line(line, allow_lazy=True)
-        text = row.content.rstrip("\r\n")
         end = offset + len(line)
         if row.containers != previous_containers:
             boundaries.add(offset)
-        if (
-            not text.strip()
-            or match_atx_heading(text, extended_headings=extended_headings)
-            or THEMATIC_BREAK_RE.fullmatch(text)
-        ):
+        if row.block_kind in {"blank", "atx_heading", "thematic_break"}:
             boundaries.update((offset, end))
+        elif row.block_kind == "setext_heading":
+            boundaries.add(end)
         rows.append((offset, end, row))
         previous_containers = row.containers
         offset = end

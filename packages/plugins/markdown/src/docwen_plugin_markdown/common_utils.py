@@ -128,7 +128,10 @@ def _apply_numbering(
     ):
         result.append(content[cursor : heading.text_start])
         heading_text = content[heading.text_start : heading.text_end]
-        result.append(formatter.format_heading(heading_text, heading.level))
+        formatted = formatter.format_heading(heading_text, heading.level)
+        if formatted and heading.requires_separator:
+            result.append(" ")
+        result.append(formatted)
         cursor = heading.text_end
     result.append(content[cursor:])
     return "".join(result)

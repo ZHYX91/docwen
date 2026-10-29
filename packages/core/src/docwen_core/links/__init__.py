@@ -68,7 +68,13 @@ from docwen_core.links._resolver import (
     normalize_link_target,
     resolve_file_path,
 )
-from docwen_core.links._source_document import markdown_heading_ranges, markdown_source_projection
+from docwen_core.links._source_document import (
+    MarkdownBlockLine,
+    MarkdownHeadingRange,
+    markdown_heading_ranges,
+    markdown_source_context_lines,
+    markdown_source_projection,
+)
 from docwen_core.links._source_ownership import markdown_source_owners
 from docwen_core.links.declared_resources import (
     DeclaredResourceError,
@@ -88,6 +94,8 @@ __all__ = [
     "EmbeddedImageMode",
     "EmbeddedMdMode",
     "LinkErrorKind",
+    "MarkdownBlockLine",
+    "MarkdownHeadingRange",
     "MarkdownInlineSourceOwner",
     "NotFoundAction",
     "_process_non_embed_links",
@@ -106,6 +114,7 @@ __all__ = [
     "make_table_safe",
     "markdown_heading_ranges",
     "markdown_inline_source_owners",
+    "markdown_source_context_lines",
     "markdown_source_owners",
     "markdown_source_projection",
     "markdown_table_cell_ranges",

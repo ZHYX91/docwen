@@ -152,6 +152,13 @@ def plugin_extended_atx_headings(md: mistune.Markdown) -> None:
         parse_extended_atx_heading,
         before="atx_heading",
     )
+    # Container parses have their own rule lists.  Register the extension in
+    # each list at the same precedence as its top-level counterpart so source
+    # heading ownership and the native AST agree at every supported depth.
+    for rules_name in ("block_quote_rules", "list_rules"):
+        rules = getattr(md.block, rules_name)
+        if "extended_atx_heading" not in rules:
+            md.block.insert_rule(rules, "extended_atx_heading", before="atx_heading")
 
 
 def _structural_pipe_row(line: str) -> list[str] | None:
@@ -385,17 +392,24 @@ def parse_markdown_text(
     *,
     auto_link_bare_url: bool = False,
     extensions: MarkdownExtensions | None = None,
+    consume_initial_bom: bool = True,
 ) -> list[dict[str, Any]]:
     """Parse Markdown text into an AST using the extended mistune parser.
 
     Args:
         content: Raw Markdown text.
+        consume_initial_bom: Consume one document encoding signature. Body,
+            label and note fragments must pass False after their document's
+            initial signature has already been handled.
 
     Returns:
         A list of token dicts from mistune's AST renderer.
     """
     parser = create_extended_markdown(auto_link_bare_url=auto_link_bare_url, extensions=extensions)
-    nodes = parser(content)
+    # Source ownership and numbering keep exact authored coordinates.  Only a
+    # complete document can authorize consuming an initial encoding signature;
+    # a fragment's leading U+FEFF is ordinary content.
+    nodes = parser(content.removeprefix("\ufeff") if consume_initial_bom else content)
     if extensions is not None and not extensions.structural_tables:
 
         def literal_cells(items: list[dict[str, Any]]) -> None:

@@ -57,8 +57,11 @@ from docwen_core.docx_citation_ooxml import (
     read_proven_resolved_citations,
 )
 from docwen_core.docx_numbering_import import (
+    DocxNumberingImportError,
     HeadingNumberingProofIndex,
     ProofOnlyHeadingImport,
+    _integer_attribute,
+    _parse_level,
     import_heading_without_source_mutation,
 )
 from docwen_core.docx_numbering_occurrence import (
@@ -494,13 +497,29 @@ def _has_explicit_resolved_v4_signal(
     # the same occurrence map and exact SDT inventory.
     target_by_tag = {item.tag: item for item in targets}
     caption_style_ids = {item.resolved_style_id for item in caption_styles}
+    ordinary_list_bindings = _ordinary_list_bindings(document)
     for paragraph in document.element.body.iter(qn("w:p")):
         owner = paragraph.getparent()
         wrapper = None if owner is None else owner.getparent()
         target = target_by_tag.get(sdt_tag(wrapper) or "") if wrapper is not None else None
         if target is not None and target.kind == "heading":
-            if paragraph.find(f"{qn('w:pPr')}/{qn('w:numPr')}") is not None:
-                return True
+            num_properties = paragraph.findall(f"{qn('w:pPr')}/{qn('w:numPr')}")
+            if num_properties:
+                # Source-native list children also carry numPr. Their list
+                # definition has no Heading-style ownership, so that shared
+                # Word feature is not an explicit resolved-v4 signal.
+                if len(num_properties) != 1:
+                    return True
+                [num_properties_node] = num_properties
+                num_ids = num_properties_node.findall(qn("w:numId"))
+                levels = num_properties_node.findall(qn("w:ilvl"))
+                if (
+                    len(num_ids) != 1
+                    or len(levels) != 1
+                    or len(num_properties_node) != 2
+                    or (num_ids[0].get(qn("w:val")), levels[0].get(qn("w:val"))) not in ordinary_list_bindings
+                ):
+                    return True
             continue
         style = paragraph.find(f"{qn('w:pPr')}/{qn('w:pStyle')}")
         if style is None or style.get(qn("w:val")) not in caption_style_ids:
@@ -517,6 +536,91 @@ def _has_explicit_resolved_v4_signal(
         except DocxSemanticsV3Error:
             return True
     return False
+
+
+def _ordinary_list_bindings(document: Any) -> frozenset[tuple[str, str]]:
+    """Index native container lists without treating their IDs as provenance.
+
+    The source writer emits hybrid lists with no level-to-Heading style link.
+    Resolved Heading definitions use multilevel plus explicit Heading pStyle
+    ownership. Missing, duplicate or ambiguous references do not gain this
+    ordinary-list exemption and still enter the strict resolved proof.
+    """
+    from docx.oxml.ns import qn
+
+    try:
+        numbering = document.part.numbering_part.element
+    except (AttributeError, KeyError, NotImplementedError):
+        return frozenset()
+    abstract_nodes: dict[str, list[Any]] = {}
+    for node in numbering.findall(qn("w:abstractNum")):
+        abstract_nodes.setdefault(node.get(qn("w:abstractNumId")), []).append(node)
+    ordinary_levels: dict[str, frozenset[str]] = {}
+    for abstract_id, nodes in abstract_nodes.items():
+        if len(nodes) != 1:
+            continue
+        [node] = nodes
+        try:
+            _integer_attribute(node, "abstractNumId", minimum=0)
+        except DocxNumberingImportError:
+            continue
+        kinds = node.findall(qn("w:multiLevelType"))
+        levels = node.findall(qn("w:lvl"))
+        level_ids = [level.get(qn("w:ilvl")) for level in levels]
+        try:
+            for level in levels:
+                # Reuse the strict format/text/suffix shape validator. Only
+                # ordinary authored lists additionally allow a zero start.
+                _parse_level(level, minimum_start=0)
+        except DocxNumberingImportError:
+            continue
+        if (
+            len(kinds) == 1
+            and kinds[0].get(qn("w:val")) == "hybridMultilevel"
+            and levels
+            and all(
+                isinstance(level_id, str) and len(level_id) == 1 and level_id in "012345678" for level_id in level_ids
+            )
+            and len(set(level_ids)) == len(level_ids)
+            and not any(level.find(qn("w:pStyle")) is not None for level in levels)
+            and node.find(qn("w:styleLink")) is None
+            and node.find(qn("w:numStyleLink")) is None
+        ):
+            ordinary_levels[abstract_id] = frozenset(level_ids)
+    instances: dict[str, list[Any]] = {}
+    for node in numbering.findall(qn("w:num")):
+        instances.setdefault(node.get(qn("w:numId")), []).append(node)
+    bindings: set[tuple[str, str]] = set()
+    for num_id, nodes in instances.items():
+        if len(nodes) != 1:
+            continue
+        try:
+            _integer_attribute(nodes[0], "numId", minimum=1)
+        except DocxNumberingImportError:
+            continue
+        references = nodes[0].findall(qn("w:abstractNumId"))
+        if len(references) != 1:
+            continue
+        levels = ordinary_levels.get(references[0].get(qn("w:val")), frozenset())
+        overrides = [child for child in nodes[0] if child is not references[0]]
+        override_levels: set[str] = set()
+        for override in overrides:
+            level = override.get(qn("w:ilvl"))
+            if (
+                override.tag != qn("w:lvlOverride")
+                or level not in levels
+                or level in override_levels
+                or [child.tag for child in override] != [qn("w:startOverride")]
+            ):
+                break
+            try:
+                _integer_attribute(override[0], "val", minimum=1)
+            except DocxNumberingImportError:
+                break
+            override_levels.add(level)
+        else:
+            bindings.update((num_id, level) for level in levels)
+    return frozenset(bindings)
 
 
 def _parse_resolved_v4_caption(
