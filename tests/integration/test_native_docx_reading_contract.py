@@ -1,4 +1,10 @@
-"""Native OOXML facts survive the real document route and Artifact Bundle."""
+"""OOXML reading facts through the document route and Artifact Bundle.
+
+The textbox helper here is a reduced XML projection fixture, not a complete
+Word shape envelope. Complete DrawingML/VML/Choice/Fallback carriers are
+covered separately by test_native_textbox_carriers; neither claims native
+Word save/reopen acceptance.
+"""
 
 from __future__ import annotations
 

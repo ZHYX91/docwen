@@ -6,7 +6,7 @@ This core module must not import from any plugin or runtime package.
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from html import escape
 from typing import Any
@@ -374,6 +374,8 @@ def build_table_semantic_grid(
     col_count: int,
     cell_text_by_position: Mapping[tuple[int, int], str],
     merge_regions: list[TableMergeRegion] | tuple[TableMergeRegion, ...],
+    max_cells: int | None = None,
+    cancel_check: Callable[[], None] | None = None,
 ) -> list[list[TableSemanticCell]]:
     """Build a 2‑D semantic cell grid from raw cell texts and merge regions.
 
@@ -384,18 +386,40 @@ def build_table_semantic_grid(
 
     F-H3b-027
     """
+    if cancel_check is not None:
+        cancel_check()
+    if max_cells is not None:
+        if row_count < 0 or col_count < 0 or row_count * col_count > max_cells:
+            raise ValueError("Table semantic grid exceeds its projected-area budget.")
+        merge_area = 0
+        for region in merge_regions:
+            if not (
+                0 <= region.start_row <= region.end_row < row_count
+                and 0 <= region.start_col <= region.end_col < col_count
+            ):
+                raise ValueError("Table merge lies outside the planned grid.")
+            merge_area += region.rowspan * region.colspan
+            if merge_area > max_cells:
+                raise ValueError("Table merge coverage exceeds its projected-area budget.")
+
     # Build a lookup that maps every cell position inside a merge region
     # to its owning TableMergeRegion.
     region_lookup: dict[tuple[int, int], TableMergeRegion] = {}
+    visited = 0
     for region in merge_regions:
         for r in range(region.start_row, region.end_row + 1):
             for c in range(region.start_col, region.end_col + 1):
+                if cancel_check is not None and visited % 1000 == 0:
+                    cancel_check()
+                visited += 1
                 region_lookup[(r, c)] = region
 
     grid: list[list[TableSemanticCell]] = []
     for row in range(row_count):
         row_cells: list[TableSemanticCell] = []
         for col in range(col_count):
+            if cancel_check is not None and (row * col_count + col) % 1000 == 0:
+                cancel_check()
             raw_text = str(cell_text_by_position.get((row, col), "") or "")
             region = region_lookup.get((row, col))
             if region is None:
@@ -445,6 +469,7 @@ def render_table_semantic_grid(
     grid: list[list[TableSemanticCell]],
     *,
     strategy: str,
+    cancel_check: Callable[[], None] | None = None,
 ) -> list[list[str]]:
     """Render a semantic cell grid to a 2‑D string table.
 
@@ -465,9 +490,13 @@ def render_table_semantic_grid(
     """
     normalized = normalize_table_merge_export_strategy(strategy)
     rendered: list[list[str]] = []
+    visited = 0
     for row_cells in grid:
         rendered_row: list[str] = []
         for cell in row_cells:
+            if cancel_check is not None and visited % 1000 == 0:
+                cancel_check()
+            visited += 1
             if not cell.is_covered:
                 rendered_row.append(cell.display_text)
                 continue
@@ -548,9 +577,10 @@ def format_image_link(
     """Format an image link in the requested *style*.
 
     A reference target already owns its percent escapes, query and fragment.
-    For Wiki links only, ``raw_resource_path`` explicitly identifies an
-    unencoded producer-owned file path whose literal percent signs must be
-    encoded once. Other styles retain their existing target contract.
+    ``raw_resource_path`` explicitly identifies an unencoded producer-owned
+    file path. URI-bearing Markdown and Wiki links encode that path once;
+    a literal percent sign is not an existing URI escape. Wiki embeds keep
+    their existing literal-target contract.
 
     ``wiki_embed`` → ``![[target]]``
     ``wiki_link`` → ``[[target|alt]]``
@@ -568,9 +598,11 @@ def format_image_link(
         alias = alias.replace("\r", "&#13;").replace("\n", "&#10;")
         return f"[[{wiki_target}|{alias}]]"
     if normalized == "markdown_embed":
-        return f"![{alt}]({target})"
+        markdown_target = quote(target, safe="/:@!$&'*+,;=-._~") if raw_resource_path else target
+        return f"![{alt}]({markdown_target})"
     # markdown_link
-    return f"[{alt}]({target})"
+    markdown_target = quote(target, safe="/:@!$&'*+,;=-._~") if raw_resource_path else target
+    return f"[{alt}]({markdown_target})"
 
 
 def _normalize_link_style(raw: str | None) -> str:

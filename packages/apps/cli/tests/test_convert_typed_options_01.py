@@ -172,33 +172,14 @@ class TestParsePages:
 
         assert parse_pages("1-5,3-7") == [1, 2, 3, 4, 5, 6, 7]
 
-    def test_empty_string_returns_empty_list(self) -> None:
+    @pytest.mark.parametrize("value", ["", "1,abc,3", "abc-def", "-1,1", "0,1,2"])
+    def test_invalid_complete_selection_is_rejected(self, value: str) -> None:
         from docwen_cli.commands.execution_options import parse_pages
 
-        assert parse_pages("") == []
-
-    def test_non_numeric_parts_ignored(self) -> None:
-        from docwen_cli.commands.execution_options import parse_pages
-
-        # Non-numeric parts are silently skipped (contextlib.suppress)
-        assert parse_pages("1,abc,3") == [1, 3]
-
-    def test_malformed_ranges_ignored(self) -> None:
-        from docwen_cli.commands.execution_options import parse_pages
-
-        assert parse_pages("abc-def") == []
-
-    def test_negative_page_sign_parsed_as_range(self) -> None:
-        """A leading minus sign is treated as a range separator (old behavior).
-
-        This is not a real-world PDF page case — real page numbers are positive.
-        The old ``parse_pages`` exhibits the same behaviour:
-        ``"-1"`` → ``partition("-")`` → ``("", "-", "1")`` → ``[1]``.
-        """
-        from docwen_cli.commands.execution_options import parse_pages
-
-        assert parse_pages("-1,1") == [1]
-        assert parse_pages("0,1,2") == [0, 1, 2]
+        with pytest.raises(ValueError):
+            parse_pages(value)
+        # A refused token is never a request to retain a valid prefix.
+        assert parse_pages("1,3") == [1, 3]
 
     def test_whitespace_tolerant(self) -> None:
         from docwen_cli.commands.execution_options import parse_pages

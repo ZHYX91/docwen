@@ -8,6 +8,7 @@ Chinese/English separator characters, and whitespace compaction.
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation
 
 
 def _compact_text(text: str) -> str:
@@ -37,39 +38,55 @@ def _normalize_ocr_digits(value: str) -> str:
 
 
 def _normalize_ocr_amount(value: str) -> str:
-    """Normalise OCR-misread monetary amounts (digits, punctuation, ¥ symbol)."""
+    """Return a signed decimal string without binary rounding or guessing.
+
+    Known OCR digit/punctuation substitutions are allowed. A sign belongs to
+    the amount, and unsupported leftover syntax cannot be silently deleted.
+    Monetary fields have at least two decimal places; additional authored
+    precision is retained rather than rounded.
+    """
     s = (value or "").strip()
     if not s:
         return ""
-    table = str.maketrans(
-        {
-            "O": "0",
-            "o": "0",
-            "I": "1",
-            "l": "1",
-            "Z": "2",
-            "z": "2",
-            "S": "5",
-            "s": "5",
-            "B": "8",
-            "，": ",",
-            "．": ".",
-            "。": ".",
-        }
+    s = s.translate(
+        str.maketrans(
+            {
+                "O": "0",
+                "o": "0",
+                "I": "1",
+                "l": "1",
+                "Z": "2",
+                "z": "2",
+                "S": "5",
+                "s": "5",
+                "B": "8",
+                "，": ",",
+                "．": ".",
+                "。": ".",
+                "−": "-",
+                "－": "-",
+                "＋": "+",
+            }
+        )
     )
-    s = s.translate(table)
-    s = s.replace("¥", "").replace("￥", "").replace(",", "")
-    s = re.sub(r"[^0-9.]", "", s)
-    if s.count(".") > 1:
-        parts = s.split(".")
-        s = parts[0] + "." + "".join(parts[1:])
-    if "." in s:
-        left, right = s.split(".", 1)
-        if not right:
-            s = left + ".00"
-        elif len(right) == 1:
-            s = left + "." + right + "0"
-    return s
+    s = re.sub(r"\s+", "", s)
+    if s.startswith(("¥", "￥")):
+        s = s[1:]
+    elif s[:1] in {"+", "-"} and s[1:2] in {"¥", "￥"}:
+        s = s[:1] + s[2:]
+    if re.fullmatch(r"[+-]?(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:\.[0-9]*)?", s) is None:
+        return ""
+    try:
+        amount = Decimal(s.replace(",", ""))
+    except InvalidOperation:
+        return ""
+    if not amount.is_finite():
+        return ""
+    result = format(amount, "f")
+    if "." not in result:
+        return result + ".00"
+    fraction = result.partition(".")[2]
+    return result + "0" * max(0, 2 - len(fraction))
 
 
 def _normalize_ocr_tax_id(value: str) -> str:

@@ -401,3 +401,46 @@ paths from already encoded references, preserving literal percent identity, URI 
 及 Bundle，逐 occurrence 独立检查目标、空／非空 alias、原资源摘要与周围正文，并覆盖重复资源和实际输出根
 冲突；不把该结构输入称作原生系统剪贴板抓取。共享格式化回归区分原始资源路径与已编码引用，分别保留字面
 百分号身份、URI query／fragment 及既有 embed 语义。
+
+
+## Native content and publication regressions / 原生内容与最终发布回归
+
+`test_spreadsheet_final_content.py`, `test_spreadsheet_projection_boundaries.py` and
+`test_spreadsheet_hub_delimiter.py` create saved/reopened CSV/TSV/XLSX packages and compare
+final independent Markdown AST or complete typed matrices, worksheet order and resource hashes.
+Sparse/merge cases additionally inspect actual stored cells and cancellation/close boundaries;
+allocation instrumentation supplements the content assertions. The hub substitutes only the
+external Office backend after independently reopening the real XLSX hub.
+
+`test_xlsx_ods_typed_publication.py` and `test_xlsx_ods_delivery_ownership.py` use a complete
+externalLink relationship graph and typed ODS packages. Source and final facts come from separate
+XML readers; moved values, missing cells, wrong types, malformed ancestry and repeated-cell
+identity are tested alongside valid strings, empty strings, numbers and booleans. The backend
+substitute delivers real ODS bytes to the actual policy, Runtime, finalizer and Bundle; it does
+not establish Excel/LibreOffice conversion behavior.
+
+`test_pdf_split_selection_publication.py` checks actual saved PDF page text and dimensions after
+CLI/Runtime publication, and checks zero publication for whole-request refusal.
+`test_pdf_selection_bounds.py` is an offscreen widget/model test, not a physical Qt observation.
+`test_clipboard_table_budget_publication.py` uses frozen synthetic HTML/plain captures through the
+real Store and request builder, then checks full DOCX body, merge, nested order and header metadata.
+It covers both native-representable headers and associations preserved in custom XML.
+
+Invoice native PDF/OFD regressions compare signed YAML strings and every item-table cell against
+independent input facts, including physical-page identity and uncertainty/conflict diagnostics.
+No OCR engine is exercised by these native-text/package tests. Existing OCR substitute tests
+retain their separate evidence level.
+
+`test_caption_resource_path_identity.py` checks each saved DOCX caption image occurrence against
+its final Markdown target, Bundle logical path and original SHA. The native reference boundary
+suites inspect authenticated bookmark/field XML before checking full reader content, formatting,
+link identity, actual breaks and production replan. `test_native_textbox_carriers.py` supplies
+complete DrawingML/VML/Choice/Fallback envelopes; older reduced textbox XML tests remain projection
+checks. Saving a ZIP and inspecting these envelopes does not establish real Word save/reopen.
+
+上述回归全部使用新合成文件，不冒充不可用的原报告样本。最终内容、次数／顺序、坐标／类型及目标→SHA
+以独立消费核对；自身往返、子串、产物数量或替身调用次数只作辅助。ODS／hub 仅在外部 Office 边界提供
+替身；PDF、Invoice 原生文本和 OFD 容器检查不代表 OCR 引擎或真实桌面。文本框完整包裹结构与早期简化
+XML 投影测试分开记录，真实 Word 保存重开、Office／LibreOffice／Qt／Obsidian、跨平台进程、最终包候选
+及 hosted CI 另行验收。QA 原失败、夹具纠正及显式保留 runtime 的结果各自记录，不将保留运行称作自动
+清理通过。

@@ -7,6 +7,7 @@ and delegates note references to NoteExtractor.
 from __future__ import annotations
 
 from collections.abc import Callable
+from itertools import pairwise
 from typing import Any
 
 from docwen_core.docx_parsing.format_features import (
@@ -366,6 +367,43 @@ def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> t
     return None
 
 
+def _reference_covered_nodes(element: Any, spans: dict[Any, tuple[Any, str]]) -> set[Any]:
+    """Map proven inclusive XML ranges without widening them to whole runs.
+
+    A range can own a complete SDT or begin/end inside different runs. Only
+    wholly contained subtrees are skipped; a boundary run still renders its
+    text and breaks outside the field. Build one paragraph inventory for all
+    spans, independent of the number of reference occurrences.
+    """
+    if not spans:
+        return set()
+    nodes = list(element.iter())
+    positions = {node: index for index, node in enumerate(nodes)}
+    ends: dict[Any, int] = {}
+    for node in reversed(nodes):
+        ends[node] = max((ends[child] for child in node), default=positions[node])
+    intervals: list[tuple[int, int]] = []
+    for first, (last, _token) in spans.items():
+        start, end = positions.get(first), ends.get(last)
+        if start is None or end is None or end < start:
+            raise ValueError("authenticated reference range is outside its original paragraph")
+        intervals.append((start, end))
+    intervals.sort()
+    if any(right[0] <= left[1] for left, right in pairwise(intervals)):
+        raise ValueError("authenticated reference XML ranges overlap")
+    covered: set[Any] = set()
+    interval_index = 0
+    for index, node in enumerate(nodes):
+        while interval_index < len(intervals) and intervals[interval_index][1] < index:
+            interval_index += 1
+        if interval_index == len(intervals):
+            break
+        start, end = intervals[interval_index]
+        if start <= index and ends[node] <= end:
+            covered.add(node)
+    return covered
+
+
 def _render_paragraph_run_segments(
     para: Any,
     note_extractor: Any = None,
@@ -382,6 +420,9 @@ def _render_paragraph_run_segments(
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
+    element = root_element if root_element is not None else getattr(para, "_p", para)
+    spans = (reference_spans or {}) if not literal_text else {}
+    covered_nodes = _reference_covered_nodes(element, spans)
 
     def _parts() -> list[str]:
         return segments[-1]
@@ -400,20 +441,15 @@ def _render_paragraph_run_segments(
             _parts().append(line_break_text)
 
     def _process_hyperlink(child: Any) -> None:
+        nonlocal segments
         url = resolve_hyperlink_target(para, child) or ""
-        hyperlink_segments = _render_paragraph_run_segments(
-            para,
-            note_extractor=note_extractor,
-            preserve_formatting=preserve_formatting,
-            syntax_config=syntax_config,
-            style_detector_config=style_detector_config,
-            split_page_breaks=split_page_breaks,
-            math_renderer=math_renderer,
-            root_element=child,
-            line_break_text=line_break_text,
-            reference_spans=reference_spans,
-            literal_text=literal_text,
-        )
+        outer_segments = segments
+        segments = [[]]
+        try:
+            _process_children(child)
+            hyperlink_segments = ["".join(parts) for parts in segments]
+        finally:
+            segments = outer_segments
         for index, text in enumerate(hyperlink_segments):
             if text:
                 _append(f"[{text}]({url})" if url and not literal_text else text)
@@ -425,20 +461,14 @@ def _render_paragraph_run_segments(
 
     def _process_children(parent: Any) -> None:
         children = list(parent)
-        spans = (reference_spans or {}) if not literal_text else {}
-        positions = {child: index for index, child in enumerate(children)} if spans else {}
         consumed_through = -1
         for index, child in enumerate(children):
             if index <= consumed_through:
                 continue
-            reference = spans.get(child)
-            if reference is not None:
-                last, token = reference
-                end = positions.get(last)
-                if end is None or end < index:
-                    raise ValueError("authenticated reference range is not in its original sibling container")
-                _append(token)
-                consumed_through = end
+            if child in covered_nodes:
+                reference = spans.get(child)
+                if reference is not None:
+                    _append(reference[1])
                 continue
             tag = child.tag.split("}")[-1] if child.tag and "}" in child.tag else (child.tag or "")
 
@@ -571,6 +601,12 @@ def _render_paragraph_run_segments(
                 text_parts.clear()
 
         for child in run:
+            if child in covered_nodes:
+                _flush_text()
+                reference = spans.get(child)
+                if reference is not None:
+                    _append(reference[1])
+                continue
             tag = child.tag.split("}")[-1] if child.tag and "}" in child.tag else (child.tag or "")
             if tag == "t" and child.text is not None:
                 text_parts.append(child.text)
@@ -597,7 +633,6 @@ def _render_paragraph_run_segments(
 
         _flush_text()
 
-    element = root_element if root_element is not None else getattr(para, "_p", para)
     _process_children(element)
     return ["".join(parts) for parts in segments]
 

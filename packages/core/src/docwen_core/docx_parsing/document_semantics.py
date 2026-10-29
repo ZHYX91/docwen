@@ -564,7 +564,7 @@ def render_semantic_reference_text(
                 in_result = False
                 field_instruction = []
                 field_result = []
-                field_start = element.getparent()
+                field_start = element
             elif in_field and field_type == "separate":
                 in_result = True
             elif in_field and field_type == "end":
@@ -577,7 +577,7 @@ def render_semantic_reference_text(
                     output.append(replacement)
                     found_reference = True
                     if reference_spans is not None and field_start is not None:
-                        reference_spans[field_start] = (element.getparent(), replacement)
+                        reference_spans[field_start] = (element, replacement)
                 else:
                     output.append("".join(field_result))
                 in_field = False

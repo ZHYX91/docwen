@@ -70,11 +70,25 @@ def looks_like_combined_id(text: str) -> bool:
     """Identify an uncertain header candidate without consuming its source."""
     return bool(
         re.match(
-            r"^\s*\d+\s*[A-Za-z一-鿿][A-Za-z一-鿿0-9]*\s*"
+            r"^\s*\d+(?:\s+\d+)*\s*[A-Za-z一-鿿][A-Za-z一-鿿0-9]*\s*"
             r"(?:[〔［【《（(\[]\s*\d{1,4}|\d{4}\s*[-－])",
             text,
         )
     )
+
+
+def combined_id_preservation_reason(text: str) -> str:
+    """Explain why a header-shaped source cannot be represented by both fields.
+
+    Several whitespace-separated numeric groups are not one copy ID. The
+    complete source must stay visible before a heading cleanup rule can turn
+    its suffix into a seemingly valid single-copy header.
+    """
+    if parse_combined_id(text) is not None or not looks_like_combined_id(text):
+        return ""
+    if re.match(r"^\s*\d+\s+\d+", text):
+        return "ambiguous_combined_id"
+    return "incomplete_combined_id"
 
 
 def extract_combined_id(text: str) -> tuple[str, str]:

@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from docwen_core.page_selection import PageSelectionError, validate_pdf_split_selection
 from docwen_core.paths import input_stem
 from docwen_plugin_layout._common import file_size, new_artifact_id
 
@@ -229,8 +230,7 @@ class PdfSplitter:
         options = context.request.options
         stem = input_stem(input_path)
 
-        split_mode = str(options.get("split_mode", "custom"))
-        pages: list[int] = [int(p) for p in options.get("pages", []) if isinstance(p, (int, float))]
+        split_mode = options.get("split_mode", "custom")
 
         context.cancellation.check()
         context.progress.report_progress(0.0, "Starting PDF split")
@@ -239,8 +239,12 @@ class PdfSplitter:
             with fitz.open(input_path, filetype="pdf") as src:
                 total_pages = len(src)
 
-                if total_pages <= 1:
-                    msg = "PDF has only one page; nothing to split."
+                try:
+                    selection = validate_pdf_split_selection(
+                        split_mode, options.get("pages", []), total_pages=total_pages
+                    )
+                except PageSelectionError as exc:
+                    msg = str(exc)
                     return ConversionResult(
                         task_id=task_id,
                         success=False,
@@ -249,23 +253,17 @@ class PdfSplitter:
                             message=msg,
                             diagnostic_code="PDF-SPLIT-INVALID-INPUT",
                         ),
-                        diagnostics=[
-                            ConversionDiagnostic(
-                                level="error",
-                                message=msg,
-                                code="PDF-SPLIT-INVALID-INPUT",
-                            )
-                        ],
+                        diagnostics=[ConversionDiagnostic(level="error", message=msg, code="PDF-SPLIT-INVALID-INPUT")],
                     )
 
                 context.cancellation.check()
 
-                if split_mode == "every_page":
+                if selection.mode == "every_page":
                     return self._split_every_page(src, total_pages, task_id, stem, context)
-                elif split_mode == "odd_even":
+                elif selection.mode == "odd_even":
                     return self._split_odd_even(src, total_pages, task_id, stem, context)
                 else:
-                    return self._split_custom(src, pages, total_pages, task_id, stem, context)
+                    return self._split_custom(src, list(selection.pages), total_pages, task_id, stem, context)
         except Exception as exc:
             context.logger.error(f"PDF split failed: {exc}")
             return ConversionResult(
@@ -451,55 +449,16 @@ class PdfSplitter:
         )
         from docwen_core.models.result import (
             ConversionDiagnostic,
-            ConversionErrorInfo,
             ConversionMetrics,
             ConversionResult,
         )
 
         fitz = _ensure_fitz()
 
-        if not pages:
-            msg = "No pages specified for custom split."
-            return ConversionResult(
-                task_id=task_id,
-                success=False,
-                error=ConversionErrorInfo(
-                    error_type="invalid_input",
-                    message=msg,
-                    diagnostic_code="PDF-SPLIT-INVALID-INPUT",
-                ),
-                diagnostics=[ConversionDiagnostic(level="error", message=msg, code="PDF-SPLIT-INVALID-INPUT")],
-            )
-
-        valid = sorted({p for p in pages if 1 <= p <= total_pages})
-        if not valid:
-            msg = f"All specified pages are out of range (1–{total_pages})."
-            return ConversionResult(
-                task_id=task_id,
-                success=False,
-                error=ConversionErrorInfo(
-                    error_type="invalid_input",
-                    message=msg,
-                    diagnostic_code="PDF-SPLIT-INVALID-INPUT",
-                ),
-                diagnostics=[ConversionDiagnostic(level="error", message=msg, code="PDF-SPLIT-INVALID-INPUT")],
-            )
-
-        all_pages = set(range(1, total_pages + 1))
-        remaining = sorted(all_pages - set(valid))
-
-        if not remaining:
-            msg = "Cannot split — the specified pages cover the entire document."
-            return ConversionResult(
-                task_id=task_id,
-                success=False,
-                error=ConversionErrorInfo(
-                    error_type="invalid_input",
-                    message=msg,
-                    diagnostic_code="PDF-SPLIT-INVALID-INPUT",
-                ),
-                diagnostics=[ConversionDiagnostic(level="error", message=msg, code="PDF-SPLIT-INVALID-INPUT")],
-            )
+        # convert() has validated the entire typed selection against this PDF.
+        valid = pages
+        selected = set(valid)
+        remaining = [page for page in range(1, total_pages + 1) if page not in selected]
 
         artifacts: list[ArtifactManifest] = []
         total_out = 0

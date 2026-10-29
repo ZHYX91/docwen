@@ -1417,3 +1417,14 @@ Native code-style paragraph groups treat visible characters as literal code: che
 Trailing native page/section separators follow closing source IDs at the depth of the containers that remain open. Closing an inner quote must not split an authenticated outer quote into separate Markdown blocks or narrow its recovered source range. When every enclosing container closes, the separator is emitted at the document root. An inline paragraph ID is not another list/quote layer.
 
 原生段落尾的分页/分节分隔跟随已收口的源码 ID，并处于仍未结束的容器深度。内层引用结束时，不得把已认证的外层引用拆成多个 Markdown 块或缩窄它恢复后的源码范围。全部外层容器结束后，分隔位于文档顶层。行内段落 ID 不是额外的列表或引用结构层。
+
+
+### Native reference and resource boundaries / 原生引用与资源边界
+
+Complex REF substitution owns the actual begin/end XML nodes, including when boundary markers share a run with visible text or real `w:br`/`w:cr` nodes. Content outside that field retains its order, formatting/link context and existing page/section projection. Authenticated reference proof requirements are unchanged. Literal/code content is not rewritten as a semantic reference.
+
+复杂 REF 替换只拥有实际 begin/end XML 节点，即使边界标记与可见文字或真实 `w:br`／`w:cr` 共 run，也保留字段外内容、顺序、格式／链接上下文及既有页／节投影。已认证引用 proof 要求不变，字面／代码内容不改成语义引用。
+
+Generated Markdown links encode raw resource filenames at the path-to-reference boundary. Literal percent signs, spaces and hash characters remain distinct filename identities; an already formed reference keeps its encoding, query and fragment. Wiki target/alias ordering and explicit empty descriptions retain their existing contract. A resource's existence or the total artifact count does not prove occurrence-to-resource identity.
+
+生成 Markdown 链接在“原始资源路径→引用”边界编码；字面百分号、空格与井号保持不同文件身份，已成形引用保留原编码、query 和 fragment。Wiki target／alias 顺序与显式空描述沿用既有合同。资源存在或总数量本身不足以证明 occurrence 对应正确资源。

@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import argparse
-import contextlib
 import getpass
 from collections.abc import Collection
 from typing import Any
 
 from docwen_cli.options.to_markdown import build_to_markdown_options
+from docwen_core.page_selection import PageSelectionError, parse_pdf_split_input
 from docwen_core.text import OCR_LANGUAGE_AUTO, OCR_LANGUAGE_MODELS
 from docwen_runtime.templates import is_canonical_template_id
 
@@ -74,22 +74,11 @@ def validate_execution_options(
 
 
 def parse_pages(value: str) -> list[int]:
-    """Parse a comma-separated page/range expression into unique page numbers."""
-
-    pages: list[int] = []
-    for part in str(value).split(","):
-        part = part.strip()
-        if "-" in part:
-            start_text, _, end_text = part.partition("-")
-            with contextlib.suppress(ValueError):
-                start, end = int(start_text), int(end_text)
-                if start > end:
-                    start, end = end, start
-                pages.extend(range(start, end + 1))
-        else:
-            with contextlib.suppress(ValueError):
-                pages.append(int(part))
-    return sorted(set(pages))
+    """Parse the complete bounded custom expression or reject it unchanged."""
+    selection = parse_pdf_split_input(value)
+    if selection.mode != "custom":
+        raise PageSelectionError("invalid_mode", "A custom page expression is required.")
+    return list(selection.pages)
 
 
 def normalize_proofread_options(checks: list[str]) -> dict[str, Any]:
@@ -191,8 +180,12 @@ def build_execution_options(
     if getattr(args, "allow_spreadsheet_protection_loss", False):
         options["allow_spreadsheet_protection_loss"] = True
 
-    if pages := getattr(args, "pages", None):
-        options["pages"] = parse_pages(str(pages))
+    if (pages := getattr(args, "pages", None)) is not None:
+        selection = parse_pdf_split_input(pages)
+        if selection.mode == "custom":
+            options["pages"] = list(selection.pages)
+        else:
+            options["split_mode"] = selection.mode
     if dpi := getattr(args, "dpi", None):
         options["render_dpi"] = int(dpi)
     if mode := getattr(args, "mode", None):

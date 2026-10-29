@@ -10,7 +10,6 @@ import posixpath
 import re
 import struct
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from pathlib import Path
 from typing import Any, cast
@@ -19,6 +18,8 @@ from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile, ZipInfo
 import msoffcrypto
 from lxml import etree
 from msoffcrypto.exceptions import DecryptionError, FileFormatError, InvalidKeyError
+
+from .ods_cached_cells import CachedExternalCell, OdsCachedCellVerifier, numeric_equal
 
 _MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 _REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -67,10 +68,15 @@ class XlsxOdsPreparation:
     output_path: str
     external_links_flattened: bool
     protection_removed: bool
-    flattened_cached_values: tuple[str, ...] = ()
+    flattened_cells: tuple[CachedExternalCell, ...] = ()
     removed_protection_elements: tuple[str, ...] = ()
     removed_external_defined_names: tuple[str, ...] = ()
     fidelity_risk_counts: tuple[tuple[str, int], ...] = ()
+
+    @property
+    def flattened_cached_values(self) -> tuple[str, ...]:
+        """Inspection compatibility; validation uses the complete typed facts."""
+        return tuple(cell.value for cell in self.flattened_cells)
 
 
 class XlsxOdsPolicyError(ValueError):
@@ -463,9 +469,9 @@ def _flatten_external_links(
     parts: dict[str, bytes],
     *,
     source_filename: str,
-) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    cached_values: list[str] = []
-    for _sheet_name, part_name in _worksheet_parts(parts):
+) -> tuple[tuple[CachedExternalCell, ...], tuple[str, ...]]:
+    cached_cells: list[CachedExternalCell] = []
+    for sheet_name, part_name in _worksheet_parts(parts):
         worksheet = _parse_xml(parts[part_name])
         changed = False
         for cell in worksheet.findall(".//m:c", namespaces=_NS):
@@ -476,14 +482,27 @@ def _flatten_external_links(
             if not _has_external_reference(formula_text or "", source_filename):
                 continue
             cached = cell.find(f"{{{_MAIN_NS}}}v")
-            if cached is None or cached.text is None:
+            cell_type = cell.get("t", "n")
+            if cached is None or (cached.text is None and cell_type != "str"):
                 raise XlsxOdsPolicyError(
                     "EXTERNAL_LINK_CACHED_VALUE_MISSING",
                     "An external formula has no cached value, so an offline result cannot be delivered safely.",
                 )
+            value = cached.text or ""
+            if (
+                cell_type not in {"n", "str", "b"}
+                or (cell_type == "n" and not numeric_equal(value, value))
+                or (cell_type == "b" and value not in {"0", "1"})
+            ):
+                raise XlsxOdsPolicyError(
+                    "EXTERNAL_LINK_CACHED_TYPE_UNSUPPORTED",
+                    "The external formula cache has no supported typed constant representation.",
+                )
+            fact = CachedExternalCell(sheet_name, cell.get("r", ""), cell_type, value)
+            _ = fact.position
             assert formula is not None
             cell.remove(formula)
-            cached_values.append(cached.text)
+            cached_cells.append(fact)
             changed = True
         if changed:
             parts[part_name] = _serialize_xml(worksheet)
@@ -518,7 +537,7 @@ def _flatten_external_links(
     for name in tuple(parts):
         if name.startswith("xl/externalLinks/"):
             del parts[name]
-    return tuple(cached_values), tuple(removed_defined_names)
+    return tuple(cached_cells), tuple(removed_defined_names)
 
 
 def _write_package(
@@ -586,7 +605,7 @@ def prepare_xlsx_for_ods(
             parent.remove(node)
             parts[part_name] = _serialize_xml(root)
 
-    flattened_cached_values: tuple[str, ...] = ()
+    flattened_cells: tuple[CachedExternalCell, ...] = ()
     removed_external_defined_names: tuple[str, ...] = ()
     if inspection.unsupported_external_references:
         raise XlsxOdsPolicyError(
@@ -594,7 +613,7 @@ def prepare_xlsx_for_ods(
             "External workbook references exist outside cells or defined names and cannot be flattened safely.",
         )
     if inspection.external_formula_cells or inspection.external_link_parts_present or inspection.external_defined_names:
-        flattened_cached_values, removed_external_defined_names = _flatten_external_links(
+        flattened_cells, removed_external_defined_names = _flatten_external_links(
             parts,
             source_filename=Path(input_path).name,
         )
@@ -608,7 +627,7 @@ def prepare_xlsx_for_ods(
             or inspection.external_defined_names
         ),
         protection_removed=file_encryption_removed or bool(password_nodes),
-        flattened_cached_values=flattened_cached_values,
+        flattened_cells=flattened_cells,
         removed_protection_elements=(
             (("encrypted-package",) if file_encryption_removed else ()) + inspection.password_protected_elements
         ),
@@ -617,18 +636,10 @@ def prepare_xlsx_for_ods(
     )
 
 
-def _numeric_value_matches(actual: str, expected: str) -> bool:
-    try:
-        return Decimal(actual) == Decimal(expected)
-    except InvalidOperation:
-        return actual == expected
-
-
 def validate_prepared_ods(path: str | Path, preparation: XlsxOdsPreparation) -> None:
     """Reject a backend success whose real ODS contradicts selected POLICY-02."""
 
-    expected_values = preparation.flattened_cached_values
-    matched_values = [False] * len(expected_values)
+    verifier = OdsCachedCellVerifier(preparation.flattened_cells)
     has_table_source = False
     has_external_formula = False
     has_ref_error = False
@@ -638,12 +649,15 @@ def validate_prepared_ods(path: str | Path, preparation: XlsxOdsPreparation) -> 
         with ZipFile(path) as package, package.open("content.xml") as stream:
             iterator = etree.iterparse(
                 stream,
-                events=("end",),
+                events=("start", "end"),
                 resolve_entities=False,
                 no_network=True,
                 huge_tree=True,
             )
-            for _event, element in iterator:
+            for event, element in iterator:
+                verifier.observe(event, element)
+                if event == "start":
+                    continue
                 if preparation.external_links_flattened:
                     if element.tag == f"{{{_ODF_TABLE_NS}}}table-source":
                         has_table_source = True
@@ -651,11 +665,6 @@ def validate_prepared_ods(path: str | Path, preparation: XlsxOdsPreparation) -> 
                         formula = str(element.get(f"{{{_ODF_TABLE_NS}}}formula", ""))
                         if "file:///" in formula or "#[" in formula:
                             has_external_formula = True
-                        actual_value = element.get(f"{{{_ODF_OFFICE_NS}}}value")
-                        if actual_value is not None:
-                            for index, expected in enumerate(expected_values):
-                                if not matched_values[index] and _numeric_value_matches(str(actual_value), expected):
-                                    matched_values[index] = True
                     if any(
                         "#REF!" in str(value)
                         for value in (
@@ -678,26 +687,34 @@ def validate_prepared_ods(path: str | Path, preparation: XlsxOdsPreparation) -> 
                         if table_name in removed_elements and _is_enabled(element.get(f"{{{_ODF_TABLE_NS}}}protected")):
                             retained_protection = True
 
+                if verifier.inside_cell:
+                    continue
                 element.clear()
                 parent = element.getparent()
                 if parent is not None:
                     while element.getprevious() is not None:
                         del parent[0]
+    except ValueError as exc:
+        raise XlsxOdsPolicyError(
+            "EXTERNAL_LINK_FLATTENING_NOT_DELIVERED",
+            f"The ODS cached-cell evidence is invalid: {exc}",
+        ) from exc
     except (BadZipFile, KeyError, OSError, etree.XMLSyntaxError) as exc:
         raise XlsxOdsPolicyError(
             "POLICY02_FINAL_ARTIFACT_INVALID",
             "The backend reported success but did not produce an inspectable ODS package.",
         ) from exc
 
-    if preparation.external_links_flattened:
-        missing_values = [
-            expected for expected, matched in zip(expected_values, matched_values, strict=True) if not matched
-        ]
-        if has_table_source or has_external_formula or missing_values or (expected_values and has_ref_error):
-            raise XlsxOdsPolicyError(
-                "EXTERNAL_LINK_FLATTENING_NOT_DELIVERED",
-                "The ODS artifact did not preserve the cached external value without a live link.",
-            )
+    if preparation.external_links_flattened and (
+        has_table_source
+        or has_external_formula
+        or not verifier.complete
+        or (preparation.flattened_cells and has_ref_error)
+    ):
+        raise XlsxOdsPolicyError(
+            "EXTERNAL_LINK_FLATTENING_NOT_DELIVERED",
+            "The ODS artifact did not preserve the cached external value without a live link.",
+        )
 
     if preparation.protection_removed and retained_protection:
         raise XlsxOdsPolicyError(

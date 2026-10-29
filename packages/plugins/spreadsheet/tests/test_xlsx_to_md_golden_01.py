@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from ._markdown_table_oracle import (
+    assert_old_workbook_source_values,
+    delimited_source_blocks,
+    markdown_table_values,
+)
 from ._xlsx_to_md_golden_support import (
     Path,
     _build_fake_context,
@@ -112,8 +117,7 @@ class TestSpreadsheetToMdDirect:
             artifact = result.artifacts[0]
             content = Path(artifact.staging_path).read_text(encoding="utf-8")
 
-            for expected in fixture["expected_markdown_semantics"]["contains"]:
-                assert expected in content
+            assert_old_workbook_source_values(content, fixture)
             for heading in fixture["expected_markdown_semantics"]["sheet_headings"]:
                 assert heading in content
 
@@ -192,11 +196,12 @@ class TestSpreadsheetToMdDirect:
             assert result.success
             content = Path(result.artifacts[0].staging_path).read_text("utf-8")
 
-            # Should contain pipe table markers
-            assert "|" in content
-            # Should contain data values
-            assert "Alpha" in content
-            assert "99.90" in content or "99.9" in content
+            assert markdown_table_values(content)[0] == [
+                ["Product", "Quantity", "Price", "Total"],
+                ["Alpha", "10", "9.99", "99.9"],
+                ["Beta", "5", "19.5", "97.5"],
+                ["Gamma", "20", "4.5", "90"],
+            ]
 
     def test_convert_xlsx_artifact_metadata(self, sample_xlsx_path: Path) -> None:
         """Artifact should contain metadata about the conversion."""
@@ -284,10 +289,7 @@ class TestSpreadsheetToMdDirect:
             assert artifact.suggested_name == expected["suggested_name"]
             assert artifact.metadata == expected["artifact_metadata"]
             assert result.metrics.extra == expected["metrics"]
-            for token in expected["required_markdown_tokens"]:
-                assert token in content
-            table_lines = [line for line in content.splitlines() if line.startswith("|")]
-            assert table_lines == expected["table_lines"]
+            assert markdown_table_values(content) == delimited_source_blocks(scope["input"]["text"], ",")
 
     @pytest.mark.parametrize(
         ("case_name", "expected_suggested_name"),

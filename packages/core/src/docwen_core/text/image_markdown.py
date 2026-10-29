@@ -190,13 +190,10 @@ def generate_image_markdown(
 def _format_link(alt: str, target: str, style: str, *, raw_resource_path: bool = True) -> str:
     if style == "wiki_embed":
         return f"![[{target}]]"
-    if style == "wiki_link":
-        return format_image_link(alt, target, style=style, raw_resource_path=raw_resource_path)
-    if style == "markdown_embed":
-        return f"![{alt}]({target})"
-    if style == "markdown_link":
-        return f"[{alt or target}]({target})"
-    return f"![{alt}]({target})"
+    if style not in {"wiki_link", "markdown_embed", "markdown_link"}:
+        style = "markdown_embed"
+    label = (alt or target) if style == "markdown_link" else alt
+    return format_image_link(label, target, style=style, raw_resource_path=raw_resource_path)
 
 
 def build_image_ocr_sidecar(

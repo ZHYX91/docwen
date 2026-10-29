@@ -7,6 +7,7 @@ from pathlib import Path
 import openpyxl
 import pytest
 
+from ._markdown_table_oracle import markdown_table_values
 from ._xlsx_to_md_golden_support import _build_fake_context
 
 pytestmark = pytest.mark.contract
@@ -49,10 +50,12 @@ def test_literal_merge_markers_are_escaped_in_structural_output(tmp_path: Path) 
 
     markdown = _convert_structural(tmp_path, workbook)
 
-    assert "| \\< | \\^ |" in markdown
+    assert markdown_table_values(markdown) == [[["Kind", "Value"], ["<", "^"]]]
     table = _table_source(markdown)
     assert table.splitlines()[0] == "| Kind | Value |"
     assert table.splitlines()[1] == "| --- | --- |"
+    # Literal marker cells must remain distinct from generated merge tokens.
+    assert all(cell.strip() not in {"<", "^"} for cell in table.splitlines()[2].strip("|").split("|"))
 
 
 def test_merge_crossing_first_row_forces_zero_header_output(tmp_path: Path) -> None:

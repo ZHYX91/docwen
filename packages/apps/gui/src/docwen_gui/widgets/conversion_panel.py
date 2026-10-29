@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_core.page_selection import PageSelectionError
 from docwen_gui.format_presentation import FormatChoice, presentation_for
 from docwen_gui.i18n import t as _t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
@@ -1599,7 +1600,7 @@ class ConversionPanel(QWidget):
         if not text:
             return
         try:
-            split_mode, pages = self._vm.parse_split_input(text)
+            split_mode, pages = self._vm.parse_split_input(text, self._vm.pdf_total_pages)
         except ValueError:
             return
         if split_mode != "custom" and 0 < self._vm.pdf_total_pages <= 1:
@@ -1635,7 +1636,12 @@ class ConversionPanel(QWidget):
                 self._page_warning_label.setText("")
                 self._page_warning_label.hide()
             return
-        is_valid = self._vm.validate_page_input(text, self._vm.pdf_total_pages)
+        error_code = ""
+        try:
+            self._vm.parse_split_input(text, self._vm.pdf_total_pages)
+        except PageSelectionError as exc:
+            error_code = exc.code
+        is_valid = not error_code
         if self._split_pdf_button:
             self._split_pdf_button.setEnabled(is_valid)
         if text in ("*", "#") and 0 < self._vm.pdf_total_pages <= 1:
@@ -1648,12 +1654,7 @@ class ConversionPanel(QWidget):
                 )
                 self._page_warning_label.show()
         elif not is_valid:
-            all_pages = False
-            try:
-                pages = self._vm.parse_page_ranges(text)
-                all_pages = self._vm.pdf_total_pages > 0 and set(range(1, self._vm.pdf_total_pages + 1)).issubset(pages)
-            except ValueError:
-                pass
+            all_pages = error_code == "all_pages"
             if self._page_warning_label:
                 self._page_warning_label.setText(
                     _t(

@@ -11,13 +11,13 @@ import re
 from typing import TYPE_CHECKING
 
 from docwen_plugin_optimizer_gongwen.utils import (
+    combined_id_preservation_reason,
     convert_date_format,
     extract_after_colon,
     extract_doc_number_and_name,
     extract_doc_number_and_signers,
     extract_printing_line,
     extract_signers_from_text,
-    looks_like_combined_id,
     parse_combined_id,
     process_attachment_item,
     process_copy_to,
@@ -98,9 +98,7 @@ def build_yaml(
     skip_indices: list[int] = []
     attachment_list_indices: list[int] = []
     result.preserved_source_indices = {
-        feature.index: "incomplete_combined_id"
-        for feature in features
-        if looks_like_combined_id(feature.text) and parse_combined_id(feature.text) is None
+        feature.index: reason for feature in features if (reason := combined_id_preservation_reason(feature.text))
     }
 
     for para_idx, candidate in sorted(result.candidates.items()):
