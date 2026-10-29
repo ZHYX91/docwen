@@ -20,6 +20,21 @@ DocWen 在 `configs/` 提供不可变基础 TOML，并把用户覆盖写入所�
 - TOML 写入采用同目录暂存事务、进程协调和恢复日志。
 - GUI/CLI 通过注入的配置端口操作，不维护第二份持久化状态。
 
+Multi-file writes are owned by `docwen_runtime.file_transactions` and `ConfigLoader`.
+Before changing files, the shared journal durably records `PREPARED`; after all new files and
+runtime reconciliation succeed, it records `COMMITTED`. A replace followed by a failed directory
+barrier has an uncertain outcome. Before compensating any file, the owner must durably publish
+`PREPARED` again. If that cannot be done, it retains the journal, restores no files, and marks the
+current effective configuration untrusted until recovery succeeds. Recovery may expose a complete
+old or new generation; it must never trust a partially compensated generation. A confirmed commit
+is not undone merely because journal cleanup fails; that condition succeeds with a cleanup warning.
+
+多文件写入由 `docwen_runtime.file_transactions` 与 `ConfigLoader` 共同负责。修改前先持久化
+`PREPARED`，所有新文件与运行时协调成功后才记录 `COMMITTED`。替换完成后的目录同步异常不能证明
+替换未发生；补偿任何文件之前必须重新可靠写入 `PREPARED`。若无法完成，保留日志、不恢复任何文件，
+并将当前有效配置标为不可信，直到恢复成功。恢复只可交付完整旧代或完整新代，不得信任部分补偿后的混合代。
+确认提交后的日志清理失败只产生清理警告，不回滚已提交修改。
+
 ## Rules / 规则
 
 1. Add new keys to the owning base TOML and typed model together.

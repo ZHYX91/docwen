@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from tests.support.cli import make_controller_mock_with_cancellation
 
 from ._cli_contract_support import (
     MagicMock,
@@ -38,7 +39,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "test.md"
         src.write_text("# Hello\n", encoding="utf-8")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -87,7 +88,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "test.md"
         src.write_text("# Hello\n", encoding="utf-8")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -126,7 +127,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "test.md"
         src.write_text("# Hello\n", encoding="utf-8")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 

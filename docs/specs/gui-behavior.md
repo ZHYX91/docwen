@@ -186,3 +186,16 @@ CLI、GUI 反馈／提交及 Runtime 共用有界页码合同。展开任何范�
 HTML table anchors and projected grid coverage have separate cumulative budgets. Each table reserves its full projected rows×columns before parsing the new cell's nested blocks or expanding coverage. The document-wide grid limit is 65536 positions, independent of the anchor limit. `rowspan=0` is resolved within its actual row group before reservation. Nested tables consume the same remaining grid budget. Rejection retains the complete frozen plain fallback; invalid HTML-only input creates no replacement. Legal merges, nested block order and explicit header associations retain the existing representability rules: native Word header prefixes where expressible, otherwise readable custom XML rather than invented prefixes.
 
 HTML 表格 anchor 与网格覆盖分别累计预算。解析新格内的子结构或展开 coverage 前，先预留整个表当前的“行数×列数”投影面积；全文网格上限为 65536 个位置，与 anchor 上限独立。`rowspan=0` 先按真实行组解析，嵌套表共用剩余预算。拒绝时保留完整冻结 plain fallback；仅 HTML 的非法输入不替换现有输入。合法 merge、嵌套块顺序、明确表头关联继续沿用可表达性规则：可表达者生成 Word 表头前缀，其余保存在可读 custom XML 中，不捏造原生前缀。
+
+
+### Exact text-drag identities and persistent cards / 文本拖入身份与卡片生命周期
+
+For file drag MIME text, an existing complete absolute path takes precedence over whitespace tokenization, including balanced braces or quotes. A shorter existing prefix never becomes an additional input. Explicit multiple paths remain multiple inputs in source order; native local-file URLs retain precedence over a text fallback. Batch ordering moves model rows without removing and reattaching their owned card widgets. Selection, file identity, pending card materialization and subsequent retry/status actions survive deferred deletion processing.
+
+文件拖入的 MIME 文本优先按完整存在的绝对路径识别，包括成对花括号或引号包装；不会因较短前缀也存在而额外添加输入。显式多路径仍按原顺序形成多项，原生本地文件 URL 优先于文本后备。批量排序移动模型行，不移除并重挂已由列表拥有的卡片；延迟删除事件处理后，选择、文件身份、待分块创建的卡片及后续重试／状态操作仍保持一致。
+
+### Proofread array editor grammar / 校对数组编辑语法
+
+The three array editors (typos, symbol variants and sensitive-word exceptions) use `|` between elements, `\|` for a literal pipe and `\\` for a literal backslash. Loading, accepting without changes, editing another row and duplicate-key merging use this same reversible grammar. Leading/trailing element whitespace remains data. An empty cell denotes an empty array; empty elements in a nonempty expression remain invalid under the existing configuration schema rather than being silently removed.
+
+错别字、符号变体及敏感词例外三个数组编辑器用 `|` 分隔元素、`\|` 表示字面竖线、`\\` 表示字面反斜杠。加载、直接确认、修改其它行和重复键合并共用同一可逆语法；元素首尾空白保留为数据。空单元格表示空数组，非空表达式中的空元素继续由现有配置 schema 拒绝，不静默删除。

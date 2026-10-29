@@ -634,3 +634,72 @@ def test_rollback_comparison_read_failure_forces_preimage_restore(
     assert (user_dir / "gui.toml").read_bytes() == preimages["gui.toml"]
     assert (user_dir / "output.toml").read_bytes() == preimages["output.toml"]
     assert loader.config.gui.window.default_mode == "batch"
+
+
+@pytest.mark.parametrize("rollback_barrier", ["before_replace", "after_replace"])
+def test_uncertain_commit_without_durable_rollback_preserves_complete_generation_untrusted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, rollback_barrier: str
+) -> None:
+    """No compensation is safe until PREPARED publication is known durable."""
+    import json
+    import stat
+
+    from docwen_runtime import toml_io
+    from docwen_runtime.config.loader import ConfigLoader
+
+    loader, user_dir, preimages = _loader_with_three_overrides(tmp_path)
+    journal = user_dir / ".docwen-config.transaction.json"
+    original_replace = toml_io.os.replace
+    original_sync = toml_io._sync_directory
+    phase = {"commit_replaced": False, "pending": None}
+    expected_modes = {name: stat.S_IMODE((user_dir / name).stat().st_mode) for name in ("gui.toml", "output.toml")}
+
+    def replace(source, destination) -> None:
+        if Path(destination) == journal:
+            state = json.loads(Path(source).read_bytes())["payload"]["state"]
+            if state == "PREPARED" and phase["commit_replaced"] and rollback_barrier == "before_replace":
+                raise OSError("rollback journal replacement could not start")
+        original_replace(source, destination)
+        if Path(destination) == journal:
+            state = json.loads(journal.read_bytes())["payload"]["state"]
+            if state == "COMMITTED":
+                phase["commit_replaced"] = True
+                phase["pending"] = "commit"
+            elif phase["commit_replaced"]:
+                phase["pending"] = "rollback"
+
+    def sync(path) -> None:
+        pending = phase.pop("pending", None)
+        if pending == "commit":
+            raise OSError("commit journal replacement happened but directory barrier failed")
+        if pending == "rollback":
+            raise OSError("rollback replacement happened but its directory barrier also failed")
+        original_sync(path)
+
+    with monkeypatch.context() as fault:
+        fault.setattr(toml_io.os, "replace", replace)
+        fault.setattr(toml_io, "_sync_directory", sync)
+        assert loader.set_values({"gui.window.default_mode": "single", "output.directory.mode": "source"}) is False
+        assert loader.config_state_trusted is False
+        assert loader.config.gui.window.default_mode == "single"
+        assert loader.config.output.directory.mode == "source"
+        # Independent disk facts prove that compensation did not publish half
+        # the old generation, regardless of the reloaded in-memory values.
+        import tomllib
+
+        assert tomllib.loads((user_dir / "gui.toml").read_text(encoding="utf-8"))["window"]["default_mode"] == "single"
+        assert tomllib.loads((user_dir / "output.toml").read_text(encoding="utf-8"))["directory"]["mode"] == "source"
+        assert (user_dir / "gui.toml").read_bytes() != preimages["gui.toml"]
+        assert (user_dir / "output.toml").read_bytes() != preimages["output.toml"]
+        retained = json.loads(journal.read_bytes())
+        assert retained["payload"]["state"] == ("COMMITTED" if rollback_barrier == "before_replace" else "PREPARED")
+        assert {row["path"] for row in retained["payload"]["preimages"]} == {"gui.toml", "output.toml"}
+    recovered = ConfigLoader(base_dir=loader.base_dir, user_dir=user_dir)
+    expected = ("single", "source") if rollback_barrier == "before_replace" else ("batch", "custom")
+    assert recovered.config_state_trusted is True
+    assert (recovered.config.gui.window.default_mode, recovered.config.output.directory.mode) == expected
+    assert not journal.exists()
+    if rollback_barrier == "after_replace":
+        assert (user_dir / "gui.toml").read_bytes() == preimages["gui.toml"]
+        assert (user_dir / "output.toml").read_bytes() == preimages["output.toml"]
+    assert {name: stat.S_IMODE((user_dir / name).stat().st_mode) for name in expected_modes} == expected_modes

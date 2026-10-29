@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
+from docwen_application.postprocessing import PROOFREAD_DOCUMENT_TARGETS
 from docwen_cli.commands.execution_options import (
     CHECK_CHOICES,
     HEADING_MERGE_MODE_CHOICES,
@@ -61,7 +62,11 @@ def _add_convert_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--proofread",
         action="store_true",
-        help="Proofread the generated DOCX before publishing it; valid only with --to docx.",
+        help=(
+            "Proofread the generated private DOCX before publishing the selected document; targets: "
+            + ", ".join(sorted(PROOFREAD_DOCUMENT_TARGETS))
+            + "."
+        ),
     )
     parser.add_argument(
         "--check",

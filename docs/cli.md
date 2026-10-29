@@ -28,7 +28,7 @@ square brackets. A rejected batch member contributes to the totals and nonzero e
 - `schema [COMMAND_PATH...]`: export the active parser contract.
 - `convert FILE --to FORMAT --output-dir DIR`: convert one file into the chosen parent; required for conversions from or to Markdown.
 - `convert FILE --to FORMAT --output PATH`: exact-file output for other single-file conversions.
-- `convert MARKDOWN --to docx --output-dir DIR --proofread [--check CHECK]...`: render DOCX privately, proofread the generated DOCX, then publish the final result. `--check` on `convert` requires `--proofread`; omitting `--check` uses the configured proofreading defaults. If all four checks are disabled, conversion still publishes the selected document with a skipped-proofreading diagnostic. Markdown sources support final DOCX/DOC/ODT/RTF/WPS targets; proofreading runs on the intermediate DOCX before any required bridge conversion. Availability of the selected target still depends on its bridge. Non-Markdown sources do not support conversion proofreading.
+- `convert MARKDOWN --to FORMAT --output-dir DIR --proofread [--check CHECK]...`: render DOCX privately, proofread the generated DOCX, then publish the final result. `--check` on `convert` requires `--proofread`; omitting `--check` uses the configured proofreading defaults. If all four checks are disabled, conversion still publishes the selected document with a skipped-proofreading diagnostic. Markdown sources support final DOCX/DOC/ODT/RTF/WPS targets; proofreading runs on the intermediate DOCX before any required bridge conversion. Availability of the selected target still depends on its bridge. Non-Markdown sources do not support conversion proofreading.
 - `validate FILE [--report PATH]`: validate DOCX, Markdown, or legacy Word-family content
   (`DOC`/`WPS`/`RTF`/`ODT` is pre-converted to DOCX by the Application layer); the default is read-only.
 - `number markdown FILE --operation add|remove [--scheme ID] (--output PATH | --in-place)`: explicitly add or remove Markdown heading numbering.
@@ -81,6 +81,33 @@ Conversions from or to Markdown publish a result folder inside the parent select
 - Single-file commands never silently rename a requested output.
 - On Windows, every public input and output path must use ordinary absolute syntax and be at most 259 UTF-16 code units. DocWen rejects `\\?\` / `\\.\` extended-length syntax before a backend starts because the supported conversion backends do not share one reliable extended-path contract. Runtime-generated artifact names may cross that boundary internally; DocWen keeps reported paths ordinary while adapting only its own filesystem calls.
 - Global options are limited to language, JSON/text verbosity and timing; batch, parallelism and confirmation flags belong to their commands.
+
+## Deadlines and proofreading / 截止与校对
+
+A batch deadline or Ctrl+C stops further submission and cancels outstanding Application request IDs before
+waiting for workers. JSON keeps one result per input, including successful publications and their paths.
+Already committed files remain successful when a later input times out. Work that never started is reported as
+`details.execution_state=not_started`; if a worker has not stopped within the bounded cooperative wait, its
+state is `cancellation_unconfirmed`. Such a worker retains its cancelled reservation until it exits. This is
+not a promise to forcibly terminate Python threads; a non-cooperative thread can still delay interpreter exit.
+The command reports timeout exit code 8 or interruption exit code 130 without rewriting prior commit facts.
+
+批处理达到总截止或收到 Ctrl+C 后，先停止续提并取消未完成的 Application 请求，再等待 worker 收束。
+JSON 保留每个输入的结果及已成功发布的路径；后续项目超时不会把先前提交的文件改成失败。
+尚未启动的输入以 `details.execution_state=not_started` 表示；有界协作等待后仍未退出的 worker 以
+`cancellation_unconfirmed` 表示，并保留其已取消的预约身份直到真正退出。这不承诺强杀 Python 线程；
+不合作的线程仍可能推迟解释器退出。命令以 8 表示超时、130 表示中断，同时保留各项已提交的事实。
+
+Conversion proofreading accepts Markdown workflow input with final `docx`, `doc`, `odt`, `rtf` or `wps` targets.
+The CLI validator, help and `schema convert` / `schema batch convert` target constraints share the Application
+support set. `--check none` explicitly disables all checks; omitting it keeps configured defaults. Legacy targets
+still require an available bridge. Generic text sniffed as `txt` remains `txt` in the inspection and source identity,
+while admission into the Markdown workflow permits the same Markdown proofreading route and report contract.
+
+转换后校对接受 Markdown 工作流输入以及上述五种最终文档格式；CLI 校验、帮助和 schema 的目标准入约束
+复用 Application 的同一支持集。`--check none` 显式关闭全部检查，未指定时使用配置默认值；旧文档目标仍须
+具备可用 bridge。嗅探为 `txt` 的普通文本保留其真实检测格式和源身份；被准入 Markdown 工作流后可使用
+同一 Markdown 校对路由及报告合同。
 
 ## Runtime discovery / 运行时发现
 

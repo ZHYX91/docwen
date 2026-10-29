@@ -1136,8 +1136,6 @@ page_range_help = "Seitenzahlen trennen ausgewählte von übrigen Seiten. * teil
 split_all_pages_warning = "Alle Seiten sind ausgewählt. Wählen Sie einige Seiten oder verwenden Sie * oder #, um die gesamte Datei zu teilen."
 split_invalid_range_warning = "Geben Sie Seitenzahlen dieser Datei ein, etwa 1-2 oder 1,3, oder verwenden Sie * oder #."
 selected_split_file = "Aktuelle Datei: {pages} Seiten"
-invalid_page_range = "Ungültiger Seitenbereich: {part}"
-invalid_page = "Ungültige Seite: {part}"
 split_mode_single_page_warning = "⚠️ Diese Datei hat nur 1 Seite; kein Split nötig"
 
 # 表格转换区
@@ -1425,7 +1423,7 @@ merge = "Zusammenführen"
 search_placeholder = "Suche Schlüssel, Wert oder Kommentar"
 correct_word = "Korrekte Schreibweise"
 misspellings = "Fehlschreibungen"
-multi_value_hint = "Tipp: Mehrere Werte mit | trennen (zum Beispiel: Wert1|Wert2|Wert3)"
+multi_value_hint = "Tipp: Werte mit | trennen; \\| steht für einen senkrechten Strich, \\\\ für einen Backslash. Leerzeichen bleiben erhalten."
 save_typos_failed = "Das Tippfehlerwörterbuch konnte nicht gespeichert werden."
 save_symbol_correction_failed = "Die Einträge zur Symbolkorrektur konnten nicht gespeichert werden."
 save_sensitive_words_failed = "Das Wörterbuch markierter Begriffe konnte nicht gespeichert werden."
@@ -1775,6 +1773,7 @@ multiple = "{count} Dateien"
 show_outputs = "Alle Ausgabedateien anzeigen"
 
 [settings.templates]
+saved_cleanup_warning = "Die Vorlagenänderung wurde gespeichert. Die Journalbereinigung konnte nicht bestätigt werden. Wiederholen Sie die Änderung nicht; aktualisieren Sie den Katalog, um eine ausstehende Bereinigung erneut zu versuchen."
 import_summary = "Importiert: {succeeded}. Fehlgeschlagen: {failed}. Abgebrochen: {cancelled}."
 load_failed = "Vorlagen konnten nicht geladen werden"
 operation_failed = "Der Vorlagenvorgang ist fehlgeschlagen. Weitere Informationen stehen in den Details."

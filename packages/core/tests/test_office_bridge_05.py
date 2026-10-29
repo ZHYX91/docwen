@@ -134,6 +134,9 @@ def test_libreoffice_conversion_fails_closed_when_owned_profile_cannot_cleanup(
 
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
     monkeypatch.setattr(office_bridge.subprocess, "Popen", _FakeProcess)
+    # This direct-child test double owns the unchanged Windows/macOS runner.
+    # Linux family ownership is exercised by native launcher/child fixtures.
+    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", office_bridge._run_libreoffice_process_legacy)
     monkeypatch.setattr(
         office_bridge,
         "_remove_libreoffice_profile",
@@ -190,6 +193,9 @@ def test_libreoffice_conversion_uses_extension_before_filter_name(
 
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
     monkeypatch.setattr(office_bridge.subprocess, "Popen", _FakeProcess)
+    # This direct-child test double owns the unchanged Windows/macOS runner.
+    # Linux family ownership is exercised by native launcher/child fixtures.
+    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", office_bridge._run_libreoffice_process_legacy)
 
     result = office_bridge._try_libreoffice_conversion(
         str(input_path),

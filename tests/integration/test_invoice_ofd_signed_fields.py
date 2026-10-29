@@ -16,12 +16,21 @@ _OFD = "http://www.ofdspec.org/2016"
 
 @pytest.mark.parametrize("structured", [False, True], ids=["positioned-content", "invoice-data"])
 @pytest.mark.parametrize(
-    "amount,tax,total,quantity", [("-100.00", "-13.00", "-113.00", "-1"), ("100.00", "13.00", "113.00", "1")]
+    "amount,tax,total,quantity,raw_total",
+    [
+        ("-100.00", "-13.00", "-113.00", "-1", "￥-113.00"),
+        ("100.00", "13.00", "113.00", "1", "￥113.00"),
+        ("-900.00", "-100.00", "-1000.00", "-1", "￥-1,000.00"),
+        ("-100.00", "-13.00", "-113.00", "-1", "-￥113.00"),
+        ("-100.00", "-13.00", "", "-1", "￥-1,00.00"),
+        ("-100.00", "-13.00", "", "-1", "￥-113.00junk"),
+    ],
 )
 def test_new_ofd_file_keeps_signed_metadata_and_detail_fields(
-    tmp_path: Path, structured: bool, amount: str, tax: str, total: str, quantity: str
+    tmp_path: Path, structured: bool, amount: str, tax: str, total: str, quantity: str, raw_total: str
 ) -> None:
     items, expected_row = _page_items(amount=amount, tax=tax, total=total, quantity=quantity)
+    items[-1] = (560.0, 400.0, raw_total)
     source = tmp_path / "signed-fields.ofd"
     page = ET.Element(f"{{{_OFD}}}Page")
     area = ET.SubElement(page, f"{{{_OFD}}}Area")
@@ -40,6 +49,8 @@ def test_new_ofd_file_keeps_signed_metadata_and_detail_fields(
         "SellerName": "销售单位",
         "TotalAmount": amount,
         "TotalTax": tax,
+        # Structured InvoiceData already owns canonical field values; the
+        # positioned-content fallback exercises the shared amount lexer.
         "AmountWithTax": total,
     }.items():
         ET.SubElement(invoice, key).text = value

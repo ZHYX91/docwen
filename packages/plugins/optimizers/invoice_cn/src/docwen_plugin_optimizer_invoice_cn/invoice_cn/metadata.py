@@ -6,6 +6,7 @@ import re
 from typing import TYPE_CHECKING
 
 from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import (
+    AMOUNT_TOKEN_PATTERN,
     _compact_text,
     _normalize_ocr_amount,
     _normalize_ocr_date,
@@ -22,7 +23,10 @@ from docwen_plugin_optimizer_invoice_cn.invoice_cn.span_fields import (
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ProgressSink
 
-_MONEY_TOKEN = r"[+\-−－＋]?[0-9OolIZzsB]+(?:\.[0-9OolIZzsB]+)?"
+# Whitespace was removed by the compact-text adapter. Only the end of the
+# text or an explicit following field label can delimit this amount. Unknown
+# suffixes (including malformed grouping) remain unowned, not numeric prefixes.
+_MONEY_END = r"(?=$|价税合[计汁]|收款人|复核|开票人|备注|购买方|销售方|发票|开票日期|校验码|机器编号)"
 
 
 def _unique_compact_field(block: str, pattern: str) -> str:
@@ -67,14 +71,14 @@ def parse_invoice_metadata_from_compact_text(
     amount_with_tax = _regex_first(
         compact,
         [
-            rf"价税合[计汁].*?小写.*?[¥￥]?({_MONEY_TOKEN})",
-            rf"价税合[计汁][:：]?[¥￥]?({_MONEY_TOKEN})",
+            rf"价税合[计汁](?:[（(]大写[）)][^()（）]*?)?[（(]?小写[）):：]*({AMOUNT_TOKEN_PATTERN}){_MONEY_END}",
+            rf"价税合[计汁][:：]?({AMOUNT_TOKEN_PATTERN}){_MONEY_END}",
         ],
     )
     amount_with_tax = _normalize_ocr_amount(amount_with_tax)
 
     total_amount_match = re.search(
-        rf"(?<!价税)合计[¥￥]?({_MONEY_TOKEN})[¥￥]({_MONEY_TOKEN})",
+        rf"(?<!价税)合计[:：]?({AMOUNT_TOKEN_PATTERN})(?=[+\-−－＋]?[¥￥])({AMOUNT_TOKEN_PATTERN}){_MONEY_END}",
         compact,
     )
 

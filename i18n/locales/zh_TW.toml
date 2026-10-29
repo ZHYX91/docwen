@@ -1135,8 +1135,6 @@ page_range_help = "頁碼將文件拆為所選頁和剩餘頁；* 逐頁拆分�
 split_all_pages_warning = "已選擇全部頁面。請選擇部分頁碼，或輸入 * 或 # 拆分整個檔案。"
 split_invalid_range_warning = "請輸入文件內的頁碼，例如 1-2 或 1,3，也可輸入 * 或 #。"
 selected_split_file = "目前檔案：{pages} 頁"
-invalid_page_range = "無效的頁碼範圍: {part}"
-invalid_page = "無效的頁碼: {part}"
 split_mode_single_page_warning = "⚠️ 當前文件只有1頁，無需拆分"
 
 # 表格转换区
@@ -1424,7 +1422,7 @@ merge = "合併"
 search_placeholder = "搜尋鍵、值或備註"
 correct_word = "正確寫法"
 misspellings = "錯誤寫法清單"
-multi_value_hint = "提示：支援用 | 分隔多個值（如：value1|value2|value3）"
+multi_value_hint = "提示：用 | 分隔值，字面豎線寫作 \\|，反斜線寫作 \\\\；保留值中的空白。"
 save_typos_failed = "無法保存錯別字詞庫。"
 save_symbol_correction_failed = "無法保存符號校對條目。"
 save_sensitive_words_failed = "無法保存敏感詞詞庫。"
@@ -1774,6 +1772,7 @@ multiple = "等 {count} 個"
 show_outputs = "查看所有輸出檔案"
 
 [settings.templates]
+saved_cleanup_warning = "範本變更已儲存，但無法確認交易日誌已完成清理。請勿重複操作；重新整理目錄可重試尚未完成的清理。"
 import_summary = "匯入成功：{succeeded}。失敗：{failed}。已取消：{cancelled}。"
 load_failed = "無法載入範本"
 operation_failed = "範本操作失敗。請查看詳情。"

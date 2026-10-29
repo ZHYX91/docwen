@@ -174,3 +174,18 @@ Excel 4.0 宏不在 ForceDisable 的保证内，因此 COM 前还检查有界 BI
 单份 XML 4 MiB／总 XML 16 MiB；严格拒绝可能降低 COM 兼容性，不构成任意文档安全认证。
 其他后端只能通过各自安全策略继续尝试。临时 LibreOffice 资料明确禁用宏执行并保留字体替换；
 资料准备失败不启动进程。真实宿主的宏抑制与普通转换需单独验收，源码替身只证明检查和调用顺序。
+
+
+### Linux external Office process ownership / Linux 外部 Office 进程归属
+
+Linux LibreOffice calls use a short-lived spawned supervisor that enables child-subreaper ownership before launching the selected executable. The long-running GUI/CLI process is not a subreaper. The supervisor is the sole waitpid authority; launcher exit alone is insufficient. Procfs only discovers its direct children, kernel wait-child checks authorize each pidfd signal, and success/cleanup require ECHILD, a matching receipt and a normally exited, joined supervisor. Cooperative cancellation and the public execution timeout use bounded TERM, then KILL and reap. The existing 90-second default remains unchanged; supervisor startup has a separate finite bound.
+
+Linux LibreOffice 调用先启动短生命周期监督进程并建立 child-subreaper 所有权，再运行所选可执行文件；长期 GUI／CLI 主进程不设置 subreaper。监督进程独占 waitpid 回收，launcher 退出不代表整条调用结束。procfs 仅发现直属孩子，每个 pidfd 信号还须通过内核 wait-child 关系检查；只有 ECHILD、匹配回执及监督进程正常退出且已 join，才允许成功或清理。协作取消与公开执行超时均有界 TERM、KILL、回收；原默认 90 秒不变，监督启动另有有限预算。
+
+Child discovery prefers task `children` files. An unavailable interface is distinct from a disappearing secondary thread; when needed, a finite procfs scan selects only status records whose `PPid` is this supervisor in the procfs mount namespace. `NSpid` maps candidates into the caller namespace before the kernel wait-child/pidfd checks. Both paths are discovery only; scan exhaustion cannot authorize a signal or cleanup and never enables process-group fallback.
+
+发现优先读取任务 `children` 文件，区分接口不可用与次线程已退出；必要时按有限预算扫描 procfs，只选取 `PPid` 为该监督者的状态记录。procfs 挂载命名空间中的候选先经 `NSpid` 映射，再进入内核 wait-child／pidfd 校验。两条路径都只用于发现；扫描预算耗尽不能授权发信号或清理，也不启用进程组 fallback。
+
+Linux private Office inputs and backend outputs belong to an independent process-temp workspace, so Runtime task cleanup cannot erase bytes still potentially used by an unconfirmed native child. Confirmed results are copied through the existing bounded freshness-checked copy into same-volume publication staging. Missing exit/reap proof fails the bridge, stops backend fallback and preserves the profile, private input and backend output directory. Their paths remain in the plugin-consumed failure message. This is a local Office lifecycle contract; it adds no cross-repository parent-death protocol and does not claim recovery from D-state or the simultaneous forced death of every supervisor. Windows/macOS retain their existing process paths and need separate native acceptance.
+
+Linux 的 Office 私有输入和后端输出置于独立的进程临时工作区；Runtime 清理本任务时不会删除未确认退出的原生孩子仍可能使用的字节。确认结束后，复用有界、带来源新鲜度核验的复制，把结果放入最终输出同卷的提交暂存。缺少退出／回收证明时，桥接失败、停止后端 fallback，并保留 profile、私有输入及后端输出目录，实际插件消费的错误消息包含这些路径。这是 Office 局部生命周期合同，不增加跨仓 parent-death 协议，不宣称已解决 D-state 或全部监督进程同时被强杀；Windows／macOS 保持既有进程路径，原生验收另行执行。

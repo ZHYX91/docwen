@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import threading
 import unicodedata
@@ -19,6 +20,8 @@ from typing import Any
 
 from docwen_runtime import file_transactions as transaction
 from docwen_runtime.file_transactions import process_config_lock
+
+logger = logging.getLogger(__name__)
 
 _STATE_VERSION = 1
 _STATE_LOCK = threading.RLock()
@@ -61,6 +64,14 @@ class TemplateStateStore:
     def __init__(self, path: Path | str, *, user_dir: Path | str) -> None:
         self.path = Path(path)
         self.user_dir = Path(user_dir)
+        self._cleanup_warnings: list[str] = []
+
+    def take_cleanup_warnings(self) -> tuple[str, ...]:
+        """Drain local diagnostics for already committed template changes."""
+        with _STATE_LOCK:
+            warnings = tuple(self._cleanup_warnings)
+            self._cleanup_warnings.clear()
+            return warnings
 
     @classmethod
     def default(cls) -> TemplateStateStore:
@@ -256,12 +267,26 @@ class TemplateStateStore:
             try:
                 yield
                 transaction.mark_transaction_committed(self.path.parent, "templates", before)
-            except BaseException:
+            except BaseException as mutation_exc:
+                try:
+                    transaction.prepare_transaction_rollback(self.path.parent, "templates", before)
+                except Exception as rollback_prepare_exc:
+                    mutation_exc.add_note(
+                        "Template rollback could not be made durable; no preimages were restored. "
+                        "The journal is retained and catalog operations require recovery."
+                    )
+                    raise mutation_exc from rollback_prepare_exc
                 for item in reversed(before):
                     transaction.restore_user_file_preimage(item, operation="templates")
                 transaction.remove_transaction_journal(self.path.parent)
                 raise
-            transaction.remove_transaction_journal(self.path.parent)
+            try:
+                transaction.remove_transaction_journal(self.path.parent)
+            except Exception as cleanup_exc:
+                # COMMITTED is authoritative.  Cleanup cannot turn the saved
+                # mutation into a failed import or invite a duplicate retry.
+                logger.warning("Committed template journal cleanup deferred: error=%s", cleanup_exc)
+                self._cleanup_warnings.append(str(cleanup_exc))
 
     def default_id(self, target: str) -> str | None:
         return self.load()["defaults"].get(target)

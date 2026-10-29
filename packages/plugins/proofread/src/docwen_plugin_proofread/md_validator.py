@@ -57,6 +57,7 @@ class MarkdownValidator:
             file_size,
             new_artifact_id,
             request_source_format,
+            request_source_ref,
             resolve_proofread_options,
         )
         from docwen_plugin_proofread.rules import (
@@ -70,9 +71,8 @@ class MarkdownValidator:
         input_path = context.workspace.input_path
         input_stem_val = input_stem(input_path)
         source_format = request_source_format(context)
-        source_display_name = (
-            Path(context.request.input_refs[0].path).name if context.request.input_refs else Path(input_path).name
-        )
+        source_ref = request_source_ref(context)
+        source_display_name = Path(source_ref.path).name if source_ref is not None else Path(input_path).name
 
         context.cancellation.check()
 

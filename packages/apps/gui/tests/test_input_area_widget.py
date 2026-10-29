@@ -689,3 +689,56 @@ class TestPublicApi:
         assert widget.view_model.mode == "batch"
         assert main_vm.mode == "batch"
         assert opened == ["folder"]
+
+
+@pytest.mark.parametrize("mode", ["single", "batch"])
+@pytest.mark.parametrize("mime_kind", ["bare", "braced", "quoted", "urls"])
+def test_drop_keeps_complete_file_identity_with_an_existing_prefix(
+    widget: InputArea, input_vm: InputAreaViewModel, tmp_path: Path, mode: str, mime_kind: str, qtbot
+) -> None:
+    prefix = tmp_path / "报告.md"
+    prefix.write_text("# Prefix\n", encoding="utf-8")
+    complete = tmp_path / "报告.md 2026.md"
+    complete.write_text("# Complete\n", encoding="utf-8")
+    input_vm.set_mode(mode)
+    observed: list[list[str]] = []
+    input_vm.files_added.connect(lambda paths: observed.append(list(paths)))
+    mime = QMimeData()
+    if mime_kind == "urls":
+        mime.setUrls([QUrl.fromLocalFile(str(complete))])
+        mime.setText(str(prefix))  # Native URL identity wins over text fallback.
+    else:
+        wrappers = {"bare": "{}", "braced": "{{{}}}", "quoted": '"{}"'}
+        mime.setText(wrappers[mime_kind].format(complete))
+    event = QDropEvent(
+        QPointF(12, 12),
+        Qt.DropAction.CopyAction,
+        mime,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    widget.dropEvent(event)
+    qtbot.waitUntil(lambda: bool(observed))
+    assert observed == [[str(complete)]]
+    assert event.isAccepted()
+
+
+def test_text_drop_preserves_real_multiple_quoted_file_identities(widget, input_vm, tmp_path, qtbot) -> None:
+    paths = [tmp_path / "first note.md", tmp_path / "second note.md"]
+    for path in paths:
+        path.write_text("# Input\n", encoding="utf-8")
+    input_vm.set_mode("batch")
+    observed = []
+    input_vm.files_added.connect(lambda values: observed.append(list(values)))
+    mime = QMimeData()
+    mime.setText(" ".join(f'"{path}"' for path in paths))
+    event = QDropEvent(
+        QPointF(12, 12),
+        Qt.DropAction.CopyAction,
+        mime,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    widget.dropEvent(event)
+    qtbot.waitUntil(lambda: bool(observed))
+    assert observed == [[str(path) for path in paths]]

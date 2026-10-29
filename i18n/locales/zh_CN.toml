@@ -1196,8 +1196,6 @@ page_range_help = "页码将文档拆为所选页和剩余页；* 逐页拆分�
 split_all_pages_warning = "已选择全部页面。请选择部分页码，或输入 * 或 # 拆分整个文件。"
 split_invalid_range_warning = "请输入文档内的页码，例如 1-2 或 1,3，也可输入 * 或 #。"
 selected_split_file = "当前文件：{pages} 页"
-invalid_page_range = "无效的页码范围: {part}"
-invalid_page = "无效的页码: {part}"
 split_mode_single_page_warning = "⚠️ 当前文件只有1页，无需拆分"
 
 # 表格转换区
@@ -1448,7 +1446,7 @@ sensitive_editor_title = "敏感词库编辑器"
 search_placeholder = "搜索键、值或备注"
 correct_word = "正确写法"
 misspellings = "错误写法列表"
-multi_value_hint = "提示：支持用 | 分隔多个值（如：value1|value2|value3）"
+multi_value_hint = "提示：用 | 分隔值，字面竖线写作 \\|，反斜杠写作 \\\\；保留值中的空白。"
 save_typos_failed = "无法保存错别字词库。"
 save_symbol_correction_failed = "无法保存符号校对条目。"
 save_sensitive_words_failed = "无法保存敏感词词库。"
@@ -1769,6 +1767,7 @@ multiple = "等 {count} 个"
 show_outputs = "查看全部输出文件"
 
 [settings.templates]
+saved_cleanup_warning = "模板修改已保存，但无法确认事务日志已完成清理。请勿重复操作；刷新目录可重试尚未完成的清理。"
 import_summary = "导入成功：{succeeded}。失败：{failed}。已取消：{cancelled}。"
 load_failed = "无法加载模板"
 operation_failed = "模板操作失败。请查看详情。"

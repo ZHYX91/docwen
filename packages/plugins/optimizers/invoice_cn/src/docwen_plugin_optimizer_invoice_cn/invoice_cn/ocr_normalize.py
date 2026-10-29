@@ -10,6 +10,17 @@ from __future__ import annotations
 import re
 from decimal import Decimal, InvalidOperation
 
+# One complete lexical contract for both compact fields and positioned cells.
+# A caller extracting from a larger text must additionally prove the end of its
+# field; matching a numeric prefix is never sufficient ownership.
+_AMOUNT_DIGIT = r"[0-9OoIlZzSsB]"
+_AMOUNT_SIGN = r"[+\-−－＋]"
+AMOUNT_TOKEN_PATTERN = (
+    rf"(?:[¥￥]{_AMOUNT_SIGN}?|{_AMOUNT_SIGN}[¥￥]?|)"
+    rf"(?:{_AMOUNT_DIGIT}{{1,3}}(?:[,，]{_AMOUNT_DIGIT}{{3}})+|{_AMOUNT_DIGIT}+)"
+    rf"(?:[.．。]{_AMOUNT_DIGIT}*)?"
+)
+
 
 def _compact_text(text: str) -> str:
     """Remove all whitespace and zero-width characters from text."""
@@ -45,8 +56,8 @@ def _normalize_ocr_amount(value: str) -> str:
     Monetary fields have at least two decimal places; additional authored
     precision is retained rather than rounded.
     """
-    s = (value or "").strip()
-    if not s:
+    s = re.sub(r"\s+", "", value or "")
+    if re.fullmatch(AMOUNT_TOKEN_PATTERN, s) is None:
         return ""
     s = s.translate(
         str.maketrans(
@@ -69,13 +80,10 @@ def _normalize_ocr_amount(value: str) -> str:
             }
         )
     )
-    s = re.sub(r"\s+", "", s)
     if s.startswith(("¥", "￥")):
         s = s[1:]
     elif s[:1] in {"+", "-"} and s[1:2] in {"¥", "￥"}:
         s = s[:1] + s[2:]
-    if re.fullmatch(r"[+-]?(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:\.[0-9]*)?", s) is None:
-        return ""
     try:
         amount = Decimal(s.replace(",", ""))
     except InvalidOperation:

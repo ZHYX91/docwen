@@ -180,13 +180,18 @@ def test_conversion_release_hook_uses_requested_main_window_surface(
     }
 
 
+@pytest.mark.parametrize("warning_owner", ["current", "other", "missing"])
 def test_conversion_release_hook_captures_rendered_successful_warning(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    qapp, qtbot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, warning_owner: str
 ) -> None:
     from PySide6.QtCore import QTimer
 
+    from docwen_gui.dialogs.activity_records import ActivityRecordsDialog
     from docwen_gui.release_smoke import _schedule_test_conversion_report
+    from docwen_gui.view_models.activity_records import ActivityRecordsModel
+    from docwen_gui.view_models.info_area_vm import InfoAreaViewModel
+    from docwen_gui.view_models.task_history import TaskHistory
+    from docwen_gui.widgets.info_area import InfoArea
 
     warning = "缺少必需字段：成文日期、发文机关署名；识别提示：存在低置信度识别"
     source = tmp_path / "rules.docx"
@@ -208,124 +213,118 @@ def test_conversion_release_hook_captures_rendered_successful_warning(
     }
     for key, value in env.items():
         monkeypatch.setenv(key, value)
-
-    class _ConfigPort:
-        def set_many(self, _values: dict[str, object]) -> bool:
-            return True
+    history = TaskHistory()
+    info_vm = InfoAreaViewModel()
+    for operation in ("current", "other"):
+        history.remember(
+            {
+                "request_id": operation,
+                "file_path": str(source),
+                "target_format": "md",
+                "action_name": "gongwen",
+                "request_summary": "Gongwen request summary",
+            }
+        )
+        history.record(
+            operation,
+            str(source),
+            "completed",
+            output_path=str(output),
+            warnings=(warning,) if warning_owner == operation else (),
+            local_details=("Local extraction details",),
+        )
+    if warning_owner != "missing":
+        info_vm.add_message(warning, "warning", file_path=str(output), operation_id=warning_owner)
+    # The unrelated operation may have the same text; it must never satisfy
+    # the current operation's smoke evidence or select its details row.
+    info_vm.set_task_summary(
+        operation_id="current",
+        state="success",
+        tone="warning",
+        completed_count=1,
+        total_count=1,
+        output_path=str(output),
+        navigate_file_path=str(output),
+        warning_count=1,
+    )
+    info_vm.clear_all_transients()
+    model = ActivityRecordsModel(history, info_vm)
+    dialog = ActivityRecordsDialog(model)
+    info_area = InfoArea(info_vm)
+    qtbot.addWidget(dialog)
+    qtbot.addWidget(info_area)
+    info_area.resize(700, 250)
+    info_area.show()
+    qapp.processEvents()
+    current = next(row for row in model.records if row.operation_id == "current")
+    assert current.source_path == source.as_posix()
+    assert current.output_path == str(output)
+    assert "Gongwen request summary" in current.details
+    assert "Local extraction details" in current.details
+    assert str(source) in current.details and str(output) in current.details
+    assert current.details != warning
+    requests = []
 
     class _ViewModel:
-        controller = SimpleNamespace(config_port=_ConfigPort())
+        controller = SimpleNamespace(config_port=SimpleNamespace(set_many=lambda _values: True))
 
-        def add_files(self, paths: list[str]) -> None:
+        def add_files(self, paths):
             assert paths == [str(source)]
-
-    requests: list[str] = []
 
     class _ActionViewModel:
         visible = True
         action_name = ""
 
-        def set_file_to_md_option(self, key: str, value: str) -> None:
+        def set_file_to_md_option(self, key, value):
             assert key == "optimize_for_type"
             self.action_name = value
 
-        def request_conversion(self, target: str) -> None:
+        def request_conversion(self, target):
             requests.append(target)
 
-    history_rows = [
-        SimpleNamespace(message="Completed: rules.docx", message_type="warning", file_path=str(output)),
-        SimpleNamespace(message=warning, message_type="warning", file_path=str(output)),
-    ]
-    task_summary = SimpleNamespace(
-        state="success",
-        tone="warning",
-        completed_count=1,
-        total_count=1,
-        failed_count=0,
-        navigate_path=str(output),
-    )
-    info_vm = SimpleNamespace(
-        history_rows=history_rows,
-        task_summary=task_summary,
-        status_source="task",
-        status_tone="warning",
-        status_meta_text="Completed",
-        status_summary_text="1/1 completed",
-    )
+    def show_records(**kwargs):
+        dialog.show_records(**kwargs)
+        return dialog
 
-    class _RowWidget:
-        def property(self, name: str) -> str:
-            assert name == "activityStatus"
-            return "warning"
-
-        def toPlainText(self) -> str:
-            return warning
-
-        def isVisible(self) -> bool:
-            return True
-
-        def grab(self) -> _Pixmap:
-            return _Pixmap()
-
-    class _Pixmap:
-        def width(self) -> int:
-            return 640
-
-        def height(self) -> int:
-            return 320
-
-        def save(self, path: str, image_format: str) -> bool:
-            assert image_format == "PNG"
-            Path(path).write_bytes(b"\x89PNG\r\n\x1a\nrelease-smoke")
-            return True
-
-    class _InfoArea:
-        def isVisible(self) -> bool:
-            return True
-
-        def grab(self) -> _Pixmap:
-            return _Pixmap()
-
-    entry = SimpleNamespace(status="completed", output_path=str(output), error_message="")
+    entry = SimpleNamespace(status="completed", output_path=str(output), error_message="", operation_id="current")
     window = SimpleNamespace(
         view_model=_ViewModel(),
         _action_area_vm=_ActionViewModel(),
         _batch_list_vm=SimpleNamespace(get_file_entry=lambda _normalized: entry),
         _info_area_vm=info_vm,
-        _info_area=_InfoArea(),
-        _show_activity_records=lambda: SimpleNamespace(
-            search=SimpleNamespace(setText=lambda text: None), details=_RowWidget()
-        ),
+        _info_area=info_area,
+        _show_activity_records=show_records,
         close=lambda: None,
     )
-    app = SimpleNamespace(processEvents=lambda: None)
     monkeypatch.setattr(QTimer, "singleShot", lambda _delay, callback: callback())
-
-    _schedule_test_conversion_report(cast(Any, app), cast(Any, window))
-
-    assert requests == ["md"]
-    payload = json.loads(report.read_text(encoding="utf-8"))
-    assert payload["success"] is True
-    assert payload["actionName"] == "gongwen"
-    assert payload["expectedWarningMessage"] == warning
-    assert payload["warningHistoryIndex"] == 1
-    assert payload["warningRecordStatus"] == "warning"
-    assert payload["warningDetailsText"] == warning
-    assert payload["warningDetailsVisible"] is True
-    assert payload["warningDetailsScreenshotSaved"] is True
-    assert payload["warningDetailsScreenshotWidth"] == 640
-    assert payload["warningDetailsScreenshotHeight"] == 320
-    assert payload["taskSummary"]["state"] == "success"
-    assert payload["taskSummary"]["tone"] == "warning"
-    assert payload["statusSource"] == "task"
-    assert payload["statusTone"] == "warning"
-    assert payload["infoAreaVisible"] is True
-    assert payload["screenshotSaved"] is True
-    assert payload["screenshotWidth"] == 640
-    assert payload["screenshotHeight"] == 320
-    assert screenshot.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
-    warning_row_screenshot = screenshot.with_name("info-area_warning_details.png")
-    assert warning_row_screenshot.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    try:
+        _schedule_test_conversion_report(qapp, cast(Any, window))
+        assert requests == ["md"]
+        payload = json.loads(report.read_text(encoding="utf-8"))
+        assert payload["success"] is (warning_owner == "current")
+        if warning_owner != "current":
+            assert payload["error"] == "successful_warning_ui_mismatch"
+            assert payload["warningHistoryIndex"] == -1
+            return
+        assert payload["warningRecord"] == {
+            "operationId": "current",
+            "sourcePath": source.as_posix(),
+            "outputPath": str(output),
+            "warnings": [warning],
+            "details": current.details,
+        }
+        assert payload["warningDetailsText"] == current.details
+        assert payload["warningRecordStatus"] == "warning"
+        assert payload["warningDetailsVisible"] is True
+        assert payload["warningDetailsScreenshotSaved"] is True
+        assert payload["warningDetailsScreenshotWidth"] > 0
+        assert payload["warningDetailsScreenshotHeight"] > 0
+        assert payload["taskSummary"]["state"] == "success"
+        assert payload["statusSource"] == "task"
+        assert payload["statusTone"] == "warning"
+        assert screenshot.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    finally:
+        info_vm.stop_all_timers()
 
 
 def test_conversion_release_hook_stops_when_output_config_batch_fails(

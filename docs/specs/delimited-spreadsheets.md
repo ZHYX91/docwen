@@ -48,6 +48,10 @@ Markdown/CSV/TSV share the ordered, typed ordinary-worksheet inventory. Chart sh
 
 Markdown/CSV/TSV 共用有序 typed 普通 worksheet 库存；chartsheet 不占普通工作表的序号、计数或首选产物身份。只有 chartsheet 时以 `SPREADSHEET-NO-WORKSHEETS` 失败，不发布空成功。普通源单元格先经过一次字面 table-cell 编码，再附加生成的图片／链接／OCR 片段；两者不重复转义，源反斜线、pipe 与类似行内语法的文字仍是字面值。
 
+The native text encoder uses CommonMark backslash escapes for punctuation, including `&`, `<` and `>`; it does not replace these source characters with HTML entity spellings. A literal `<` cell and a cell whose authored text is `&lt;` remain distinct through Markdown and a subsequent DOCX conversion. Generated in-cell `<br>` breaks and Structural Tables merge carriers retain their own syntax. This transport rule does not add a global entity-unescape step for user-authored Markdown.
+
+原生文字编码对标点（包括 `&`、`<`、`>`）使用 CommonMark 反斜线转义，不把源字符换成 HTML entity 拼写。字面 `<` 单元格与原文就是 `&lt;` 的单元格，经过 Markdown 和后续 DOCX 转换仍是不同文字。生成的单元格内 `<br>` 换行和 Structural Tables 合并载体保留各自语法；本规则不对用户原始 Markdown 增加全局 entity 解码。
+
 ## Bounded native projection / 有界原生投影
 
 Before openpyxl loads a workbook, typed worksheet XML is scanned for stored-cell count and merge coverage. Each request-wide stage has a 1,000,000-cell budget: stored cells, merge coverage, Markdown component grids and copied output blocks. Markdown plans connected components from actual scalar, merge and image coordinates, retaining internal disconnected islands exactly once in row-major order. A distant single value does not imply an A1-origin rectangle. CSV/TSV retain coordinate rectangles through bounded row buffers, reserve cumulative output area before writing, and never create blank Cell objects merely to traverse that rectangle. Overflow fails with `SPREADSHEET-PROJECTION-LIMIT` before the affected expansion.

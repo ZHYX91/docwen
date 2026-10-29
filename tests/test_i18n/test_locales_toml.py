@@ -349,8 +349,9 @@ def test_key_groups_order_and_styles_key_order() -> None:
 @pytest.mark.parametrize(
     "key",
     [
-        "conversion_panel.layout.invalid_page_range",
-        "conversion_panel.layout.invalid_page",
+        "conversion_panel.layout.split_invalid_range_warning",
+        "conversion_panel.layout.split_all_pages_warning",
+        "conversion_panel.layout.split_mode_single_page_warning",
     ],
 )
 def test_gui_layout_page_errors_are_not_left_as_en_us_placeholders(key: str) -> None:
@@ -363,7 +364,18 @@ def test_gui_layout_page_errors_are_not_left_as_en_us_placeholders(key: str) -> 
             continue
         locale_data = _read_toml_file(toml_path)
         locale_value = _get_nested_value(locale_data, key)
+        assert locale_value.strip(), f"{toml_path.name} has an empty page warning for {key}"
         assert locale_value != en_value, f"{toml_path.name} still uses en_US placeholder for {key}"
+
+
+def test_retired_gui_page_parser_keys_are_absent_from_shipped_locales() -> None:
+    retired = {
+        "conversion_panel.layout.invalid_page",
+        "conversion_panel.layout.invalid_page_range",
+    }
+    for toml_path in sorted(LOCALES_DIR.glob("*.toml")):
+        keys = set(_flatten_string_values(_read_toml_file(toml_path)))
+        assert retired.isdisjoint(keys), f"{toml_path.name} retains retired page-parser keys"
 
 
 def test_key_settings_and_editors_do_not_copy_english_prose() -> None:

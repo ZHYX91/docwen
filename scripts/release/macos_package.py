@@ -22,8 +22,9 @@ if __package__ in {None, ""}:
 from scripts.release.macos_archive import archive_payload, inventory, verify_extracted, write_inventory
 from scripts.release.macos_functional import run_cases
 from scripts.release.macos_functional_cases import MARKDOWN, TOKEN
-from scripts.release.publication_contract import canonical_json, file_identity, require
-from tools.run_lease import lease_payload, managed_run
+from scripts.release.publication_contract import PublicationError, canonical_json, file_identity, require
+from scripts.release.publication_download import atomic_record
+from tools.run_lease import OwnedRunLease, lease_payload, managed_run
 
 REPO = Path(__file__).resolve().parents[2]
 MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
@@ -379,16 +380,110 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 "defaultUserProfile": "passed-with-isolated-home" if app else "not-applicable",
             }
             archives.append(archive)
-        output.mkdir(parents=True)
-        (output / ".docwen-temp-lease.json").write_bytes(
+        _publish_archives(archives, output=output, report=report, results=results)
+
+
+def _publish_archives(archives: list[Path], *, output: Path, report: Path, results: dict[str, Any]) -> None:
+    """Publish one already verified build without leaving anonymous partial archives."""
+    require(not output.exists() and not output.is_symlink(), "package outputs must be new")
+    require(not report.exists() and not report.is_symlink(), "package report must be new")
+    require(len({archive.name for archive in archives}) == len(archives), "archive names must be unique")
+    require(report not in {output / archive.name for archive in archives}, "package report conflicts with archive")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    identities = {archive.name: file_identity(archive) for archive in archives}
+    with managed_run(
+        output.parent, prefix=".docwen-macos-publish-", owner="docwen.release.macos", kind="macos-publication"
+    ) as publication:
+        atomic_record(
+            publication.root / "publication.json",
             canonical_json(
-                lease_payload(output, owner="docwen.release.macos", kind="macos-candidate", state="completed-success")
-            )
+                {
+                    "output": str(output),
+                    "archives": identities,
+                    "report": {"path": str(report), "content": results},
+                }
+            ),
         )
         for archive in archives:
-            shutil.copyfile(archive, output / archive.name)
-        report.parent.mkdir(parents=True, exist_ok=True)
-        report.write_bytes(canonical_json(results))
+            staged = publication.root / archive.name
+            shutil.copyfile(archive, staged)
+            require(file_identity(staged) == identities[archive.name], "candidate archive copy mismatch")
+        output.mkdir()
+        root_identity = output.lstat()
+        try:
+            atomic_record(
+                publication.root / "candidate-identity.json",
+                canonical_json(
+                    {
+                        "root": str(output),
+                        "rootIdentity": {"device": root_identity.st_dev, "inode": root_identity.st_ino},
+                        "owner": "docwen.release.macos",
+                        "kind": "macos-candidate",
+                    }
+                ),
+            )
+            lease = lease_payload(output, owner="docwen.release.macos", kind="macos-candidate")
+            lease["publicationRoot"] = str(publication.root)
+            lease["artifacts"] = identities
+            lease["report"] = str(report)
+            marker = output / ".docwen-temp-lease.json"
+            atomic_record(marker, canonical_json(lease))
+            marker_identity = marker.lstat()
+        except BaseException as error:
+            error.add_note(
+                f"Candidate reservation: {output}; device={root_identity.st_dev}; inode={root_identity.st_ino}; "
+                f"publication evidence: {publication.root}"
+            )
+            try:
+                current = output.lstat()
+                if (current.st_dev, current.st_ino) == (
+                    root_identity.st_dev,
+                    root_identity.st_ino,
+                ) and not output.is_symlink():
+                    # Only an empty directory can be retired here. A partial
+                    # marker or unexpected entry remains with its reservation.
+                    output.rmdir()
+            except OSError as cleanup_error:
+                error.add_note(f"Candidate initialization cleanup retained: {cleanup_error}")
+            raise
+
+        candidate = OwnedRunLease(
+            output, root_identity, marker_identity, lease, "docwen.release.macos", canonical_json(lease)
+        )
+
+        try:
+            for archive in archives:
+                os.link(publication.root / archive.name, output / archive.name)
+            report.parent.mkdir(parents=True, exist_ok=True)
+            atomic_record(report, canonical_json(results))
+            for archive in archives:
+                require(file_identity(output / archive.name) == identities[archive.name], "published archive changed")
+        except BaseException as error:
+            outcome = "retained-interrupted" if isinstance(error, KeyboardInterrupt) else "retained-failure"
+            try:
+                candidate.save(outcome)
+            except (OSError, ValueError, PublicationError) as recording_error:
+                error.add_note(f"Could not record candidate failure; inspect {publication.root}: {recording_error}")
+                candidate.record_recovery(
+                    error,
+                    "failure-recording",
+                    outcome=outcome,
+                    recording_error=recording_error,
+                    execution_error=error,
+                )
+            raise
+        try:
+            candidate.save("completed-success")
+        except (OSError, ValueError, PublicationError) as error:
+            # All archive bytes and the receipt are committed. A terminal lease
+            # recording failure must not rewrite that fact as a failed build.
+            candidate.record_recovery(
+                error,
+                "terminal-recording",
+                outcome="completed-success",
+                recording_error=error,
+            )
+            raise
 
 
 def main() -> None:

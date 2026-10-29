@@ -29,6 +29,18 @@ even when runtime discovery has already created the catalog state.
 内置和自定义模板可混排；新增导入排到末尾，副本排在原模板之后。同名导入默认保留两者，
 明确选择替换时保留既有自定义模板的 ID、顺序和启停状态。
 
+Template file-plus-state compensation uses the same durable `PREPARED` re-publication as configuration
+writes. If it cannot be made durable, no before-image is restored and later catalog operations must recover
+or fail closed. After `COMMITTED` is confirmed, a journal deletion or directory-sync failure is a cleanup
+warning: import/copy/rename/delete retain their committed result, identity and ordering. The management UI
+counts a committed import as successful and presents the warning separately, so cleanup retries through
+catalog refresh do not repeat the import. Mutation and prepare failures still fail the operation.
+
+模板文件与状态补偿复用配置写入的可靠 `PREPARED` 重申；无法持久化时不恢复任何前像，后续目录操作
+必须先恢复或失败关闭。确认 `COMMITTED` 后，日志删除或目录同步失败属于清理警告；导入、复制、
+重命名和删除仍保留已提交的结果、身份及顺序。管理界面将已提交导入计为成功并单独提示警告，刷新目录
+重试清理不会重复导入。变更或准备阶段失败仍将操作报告为失败。
+
 The main selector shows enabled templates in saved order and uses canonical IDs for selection and dispatch.
 Both lists show a leading source badge with a locale-consistent width. The main selector offers only management
 navigation; it has no package-location action. Removing or disabling the current template clears selection,

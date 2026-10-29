@@ -535,6 +535,6 @@ class _StdlibBridgeHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         docwen_logger = logging.getLogger("docwen")
-        if record.name.startswith("docwen"):
+        if record.name == "docwen" or record.name.startswith("docwen."):
             return
         docwen_logger.handle(record)

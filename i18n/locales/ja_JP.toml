@@ -1136,8 +1136,6 @@ page_range_help = "指定したページと残りのページに分割します�
 split_all_pages_warning = "すべてのページが選択されています。一部のページを選ぶか、* または # でファイル全体を分割してください。"
 split_invalid_range_warning = "このファイル内のページ番号（例：1-2、1,3）、または *、# を入力してください。"
 selected_split_file = "現在のファイル：{pages} ページ"
-invalid_page_range = "無効なページ範囲: {part}"
-invalid_page = "無効なページ: {part}"
 split_mode_single_page_warning = "⚠️ このファイルは1ページのみのため、分割は不要です"
 
 # 表格转换区
@@ -1425,7 +1423,7 @@ merge = "マージ"
 search_placeholder = "キー、値、コメントを検索"
 correct_word = "正しい表記"
 misspellings = "誤表記一覧"
-multi_value_hint = "ヒント：複数の値は | で区切ります（例：値1|値2|値3）"
+multi_value_hint = "ヒント：値は | で区切ります。文字の | は \\|、バックスラッシュは \\\\ と入力します。空白は保持されます。"
 save_typos_failed = "誤字辞書を保存できませんでした。"
 save_symbol_correction_failed = "記号補正の項目を保存できませんでした。"
 save_sensitive_words_failed = "要注意語辞書を保存できませんでした。"
@@ -1775,6 +1773,7 @@ multiple = "計 {count} 件"
 show_outputs = "すべての出力ファイルを表示"
 
 [settings.templates]
+saved_cleanup_warning = "テンプレートの変更は保存されました。ジャーナルの削除完了を確認できませんでした。同じ操作は繰り返さず、一覧を更新して残りのクリーンアップを再試行してください。"
 import_summary = "インポート成功：{succeeded}。失敗：{failed}。キャンセル：{cancelled}。"
 load_failed = "テンプレートを読み込めません"
 operation_failed = "テンプレートの操作に失敗しました。詳細を確認してください。"

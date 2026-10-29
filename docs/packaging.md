@@ -195,3 +195,18 @@ as its subject, checks every Mach-O architecture and the outer app seal, and rep
 checks after extraction and execution. Native LaunchServices/Cocoa settings startup,
 six GUI conversions and an isolated-HOME default-profile conversion supplement the
 frozen CLI cases. Software versions and the actual source commit are retained in the receipt.
+
+
+### Final package publication recovery / 最终包提交恢复
+
+MSIX package bytes are copied into an owned staging directory on the destination filesystem and checked against the already built package before exclusive publication. Requested metadata, including the packaging commit, is part of the same completion boundary. The build lease cannot complete or remove its work before that receipt is committed. macOS similarly verifies both copied archives before exposing them and records the candidate as completed only after both archives and the requested report exist with their expected identities. These steps reuse existing builds; publication faults do not request a rebuild.
+
+MSIX 在目标文件系统的带租约暂存目录中复制已构建包，核对字节数与摘要后排他提交。所请求的元数据及 packaging commit 属于同一完成边界；回执尚未提交时，构建租约不得先记成功或清理工作目录。macOS 同样先核对两份复制归档，再公开文件，并在两份归档与报告均具备预期身份后才记候选完成。提交故障复用现有构建，不要求重建。
+
+Partial copies remain owned staging files and never occupy a final package name. A later receipt/report failure can leave complete final artifacts; the retained publication record identifies those exact destination paths, byte counts, hashes and intended receipt content. Failure remains a failed gate. Existing unknown outputs are not overwritten; recovery must reconcile the retained identities rather than blindly retry into occupied names. Source-level filesystem fault injection does not establish Windows SDK, native macOS signing, Store or Gatekeeper acceptance.
+
+部分复制仅留在有主暂存区，不占最终包名。后续回执／报告失败可能留下完整最终文件；保留的提交记录给出精确目标、字节数、摘要和预期回执内容，门禁仍为失败。未知已有输出不覆盖；恢复必须核对留存身份，不能盲目向已占名称重试。源码级文件系统故障注入不代表 Windows SDK、macOS 原生签名、Store 或 Gatekeeper 已验收。
+
+The optional successful-warning smoke selects the activity record by the conversion's operation ID and source path. It checks the exact raw warning among that record's warnings, and compares the displayed full details with the record's input, output, request summary and local details projection. An identical warning in another operation cannot satisfy this gate. This check is enabled only by the explicit successful-warning smoke or a nonempty expected-warning setting; it is not a default product rejection.
+
+可选的 successful-warning smoke 按本次 operation ID 与源路径选择活动记录，核对该记录中的原始 warning，并将展示的完整详情与包含输入、输出、请求摘要及本地详情的记录投影全等比较。其它操作的同文警告不能满足本门禁。仅显式 successful-warning smoke 或非空 expected-warning 设置启用此检查，不属于默认产品拒绝条件。

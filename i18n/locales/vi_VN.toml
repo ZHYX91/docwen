@@ -1198,8 +1198,6 @@ page_range_help = "Số trang tách các trang đã chọn khỏi phần còn l�
 split_all_pages_warning = "Đã chọn tất cả các trang. Hãy chọn một số trang hoặc dùng * hay # để tách toàn bộ tệp."
 split_invalid_range_warning = "Nhập số trang trong tệp, như 1-2 hoặc 1,3, hoặc dùng * hay #."
 selected_split_file = "Tệp hiện tại: {pages} trang"
-invalid_page_range = "Phạm vi trang không hợp lệ: {part}"
-invalid_page = "Trang không hợp lệ: {part}"
 split_mode_single_page_warning = "⚠️ Tệp này chỉ có 1 trang; không cần tách"
 
 # 表格转换区
@@ -1452,7 +1450,7 @@ sensitive_editor_title = "Trình chỉnh sửa từ nhạy cảm"
 search_placeholder = "Tìm kiếm khóa, giá trị hoặc ghi chú"
 correct_word = "Cách viết đúng"
 misspellings = "Các cách viết sai"
-multi_value_hint = "Mẹo: dùng | để phân tách nhiều giá trị (ví dụ: giá_trị1|giá_trị2|giá_trị3)"
+multi_value_hint = "Mẹo: phân tách giá trị bằng |; nhập \\| cho dấu | và \\\\ cho dấu gạch chéo ngược. Khoảng trắng được giữ nguyên."
 save_typos_failed = "Không thể lưu từ điển lỗi chính tả."
 save_symbol_correction_failed = "Không thể lưu các mục sửa ký hiệu."
 save_sensitive_words_failed = "Không thể lưu từ điển thuật ngữ được đánh dấu."
@@ -1772,6 +1770,7 @@ multiple = "{count} tệp"
 show_outputs = "Xem tất cả tệp đầu ra"
 
 [settings.templates]
+saved_cleanup_warning = "Thay đổi mẫu đã được lưu. Không thể xác nhận việc dọn nhật ký. Đừng lặp lại thay đổi; hãy làm mới danh mục để thử lại phần dọn dẹp còn lại."
 import_summary = "Đã nhập: {succeeded}. Thất bại: {failed}. Đã hủy: {cancelled}."
 load_failed = "Không thể tải mẫu"
 operation_failed = "Thao tác với mẫu không thành công. Hãy xem chi tiết."

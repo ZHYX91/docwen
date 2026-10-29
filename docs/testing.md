@@ -20,6 +20,46 @@ Tests are grouped by primary behavior family and execution cost. The default rep
 
 Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry point pins the repository's pytest configuration and root fixtures even when every selected path belongs to a single workspace package.
 
+Before successful owned-runtime cleanup, QA captures the existing root and lease identity and pins the directory
+object through cleanup and failure recording, without blocking Windows delete sharing. If recursive cleanup
+partially removes the marker and fails, the shared run-lease writer may exclusively restore that same known lease
+only while the root identity still matches. A replaced marker/root is never adopted. Recording failures keep the
+original cleanup error visible, attempt the existing external recovery hold, and still return the failed gate (2);
+they do not reset retention deadlines, repeat deletion, or turn cleanup failure into a warning pass.
+
+QA 清理成功运行前捕获现有根目录和租约身份，并在清理及失败记录期间持有目录对象，保留 Windows 的
+删除共享。递归删除部分移除 marker 后失败时，共享租约 writer 仅在
+根身份保持一致时排他恢复已知租约；不接管被替换的 marker／根目录。记录失败保留原始清理错误并尝试
+既有外部 recovery hold，门禁仍返回失败 2；不重置保留期限、不再次强删、不降为警告通过。
+
+Failure runtimes are subject to the bounded housekeeping policy on subsequent QA invocations, even when a
+keep-runtime request accompanied the failing run. Export the compact reports and capture specifically needed
+original samples with run/lease/path/hash identities before starting another retention scan. Then close owned
+raw runs through the existing saved-plan/acceptance-closeout entry. A later rerun is new evidence, never a
+replacement for a missing earlier payload; an empty reused path is not authority to reconstruct or delete it.
+
+失败 runtime 在后续 QA 启动时仍受有界 housekeeping 策略管理，包括带 keep-runtime 请求的失败运行。
+下一次保留扫描前应导出紧凑报告，并以 run／lease／路径／hash 身份留存确需的原始样本，再使用既有
+保存计划或 acceptance-closeout 入口收口有主原始目录。重跑属于新证据，不能替代已缺失的旧 payload；
+同路径下后来出现的空目录不构成重建租约或删除授权。
+
+`test_config_durable_transaction_recovery.py` exercises actual journal replacement followed by a failed
+directory barrier, real first-file compensation and abrupt child-process exit, then recovery in a new process.
+It checks exact bytes, modes, logical symlink identity, trusted state and retained journal ownership; a failed
+first recovery is retried independently. `test_config_transaction_safety.py` covers failure to make rollback
+`PREPARED` durable before or after replacement. `test_template_manager.py` applies the same crash boundary to
+file-plus-catalog identity, and checks committed cleanup warnings using saved/reopened DOCX inputs, final bytes,
+IDs, order and defaults. `test_template_management_ui.py` checks actual Qt import counts and separately visible
+cleanup warnings. Directory-barrier and trash-service failures are injected boundaries; they do not establish
+power-loss behavior or native desktop recycle-bin behavior. Linux/macOS real-symlink source regressions and
+Windows symlink-privilege skips remain separate from packaged native acceptance.
+
+上述配置恢复用例执行真实 journal replace、注入目录屏障异常、落盘第一份补偿后以 `os._exit` 终止子进程，
+再由新进程恢复，独立检查 bytes、mode、逻辑符号链接、trust 与日志；首次恢复失败另行重试。模板回归把
+同一边界应用于文件与目录身份，并保存重开真实 DOCX 后核最终内容、ID、顺序与默认状态；Qt 回归核导入
+成功／失败计数与独立清理警告。这些用例的屏障故障和回收站服务故障属于注入边界，不等于断电或原生
+桌面回收站验收。真实符号链接与 Windows 权限 skip、源码 Qt 与最终原生包验收分别记录。
+
 `test_markdown_full_source_ownership.py` and `test_source_ownership_consumers.py` assert exact non-heading source
 preservation, real embedded section/block content and link removal across container exits. The proofreading report
 contract adds visible-text positives and literal-code negatives with independently calculated source ranges and
@@ -444,3 +484,79 @@ checks. Saving a ZIP and inspecting these envelopes does not establish real Word
 XML 投影测试分开记录，真实 Word 保存重开、Office／LibreOffice／Qt／Obsidian、跨平台进程、最终包候选
 及 hosted CI 另行验收。QA 原失败、夹具纠正及显式保留 runtime 的结果各自记录，不将保留运行称作自动
 清理通过。
+
+
+Focused GUI regressions use real `QMimeData` text/URL drops, ConfigPort persistence followed by a fresh reload and TextValidator observations, and actual Qt DeferredDelete delivery after moving/sorting a mixture of attached and queued cards. The successful-warning hook is checked against a real ActivityRecordsModel and details widget, including operation/source negatives and complete local detail text. Offscreen Qt checks establish these source-level behaviors; native desktop drag/drop, idle card interactions and packaged screenshots remain separate acceptance scopes.
+
+定向 GUI 回归使用真实 `QMimeData` 文本／URL 拖入、ConfigPort 保存后新实例重载与 TextValidator 观察，并在已挂／待创建卡片混合排序后投递真实 Qt DeferredDelete 事件。成功警告 hook 使用真实 ActivityRecordsModel 与详情控件，覆盖 operation／source 负控和完整本地详情。离屏 Qt 仅证明这些源码行为，原生桌面拖入、空闲后卡片交互与最终包截图仍属独立验收范围。
+
+MSIX and macOS publication regressions inject bounded copy/hash/link/report failures into real filesystem artifacts and inspect retained lease/publication identities, final bytes and unknown-file preservation. MSIX SDK construction is explicitly substituted in that fault lane; macOS publication tests reuse saved and reopened tar archives without building or signing. Native SDK and arm64 candidate verification still run only in their platform acceptance lanes.
+
+MSIX／macOS 提交回归对真实文件注入有界 copy／hash／link／report 故障，核对留存租约、提交身份、最终字节及未知文件保护。故障测试中的 MSIX SDK 构建明确为替身；macOS 测试复用已保存重开的 tar，不构建或签名。原生 SDK 与 arm64 候选验证继续由各平台验收通道完成。
+
+
+`test_office_linux_process_ownership.py` compiles a bounded native C launcher/child fixture inside the owned test runtime. The child creates a separate session and emits an activity heartbeat; tests capture its actual PID/start ticks and profile/input/output arguments before cancellation or the explicit 0.8-second timeout. The normal case is released only after observation. A TERM-ignoring child exercises KILL, while an unrelated native sentinel continues to emit heartbeats. Checks require the owner’s kernel wait/reap receipt, a joined supervisor, stable stopped heartbeat and independent identity absence. Saved/reopened DOCX input and final copy bytes are checked separately from process lifetime.
+
+`test_office_linux_process_ownership.py` 在测试自有运行根编译有界 native C launcher／child。孩子建立独立 session 并持续写心跳；取消或显式 0.8 秒超时前，测试取得实际 PID／start ticks 及 profile／输入／输出参数，正常用例在完成观察后才放行。忽略 TERM 的孩子验证 KILL，无关 native sentinel 心跳继续。断言结合监督者的内核 wait／reap 回执、join、停止后的稳定心跳与独立身份消失；保存重开的 DOCX 输入与最终复制字节单独核验。
+
+The missing-confirmation regression drops only the final IPC receipt after the real owner has run and reaped its native child. Core and the real Runtime/PrintPlugin route must still fail with zero final artifacts and retain the independent process state after TaskManager cleanup. This is a deterministic receipt fault; it is not a D-state observation or a real LibreOffice conversion. Actual installed LibreOffice version, normal conversion, cancellation, hard timeout, macro behavior and packaged-host acceptance remain independent gates.
+
+缺失确认回归只丢弃真实 owner 已运行并回收原生孩子后的最终 IPC 回执；Core 与真实 Runtime／PrintPlugin 路线仍须失败、零最终产物，TaskManager 清理后独立进程现场继续保留。这是确定性回执故障，不是 D-state 观察或真实 LibreOffice 转换。实际安装的 LibreOffice 版本、正常转换、取消、硬超时、宏行为和最终包宿主验收继续作为独立门禁。
+
+A separate native KILL-refusal case delivers TERM to a genuinely active TERM-ignoring child, then injects `PermissionError` only at the production KILL send. After the bounded bridge failure, independent PID/start-ticks and an advancing heartbeat must still identify that child; profile/private input/output remain and no final artifact is published. Only after these assertions does a test-owned release permit rescue through the original retained pidfd, another kernel wait-child check and reap to ECHILD. This verifies active-but-unconfirmed retention separately from a lost receipt; the rescue is not a production cleanup success or D-state evidence.
+
+独立的原生 KILL 拒绝用例向真实活动且忽略 TERM 的孩子发送 TERM，仅在生产 KILL 发送处注入 `PermissionError`。有界桥接失败后，独立 PID／start ticks 及继续增长的心跳仍须指向同一孩子；profile／私有输入／输出保留且不发布最终产物。断言结束后测试才放行收尾，用事先保留的原 pidfd、再次确认的内核 wait-child 关系及 ECHILD 回收。这与只丢回执的用例分别证明“仍在活动但未确认”和“缺少回执”；测试救援不算生产清理成功，也不是 D-state 证据。
+
+Discovery-layer controls distinguish readable task files, missing interfaces, vanished secondary threads, namespace mismatches and finite entry/time/text budgets. Native controls may supply a test-owned `children` file populated from the C child's independently recorded procfs PID, or intentionally omit that interface to exercise the real status/PPid scan. Such supplied files prove the discovery parser and actual downstream kernel ownership; they do not assert that the host exposes a usable kernel `children` file.
+
+发现层对照区分可读任务文件、接口缺失、次线程退出、命名空间身份冲突及有限的条目／时间／文本预算。原生对照可由测试提供 `children` 文件，并填入 C 孩子独立记录的 procfs PID，或故意省略接口以执行真实 status／PPid 扫描。这些测试文件证明发现解析和后续真实内核归属，不宣称宿主实际提供可用的内核 `children` 文件。
+
+
+`test_spreadsheet_literal_final_docx.py` saves and reopens native XLSX inputs, then publishes Markdown and DOCX
+through Runtime/finalizer and Artifact Bundle. An independent Markdown-to-HTML consumer and direct OOXML cell
+matrices distinguish literal `<`, `>`, `&`, authored `&lt;`, caret, backslash/pipe, source line breaks and literal
+`<br>` text. Ordinary and Structural Tables configurations retain the same text, while horizontal/vertical native
+merges retain their separate geometry. The fresh DOCX package checks do not claim a real Word save/reopen.
+
+上述真实文件回归先保存重开 XLSX，再经 Runtime/finalizer 与 Bundle 发布 Markdown 和 DOCX。独立 Markdown
+消费者及直接 OOXML 单元格矩阵区分原字符、原本就是 entity 拼写的文字、反斜线／pipe、真实行内换行和
+字面 `<br>`；普通／Structural 配置的正文相同，实际横向／纵向合并另核几何，不冒称真实 Word 保存重开。
+
+### CLI cancellation, publication and admitted workflows / CLI 取消、发布与准入工作流
+
+`test_cli_deadline_v3.py` drives the real composed CLI in child processes with bounded phase gates around
+worker start, CSV conversion and actual OutputFinalizer publication. Saved XLSX matrices and aligned per-input
+results establish earlier success, later cancellation and unstarted inputs. Linux SIGINT is measured separately
+from Windows Ctrl+C, which these tests do not establish. A separate delayed-worker test checks that bounded
+drain does not release a cancelled Application scope before the worker exits. The instrumentation calls the
+production controller, converters and finalizer; it does not replace them with a mock controller.
+
+CLI 截止回归使用真实组合入口的子进程，仅在 worker 启动、CSV 转换及真实最终发布前后设置有界时序门；
+重开的 XLSX 矩阵与逐输入结果证明先前成功、后续取消及未启动状态。Linux SIGINT 与 Windows Ctrl+C 分开，
+本组不建立后者的宿主证据。延迟 worker 对照检查有界等待结束后仍保留取消身份，直至真正退出。
+
+`test_validate_execute_02.py` checks inspection, admission and real Runtime report publication for neutral Markdown,
+inline code, a single list, headings and plain text, including original-byte hashes and independent source ranges.
+`test_cli_document_proofread_publication.py` examines real private DOCX content and comments before a final public
+commit. Its ODT writer is explicitly an Office-boundary double with an independently inspected ODF package;
+it proves pipeline/publication behavior, not an installed Office conversion. Missing-bridge cases cover all four
+legacy target admissions. Native Office save/reopen remains separate. Logging namespace checks use actual file
+and console sinks in a child process, so no logging-global state leaks back into the test process.
+
+校对回归对普通 Markdown、行内代码、单列表、标题与纯文本走实际检查、准入和 Runtime 报告发布，独立核对
+源字节 hash 与 range。转换后校对先检查实际私有 DOCX 的正文和批注，再检查一次公开提交；ODT writer 明确是
+Office 边界替身，以独立 ODF 包检查输出，只证明管线及发布行为，不证明安装的 Office 转换能力。缺 bridge
+对照覆盖四种旧文档目标准入；原生保存重开另验。日志命名空间用子进程中的真实文件及 console sink 检查，
+不向测试主进程泄漏 logging 全局状态。
+
+The cancellation tests also exercise real SIGINT inside executor submission, after submission returns, while
+Application returns a reservation and while Deadline returns its captured handle. The real controller then reuses
+the same request ID and source to publish a fresh XLSX, proving the old cancelled scope no longer owns that ID.
+Application-only contract cases pair pre-alias capture and partial-alias rollback with refusal to acquire a prior
+owner and rejection of stale exact cancellation/release against a later same-ID scope. These are in-process
+ownership checks, separate from native process termination.
+
+取消回归还在 executor 提交内部、提交返回后、Application 返回预约及 Deadline 返回已捕获句柄时发送真实 SIGINT，
+随后以同一 controller、request ID 和源文件重新发布真实 XLSX，证明旧取消 scope 已释放该身份。Application 合同
+对照覆盖先交付句柄后挂 alias、部分 alias 回滚、拒绝接管既有 owner，以及旧句柄不得取消或释放同 ID 新 scope；
+这些属于进程内所有权检查，与原生进程终止证据分开。

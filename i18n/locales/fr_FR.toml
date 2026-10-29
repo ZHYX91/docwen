@@ -1195,8 +1195,6 @@ page_range_help = "Les numéros séparent les pages choisies du reste. * divise 
 split_all_pages_warning = "Toutes les pages sont sélectionnées. Choisissez certaines pages ou utilisez * ou # pour diviser tout le fichier."
 split_invalid_range_warning = "Saisissez des pages de ce fichier, par exemple 1-2 ou 1,3, ou utilisez * ou #."
 selected_split_file = "Fichier actuel : {pages} pages"
-invalid_page_range = "Plage de pages invalide : {part}"
-invalid_page = "Page invalide : {part}"
 split_mode_single_page_warning = "⚠️ Ce fichier n'a qu'une seule page ; aucune division nécessaire"
 
 # 表格转换区
@@ -1484,7 +1482,7 @@ merge = "Fusionner"
 search_placeholder = "Rechercher clé, valeur ou commentaire"
 correct_word = "Orthographe correcte"
 misspellings = "Graphies incorrectes"
-multi_value_hint = "Conseil : utilisez | pour séparer plusieurs valeurs (par exemple : valeur1|valeur2|valeur3)"
+multi_value_hint = "Conseil : séparez les valeurs par | ; saisissez \\| pour une barre et \\\\ pour une barre oblique inverse. Les espaces sont conservés."
 save_typos_failed = "Impossible d’enregistrer le dictionnaire des fautes de frappe."
 save_symbol_correction_failed = "Impossible d’enregistrer les corrections de symboles."
 save_sensitive_words_failed = "Impossible d’enregistrer le dictionnaire des termes signalés."
@@ -1771,6 +1769,7 @@ multiple = "{count} fichiers"
 show_outputs = "Voir tous les fichiers de sortie"
 
 [settings.templates]
+saved_cleanup_warning = "La modification du modèle a été enregistrée. Le nettoyage du journal n’a pas pu être confirmé. Ne répétez pas la modification ; actualisez le catalogue pour réessayer le nettoyage restant."
 import_summary = "Importés : {succeeded}. Échecs : {failed}. Annulés : {cancelled}."
 load_failed = "Impossible de charger les modèles"
 operation_failed = "L’opération sur le modèle a échoué. Consultez les détails."

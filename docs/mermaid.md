@@ -40,3 +40,18 @@ Browser downloads may require a working network/proxy. Run the browser-install c
 - A rendered diagram is an ordinary DOCX image. DOCX → Markdown exports an image and does not reconstruct Mermaid source. The exact resolved-v4 input route continues to preserve fenced source.
 
 图片按模板正文节、分栏与段落缩进等比缩放，明显缩小会提示检查文字。每张图单独计时，失败时保留可见代码并报告图表序号和原因，其他图继续；取消不会伪装成成功回退。反向转换只处理普通图片，不还原 Mermaid 源码。
+
+The local renderer's cooperative cancellation/timeout cleanup runs in Python `finally`: POSIX uses a dedicated
+process session and Windows uses an owned Job. The Node bootstrap consumes its stdin token only as a startup
+gate before loading Puppeteer; it is not a parent-liveness channel. A Machine consumer that forcibly terminates
+Python must establish an OS lifetime owner before starting the Machine process and confirm descendant teardown
+independently of Python cleanup or inherited stdio. New renderer sessions do not change that consumer contract.
+Actual configured mmdc/Puppeteer/browser success, cancellation and consumer-stop acceptance must use the same
+producer/consumer candidates, observe active browser work, and verify termination/reaping separately.
+
+本地渲染器的合作取消／超时清理在 Python `finally` 中执行：POSIX 使用专属进程 session，Windows 使用有主
+Job。Node bootstrap 读取一次 stdin token 后才加载 Puppeteer；该 token 只是启动门，不是父进程存活通道。
+会强制终止 Python 的 Machine 消费者必须在启动 Machine 之前建立操作系统生命周期 owner，并独立于
+Python 清理或继承的 stdio 确认后代退出。渲染器的新 session 不改变这一消费端合同。真实配置的
+mmdc／Puppeteer／浏览器成功、取消及消费端停止验收需使用同一生产者／消费者候选，先观察浏览器实际
+活动，再单独核对终止与回收。

@@ -1195,8 +1195,6 @@ page_range_help = "Page numbers separate selected pages from the rest. * splits 
 split_all_pages_warning = "All pages are selected. Select some pages, or use * or # to split the entire file."
 split_invalid_range_warning = "Enter page numbers within this file, such as 1-2 or 1,3, or use * or #."
 selected_split_file = "Current file: {pages} pages"
-invalid_page_range = "Invalid page range: {part}"
-invalid_page = "Invalid page: {part}"
 split_mode_single_page_warning = "⚠️ This file has only 1 page; no split needed"
 
 # 表格转换区
@@ -1448,7 +1446,7 @@ sensitive_editor_title = "Flagged Terms Editor"
 search_placeholder = "Search key, value, or comment"
 correct_word = "Correct Word"
 misspellings = "Misspellings"
-multi_value_hint = "Tip: use | to separate multiple values (for example: value1|value2|value3)"
+multi_value_hint = "Tip: separate values with |; write \\| for a literal pipe and \\\\ for a backslash. Spaces are preserved."
 save_typos_failed = "Could not save typos dictionary."
 save_symbol_correction_failed = "Could not save symbol correction entries."
 save_sensitive_words_failed = "Could not save sensitive words dictionary."
@@ -1769,6 +1767,7 @@ multiple = "{count} files"
 show_outputs = "View all output files"
 
 [settings.templates]
+saved_cleanup_warning = "The template change was saved. Journal cleanup could not be confirmed; do not repeat the change. Refresh the catalog to retry any remaining cleanup."
 import_summary = "Imported: {succeeded}. Failed: {failed}. Cancelled: {cancelled}."
 load_failed = "Templates could not be loaded"
 operation_failed = "The template operation failed. View details for more information."

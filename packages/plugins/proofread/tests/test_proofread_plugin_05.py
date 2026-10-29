@@ -330,6 +330,7 @@ class TestSkipPolicyIntegration:
 
         from docx import Document
 
+        from docwen_core.models.file_ref import FileRef
         from docwen_plugin_proofread.docx_validator import DocxValidator
 
         input_path = tmp_path / "input.docx"
@@ -362,7 +363,7 @@ class TestSkipPolicyIntegration:
             request=SimpleNamespace(
                 request_id="req",
                 options={},
-                input_refs=[SimpleNamespace(path=str(input_path), format="docx")],
+                input_refs=[FileRef(path=str(input_path), format="docx", category="document")],
             ),
             workspace=Workspace(),
             config=SimpleNamespace(

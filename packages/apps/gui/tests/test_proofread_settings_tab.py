@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from PySide6.QtWidgets import QTableWidgetItem
@@ -442,3 +443,117 @@ def test_sensitive_word_editor_preserves_exception_items_and_remark(
     assert "允许上下文" in saved_text
 
     dialog.close()
+
+
+@pytest.mark.parametrize(
+    "editor_name,relative,key,values,validator_argument",
+    [
+        (
+            "_TyposDictionaryEditor",
+            "proofread/typos.toml",
+            "correct",
+            ["foo|bar", "wrng", r"a\b", " spaced "],
+            "typos_map",
+        ),
+        ("_SymbolErrorEditor", "proofread/symbol_map.toml", "｜", ["|", "丨", "\\", " spaced "], "symbol_map"),
+        (
+            "_SensitiveWordEditor",
+            "proofread/sensitive_words.toml",
+            "foo",
+            ["foo|bar", r"foo\bar", " foo "],
+            "sensitive_words",
+        ),
+    ],
+)
+@pytest.mark.parametrize("edit_unrelated", [False, True])
+def test_array_editors_save_literal_values_through_config_port_without_semantic_drift(
+    qapp, tmp_path, editor_name, relative, key, values, validator_argument, edit_unrelated
+):
+    import tomllib
+
+    from docwen_bundle.config_port import ConfigPortAdapter
+    from docwen_gui.widgets.settings import proofread_tab
+    from docwen_plugin_proofread.text_validator import TextValidator
+    from docwen_runtime.config.loader import ConfigLoader
+
+    config_dir = tmp_path / "configs"
+    _write_minimal_base_config_tree(config_dir)
+    loader = ConfigLoader(base_dir=config_dir, user_dir=config_dir)
+    expected = {key: values, "unrelated": ["other"]}
+    assert loader.update_file_sections(relative, {"entries": expected})
+    port = ConfigPortAdapter(loader)
+    initial_text = port.get_file_text(relative)
+    assert initial_text is not None
+    dialog = getattr(proofread_tab, editor_name)(relative, source_text=initial_text, save_callback=port.save_file_text)
+    try:
+        if edit_unrelated:
+            row = next(
+                row for row in range(dialog._table.rowCount()) if dialog._table.item(row, 0).text() == "unrelated"
+            )
+            dialog._table.item(row, 2).setText("changed comment")
+        dialog._on_accept()
+        fresh = ConfigPortAdapter(base_dir=config_dir, user_dir=config_dir)
+        saved = fresh.get_file_text(relative)
+        assert saved is not None
+        actual = tomllib.loads(saved)["entries"]
+        assert actual == expected
+        switches = {"typos_rule": False, "symbol_correction": False, "sensitive_word": False, "symbol_pairing": False}
+        switches[
+            {"typos_map": "typos_rule", "symbol_map": "symbol_correction", "sensitive_words": "sensitive_word"}[
+                validator_argument
+            ]
+        ] = True
+        original_options: dict[str, Any] = {validator_argument: expected}
+        reloaded_options: dict[str, Any] = {validator_argument: actual}
+        before = TextValidator(**original_options, enabled=switches)
+        after = TextValidator(**reloaded_options, enabled=switches)
+
+        def facts(validator, text):
+            return [
+                (e.start_pos, e.end_pos, e.error_text, e.replacement, e.source) for e in validator.validate_text(text)
+            ]
+
+        for text in ("foo and bar", "|", "foo", "foo|bar", "wrng", r"a\b", " spaced ", " foo "):
+            assert facts(after, text) == facts(before, text)
+        if validator_argument == "typos_map":
+            assert not before.validate_text("foo and bar")
+            assert [error.error_text for error in after.validate_text("foo|bar")] == ["foo|bar"]
+        if validator_argument == "sensitive_words":
+            assert [error.error_text for error in after.validate_text("foo")] == ["foo"]
+            assert not after.validate_text("foo|bar")
+        if validator_argument == "symbol_map":
+            assert [(error.error_text, error.replacement) for error in after.validate_text("|")] == [("|", "｜")]
+    finally:
+        dialog.deleteLater()
+
+
+@pytest.mark.parametrize(
+    "editor_name,relative",
+    [
+        ("_TyposDictionaryEditor", "proofread/typos.toml"),
+        ("_SymbolErrorEditor", "proofread/symbol_map.toml"),
+        ("_SensitiveWordEditor", "proofread/sensitive_words.toml"),
+    ],
+)
+def test_array_editor_does_not_silently_drop_invalid_empty_elements(qapp, tmp_path, monkeypatch, editor_name, relative):
+    from docwen_bundle.config_port import ConfigPortAdapter
+    from docwen_gui.widgets.settings import proofread_tab
+    from docwen_runtime.config.loader import ConfigLoader
+
+    config_dir = tmp_path / "configs"
+    _write_minimal_base_config_tree(config_dir)
+    loader = ConfigLoader(base_dir=config_dir, user_dir=config_dir)
+    assert loader.update_file_sections(relative, {"entries": {"key": ["one"]}})
+    port = ConfigPortAdapter(loader)
+    original = port.get_file_text(relative)
+    dialog = getattr(proofread_tab, editor_name)(relative, source_text=original, save_callback=port.save_file_text)
+    notices = []
+    monkeypatch.setattr(proofread_tab.QMessageBox, "warning", lambda *args: notices.append(args))
+    try:
+        dialog._table.item(0, 1).setText("one||two")
+        dialog._on_accept()
+        assert notices
+        assert port.get_file_text(relative) == original
+        assert dialog.result() != dialog.DialogCode.Accepted
+    finally:
+        dialog.deleteLater()

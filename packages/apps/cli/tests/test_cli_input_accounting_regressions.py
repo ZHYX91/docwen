@@ -6,9 +6,9 @@ import json
 from argparse import Namespace
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 import pytest
+from tests.support.cli import make_controller_mock_with_cancellation
 
 from docwen_cli.commands import convert
 from docwen_cli.utils import expand_paths
@@ -68,7 +68,7 @@ def test_actual_batch_summary_counts_rejected_input_in_every_mode(
     args.command = "batch" if explicit_batch else "convert"
     args.batch_command = "convert" if explicit_batch else None
     args.to = "docx"
-    controller = MagicMock()
+    controller = make_controller_mock_with_cancellation()
     controller.has_runtime = True
     controller.execute_single.return_value = ConversionResult(task_id="good", success=True)
     catalog = bundled_available_runtime_catalog()

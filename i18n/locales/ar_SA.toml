@@ -1195,8 +1195,6 @@ page_range_help = "حدد الصفحات بأرقام مفصولة بفواصل 
 split_all_pages_warning = "اختر بعض الصفحات فقط، أو استخدم * أو # لتقسيم الملف كله."
 split_invalid_range_warning = "أدخل أرقام صفحات ضمن الملف، مثل 1-2 أو 1,3، أو استخدم * أو #."
 selected_split_file = "الملف الحالي: {pages} صفحات"
-invalid_page_range = "نطاق صفحات غير صالح: {part}"
-invalid_page = "رقم صفحة غير صالح: {part}"
 split_mode_single_page_warning = "⚠️ يتكون الملف من صفحة واحدة؛ لا حاجة لتقسيمه"
 
 # 表格转换区
@@ -1448,7 +1446,7 @@ sensitive_editor_title = "محرر الكلمات المطلوب التنبيه 
 search_placeholder = "ابحث عن مفتاح أو قيمة أو تعليق"
 correct_word = "الكلمة الصحيحة"
 misspellings = "الأخطاء الإملائية"
-multi_value_hint = "استخدم الرمز | للفصل بين قيم متعددة، مثل value1|value2|value3"
+multi_value_hint = "افصل القيم باستخدام |؛ اكتب \\| للرمز نفسه و \\\\ للشرطة المائلة العكسية. تُحفظ المسافات."
 save_typos_failed = "تعذّر حفظ قاموس الأخطاء الإملائية."
 save_symbol_correction_failed = "تعذّر حفظ قواعد تصحيح الرموز."
 save_sensitive_words_failed = "تعذّر حفظ قائمة الكلمات الحساسة."
@@ -1769,6 +1767,7 @@ multiple = "{count} ملفات"
 show_outputs = "عرض كل الملفات الناتجة"
 
 [settings.templates]
+saved_cleanup_warning = "تم حفظ تعديل القالب. تعذّر تأكيد تنظيف السجل. لا تكرر التعديل؛ حدّث القائمة لإعادة محاولة التنظيف المتبقي."
 import_summary = "نجح استيراد {succeeded}؛ فشل {failed}؛ أُلغي {cancelled}."
 load_failed = "تعذّر تحميل القوالب"
 operation_failed = "تعذّرت العملية على القالب. افتح التفاصيل لمعرفة السبب."

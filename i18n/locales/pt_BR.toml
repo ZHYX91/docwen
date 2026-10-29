@@ -1196,8 +1196,6 @@ page_range_help = "Os números separam as páginas selecionadas das demais. * di
 split_all_pages_warning = "Todas as páginas estão selecionadas. Selecione algumas ou use * ou # para dividir o arquivo inteiro."
 split_invalid_range_warning = "Insira páginas deste arquivo, como 1-2 ou 1,3, ou use * ou #."
 selected_split_file = "Arquivo atual: {pages} páginas"
-invalid_page_range = "Intervalo de páginas inválido: {part}"
-invalid_page = "Página inválida: {part}"
 split_mode_single_page_warning = "⚠️ Este arquivo tem apenas 1 página; não precisa dividir"
 
 # 表格转换区
@@ -1479,7 +1477,7 @@ merge = "Mesclar"
 search_placeholder = "Pesquisar chave, valor ou comentario"
 correct_word = "Grafia correta"
 misspellings = "Grafias incorretas"
-multi_value_hint = "Dica: use | para separar vários valores (por exemplo: valor1|valor2|valor3)"
+multi_value_hint = "Dica: separe valores com |; use \\| para uma barra e \\\\ para uma barra invertida. Os espaços são preservados."
 save_typos_failed = "Não foi possível salvar o dicionário de erros de digitação."
 save_symbol_correction_failed = "Não foi possível salvar as correções de símbolos."
 save_sensitive_words_failed = "Não foi possível salvar o dicionário de termos sinalizados."
@@ -1770,6 +1768,7 @@ multiple = "{count} arquivos"
 show_outputs = "Ver todos os arquivos de saída"
 
 [settings.templates]
+saved_cleanup_warning = "A alteração do modelo foi salva. Não foi possível confirmar a limpeza do diário. Não repita a alteração; atualize o catálogo para tentar novamente a limpeza pendente."
 import_summary = "Importados: {succeeded}. Falhas: {failed}. Cancelados: {cancelled}."
 load_failed = "Não foi possível carregar os modelos"
 operation_failed = "A operação do modelo falhou. Consulte os detalhes."

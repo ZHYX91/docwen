@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from tests.support.cli import make_controller_mock_with_cancellation
 
 from ._cli_contract_support import (
     ExitCode,
@@ -29,7 +30,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "test.docx"
         _write_ooxml(src)
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -82,7 +83,7 @@ class TestExecuteConvertActionPath:
         _write_ooxml(sheet)
         bad.write_text("unsupported\n", encoding="utf-8")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.side_effect = [
             ConversionResult(task_id="docx", success=True),
@@ -167,7 +168,7 @@ class TestExecuteConvertActionPath:
                 )
             raise AssertionError("third request must not start after stop-on-error")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.side_effect = execute_single
 
@@ -204,7 +205,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "test.docx"
         _write_ooxml(src)
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -255,7 +256,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "book.xlsx"
         _write_ooxml(src)
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -283,7 +284,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "sample.png"
         src.write_bytes(b"\x89PNG\r\n\x1a\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -314,7 +315,7 @@ class TestExecuteConvertActionPath:
             encoding="utf-8",
         )
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -344,7 +345,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "layout.pdf"
         src.write_bytes(b"%PDF-1.4\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -373,7 +374,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "layout.pdf"
         src.write_bytes(b"%PDF-1.4\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -398,7 +399,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "invoice.pdf"
         src.write_bytes(b"%PDF-1.4\n%\x00\x00\x00\x00\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
         mock_controller.config_port.get.side_effect = lambda key, default=None: (
@@ -433,7 +434,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "gongwen.docx"
         _write_ooxml(src)
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -463,7 +464,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "invoice.pdf"
         src.write_bytes(b"%PDF-1.4\n%\x00\x00\x00\x00\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
         mock_controller.config_port.get.side_effect = lambda key, default=None: (
@@ -489,7 +490,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "image.png"
         src.write_bytes(b"\x89PNG\r\n\x1a\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -511,7 +512,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "book.xlsx"
         _write_ooxml(src)
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 

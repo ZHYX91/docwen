@@ -45,6 +45,7 @@ class ActivityRecord:
     source_location_available: bool = True
     output_paths: tuple[str, ...] = ()
     diagnostic: DiagnosticSummary | None = None
+    warning_messages: tuple[str, ...] = ()
 
     @property
     def status_label(self) -> str:
@@ -145,6 +146,11 @@ class ActivityRecordsModel(QAbstractTableModel):
                         source_location_available,
                         outputs,
                         outcome.diagnostic if outcome else DiagnosticSummary(status="pending"),
+                        tuple(
+                            dict.fromkeys(
+                                (*warnings, *(row.message for row in matching if row.message_type == "warning"))
+                            )
+                        ),
                     )
                 )
         for row in notices:
@@ -175,6 +181,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                     row.operation or t("activity.info"),
                     details,
                     diagnostic=row.diagnostic or DiagnosticSummary(status=status),
+                    warning_messages=(row.message,) if row.message_type == "warning" else (),
                 )
             )
         if records == self.records:

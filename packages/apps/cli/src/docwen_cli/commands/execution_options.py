@@ -7,6 +7,7 @@ import getpass
 from collections.abc import Collection
 from typing import Any
 
+from docwen_application.postprocessing import PROOFREAD_DOCUMENT_TARGETS
 from docwen_cli.options.to_markdown import build_to_markdown_options
 from docwen_core.page_selection import PageSelectionError, parse_pdf_split_input
 from docwen_core.text import OCR_LANGUAGE_AUTO, OCR_LANGUAGE_MODELS
@@ -67,10 +68,9 @@ def validate_execution_options(
         proofread = bool(getattr(args, "proofread", False))
         if checks and not proofread:
             raise ValueError("convert --check requires --proofread")
-        if proofread and str(getattr(args, "to", "")).strip().lower() != "docx":
-            raise ValueError("--proofread is supported only with convert --to docx")
-        if proofread and "none" in checks:
-            raise ValueError("--proofread cannot be combined with --check none")
+        if proofread and str(getattr(args, "to", "")).strip().lower() not in PROOFREAD_DOCUMENT_TARGETS:
+            targets = ", ".join(sorted(PROOFREAD_DOCUMENT_TARGETS))
+            raise ValueError(f"--proofread requires a Markdown source and one of these document targets: {targets}")
 
 
 def parse_pages(value: str) -> list[int]:

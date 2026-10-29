@@ -102,6 +102,10 @@ class TemplateManager:
         self.user_dir.mkdir(parents=True, exist_ok=True)
         return self.user_dir
 
+    def take_cleanup_warnings(self) -> tuple[str, ...]:
+        """Return warnings without repeating an already committed operation."""
+        return self.state_store.take_cleanup_warnings()
+
     @serialized
     def list_templates(self, target_type: str | None = None, *, include_disabled: bool = True) -> list[TemplateInfo]:
         return self.registry.list_templates(target_type, include_disabled=include_disabled)
