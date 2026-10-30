@@ -114,13 +114,14 @@ def project_repeated_note_references(
 
     One native reference owns the note. Subsequent references are ordinary
     NOTEREF fields, with a bookmark around the first reference. Inventory the
-    complete package after rendering so template and caption bookmarks count.
+    complete package only when a repeat requires a new bookmark, so template
+    and caption names/IDs count without auditing an unrelated bookmark graph.
     """
     document = Document(BytesIO(package))
     root = document.element
-    inventory = build_docx_bookmark_inventory(document)
-    used_ids = set(inventory.used_id_keys)
-    used_names = set(inventory.used_name_keys)
+    inventory = None
+    used_ids = set()
+    used_names = set()
     next_id = 0
     deferred_count = 0
     for kind, owned_ids in (("footnote", footnotes), ("endnote", endnotes)):
@@ -136,6 +137,10 @@ def project_repeated_note_references(
         for note_id, references in grouped.items():
             if note_id not in owned_ids or len(references) < 2:
                 continue
+            if inventory is None:
+                inventory = build_docx_bookmark_inventory(document)
+                used_ids.update(inventory.used_id_keys)
+                used_names.update(inventory.used_name_keys)
             if cached_marks is None:
                 try:
                     cached_marks = _cached_note_marks(document, kind)

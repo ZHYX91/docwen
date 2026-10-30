@@ -635,7 +635,8 @@ def test_other_story_reference_id_is_reserved_without_modifying_it(tmp_path: Pat
 
 
 @pytest.mark.parametrize(
-    "raw_id,new_id", [(" 1 ", "2"), (" +01\t", "2"), ("1_0", "1"), ("١", "1"), ("\u00a01", "1"), ("2147483648", "1")]
+    "raw_id,new_id",
+    [(" 1 ", "2"), (" +01\t", "2"), ("1_0", "1"), ("0_1", "1"), ("١", "1"), ("\u00a01", "1"), ("2147483648", "1")],
 )
 @pytest.mark.parametrize("old_before_new", [False, True])
 def test_note_id_lexical_forms_are_reserved_or_preserved_outside_owned_projection(
@@ -667,3 +668,30 @@ def test_note_id_lexical_forms_are_reserved_or_preserved_outside_owned_projectio
         refs = [item.get(qn("w:id")) for item in root.iter(qn("w:footnoteReference"))]
         assert refs == ([raw_id, new_id] if old_before_new else [new_id, raw_id])
         assert sum("NOTEREF" in (item.text or "") for item in root.iter(qn("w:instrText"))) == 1
+
+
+def test_single_new_note_preserves_unconsumed_malformed_template_bookmark(tmp_path: Path) -> None:
+    path = tmp_path / "unrelated-bookmark.docx"
+    document = Document()
+    paragraph = document.add_paragraph("Template literal")
+    bookmark = OxmlElement("w:bookmarkStart")
+    # This malformed oversized integer exceeds Python's int-string limit;
+    # the note operation does not need to interpret or modify this bookmark.
+    bookmark.set(qn("w:id"), "9" * 5000)
+    bookmark.set(qn("w:name"), "not a legal bookmark name")
+    paragraph._p.append(bookmark)
+    before = etree.tostring(bookmark, method="c14n", exclusive=True)
+    context = NoteContext()
+    context._footnote_children = {"new": _note_children("New note")}
+    prepare_note_context_for_document(document, context)
+    reference = context.create_footnote_ref_run("new")
+    assert reference is not None
+    paragraph._p.append(reference)
+    document.save(str(path))
+    write_notes_to_docx(str(path), context)
+    with ZipFile(path) as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+        preserved = next(root.iter(qn("w:bookmarkStart")))
+        assert etree.tostring(preserved, method="c14n", exclusive=True) == before
+        assert [item.get(qn("w:id")) for item in root.iter(qn("w:footnoteReference"))] == ["1"]
+        assert not list(root.iter(qn("w:instrText")))
