@@ -127,6 +127,7 @@ class _PreservedStyleReference:
     part: Part
     root: etree._Element
     reference: etree._Element
+    owner: etree._Element
     reference_xml: bytes
     original_blob: bytes | None
 
@@ -1002,7 +1003,15 @@ def _bind_preserved_references(
                     continue
                 remaining[occurrence] -= 1
                 result.append(
-                    _PreservedStyleReference(document, part, root, reference, _reference_xml(reference), original_blob)
+                    _PreservedStyleReference(
+                        document,
+                        part,
+                        root,
+                        reference,
+                        _reference_owner(reference),
+                        _reference_xml(reference),
+                        original_blob,
+                    )
                 )
     return tuple(result)
 
@@ -1022,13 +1031,17 @@ def _current_preserved_occurrences(bindings: ManagedStyleBindings) -> tuple[tupl
         ancestor = record.reference
         while (parent := ancestor.getparent()) is not None:
             ancestor = parent
-        if ancestor is not record.root or _reference_xml(record.reference) != record.reference_xml:
+        if (
+            ancestor is not record.root
+            or _reference_owner(record.reference) is not record.owner
+            or _reference_xml(record.reference) != record.reference_xml
+        ):
             continue
         result.append(_reference_occurrence(record.reference, str(record.part.partname).lstrip("/")))
     return tuple(result)
 
 
-def _reference_occurrence(element: etree._Element, part_name: str) -> tuple[str, bytes]:
+def _reference_owner(element: etree._Element) -> etree._Element:
     # The immediate formatting owner is stable when unrelated siblings or
     # paragraphs are inserted. Do not exempt every use of the same style ID.
     owner = element.getparent()
@@ -1038,6 +1051,11 @@ def _reference_occurrence(element: etree._Element, part_name: str) -> tuple[str,
         content_owner = owner.getparent()
         if content_owner is not None:
             owner = content_owner
+    return owner
+
+
+def _reference_occurrence(element: etree._Element, part_name: str) -> tuple[str, bytes]:
+    owner = _reference_owner(element)
     return part_name, _reference_xml(element) + b"\0" + etree.tostring(owner, method="c14n", exclusive=True)
 
 

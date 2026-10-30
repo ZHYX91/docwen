@@ -339,3 +339,40 @@ def test_valid_sibling_reference_cannot_donate_bad_reference_provenance() -> Non
     parent.replace(bad, deepcopy(bad))
     with pytest.raises(ManagedStyleCompletionError, match="missing or ambiguous style"):
         validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)
+
+
+@pytest.mark.parametrize("kind", ["run", "paragraph", "table"])
+def test_original_bad_style_reference_cannot_move_to_a_new_content_owner(kind: str) -> None:
+    document = Document()
+    if kind == "run":
+        document.add_paragraph()
+        _bad_run(document)
+        tag = qn("w:rStyle")
+    elif kind == "paragraph":
+        properties = document.add_paragraph("Old template paragraph")._p.get_or_add_pPr()
+        reference = OxmlElement("w:pStyle")
+        reference.set(qn("w:val"), "MissingTemplateStyle")
+        properties.append(reference)
+        tag = qn("w:pStyle")
+    else:
+        table = document.add_table(rows=1, cols=1)
+        table.cell(0, 0).text = "Old template table"
+        reference = OxmlElement("w:tblStyle")
+        reference.set(qn("w:val"), "MissingTemplateStyle")
+        table._tbl.tblPr.append(reference)
+        tag = qn("w:tblStyle")
+    completed, bindings = complete_managed_styles(document, _catalog("en_US"))
+    original = next(
+        element for element in completed.element.iter(tag) if element.get(qn("w:val")) == "MissingTemplateStyle"
+    )
+    if kind == "run":
+        new_properties = completed.add_paragraph().add_run("New generated text")._r.get_or_add_rPr()
+    elif kind == "paragraph":
+        new_properties = completed.add_paragraph("New generated paragraph")._p.get_or_add_pPr()
+    else:
+        replacement = completed.add_table(rows=1, cols=1)
+        replacement.cell(0, 0).text = "New generated table"
+        new_properties = replacement._tbl.tblPr
+    new_properties.append(original)  # Same physical reference, different owner.
+    with pytest.raises(ManagedStyleCompletionError, match="missing or ambiguous style"):
+        validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)
