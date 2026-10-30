@@ -210,7 +210,9 @@ def test_full_conversion_heading_uses_private_binding_before_wrong_type_name_loo
         styles = etree.fromstring(archive.read("word/styles.xml"))
         old = next(style for style in styles.findall(qn("w:style")) if style.get(qn("w:styleId")) == f"Heading{level}")
         assert etree.tostring(old, method="c14n", exclusive=True) == before
-        heading = next(p for p in root.iter(qn("w:p")) if "Fresh heading" in "".join(p.itertext()))
+        heading = next(
+            p for p in root.iter(qn("w:p")) if "Fresh heading" in "".join(str(text) for text in p.itertext())
+        )
         reference = heading.find(qn("w:pPr") + "/" + qn("w:pStyle"))
         assert reference is not None
         assert reference.get(qn("w:val")) == f"Heading{level}DocWen1"
@@ -248,8 +250,8 @@ def test_yaml_fill_retains_original_bad_style_reference_on_edited_owner(tmp_path
         root = etree.fromstring(archive.read("word/document.xml"))
         preserved = next(root.iter(reference.tag))
         assert preserved.get(qn("w:val")) == "MissingTemplateStyle"
-        assert "Filled title" in "".join(root.itertext())
-        assert "{{标题}}" not in "".join(root.itertext())
+        assert "Filled title" in "".join(str(text) for text in root.itertext())
+        assert "{{标题}}" not in "".join(str(text) for text in root.itertext())
     assert template.read_bytes() == original
 
 

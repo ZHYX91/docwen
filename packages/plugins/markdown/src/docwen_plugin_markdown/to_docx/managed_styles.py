@@ -987,7 +987,10 @@ def _bind_preserved_references(
 ) -> tuple[_PreservedStyleReference, ...]:
     remaining = Counter(baseline)
     result: list[_PreservedStyleReference] = []
-    for part in document.part.package.parts:
+    package = document.part.package
+    if package is None:
+        _internal("Request-owned DOCX has no owning package for style-reference provenance.")
+    for part in package.parts:
         part_name = str(part.partname).lstrip("/")
         if not (_is_reference_part(part_name) or part_name in {_PRIMARY_STYLES_PART, _EFFECTS_STYLES_PART}):
             continue
@@ -1019,7 +1022,8 @@ def _bind_preserved_references(
 def _current_preserved_occurrences(bindings: ManagedStyleBindings) -> tuple[tuple[str, bytes], ...]:
     result: list[tuple[str, bytes]] = []
     for record in bindings.preserved_invalid_references:
-        if not any(part is record.part for part in record.document.part.package.parts):
+        package = record.document.part.package
+        if package is None or not any(part is record.part for part in package.parts):
             continue
         if record.original_blob is not None:
             # Generic OPC parts have no live XML tree. The parsed handles are
