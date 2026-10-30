@@ -92,6 +92,7 @@ def add_md_numbering(
     *,
     extended_headings: bool = False,
     structural_tables: bool = False,
+    added_prefixes: list[str] | None = None,
 ) -> str:
     """Add heading numbering using one exact configured scheme.
 
@@ -102,6 +103,8 @@ def add_md_numbering(
         content: Raw Markdown content.
         scheme: Exact scheme ID (e.g. ``"gongwen_standard"``).
         registry: Request-owned numbering scheme registry.
+        added_prefixes: Optional insertion provenance in heading inventory order;
+            empty prefixes still reserve their heading slot.
 
     Returns:
         Markdown content with heading numbers inserted.
@@ -109,12 +112,21 @@ def add_md_numbering(
     scheme_config = resolve_heading_numbering_scheme(scheme, registry)
     formatter = HeadingFormatter(scheme_config)
     return _apply_numbering(
-        content, formatter, extended_headings=extended_headings, structural_tables=structural_tables
+        content,
+        formatter,
+        extended_headings=extended_headings,
+        structural_tables=structural_tables,
+        added_prefixes=added_prefixes,
     )
 
 
 def _apply_numbering(
-    content: str, formatter: Any, *, extended_headings: bool = False, structural_tables: bool = False
+    content: str,
+    formatter: Any,
+    *,
+    extended_headings: bool = False,
+    structural_tables: bool = False,
+    added_prefixes: list[str] | None = None,
 ) -> str:
     """Apply a ``HeadingFormatter`` to all heading lines in Markdown content.
 
@@ -129,6 +141,8 @@ def _apply_numbering(
         result.append(content[cursor : heading.text_start])
         heading_text = content[heading.text_start : heading.text_end]
         formatted = formatter.format_heading(heading_text, heading.level)
+        if added_prefixes is not None:
+            added_prefixes.append(formatted[: len(formatted) - len(heading_text)] if heading_text else formatted)
         if formatted and heading.requires_separator:
             result.append(" ")
         result.append(formatted)

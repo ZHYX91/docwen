@@ -11,6 +11,11 @@ template_name = "English General Template"
 # Main Window
 # =============================================================================
 [main_window]
+numbering_comments_unanchored = "Some added numbers cannot be isolated as text with this scheme. Their review comments were skipped; heading content was preserved."
+numbering_comments_native = "Review comments were not added to Word-native numbers because they have no separate text range. Select text numbering in Incoming Text to comment only on added numbers."
+conversion_failed_detail = "Conversion failed."
+note_syntax_invalid = "Footnote or endnote syntax is invalid. Check note references and definitions, then retry."
+note_template_incompatible = "The template footnote or endnote structure is incompatible with this conversion. Check the template notes or choose another template and retry."
 image_png_16bit_clipped = "PNG stores at most 16-bit integer samples; values outside 0–65535 were clipped. Use TIFF to retain the original integer range."
 output_filesystem_unsupported = "This folder cannot save results safely without risking replacement of existing files. Choose another output folder; in WSL, use a native Linux folder."
 ocr_quality_notice = "OCR results may contain errors or omissions; verify them against the source."
@@ -1837,6 +1842,8 @@ unavailable = "{name} optimization is unavailable for this input category in the
 
 
 [settings.gongwen]
+numbering_comments_label = "Add review comments to automatically added official-document numbers"
+numbering_comments_help = "Comment only on heading numbers actually added using the scheme selected in Incoming Text. This does not enable numbering or mark existing handwritten numbers. Independent of Format official-document fields. Requires an isolated text number prefix. Word-native numbering and custom Markdown prefixes that cannot be anchored exactly are preserved and reported as skipped comments."
 description = "Set defaults for recognizing official documents and formatting template fields separately."
 to_markdown_title = "Document → Markdown"
 to_markdown_description = "Use official document optimization as the initial choice for compatible documents; this does not classify files as official documents. DOCX is handled directly; DOC, WPS, RTF and ODT need an available document converter."

@@ -154,7 +154,11 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("conversion_defaults", "layout", "to_md_enable_ocr"),
         ("conversion_defaults", "layout", "render_dpi"),
     ),
-    "gongwen": (("text", "gongwen_fields_enabled"), ("text", "attachment_alignment")),
+    "gongwen": (
+        ("text", "gongwen_fields_enabled"),
+        ("text", "gongwen_numbering_comments"),
+        ("text", "attachment_alignment"),
+    ),
     "invoice": (),
     "link": (("link",),),
     "formatting": (("formatting",),),
@@ -988,6 +992,9 @@ class SettingsViewModel(QObject):
         config.text.gongwen_fields_enabled = (
             template_fill.get("gongwen_fields_enabled", True) if isinstance(template_fill, dict) else True
         )
+        config.text.gongwen_numbering_comments = (
+            template_fill.get("gongwen_numbering_comments", False) if isinstance(template_fill, dict) else False
+        )
         config.text.attachment_alignment = (
             str(template_fill.get("attachment_alignment", "tab")) if isinstance(template_fill, dict) else "tab"
         )
@@ -1416,6 +1423,7 @@ class SettingsViewModel(QObject):
         put("conversion.md_to_docx.heading_merge_punctuation", text.heading_merge_punctuation)
         put("template_fill.list_separator", text.list_separator)
         put("template_fill.gongwen_fields_enabled", text.gongwen_fields_enabled)
+        put("template_fill.gongwen_numbering_comments", text.gongwen_numbering_comments)
         put("template_fill.attachment_alignment", text.attachment_alignment)
         put("document.style.table.md_to_docx.table_style_mode", text.table_style_mode)
         put("document.style.table.md_to_docx.builtin_style_key", text.builtin_table_style)

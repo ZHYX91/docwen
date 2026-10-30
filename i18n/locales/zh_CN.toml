@@ -11,6 +11,11 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+numbering_comments_unanchored = "所选方案的部分自动序号无法单独定位为文字，已跳过这些序号的批注；标题内容保留。"
+numbering_comments_native = "Word 原生编号由 Word 自动显示，没有可单独锚定的序号文字，因此未添加序号批注。如需批注，请在“传入文本”中选择文字编号。"
+conversion_failed_detail = "转换失败。"
+note_syntax_invalid = "脚注或尾注标记格式有误，请核对引用和定义后重试。"
+note_template_incompatible = "模板中的脚注或尾注结构与此次转换不兼容。请检查模板中的注释结构，或使用其他模板后重试。"
 image_png_16bit_clipped = "PNG 最多保存 16 位整数像素；超出 0–65535 的值已被裁剪。如需保留原始整数范围，请使用 TIFF。"
 output_filesystem_unsupported = "无法安全地将结果保存到这个文件夹，继续可能覆盖已有文件。请选择其他输出文件夹；在 WSL 中可改用 Linux 原生文件夹。"
 ocr_quality_notice = "OCR 结果可能存在错漏，请对照原文校对。"
@@ -1837,6 +1842,8 @@ unavailable = "当前环境未提供适用于此输入类别的{name}优化。"
 
 
 [settings.gongwen]
+numbering_comments_label = "为自动添加的公文序号添加批注"
+numbering_comments_help = "仅为按“传入文本”所选方案实际自动添加的标题序号添加核对批注；不会启用自动编号，也不标记原有手写序号。此项独立于“格式化公文字段”。 仅支持可单独定位的文字序号；Word 原生编号及无法精确定位的自定义标记序号会保留原样并提示跳过批注。"
 description = "分别设置公文识别默认选择与模板字段格式化。"
 to_markdown_title = "文档 → Markdown"
 to_markdown_description = "将公文优化设为兼容文档的初始选择，不会自动判断文件是否为公文。DOCX 可直接处理；DOC、WPS、RTF、ODT 需有可用的文档转换能力。"

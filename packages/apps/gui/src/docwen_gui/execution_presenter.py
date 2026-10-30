@@ -28,6 +28,12 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
     for diagnostic in result.diagnostics:
         if diagnostic.level != "warning":
             continue
+        if diagnostic.code == "MD2DOCX-NUMBERING-COMMENTS-NATIVE":
+            messages.append(_t("main_window.numbering_comments_native"))
+            continue
+        if diagnostic.code == "MD2DOCX-NUMBERING-COMMENTS-UNANCHORED":
+            messages.append(_t("main_window.numbering_comments_unanchored"))
+            continue
         extension_messages = {
             "docwen.conversion.markdown_extension.typed_endnotes.flattened": _t("main_window.extension_loss_endnotes"),
             "docwen.conversion.markdown_extension.extended_headings.flattened": _t(
@@ -88,12 +94,13 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
     return messages
 
 
-def _localized_failure_message(error: object | None = None) -> str:
+def _localized_failure_message(error: object | None = None, *, details: bool = False) -> str:
     """Return localized summary copy while keeping raw diagnostics in details."""
 
-    base = _t(
-        "main_window.conversion_failed",
-        "Conversion failed. Open failure details for diagnostic information.",
+    base = (
+        _t("main_window.conversion_failed_detail", "Conversion failed.")
+        if details
+        else _t("main_window.conversion_failed", "Conversion failed. Open failure details for diagnostic information.")
     )
     if error is None:
         return base
@@ -104,6 +111,10 @@ def _localized_failure_message(error: object | None = None) -> str:
     diagnostic_code = str(getattr(error, "diagnostic_code", "") or "").strip()
     error_type = str(getattr(error, "error_type", "") or "").strip()
     stable_code = diagnostic_code or error_type
+    if stable_code == "MD2DOCX-NOTE-SYNTAX-INVALID":
+        return _t("main_window.note_syntax_invalid")
+    if stable_code == "MD2DOCX-NOTE-PART-INVALID":
+        return _t("main_window.note_template_incompatible")
     if stable_code == "OUTPUT_ATOMIC_PUBLISH_UNSUPPORTED":
         return _t("main_window.output_filesystem_unsupported")
     if stable_code == "MERGE-FORMULA-CACHE-MISSING":
@@ -319,6 +330,7 @@ class ExecutionPresenter(QObject):
             "danger",
             show_location=False,
             operation_id=task_id,
+            details_message=_localized_failure_message(message, details=True),
         )
         guide_actions = self._info_area_vm.compute_guide_actions(
             "failed",
@@ -506,6 +518,9 @@ class ExecutionPresenter(QObject):
                 file_path=first_error_output,
                 navigate_file_path=first_error_output,
                 operation_id=task_id,
+                details_message=_localized_failure_message(
+                    first_error_summary_source or first_error_message, details=True
+                ),
             )
         if first_retained_failure is not None and first_retained_failure[0] != first_failed_path:
             _, retained_output, _retained_message = first_retained_failure
@@ -515,6 +530,7 @@ class ExecutionPresenter(QObject):
                 show_location=True,
                 file_path=retained_output,
                 navigate_file_path=retained_output,
+                details_message=_localized_failure_message(details=True),
                 operation_id=task_id,
             )
         self._info_area_vm.set_task_summary(
@@ -620,6 +636,9 @@ class ExecutionPresenter(QObject):
             file_path=retained_output_path,
             navigate_file_path=retained_output_path,
             operation_id=task_id,
+            details_message=_t("main_window.task_cancelled_status")
+            if cancelled
+            else _localized_failure_message(error, details=True),
         )
         guide_actions = self._info_area_vm.compute_guide_actions(
             state,

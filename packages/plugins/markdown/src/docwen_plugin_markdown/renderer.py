@@ -71,6 +71,7 @@ from docwen_plugin_markdown.to_docx.numbering import (
     DocxListNumbering,
     apply_list_to_paragraph,
 )
+from docwen_plugin_markdown.to_docx.numbering_comments import add_numbering_review
 
 if TYPE_CHECKING:
     from docwen_core.docx_resolved_numbering import ResolvedNumberingDocxSession
@@ -316,6 +317,7 @@ class MdToDocxRenderer:
 
         # Heading counters for optional numbering.
         self._h_counters: list[int] = [0] * 9
+        self.rendered_heading_levels: set[int] = set()
 
         # List depth tracking for table indent
         self._list_depth: int = 0
@@ -601,12 +603,18 @@ class MdToDocxRenderer:
         mixed heading/body paragraph contract.
         """
         level = max(1, min(node.get("attrs", {}).get("level", 1), 9))
+        self.rendered_heading_levels.add(level)
         self._h_counters[level - 1] += 1
         for lx in range(level, 9):
             self._h_counters[lx] = 0
 
         heading = self._doc.add_heading(level=level)
         children = node.get("children", [])
+        if number := node.get("_docwen_added_number"):
+            number_run = heading.add_run(number)
+            add_numbering_review(self._doc, number_run)
+            children = [dict(child) for child in children]
+            children[0]["raw"] = children[0]["raw"][len(number) :]
 
         hmode = self._heading_formatting_mode
         if hmode == "remove":

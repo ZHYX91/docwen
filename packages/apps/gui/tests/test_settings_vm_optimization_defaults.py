@@ -27,6 +27,23 @@ def composition(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return vm, port, controller
 
 
+def test_numbering_comments_persist_cancel_and_reset_independently(composition) -> None:
+    vm, port, controller = composition
+    assert vm.config.text.gongwen_numbering_comments is False
+    vm.set_field(SECTION_TEXT, "gongwen_numbering_comments", True)
+    vm.set_field(SECTION_TEXT, "gongwen_fields_enabled", False)
+    assert vm.apply_changes()
+    reopened = SettingsViewModel(controller=controller)
+    assert reopened.config.text.gongwen_numbering_comments is True
+    assert reopened.config.text.gongwen_fields_enabled is False
+    assert port.get("template_fill.gongwen_numbering_comments") is True
+    vm.set_field(SECTION_TEXT, "gongwen_numbering_comments", False)
+    vm.cancel()
+    assert vm.config.text.gongwen_numbering_comments is True
+    assert vm.reset_group("gongwen")
+    assert vm.config.text.gongwen_numbering_comments is False
+
+
 def test_one_default_per_input_category_persists_and_reopens(composition) -> None:
     vm, port, controller = composition
     assert vm.config.text.attachment_alignment == port.get("template_fill.attachment_alignment") == "tab"

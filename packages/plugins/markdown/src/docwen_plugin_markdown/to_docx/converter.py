@@ -115,6 +115,7 @@ from docwen_plugin_markdown.to_docx.notes import (
     prepare_note_context_for_document,
     write_notes_to_docx,
 )
+from docwen_plugin_markdown.to_docx.numbering_comments import annotate_numbering_prefixes
 from docwen_plugin_markdown.yaml_links import YamlLinkProjection
 from docwen_plugin_markdown.yaml_processor import (
     TITLE_PLACEHOLDER_ALIASES,
@@ -655,6 +656,9 @@ class MdToDocxConverter:
             scheme_config: dict[str, dict[str, str]] | None = None
             supported_heading_levels: set[int] | None = None
 
+            numbering_comments = bool(_config_value(context.config, "template_fill.gongwen_numbering_comments", False))
+            added_prefixes: list[str] = []
+            unanchored_number_comments = 0
             if add_num and render_body:
                 scheme = str(
                     options.get(
@@ -780,6 +784,7 @@ class MdToDocxConverter:
                             registry=context.numbering_registry,
                             extended_headings=extensions.extended_headings,
                             structural_tables=extensions.structural_tables,
+                            added_prefixes=added_prefixes if numbering_comments else None,
                         )
                     except NumberingSchemeResolutionError as exc:
                         return _numbering_resolution_failure(task_id, t_start, exc)
@@ -863,6 +868,8 @@ class MdToDocxConverter:
                 raw_ast = parse_markdown_text(
                     md_body, auto_link_bare_url=False, extensions=extensions, consume_initial_bom=False
                 )
+                if added_prefixes:
+                    unanchored_number_comments = annotate_numbering_prefixes(raw_ast, added_prefixes)
                 cancellable.check()
                 try:
                     raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
@@ -1327,6 +1334,34 @@ class MdToDocxConverter:
                 ConversionDiagnostic(level="warning", message=message, code=code)
                 for code, message in (renderer.warnings if renderer is not None else ())
             ]
+            if (
+                numbering_comments
+                and word_native_translation is not None
+                and renderer is not None
+                and renderer.rendered_heading_levels.intersection(supported_heading_levels or ())
+            ):
+                diagnostics.append(
+                    ConversionDiagnostic(
+                        level="warning",
+                        code="MD2DOCX-NUMBERING-COMMENTS-NATIVE",
+                        message=(
+                            "Review comments were not added to Word-native heading numbers: "
+                            "Word generates these numbers without a text range. "
+                            "Select text numbering in Incoming Text to comment only on the added numbers."
+                        ),
+                    )
+                )
+            if unanchored_number_comments:
+                diagnostics.append(
+                    ConversionDiagnostic(
+                        level="warning",
+                        code="MD2DOCX-NUMBERING-COMMENTS-UNANCHORED",
+                        message=(
+                            "Some added heading numbers could not be isolated as text in this scheme. "
+                            "Their review comments were skipped; the heading content was preserved."
+                        ),
+                    )
+                )
             if approximate_warning:
                 diagnostics.insert(
                     0,

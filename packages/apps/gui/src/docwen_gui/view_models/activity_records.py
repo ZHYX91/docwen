@@ -111,7 +111,11 @@ class ActivityRecordsModel(QAbstractTableModel):
                 ]
                 warnings = outcome.warnings if outcome else ()
                 messages = list(
-                    dict.fromkeys(row.message for row in matching if not warnings or row.message_type != "warning")
+                    dict.fromkeys(
+                        (row.details_message or row.message)
+                        for row in matching
+                        if not warnings or row.message_type != "warning"
+                    )
                 )
                 has_warning = bool(warnings) or any(row.message_type == "warning" for row in matching)
                 input_display = source_label or display_path(path)
@@ -163,7 +167,7 @@ class ActivityRecordsModel(QAbstractTableModel):
             status = {"success": "completed", "danger": "failed", "warning": "warning"}.get(row.message_type, "info")
             if row.diagnostic is not None and row.diagnostic.status == "not_started":
                 status = "not_started"
-            details = row.message
+            details = row.details_message or row.message
             if row.repeat_count > 1:
                 details += "\n" + t("info_area.history_repeated", count=row.repeat_count)
             path = row.file_path or row.navigate_file_path

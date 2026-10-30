@@ -5,5 +5,8 @@ list_separator = "、"
 # Format Chinese official-document fields in Word templates.
 gongwen_fields_enabled = true
 
+# Independently review only heading numbers added by the incoming-text policy.
+gongwen_numbering_comments = false
+
 # Attachment-name alignment: spaces or a tab stop, with a hanging indent.
 attachment_alignment = "tab"

@@ -205,7 +205,11 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "image.pdf_quality",
         "image.tiff_mode",
     ),
-    "gongwen": ("template_fill.gongwen_fields_enabled", "template_fill.attachment_alignment"),
+    "gongwen": (
+        "template_fill.gongwen_fields_enabled",
+        "template_fill.gongwen_numbering_comments",
+        "template_fill.attachment_alignment",
+    ),
     "link": (
         "link.format.image_link_style",
         "link.format.md_file_link_style",

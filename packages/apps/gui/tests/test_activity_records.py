@@ -16,6 +16,52 @@ from docwen_gui.view_models.task_history import TaskHistory
 pytestmark = pytest.mark.gui
 
 
+def test_failure_details_keep_diagnostics_without_self_navigation(qapp):
+    from docwen_gui.i18n import t
+
+    history = TaskHistory()
+    feedback = InfoAreaViewModel()
+    model = ActivityRecordsModel(history, feedback)
+    history.remember({"request_id": "failure", "file_path": "/input.md", "target_format": "docx"})
+    history.record("failure", "/input.md", "failed", "Technical note incompatibility")
+    notice = t("main_window.conversion_failed") + " [MD2DOCX-NOTE-PART-INVALID]"
+    feedback.add_message(
+        notice,
+        "danger",
+        operation_id="failure",
+        details_message=t("main_window.conversion_failed_detail") + " [MD2DOCX-NOTE-PART-INVALID]",
+    )
+    assert feedback.history_rows[0].message == notice
+    details = model.records[0].details
+    assert t("main_window.conversion_failed") not in details
+    assert "Technical note incompatibility" in details
+    assert "MD2DOCX-NOTE-PART-INVALID" in details
+    feedback.stop_all_timers()
+
+
+@pytest.mark.parametrize("locale", ["zh_CN", "en_US", "ar_SA"])
+def test_note_failures_have_localized_specific_diagnoses(qapp, locale):
+    from docwen_core.models.result import ConversionErrorInfo
+    from docwen_gui.execution_presenter import _localized_failure_message
+    from docwen_gui.i18n import get_locale, set_locale, t
+
+    previous = get_locale()
+    set_locale(locale)
+    try:
+        for code, key in (
+            ("MD2DOCX-NOTE-SYNTAX-INVALID", "main_window.note_syntax_invalid"),
+            ("MD2DOCX-NOTE-PART-INVALID", "main_window.note_template_incompatible"),
+        ):
+            error = ConversionErrorInfo(error_type="invalid_input", message="Technical details", diagnostic_code=code)
+            assert _localized_failure_message(error) == t(key)
+        error = ConversionErrorInfo(
+            error_type="conversion_failed", message="disk error", diagnostic_code="MD2DOCX-NOTE-WRITEBACK-ERROR"
+        )
+        assert _localized_failure_message(error) != t("main_window.note_template_incompatible")
+    finally:
+        set_locale(previous)
+
+
 @pytest.fixture
 def activity(qtbot):
     history = TaskHistory()

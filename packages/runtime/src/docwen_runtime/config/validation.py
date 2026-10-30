@@ -614,6 +614,7 @@ def _validate_ocr(data: dict[str, Any]) -> None:
 def _validate_template_fill(data: dict[str, Any]) -> None:
     _validate_optional_string(data, "list_separator", label="template_fill")
     _validate_optional_bool(data, "gongwen_fields_enabled", label="template_fill")
+    _validate_optional_bool(data, "gongwen_numbering_comments", label="template_fill")
     _canonical_choice(
         data,
         "attachment_alignment",

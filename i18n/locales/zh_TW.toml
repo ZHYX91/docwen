@@ -1670,6 +1670,11 @@ subtitle = "副標題"
 
 
 [main_window]
+numbering_comments_unanchored = "所選方案的部分自動編號無法單獨定位為文字，已略過這些編號的註解；標題內容保留。"
+numbering_comments_native = "Word 原生編號由 Word 自動顯示，沒有可單獨錨定的序號文字，因此未加入編號註解。如需註解，請在「傳入文字」中選擇文字編號。"
+conversion_failed_detail = "轉換失敗。"
+note_syntax_invalid = "註腳或章節附註標記格式有誤，請核對引用和定義後重試。"
+note_template_incompatible = "範本中的註腳或章節附註結構與此次轉換不相容。請檢查範本或改用其他範本後重試。"
 image_png_16bit_clipped = "PNG 最多儲存 16 位整數像素；超出 0–65535 的值已被裁剪。如需保留原始整數範圍，請使用 TIFF。"
 output_filesystem_unsupported = "無法安全地將結果儲存到這個資料夾，繼續可能覆寫既有檔案。請選擇其他輸出資料夾；在 WSL 中可改用 Linux 原生資料夾。"
 ocr_quality_notice = "OCR 結果可能有錯漏，請對照原文校對。"
@@ -1842,6 +1847,8 @@ unavailable = "目前環境未提供適用於此輸入類別的{name}最佳化�
 
 
 [settings.gongwen]
+numbering_comments_label = "為自動新增的公文序號加入註解"
+numbering_comments_help = "僅為依「傳入文字」所選方案實際自動新增的標題序號加入核對註解；不會啟用自動編號，也不標記原有手寫序號。此項獨立於「格式化公文字段」。 僅支援可單獨定位的文字編號；Word 原生編號及無法精確定位的自訂標記編號會保留原樣，並提示略過註解。"
 description = "分別設定公文辨識的預設選擇與範本欄位格式。"
 to_markdown_title = "文件 → Markdown"
 to_markdown_description = "將公文最佳化設為相容文件的初始選擇，不會自動判斷檔案是否為公文。DOCX 可直接處理；DOC、WPS、RTF、ODT 需要可用的文件轉換能力。"

@@ -11,6 +11,11 @@ template_name = "Modèle Général Français"
 # 通用文本
 # =============================================================================
 [main_window]
+numbering_comments_unanchored = "Certains numéros ajoutés ne peuvent pas être isolés comme texte avec ce schéma. Leurs commentaires ont été ignorés ; les titres sont conservés."
+numbering_comments_native = "Les numéros natifs Word ne possèdent pas de plage de texte distincte et ne sont pas commentés. Choisissez la numérotation textuelle dans Texte entrant pour commenter les numéros ajoutés."
+conversion_failed_detail = "Échec de la conversion."
+note_syntax_invalid = "La syntaxe des notes est incorrecte. Vérifiez les références et les définitions."
+note_template_incompatible = "La structure des notes du modèle est incompatible avec cette conversion. Vérifiez le modèle ou choisissez-en un autre."
 image_png_16bit_clipped = "PNG stocke les valeurs entières sur 16 bits au maximum ; les valeurs hors de la plage 0–65535 ont été écrêtées. Utilisez TIFF pour conserver la plage d’origine."
 output_filesystem_unsupported = "Impossible d’enregistrer en toute sécurité dans ce dossier : le système de fichiers ne permet pas une publication atomique sans écrasement. Choisissez un autre emplacement ; sous WSL, utilisez un système de fichiers Linux natif."
 ocr_quality_notice = "Les résultats OCR peuvent contenir des erreurs ou omissions ; vérifiez-les avec la source."
@@ -1839,6 +1844,8 @@ unavailable = "L’optimisation {name} n’est pas disponible pour cette catégo
 
 
 [settings.gongwen]
+numbering_comments_label = "Commenter les numéros ajoutés automatiquement"
+numbering_comments_help = "Commente uniquement les numéros de titres ajoutés selon le schéma choisi dans Texte entrant. Ne déclenche pas la numérotation et ne marque pas les numéros existants. Indépendant du formatage des champs. Nécessite un préfixe numérique isolable. La numérotation native Word et les préfixes Markdown non isolables sont conservés, avec un avertissement sur les commentaires ignorés."
 description = "Réglez séparément le choix par défaut pour les documents officiels et le formatage des champs du modèle."
 to_markdown_title = "Document → Markdown"
 to_markdown_description = "Présélectionnez l’optimisation des documents officiels pour les documents compatibles, sans classer automatiquement les fichiers. DOCX est traité directement ; DOC, WPS, RTF et ODT nécessitent un convertisseur de documents disponible."

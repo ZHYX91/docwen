@@ -229,6 +229,13 @@ def test_specialized_optimization_settings_are_localized() -> None:
         "settings.optimization.set_default",
         "settings.optimization.clear_default",
         "settings.gongwen.description",
+        "settings.gongwen.numbering_comments_label",
+        "settings.gongwen.numbering_comments_help",
+        "main_window.numbering_comments_native",
+        "main_window.numbering_comments_unanchored",
+        "main_window.conversion_failed_detail",
+        "main_window.note_syntax_invalid",
+        "main_window.note_template_incompatible",
         "settings.invoice.description",
     )
     english = _read_toml_file(LOCALES_DIR / "en_US.toml")

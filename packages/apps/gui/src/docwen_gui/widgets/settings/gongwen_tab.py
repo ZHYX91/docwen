@@ -83,8 +83,19 @@ class GongwenTab(BaseSettingsTab):
                 SECTION_TEXT, "attachment_alignment", self._attachment_alignment.currentData()
             )
         )
+        row, self._numbering_comments = self._create_toggle_with_info(
+            t("settings.gongwen.numbering_comments_label"),
+            t("settings.gongwen.numbering_comments_help"),
+        )
+        self._numbering_comments.setObjectName("gongwenNumberingComments")
+        from_markdown_form.addRow(row)
+        self._numbering_comments.toggled.connect(
+            lambda enabled: self._vm.set_field(SECTION_TEXT, "gongwen_numbering_comments", enabled)
+        )
 
     def _load_fields_value(self) -> None:
+        with QSignalBlocker(self._numbering_comments):
+            self._numbering_comments.setChecked(self._vm.config.text.gongwen_numbering_comments)
         with QSignalBlocker(self._gongwen_fields):
             self._gongwen_fields.setChecked(self._vm.config.text.gongwen_fields_enabled)
         with QSignalBlocker(self._attachment_alignment):
@@ -92,7 +103,11 @@ class GongwenTab(BaseSettingsTab):
         self._attachment_options.setEnabled(self._vm.config.text.gongwen_fields_enabled)
 
     def _on_config_changed(self, section: str, key: str, _value: object) -> None:
-        if section == SECTION_TEXT and key in {"gongwen_fields_enabled", "attachment_alignment"}:
+        if section == SECTION_TEXT and key in {
+            "gongwen_fields_enabled",
+            "gongwen_numbering_comments",
+            "attachment_alignment",
+        }:
             self._load_fields_value()
 
     def reload_from_config(self) -> None:

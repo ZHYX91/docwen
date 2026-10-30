@@ -11,6 +11,11 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+numbering_comments_unanchored = "Alguns números adicionados não podem ser isolados como texto neste esquema. Seus comentários foram ignorados; os títulos foram preservados."
+numbering_comments_native = "Os números nativos do Word não têm um intervalo de texto separado e não receberam comentários. Selecione numeração de texto em Texto de entrada para comentar os números adicionados."
+conversion_failed_detail = "Falha na conversão."
+note_syntax_invalid = "A sintaxe das notas é inválida. Verifique as referências e definições."
+note_template_incompatible = "A estrutura de notas do modelo é incompatível com esta conversão. Verifique o modelo ou escolha outro."
 image_png_16bit_clipped = "PNG armazena valores inteiros de até 16 bits; os valores fora do intervalo 0–65535 foram limitados. Use TIFF para preservar o intervalo original."
 output_filesystem_unsupported = "Não é possível salvar com segurança nesta pasta: o sistema de arquivos não permite publicação atômica sem sobrescrever resultados existentes. Escolha outro local de saída; no WSL, use um sistema de arquivos nativo do Linux."
 ocr_quality_notice = "O OCR pode conter erros ou omissões; confira os resultados com o original."
@@ -1838,6 +1843,8 @@ unavailable = "A otimização {name} não está disponível para esta categoria 
 
 
 [settings.gongwen]
+numbering_comments_label = "Comentar números adicionados automaticamente"
+numbering_comments_help = "Comenta apenas os números de títulos adicionados pelo esquema em Texto de entrada. Não ativa a numeração nem marca números existentes. Independente da formatação de campos. Requer um prefixo numérico isolável. A numeração nativa do Word e os prefixos Markdown não isoláveis são preservados, com aviso sobre comentários ignorados."
 description = "Configure separadamente o padrão para documentos oficiais e a formatação dos campos do modelo."
 to_markdown_title = "Documento → Markdown"
 to_markdown_description = "Use a otimização de documentos oficiais como seleção inicial para documentos compatíveis, sem classificar os arquivos automaticamente. DOCX é processado diretamente; DOC, WPS, RTF e ODT precisam de um conversor de documentos disponível."

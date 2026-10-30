@@ -125,7 +125,11 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
 
     gongwen_plan = reset_plan_for_group("gongwen")
     assert gongwen_plan.files == ()
-    assert gongwen_plan.dotted_keys == ("template_fill.gongwen_fields_enabled", "template_fill.attachment_alignment")
+    assert gongwen_plan.dotted_keys == (
+        "template_fill.gongwen_fields_enabled",
+        "template_fill.gongwen_numbering_comments",
+        "template_fill.attachment_alignment",
+    )
     assert gongwen_plan.conditional_dotted_keys == (("document.to_md_optimization", "gongwen"),)
 
     invoice_plan = reset_plan_for_group("invoice")
