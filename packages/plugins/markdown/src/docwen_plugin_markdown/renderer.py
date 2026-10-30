@@ -375,7 +375,13 @@ class MdToDocxRenderer:
         """
         # Resolve note styles from the document once per render
         if self._note_ctx is not None:
-            self._note_ctx.resolve_note_styles(self._doc)
+            if self._managed_styles is not None:
+                self._note_ctx.footnote_text_style = self._managed_styles.style_id("footnote_text")
+                self._note_ctx.footnote_ref_style = self._managed_styles.style_id("footnote_reference")
+                self._note_ctx.endnote_text_style = self._managed_styles.style_id("endnote_text")
+                self._note_ctx.endnote_ref_style = self._managed_styles.style_id("endnote_reference")
+            else:
+                self._note_ctx.resolve_note_styles(self._doc)
 
         paragraphs: list = []
         skip_merged = False

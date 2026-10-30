@@ -10,7 +10,8 @@ keep Word's optional ``stylesWithEffects`` copy in sync.
 from __future__ import annotations
 
 import unicodedata
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, replace
 from io import BytesIO
 from typing import TYPE_CHECKING, Final, Never
 from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipFile, ZipFile, ZipInfo
@@ -124,6 +125,7 @@ class ManagedStyleBindings:
     styles: tuple[tuple[str, BaseStyle], ...]
     foundation_style_ids: tuple[tuple[str, str], ...]
     conflicts: tuple[ManagedStyleConflict, ...] = ()
+    preserved_invalid_references: tuple[tuple[str, bytes], ...] = ()
 
     def get(self, semantic_key: str) -> BaseStyle:
         for key, style in self.styles:
@@ -203,7 +205,11 @@ def complete_managed_styles(
         conflicts = _dedupe_conflicts(
             (*resolution_conflicts, *plan.conflicts, *(effects_plan.conflicts if effects_plan is not None else ()))
         )
-        bindings = _bind_and_validate(completed, catalog, plan, conflicts)
+        baseline = _invalid_reference_occurrences(source_blob, dict(plan.migrations))
+        bindings = replace(
+            _bind_and_validate(completed, catalog, plan, conflicts),
+            preserved_invalid_references=baseline,
+        )
         expected_ids = tuple((match.definition.semantic_key, match.output_style_id) for match in plan.matches)
         effects_expected_ids = (
             tuple((match.definition.semantic_key, match.output_style_id) for match in effects_plan.matches)
@@ -215,6 +221,7 @@ def complete_managed_styles(
             catalog,
             expected_ids=expected_ids,
             effects_expected_ids=effects_expected_ids,
+            preserved_invalid_references=baseline,
         )
         return completed, bindings
     except ManagedStyleCompletionError:
@@ -234,13 +241,9 @@ def _preflight(
 ) -> _CompletionPlan:
     resolved_by_key = dict(resolved_ids)
     styles = tuple(root.findall(qn("w:style")))
-    by_id: dict[str, etree._Element] = {}
+    by_id = _style_elements_by_id(root)
     by_name: dict[str, list[etree._Element]] = {}
     for style in styles:
-        style_id = style.get(qn("w:styleId"), "")
-        if not style_id or style_id in by_id:
-            _conflict("DOCX styles contain a missing or duplicate styleId.")
-        by_id[style_id] = style
         name = _style_name(style)
         if name:
             by_name.setdefault(_normalize_name(name), []).append(style)
@@ -262,15 +265,12 @@ def _preflight(
         all_name_hits = _unique_elements(
             candidate for name in recognition_names for candidate in by_name.get(_normalize_name(name), ())
         )
-        name_hits = [candidate for candidate in all_name_hits if candidate.get(qn("w:type"), "") == definition.kind]
-        stable_hit = by_id.get(definition.style_id)
-        if definition.is_builtin:
-            if stable_hit is not None and not _compatible_identity(stable_hit, definition, recognition_names):
-                _conflict(f"Canonical built-in styleId {definition.style_id!r} is occupied by another identity.")
-            if len(all_name_hits) != len(name_hits) or len(name_hits) > 1:
-                _conflict(f"Canonical built-in style name for {definition.semantic_key!r} is ambiguous or mistyped.")
-            if stable_hit is not None and name_hits and stable_hit is not name_hits[0]:
-                _conflict(f"Canonical built-in styleId and name disagree for {definition.semantic_key!r}.")
+        name_hits = [
+            candidate
+            for candidate in all_name_hits
+            if candidate.get(qn("w:type"), "") == definition.kind
+            and by_id.get(candidate.get(qn("w:styleId"), "")) is candidate
+        ]
         candidates = _unique_elements((*id_hits, *name_hits))
         candidate = _select_candidate(candidates, definition, output_style_id)
         if len(candidates) > 1 or len(all_name_hits) != len(name_hits):
@@ -318,9 +318,11 @@ def _resolve_output_style_ids(
     resolved: list[tuple[str, str]] = []
     conflicts: list[ManagedStyleConflict] = []
     for definition in _ALL_STYLE_DEFINITIONS:
-        if definition in _FOUNDATION_STYLE_DEFINITIONS or definition.is_builtin:
-            resolved.append((definition.semantic_key, _resolve_builtin_style_id(primary_root, definition, catalog)))
-            continue
+        preferred_id = (
+            _resolve_builtin_style_id(primary_root, definition, catalog)
+            if definition in _FOUNDATION_STYLE_DEFINITIONS or definition.is_builtin
+            else definition.style_id
+        )
         recognition_names = _recognition_names(definition, catalog)
         recognition_identities = {_normalize_name(name) for name in recognition_names}
         visible_identity_conflict = any(
@@ -331,14 +333,14 @@ def _resolve_output_style_ids(
         )
         stable_is_safe = (
             all(
-                (candidate := _style_by_id(root, definition.style_id)) is None
-                or _compatible_identity(candidate, definition, recognition_names)
+                not (candidates := _styles_by_id(root, preferred_id))
+                or (len(candidates) == 1 and _compatible_identity(candidates[0], definition, recognition_names))
                 for root in roots
             )
             and not visible_identity_conflict
         )
         if stable_is_safe:
-            output_style_id = definition.style_id
+            output_style_id = preferred_id
         else:
             output_style_id = _allocate_collision_free_style_id(definition.style_id, used_ids)
             conflicts.append(
@@ -372,17 +374,20 @@ def _resolve_builtin_style_id(
         candidate
         for candidate in primary_root.findall(qn("w:style"))
         if _compatible_identity(candidate, definition, recognition_names)
+        and _style_by_id(primary_root, candidate.get(qn("w:styleId"), "")) is candidate
     )
     if len(candidates) == 1:
         return candidates[0].get(qn("w:styleId"), definition.style_id)
     return definition.style_id
 
 
+def _styles_by_id(root: etree._Element, style_id: str) -> list[etree._Element]:
+    return [element for element in root.findall(qn("w:style")) if element.get(qn("w:styleId"), "") == style_id]
+
+
 def _style_by_id(root: etree._Element, style_id: str) -> etree._Element | None:
-    for element in root.findall(qn("w:style")):
-        if element.get(qn("w:styleId"), "") == style_id:
-            return element
-    return None
+    matches = _styles_by_id(root, style_id)
+    return matches[0] if len(matches) == 1 else None
 
 
 def _allocate_collision_free_style_id(stable_id: str, used_ids: set[str]) -> str:
@@ -880,6 +885,7 @@ def _validate_serialized_package(
     *,
     expected_ids: tuple[tuple[str, str], ...],
     effects_expected_ids: tuple[tuple[str, str], ...] | None,
+    preserved_invalid_references: tuple[tuple[str, bytes], ...] = (),
 ) -> None:
     expected_by_key = dict(expected_ids)
     with ZipFile(BytesIO(blob), "r") as archive:
@@ -898,11 +904,12 @@ def _validate_serialized_package(
                 _internal(f"Managed style {expected_id!r} has the wrong final output name.")
             if element.find(qn("w:aliases")) is not None:
                 _internal(f"Managed style {expected_id!r} regained aliases after rendering.")
+        allowances = Counter(preserved_invalid_references)
         for item in archive.infolist():
             if not (_is_reference_part(item.filename) or item.filename == _PRIMARY_STYLES_PART):
                 continue
             root = etree.fromstring(archive.read(item.filename))
-            _validate_reference_root(root, style_types, item.filename)
+            _validate_reference_root(root, style_types, item.filename, allowances)
         if _EFFECTS_STYLES_PART in archive.namelist():
             if effects_expected_ids is None:
                 _internal("Parallel style registry appeared without a resolved identity map.")
@@ -919,7 +926,7 @@ def _validate_serialized_package(
                     _internal(f"Parallel style {expected_id!r} has the wrong output name.")
                 if element.find(qn("w:aliases")) is not None:
                     _internal(f"Parallel style {expected_id!r} regained aliases after rendering.")
-            _validate_reference_root(effects, effects_types, _EFFECTS_STYLES_PART)
+            _validate_reference_root(effects, effects_types, _EFFECTS_STYLES_PART, allowances)
 
 
 def validate_managed_style_package(
@@ -940,6 +947,7 @@ def validate_managed_style_package(
             catalog,
             expected_ids=expected_ids,
             effects_expected_ids=expected_ids,
+            preserved_invalid_references=bindings.preserved_invalid_references if bindings else (),
         )
     except ManagedStyleCompletionError:
         raise
@@ -951,27 +959,64 @@ def validate_managed_style_package(
         ) from exc
 
 
-def _validate_reference_root(root: etree._Element, style_types: dict[str, str], part_name: str) -> None:
-    """Validate concrete formatting references without over-owning inheritance.
+def _reference_occurrence(element: etree._Element, part_name: str) -> tuple[str, bytes]:
+    # The immediate formatting owner is stable when unrelated siblings or
+    # paragraphs are inserted. Do not exempt every use of the same style ID.
+    owner = element.getparent()
+    if owner is None:
+        owner = element
+    if owner.tag in {qn("w:pPr"), qn("w:rPr"), qn("w:tblPr")}:
+        content_owner = owner.getparent()
+        if content_owner is not None:
+            owner = content_owner
+    return part_name, etree.tostring(owner, method="c14n", exclusive=True)
 
-    Missing ``pStyle``/``rStyle``/``tblStyle`` changes rendered formatting and
-    is always invalid in DocWen output. WordprocessingML inheritance/link
-    references, however, may legitimately name a definition that a foreign
-    template omits and Word then ignores. DocWen completes every dependency it
-    creates itself, so preserving such legacy links is safer than synthesizing
-    unknown user formatting or rejecting an otherwise usable template.
-    """
 
-    for tag in _REFERENCE_QNAMES:
+def _invalid_reference_occurrences(blob: bytes, migrations: dict[str, str]) -> tuple[tuple[str, bytes], ...]:
+    result: list[tuple[str, bytes]] = []
+    with ZipFile(BytesIO(blob)) as archive:
+        primary = etree.fromstring(archive.read(_PRIMARY_STYLES_PART))
+        rewrite_style_refs_in_element(primary, migrations)
+        style_types = {
+            migrations.get(style_id, style_id): element.get(qn("w:type"), "")
+            for style_id, element in _style_elements_by_id(primary).items()
+        }
+        for name in archive.namelist():
+            if not (_is_reference_part(name) or name in {_PRIMARY_STYLES_PART, _EFFECTS_STYLES_PART}):
+                continue
+            root = etree.fromstring(archive.read(name))
+            rewrite_style_refs_in_element(root, migrations)
+            types = style_types
+            if name == _EFFECTS_STYLES_PART:
+                types = {
+                    style_id: element.get(qn("w:type"), "") for style_id, element in _style_elements_by_id(root).items()
+                }
+            for tag, expected in _DIRECT_STYLE_REFERENCE_TYPES.items():
+                for element in root.iter(tag):
+                    if types.get(element.get(qn("w:val"), "")) != expected:
+                        result.append(_reference_occurrence(element, name))
+    return tuple(result)
+
+
+def _validate_reference_root(
+    root: etree._Element,
+    style_types: dict[str, str],
+    part_name: str,
+    allowances: Counter[tuple[str, bytes]],
+) -> None:
+    """Require valid new references; allow only preserved baseline occurrences."""
+    for tag, expected in _DIRECT_STYLE_REFERENCE_TYPES.items():
         for element in root.iter(tag):
             style_id = element.get(qn("w:val"), "")
-            expected = _DIRECT_STYLE_REFERENCE_TYPES.get(tag)
-            if expected is None:
+            if style_types.get(style_id) == expected:
+                continue
+            occurrence = _reference_occurrence(element, part_name)
+            if allowances[occurrence]:
+                allowances[occurrence] -= 1
                 continue
             if style_id not in style_types:
-                _internal(f"{part_name} references missing style {style_id!r}.")
-            if style_types[style_id] != expected:
-                _internal(f"{part_name} references {style_id!r} with the wrong OOXML type.")
+                _internal(f"{part_name} references missing or ambiguous style {style_id!r}.")
+            _internal(f"{part_name} references {style_id!r} with the wrong OOXML type.")
 
 
 def _recognition_names(
@@ -1019,13 +1064,14 @@ def _require_type(element: etree._Element, definition: DocumentStyleDefinition) 
 
 
 def _style_elements_by_id(root: etree._Element) -> dict[str, etree._Element]:
-    result: dict[str, etree._Element] = {}
-    for element in root.findall(qn("w:style")):
-        style_id = element.get(qn("w:styleId"), "")
-        if not style_id or style_id in result:
-            _internal("A style definition part contains missing or duplicate style IDs.")
-        result[style_id] = element
-    return result
+    """Only unambiguous existing IDs can be reused or targeted by new output."""
+    elements = root.findall(qn("w:style"))
+    counts = Counter(element.get(qn("w:styleId"), "") for element in elements)
+    return {
+        style_id: element
+        for element in elements
+        if (style_id := element.get(qn("w:styleId"), "")) and counts[style_id] == 1
+    }
 
 
 def _normalize_name(value: str) -> str:

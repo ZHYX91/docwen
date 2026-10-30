@@ -66,12 +66,13 @@ semantic key -> stable OOXML styleId -> visible w:name
 - A built-in Word style uses its canonical English `styleId` and canonical English `w:name`; Word/WPS localize its
   presentation. If a Word/WPS template already represents the same built-in identity and type under a host-specific
   numeric or localized internal `styleId`, DocWen reuses that actual ID through the resolved map; it does not delete
-  and recreate the style merely to force the canonical ID. A newly injected built-in uses the canonical ID/name.
+  and recreate the style merely to force the canonical ID. A newly injected built-in uses the canonical ID/name when available; an occupied or ambiguous identity receives
+  a request-local collision-free ID while keeping its canonical name.
 - A DocWen style uses the stable `DocWen...` styleId below and a locale-specific `w:name` from the exact output
   locale. All eleven shipped locales are required.
 - `w:aliases` is never emitted. Import-time aliases are an internal recognition aid, not output identity.
 - An existing style with the same semantic identity and OOXML type is preserved, including user formatting. If a
-  stable DocWen `styleId` or visible name is occupied by a different identity or OOXML type, DocWen preserves the
+  managed `styleId` or visible name is occupied by a different identity or OOXML type, DocWen preserves the
   user's style and allocates a request-local collision-free `styleId` for the managed identity. The resolved
   semantic-key-to-styleId map is the only map used by renderers and is recorded with a stable conflict diagnostic.
   DocWen never deletes, renames, retypes, or rewrites the conflicting user style.
@@ -83,6 +84,16 @@ default. Final validation covers these foundation identities in both `styles.xml
 `Title` and `Subtitle` are optional template styles, not prerequisites or injected dependencies. The shipped blank
 template includes `Title` and therefore produces 47 physical styles after completion; this count is not a requirement
 for other templates. Source template bytes and compatible formatting remain unchanged.
+
+Final style validation is scoped to managed identities and newly written direct references. Missing or duplicate
+unused template style IDs and wrong-type visible-name collisions are preserved; an ambiguous ID is never reused for
+new managed output. Every generated `pStyle`, `rStyle` and `tblStyle` must target one definition of the correct type.
+Existing invalid direct references may survive only within the request's preserved occurrence baseline: the same
+part, canonical content owner (paragraph, run or table), and bounded occurrence count. Reusing an
+old bad style ID on a new run does not grant an exemption. Adding unrelated sibling content does not invalidate an
+unchanged old run. This baseline is kept in memory, without persisted bypass attributes. Managed and foundation
+identities themselves remain unique and type-checked in both style registries. Note rendering consumes the resolved
+managed binding rather than the first visible-name match.
 
 ## Complete registry / 完整注册表
 

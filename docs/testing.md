@@ -8,6 +8,11 @@ with no repository-layout or README dependency. CI uses its existing explicitly 
 Workspace repository cleanup reads `workspace.json`; legacy roots without registration never grant
 cleanup access to neighboring repositories. Registration does not bypass leases, Git tracking or links.
 
+`test_template_style_preservation.py` checks old missing/wrong-type direct style references, unused duplicate IDs,
+wrong-type note-style names, and shared private managed identities. It rejects added invalid occurrences, including
+an exact duplicate old run, and all three newly generated direct-reference types. Unrelated sibling insertion keeps
+the unchanged old-run baseline valid; new notes use the resolved correctly typed managed style.
+
 `test_docx_notes_v4.py` independently inspects saved note bodies, special-note types with positive IDs, relationship
 bytes, reachable media and native/NOTEREF references in mixed footnote/endnote packages. It pairs untouched malformed
 IDs, missing separators/resources and dangling references with unsafe ID ambiguity in the domain being extended;
