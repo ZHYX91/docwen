@@ -632,3 +632,38 @@ def test_other_story_reference_id_is_reserved_without_modifying_it(tmp_path: Pat
     write_notes_to_docx(str(path), context)
     with ZipFile(path) as archive:
         assert archive.read("word/header1.xml") == before
+
+
+@pytest.mark.parametrize(
+    "raw_id,new_id", [(" 1 ", "2"), (" +01\t", "2"), ("1_0", "1"), ("١", "1"), ("\u00a01", "1"), ("2147483648", "1")]
+)
+@pytest.mark.parametrize("old_before_new", [False, True])
+def test_note_id_lexical_forms_are_reserved_or_preserved_outside_owned_projection(
+    tmp_path: Path, raw_id: str, new_id: str, old_before_new: bool
+) -> None:
+    path = tmp_path / "malformed-native-ref.docx"
+    document = Document()
+    paragraph = document.add_paragraph()
+    old_run = OxmlElement("w:r")
+    old = OxmlElement("w:footnoteReference")
+    old.set(qn("w:id"), raw_id)
+    old_run.append(old)
+    paragraph._p.append(old_run)
+    context = NoteContext()
+    context._footnote_children = {"new": _note_children("New note")}
+    prepare_note_context_for_document(document, context)
+    assert context.get_footnote_word_id("new") == int(new_id)
+    for _ in range(2):
+        new_run = context.create_footnote_ref_run("new")
+        assert new_run is not None
+        if old_before_new:
+            paragraph._p.append(new_run)
+        else:
+            old_run.addprevious(new_run)
+    document.save(str(path))
+    write_notes_to_docx(str(path), context)
+    with ZipFile(path) as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+        refs = [item.get(qn("w:id")) for item in root.iter(qn("w:footnoteReference"))]
+        assert refs == ([raw_id, new_id] if old_before_new else [new_id, raw_id])
+        assert sum("NOTEREF" in (item.text or "") for item in root.iter(qn("w:instrText"))) == 1

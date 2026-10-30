@@ -916,7 +916,21 @@ _NOTE_SPECS = (
         _ENDNOTES_CT,
     ),
 )
-_NOTE_ID = re.compile(r"[+-]?\d+")
+_NOTE_ID = re.compile(r"[+-]?[0-9]+")
+
+
+def parse_word_note_id(value: str | None) -> int | None:
+    """Read an OOXML xsd:int without rewriting its original lexical form."""
+    if value is None:
+        return None
+    collapsed = value.strip(" \t\r\n")
+    if _NOTE_ID.fullmatch(collapsed) is None:
+        return None
+    magnitude = collapsed.lstrip("+-").lstrip("0") or "0"
+    if len(magnitude) > 10:
+        return None
+    note_id = int(("-" if collapsed.startswith("-") else "") + magnitude)
+    return note_id if -(2**31) <= note_id < 2**31 else None
 
 
 def prepare_note_context_for_document(document, note_ctx: NoteContext) -> None:
@@ -1010,8 +1024,9 @@ def _audit_note_package(
                 for index, kind in enumerate(("footnote", "endnote")):
                     for ref in story.iter(f"{{{WML_NS}}}{kind}Reference"):
                         raw_id = ref.get(f"{{{WML_NS}}}id", "")
-                        if _NOTE_ID.fullmatch(raw_id):
-                            referenced[index].add(int(raw_id))
+                        note_id = parse_word_note_id(raw_id)
+                        if note_id is not None:
+                            referenced[index].add(note_id)
             for ids, references in zip(result, referenced, strict=True):
                 ids.update(references)
         return result[0], result[1]
@@ -1067,10 +1082,10 @@ def _audit_note_part(
         if element.tag != expected_child:
             _note_invalid(f"{part_name} contains an unexpected direct child element.")
         raw_id = element.get(f"{{{WML_NS}}}id")
-        if not isinstance(raw_id, str) or _NOTE_ID.fullmatch(raw_id) is None:
-            _note_invalid(f"{part_name} contains a missing or malformed note ID.")
-        note_id = int(raw_id)
-        if not -(2**31) <= note_id < 2**31 or note_id in all_ids:
+        note_id = parse_word_note_id(raw_id)
+        if note_id is None:
+            _note_invalid(f"{part_name} contains a missing, malformed or out-of-range note ID.")
+        if note_id in all_ids:
             _note_invalid(f"{part_name} contains an out-of-range or duplicate note ID.")
         # Special-note identity comes from w:type, never an assumed ID.
         # All occupied IDs (including positive separators) are reserved.
@@ -1100,9 +1115,9 @@ def _audit_document_note_references(
         counts: dict[int, int] = {}
         for element in document.iter(f"{{{WML_NS}}}{element_name}"):
             raw_id = element.get(f"{{{WML_NS}}}id", "")
-            if _NOTE_ID.fullmatch(raw_id) is None:
+            note_id = parse_word_note_id(raw_id)
+            if note_id is None:
                 continue  # Untouched malformed template reference.
-            note_id = int(raw_id)
             counts[note_id] = counts.get(note_id, 0) + 1
         for note_id in owned_ids:
             if counts.get(note_id, 0) == 0 or (final and counts[note_id] != 1):
@@ -1269,9 +1284,9 @@ def _new_note_ids(
     new_ids: set[int] = set()
     for element in elements:
         raw_id = element.get(f"{{{WML_NS}}}id")
-        if element.tag != expected_tag or not isinstance(raw_id, str) or _NOTE_ID.fullmatch(raw_id) is None:
+        note_id = parse_word_note_id(raw_id)
+        if element.tag != expected_tag or note_id is None:
             _note_invalid(f"New {note_name} element has an invalid shape or ID.")
-        note_id = int(raw_id)
         if not 0 < note_id < 2**31 or note_id in new_ids or element.get(f"{{{WML_NS}}}type", "normal") != "normal":
             _note_invalid(f"New {note_name} ID collides with the existing note domain.")
         new_ids.add(note_id)

@@ -15,6 +15,7 @@ from docwen_core.text.numbering import (
     number_to_roman_lower,
     number_to_roman_upper,
 )
+from docwen_plugin_markdown.to_docx.notes import parse_word_note_id
 
 _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
@@ -82,7 +83,9 @@ def _cached_note_marks(document, kind: str) -> dict[int, str | None]:
             # not advance its numbering sequence (OOXML customMarkFollows).
             if reference.get(_W + "customMarkFollows") in {"true", "1", "on"}:
                 continue
-            note_id = int(reference.get(_W + "id"))
+            note_id = parse_word_note_id(reference.get(_W + "id"))
+            if note_id is None:
+                raise ValueError("Uninterpretable template note reference")
             if note_id in marks:
                 continue
             counter += 1
@@ -127,11 +130,8 @@ def project_repeated_note_references(
         grouped: dict[int, list] = defaultdict(list)
         for reference in root.iter(_W + kind + "Reference"):
             value = reference.get(_W + "id")
-            try:
-                note_id = int(value) if value is not None else None
-            except ValueError:
-                continue  # Preserve unrelated malformed template references.
-            if note_id in owned_ids:
+            note_id = parse_word_note_id(value)
+            if note_id is not None and note_id in owned_ids:
                 grouped[note_id].append(reference)
         for note_id, references in grouped.items():
             if note_id not in owned_ids or len(references) < 2:

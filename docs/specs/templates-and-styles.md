@@ -315,7 +315,9 @@ Template notes are preserved without imposing a whole-template compliance gate. 
 domain, it checks that domain's part ownership, content type, root and unambiguous integer IDs. Separator,
 continuation-separator and continuation-notice identity comes from `w:type`, independently of the numeric ID: positive
 special-note IDs are occupied IDs, not normal notes to overwrite. All existing IDs and numeric reference IDs across
-package stories are reserved; the lowest unused positive ID is allocated independently in each domain. Missing or
+package stories are reserved; the lowest unused positive ID is allocated independently in each domain. OOXML note IDs
+use the signed 32-bit XML Schema integer lexical contract (XML whitespace is collapsed, ASCII signed digits are accepted);
+Python-only underscore or Unicode-digit spellings never join a new note's identity. Missing or
 noncanonical separators and unrelated broken template references/resources are preserved without repair. Ambiguous
 IDs or part ownership that prevent safe append still fail closed, without auditing the untouched opposite domain.
 The new normal body and its main-document native reference use the same ID and are checked again before atomic
