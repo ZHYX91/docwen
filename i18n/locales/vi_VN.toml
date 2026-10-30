@@ -13,7 +13,6 @@ template_name = "Mẫu Chung Tiếng Việt"
 # =============================================================================
 [main_window]
 numbering_comments_unanchored = "Một số số được thêm không thể tách thành văn bản riêng theo sơ đồ này. Đã bỏ qua nhận xét tương ứng và giữ nguyên tiêu đề."
-numbering_comments_native = "Số gốc của Word không có vùng văn bản riêng nên không được nhận xét. Chọn đánh số dạng văn bản trong Văn bản đầu vào để nhận xét số được thêm."
 conversion_failed_detail = "Chuyển đổi thất bại."
 note_syntax_invalid = "Cú pháp chú thích không hợp lệ. Hãy kiểm tra tham chiếu và định nghĩa."
 note_template_incompatible = "Cấu trúc chú thích của mẫu không tương thích với chuyển đổi này. Hãy kiểm tra hoặc chọn mẫu khác."
@@ -1845,8 +1844,10 @@ unavailable = "Tối ưu {name} không khả dụng cho loại đầu vào này 
 
 
 [settings.gongwen]
+numbering_text_label = "Dùng số dạng văn bản cho công văn"
+numbering_text_help = "Dùng văn bản cho số tiêu đề được thêm trong lần chuyển đổi này theo sơ đồ Văn bản đầu vào. Không bật đánh số, đổi chế độ đã lưu hoặc số có sẵn trong mẫu. Mặc định bật, độc lập với định dạng trường."
 numbering_comments_label = "Thêm nhận xét cho số được thêm tự động"
-numbering_comments_help = "Chỉ nhận xét số tiêu đề thực sự được thêm theo sơ đồ đã chọn trong Văn bản đầu vào. Không bật đánh số hoặc đánh dấu số có sẵn. Độc lập với định dạng trường công văn. Cần tiền tố số dạng văn bản có thể tách riêng. Số gốc của Word và tiền tố Markdown không thể xác định chính xác được giữ nguyên và thông báo bỏ qua nhận xét."
+numbering_comments_help = "Chỉ nhận xét số văn bản thực sự được thêm, không đánh dấu số có sẵn. Mặc định bật. Tắt số dạng văn bản sẽ bỏ chọn và vô hiệu hóa tùy chọn này; khi bật lại bạn có thể tự chọn. Số Markdown không có vị trí chính xác sẽ được bỏ qua kèm cảnh báo. Độc lập với định dạng trường."
 description = "Thiết lập riêng lựa chọn mặc định cho công văn và định dạng trường trong mẫu."
 to_markdown_title = "Tài liệu → Markdown"
 to_markdown_description = "Dùng tối ưu công văn làm lựa chọn ban đầu cho tài liệu tương thích, không tự phân loại tệp là công văn. DOCX được xử lý trực tiếp; DOC, WPS, RTF và ODT cần bộ chuyển đổi tài liệu khả dụng."

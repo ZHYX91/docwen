@@ -656,7 +656,12 @@ class MdToDocxConverter:
             scheme_config: dict[str, dict[str, str]] | None = None
             supported_heading_levels: set[int] | None = None
 
-            numbering_comments = bool(_config_value(context.config, "template_fill.gongwen_numbering_comments", False))
+            numbering_text = bool(_config_value(context.config, "template_fill.gongwen_numbering_text", True))
+            numbering_comments = numbering_text and bool(
+                _config_value(context.config, "template_fill.gongwen_numbering_comments", True)
+            )
+            if numbering_text:
+                render_mode = "text"
             added_prefixes: list[str] = []
             unanchored_number_comments = 0
             if add_num and render_body:
@@ -784,7 +789,7 @@ class MdToDocxConverter:
                             registry=context.numbering_registry,
                             extended_headings=extensions.extended_headings,
                             structural_tables=extensions.structural_tables,
-                            added_prefixes=added_prefixes if numbering_comments else None,
+                            added_prefixes=added_prefixes if numbering_text else None,
                         )
                     except NumberingSchemeResolutionError as exc:
                         return _numbering_resolution_failure(task_id, t_start, exc)
@@ -869,7 +874,9 @@ class MdToDocxConverter:
                     md_body, auto_link_bare_url=False, extensions=extensions, consume_initial_bom=False
                 )
                 if added_prefixes:
-                    unanchored_number_comments = annotate_numbering_prefixes(raw_ast, added_prefixes)
+                    unanchored_number_comments = annotate_numbering_prefixes(
+                        raw_ast, added_prefixes, comments=numbering_comments, text_numbering=numbering_text
+                    )
                 cancellable.check()
                 try:
                     raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
@@ -1334,23 +1341,6 @@ class MdToDocxConverter:
                 ConversionDiagnostic(level="warning", message=message, code=code)
                 for code, message in (renderer.warnings if renderer is not None else ())
             ]
-            if (
-                numbering_comments
-                and word_native_translation is not None
-                and renderer is not None
-                and renderer.rendered_heading_levels.intersection(supported_heading_levels or ())
-            ):
-                diagnostics.append(
-                    ConversionDiagnostic(
-                        level="warning",
-                        code="MD2DOCX-NUMBERING-COMMENTS-NATIVE",
-                        message=(
-                            "Review comments were not added to Word-native heading numbers: "
-                            "Word generates these numbers without a text range. "
-                            "Select text numbering in Incoming Text to comment only on the added numbers."
-                        ),
-                    )
-                )
             if unanchored_number_comments:
                 diagnostics.append(
                     ConversionDiagnostic(

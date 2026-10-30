@@ -35,6 +35,8 @@ def _convert(
     source=None,
     conflicting_styles=False,
     registry=None,
+    text_enabled=None,
+    template_native=False,
 ):
     template = Document()
     template.styles.add_style("CommentReference", WD_STYLE_TYPE.CHARACTER)
@@ -70,6 +72,11 @@ def _convert(
         reference = OxmlElement("w:commentReference")
         reference.set(qn("w:id"), str(comment_id))
         paragraph.add_run()._r.append(reference)
+    if template_native:
+        original.style = template.styles["Heading 1"]
+        style = template.styles["Heading 1"]._element
+        assert style is not None
+        style.get_or_add_pPr().get_or_add_numPr().get_or_add_numId().val = 1
     template.add_paragraph("{{正文}}")
     template_path = tmp_path / "template.docx"
     template.save(template_path)
@@ -88,15 +95,18 @@ def _convert(
             "markdown_extensions": {"input": {"typed_endnotes": True}},
         },
         config_values={
+            "text": {"heading_numbering_render_mode": mode},
             "template_fill": {
                 **({"gongwen_numbering_comments": enabled} if enabled is not None else {}),
+                **({"gongwen_numbering_text": text_enabled} if text_enabled is not None else {}),
                 "gongwen_fields_enabled": fields,
-            }
+            },
         },
         numbering_registry=registry or repository_numbering_registry(),
     )
     result = MdToDocxConverter().convert(context)
     assert result.success, result.error
+    assert context.config.get("text.heading_numbering_render_mode") == mode
     assert source_path.read_text(encoding="utf-8") == source
     output_path = Path(result.artifacts[0].staging_path)
     return result, template_path, output_path
@@ -117,6 +127,14 @@ def _anchors(document):
                 if key in active:
                     anchored[key] = "".join(active.pop(key))
     return anchored
+
+
+def _paragraph_num_id(paragraph):
+    return paragraph._p.find(qn("w:pPr")).find(qn("w:numPr")).find(qn("w:numId")).get(qn("w:val"))
+
+
+def _style_bytes(document, name):
+    return etree.tostring(document.styles[name]._element)
 
 
 @pytest.mark.parametrize("fields", [False, True])
@@ -145,23 +163,49 @@ def test_added_numbers_only_have_comments_and_existing_resources_survive(tmp_pat
             assert f'w:id="{comment_id}"' in output.read(name).decode("utf-8")
 
 
-@pytest.mark.parametrize("enabled,add", [(False, True), (None, True), (True, False)])
+@pytest.mark.parametrize("enabled,add", [(False, True), (True, False)])
 def test_switch_off_or_numbering_off_never_comments_existing_numbers(tmp_path, enabled, add):
     _result, _original, output_path = _convert(tmp_path, enabled=enabled, add=add)
     document = Document(str(output_path))
     assert [comment.text for comment in document.comments] == ["Original review"]
 
 
-@pytest.mark.parametrize("source,expected_warning", [("# Title\n", True), ("Ordinary text\n", False)])
-def test_native_numbering_keeps_native_semantics_and_warns_only_for_actual_numbers(tmp_path, source, expected_warning):
-    result, _original, output_path = _convert(tmp_path, mode="word_native", source=source)
+@pytest.mark.parametrize("text_enabled", [None, True, False])
+@pytest.mark.parametrize("comments_enabled", [True, False])
+def test_text_policy_overrides_only_new_native_numbers_and_enforces_comment_dependency(
+    tmp_path, text_enabled, comments_enabled
+):
+    result, original_path, output_path = _convert(
+        tmp_path,
+        mode="word_native",
+        source="# Title\n",
+        text_enabled=text_enabled,
+        enabled=comments_enabled,
+        template_native=True,
+    )
     document = Document(str(output_path))
-    assert [comment.text for comment in document.comments] == ["Original review"]
-    assert any(item.code == "MD2DOCX-NUMBERING-COMMENTS-NATIVE" for item in result.diagnostics) is expected_warning
-    if expected_warning:
+    reviews = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]
+    assert not any(item.code == "MD2DOCX-NUMBERING-COMMENTS-NATIVE" for item in result.diagnostics)
+    if text_enabled is not False:
+        assert len(reviews) == int(comments_enabled)
+        if comments_enabled:
+            assert _anchors(document)[str(reviews[0].comment_id)] == "一、"
+        heading = next(p for p in document.paragraphs if p.text == "一、Title")
+        assert _paragraph_num_id(heading) == "0"
+        original = Document(str(original_path))
+        assert _style_bytes(document, "Heading 1") == _style_bytes(original, "Heading 1")
+        with ZipFile(original_path) as before, ZipFile(output_path) as after:
+            assert before.read("word/numbering.xml") == after.read("word/numbering.xml")
+    else:
+        assert not reviews  # external inconsistent comments=true is ignored
         assert any(p.text == "Title" for p in document.paragraphs)
         with ZipFile(output_path) as package:
             assert b"20000" in package.read("word/numbering.xml")
+
+
+def test_missing_old_comment_key_now_defaults_on_without_enabling_numbering(tmp_path):
+    _result, _original, output_path = _convert(tmp_path, enabled=None)
+    assert len([c for c in Document(str(output_path)).comments if c.text == NUMBERING_REVIEW_TEXT]) == 2
 
 
 def test_nested_setext_empty_headings_and_code_do_not_shift_comment_ownership(tmp_path):
@@ -302,3 +346,39 @@ def test_malformed_legacy_comment_ids_are_preserved_without_using_library_alloca
         assert root[0].get(qn("w:id")) == "bad_id"
         assert root[1].get(qn("w:id")) is None
         assert root[2].get(qn("w:id")) == "1"
+
+
+@pytest.mark.parametrize(
+    "lexical,expected",
+    [
+        ("0" * 5000, 1),
+        (" \t+" + "0" * 5000 + "\r\n", 1),
+        ("0_0", 0),
+        ("００", 0),
+        ("٠", 0),
+    ],
+    ids=["long-zero", "xml-whitespace", "underscore", "fullwidth", "arabic-digit"],
+)
+def test_xml_integer_comment_identity_reserves_long_zero_and_rejects_non_xml_spellings(tmp_path, lexical, expected):
+    document = Document()
+    document.styles.add_style("CommentReference", WD_STYLE_TYPE.CHARACTER)
+    document.styles.add_style("CommentText", WD_STYLE_TYPE.PARAGRAPH)
+    old = document.add_comment(document.add_paragraph("Original").runs[0], "Original")
+    for root in (document.element, old._element):
+        for node in root.iter():
+            if node.tag in {
+                qn("w:comment"),
+                qn("w:commentRangeStart"),
+                qn("w:commentRangeEnd"),
+                qn("w:commentReference"),
+            }:
+                node.set(qn("w:id"), lexical)
+    add_numbering_review(document, document.add_paragraph().add_run("一、"))
+    assert list(document.comments)[1].comment_id == expected
+    assert old._element.get(qn("w:id")) == lexical
+    output = tmp_path / "lexical-comment.docx"
+    document.save(output)
+    with ZipFile(output) as package:
+        comments = etree.fromstring(package.read("word/comments.xml"))
+        assert comments[0].get(qn("w:id")) == lexical
+        assert comments[1].get(qn("w:id")) == str(expected)

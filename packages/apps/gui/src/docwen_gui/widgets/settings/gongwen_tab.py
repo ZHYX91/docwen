@@ -83,6 +83,15 @@ class GongwenTab(BaseSettingsTab):
                 SECTION_TEXT, "attachment_alignment", self._attachment_alignment.currentData()
             )
         )
+        row, self._numbering_text = self._create_toggle_with_info(
+            t("settings.gongwen.numbering_text_label"),
+            t("settings.gongwen.numbering_text_help"),
+        )
+        self._numbering_text.setObjectName("gongwenNumberingText")
+        from_markdown_form.addRow(row)
+        self._numbering_text.toggled.connect(
+            lambda enabled: self._vm.set_field(SECTION_TEXT, "gongwen_numbering_text", enabled)
+        )
         row, self._numbering_comments = self._create_toggle_with_info(
             t("settings.gongwen.numbering_comments_label"),
             t("settings.gongwen.numbering_comments_help"),
@@ -94,8 +103,11 @@ class GongwenTab(BaseSettingsTab):
         )
 
     def _load_fields_value(self) -> None:
+        with QSignalBlocker(self._numbering_text):
+            self._numbering_text.setChecked(self._vm.config.text.gongwen_numbering_text)
         with QSignalBlocker(self._numbering_comments):
             self._numbering_comments.setChecked(self._vm.config.text.gongwen_numbering_comments)
+        self._numbering_comments.setEnabled(self._vm.config.text.gongwen_numbering_text)
         with QSignalBlocker(self._gongwen_fields):
             self._gongwen_fields.setChecked(self._vm.config.text.gongwen_fields_enabled)
         with QSignalBlocker(self._attachment_alignment):
@@ -106,6 +118,7 @@ class GongwenTab(BaseSettingsTab):
         if section == SECTION_TEXT and key in {
             "gongwen_fields_enabled",
             "gongwen_numbering_comments",
+            "gongwen_numbering_text",
             "attachment_alignment",
         }:
             self._load_fields_value()

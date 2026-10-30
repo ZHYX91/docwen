@@ -28,9 +28,6 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
     for diagnostic in result.diagnostics:
         if diagnostic.level != "warning":
             continue
-        if diagnostic.code == "MD2DOCX-NUMBERING-COMMENTS-NATIVE":
-            messages.append(_t("main_window.numbering_comments_native"))
-            continue
         if diagnostic.code == "MD2DOCX-NUMBERING-COMMENTS-UNANCHORED":
             messages.append(_t("main_window.numbering_comments_unanchored"))
             continue

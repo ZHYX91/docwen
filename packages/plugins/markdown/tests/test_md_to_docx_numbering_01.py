@@ -48,6 +48,7 @@ def test_md_to_docx_text_and_word_native_use_request_cleanup_rules() -> None:
                 "numbering_scheme": "hierarchical_standard",
                 "heading_numbering_render_mode": render_mode,
             },
+            config_values={"template_fill": {"gongwen_numbering_text": False}},
             numbering_registry=repository_numbering_registry(),
             heading_cleanup_rules=request_rules,
         )

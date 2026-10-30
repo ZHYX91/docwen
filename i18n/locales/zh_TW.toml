@@ -1671,7 +1671,6 @@ subtitle = "副標題"
 
 [main_window]
 numbering_comments_unanchored = "所選方案的部分自動編號無法單獨定位為文字，已略過這些編號的註解；標題內容保留。"
-numbering_comments_native = "Word 原生編號由 Word 自動顯示，沒有可單獨錨定的序號文字，因此未加入編號註解。如需註解，請在「傳入文字」中選擇文字編號。"
 conversion_failed_detail = "轉換失敗。"
 note_syntax_invalid = "註腳或章節附註標記格式有誤，請核對引用和定義後重試。"
 note_template_incompatible = "範本中的註腳或章節附註結構與此次轉換不相容。請檢查範本或改用其他範本後重試。"
@@ -1847,8 +1846,10 @@ unavailable = "目前環境未提供適用於此輸入類別的{name}最佳化�
 
 
 [settings.gongwen]
+numbering_text_label = "公文編號使用文字編號"
+numbering_text_help = "僅對本次依「傳入文字」所選方案自動新增的標題編號使用文字，不啟用編號、不修改已儲存的編號方式或範本原有編號。預設開啟，獨立於公文字段格式化。"
 numbering_comments_label = "為自動新增的公文序號加入註解"
-numbering_comments_help = "僅為依「傳入文字」所選方案實際自動新增的標題序號加入核對註解；不會啟用自動編號，也不標記原有手寫序號。此項獨立於「格式化公文字段」。 僅支援可單獨定位的文字編號；Word 原生編號及無法精確定位的自訂標記編號會保留原樣，並提示略過註解。"
+numbering_comments_help = "僅為實際自動新增的文字標題編號加入核對註解，不標記原有手寫編號。預設開啟；關閉文字編號時自動取消並停用，重新開啟後可自行勾選。無法精確定位的自訂標記編號會提示略過註解。獨立於公文字段格式化。"
 description = "分別設定公文辨識的預設選擇與範本欄位格式。"
 to_markdown_title = "文件 → Markdown"
 to_markdown_description = "將公文最佳化設為相容文件的初始選擇，不會自動判斷檔案是否為公文。DOCX 可直接處理；DOC、WPS、RTF、ODT 需要可用的文件轉換能力。"

@@ -196,6 +196,18 @@ can introduce small differences between its calculated indent and rendered name 
 序号每增加一位，前置补位减少半字宽；复杂混排和两端对齐可能使实际名称起点与估算缩进略有差别。
 单附件不编号；字体、两端对齐及其他模板段落格式保持原样。
 
+`template_fill.gongwen_numbering_text` and `template_fill.gongwen_numbering_comments` both default to `true`.
+They belong to Gongwen → Markdown→Document and remain independent of field formatting. The text switch overrides
+only the render mode of heading numbers newly added by the Incoming Text scheme in this source conversion;
+it never enables `add_numbering`, changes the saved global render mode, or rewrites existing template numbering.
+New text-numbered headings locally suppress inherited native numbering with `ilvl=0,numId=0`. Turning text
+numbering off clears and disables comments; turning it back on does not select comments automatically.
+Config validation and runtime projection also force comments off for inconsistent external input.
+Comments cover only the exact newly inserted number, with the fixed review text; custom Markdown prefixes
+without an exact text anchor are preserved and reported as skipped comments. Existing comment attributes and
+resources remain untouched. ID reservation shares the note parser's XML integer identity, including XML
+whitespace and arbitrarily long leading zeros, while rejecting Python-only or Unicode digit spellings.
+
 The standalone `{{body}}` run may author direct font/character overrides
 separate from its paragraph style. Ordinary body text receives only these
 explicit run properties (including script-specific fonts and sizes), not

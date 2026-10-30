@@ -1672,7 +1672,6 @@ subtitle = "Untertitel"
 
 [main_window]
 numbering_comments_unanchored = "Einige hinzugefügte Nummern können mit diesem Schema nicht als eigener Text isoliert werden. Ihre Kommentare wurden ausgelassen; die Überschriften bleiben erhalten."
-numbering_comments_native = "Word-eigene Nummern haben keinen eigenen Textbereich und wurden nicht kommentiert. Wählen Sie Textnummerierung unter Eingangstext, um hinzugefügte Nummern zu kommentieren."
 conversion_failed_detail = "Konvertierung fehlgeschlagen."
 note_syntax_invalid = "Die Fußnoten- oder Endnotensyntax ist ungültig. Prüfen Sie Verweise und Definitionen."
 note_template_incompatible = "Die Fußnoten- oder Endnotenstruktur der Vorlage ist mit dieser Konvertierung nicht kompatibel. Prüfen Sie die Vorlage oder wählen Sie eine andere."
@@ -1848,8 +1847,10 @@ unavailable = "Die Optimierung {name} ist in der aktuellen Umgebung für diese E
 
 
 [settings.gongwen]
+numbering_text_label = "Textnummerierung für Amtsdokumente verwenden"
+numbering_text_help = "Verwendet Text für in dieser Konvertierung nach dem Eingangstext-Schema hinzugefügte Nummern. Aktiviert keine Nummerierung und ändert weder gespeicherten Modus noch Vorlagennummerierung. Standardmäßig an; unabhängig von der Feldformatierung."
 numbering_comments_label = "Automatisch hinzugefügte Nummern kommentieren"
-numbering_comments_help = "Kommentiert nur Überschriftennummern, die mit dem unter Eingangstext gewählten Schema hinzugefügt wurden. Aktiviert keine Nummerierung und markiert keine vorhandenen Nummern. Unabhängig von der Feldformatierung. Erfordert einen isolierbaren Textpräfix. Word-eigene Nummerierung und nicht genau markierbare Markdown-Präfixe bleiben erhalten; ausgelassene Kommentare werden gemeldet."
+numbering_comments_help = "Kommentiert nur hinzugefügte Textnummern, keine vorhandenen Nummern. Standardmäßig an. Ausschalten der Textnummerierung löscht und deaktiviert diese Option; danach kann sie erneut gewählt werden. Nicht isolierbare Markdown-Nummern werden mit Warnung übersprungen. Unabhängig von der Feldformatierung."
 description = "Standardauswahl für amtliche Dokumente und Formatierung von Vorlagenfeldern getrennt einstellen."
 to_markdown_title = "Dokument → Markdown"
 to_markdown_description = "Die Optimierung amtlicher Dokumente als Vorauswahl für kompatible Dokumente verwenden. Dateien werden dabei nicht als amtliche Dokumente klassifiziert. DOCX wird direkt verarbeitet; DOC, WPS, RTF und ODT benötigen einen verfügbaren Dokumentkonverter."

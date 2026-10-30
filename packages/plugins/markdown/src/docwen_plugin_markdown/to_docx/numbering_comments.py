@@ -9,6 +9,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from lxml import etree
 
+from docwen_plugin_markdown.to_docx.notes import parse_word_note_id
+
 NUMBERING_REVIEW_TEXT = "此序号由软件自动添加，请核对标题级别及编号是否正确。"
 _COMMENT_TAGS = {qn("w:comment"), qn("w:commentRangeStart"), qn("w:commentRangeEnd"), qn("w:commentReference")}
 
@@ -32,11 +34,9 @@ def add_numbering_review(document: Any, run: Any) -> None:
                 continue
         for element in root.iter():
             if element.tag in _COMMENT_TAGS:
-                value = element.get(qn("w:id"), "")
-                try:
-                    used.add(int(value))
-                except ValueError:
-                    continue
+                value = parse_word_note_id(element.get(qn("w:id")))
+                if value is not None:
+                    used.add(value)
     comment_id = 0
     while comment_id in used:
         comment_id += 1
@@ -98,7 +98,9 @@ def _comment_style(document: Any, name: str, kind: Any) -> str:
     return document.styles.add_style(candidate, kind).style_id
 
 
-def annotate_numbering_prefixes(nodes: list[dict[str, Any]], prefixes: list[str]) -> int:
+def annotate_numbering_prefixes(
+    nodes: list[dict[str, Any]], prefixes: list[str], *, comments: bool = True, text_numbering: bool = False
+) -> int:
     """Bind the numbering transform's exact inventory to parsed headings.
 
     Do not infer ownership from visible numbers: authored handwritten numbers
@@ -115,12 +117,16 @@ def annotate_numbering_prefixes(nodes: list[dict[str, Any]], prefixes: list[str]
 
     visit(nodes)
     if len(headings) != len(prefixes):
-        return sum(bool(prefix.rstrip()) for prefix in prefixes)
+        return sum(bool(prefix.rstrip()) for prefix in prefixes) if comments else 0
     skipped = 0
     for node, prefix in zip(headings, prefixes, strict=True):
         # Whitespace separating a number from its title is not the number.
         number = prefix.rstrip()
         if not number:
+            continue
+        if text_numbering:
+            node["_docwen_text_numbering"] = True
+        if not comments:
             continue
         children = node.get("children", [])
         if not children or children[0].get("type") != "text" or not children[0].get("raw", "").startswith(number):

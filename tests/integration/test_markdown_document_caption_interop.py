@@ -231,6 +231,7 @@ def test_direct_number_suite_id_only_and_authored_aliases_round_trip(
 @pytest.mark.parametrize("render_mode", ["text", "word_native"])
 def test_direct_number_suite_heading_references_follow_selected_numbering_scheme(
     round_trip_runtime: Any,
+    native_round_trip_runtime: Any,
     tmp_path: Path,
     render_mode: str,
 ) -> None:
@@ -239,6 +240,7 @@ def test_direct_number_suite_heading_references_follow_selected_numbering_scheme
         "# Alpha ^alpha\n\n## Beta ^beta\n\nSee @[[#^alpha]] and @[[#^beta]].\n",
         encoding="utf-8",
     )
+    round_trip_runtime = native_round_trip_runtime if render_mode == "word_native" else round_trip_runtime
 
     output = md_to_docx(
         round_trip_runtime,

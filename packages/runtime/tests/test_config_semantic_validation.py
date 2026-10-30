@@ -35,6 +35,8 @@ PROJECT_CONFIGS = Path(__file__).resolve().parents[3] / "configs"
         ("template_fill.toml", "gongwen_fields_enabled = 1\n"),
         ("template_fill.toml", 'gongwen_numbering_comments = "false"\n'),
         ("template_fill.toml", "gongwen_numbering_comments = 1\n"),
+        ("template_fill.toml", 'gongwen_numbering_text = "false"\n'),
+        ("template_fill.toml", "gongwen_numbering_text = 1\n"),
         ("template_fill.toml", 'attachment_alignment = "unknown"\n'),
         ("template_fill.toml", 'attachment_alignment = " TAB "\n'),
         ("template_fill.toml", "attachment_alignment = false\n"),
@@ -301,3 +303,14 @@ def test_deep_semantic_raw_editor_failure_restores_exact_preimage(tmp_path: Path
     assert user_file.read_bytes() == preimage
     assert loader.config.link.embedding.max_depth == 7
     assert loader.config_state_trusted is True
+
+
+def test_numbering_review_dependency_normalizes_external_config_without_altering_input():
+    from docwen_runtime.config.validation import validate_config_file
+
+    effective = {"gongwen_numbering_text": False, "gongwen_numbering_comments": True}
+    assert validate_config_file("template_fill.toml", effective, {}) == {
+        "gongwen_numbering_text": False,
+        "gongwen_numbering_comments": False,
+    }
+    assert effective["gongwen_numbering_comments"] is True

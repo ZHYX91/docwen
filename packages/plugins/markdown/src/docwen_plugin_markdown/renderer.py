@@ -317,7 +317,6 @@ class MdToDocxRenderer:
 
         # Heading counters for optional numbering.
         self._h_counters: list[int] = [0] * 9
-        self.rendered_heading_levels: set[int] = set()
 
         # List depth tracking for table indent
         self._list_depth: int = 0
@@ -603,7 +602,6 @@ class MdToDocxRenderer:
         mixed heading/body paragraph contract.
         """
         level = max(1, min(node.get("attrs", {}).get("level", 1), 9))
-        self.rendered_heading_levels.add(level)
         self._h_counters[level - 1] += 1
         for lx in range(level, 9):
             self._h_counters[lx] = 0
@@ -615,6 +613,10 @@ class MdToDocxRenderer:
             heading.style = self._managed_styles.get(f"heading_{level}")
         else:
             heading = self._doc.add_heading(level=level)
+        if node.get("_docwen_text_numbering"):
+            num_pr = heading._p.get_or_add_pPr().get_or_add_numPr()
+            num_pr.get_or_add_ilvl().val = 0
+            num_pr.get_or_add_numId().val = 0
         children = node.get("children", [])
         if number := node.get("_docwen_added_number"):
             number_run = heading.add_run(number)

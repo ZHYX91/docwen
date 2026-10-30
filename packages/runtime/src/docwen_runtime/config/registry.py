@@ -208,6 +208,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
     "gongwen": (
         "template_fill.gongwen_fields_enabled",
         "template_fill.gongwen_numbering_comments",
+        "template_fill.gongwen_numbering_text",
         "template_fill.attachment_alignment",
     ),
     "link": (

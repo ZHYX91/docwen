@@ -16,7 +16,6 @@ template_name = "Plantilla General Española"
 # =============================================================================
 [main_window]
 numbering_comments_unanchored = "Algunos números añadidos no se pueden aislar como texto con este esquema. Se omitieron sus comentarios y se conservaron los títulos."
-numbering_comments_native = "Los números nativos de Word no tienen un intervalo de texto propio y no se comentaron. Seleccione numeración de texto en Texto entrante para comentar los números añadidos."
 conversion_failed_detail = "Error de conversión."
 note_syntax_invalid = "La sintaxis de las notas no es válida. Revise las referencias y definiciones."
 note_template_incompatible = "La estructura de notas de la plantilla es incompatible con esta conversión. Revise la plantilla o elija otra."
@@ -1854,8 +1853,10 @@ unavailable = "La optimización {name} no está disponible para esta categoría 
 
 
 [settings.gongwen]
+numbering_text_label = "Usar numeración de texto para documentos oficiales"
+numbering_text_help = "Usa texto para los números añadidos en esta conversión con el esquema de Texto entrante. No activa la numeración ni cambia el modo guardado o los números de la plantilla. Activado por defecto e independiente del formato de campos."
 numbering_comments_label = "Comentar los números añadidos automáticamente"
-numbering_comments_help = "Comenta solo los números de títulos añadidos con el esquema de Texto entrante. No activa la numeración ni marca números existentes. Es independiente del formato de campos. Requiere un prefijo de texto aislable. La numeración nativa de Word y los prefijos Markdown no aislables se conservan y se informa de los comentarios omitidos."
+numbering_comments_help = "Comenta solo los números de texto añadidos, nunca los existentes. Activado por defecto. Desactivar la numeración de texto desmarca e inhabilita esta opción; al reactivarla puede elegirla de nuevo. Los prefijos Markdown no aislables se omiten con aviso. Independiente del formato de campos."
 description = "Configure por separado la opción predeterminada para documentos oficiales y el formato de los campos de plantilla."
 to_markdown_title = "Documento → Markdown"
 to_markdown_description = "Use la optimización de documentos oficiales como selección inicial para documentos compatibles, sin clasificar los archivos automáticamente. DOCX se procesa directamente; DOC, WPS, RTF y ODT necesitan un conversor de documentos disponible."

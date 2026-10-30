@@ -12,7 +12,6 @@ template_name = "English General Template"
 # =============================================================================
 [main_window]
 numbering_comments_unanchored = "Some added numbers cannot be isolated as text with this scheme. Their review comments were skipped; heading content was preserved."
-numbering_comments_native = "Review comments were not added to Word-native numbers because they have no separate text range. Select text numbering in Incoming Text to comment only on added numbers."
 conversion_failed_detail = "Conversion failed."
 note_syntax_invalid = "Footnote or endnote syntax is invalid. Check note references and definitions, then retry."
 note_template_incompatible = "The template footnote or endnote structure is incompatible with this conversion. Check the template notes or choose another template and retry."
@@ -1842,8 +1841,10 @@ unavailable = "{name} optimization is unavailable for this input category in the
 
 
 [settings.gongwen]
+numbering_text_label = "Use text numbering for official-document numbers"
+numbering_text_help = "Use text for heading numbers added in this conversion using the Incoming Text scheme. Does not enable numbering, change the saved render mode, or alter existing template numbering. On by default; independent of field formatting."
 numbering_comments_label = "Add review comments to automatically added official-document numbers"
-numbering_comments_help = "Comment only on heading numbers actually added using the scheme selected in Incoming Text. This does not enable numbering or mark existing handwritten numbers. Independent of Format official-document fields. Requires an isolated text number prefix. Word-native numbering and custom Markdown prefixes that cannot be anchored exactly are preserved and reported as skipped comments."
+numbering_comments_help = "Review only the text heading numbers actually added, never existing handwritten numbers. On by default. Turning text numbering off clears and disables this option; turning it back on leaves you free to select it. Custom Markdown numbers without an exact text anchor are skipped with a warning. Independent of field formatting."
 description = "Set defaults for recognizing official documents and formatting template fields separately."
 to_markdown_title = "Document → Markdown"
 to_markdown_description = "Use official document optimization as the initial choice for compatible documents; this does not classify files as official documents. DOCX is handled directly; DOC, WPS, RTF and ODT need an available document converter."
