@@ -398,7 +398,7 @@ def test_deferred_note_headings_do_not_consume_body_numbering_provenance(tmp_pat
     assert not any(item.code == "MD2DOCX-NUMBERING-COMMENTS-UNANCHORED" for item in result.diagnostics)
     with ZipFile(output_path) as package:
         note = etree.fromstring(package.read(f"word/{part}.xml"))
-        assert "Note title" in "".join(note.itertext())
+        assert "Note title" in "".join(str(text) for text in note.itertext())
         assert not list(note.iter(qn("w:commentRangeStart")))
         assert not list(note.iter(qn("w:numPr")))
         assert b"DWNUM" not in package.read(f"word/{part}.xml")
