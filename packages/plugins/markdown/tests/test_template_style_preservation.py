@@ -8,6 +8,10 @@ from zipfile import ZipFile
 import pytest
 from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
+from docx.opc.constants import CONTENT_TYPE as CT
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
+from docx.opc.packuri import PackURI
+from docx.opc.part import Part
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.styles.style import ParagraphStyle
@@ -21,7 +25,7 @@ from docwen_plugin_markdown.to_docx.managed_styles import (
 )
 
 from .conftest import make_context
-from .test_managed_styles import _catalog, _document_bytes
+from .test_managed_styles import _attach_xml_part, _catalog, _document_bytes
 
 pytestmark = pytest.mark.contract
 
@@ -215,3 +219,123 @@ def test_full_conversion_heading_uses_private_binding_before_wrong_type_name_loo
         )
         assert generated.get(qn("w:type")) == "paragraph"
     assert template.read_bytes() == template_bytes
+
+
+@pytest.mark.parametrize("kind", ["paragraph", "table"])
+def test_yaml_fill_retains_original_bad_style_reference_on_edited_owner(tmp_path: Path, kind: str) -> None:
+    document = Document()
+    if kind == "paragraph":
+        owner = document.add_paragraph("{{标题}}")
+        properties = owner._p.get_or_add_pPr()
+        reference = OxmlElement("w:pStyle")
+    else:
+        owner = document.add_table(rows=1, cols=1)
+        owner.cell(0, 0).text = "{{标题}}"
+        properties = owner._tbl.tblPr
+        reference = OxmlElement("w:tblStyle")
+    reference.set(qn("w:val"), "MissingTemplateStyle")
+    properties.append(reference)
+    document.add_paragraph("{{正文}}")
+    template = tmp_path / "yaml-template.docx"
+    document.save(str(template))
+    original = template.read_bytes()
+    source = tmp_path / "source.md"
+    source.write_text("---\n标题: Filled title\n---\n\nNew body.\n", encoding="utf-8")
+    context, _workspace = make_context(str(source), target_format="docx", options={"template_name": str(template)})
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    with ZipFile(result.artifacts[0].staging_path) as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+        preserved = next(root.iter(reference.tag))
+        assert preserved.get(qn("w:val")) == "MissingTemplateStyle"
+        assert "Filled title" in "".join(root.itertext())
+        assert "{{标题}}" not in "".join(root.itertext())
+    assert template.read_bytes() == original
+
+
+@pytest.mark.parametrize("replacement", ["reference", "run", "paragraph", "table"])
+def test_identical_xml_copy_cannot_replace_original_reference_provenance(replacement: str) -> None:
+    document = Document()
+    if replacement == "table":
+        table = document.add_table(rows=1, cols=1)
+        table.cell(0, 0).text = "Template table"
+        reference = OxmlElement("w:tblStyle")
+        reference.set(qn("w:val"), "MissingTemplateStyle")
+        table._tbl.tblPr.append(reference)
+    else:
+        document.add_paragraph()
+        _bad_run(document)
+    completed, bindings = complete_managed_styles(document, _catalog("en_US"))
+    validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)
+    if replacement == "table":
+        original = completed.tables[0]._tbl
+    elif replacement == "paragraph":
+        original = completed.paragraphs[0]._p
+    elif replacement == "run":
+        original = completed.paragraphs[0].runs[0]._r
+    else:
+        original = next(completed.element.iter(qn("w:rStyle")))
+    parent = original.getparent()
+    assert parent is not None
+    parent.replace(original, deepcopy(original))
+    with pytest.raises(ManagedStyleCompletionError, match="missing or ambiguous style"):
+        validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)
+
+
+def test_modified_original_bad_reference_does_not_retain_exemption() -> None:
+    document = Document()
+    document.add_paragraph()
+    _bad_run(document)
+    completed, bindings = complete_managed_styles(document, _catalog("en_US"))
+    reference = next(completed.element.iter(qn("w:rStyle")))
+    reference.set(qn("w:val"), "AnotherMissingStyle")
+    with pytest.raises(ManagedStyleCompletionError, match="missing or ambiguous style"):
+        validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)
+
+
+@pytest.mark.parametrize("replace_part", [False, True])
+def test_blob_only_part_baseline_requires_original_reachable_part(replace_part: bool) -> None:
+    document = Document()
+    payload = (
+        b'<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        b'<w:footnote w:id="1"><w:p><w:r><w:rPr><w:rStyle w:val="MissingTemplateStyle"/>'
+        b"</w:rPr><w:t>Preserved note text</w:t></w:r></w:p></w:footnote></w:footnotes>"
+    )
+    _attach_xml_part(
+        document,
+        name="word/footnotes.xml",
+        content_type=CT.WML_FOOTNOTES,
+        relationship_type=RT.FOOTNOTES,
+        payload=payload,
+    )
+    completed, bindings = complete_managed_styles(document, _catalog("en_US"))
+    validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)
+    if not replace_part:
+        completed.add_paragraph("Unrelated valid text")
+        validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)
+        return
+    relationship = next(rel for rel in completed.part.rels.values() if rel.reltype == RT.FOOTNOTES)
+    old_part = relationship.target_part
+    new_part = Part(PackURI("/word/footnotes.xml"), CT.WML_FOOTNOTES, old_part.blob, completed.part.package)
+    completed.part.drop_rel(relationship.rId)
+    completed.part.relate_to(new_part, RT.FOOTNOTES)
+    with pytest.raises(ManagedStyleCompletionError, match="missing or ambiguous style"):
+        validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)
+
+
+def test_valid_sibling_reference_cannot_donate_bad_reference_provenance() -> None:
+    document = Document()
+    document.add_paragraph()
+    run = _bad_run(document)
+    properties = run.find(qn("w:rPr"))
+    assert properties is not None
+    valid = OxmlElement("w:rStyle")
+    valid.set(qn("w:val"), "Emphasis")
+    properties.insert(0, valid)
+    completed, bindings = complete_managed_styles(document, _catalog("en_US"))
+    bad = next(ref for ref in completed.element.iter(qn("w:rStyle")) if ref.get(qn("w:val")) == "MissingTemplateStyle")
+    parent = bad.getparent()
+    assert parent is not None
+    parent.replace(bad, deepcopy(bad))
+    with pytest.raises(ManagedStyleCompletionError, match="missing or ambiguous style"):
+        validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)

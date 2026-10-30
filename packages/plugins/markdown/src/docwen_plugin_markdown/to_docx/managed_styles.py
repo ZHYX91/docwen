@@ -18,6 +18,7 @@ from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipFile, ZipFile, ZipInfo
 
 import lxml.etree as etree
 from docx import Document
+from docx.opc.part import Part
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.styles.style import BaseStyle
@@ -119,13 +120,25 @@ class ManagedStyleConflict:
 
 
 @dataclass(frozen=True, slots=True)
+class _PreservedStyleReference:
+    """An original physical reference still owned by this request's document."""
+
+    document: DocumentObject
+    part: Part
+    root: etree._Element
+    reference: etree._Element
+    reference_xml: bytes
+    original_blob: bytes | None
+
+
+@dataclass(frozen=True, slots=True)
 class ManagedStyleBindings:
     """Request-owned stable styles, rebound after any save/reopen cycle."""
 
     styles: tuple[tuple[str, BaseStyle], ...]
     foundation_style_ids: tuple[tuple[str, str], ...]
     conflicts: tuple[ManagedStyleConflict, ...] = ()
-    preserved_invalid_references: tuple[tuple[str, bytes], ...] = ()
+    preserved_invalid_references: tuple[_PreservedStyleReference, ...] = ()
 
     def get(self, semantic_key: str) -> BaseStyle:
         for key, style in self.styles:
@@ -206,10 +219,7 @@ def complete_managed_styles(
             (*resolution_conflicts, *plan.conflicts, *(effects_plan.conflicts if effects_plan is not None else ()))
         )
         baseline = _invalid_reference_occurrences(source_blob, dict(plan.migrations))
-        bindings = replace(
-            _bind_and_validate(completed, catalog, plan, conflicts),
-            preserved_invalid_references=baseline,
-        )
+        bindings = _bind_and_validate(completed, catalog, plan, conflicts)
         expected_ids = tuple((match.definition.semantic_key, match.output_style_id) for match in plan.matches)
         effects_expected_ids = (
             tuple((match.definition.semantic_key, match.output_style_id) for match in effects_plan.matches)
@@ -223,6 +233,7 @@ def complete_managed_styles(
             effects_expected_ids=effects_expected_ids,
             preserved_invalid_references=baseline,
         )
+        bindings = replace(bindings, preserved_invalid_references=_bind_preserved_references(completed, baseline))
         return completed, bindings
     except ManagedStyleCompletionError:
         raise
@@ -947,7 +958,7 @@ def validate_managed_style_package(
             catalog,
             expected_ids=expected_ids,
             effects_expected_ids=expected_ids,
-            preserved_invalid_references=bindings.preserved_invalid_references if bindings else (),
+            preserved_invalid_references=_current_preserved_occurrences(bindings) if bindings else (),
         )
     except ManagedStyleCompletionError:
         raise
@@ -957,6 +968,64 @@ def validate_managed_style_package(
             f"Final DOCX managed-style validation failed: {exc}",
             error_type="conversion_failed",
         ) from exc
+
+
+def _part_reference_root(part: Part) -> etree._Element | None:
+    root = getattr(part, "element", None)
+    if root is None:
+        root = getattr(part, "_element", None)
+    return root if isinstance(root, etree._Element) else None
+
+
+def _reference_xml(element: etree._Element) -> bytes:
+    return etree.tostring(element, method="c14n", exclusive=True, with_tail=False)
+
+
+def _bind_preserved_references(
+    document: DocumentObject, baseline: tuple[tuple[str, bytes], ...]
+) -> tuple[_PreservedStyleReference, ...]:
+    remaining = Counter(baseline)
+    result: list[_PreservedStyleReference] = []
+    for part in document.part.package.parts:
+        part_name = str(part.partname).lstrip("/")
+        if not (_is_reference_part(part_name) or part_name in {_PRIMARY_STYLES_PART, _EFFECTS_STYLES_PART}):
+            continue
+        root = _part_reference_root(part)
+        original_blob = None
+        if root is None:
+            original_blob = part.blob
+            root = etree.fromstring(original_blob)
+        for tag in _DIRECT_STYLE_REFERENCE_TYPES:
+            for reference in root.iter(tag):
+                occurrence = _reference_occurrence(reference, part_name)
+                if not remaining[occurrence]:
+                    continue
+                remaining[occurrence] -= 1
+                result.append(
+                    _PreservedStyleReference(document, part, root, reference, _reference_xml(reference), original_blob)
+                )
+    return tuple(result)
+
+
+def _current_preserved_occurrences(bindings: ManagedStyleBindings) -> tuple[tuple[str, bytes], ...]:
+    result: list[tuple[str, bytes]] = []
+    for record in bindings.preserved_invalid_references:
+        if not any(part is record.part for part in record.document.part.package.parts):
+            continue
+        if record.original_blob is not None:
+            # Generic OPC parts have no live XML tree. The parsed handles are
+            # authoritative only while that same reachable part owns its bytes.
+            if record.part.blob != record.original_blob:
+                continue
+        elif _part_reference_root(record.part) is not record.root:
+            continue
+        ancestor = record.reference
+        while (parent := ancestor.getparent()) is not None:
+            ancestor = parent
+        if ancestor is not record.root or _reference_xml(record.reference) != record.reference_xml:
+            continue
+        result.append(_reference_occurrence(record.reference, str(record.part.partname).lstrip("/")))
+    return tuple(result)
 
 
 def _reference_occurrence(element: etree._Element, part_name: str) -> tuple[str, bytes]:
@@ -969,7 +1038,7 @@ def _reference_occurrence(element: etree._Element, part_name: str) -> tuple[str,
         content_owner = owner.getparent()
         if content_owner is not None:
             owner = content_owner
-    return part_name, etree.tostring(owner, method="c14n", exclusive=True)
+    return part_name, _reference_xml(element) + b"\0" + etree.tostring(owner, method="c14n", exclusive=True)
 
 
 def _invalid_reference_occurrences(blob: bytes, migrations: dict[str, str]) -> tuple[tuple[str, bytes], ...]:

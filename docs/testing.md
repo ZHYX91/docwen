@@ -11,7 +11,9 @@ cleanup access to neighboring repositories. Registration does not bypass leases,
 `test_template_style_preservation.py` checks old missing/wrong-type direct style references, unused duplicate IDs,
 wrong-type note-style names, and shared private managed identities. It rejects added invalid occurrences, including
 an exact duplicate old run, and all three newly generated direct-reference types. Unrelated sibling insertion keeps
-the unchanged old-run baseline valid; new notes use the resolved correctly typed managed style.
+the unchanged old-run baseline valid; new notes use the resolved correctly typed managed style. YAML filling in an
+original paragraph/table with a bad style reference is allowed while that exact reference remains attached. Identical
+copies of removed references/runs/paragraphs/tables and replaced blob-only parts cannot inherit its allowance.
 
 `test_docx_notes_v4.py` independently inspects saved note bodies, special-note types with positive IDs, relationship
 bytes, reachable media and native/NOTEREF references in mixed footnote/endnote packages. It pairs untouched malformed

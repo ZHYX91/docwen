@@ -88,10 +88,12 @@ for other templates. Source template bytes and compatible formatting remain unch
 Final style validation is scoped to managed identities and newly written direct references. Missing or duplicate
 unused template style IDs and wrong-type visible-name collisions are preserved; an ambiguous ID is never reused for
 new managed output. Every generated `pStyle`, `rStyle` and `tblStyle` must target one definition of the correct type.
-Existing invalid direct references may survive only within the request's preserved occurrence baseline: the same
-part, canonical content owner (paragraph, run or table), and bounded occurrence count. Reusing an
-old bad style ID on a new run does not grant an exemption. Adding unrelated sibling content does not invalidate an
-unchanged old run. This baseline is kept in memory, without persisted bypass attributes. Managed and foundation
+Existing invalid direct references may survive only while the original physical reference element remains unchanged
+and attached to the same live request-owned part root. Its current paragraph, run or table snapshot is used at final
+serialization, so filling YAML text on that owner does not reject an untouched bad style reference. Removed or copied
+references cannot donate an exemption, even when the replacement has identical XML. Blob-only generic parts retain
+allowances only while the same reachable part still owns its original bytes. This provenance is kept in memory,
+without persisted bypass attributes. Managed and foundation
 identities themselves remain unique and type-checked in both style registries. Note rendering consumes the resolved
 managed binding rather than the first visible-name match.
 
