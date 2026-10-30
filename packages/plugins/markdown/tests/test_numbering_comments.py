@@ -252,7 +252,8 @@ def test_embedded_headings_cannot_consume_original_numbering_provenance(tmp_path
     review_ids = {str(comment.comment_id) for comment in reviews}
     assert any(paragraph.text == "Sample" for paragraph in document.paragraphs)
     for paragraph in document.paragraphs:
-        if not (paragraph.style.name or "").lower().startswith("heading"):
+        style = paragraph.style
+        if style is None or not (style.name or "").lower().startswith("heading"):
             continue
         paragraph_reviews = {node.get(qn("w:id")) for node in paragraph._p.iter(qn("w:commentRangeStart"))}
         assert _paragraph_num_id(paragraph) == ("0" if paragraph_reviews.intersection(review_ids) else None)
