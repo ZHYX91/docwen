@@ -917,17 +917,27 @@ _NOTE_SPECS = (
     ),
 )
 _NOTE_ID = re.compile(r"[+-]?\d+")
-_NOTE_TYPES = frozenset({"normal", "separator", "continuationSeparator", "continuationNotice"})
-_RELATIONSHIP_ATTRIBUTE_NAMES = frozenset({"id", "embed", "link"})
 
 
 def prepare_note_context_for_document(document, note_ctx: NoteContext) -> None:
-    """Audit request-template note graphs and seed collision-free ID allocation."""
+    """Inventory only note domains this request will extend.
 
+    Existing resources and references remain template-owned, including defects.
+    Numeric reference IDs are reserved too, so appending cannot silently repair
+    a dangling template reference by binding it to an unrelated new note.
+    """
+
+    if not note_ctx.has_notes:
+        return
     buffer = BytesIO()
     try:
         document.save(buffer)
-        footnote_ids, endnote_ids = _audit_note_package(buffer.getvalue())
+        footnote_ids, endnote_ids = _audit_note_package(
+            buffer.getvalue(),
+            touch_footnotes=note_ctx.has_footnotes,
+            touch_endnotes=note_ctx.has_endnotes,
+            reserve_references=True,
+        )
     except NoteWritebackError:
         raise
     except (BadZipFile, etree.XMLSyntaxError, KeyError, OSError, ValueError) as exc:
@@ -944,6 +954,10 @@ def _audit_note_package(
     *,
     pending_footnote_ids: set[int] | None = None,
     pending_endnote_ids: set[int] | None = None,
+    touch_footnotes: bool = True,
+    touch_endnotes: bool = True,
+    reserve_references: bool = False,
+    final: bool = False,
 ) -> tuple[set[int], set[int]]:
     with ZipFile(BytesIO(blob), "r") as archive:
         names = [item.filename for item in archive.infolist()]
@@ -953,7 +967,12 @@ def _audit_note_package(
         rels_root = etree.fromstring(archive.read("word/_rels/document.xml.rels"))
         ct_root = etree.fromstring(archive.read("[Content_Types].xml"))
         result: list[set[int]] = []
-        for note_name, part_name, rels_name, rel_type, content_type in _NOTE_SPECS:
+        for touched, (note_name, part_name, rels_name, rel_type, content_type) in zip(
+            (touch_footnotes, touch_endnotes), _NOTE_SPECS, strict=True
+        ):
+            if not touched:
+                result.append(set())
+                continue
             result.append(
                 _audit_note_part(
                     archive,
@@ -965,19 +984,36 @@ def _audit_note_package(
                     rels_name=rels_name,
                     rel_type=rel_type,
                     content_type=content_type,
+                    required_normal_ids=(
+                        (pending_footnote_ids if note_name == "footnote" else pending_endnote_ids) or set()
+                    )
+                    if final
+                    else set(),
                 )
             )
-        referenced_footnotes, referenced_endnotes = _audit_document_note_references(
+        referenced = _audit_document_note_references(
             archive,
-            footnote_ids=result[0] | (pending_footnote_ids or set()),
-            endnote_ids=result[1] | (pending_endnote_ids or set()),
             pending_footnote_ids=pending_footnote_ids or set(),
             pending_endnote_ids=pending_endnote_ids or set(),
+            final=final,
         )
-        if (pending_footnote_ids or set()) - referenced_footnotes:
-            _note_invalid("A pending footnote body has no matching main-document reference.")
-        if (pending_endnote_ids or set()) - referenced_endnotes:
-            _note_invalid("A pending endnote body has no matching main-document reference.")
+        if reserve_references:
+            # Reserve IDs in other stories too. Existing unsupported references
+            # must not acquire an accidental target when the main body gains notes.
+            for name in names:
+                if name == "word/document.xml" or not (name.startswith("word/") and name.endswith(".xml")):
+                    continue
+                try:
+                    story = etree.fromstring(archive.read(name))
+                except etree.XMLSyntaxError:
+                    continue  # This writer does not consume that unrelated part.
+                for index, kind in enumerate(("footnote", "endnote")):
+                    for ref in story.iter(f"{{{WML_NS}}}{kind}Reference"):
+                        raw_id = ref.get(f"{{{WML_NS}}}id", "")
+                        if _NOTE_ID.fullmatch(raw_id):
+                            referenced[index].add(int(raw_id))
+            for ids, references in zip(result, referenced, strict=True):
+                ids.update(references)
         return result[0], result[1]
 
 
@@ -992,6 +1028,7 @@ def _audit_note_part(
     rels_name: str,
     rel_type: str,
     content_type: str,
+    required_normal_ids: set[int],
 ) -> set[int]:
     part_present = part_name in names
     document_relationships = [
@@ -1003,6 +1040,8 @@ def _audit_note_part(
         item for item in content_types.findall(f"{{{_CT_NS}}}Override") if item.get("PartName") == f"/{part_name}"
     ]
     if not part_present:
+        if required_normal_ids:
+            _note_invalid(f"New {note_name} references have no matching note part.")
         if document_relationships or overrides or rels_name in names:
             _note_invalid(f"{part_name} has dangling relationship, content-type, or relationship-part records.")
         return set()
@@ -1024,8 +1063,6 @@ def _audit_note_part(
     if root.tag != expected_root:
         _note_invalid(f"{part_name} has the wrong root element.")
     all_ids: set[int] = set()
-    positive_ids: set[int] = set()
-    by_id: dict[int, str] = {}
     for element in root:
         if element.tag != expected_child:
             _note_invalid(f"{part_name} contains an unexpected direct child element.")
@@ -1035,88 +1072,42 @@ def _audit_note_part(
         note_id = int(raw_id)
         if not -(2**31) <= note_id < 2**31 or note_id in all_ids:
             _note_invalid(f"{part_name} contains an out-of-range or duplicate note ID.")
-        note_type = element.get(f"{{{WML_NS}}}type", "normal")
-        if note_type not in _NOTE_TYPES:
-            _note_invalid(f"{part_name} contains an unknown note type.")
-        if (note_id > 0) != (note_type == "normal"):
-            _note_invalid(f"{part_name} note ID/type ownership is invalid.")
+        # Special-note identity comes from w:type, never an assumed ID.
+        # All occupied IDs (including positive separators) are reserved.
+        # Appending text-only notes does not consume existing body resources.
+        if note_id in required_normal_ids and element.get(f"{{{WML_NS}}}type", "normal") != "normal":
+            _note_invalid(f"New {note_name} body is not a normal note.")
         all_ids.add(note_id)
-        by_id[note_id] = note_type
-        if note_id > 0:
-            positive_ids.add(note_id)
-    if by_id.get(-1) != "separator" or by_id.get(0) != "continuationSeparator":
-        _note_invalid(f"{part_name} does not contain the required reserved separator IDs.")
-    _audit_note_relationships(archive, names, root, part_name=part_name, rels_name=rels_name)
-    return positive_ids
-
-
-def _audit_note_relationships(
-    archive: ZipFile,
-    names: set[str],
-    note_root: etree._Element,
-    *,
-    part_name: str,
-    rels_name: str,
-) -> None:
-    referenced_ids: set[str] = set()
-    for element in note_root.iter():
-        for raw_name, value in element.attrib.items():
-            qname = etree.QName(raw_name)
-            if qname.namespace == _OFFICE_REL_NS and qname.localname in _RELATIONSHIP_ATTRIBUTE_NAMES:
-                if not value:
-                    _note_invalid(f"{part_name} contains a blank relationship reference.")
-                referenced_ids.add(str(value))
-    if rels_name not in names:
-        if referenced_ids:
-            _note_invalid(f"{part_name} references relationships but has no relationship part.")
-        return
-    root = etree.fromstring(archive.read(rels_name))
-    if root.tag != f"{{{_RELS_NS}}}Relationships":
-        _note_invalid(f"{rels_name} has the wrong root element.")
-    relationships: dict[str, etree._Element] = {}
-    for relationship in root:
-        if relationship.tag != f"{{{_RELS_NS}}}Relationship":
-            _note_invalid(f"{rels_name} contains an unexpected direct child element.")
-        rel_id = relationship.get("Id", "")
-        target = relationship.get("Target", "")
-        if not rel_id or rel_id in relationships or not relationship.get("Type") or not target:
-            _note_invalid(f"{rels_name} contains a malformed or duplicate relationship.")
-        target_mode = relationship.get("TargetMode")
-        if target_mode not in {None, "Internal", "External"}:
-            _note_invalid(f"{rels_name} contains an invalid TargetMode.")
-        if target_mode != "External" and _resolve_part_target(part_name, target) not in names:
-            _note_invalid(f"{rels_name} targets a missing package part.")
-        relationships[rel_id] = relationship
-    missing = referenced_ids - relationships.keys()
-    if missing:
-        _note_invalid(f"{part_name} references missing relationship IDs: {sorted(missing)!r}.")
+    if required_normal_ids - all_ids:
+        _note_invalid(f"New {note_name} references have no matching appended note bodies.")
+    return all_ids
 
 
 def _audit_document_note_references(
     archive: ZipFile,
     *,
-    footnote_ids: set[int],
-    endnote_ids: set[int],
     pending_footnote_ids: set[int],
     pending_endnote_ids: set[int],
+    final: bool,
 ) -> tuple[set[int], set[int]]:
+    """Validate request-owned references, inventory template references only."""
     document = etree.fromstring(archive.read("word/document.xml"))
     observed: list[set[int]] = []
-    for element_name, valid_ids, pending_ids in (
-        ("footnoteReference", footnote_ids, pending_footnote_ids),
-        ("endnoteReference", endnote_ids, pending_endnote_ids),
+    for element_name, owned_ids in (
+        ("footnoteReference", pending_footnote_ids),
+        ("endnoteReference", pending_endnote_ids),
     ):
-        observed_ids: set[int] = set()
+        counts: dict[int, int] = {}
         for element in document.iter(f"{{{WML_NS}}}{element_name}"):
-            raw_id = element.get(f"{{{WML_NS}}}id")
-            if not isinstance(raw_id, str) or _NOTE_ID.fullmatch(raw_id) is None or int(raw_id) not in valid_ids:
-                _note_invalid(f"word/document.xml contains a dangling or malformed {element_name}.")
-            # Only freshly generated references await NOTEREF projection.
-            # Existing template references and final output must be unique.
-            if int(raw_id) in observed_ids and int(raw_id) not in pending_ids:
-                _note_invalid(f"word/document.xml contains a duplicate native {element_name}.")
-            observed_ids.add(int(raw_id))
-        observed.append(observed_ids)
+            raw_id = element.get(f"{{{WML_NS}}}id", "")
+            if _NOTE_ID.fullmatch(raw_id) is None:
+                continue  # Untouched malformed template reference.
+            note_id = int(raw_id)
+            counts[note_id] = counts.get(note_id, 0) + 1
+        for note_id in owned_ids:
+            if counts.get(note_id, 0) == 0 or (final and counts[note_id] != 1):
+                _note_invalid(f"New {element_name} has no unique matching main-document reference.")
+        observed.append(set(counts))
     return observed[0], observed[1]
 
 
@@ -1172,6 +1163,8 @@ def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> int:
             original.read_bytes(),
             pending_footnote_ids=new_footnote_ids,
             pending_endnote_ids=new_endnote_ids,
+            touch_footnotes=bool(new_footnote_ids),
+            touch_endnotes=bool(new_endnote_ids),
         )
         if new_footnote_ids & existing_footnotes or new_endnote_ids & existing_endnotes:
             _note_invalid("A new note ID collides with the existing note domain.")
@@ -1247,7 +1240,14 @@ def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> int:
                 if en_bytes is not None and "word/endnotes.xml" not in names:
                     zf_out.writestr("word/endnotes.xml", en_bytes)
 
-            _audit_note_package(tmp_path.read_bytes())
+            _audit_note_package(
+                tmp_path.read_bytes(),
+                pending_footnote_ids=new_footnote_ids,
+                pending_endnote_ids=new_endnote_ids,
+                touch_footnotes=bool(new_footnote_ids),
+                touch_endnotes=bool(new_endnote_ids),
+                final=True,
+            )
             tmp_path.replace(original)
         return projection.deferred_count
     except NoteWritebackError:
@@ -1272,7 +1272,7 @@ def _new_note_ids(
         if element.tag != expected_tag or not isinstance(raw_id, str) or _NOTE_ID.fullmatch(raw_id) is None:
             _note_invalid(f"New {note_name} element has an invalid shape or ID.")
         note_id = int(raw_id)
-        if not 0 < note_id < 2**31 or note_id in new_ids:
+        if not 0 < note_id < 2**31 or note_id in new_ids or element.get(f"{{{WML_NS}}}type", "normal") != "normal":
             _note_invalid(f"New {note_name} ID collides with the existing note domain.")
         new_ids.add(note_id)
     return new_ids

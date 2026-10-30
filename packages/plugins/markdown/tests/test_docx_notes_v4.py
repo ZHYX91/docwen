@@ -407,7 +407,7 @@ def test_converter_preserves_existing_graph_and_allocates_matching_body_and_part
 )
 @pytest.mark.parametrize("with_body", [False, True])
 @pytest.mark.parametrize("with_new_note", [False, True])
-def test_converter_fails_closed_before_artifact_for_malformed_existing_note_graph(
+def test_converter_only_rejects_ambiguous_ids_when_extending_existing_note_domain(
     tmp_path: Path,
     damage: str,
     with_body: bool,
@@ -425,6 +425,23 @@ def test_converter_fails_closed_before_artifact_for_malformed_existing_note_grap
     )
 
     result = MdToDocxConverter().convert(context)
+
+    unsafe_append = with_body and with_new_note and damage in {"duplicate_positive", "malformed_id"}
+    if not unsafe_append:
+        assert result.success, result.error
+        output = Path(result.artifacts[0].staging_path)
+        with ZipFile(template) as before, ZipFile(output) as after:
+            before_root = etree.fromstring(before.read("word/footnotes.xml"))
+            after_root = etree.fromstring(after.read("word/footnotes.xml"))
+            for old, preserved in zip(before_root, after_root, strict=not (with_body and with_new_note)):
+                assert etree.tostring(old, method="c14n", exclusive=True) == etree.tostring(
+                    preserved, method="c14n", exclusive=True
+                )
+            assert before.read("word/_rels/footnotes.xml.rels") == after.read("word/_rels/footnotes.xml.rels")
+            if damage != "missing_relationship":
+                assert before.read("word/media/existing-note.png") == after.read("word/media/existing-note.png")
+        assert hashlib.sha256(template.read_bytes()).hexdigest() == template_hash
+        return
 
     assert result.success is False
     assert result.artifacts == []
@@ -452,3 +469,166 @@ def test_unprepared_collision_fails_without_replacing_request_owned_package(tmp_
 
     assert raised.value.diagnostic_code == "MD2DOCX-NOTE-PART-INVALID"
     assert hashlib.sha256(path.read_bytes()).hexdigest() == before
+
+
+def _rewrite_members(path: Path, replacements: dict[str, bytes]) -> None:
+    with ZipFile(path) as archive:
+        members = [(item, replacements.pop(item.filename, archive.read(item.filename))) for item in archive.infolist()]
+    with ZipFile(path, "w", ZIP_DEFLATED) as archive:
+        for item, payload in members:
+            archive.writestr(item, payload)
+        for name, payload in replacements.items():
+            archive.writestr(name, payload)
+
+
+def _mixed_nonstandard_template(path: Path, endnote_path: Path) -> None:
+    _inject_existing_footnote_graph(path, include_body_placeholder=True)
+    _inject_existing_endnote_graph(endnote_path)
+    with ZipFile(path) as footnotes, ZipFile(endnote_path) as endnotes:
+        relationships = etree.fromstring(footnotes.read("word/_rels/document.xml.rels"))
+        owner = etree.SubElement(relationships, f"{{{_RELS_NS}}}Relationship")
+        owner.attrib.update({"Id": "rIdExistingEndnotes", "Type": _ENDNOTES_REL_TYPE, "Target": "endnotes.xml"})
+        content_types = etree.fromstring(footnotes.read("[Content_Types].xml"))
+        override = etree.SubElement(content_types, f"{{{_CT_NS}}}Override")
+        override.attrib.update({"PartName": "/word/endnotes.xml", "ContentType": _ENDNOTES_CT})
+        document = etree.fromstring(footnotes.read("word/document.xml"))
+        for ref in document.iter(f"{{{WML_NS}}}footnoteReference"):
+            ref.set(f"{{{WML_NS}}}id", "3")
+        paragraph = document.find(f"{{{WML_NS}}}body/{{{WML_NS}}}p")
+        assert paragraph is not None
+        reference = etree.SubElement(etree.SubElement(paragraph, f"{{{WML_NS}}}r"), f"{{{WML_NS}}}endnoteReference")
+        reference.set(f"{{{WML_NS}}}id", "3")
+        replacements = {
+            "word/document.xml": etree.tostring(document),
+            "word/_rels/document.xml.rels": etree.tostring(relationships),
+            "[Content_Types].xml": etree.tostring(content_types),
+            "word/_rels/endnotes.xml.rels": endnotes.read("word/_rels/endnotes.xml.rels"),
+        }
+        for kind, archive in (("footnote", footnotes), ("endnote", endnotes)):
+            part = f"word/{kind}s.xml"
+            root = etree.fromstring(archive.read(part))
+            # separator=0, continuationSeparator=1 reproduce the original.
+            # A continuation notice uses positive 2; normal notes occupy 3/7.
+            for note in root:
+                old_id = int(note.get(f"{{{WML_NS}}}id", "0"))
+                note.set(f"{{{WML_NS}}}id", str({-1: 0, 0: 1, 1: 3, 3: 7}[old_id]))
+            notice = etree.SubElement(root, f"{{{WML_NS}}}{kind}")
+            notice.set(f"{{{WML_NS}}}id", "2")
+            notice.set(f"{{{WML_NS}}}type", "continuationNotice")
+            etree.SubElement(notice, f"{{{WML_NS}}}p")
+            replacements[part] = etree.tostring(root)
+    _rewrite_members(path, replacements)
+
+
+def test_mixed_nonstandard_domains_preserve_specials_bodies_resources_and_repeated_references(tmp_path: Path) -> None:
+    template = tmp_path / "mixed.docx"
+    _mixed_nonstandard_template(template, tmp_path / "endnotes.docx")
+    source = tmp_path / "source.md"
+    source.write_text(
+        "New foot[^f] and end[^endnote:e]. Repeat[^f] [^endnote:e].\n\n"
+        "[^f]: New foot body.\n[^endnote:e]: New end body.\n",
+        encoding="utf-8",
+    )
+    context, _workspace = make_context(
+        str(source),
+        target_format="docx",
+        options={"template_name": str(template), "markdown_extensions": {"input": {"typed_endnotes": True}}},
+    )
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    output = Path(result.artifacts[0].staging_path)
+    with ZipFile(template) as before, ZipFile(output) as after:
+        for kind in ("footnote", "endnote"):
+            part = f"word/{kind}s.xml"
+            old = etree.fromstring(before.read(part))
+            new = etree.fromstring(after.read(part))
+            assert len(new) == len(old) + 1
+            for original, preserved in zip(old, list(new)[:-1], strict=True):
+                assert etree.tostring(original, method="c14n", exclusive=True) == etree.tostring(
+                    preserved, method="c14n", exclusive=True
+                )
+            assert new[-1].get(f"{{{WML_NS}}}id") == "4"
+            assert new[-1].get(f"{{{WML_NS}}}type", "normal") == "normal"
+            assert before.read(f"word/_rels/{kind}s.xml.rels") == after.read(f"word/_rels/{kind}s.xml.rels")
+        assert before.read("word/media/existing-note.png") == after.read("word/media/existing-note.png")
+        document = etree.fromstring(after.read("word/document.xml"))
+        for kind in ("footnote", "endnote"):
+            assert [item.get(f"{{{WML_NS}}}id") for item in document.iter(f"{{{WML_NS}}}{kind}Reference")] == ["3", "4"]
+        assert sum("NOTEREF" in (item.text or "") for item in document.iter(f"{{{WML_NS}}}instrText")) == 2
+    reopened = tmp_path / "reopened.docx"
+    Document(str(output)).save(str(reopened))
+    assert _footnote_ids(reopened) == {0, 1, 2, 3, 4}
+    assert _endnote_ids(reopened) == {0, 1, 2, 3, 4, 7}
+
+
+def test_untouched_ambiguous_endnotes_do_not_block_new_footnotes(tmp_path: Path) -> None:
+    template = tmp_path / "mixed.docx"
+    _mixed_nonstandard_template(template, tmp_path / "endnotes.docx")
+    with ZipFile(template) as archive:
+        root = etree.fromstring(archive.read("word/endnotes.xml"))
+    root.append(deepcopy(root[-1]))
+    _rewrite_members(template, {"word/endnotes.xml": etree.tostring(root)})
+    source = tmp_path / "source.md"
+    source.write_text("Body[^f].\n\n[^f]: Foot only.\n", encoding="utf-8")
+    context, _workspace = make_context(str(source), target_format="docx", options={"template_name": str(template)})
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    with ZipFile(template) as before, ZipFile(result.artifacts[0].staging_path) as after:
+        assert etree.tostring(etree.fromstring(before.read("word/endnotes.xml")), method="c14n") == etree.tostring(
+            etree.fromstring(after.read("word/endnotes.xml")), method="c14n"
+        )
+
+
+@pytest.mark.parametrize("bad_id", ["2", "malformed"])
+def test_existing_broken_references_remain_untouched_and_cannot_bind_to_new_note(tmp_path: Path, bad_id: str) -> None:
+    template = tmp_path / "broken-ref.docx"
+    _inject_existing_footnote_graph(template, include_body_placeholder=True)
+    document = Document(str(template))
+    reference = OxmlElement("w:footnoteReference")
+    reference.set(qn("w:id"), bad_id)
+    document.paragraphs[0]._p.append(reference)
+    document.save(str(template))
+    source = tmp_path / "source.md"
+    source.write_text("New[^f], repeat[^f].\n\n[^f]: New body.\n", encoding="utf-8")
+    context, _workspace = make_context(str(source), target_format="docx", options={"template_name": str(template)})
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    with ZipFile(result.artifacts[0].staging_path) as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+        refs = [item.get(qn("w:id")) for item in root.iter(qn("w:footnoteReference"))]
+        assert refs == ["1", bad_id, "3" if bad_id == "2" else "2"]
+
+
+def test_new_note_without_reference_fails_atomically(tmp_path: Path) -> None:
+    path = tmp_path / "missing-ref.docx"
+    Document().save(str(path))
+    context = NoteContext()
+    context._footnote_children = {"new": _note_children("new")}
+    context.get_footnote_word_id("new")
+    before = path.read_bytes()
+    with pytest.raises(NoteWritebackError, match="matching main-document reference"):
+        write_notes_to_docx(str(path), context)
+    assert path.read_bytes() == before
+
+
+def test_other_story_reference_id_is_reserved_without_modifying_it(tmp_path: Path) -> None:
+    path = tmp_path / "header-ref.docx"
+    _inject_existing_footnote_graph(path)
+    document = Document(str(path))
+    run = document.sections[0].header.paragraphs[0].add_run()
+    reference = OxmlElement("w:footnoteReference")
+    reference.set(qn("w:id"), "2")
+    run._r.append(reference)
+    context = NoteContext()
+    context._footnote_children = {"new": _note_children("new")}
+    prepare_note_context_for_document(document, context)
+    new_reference = context.create_footnote_ref_run("new")
+    assert new_reference is not None
+    assert context.get_footnote_word_id("new") == 3
+    document.paragraphs[0]._p.append(new_reference)
+    document.save(str(path))
+    with ZipFile(path) as archive:
+        before = archive.read("word/header1.xml")
+    write_notes_to_docx(str(path), context)
+    with ZipFile(path) as archive:
+        assert archive.read("word/header1.xml") == before

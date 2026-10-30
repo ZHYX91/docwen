@@ -8,6 +8,12 @@ with no repository-layout or README dependency. CI uses its existing explicitly 
 Workspace repository cleanup reads `workspace.json`; legacy roots without registration never grant
 cleanup access to neighboring repositories. Registration does not bypass leases, Git tracking or links.
 
+`test_docx_notes_v4.py` independently inspects saved note bodies, special-note types with positive IDs, relationship
+bytes, reachable media and native/NOTEREF references in mixed footnote/endnote packages. It pairs untouched malformed
+IDs, missing separators/resources and dangling references with unsafe ID ambiguity in the domain being extended;
+other-story numeric references reserve their IDs too. Source file hashes remain unchanged. These generated package
+checks and python-docx save/reopen do not certify native Word/WPS/LibreOffice save/reopen fidelity.
+
 Local QA and CI use `tools/qa.py` for the same mandatory source checks: whole-repository Ruff,
 test governance, all Import-Linter dependency contracts, architecture cleanliness, and Pyright
 for Windows, Linux and macOS. `python tools/qa.py --skip-pytest` runs these checks before costly

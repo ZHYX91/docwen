@@ -349,8 +349,9 @@ def _render_resolved_v4_docx(
         code_font=code_font,
         code_background_color=code_background_color,
     )
-    prepare_note_context_for_document(doc, note_ctx)
     placeholder_para = find_body_placeholder(doc)
+    if placeholder_para is not None:
+        prepare_note_context_for_document(doc, note_ctx)
     placeholder_map = scan_placeholders(doc)
     bibliography_anchor = prepare_bibliography_anchor(
         doc,

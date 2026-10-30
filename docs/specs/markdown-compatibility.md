@@ -1346,7 +1346,7 @@ Layout、presentation 与 markup 路由在 manifest 声明后使用共享的 Mar
 
 ## Authored Markdown template body placement
 
-Authored Markdown inserts body content only at a single, standalone main-document body placeholder (including the supported localized aliases and markers split across text runs). A custom template with no body marker is metadata-only: YAML fields and explicit bibliography placement remain available, but body links/resources, notes, numbering, semantic body sessions and rendering are not materialized. Existing template notes are still audited and preserved. An empty body leaves no visible marker.
+Authored Markdown inserts body content only at a single, standalone main-document body placeholder (including the supported localized aliases and markers split across text runs). A custom template with no body marker is metadata-only: YAML fields and explicit bibliography placement remain available, but body links/resources, notes, numbering, semantic body sessions and rendering are not materialized. Existing template notes are preserved; their unrelated defects do not trigger a note-compliance audit. An empty body leaves no visible marker.
 
 Inline markers, table-cell/textbox/header/footer markers and duplicate body markers fail with `MD2DOCX-TEMPLATE-BODY-PLACEMENT`, rather than being mistaken for a metadata-only template. The same rejection applies when XML scanning finds a marker hidden in an unsupported inline content control or split within its alias by a structural break: every accepted marker must also be recognizable by the body-placement finder. Invalid source semantic syntax remains invalid even when the body is omitted. Source and template bytes are never rewritten.
 

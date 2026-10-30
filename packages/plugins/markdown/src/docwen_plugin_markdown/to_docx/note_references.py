@@ -121,16 +121,27 @@ def project_repeated_note_references(
     next_id = 0
     deferred_count = 0
     for kind, owned_ids in (("footnote", footnotes), ("endnote", endnotes)):
-        cached_marks = _cached_note_marks(document, kind)
+        if not owned_ids:
+            continue
+        cached_marks = None
         grouped: dict[int, list] = defaultdict(list)
         for reference in root.iter(_W + kind + "Reference"):
             value = reference.get(_W + "id")
-            if value is None:
-                raise ValueError("Note reference has no ID")
-            grouped[int(value)].append(reference)
+            try:
+                note_id = int(value) if value is not None else None
+            except ValueError:
+                continue  # Preserve unrelated malformed template references.
+            if note_id in owned_ids:
+                grouped[note_id].append(reference)
         for note_id, references in grouped.items():
             if note_id not in owned_ids or len(references) < 2:
                 continue
+            if cached_marks is None:
+                try:
+                    cached_marks = _cached_note_marks(document, kind)
+                except (TypeError, ValueError):
+                    # Uninterpretable template numbering cannot justify a guessed cache.
+                    cached_marks = dict.fromkeys(owned_ids)
             while ("numeric", next_id) in used_ids:
                 next_id += 1
             if next_id > 2_147_483_647:

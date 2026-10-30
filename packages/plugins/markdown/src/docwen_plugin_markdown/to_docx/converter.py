@@ -984,7 +984,8 @@ class MdToDocxConverter:
             placeholder_para = find_body_placeholder(doc)
             render_body = placeholder_para is not None
             try:
-                prepare_note_context_for_document(doc, note_ctx)
+                if render_body:
+                    prepare_note_context_for_document(doc, note_ctx)
             except NoteWritebackError as exc:
                 return _note_failure(task_id, t_start, exc)
             placeholder_map = scan_placeholders(doc)

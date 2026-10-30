@@ -310,13 +310,21 @@ to the conversion request and never rewrites the source Markdown or its authored
 The four built-in note styles (`FootnoteText`, `FootnoteReference`, `EndnoteText`, and `EndnoteReference`) are always
 completed, even when the source contains no new note. Their presence is not evidence that note content survived.
 
-Before adding a footnote or endnote, DocWen reads the complete existing note part, its relationships, and its content
-type. It validates every existing note ID, including Word's reserved separator IDs, rejects illegal or duplicate IDs,
-and allocates the lowest unused positive ID independently in the footnote and endnote domains. The body entry and the
-main-document reference run are written atomically with the same ID. A failure cannot leave only one side behind.
+Template notes are preserved without imposing a whole-template compliance gate. When no new note is materialized
+(including metadata-only templates), DocWen does not audit the template's existing note graph. When extending one note
+domain, it checks that domain's part ownership, content type, root and unambiguous integer IDs. Separator,
+continuation-separator and continuation-notice identity comes from `w:type`, independently of the numeric ID: positive
+special-note IDs are occupied IDs, not normal notes to overwrite. All existing IDs and numeric reference IDs across
+package stories are reserved; the lowest unused positive ID is allocated independently in each domain. Missing or
+noncanonical separators and unrelated broken template references/resources are preserved without repair. Ambiguous
+IDs or part ownership that prevent safe append still fail closed, without auditing the untouched opposite domain.
+The new normal body and its main-document native reference use the same ID and are checked again before atomic
+replacement. Repeated new references use the existing NOTEREF projection; final output must contain exactly one native
+reference per new body. A failure cannot publish only one side of a new note.
 
 Existing rich note bodies are preserved as OOXML, including blocks, runs, hyperlinks, drawings, and every reachable
-note-part relationship. DocWen neither flattens the body to text nor deletes, renumbers, or recreates existing notes.
+note-part relationship. Resources unreachable from the package relationship graph remain outside python-docx's save
+contract; preserving an existing defect does not promise to recover an already orphaned ZIP member. DocWen neither flattens the body to text nor deletes, renumbers, or recreates existing notes.
 Relationship IDs are allocated against the complete existing part, not only relationships created during the current
 request. Word, WPS, and LibreOffice must each open, save, reopen, and retain the note body, reference, relationship,
 and ID graph; a headless check that only sees the four styles is not a host-fidelity gate.
