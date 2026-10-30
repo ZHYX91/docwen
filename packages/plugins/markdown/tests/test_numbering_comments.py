@@ -42,6 +42,7 @@ def _convert(
     text_enabled=None,
     template_native=False,
     captions=False,
+    auto_link=False,
 ):
     template = Document()
     template.styles.add_style("CommentReference", WD_STYLE_TYPE.CHARACTER)
@@ -101,6 +102,7 @@ def _convert(
         },
         config_values={
             "text": {"heading_numbering_render_mode": mode},
+            "link": {"non_embed_links": {"auto_link_bare_url": auto_link}},
             "template_fill": {
                 **({"gongwen_numbering_comments": enabled} if enabled is not None else {}),
                 **({"gongwen_numbering_text": text_enabled} if text_enabled is not None else {}),
@@ -305,6 +307,101 @@ def test_preparse_errors_cannot_expose_numbering_provenance_markers(tmp_path, mo
     assert "一、Main" in result.error.message
     assert "DWNUM" not in result.error.message
     assert all("DWNUM" not in diagnostic.message for diagnostic in result.diagnostics)
+
+
+@pytest.mark.parametrize(
+    "format_string",
+    [
+        "{1.chinese_lower}、",
+        " {1.arabic_half} ",
+        "\t{1.arabic_half} ",
+        "https://example.com/{1.arabic_half} ",
+        "*{1.arabic_half}* ",
+        "`{1.arabic_half}` ",
+        "[{1.arabic_half}](https://example.com) ",
+        "<b>{1.arabic_half}</b> ",
+    ],
+    ids=["standard", "space", "tab", "url", "emphasis", "code", "link", "html"],
+)
+def test_provenance_is_transformation_equivalent_for_custom_prefixes(format_string):
+    from docwen_core.export_semantics import LinkRuntimeConfig
+    from docwen_core.links import process_markdown_links
+    from docwen_core.text.heading_numbering import HeadingFormatter
+    from docwen_plugin_markdown.common_utils import _apply_numbering
+
+    source = "# Main\n"
+    scheme = {"level_1": {"format": format_string}}
+    provenance = NumberingProvenance(source)
+    marked = _apply_numbering(source, HeadingFormatter(scheme), prefix_marker=provenance.mark)
+    ordinary = _apply_numbering(source, HeadingFormatter(scheme))
+    config = LinkRuntimeConfig(auto_link_bare_url=True)
+    control = process_markdown_links(ordinary, "", link_config=config, target_format="docx")
+    transformed = process_markdown_links(marked, "", link_config=config, target_format="docx")
+    clean, prefixes, missing = provenance.prepare_source(transformed)
+    assert clean == control
+    assert len(prefixes) == 1 and prefixes[0]
+    assert missing == 0
+
+
+@pytest.mark.parametrize(
+    "format_string,visible,review",
+    [
+        (" {1.arabic_half} ", "1 Main", True),
+        ("\t{1.arabic_half} ", "1 Main", True),
+        ("https://example.com/{1.arabic_half} ", "https://example.com/1 Main", False),
+    ],
+    ids=["space", "tab", "url"],
+)
+def test_custom_prefix_boundaries_preserve_text_numbering_and_links(tmp_path, format_string, visible, review):
+    snapshot = repository_numbering_snapshot()
+    snapshot["numbering"]["add"]["schemes"]["custom"] = {
+        "name": "Custom",
+        "enabled": True,
+        "locales": ["*"],
+        "level_1": {"format": format_string},
+    }
+    registry = NumberingSchemeRegistry.from_config_snapshot(
+        snapshot, locale_path=PROJECT_ROOT / "i18n/locales/zh_CN.toml"
+    )
+    result, _original, output_path = _convert(
+        tmp_path,
+        scheme="custom",
+        registry=registry,
+        source="# Main\n",
+        template_native=True,
+        auto_link=True,
+    )
+    document = Document(str(output_path))
+    heading = next(paragraph for paragraph in document.paragraphs if paragraph.text == visible)
+    assert _paragraph_num_id(heading) == "0"
+    reviews = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]
+    assert len(reviews) == int(review)
+    if review:
+        assert _anchors(document)[str(reviews[0].comment_id)] == "1"
+    else:
+        assert any(rel.target_ref == "https://example.com/1" for rel in document.part.rels.values())
+    assert any(item.code == "MD2DOCX-NUMBERING-COMMENTS-UNANCHORED" for item in result.diagnostics) is not review
+
+
+@pytest.mark.parametrize("label,part", [("a", "footnotes"), ("endnote:a", "endnotes")])
+@pytest.mark.parametrize(
+    "note_heading", ["    # Note title\n", "    Note title\n    ==========\n"], ids=["atx", "setext"]
+)
+def test_deferred_note_headings_do_not_consume_body_numbering_provenance(tmp_path, label, part, note_heading):
+    source = f"# Main\n\nref[^{label}].\n\n[^{label}]:\n{note_heading}\n    Note body.\n"
+    result, _original, output_path = _convert(tmp_path, source=source, template_native=True)
+    document = Document(str(output_path))
+    heading = next(paragraph for paragraph in document.paragraphs if paragraph.text == "一、Main")
+    assert _paragraph_num_id(heading) == "0"
+    reviews = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]
+    assert len(reviews) == 1 and _anchors(document)[str(reviews[0].comment_id)] == "一、"
+    assert not any(item.code == "MD2DOCX-NUMBERING-COMMENTS-UNANCHORED" for item in result.diagnostics)
+    with ZipFile(output_path) as package:
+        note = etree.fromstring(package.read(f"word/{part}.xml"))
+        assert "Note title" in "".join(note.itertext())
+        assert not list(note.iter(qn("w:commentRangeStart")))
+        assert not list(note.iter(qn("w:numPr")))
+        assert b"DWNUM" not in package.read(f"word/{part}.xml")
 
 
 def test_nested_setext_empty_headings_and_code_do_not_shift_comment_ownership(tmp_path):

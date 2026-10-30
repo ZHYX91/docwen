@@ -31,12 +31,14 @@ class NumberingProvenance:
         while self._scope in source:
             self._scope = f"DWNUM{secrets.token_hex(24)}X"
         self._prefixes: dict[str, str] = {}
-        self._pattern = re.compile(re.escape(self._scope) + r"[0-9]+Z")
+        self._pattern = re.compile(re.escape(self._scope) + r"[0-9]+Z ")
 
     def mark(self, prefix: str) -> str:
         if not prefix.rstrip():
             return ""
-        marker = f"{self._scope}{len(self._prefixes)}Z"
+        # Keep the original whitespace boundary before the scheme prefix so
+        # link processing sees the same bare-URL and inline-delimiter context.
+        marker = f"{self._scope}{len(self._prefixes)}Z "
         self._prefixes[marker] = prefix
         return marker
 
@@ -57,7 +59,12 @@ class NumberingProvenance:
             if prefix is None:
                 continue
             output.append(source[cursor : match.start()])
-            positions[match.start() - removed] = prefix
+            leading = len(prefix) - len(prefix.lstrip(" \t"))
+            # ATX/Setext heading parsing consumes prefix-leading ASCII space
+            # and tab characters. Move only across those exact owned bytes.
+            if source[match.end() : match.end() + leading] != prefix[:leading]:
+                leading = 0
+            positions[match.start() - removed + leading] = prefix[leading:]
             removed += match.end() - match.start()
             cursor = match.end()
         output.append(source[cursor:])
@@ -165,6 +172,10 @@ def annotate_numbering_prefixes(
 
     def visit(items: list[dict[str, Any]]) -> None:
         for item in items:
+            if item.get("type") == "footnotes":
+                # Notes are rendered separately and their headings never
+                # received incoming-text numbering in the source transform.
+                continue
             if item.get("type") == "heading":
                 headings.append(item)
             else:
