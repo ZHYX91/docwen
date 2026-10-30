@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+import secrets
 from typing import Any
 
 from docx.enum.style import WD_STYLE_TYPE
@@ -9,10 +11,63 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from lxml import etree
 
+from docwen_core.links import markdown_heading_ranges
 from docwen_plugin_markdown.to_docx.notes import parse_word_note_id
 
 NUMBERING_REVIEW_TEXT = "此序号由软件自动添加，请核对标题级别及编号是否正确。"
 _COMMENT_TAGS = {qn("w:comment"), qn("w:commentRangeStart"), qn("w:commentRangeEnd"), qn("w:commentReference")}
+
+
+class NumberingProvenance:
+    """Carry insertion identities through links/embeds, before the final parse.
+
+    Markers are removed before the final Markdown parse, preserving custom
+    prefix formatting and source/carrier identity. Final source offsets identify
+    the original numbered headings even when embeds add identical headings.
+    """
+
+    def __init__(self, source: str) -> None:
+        self._scope = f"DWNUM{secrets.token_hex(24)}X"
+        while self._scope in source:
+            self._scope = f"DWNUM{secrets.token_hex(24)}X"
+        self._prefixes: dict[str, str] = {}
+        self._pattern = re.compile(re.escape(self._scope) + r"[0-9]+Z")
+
+    def mark(self, prefix: str) -> str:
+        if not prefix.rstrip():
+            return ""
+        marker = f"{self._scope}{len(self._prefixes)}Z"
+        self._prefixes[marker] = prefix
+        return marker
+
+    def strip_markers(self, text: str) -> str:
+        return self._pattern.sub(lambda match: "" if match.group() in self._prefixes else match.group(), text)
+
+    def prepare_source(
+        self, source: str, *, extended_headings: bool = False, structural_tables: bool = False
+    ) -> tuple[str, list[str], int]:
+        if not self._prefixes:
+            return source, [], 0
+        output: list[str] = []
+        positions: dict[int, str] = {}
+        cursor = 0
+        removed = 0
+        for match in self._pattern.finditer(source):
+            prefix = self._prefixes.get(match.group())
+            if prefix is None:
+                continue
+            output.append(source[cursor : match.start()])
+            positions[match.start() - removed] = prefix
+            removed += match.end() - match.start()
+            cursor = match.end()
+        output.append(source[cursor:])
+        clean = "".join(output)
+        prefixes = []
+        for heading in markdown_heading_ranges(
+            clean, extended_headings=extended_headings, structural_tables=structural_tables
+        ):
+            prefixes.append(positions.pop(heading.text_start, ""))
+        return clean, prefixes, len(positions)
 
 
 def add_numbering_review(document: Any, run: Any) -> None:

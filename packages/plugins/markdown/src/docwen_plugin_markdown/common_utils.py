@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -93,6 +94,7 @@ def add_md_numbering(
     extended_headings: bool = False,
     structural_tables: bool = False,
     added_prefixes: list[str] | None = None,
+    prefix_marker: Callable[[str], str] | None = None,
 ) -> str:
     """Add heading numbering using one exact configured scheme.
 
@@ -117,6 +119,7 @@ def add_md_numbering(
         extended_headings=extended_headings,
         structural_tables=structural_tables,
         added_prefixes=added_prefixes,
+        prefix_marker=prefix_marker,
     )
 
 
@@ -127,6 +130,7 @@ def _apply_numbering(
     extended_headings: bool = False,
     structural_tables: bool = False,
     added_prefixes: list[str] | None = None,
+    prefix_marker: Callable[[str], str] | None = None,
 ) -> str:
     """Apply a ``HeadingFormatter`` to all heading lines in Markdown content.
 
@@ -141,10 +145,13 @@ def _apply_numbering(
         result.append(content[cursor : heading.text_start])
         heading_text = content[heading.text_start : heading.text_end]
         formatted = formatter.format_heading(heading_text, heading.level)
+        prefix = formatted[: len(formatted) - len(heading_text)] if heading_text else formatted
         if added_prefixes is not None:
-            added_prefixes.append(formatted[: len(formatted) - len(heading_text)] if heading_text else formatted)
+            added_prefixes.append(prefix)
         if formatted and heading.requires_separator:
             result.append(" ")
+        if prefix_marker is not None and prefix:
+            result.append(prefix_marker(prefix))
         result.append(formatted)
         cursor = heading.text_end
     result.append(content[cursor:])

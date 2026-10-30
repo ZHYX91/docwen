@@ -16,7 +16,11 @@ from PIL import Image
 from tests.support.numbering import repository_numbering_registry, repository_numbering_snapshot
 
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
-from docwen_plugin_markdown.to_docx.numbering_comments import NUMBERING_REVIEW_TEXT, add_numbering_review
+from docwen_plugin_markdown.to_docx.numbering_comments import (
+    NUMBERING_REVIEW_TEXT,
+    NumberingProvenance,
+    add_numbering_review,
+)
 from docwen_runtime.numbering import NumberingSchemeRegistry
 
 from .conftest import PROJECT_ROOT, make_context
@@ -27,7 +31,7 @@ pytestmark = pytest.mark.contract
 def _convert(
     tmp_path,
     *,
-    enabled=True,
+    enabled: bool | None = True,
     add=True,
     mode="text",
     fields=False,
@@ -37,6 +41,7 @@ def _convert(
     registry=None,
     text_enabled=None,
     template_native=False,
+    captions=False,
 ):
     template = Document()
     template.styles.add_style("CommentReference", WD_STYLE_TYPE.CHARACTER)
@@ -73,7 +78,7 @@ def _convert(
         reference.set(qn("w:id"), str(comment_id))
         paragraph.add_run()._r.append(reference)
     if template_native:
-        original.style = template.styles["Heading 1"]
+        original.style = "Heading 1"
         style = template.styles["Heading 1"]._element
         assert style is not None
         style.get_or_add_pPr().get_or_add_numPr().get_or_add_numId().val = 1
@@ -92,7 +97,7 @@ def _convert(
             "numbering_scheme": scheme,
             "heading_numbering_render_mode": mode,
             "heading_formatting_mode": "apply",
-            "markdown_extensions": {"input": {"typed_endnotes": True}},
+            "markdown_extensions": {"input": {"typed_endnotes": True, "captions_references": captions}},
         },
         config_values={
             "text": {"heading_numbering_render_mode": mode},
@@ -130,7 +135,10 @@ def _anchors(document):
 
 
 def _paragraph_num_id(paragraph):
-    return paragraph._p.find(qn("w:pPr")).find(qn("w:numPr")).find(qn("w:numId")).get(qn("w:val"))
+    properties = paragraph._p.find(qn("w:pPr"))
+    numbering = properties.find(qn("w:numPr")) if properties is not None else None
+    number_id = numbering.find(qn("w:numId")) if numbering is not None else None
+    return number_id.get(qn("w:val")) if number_id is not None else None
 
 
 def _style_bytes(document, name):
@@ -206,6 +214,96 @@ def test_text_policy_overrides_only_new_native_numbers_and_enforces_comment_depe
 def test_missing_old_comment_key_now_defaults_on_without_enabling_numbering(tmp_path):
     _result, _original, output_path = _convert(tmp_path, enabled=None)
     assert len([c for c in Document(str(output_path)).comments if c.text == NUMBERING_REVIEW_TEXT]) == 2
+
+
+@pytest.mark.parametrize(
+    "source,expected,captions",
+    [
+        ("# Main\n\n![[sample.md]]\n", ["一、"], False),
+        ("![[sample.md]]\n\n# Main\n\n![[same.md]]\n\n## Tail\n", ["一、", "（一）"], False),
+        (
+            "> # Quoted\n>\n> ![[sample.md]]\n\n- ## List\n\n  ![[same.md]]\n\nSetext\n======\n\n#\n",
+            ["一、", "（一）", "二、", "三、"],
+            False,
+        ),
+        ("![[sample.md]]\n\n# [Main](https://example.com)\n\n## [[Missing|Tail]]\n", ["一、", "（一）"], False),
+        ("# Main ^main\n\n![[sample.md]]\n\nSee @[[#^main]].\n", ["一、"], True),
+    ],
+    ids=[
+        "embed-after",
+        "embed-before-between-identical",
+        "containers-setext-empty",
+        "changed-links",
+        "semantic-carrier",
+    ],
+)
+def test_embedded_headings_cannot_consume_original_numbering_provenance(tmp_path, source, expected, captions):
+    fixture = PROJECT_ROOT / "tests/fixtures/files/sample.md"
+    fixture_bytes = fixture.read_bytes()
+    (tmp_path / "sample.md").write_bytes(fixture_bytes)
+    (tmp_path / "same.md").write_text("# 一、Main\n", encoding="utf-8")
+    result, original_path, output_path = _convert(
+        tmp_path, source=source, mode="word_native", template_native=True, captions=captions
+    )
+    document = Document(str(output_path))
+    reviews = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]
+    anchors = _anchors(document)
+    assert [anchors[str(comment.comment_id)] for comment in reviews] == expected
+    review_ids = {str(comment.comment_id) for comment in reviews}
+    assert any(paragraph.text == "Sample" for paragraph in document.paragraphs)
+    for paragraph in document.paragraphs:
+        if not (paragraph.style.name or "").lower().startswith("heading"):
+            continue
+        paragraph_reviews = {node.get(qn("w:id")) for node in paragraph._p.iter(qn("w:commentRangeStart"))}
+        assert _paragraph_num_id(paragraph) == ("0" if paragraph_reviews.intersection(review_ids) else None)
+    assert _style_bytes(document, "Heading 1") == _style_bytes(Document(str(original_path)), "Heading 1")
+    assert fixture.read_bytes() == fixture_bytes
+    with ZipFile(original_path) as before, ZipFile(output_path) as after:
+        original_definitions = etree.fromstring(before.read("word/numbering.xml"))
+        final_definitions = etree.fromstring(after.read("word/numbering.xml"))
+        for definition in original_definitions:
+            assert any(etree.tostring(definition) == etree.tostring(node) for node in final_definitions)
+        for name in after.namelist():
+            if name.endswith(".xml"):
+                assert b"DWNUM" not in after.read(name), name
+    assert all("DWNUM" not in diagnostic.message for diagnostic in result.diagnostics)
+
+
+def test_provenance_scope_collision_retains_authored_marker_like_text(monkeypatch):
+    from docwen_plugin_markdown.to_docx import numbering_comments
+
+    tokens = iter(["a" * 48, "b" * 48])
+    monkeypatch.setattr(numbering_comments.secrets, "token_hex", lambda _size: next(tokens))
+    literal = "DWNUM" + "a" * 48 + "X0Z"
+    provenance = NumberingProvenance(f"# {literal}\n")
+    marker = provenance.mark("一、")
+    clean, prefixes, missing = provenance.prepare_source(f"# {marker}一、{literal}\n")
+    assert clean == f"# 一、{literal}\n"
+    assert prefixes == ["一、"] and missing == 0
+    assert provenance.strip_markers(marker + literal) == literal
+
+
+def test_preparse_errors_cannot_expose_numbering_provenance_markers(tmp_path, monkeypatch):
+    from docwen_plugin_markdown.to_docx import converter
+
+    source = tmp_path / "failure.md"
+    source.write_text("# Main\n", encoding="utf-8")
+
+    def fail_with_source(content, *_args, **_kwargs):
+        assert "DWNUM" in content
+        raise ValueError(content)
+
+    monkeypatch.setattr(converter, "process_markdown_links", fail_with_source)
+    context, _workspace = make_context(
+        str(source),
+        options={"add_numbering": True, "numbering_scheme": "gongwen_standard"},
+        numbering_registry=repository_numbering_registry(),
+    )
+    result = MdToDocxConverter().convert(context)
+    assert not result.success and result.error is not None
+    assert "一、Main" in result.error.message
+    assert "DWNUM" not in result.error.message
+    assert all("DWNUM" not in diagnostic.message for diagnostic in result.diagnostics)
 
 
 def test_nested_setext_empty_headings_and_code_do_not_shift_comment_ownership(tmp_path):

@@ -72,7 +72,14 @@ def test_md_to_docx_uses_text_config_when_request_numbering_options_are_omitted(
         return content
 
     def add_numbering(
-        content: str, *, scheme: str, registry, extended_headings: bool, structural_tables: bool, added_prefixes=None
+        content: str,
+        *,
+        scheme: str,
+        registry,
+        extended_headings: bool,
+        structural_tables: bool,
+        added_prefixes=None,
+        prefix_marker=None,
     ) -> str:
         calls.append(("add", scheme))
         return content
