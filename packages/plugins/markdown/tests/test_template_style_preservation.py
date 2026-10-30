@@ -179,3 +179,39 @@ def test_removed_invalid_owner_cannot_exempt_new_owner_with_same_properties(kind
         replacement._tbl.tblPr.append(deepcopy(ref))
     with pytest.raises(ManagedStyleCompletionError, match="missing or ambiguous style"):
         validate_managed_style_package(_document_bytes(completed), _catalog("en_US"), bindings)
+
+
+@pytest.mark.parametrize("level", [1, 3])
+def test_full_conversion_heading_uses_private_binding_before_wrong_type_name_lookup(tmp_path: Path, level: int) -> None:
+    document = Document()
+    document.add_paragraph("Template literal")
+    document.add_paragraph("{{正文}}")
+    conflicting = document.styles[f"Heading {level}"]._element
+    assert conflicting is not None
+    conflicting.set(qn("w:type"), "character")
+    before = etree.tostring(conflicting, method="c14n", exclusive=True)
+    template = tmp_path / "heading-conflict.docx"
+    document.save(str(template))
+    template_bytes = template.read_bytes()
+    source = tmp_path / "heading-source.md"
+    source.write_text("#" * level + " Fresh heading\n\nBody paragraph.\n", encoding="utf-8")
+    context, _workspace = make_context(
+        str(source), target_format="docx", options={"template_name": str(template), "heading_merge_mode": "never"}
+    )
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    output = result.artifacts[0].staging_path
+    with ZipFile(output) as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+        styles = etree.fromstring(archive.read("word/styles.xml"))
+        old = next(style for style in styles.findall(qn("w:style")) if style.get(qn("w:styleId")) == f"Heading{level}")
+        assert etree.tostring(old, method="c14n", exclusive=True) == before
+        heading = next(p for p in root.iter(qn("w:p")) if "Fresh heading" in "".join(p.itertext()))
+        reference = heading.find(qn("w:pPr") + "/" + qn("w:pStyle"))
+        assert reference is not None
+        assert reference.get(qn("w:val")) == f"Heading{level}DocWen1"
+        generated = next(
+            style for style in styles.findall(qn("w:style")) if style.get(qn("w:styleId")) == f"Heading{level}DocWen1"
+        )
+        assert generated.get(qn("w:type")) == "paragraph"
+    assert template.read_bytes() == template_bytes

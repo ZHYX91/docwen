@@ -608,7 +608,13 @@ class MdToDocxRenderer:
         for lx in range(level, 9):
             self._h_counters[lx] = 0
 
-        heading = self._doc.add_heading(level=level)
+        if self._managed_styles is not None:
+            # A preserved user style may occupy Word's Heading N name with
+            # another type. Bind the resolved identity before rendering runs.
+            heading = self._doc.add_paragraph()
+            heading.style = self._managed_styles.get(f"heading_{level}")
+        else:
+            heading = self._doc.add_heading(level=level)
         children = node.get("children", [])
         if number := node.get("_docwen_added_number"):
             number_run = heading.add_run(number)
