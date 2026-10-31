@@ -163,6 +163,13 @@ PRI logical resource URIs use `/Files/assets/msix/...`, while physical candidate
 `release/macos-production-manifest.v1.json` fixes the arm64/macOS 14 target, two versioned
 `tar.gz` assets, safe internal symlink policy and ad-hoc-only signing policy. The release
 workflow builds the GUI and CLI once on native `macos-14` with the locked Python environment.
+Its Office checks use LibreOffice 26.8.2.2 for Apple Silicon, installed from the
+[official archive](https://downloadarchive.documentfoundation.org/libreoffice/old/26.8.2.2/mac/aarch64/LibreOffice_26.8.2.2_MacOS_aarch64.dmg).
+The workflow checks the pinned SHA-256 against the downloaded bytes before mounting the DMG
+and checks the installed executable's version before building. The digest comes from the
+[official checksum](https://downloadarchive.documentfoundation.org/libreoffice/old/26.8.2.2/mac/aarch64/LibreOffice_26.8.2.2_MacOS_aarch64.dmg.sha256).
+Update the version and digest together after reviewing the new official archive; the rolling
+Homebrew cask and upstream `stable` directory are not the identity for this Office gate.
 `scripts/release/macos_package.py` composes the app around that unchanged onedir payload.
 The small native launcher forwards arguments by `execv` using its own location, so Finder
 and a shell with a different working directory use the same executable and resource layout.

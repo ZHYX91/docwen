@@ -273,9 +273,33 @@ jobs:
           enable-cache: true
       - name: Require native Apple Silicon and install image/Office dependencies
         run: |
+          set -euo pipefail
           test "$(uname -m)" = arm64
           brew install libheif
-          brew install --cask libreoffice
+          # The rolling stable directory retires old cask URLs. Pin the official
+          # archive and its published digest so every retry uses the same host.
+          libreoffice_version=26.8.2.2
+          dmg="$RUNNER_TEMP/LibreOffice_${libreoffice_version}_MacOS_aarch64.dmg"
+          mount="$RUNNER_TEMP/docwen-libreoffice"
+          curl --fail --location --retry 3 \
+            "https://downloadarchive.documentfoundation.org/libreoffice/old/${libreoffice_version}/mac/aarch64/LibreOffice_${libreoffice_version}_MacOS_aarch64.dmg" \
+            --output "$dmg"
+          printf '%s  %s\n' \
+            9f24fe83ab1ed5c95eb3df580119f32932f713e577feeac02bf619fb00749b55 "$dmg" \
+            | shasum -a 256 --check -
+          test ! -e /Applications/LibreOffice.app
+          mkdir "$mount"
+          hdiutil attach "$dmg" -mountpoint "$mount" -nobrowse -readonly
+          trap 'hdiutil detach "$mount"' EXIT
+          sudo ditto "$mount/LibreOffice.app" /Applications/LibreOffice.app
+          hdiutil detach "$mount"
+          trap - EXIT
+          office_version=$(/Applications/LibreOffice.app/Contents/MacOS/soffice --version)
+          printf '%s\n' "$office_version"
+          case "$office_version" in
+            "LibreOffice ${libreoffice_version} "*) ;;
+            *) echo "Unexpected LibreOffice host version" >&2; exit 1 ;;
+          esac
       - name: Install exact lockfile
         run: uv sync --frozen --extra dev
       - name: Build GUI and CLI payloads once
