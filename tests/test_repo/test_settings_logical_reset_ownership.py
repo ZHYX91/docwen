@@ -68,7 +68,7 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "spreadsheet": 4,
         "layout": 3,
         "image": 7,
-        "gongwen": 2,
+        "gongwen": 4,
         "invoice": 0,
         "link": 8,
         "other": 2,
@@ -82,6 +82,14 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
 
     assert "template_fill.gongwen_fields_enabled" not in reset_plan_for_group("text").dotted_keys
     assert "template_fill.attachment_alignment" not in reset_plan_for_group("text").dotted_keys
+    assert set(reset_plan_for_group("gongwen").dotted_keys) == {
+        "template_fill.gongwen_fields_enabled",
+        "template_fill.attachment_alignment",
+        "template_fill.gongwen_numbering_text",
+        "template_fill.gongwen_numbering_comments",
+    }
+    for key in ("template_fill.gongwen_numbering_text", "template_fill.gongwen_numbering_comments"):
+        assert key not in reset_plan_for_group("text").dotted_keys
     for category in ("document", "layout", "image"):
         assert f"{category}.to_md_optimization" not in reset_plan_for_group(category).dotted_keys
     assert reset_plan_for_group("gongwen").conditional_dotted_keys == (("document.to_md_optimization", "gongwen"),)
