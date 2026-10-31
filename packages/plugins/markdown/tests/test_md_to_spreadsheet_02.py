@@ -475,8 +475,9 @@ owner: Finance
         assert len(result.artifacts) == 1
         assert any(diagnostic.code == "FINALIZER_DONE" for diagnostic in result.diagnostics)
         output = Path(result.artifacts[0].staging_path)
-        assert output.parent.parent == output_dir
-        assert output.parent.name == output.stem
+        assert output.parent == output_dir
+        assert list(output_dir.iterdir()) == [output]
+        assert output.name.startswith(f"{md_path.stem}_")
         assert output.stem.endswith("_fromMd")
         assert output.suffix == ".xlsx"
         assert output.exists()

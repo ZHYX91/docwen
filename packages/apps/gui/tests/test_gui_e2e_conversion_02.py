@@ -451,9 +451,9 @@ class TestMarkdownTemplateWorkflow:
 
         output_path = Path(entry.output_path)
         assert output_path.exists()
-        assert output_path.parent.parent == source.parent
+        assert output_path.parent == source.parent
         assert output_path.name.startswith("brief_") and output_path.name.endswith("_fromMd.docx")
-        assert output_path.parent.name == output_path.stem
+        assert list(source.parent.glob("*.docx")) == [output_path]
         output_doc = Document(str(output_path))
         paragraph_text = [paragraph.text for paragraph in output_doc.paragraphs if paragraph.text.strip()]
 
