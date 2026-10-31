@@ -35,6 +35,7 @@ def test_invalid_complete_selection_disables_submission_and_recovers(qapp: Any, 
     try:
         vm.set_file_info("layout", "pdf", file_path="/test.pdf")
         vm.set_pdf_info(4, "test.pdf")
+        vm.split_mode = "custom"
         assert widget._page_input_edit is not None
         assert widget._split_pdf_button is not None
         assert widget._page_warning_label is not None
@@ -59,6 +60,7 @@ def test_wildcards_and_metadata_refresh_keep_validation_local(qapp: Any, value: 
     try:
         vm.set_file_info("layout", "pdf", file_path="/test.pdf")
         vm.set_pdf_info(4, "test.pdf")
+        vm.split_mode = "custom"
         assert widget._page_input_edit is not None
         assert widget._split_pdf_button is not None
         assert widget._page_warning_label is not None

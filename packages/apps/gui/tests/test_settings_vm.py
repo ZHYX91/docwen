@@ -346,7 +346,7 @@ class TestApplyCancel:
         assert fresh_vm.config.conversion_defaults.document["to_md_add_numbering"] is True
         assert fresh_vm.config.conversion_defaults.document["to_md_default_scheme"] == "legal_standard"
 
-    @pytest.mark.parametrize("separator", [", ", ""])
+    @pytest.mark.parametrize("separator", [", ", "、", "", " "])
     def test_apply_roundtrips_yaml_list_separator_exactly(
         self,
         separator: str,

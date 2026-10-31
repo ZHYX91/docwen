@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from docwen_core.models.file_ref import source_presentation_name
 from docwen_core.text.heading_numbering import NumberingSchemeResolutionError
 from docwen_plugin_optimizer_gongwen.manifest import build_manifest
 from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
@@ -88,6 +89,7 @@ class GongwenOptimizerPlugin:
                     doc,
                     input_path,
                     options,
+                    source_name=source_presentation_name(context.request.input_refs[0], fallback_path=input_path),
                     cancellation=context.cancellation,
                     progress=context.progress,
                     registry=context.numbering_registry,

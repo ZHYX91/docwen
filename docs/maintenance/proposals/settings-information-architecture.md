@@ -1,7 +1,7 @@
 # Settings information architecture / 设置归属复查
 
-Reviewed against `02f46e742a582bacb3efc324c3f09f5310a79ded` (PR #115).
-This change reorganizes presentation, not conversion contracts or configuration.
+Implementation record updated for the independent Generate Markdown / Parse Markdown pages.
+Existing conversion keys are retained; page reset ownership is now directional.
 
 ## Navigation / 导航
 
@@ -9,11 +9,12 @@ This change reorganizes presentation, not conversion contracts or configuration.
 | --- | --- |
 | Basics / 基本设置 | 通用、文件保存、模板、转换软件、日志 |
 | Input types / 输入类型 | 传入文本、传入文档、传入表格、传入图片、传入版式文件、传入其他文件 |
-| Content / 内容处理 | Markdown 语法、链接、OCR 与图片、校对 |
+| Content / 内容处理 | 生成 Markdown、解析 Markdown、链接、OCR 与图片、校对 |
 | Specialized / 专项优化 | 公文、发票 |
 
-There are still 17 pages. Stable page keys, cross-page links, configuration keys,
-Apply/Cancel and per-page reset ownership are unchanged. Group headings are not
+There are 18 pages. The `formatting` key owns Markdown generation; `markdown_input`
+owns parsing. Existing conversion configuration keys and Apply/Cancel are retained.
+Each page resets only its direction and preserves unsaved values on the other page. Group headings are not
 pages or focus stops. Empty groups remain hidden.
 
 “OCR 与图片” covers recognition and Markdown image/OCR presentation. Input pages
@@ -28,12 +29,11 @@ continue to apply. This avoids solving one long title by clipping other locales.
 
 ## Markdown policy is not a Word preference / Markdown 规则不属于 Word 专页
 
-The Markdown page presents, in order:
-
-1. Generate Markdown: optional output extensions and preferred output syntax.
-2. Read Markdown: optional input recognition, independent of output choices.
-3. Word-specific mappings and generation: page/section separators, paragraphs
-   and Mermaid rendering, explicitly scoped to this conversion family.
+The Generate Markdown page contains optional output extensions, syntax/list indentation,
+and DOCX → Markdown separator conversion. The Parse Markdown page contains optional
+input recognition, Markdown → DOCX separator conversion, ordinary-line paragraph handling
+and Mermaid. Each Obsidian preset changes only its page's extension direction. Template
+filling and DOCX table styles remain on Incoming text; Link and OCR retain their existing entries.
 
 Output conventions are source-independent. Documents, spreadsheets, images,
 fixed-layout files and specialized optimizers should use the same convention for
@@ -71,7 +71,7 @@ a generic plugin-settings engine, configuration migration, or compatibility keys
 ## Verification boundary / 验收边界
 
 GUI tests cover the four groups, all existing page identities, localizations,
-source-independent Markdown card order, independent input/output switches and
+directional Markdown card ownership, independent input/output switches and
 unchanged per-category OCR defaults. Existing reset, lifecycle, accessibility,
 Mermaid, i18n and Markdown extension integration tests remain required.
 

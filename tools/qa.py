@@ -21,6 +21,7 @@ if __package__ in {None, ""}:
 
 from tools import qa_reports, source_checks
 from tools.run_lease import OwnedRunLease, lease_payload, transition
+from tools.source_imports import source_import_environment
 from tools.windows_short_path import ShortPathDriveError, drive_root, mount_short_drive, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
 from tools.workspace_root import WorkspaceRootError, resolve_workspace_root
@@ -48,7 +49,9 @@ PYTEST_SYSTEM_TEMP_NAME = "t"
 
 
 def _run(args: list[str], *, env: dict[str, str] | None = None) -> int:
-    proc = subprocess.run(args, cwd=Path(__file__).resolve().parents[1], env=env)
+    repo_root = Path(__file__).resolve().parents[1]
+    environment = source_import_environment(repo_root, os.environ if env is None else env)
+    proc = subprocess.run(args, cwd=repo_root, env=environment)
     return int(proc.returncode)
 
 
@@ -250,7 +253,7 @@ def _pytest_runtime_environment(
             raise ValueError(f"pytest runtime child must not traverse a link or reparse point: {path}")
     if owned:
         _write_runtime_lease(runtime_root, state="active")
-    environment = os.environ.copy()
+    environment = source_import_environment(repo_root, os.environ)
     environment.update(
         {
             PYTEST_RUNTIME_ROOT_ENV: str(runtime_root),

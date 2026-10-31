@@ -13,6 +13,7 @@ from typing import Any
 
 from PySide6.QtCore import QEvent, QPoint, QSize, Qt, Signal
 from PySide6.QtWidgets import (
+    QAbstractSpinBox,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
@@ -38,7 +39,7 @@ from docwen_gui.widgets.value_controls import ScrollSafeComboBox, ScrollSafeDoub
 
 from ...resources import load_svg_icon
 from ...styles.design_tokens import Sizing, Spacing
-from ..panel_card import FormRow, PanelCard, WrappingLabel
+from ..panel_card import ChoiceGroup, FormRow, PanelCard, WrappingLabel
 from .check_box import SettingsCheckBox
 
 SPACING_XS = Spacing.XS
@@ -229,6 +230,7 @@ class BaseSettingsTab(QWidget):
 
         # Tab-level description (hidden by default; subclasses call set_tab_description)
         self._tab_desc = WrappingLabel("", self)
+        self._tab_desc.setTextFormat(Qt.TextFormat.PlainText)
         self._tab_desc.setObjectName("settingsTabDescription")
         self._tab_desc.setProperty("settingsRole", "tabDescription")
         self._tab_desc.setWordWrap(True)
@@ -256,6 +258,8 @@ class BaseSettingsTab(QWidget):
 
         self._create_interface()
         for control in self.findChildren(QWidget):
+            if isinstance(control, QLineEdit) and isinstance(control.parentWidget(), QAbstractSpinBox):
+                continue
             if isinstance(control, (QPushButton, QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox)):
                 set_metric(control, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
             if isinstance(control, QPushButton):
@@ -298,7 +302,8 @@ class BaseSettingsTab(QWidget):
 
         desc = description.strip()
         if desc:
-            desc_label = QLabel(desc, card)
+            desc_label = WrappingLabel(desc, card)
+            desc_label.setTextFormat(Qt.TextFormat.PlainText)
             desc_label.setObjectName("settingsCardDescription")
             desc_label.setWordWrap(True)
             layout.addWidget(desc_label)
@@ -362,7 +367,8 @@ class BaseSettingsTab(QWidget):
     @staticmethod
     def add_form_description(form: QFormLayout, text: str) -> QLabel:
         """Add a full-width description row."""
-        label = QLabel(text)
+        label = WrappingLabel(text)
+        label.setTextFormat(Qt.TextFormat.PlainText)
         label.setWordWrap(True)
         label.setProperty("class", "secondary")
         label.setProperty("settingsRole", "sectionDescription")
@@ -575,7 +581,18 @@ class DynamicSettingsTab(BaseSettingsTab):
 
                 if widget is not None:
                     self._widgets[key] = widget
-                    self.add_form_row(form, label_text, widget, tooltip)
+                    if field.get("unit_key"):
+                        unit = self.create_combobox(field["units"])
+                        unit.setProperty("compactUnit", True)
+                        unit.setMinimumContentsLength(2)
+                        unit.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+                        self._widgets[field["unit_key"]] = unit
+                        inline = ChoiceGroup(self._scroll_container, horizontal=True, spacing=Spacing.CONTROL_GAP)
+                        inline.content_layout.addWidget(widget, 1)
+                        inline.content_layout.addWidget(unit)
+                        self.add_form_row(form, label_text, inline, tooltip)
+                    else:
+                        self.add_form_row(form, label_text, widget, tooltip)
 
     def _connect_widgets_to_vm(self) -> None:
         """Connect widget signals to the ViewModel for dirty tracking.

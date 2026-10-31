@@ -634,10 +634,17 @@ def _validate_to_md_optimization(data: dict[str, Any]) -> None:
         raise ConfigSemanticError("to_md_optimization must be 'none' or a non-empty exact resource ID")
 
 
+def _validate_layout(data: dict[str, Any]) -> None:
+    _validate_to_md_optimization(data)
+    _canonical_choice(data, "split_mode", frozenset({"every_page", "odd_even", "custom"}), label="layout.split_mode")
+    for key in ("document_format", "render_format"):
+        _validate_optional_string(data, key, label="layout")
+
+
 _EXPLICIT_VALIDATORS = {
     "document.toml": _validate_to_md_optimization,
     "image.toml": _validate_to_md_optimization,
-    "layout.toml": _validate_to_md_optimization,
+    "layout.toml": _validate_layout,
     "ocr.toml": _validate_ocr,
     "template_fill.toml": _validate_template_fill,
     "logger.toml": _validate_logger,

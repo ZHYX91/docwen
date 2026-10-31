@@ -156,7 +156,7 @@ def test_text_reset_preserves_gongwen_field_switch(tmp_path: Path) -> None:
     assert loader.reset_group("text") is True
 
     expected_template_fill = {
-        "list_separator": "、",
+        "list_separator": ", ",
         "gongwen_fields_enabled": False,
         "gongwen_numbering_text": False,
         "gongwen_numbering_comments": False,

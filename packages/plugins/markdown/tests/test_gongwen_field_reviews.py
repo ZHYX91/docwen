@@ -73,7 +73,7 @@ def test_field_reviews_preserve_malformed_comments_and_conflicting_styles():
 
 
 @pytest.mark.parametrize("key", FIELDS)
-@pytest.mark.parametrize("separator", [" / ", "，", "", " "])
+@pytest.mark.parametrize("separator", [", ", " / ", "，", "", " "])
 def test_multi_item_fields_override_generic_separator_and_annotate_only_value(key, separator) -> None:
     document = Document()
     paragraph = document.add_paragraph(f"前文 {{{{{key}}}}} 后文")

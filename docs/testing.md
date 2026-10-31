@@ -1,5 +1,11 @@
 # Testing / 测试
 
+QA and `tools/run_source.py` prepend the selected checkout's complete `packages/**/src`
+set to child-process imports, including CLI and nested optimizers, ahead of inherited
+PYTHONPATH and editable installs. Caller environments and leased runtime/report/TEMP
+values remain intact. A fresh-interpreter regression uses competing checkouts to prove
+actual module origins; passing tests from a different checkout are not evidence for this tree.
+
 Engineering ownership belongs to the caller. `tools/workspace_root.py --init <parent>/.workspace
 --repository <checkout>` registers a local checkout without private planning files. Local QA and
 `tools/run_source.py` select that root explicitly or via `DOCWEN_WORKSPACE_ROOT`; linked worktrees
@@ -25,6 +31,9 @@ checks and python-docx save/reopen do not certify native Word/WPS/LibreOffice sa
 check producer ownership before publication, scoped resource links, portable attachment directories and
 the same Bundle relations. `test_gongwen_attachment_resources.py` uses a real DOCX with main-only,
 attachment-only and shared image bytes, then independently checks output hashes and resource identities.
+Attachment source metadata uses the public presentation filename (metadata, then logical path,
+then the physical fallback), serialized as a YAML scalar. Physical `input-0000.docx` staging,
+`[计划] #附件.docx` public names and metadata precedence are checked alongside resource hashes.
 Single/multiple CSV and DOCX/XLSX output regressions cover flat files, grouped multi-file results,
 explicit audit sidecars, exact destinations and conversion-plus-proofreading pipelines.
 

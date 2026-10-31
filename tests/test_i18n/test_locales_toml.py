@@ -186,6 +186,8 @@ def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
         "settings.formatting.separators.asterisk",
         "settings.formatting.separators.underscore",
         "settings.invoice.layout_title",  # File-format identifiers and a direction arrow, not prose.
+        "settings.gongwen.from_markdown_title",  # Markdown → DOCX: format identifiers, not prose.
+        "settings.formatting.mermaid_title",  # Mermaid is the diagram language's name.
         "settings.output.date_formats.iso",
         "settings.output.date_formats.compact",
         "settings.output.date_formats.chinese",

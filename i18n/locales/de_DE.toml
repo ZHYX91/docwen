@@ -154,6 +154,7 @@ optimizations = "Spezialfunktionen"
 inputs = "Eingabetypen"
 content = "Inhalte"
 [settings.tabs]
+markdown_input = "Markdown einlesen"
 general = "Allgemein"
 text = "Texteingabe"
 proofread = "Prüfung"
@@ -164,7 +165,7 @@ image = "Bildeingabe"
 layout = "Layout-Dateieingabe"
 other = "Andere Eingabedateien"
 link = "Link"
-formatting = "Markdown-Syntax"
+formatting = "Markdown erzeugen"
 output = "Dateispeicherung"
 logging = "Log"
 software = "Konvertierungssoftware"
@@ -290,10 +291,10 @@ add_numbering_tooltip = "Hierarchische Nummerierung zu Überschriften im ausgege
 scheme_label = "Schema:"
 scheme_tooltip = "Nummerierungsschema für Überschriften auswählen"
 render_mode_label = "Ausgabemodus der Überschriftennummerierung:"
-render_mode_tooltip = "Festlegen, ob Überschriftennummern in den Text geschrieben oder mit der nativen Word-Nummerierung erzeugt werden"
+render_mode_tooltip = "Festlegen, ob Überschriftennummern in den Text geschrieben oder mit der nativen DOCX-Nummerierung erzeugt werden"
 render_mode_text = "Text"
-render_mode_word_native = "Word-nativ"
-render_mode_hint = "Text = Nummern in Überschriften schreiben; Word-nativ = mehrstufige Word-Listennummerierung verwenden"
+render_mode_word_native = "DOCX-nativ"
+render_mode_hint = "Text = Nummern in Überschriften schreiben; DOCX-nativ = mehrstufige DOCX-Listennummerierung verwenden"
 
 # 字段优化（字段处理器）
 
@@ -318,7 +319,7 @@ save_numbering_clean_rules_failed = "Die Regeln zum Bereinigen der Nummerierung 
 # -----------------------------------------------------------------------------
 input_description = "Einstellungen für eingehendes Markdown: Dokumenterstellung, Vorlagenfüllung und Überschriften."
 template_fill_section = "Vorlagen ausfüllen"
-template_fill_desc = "Trennzeichen für YAML-Listen in Word- und Tabellenvorlagen. Leerzeichen und leere Trennzeichen bleiben unverändert."
+template_fill_desc = "Trennzeichen für YAML-Listen in DOCX- und Tabellenvorlagen. Leerzeichen und leere Trennzeichen bleiben unverändert."
 [settings.proofread]
 validation_section = "Prüfregeln"
 enable_symbol_pairing = "Prüfung auf zusammengehörige Zeichen aktivieren"
@@ -344,7 +345,7 @@ image_extraction_mode_tooltip = "Wählen Sie, wie Bilder in Markdown eingebettet
 image_extraction_mode_file = "Bilddateien"
 image_extraction_mode_base64 = "Base64 inline"
 ocr_placement_mode_label = "OCR-Position:"
-ocr_placement_mode_tooltip = "Wählen Sie den Ablageort für Bild + OCR. Bild-MD erstellt pro Bild eine eigene Markdown-Datei; Hauptdokument schreibt Bild und OCR in das Haupt-Markdown. Base64-Inline erfordert Hauptdokument: die Auswahl wird deaktiviert und erzwungen, bis wieder Bilddateien gewählt werden; dann wird die vorherige Auswahl wiederhergestellt."
+ocr_placement_mode_tooltip = "Wählen Sie den Ablageort für Bild + OCR.\n\nBild-MD erstellt pro Bild eine eigene Markdown-Datei; Hauptdokument schreibt Bild und OCR in das Haupt-Markdown.\n\nBase64-Inline erfordert Hauptdokument: die Auswahl wird deaktiviert und erzwungen, bis wieder Bilddateien gewählt werden; dann wird die vorherige Auswahl wiederhergestellt."
 ocr_placement_mode_image_md = "Bild-MD"
 ocr_placement_mode_main_md = "Hauptdokument"
 ocr_blockquote_title_enabled_label = "OCR-Titelzeile (Haupt-MD)"
@@ -373,7 +374,7 @@ section = "Export verbundener Zellen"
 desc = "Legt fest, wie verbundene Zellen in der Markdown-Ausgabe dargestellt werden."
 merge_strategy_label = "Exportstrategie für verbundene Zellen:"
 
-merge_strategy_help = "Nur für normales Markdown: Füllen wiederholt den Text der Ankerzelle (z. B. „Titel | Titel“); Leer lässt überdeckte Zellen leer („Titel | “). Bei aktivierter Structural-Tables-Ausgabe werden stattdessen die Strukturmarkierungen < und ^ verwendet."
+merge_strategy_help = "Nur für normales Markdown: Füllen wiederholt den Text der Ankerzelle (z.\n\nB. „Titel | Titel“); Leer lässt überdeckte Zellen leer („Titel | “).\n\nBei aktivierter Structural-Tables-Ausgabe werden stattdessen die Strukturmarkierungen < und ^ verwendet."
 [settings.table_export.strategies]
 fill = "Ausfüllen"
 empty = "Leer lassen"
@@ -424,7 +425,7 @@ ods_conversion_label = "ODS-Konvertierung"
 spreadsheet_to_pdf_label = "Tabelle zu PDF"
 
 # 汇总模式选项
-merge_mode_help = "Die Ausrichtung vergleicht gespeicherte Zahlen und exakten Text; Textkennungen werden nicht als Zahlen interpretiert. Zeilen/Spalten: gleiche oder bereits enthaltene Datensätze überspringen; nur ersetzen, wenn der neue Datensatz alle Basiswerte enthält; ergänzende oder widersprüchliche Datensätze getrennt behalten. Zellen: Leerwerte ignorieren, Zahlen einschließlich Zahlentext addieren, gleichen Text einmal behalten, anderen Text mit Kommas verbinden. Fehlende Formelergebnisse stoppen die Zusammenführung; vorhandene Ergebnisse können veraltet sein."
+merge_mode_help = "Die Ausrichtung vergleicht gespeicherte Zahlen und exakten Text; Textkennungen werden nicht als Zahlen interpretiert.\n\nZeilen/Spalten: gleiche oder bereits enthaltene Datensätze überspringen; nur ersetzen, wenn der neue Datensatz alle Basiswerte enthält; ergänzende oder widersprüchliche Datensätze getrennt behalten.\n\nZellen: Leerwerte ignorieren, Zahlen einschließlich Zahlentext addieren, gleichen Text einmal behalten, anderen Text mit Kommas verbinden.\n\nFehlende Formelergebnisse stoppen die Zusammenführung; vorhandene Ergebnisse können veraltet sein."
 [settings.spreadsheet.merge_modes]
 by_row = "Nach Zeile"
 by_column = "Nach Spalte"
@@ -466,6 +467,8 @@ tiff_no_alpha = "Transparenz entfernen"
 # 版式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.layout]
+document_format = "Dokumentformat"
+defaults_section = "Konvertierungsstandards"
 extraction_section = "Extraktion/OCR"
 keep_images = "Bilder extrahieren"
 enable_ocr = "OCR aktivieren"
@@ -545,8 +548,8 @@ embed = "Inhalt einfügen"
 # -----------------------------------------------------------------------------
 [settings.formatting]
 each_line_paragraph = "Jede Zeile als eigener Absatz"
-each_line_paragraph_help = "Jede gewöhnliche Markdown-Textzeile als eigenen Word-Absatz ausgeben. Überschriften, Listen, Zitate, Tabellen, Code und explizite Zeilenumbrüche bleiben unverändert."
-line_paragraph_section = "Markdown zu Word"
+each_line_paragraph_help = "Jede gewöhnliche Markdown-Textzeile als eigenen DOCX-Absatz ausgeben. Überschriften, Listen, Zitate, Tabellen, Code und explizite Zeilenumbrüche bleiben unverändert."
+line_paragraph_section = "Absatzverarbeitung"
 mermaid_auto = "Automatisch suchen"
 mermaid_browse = "Mermaid CLI auswählen"
 mermaid_path = "CLI-Pfad:"
@@ -559,10 +562,10 @@ mermaid_browser_missing = "Passender Browser fehlt. Browser gemäß Installation
 mermaid_test_failed = "Test fehlgeschlagen: {reason}"
 mermaid_test_passed = "Verfügbar: Testdiagramm erfolgreich gerendert."
 
-mermaid_title = "Mermaid-Diagramme"
-mermaid_tooltip = "Wählen Sie, ob `mermaid`-Codeblöcke als Bilder gerendert oder als Quellcode beibehalten werden. Der Bildmodus verwendet die lokale Mermaid CLI; ist das Rendern nicht verfügbar oder schlägt es fehl, bleibt der Codeblock erhalten und eine Warnung wird gemeldet."
+mermaid_title = "Mermaid"
+mermaid_tooltip = "Markdown → DOCX. Wählen Sie, ob `mermaid`-Codeblöcke als Bilder gerendert oder als Quellcode beibehalten werden. Der Bildmodus verwendet die lokale Mermaid CLI; ist das Rendern nicht verfügbar oder schlägt es fehl, bleibt der Codeblock erhalten und eine Warnung wird gemeldet."
 mermaid_mode_label = "Ausgabe:"
-mermaid_mode_tooltip = "Wählen Sie, wie `mermaid`-Codeblöcke in erzeugte Dokumente geschrieben werden."
+mermaid_mode_tooltip = "Markdown → DOCX. Wählen Sie, wie `mermaid`-Codeblöcke in erzeugte Dokumente geschrieben werden."
 mermaid_code = "Als Codeblock beibehalten"
 mermaid_image = "Als Bild rendern"
 mermaid_ready = "CLI {cli} / Mermaid {mermaid} erkannt. Der Browser wird bei der Konvertierung geprüft."
@@ -579,18 +582,18 @@ table_header_format_label = "Tabellenkopf:"
 table_header_format_tooltip = "Formatierung in Tabellenköpfen."
 
 # 分隔符映射
-separator_mapping = "Trennzeichen-Zuordnung"
-separator_mapping_tooltip = "Zuordnung von Word-Umbrüchen zu Markdown."
+separator_mapping = "Trennzeichenkonvertierung"
+separator_mapping_tooltip = "Zuordnung von DOCX-Umbrüchen zu Markdown."
 page_break_label = "Seitenumbruch:"
-page_break_tooltip = "Word Seitenumbruch."
+page_break_tooltip = "DOCX Seitenumbruch."
 section_break_label = "Abschnittswechsel:"
-section_break_tooltip = "Word Abschnittswechsel."
+section_break_tooltip = "DOCX Abschnittswechsel."
 horizontal_rule_label = "Trennlinie:"
-horizontal_rule_tooltip = "Word Rahmenlinie unten."
+horizontal_rule_tooltip = "DOCX Rahmenlinie unten."
 
 # 语法选择
 syntax_selection = "Syntaxwahl"
-syntax_selection_tooltip = "Diese Ausgabestile gelten derzeit hauptsächlich für die normale Word-zu-Markdown-Konvertierung. Tabellen, Bilder, PDF/OFD und Spezialfunktionen unterstützen noch nicht alle Optionen. Die Auswahl schränkt das Lesen von Markdown nicht ein."
+syntax_selection_tooltip = "Diese Ausgabestile gelten derzeit hauptsächlich für die normale DOCX-zu-Markdown-Konvertierung. Tabellen, Bilder, PDF/OFD und Spezialfunktionen unterstützen noch nicht alle Optionen. Die Auswahl schränkt das Lesen von Markdown nicht ein."
 bold_syntax_label = "Fett:"
 bold_syntax_tooltip = "Syntax für Fett."
 italic_syntax_label = "Kursiv:"
@@ -624,8 +627,8 @@ heading_merge_punctuation_label = "Satzzeichen für die Zusammenführung:"
 heading_merge_punctuation_tooltip = "Zeichen, die im Modus 'Satzzeichen erforderlich' die Zusammenführung von Überschrift und Text auslösen. Eine leere Eingabe deaktiviert diese Zusammenführung."
 
 # MD转文档分隔符映射
-md_separator_mapping = "Trennzeichen-Zuordnung"
-md_separator_mapping_tooltip = "Markdown zu Word Umbrüchen."
+md_separator_mapping = "Trennzeichenkonvertierung"
+md_separator_mapping_tooltip = "Markdown zu DOCX Umbrüchen."
 dash_label = "--- (Bindestriche):"
 dash_tooltip = "--- Zuordnung."
 asterisk_label = "*** (Sternchen):"
@@ -646,8 +649,6 @@ list_separator_tooltip = "Trennzeichen beim Zusammenfügen von YAML-Listenwerten
 # 格式处理选项
 mermaid_output_group = "Ausgabemethode"
 mermaid_renderer_group = "Lokaler Renderer"
-output_section = "Markdown erzeugen"
-word_mappings_title = "Word-spezifische Zuordnung und Ausgabe"
 
 [settings.formatting.options]
 preserve_format = "Format behalten"
@@ -1122,6 +1123,12 @@ no_transparency = "Entfernen"
 
 # 版式转换区
 [conversion_panel.layout]
+split_mode = "Teilungsmodus"
+split_custom = "Nach Seitenzahlen"
+split_odd_even = "Gerade / ungerade Seiten"
+split_every_page = "Jede Seite"
+to_image = "In Bild umwandeln"
+to_document = "In Dokument umwandeln"
 image_format = "Bildformat"
 resolution = "Auflösung (DPI)"
 convert_to_other_formats = "Andere Formate"
@@ -1131,10 +1138,10 @@ merge_split_hint = "Verbinden/Teilen"
 merge_to_pdf = "PDF Merge"
 split_to_pdf = "PDF Split"
 split_page_range = "Bereich:"
-page_range_placeholder = "1-3,5  *  #"
-page_range_help = "Seitenzahlen trennen ausgewählte von übrigen Seiten. * teilt jede Seite einzeln; # trennt ungerade und gerade Seiten."
-split_all_pages_warning = "Alle Seiten sind ausgewählt. Wählen Sie einige Seiten oder verwenden Sie * oder #, um die gesamte Datei zu teilen."
-split_invalid_range_warning = "Geben Sie Seitenzahlen dieser Datei ein, etwa 1-2 oder 1,3, oder verwenden Sie * oder #."
+page_range_placeholder = "1-5,7,9-12"
+page_range_help = "Ausgewählte Seiten bilden eine PDF, die übrigen eine zweite. Beide behalten die ursprüngliche Reihenfolge."
+split_all_pages_warning = "Alle Seiten sind ausgewählt. Wählen Sie einige Seiten oder Jede Seite / Gerade-ungerade."
+split_invalid_range_warning = "Geben Sie einige Seiten dieser Datei ein, etwa 1-2 oder 1,3."
 selected_split_file = "Aktuelle Datei: {pages} Seiten"
 split_mode_single_page_warning = "⚠️ Diese Datei hat nur 1 Seite; kein Split nötig"
 
@@ -1735,16 +1742,17 @@ merge_result_summary = "{source} / {sheet} · {mode}: hinzugefügt {added}, erse
 merge_formula_cache_missing = "Zusammenführung gestoppt: Für eine Formel fehlt das gespeicherte Ergebnis. Die Arbeitsmappe in einer Tabellenkalkulation neu berechnen und speichern, dann erneut versuchen. Datei und Zellen stehen in den Fehlerdetails."
 
 [settings.markdown_extensions]
-description = "Gemeinsame Regeln zum Erzeugen und Lesen von Markdown. Die Ausgabevorgaben sind quellunabhängig, werden aber nicht von allen Konvertierungen vollständig unterstützt. Word-spezifische Zuordnungen stehen separat darunter. Quelldateien bleiben unverändert."
+description = "Markdown-Ausgabe konfigurieren. Die Trennzeichenkonvertierung gilt nur für DOCX → Markdown; die Unterstützung der Ausgabestile hängt vom Konvertierungsweg ab."
 input = "Markdown-Eingabe: Erweiterungen erkennen"
 output = "Markdown-Ausgabe: Erweiterungen verwenden"
 input_hint = "Deaktivierte Syntax wird als normaler Text, Tabelle oder Fußnote verarbeitet."
-output_hint = "Der normale Word-Export unterstützt diese Erweiterungen, der Tabellenexport unterstützt Structural Tables. Andere Quellen und Spezialfunktionen sind noch nicht vollständig angebunden. Erweiterungen fügen keine Erkennungsfähigkeiten hinzu."
+output_hint = "Der normale DOCX-Export unterstützt diese Erweiterungen, der Tabellenexport unterstützt Structural Tables. Andere Quellen und Spezialfunktionen sind noch nicht vollständig angebunden. Erweiterungen fügen keine Erkennungsfähigkeiten hinzu."
 structural_tables = "Structural Tables: strukturierte Tabellen"
 captions_references = "Number Suite: Beschriftungen und Querverweise"
 extended_headings = "Überschriften der Ebenen 7–9"
 typed_endnotes = "Fuß-/Endnoten unterscheiden (endnote:)"
 obsidian_preset = "Obsidian-Erweiterungen verwenden"
+input_description = "Markdown-Erkennung sowie Trennzeichen, Absätze und Mermaid für Markdown → DOCX konfigurieren. Quelldateien bleiben unverändert."
 
 [activity]
 not_started = "Nicht gestartet"
@@ -1850,15 +1858,15 @@ unavailable = "Die Optimierung {name} ist in der aktuellen Umgebung für diese E
 numbering_text_label = "Textnummerierung für Amtsdokumente verwenden"
 numbering_text_help = "Verwendet Text für in dieser Konvertierung nach dem Eingangstext-Schema hinzugefügte Nummern. Aktiviert keine Nummerierung und ändert weder gespeicherten Modus noch Vorlagennummerierung. Standardmäßig an; unabhängig von der Feldformatierung."
 numbering_comments_label = "Automatisch hinzugefügte Nummern kommentieren"
-numbering_comments_help = "Kommentiert nur hinzugefügte Textnummern, keine vorhandenen Nummern. Standardmäßig an. Ausschalten der Textnummerierung löscht und deaktiviert diese Option; danach kann sie erneut gewählt werden. Nicht isolierbare Markdown-Nummern werden mit Warnung übersprungen. Unabhängig von der Feldformatierung."
+numbering_comments_help = "Kommentiert nur hinzugefügte Textnummern, keine vorhandenen Nummern.\n\nStandardmäßig an.\n\nAusschalten der Textnummerierung löscht und deaktiviert diese Option; danach kann sie erneut gewählt werden.\n\nNicht isolierbare Markdown-Nummern werden mit Warnung übersprungen.\n\nUnabhängig von der Feldformatierung."
 description = "Standardauswahl für amtliche Dokumente und Formatierung von Vorlagenfeldern getrennt einstellen."
 to_markdown_title = "Dokument → Markdown"
 to_markdown_description = "Die Optimierung amtlicher Dokumente als Vorauswahl für kompatible Dokumente verwenden. Dateien werden dabei nicht als amtliche Dokumente klassifiziert. DOCX wird direkt verarbeitet; DOC, WPS, RTF und ODT benötigen einen verfügbaren Dokumentkonverter."
 document_settings = "Dokumentextraktion, Nummerierung und Tabellen"
-from_markdown_title = "Markdown → Dokument"
+from_markdown_title = "Markdown → DOCX"
 title = "Amtliche Dokumente"
 fields_label = "Chinesische Amtsdokumentfelder formatieren"
-fields_help = "Formatiert Anlagen, Kopieempfänger, Dokument- und Veröffentlichungsdaten sowie Anmerkungen in Word-Vorlagen und entfernt geeignete leere Felder. Der Anlagenplatzhalter muss einen eigenen Absatz im Dokumenttext oder in einer Tabellenzelle belegen. Kopf- und Fußzeilen, Textfelder und Platzhalter im Fließtext werden nicht unterstützt. Ausgeschaltet gelten die normale Feldfüllung und das allgemeine Listentrennzeichen."
+fields_help = "Formatiert Anlagen, Kopieempfänger, Dokument- und Veröffentlichungsdaten sowie Anmerkungen in DOCX-Vorlagen und entfernt geeignete leere Felder.\n\nDer Anlagenplatzhalter muss einen eigenen Absatz im Dokumenttext oder in einer Tabellenzelle belegen.\n\nKopf- und Fußzeilen, Textfelder und Platzhalter im Fließtext werden nicht unterstützt.\n\nAusgeschaltet gelten die normale Feldfüllung und das allgemeine Listentrennzeichen."
 
 attachment_alignment_label = "Ausrichtung der Anlagen"
 attachment_alignment_spaces = "Leerzeichen + Einzug"

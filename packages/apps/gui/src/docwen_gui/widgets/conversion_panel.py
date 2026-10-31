@@ -196,6 +196,9 @@ class ConversionPanel(QWidget):
         self._validation_checkboxes: dict[str, QCheckBox] = {}
 
         # Layout section sub-widgets
+        self._split_mode_combo: QComboBox | None = None
+        self._page_range_row: FormRow | None = None
+        self._page_range_help: QLabel | None = None
         self._page_input_edit: QLineEdit = _cast(QLineEdit, None)
         self._pdf_info_label: QLabel = _cast(QLabel, None)
         self._page_warning_label: QLabel = _cast(QLabel, None)
@@ -249,6 +252,12 @@ class ConversionPanel(QWidget):
         )
         content_layout.addWidget(self._saveas_group)
 
+        self._layout_images_group = self._make_section_group(
+            _t("conversion_panel.layout.to_image", "Convert to image"), "conversionLayoutImages"
+        )
+        self._layout_images_group.setVisible(False)
+        content_layout.addWidget(self._layout_images_group)
+
         # Extra group (initially hidden)
         self._extra_group = self._make_section_group("", "conversionExtraGroup")
         self._extra_group.setVisible(False)
@@ -278,6 +287,7 @@ class ConversionPanel(QWidget):
         desc_label = WrappingLabel(parent=group)
         desc_label.setObjectName("conversionSectionDescription")
         desc_label.setWordWrap(True)
+        desc_label.setVisible(False)
         layout.addWidget(desc_label)
         setattr(self, "_" + object_name + "_desc", desc_label)
 
@@ -294,6 +304,9 @@ class ConversionPanel(QWidget):
 
     def _get_secondary_content(self) -> QVBoxLayout:
         return self._conversionSecondaryGroup_content  # pyright: ignore[reportAttributeAccessIssue]
+
+    def _get_layout_images_content(self) -> QVBoxLayout:
+        return self._conversionLayoutImages_content  # pyright: ignore[reportAttributeAccessIssue]
 
     def _get_extra_content(self) -> QVBoxLayout:
         return self._conversionExtraGroup_content  # pyright: ignore[reportAttributeAccessIssue]
@@ -390,7 +403,12 @@ class ConversionPanel(QWidget):
             self._build_image_section()
         elif category == "layout":
             self._build_layout_section()
-        for content in (self._get_primary_content(), self._get_secondary_content(), self._get_extra_content()):
+        for content in (
+            self._get_primary_content(),
+            self._get_secondary_content(),
+            self._get_layout_images_content(),
+            self._get_extra_content(),
+        ):
             self._arrange_section_actions(content)
         for control in self.findChildren(QWidget):
             if isinstance(control, (QComboBox, QLineEdit, QRadioButton)):
@@ -437,6 +455,7 @@ class ConversionPanel(QWidget):
         for obj_attr in (
             "_conversionPrimaryGroup_content",
             "_conversionSecondaryGroup_content",
+            "_conversionLayoutImages_content",
             "_conversionExtraGroup_content",
         ):
             layout = getattr(self, obj_attr, None)
@@ -454,6 +473,8 @@ class ConversionPanel(QWidget):
 
         self._extra_group.setVisible(False)
         self._extra_group.setTitle("")
+        self._layout_images_group.setVisible(False)
+        self._saveas_group.setTitle(_t("conversion_panel.save_as", "Save As"))
         self._conversion_group.setVisible(True)
         self._saveas_group.setVisible(True)
         self._format_buttons.clear()
@@ -487,6 +508,9 @@ class ConversionPanel(QWidget):
             "_spreadsheet_protection_loss_checkbox",
             "_merge_pdfs_button",
             "_split_pdf_button",
+            "_split_mode_combo",
+            "_page_range_row",
+            "_page_range_help",
             "_page_input_edit",
             "_pdf_info_label",
             "_page_warning_label",
@@ -649,7 +673,9 @@ class ConversionPanel(QWidget):
             self._conversion_combo.set_choices(self._vm.get_conversion_format_choices())
             apply_format_swatch_icons(self._conversion_combo)
         self._sync_combo_items(self._saveas_combo, self._vm.get_saveas_formats())
-        self._sync_combo_items(self._layout_export_combo, self._vm.get_layout_export_formats())
+        self._sync_combo_items(
+            self._layout_export_combo, self._vm.get_layout_export_formats(), selected=self._vm.document_format
+        )
         self._sync_combo_items(
             self._layout_render_format_combo,
             self._vm.get_layout_render_formats(),
@@ -743,7 +769,15 @@ class ConversionPanel(QWidget):
             if not self._page_input_edit.hasFocus():
                 with QSignalBlocker(self._page_input_edit):
                     self._page_input_edit.setText(self._vm.page_input)
-            self._update_page_validation(self._page_input_edit.text().strip())
+            custom = self._vm.split_mode == "custom"
+            if self._split_mode_combo is not None:
+                with QSignalBlocker(self._split_mode_combo):
+                    self._split_mode_combo.setCurrentIndex(self._split_mode_combo.findData(self._vm.split_mode))
+            if self._page_range_row is not None:
+                self._page_range_row.setVisible(custom)
+            if self._page_range_help is not None:
+                self._page_range_help.setVisible(custom)
+            self._update_page_validation(self._vm.split_expression())
         if self._pdf_info_label is not None:
             self._pdf_info_label.setText(
                 _t(
@@ -1188,9 +1222,9 @@ class ConversionPanel(QWidget):
         self._compress_btn_group.idToggled.connect(self._on_compress_mode_changed)
 
         # Size limit row
-        size_control = ChoiceGroup(self, responsive=True, spacing=_SPACING_SM)
+        size_control = ChoiceGroup(self, horizontal=True, spacing=_SPACING_SM)
         size_layout = size_control.content_layout
-        size_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        size_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         size_edit = QLineEdit(str(self._vm.size_limit), self)
         size_edit.setEnabled(is_limit)
@@ -1199,10 +1233,11 @@ class ConversionPanel(QWidget):
         size_layout.addWidget(size_edit, stretch=1)
 
         unit_combo = self._make_combo(["KB", "MB"], parent=size_control)
+        unit_combo.setProperty("compactUnit", True)
         unit_combo.setCurrentText(self._vm.size_unit)
         unit_combo.setEnabled(is_limit)
-        set_metric(unit_combo, "setMinimumWidth", 84)
-        unit_combo.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        set_metric(unit_combo, "setMinimumWidth", 58)
+        unit_combo.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         unit_combo.currentTextChanged.connect(self._on_size_input_changed)
         self._size_unit_combo = unit_combo
         size_layout.addWidget(unit_combo)
@@ -1316,33 +1351,30 @@ class ConversionPanel(QWidget):
         if not export_formats and not render_formats:
             self._saveas_group.setVisible(False)
             return
+        self._saveas_group.setVisible(bool(export_formats))
+        self._saveas_group.setTitle(_t("conversion_panel.layout.to_document", "Convert to document"))
+        self._layout_images_group.setVisible(bool(render_formats))
         if export_formats:
-            export_section = QWidget(self)
-            export_layout = QVBoxLayout(export_section)
-            export_layout.setContentsMargins(0, 0, 0, 0)
-            set_metric(export_layout, "setSpacing", Spacing.FORM_ROW_GAP)
+            export_layout = parent_layout
             row_container, combo, btn = self._make_dropdown_action_row(
                 export_formats, _t("conversion_panel.export", "Export")
             )
+            combo.setCurrentText(
+                self._vm.document_format if self._vm.document_format in export_formats else export_formats[0]
+            )
+            combo.currentTextChanged.connect(lambda value: setattr(self._vm, "document_format", value))
             self._layout_export_combo = combo
             self._layout_export_button = btn
             btn.clicked.connect(self._on_layout_export_clicked)
             export_layout.addWidget(row_container)
             self._arrange_section_actions(export_layout)
-            parent_layout.addWidget(export_section)
-
-        if export_formats and render_formats:
-            sep = QFrame()
-            sep.setFrameShape(QFrame.Shape.HLine)
-            parent_layout.addWidget(sep)
 
         if not render_formats:
             return
 
         # Give each selector an explicit label; shared form rows handle narrow
         # viewports and large fonts while the action retains its own row.
-        render_row_container = QWidget(self)
-        render_row_container.setObjectName("conversionButtonRow")
+        render_row_container = QWidget(self._layout_images_group)
         render_row = QVBoxLayout(render_row_container)
         render_row.setContentsMargins(0, 0, 0, 0)
         set_metric(render_row, "setSpacing", Spacing.FORM_ROW_GAP)
@@ -1375,7 +1407,7 @@ class ConversionPanel(QWidget):
         self._layout_render_button = render_btn
         render_row.addWidget(render_btn)
 
-        parent_layout.addWidget(render_row_container)
+        self._get_layout_images_content().addWidget(render_row_container)
 
     def _build_layout_merge_split_extra(self) -> None:
         """Build merge/split extra section for layout category."""
@@ -1414,26 +1446,44 @@ class ConversionPanel(QWidget):
         self._split_pdf_button = split_pdf_btn
         split_row.addWidget(split_pdf_btn)
 
+        split_mode_combo = self._make_combo([], parent=self)
+        for label, value in (
+            (_t("conversion_panel.layout.split_every_page", "Every page"), "every_page"),
+            (_t("conversion_panel.layout.split_odd_even", "Odd / even pages"), "odd_even"),
+            (_t("conversion_panel.layout.split_custom", "By page numbers"), "custom"),
+        ):
+            split_mode_combo.addItem(label, value)
+        split_mode_combo.setCurrentIndex(split_mode_combo.findData(self._vm.split_mode))
+        self._split_mode_combo = split_mode_combo
+        extra_layout.addWidget(FormRow(_t("conversion_panel.layout.split_mode", "Split mode"), split_mode_combo, self))
+        split_mode_combo.currentIndexChanged.connect(
+            lambda _index: setattr(self._vm, "split_mode", split_mode_combo.currentData())
+        )
+
         # Page range input row
         page_edit = QLineEdit(self._vm.page_input, self)
         set_metric(page_edit, "setMinimumWidth", Sizing.BUTTON_MIN_WIDTH)
-        page_edit.setPlaceholderText(_t("conversion_panel.layout.page_range_placeholder", "e.g., 1-5,7,9-12 or *"))
+        page_edit.setPlaceholderText(_t("conversion_panel.layout.page_range_placeholder", "e.g., 1-5,7,9-12"))
         page_edit.setToolTip(page_edit.placeholderText())
         page_edit.textChanged.connect(self._on_page_input_changed)
         self._page_input_edit = page_edit
         page_label = _t("conversion_panel.layout.split_page_range", "Page Range")
         page_edit.setAccessibleName(page_label)
-        extra_layout.addWidget(FormRow(page_label, page_edit, self))
+        self._page_range_row = FormRow(page_label, page_edit, self)
+        self._page_range_row.setVisible(self._vm.split_mode == "custom")
+        extra_layout.addWidget(self._page_range_row)
 
         split_help = WrappingLabel(
             _t(
                 "conversion_panel.layout.page_range_help",
-                "Page numbers separate selected pages from the rest. * splits every page; # separates odd and even pages.",
+                "Selected pages form one PDF; the rest form another. Each keeps source page order.",
             ),
             self,
         )
         split_help.setObjectName("hintLabel")
         split_help.setWordWrap(True)
+        split_help.setVisible(self._vm.split_mode == "custom")
+        self._page_range_help = split_help
         extra_layout.addWidget(split_help)
 
         # PDF info
@@ -1596,7 +1646,7 @@ class ConversionPanel(QWidget):
     def _on_split_pdf_clicked(self) -> None:
         if not self._page_input_edit:
             return
-        text = self._page_input_edit.text().strip()
+        text = self._vm.split_expression()
         if not text:
             return
         try:
@@ -1625,7 +1675,7 @@ class ConversionPanel(QWidget):
         raw_text = self._page_input_edit.text()
         if self._vm.page_input != raw_text:
             self._vm.page_input = raw_text
-        self._update_page_validation(raw_text.strip())
+        self._update_page_validation(self._vm.split_expression())
 
     def _update_page_validation(self, text: str) -> None:
         """Update split availability and warning text without rebuilding controls."""
@@ -1659,12 +1709,12 @@ class ConversionPanel(QWidget):
                 self._page_warning_label.setText(
                     _t(
                         "conversion_panel.layout.split_all_pages_warning",
-                        "All pages are selected. Select some pages, or use * or # to split the entire file.",
+                        "All pages are selected. Select some pages, or choose Every page / Odd-even.",
                     )
                     if all_pages
                     else _t(
                         "conversion_panel.layout.split_invalid_range_warning",
-                        "Enter page numbers within this file, such as 1-2 or 1,3, or use * or #.",
+                        "Enter some page numbers within this file, such as 1-2 or 1,3.",
                     )
                 )
                 self._page_warning_label.show()

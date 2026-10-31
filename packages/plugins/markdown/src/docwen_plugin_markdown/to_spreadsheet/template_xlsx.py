@@ -43,7 +43,7 @@ def build_template_workbook(
     *,
     source_stem: str = "",
     image_scope: str | None = None,
-    list_separator: str = "、",
+    list_separator: str = ", ",
     structural_tables: bool = True,
 ) -> tuple[Any, dict[str, int]]:
     """Fill an XLSX template using Markdown YAML and table data.
@@ -785,7 +785,7 @@ def _plain_text_from_markup(value: str) -> str:
     )
 
 
-def _coerce_cell_value(raw_value: Any, *, list_separator: str = "、") -> tuple[Any, str | None]:
+def _coerce_cell_value(raw_value: Any, *, list_separator: str = ", ") -> tuple[Any, str | None]:
     if raw_value is None:
         return "", None
     if isinstance(raw_value, list):

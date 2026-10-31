@@ -17,11 +17,12 @@ def test_formatting_tab_updates_combo_fields_including_indent(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
     from docwen_gui.widgets.settings.document_tab import DocumentTab
-    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.formatting_tab import FormattingTab, MarkdownInputTab
     from docwen_gui.widgets.settings.text_tab import TextTab
 
     vm = SettingsViewModel(config=SettingsConfig())
     tab = FormattingTab(vm)
+    input_tab = MarkdownInputTab(vm)
     text_tab = TextTab(vm)
     document_tab = DocumentTab(vm)
     text = text_tab._content_controls
@@ -29,14 +30,14 @@ def test_formatting_tab_updates_combo_fields_including_indent(qapp) -> None:
 
     assert _combo_values(document._body_format) == ["preserve", "discard"]  # pyright: ignore[reportPrivateUsage]
     assert _combo_values(tab._indent_spaces) == [2, 4]  # pyright: ignore[reportPrivateUsage]
-    assert _combo_values(tab._mermaid_mode) == ["code", "image"]  # pyright: ignore[reportPrivateUsage]
+    assert _combo_values(input_tab._mermaid_mode) == ["code", "image"]  # pyright: ignore[reportPrivateUsage]
     assert _combo_values(text._heading_merge_mode) == ["punct_required", "always", "never"]  # pyright: ignore[reportPrivateUsage]
     assert _combo_values(text._table_style_mode) == ["builtin", "custom"]  # pyright: ignore[reportPrivateUsage]
     assert _combo_values(text._builtin_table_style) == ["three_line_table", "table_grid"]  # pyright: ignore[reportPrivateUsage]
 
     tab.set_combo_data(document._body_format, "discard")  # pyright: ignore[reportPrivateUsage]
     tab.set_combo_data(tab._indent_spaces, 2)  # pyright: ignore[reportPrivateUsage]
-    tab.set_combo_data(tab._mermaid_mode, "image")  # pyright: ignore[reportPrivateUsage]
+    tab.set_combo_data(input_tab._mermaid_mode, "image")  # pyright: ignore[reportPrivateUsage]
     tab.set_combo_data(text._heading_merge_mode, "always")  # pyright: ignore[reportPrivateUsage]
     tab.set_combo_data(text._table_style_mode, "custom")  # pyright: ignore[reportPrivateUsage]
     text._custom_table_style_name.setText("My Table")  # pyright: ignore[reportPrivateUsage]
@@ -60,7 +61,7 @@ def test_formatting_tab_preserves_yaml_list_separator_exactly(qapp) -> None:
     text_tab = TextTab(vm)
     text = text_tab._content_controls
 
-    assert text._list_separator.text() == "、"  # pyright: ignore[reportPrivateUsage]
+    assert text._list_separator.text() == ", "  # pyright: ignore[reportPrivateUsage]
 
     text._list_separator.setText(", ")  # pyright: ignore[reportPrivateUsage]
     assert vm.config.text.list_separator == ", "
@@ -131,11 +132,12 @@ def test_formatting_tab_user_edits_update_all_view_model_fields(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
     from docwen_gui.widgets.settings.document_tab import DocumentTab
-    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.formatting_tab import FormattingTab, MarkdownInputTab
     from docwen_gui.widgets.settings.text_tab import TextTab
 
     vm = SettingsViewModel(config=SettingsConfig())
     tab = FormattingTab(vm)
+    input_tab = MarkdownInputTab(vm)
     text_tab = TextTab(vm)
     document_tab = DocumentTab(vm)
     text = text_tab._content_controls
@@ -185,6 +187,8 @@ def test_formatting_tab_user_edits_update_all_view_model_fields(qapp) -> None:
             if field_name in document_fields
             else (tab, vm.config.formatting)
         )
+        if field_name in {"mermaid_mode", "dash_sep", "asterisk_sep", "underscore_sep"}:
+            owner = input_tab
         combo = getattr(owner, widget_name)
         tab.set_combo_data(combo, value)
         config = (
@@ -208,11 +212,12 @@ def test_extension_controls_and_directional_preset_update_only_the_selected_dire
 
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.formatting_tab import FormattingTab, MarkdownInputTab
 
     vm = SettingsViewModel(config=SettingsConfig())
     tab = FormattingTab(vm)
-    control = tab.findChild(QCheckBox, "markdownExtensionInputStructuralTables")
+    input_tab = MarkdownInputTab(vm)
+    control = input_tab.findChild(QCheckBox, "markdownExtensionInputStructuralTables")
     preset = tab.findChild(QPushButton, "markdownExtensionsOutputPreset")
     assert control is not None and preset is not None
     assert not control.isChecked()
@@ -229,6 +234,7 @@ def test_extension_controls_and_directional_preset_update_only_the_selected_dire
     assert not vm.config.formatting.markdown_extensions["input"]["captions_references"]
     vm.cancel_changes()
     tab.reload_from_config()
+    input_tab.reload_from_config()
     assert not control.isChecked()
     assert not any(vm.config.formatting.markdown_extensions["output"].values())
 
@@ -243,11 +249,13 @@ def test_extension_labels_use_available_row_width_and_remain_accessible(qapp, lo
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
     from docwen_gui.widgets.settings.check_box import SettingsCheckBox
-    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.formatting_tab import FormattingTab, MarkdownInputTab
 
     previous = get_locale()
     set_locale(locale)
-    tab = FormattingTab(SettingsViewModel(config=SettingsConfig()))
+    vm = SettingsViewModel(config=SettingsConfig())
+    tab = FormattingTab(vm)
+    input_tab = MarkdownInputTab(vm)
     tab.setFont(QFont("Microsoft YaHei", font_size))
     tab.resize(600, 850)
     try:
@@ -255,7 +263,11 @@ def test_extension_labels_use_available_row_width_and_remain_accessible(qapp, lo
         for _ in range(8):
             qapp.processEvents()
         for direction in ("Input", "Output"):
-            card = tab.findChild(QWidget, f"markdownExtensions{direction}Card")
+            owner = input_tab if direction == "Input" else tab
+            owner.resize(600, 850)
+            owner.show()
+            qapp.processEvents()
+            card = owner.findChild(QWidget, f"markdownExtensions{direction}Card")
             assert card is not None
             controls = card.findChildren(SettingsCheckBox)
             assert len(controls) == 4
@@ -268,6 +280,7 @@ def test_extension_labels_use_available_row_width_and_remain_accessible(qapp, lo
                 assert not control.font().bold()
     finally:
         tab.close()
+        input_tab.close()
         set_locale(previous)
 
 
@@ -277,12 +290,18 @@ def test_each_markdown_extension_has_directional_keyboard_help(qapp) -> None:
 
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.formatting_tab import FormattingTab, MarkdownInputTab
 
-    tab = FormattingTab(SettingsViewModel(config=SettingsConfig()))
+    vm = SettingsViewModel(config=SettingsConfig())
+    tab = FormattingTab(vm)
+    input_tab = MarkdownInputTab(vm)
     try:
         for direction in ("Input", "Output"):
-            card = tab.findChild(QWidget, f"markdownExtensions{direction}Card")
+            owner = input_tab if direction == "Input" else tab
+            owner.resize(600, 850)
+            owner.show()
+            qapp.processEvents()
+            card = owner.findChild(QWidget, f"markdownExtensions{direction}Card")
             assert card is not None
             buttons = card.findChildren(QToolButton, "settingsInfoButton")
             assert len(buttons) == 4
@@ -293,4 +312,5 @@ def test_each_markdown_extension_has_directional_keyboard_help(qapp) -> None:
                 assert button.focusPolicy() == Qt.FocusPolicy.StrongFocus
     finally:
         tab.close()
+        input_tab.close()
         tab.deleteLater()

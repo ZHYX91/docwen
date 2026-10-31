@@ -357,7 +357,7 @@ owner: Finance
 
     @pytest.mark.parametrize(
         ("separator", "expected"),
-        [(None, "甲、乙"), (" / ", "甲 / 乙"), ("", "甲乙")],
+        [(None, "甲, 乙"), ("、", "甲、乙"), (" ", "甲 乙"), (" / ", "甲 / 乙"), ("", "甲乙")],
     )
     @pytest.mark.contract
     def test_template_name_joins_yaml_lists_with_request_config_separator(
@@ -397,7 +397,7 @@ owner: Finance
         output_ws = _active_worksheet(output)
         assert output_ws["A1"].value == expected
         assert output_ws["B1"].value == f"Authors: {expected}"
-        effective_separator = "、" if separator is None else separator
+        effective_separator = ", " if separator is None else separator
         assert output_ws["C1"].value == f"甲{effective_separator}['乙', '丙']"
         output.close()
 

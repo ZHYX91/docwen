@@ -109,11 +109,15 @@ class ConversionPanelViewModel(QObject):
         self._reference_table_name: str = ""
 
         # Layout section state
+        self._layout_overrides: set[str] = set()
+        self._document_format = "DOCX"
+        self._split_mode = "every_page"
         self._render_format: str = "TIF"
         self._render_dpi: int = self._normalize_render_dpi(self._read_int_default("layout.render_dpi", 300))
         self._page_input: str = ""
         self._pdf_total_pages: int = 0
         self._pdf_file_name: str = ""
+        self.refresh_layout_defaults()
 
         # Validation options
         self._validation_options: dict[str, bool] = {
@@ -302,6 +306,50 @@ class ConversionPanelViewModel(QObject):
     # ── Layout section properties ─────────────────────────────────────────
 
     @property
+    def document_format(self) -> str:
+        return self._document_format
+
+    @document_format.setter
+    def document_format(self, value: str) -> None:
+        self._layout_overrides.add("document_format")
+        if self._document_format != value:
+            self._document_format = value
+            self.state_changed.emit()
+
+    @property
+    def split_mode(self) -> str:
+        return self._split_mode
+
+    @split_mode.setter
+    def split_mode(self, value: str) -> None:
+        if value not in {"every_page", "odd_even", "custom"}:
+            raise ValueError(f"Invalid split mode: {value!r}")
+        self._layout_overrides.add("split_mode")
+        if self._split_mode != value:
+            self._split_mode = value
+            self.state_changed.emit()
+
+    def refresh_layout_defaults(self, *, emit: bool = True) -> None:
+        """Refresh committed defaults while retaining explicit operation choices."""
+        for key, fallback in (("document_format", "DOCX"), ("render_format", "TIF"), ("split_mode", "every_page")):
+            if key not in self._layout_overrides:
+                value = str(self._read_config_default(f"layout.{key}", fallback))
+                if key != "split_mode":
+                    value = value.upper()
+                allowed = {"every_page", "odd_even", "custom"} if key == "split_mode" else None
+                if allowed is not None and value not in allowed:
+                    value = fallback
+                setattr(self, f"_{key}", value)
+        if "render_dpi" not in self._layout_overrides:
+            self._render_dpi = self._normalize_render_dpi(self._read_int_default("layout.render_dpi", 300))
+        if emit:
+            self.state_changed.emit()
+
+    def split_expression(self) -> str:
+        """Adapt the UI mode to the existing bounded page-selection protocol."""
+        return {"every_page": "*", "odd_even": "#"}.get(self._split_mode, self._page_input.strip())
+
+    @property
     def render_format(self) -> str:
         """Layout render format: ``"TIF"`` or ``"JPG"``."""
         return self._render_format
@@ -310,6 +358,7 @@ class ConversionPanelViewModel(QObject):
     def render_format(self, value: str) -> None:
         if value not in ("PNG", "TIF", "JPG"):
             raise ValueError(f"Invalid render_format: {value!r}")
+        self._layout_overrides.add("render_format")
         if self._render_format != value:
             self._render_format = value
             self.state_changed.emit()
@@ -323,6 +372,7 @@ class ConversionPanelViewModel(QObject):
     def render_dpi(self, value: int) -> None:
         if value not in (150, 300, 600):
             raise ValueError(f"Invalid render_dpi: {value}")
+        self._layout_overrides.add("render_dpi")
         if self._render_dpi != value:
             self._render_dpi = value
             self.state_changed.emit()
@@ -418,6 +468,9 @@ class ConversionPanelViewModel(QObject):
             current_format,
             ui_mode,
         )
+        if (file_path, category, ui_mode) != (self._current_file_path, self._file_category, self._ui_mode):
+            self._layout_overrides.clear()
+            self.refresh_layout_defaults(emit=False)
         if file_path != self._current_file_path:
             self._page_input = ""
             self._pdf_total_pages = 0
@@ -469,7 +522,8 @@ class ConversionPanelViewModel(QObject):
         self._pdf_quality = self._normalize_pdf_quality(self._read_image_default("pdf_quality", "original"))
         self._merge_mode = self._normalize_merge_mode(self._read_int_default("spreadsheet.merge_mode", 3))
         self._reference_table_name = ""
-        self._render_format = "TIF"
+        self._layout_overrides.clear()
+        self.refresh_layout_defaults(emit=False)
         self._render_dpi = self._normalize_render_dpi(self._read_int_default("layout.render_dpi", 300))
         self._page_input = ""
         self._pdf_total_pages = 0

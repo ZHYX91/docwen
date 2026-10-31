@@ -9,9 +9,12 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
 from PIL import Image
+from yaml import safe_load
 
 from docwen_application.bundle_mapping import build_bundle_draft
 from docwen_core.models import ConversionRequest, FileRef, OutputPolicy, validate_artifact_bundle_draft
+from docwen_core.models.file_ref import SOURCE_PRESENTATION_NAME_METADATA_KEY
+from docwen_core.yaml_tools import extract_yaml
 from docwen_plugin_optimizer_gongwen.plugin import GongwenOptimizerPlugin
 from docwen_runtime.engine.route_resolver import RouteResolver
 from docwen_runtime.engine.task_manager import TaskManager
@@ -22,7 +25,17 @@ from docwen_runtime.workspace.manager import WorkspaceManager
 pytestmark = pytest.mark.integration
 
 
-def test_real_attachment_images_follow_their_document_owner(tmp_path: Path):
+@pytest.mark.parametrize(
+    "physical_name,logical_name,presentation_name,expected_name",
+    [
+        ("notice.docx", "", None, "notice.docx"),
+        ("input-0000.docx", "[计划] #附件.docx", None, "[计划] #附件.docx"),
+        ("input-0000.docx", "logical.docx", "[计划] #附件.docx", "[计划] #附件.docx"),
+    ],
+)
+def test_real_attachment_images_follow_their_document_owner(
+    tmp_path: Path, physical_name, logical_name, presentation_name, expected_name
+):
     def png(color):
         stream = io.BytesIO()
         Image.new("RGB", (8, 8), color).save(stream, format="PNG")
@@ -43,7 +56,7 @@ def test_real_attachment_images_follow_their_document_owner(tmp_path: Path):
     attachment = document.add_paragraph("附件内容：项目管理办法全文，含办理步骤及图示。")
     attachment.add_run().add_picture(io.BytesIO(child_bytes))
     attachment.add_run().add_picture(io.BytesIO(shared_bytes))
-    source = tmp_path / "notice.docx"
+    source = tmp_path / physical_name
     document.save(str(source))
     source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     registry = PluginRegistry()
@@ -55,7 +68,16 @@ def test_real_attachment_images_follow_their_document_owner(tmp_path: Path):
         ConversionRequest(
             request_id="real-resource-owners",
             input_refs=[
-                FileRef(path=str(source), format="docx", category="document", size_bytes=source.stat().st_size)
+                FileRef(
+                    path=str(source),
+                    format="docx",
+                    category="document",
+                    size_bytes=source.stat().st_size,
+                    logical_path=logical_name,
+                    metadata={SOURCE_PRESENTATION_NAME_METADATA_KEY: presentation_name}
+                    if presentation_name is not None
+                    else {},
+                )
             ],
             target_format="md",
             action_name="gongwen",
@@ -91,7 +113,10 @@ def test_real_attachment_images_follow_their_document_owner(tmp_path: Path):
             assert hashlib.sha256(Path(item.staging_path).read_bytes()).hexdigest() == item.sha256
         foreign_names = {item.suggested_name for item in resources if item.sha256 not in expected_hashes}
         assert all(name not in content for name in foreign_names)
-    assert "../" not in Path(child.staging_path).read_text(encoding="utf-8")
+    child_text = Path(child.staging_path).read_text(encoding="utf-8")
+    header, _body = extract_yaml(child_text)
+    assert safe_load(header)["来源文件"] == expected_name
+    assert "../" not in child_text
     shared = [item for item in resources if item.sha256 == hashlib.sha256(shared_bytes).hexdigest()]
     assert len({item.artifact_id for item in shared}) == 2
     draft = build_bundle_draft(

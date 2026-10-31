@@ -232,3 +232,12 @@ Compact amount fields and positioned cells share one complete token grammar: opt
 Linux Office bridging owns the native launcher and descendants through a local spawned supervisor. Normal completion, cancellation and timeout must confirm child exit/reap before cleaning process state. An unconfirmed result retains independent profile/input/output state and fails without publishing. The finite native fixture exercises these source contracts; it does not establish real LibreOffice or other-platform behavior. The public default Office timeout remains 90 seconds.
 
 Linux Office 桥接通过局部监督进程拥有 native launcher 及其后代；正常完成、取消与超时均先确认退出和回收，再清理进程状态。未确认时保留独立 profile／输入／输出现场并失败，不发布产物。有界 native 夹具验证这些源码合同，不代表真实 LibreOffice 或其它平台已验。公开默认 Office 超时仍为 90 秒。
+
+### Settings presentation boundary
+
+The GUI provides separate Generate Markdown and Parse Markdown pages with direction-owned
+presets and current-page resets, explicit PDF split modes, and independent fixed-layout
+document/image preferences restricted to discovered routes. Template filling defaults to
+`, ` while retaining exact existing separators and dedicated official-document rules.
+These changes expose existing conversion contracts; source Qt/configuration regressions
+are distinct from native desktop and final-candidate acceptance (see `specs/gui-behavior.md`).

@@ -8,7 +8,7 @@ from PIL import Image
 from docwen_core.mermaid_runtime import MermaidRuntime
 from docwen_gui.models.settings_config import SettingsConfig
 from docwen_gui.view_models.settings_vm import SettingsViewModel
-from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+from docwen_gui.widgets.settings.formatting_tab import MarkdownInputTab as FormattingTab
 
 pytestmark = pytest.mark.gui
 

@@ -153,6 +153,9 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("conversion_defaults", "layout", "to_md_keep_images"),
         ("conversion_defaults", "layout", "to_md_enable_ocr"),
         ("conversion_defaults", "layout", "render_dpi"),
+        ("conversion_defaults", "layout", "split_mode"),
+        ("conversion_defaults", "layout", "document_format"),
+        ("conversion_defaults", "layout", "render_format"),
     ),
     "gongwen": (
         ("text", "gongwen_fields_enabled"),
@@ -162,7 +165,29 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
     ),
     "invoice": (),
     "link": (("link",),),
-    "formatting": (("formatting",),),
+    "formatting": (
+        ("formatting", "page_break_sep"),
+        ("formatting", "section_break_sep"),
+        ("formatting", "horizontal_rule_sep"),
+        ("formatting", "bold_syntax"),
+        ("formatting", "italic_syntax"),
+        ("formatting", "strikethrough_syntax"),
+        ("formatting", "highlight_syntax"),
+        ("formatting", "superscript_syntax"),
+        ("formatting", "subscript_syntax"),
+        ("formatting", "unordered_list_syntax"),
+        ("formatting", "indent_spaces"),
+        ("formatting", "markdown_extensions", "output"),
+    ),
+    "markdown_input": (
+        ("formatting", "each_line_paragraph"),
+        ("formatting", "mermaid_mode"),
+        ("formatting", "mermaid_cli_path"),
+        ("formatting", "dash_sep"),
+        ("formatting", "asterisk_sep"),
+        ("formatting", "underscore_sep"),
+        ("formatting", "markdown_extensions", "input"),
+    ),
     "output": (("output",),),
     "export": (("conversion_defaults", "export"), ("export",)),
     "logging": (("logging",),),
@@ -1000,7 +1025,7 @@ class SettingsViewModel(QObject):
 
         template_fill = raw.get("template_fill", {})
         config.text.list_separator = (
-            str(template_fill.get("list_separator", "、")) if isinstance(template_fill, dict) else "、"
+            str(template_fill.get("list_separator", ", ")) if isinstance(template_fill, dict) else ", "
         )
         config.text.gongwen_fields_enabled = (
             template_fill.get("gongwen_fields_enabled", True) if isinstance(template_fill, dict) else True
@@ -1246,6 +1271,24 @@ class SettingsViewModel(QObject):
             )
 
         return _normalize_settings_config(config)
+
+    def layout_format_choices(self, category: str) -> list[tuple[str, str]]:
+        """Offer only discovered fixed-layout routes as persisted target preferences."""
+        from docwen_core.formats.categories import get_category
+
+        from ._runtime_route_filter import RuntimeRouteSource, discover_runtime_route_choices
+
+        targets: set[str] = set()
+        for source in ("pdf", "ofd", "xps"):
+            result = discover_runtime_route_choices(
+                self._controller,
+                sources=(RuntimeRouteSource(detected_format=source, source_category="layout"),),
+                operation="conversion",
+            )
+            targets.update(
+                choice.target.upper() for choice in result.choices if get_category(choice.target) == category
+            )
+        return [(target, target) for target in sorted(targets)]
 
     def reset_section(self, section: str) -> bool:
         """Reset a GUI section through its runtime-owned logical group plan."""
@@ -1543,6 +1586,9 @@ class SettingsViewModel(QObject):
                 "to_md_enable_ocr",
                 "to_md_optimization",
                 "render_dpi",
+                "split_mode",
+                "document_format",
+                "render_format",
             ),
             "other": (
                 "to_md_keep_images",

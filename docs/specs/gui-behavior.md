@@ -199,3 +199,40 @@ For file drag MIME text, an existing complete absolute path takes precedence ove
 The three array editors (typos, symbol variants and sensitive-word exceptions) use `|` between elements, `\|` for a literal pipe and `\\` for a literal backslash. Loading, accepting without changes, editing another row and duplicate-key merging use this same reversible grammar. Leading/trailing element whitespace remains data. An empty cell denotes an empty array; empty elements in a nonempty expression remain invalid under the existing configuration schema rather than being silently removed.
 
 错别字、符号变体及敏感词例外三个数组编辑器用 `|` 分隔元素、`\|` 表示字面竖线、`\\` 表示字面反斜杠。加载、直接确认、修改其它行和重复键合并共用同一可逆语法；元素首尾空白保留为数据。空单元格表示空数组，非空表达式中的空元素继续由现有配置 schema 拒绝，不静默删除。
+
+### Conversion preferences and directional Markdown pages / 转换偏好与 Markdown 双页
+
+PDF splitting offers Every page, Odd/even and By page numbers. Only the custom mode
+shows a page-range input. Custom selection produces one PDF for selected pages and
+one for the remainder, each in source order; the bounded parser and all rejection
+rules above still apply. The GUI maps the two whole-file modes internally and does
+not require users to enter protocol symbols. Page expressions stay with the input
+file and are never persisted as global preferences.
+
+Incoming fixed-layout settings own `layout.split_mode` (every_page),
+`layout.document_format` (DOCX), `layout.render_format` (TIF) and existing render DPI
+(300). Format selectors are populated from discovered routes. A dormant or unavailable
+preference never invents a route: the operation selects an available target. Current
+explicit choices survive committed-default refresh, including a choice back to the
+initial value; a new file/operation context or panel reset reads saved defaults again.
+Document and image conversion use separate cards. Image-size values and their compact
+unit selectors remain on one line; narrow rows move only the field label above them.
+
+Generate Markdown (`formatting`) owns output extensions, output syntax/list indentation
+and DOCX → Markdown separators. Parse Markdown (`markdown_input`) owns input extensions,
+Markdown → DOCX separators, ordinary-line paragraphs and Mermaid. Presets and current-page
+reset affect only that direction, including persisted values and unsaved drafts. Apply,
+reload and Cancel retain their existing transaction semantics. Shared link/OCR settings
+and Incoming text's template filling and DOCX table styles retain their original owners.
+
+The template-list separator defaults and resets to comma plus space (`, `). Existing
+values, including the Chinese list separator, empty strings and spaces, are preserved
+exactly and do not change with interface language. This joins values for template output;
+it never rewrites input YAML. Dedicated official-document fields retain their existing
+list punctuation, comments, attachment-per-item layout and other special formatting.
+
+Settings help keeps the shared keyboard-operable, scroll-bounded plain-text popup.
+Descriptions remain plain text and use paragraphs for long explanations. Spin-box outer
+frames own padding/height; their internal text editors add neither. Both numeric types
+retain native keyboard behavior and visible arrows in Light/Dark, disabled and RTL states.
+Source Qt checks do not certify native desktop or final packaged appearance.

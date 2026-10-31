@@ -72,6 +72,10 @@ _CHANGE_FIELD_LABEL_KEYS: dict[str, str] = {
     "output.custom_path": "settings.output.custom_path_label",
     "output.create_date_subfolder": "settings.output.date_folder.create_label",
     "output.date_folder_format": "settings.output.date_folder.format_label",
+    "conversion_defaults.layout.split_mode": "conversion_panel.layout.split_mode",
+    "conversion_defaults.layout.document_format": "settings.layout.document_format",
+    "conversion_defaults.layout.render_format": "conversion_panel.layout.image_format",
+    "conversion_defaults.layout.render_dpi": "settings.layout.render_dpi_label",
     "export.ocr_language": "settings.ocr.language_label",
     "export.recognize_tables": "action_area.recognize_tables",
     "formatting.mermaid_mode": "settings.formatting.mermaid_mode_label",
@@ -95,6 +99,11 @@ _CHANGE_VALUE_LABEL_KEYS: dict[str, dict[object, str]] = {
     "output.output_mode": {
         "source": "settings.output.output_modes.source",
         "custom": "settings.output.output_modes.custom",
+    },
+    "conversion_defaults.layout.split_mode": {
+        "every_page": "conversion_panel.layout.split_every_page",
+        "odd_even": "conversion_panel.layout.split_odd_even",
+        "custom": "conversion_panel.layout.split_custom",
     },
     "export.ocr_language": {
         "auto": "settings.ocr.language_auto",
@@ -181,7 +190,7 @@ class SettingsNavigationGroup(NamedTuple):
 NAVIGATION_GROUPS = (
     SettingsNavigationGroup("general", ("general", "output", "templates", "software", "logging")),
     SettingsNavigationGroup("inputs", ("text", "document", "spreadsheet", "image", "layout", "other")),
-    SettingsNavigationGroup("content", ("formatting", "link", "export", "proofread")),
+    SettingsNavigationGroup("content", ("formatting", "markdown_input", "link", "export", "proofread")),
     SettingsNavigationGroup("optimizations", ("gongwen", "invoice")),
 )
 TAB_KEYS = [key for group in NAVIGATION_GROUPS for key in group.page_keys]
@@ -208,6 +217,7 @@ TAB_NAMES: dict[str, str] = {
     "other": t("settings.tabs.other"),
     "proofread": t("settings.tabs.proofread"),
     "formatting": t("settings.tabs.formatting"),
+    "markdown_input": t("settings.tabs.markdown_input"),
     "link": t("settings.tabs.link"),
     "export": t("settings.tabs.export"),
     "software": t("settings.tabs.software"),
@@ -282,6 +292,12 @@ def _build_formatting_tab(view_model: SettingsViewModel) -> QWidget:
     return FormattingTab(view_model)
 
 
+def _build_markdown_input_tab(view_model: SettingsViewModel) -> QWidget:
+    from .formatting_tab import MarkdownInputTab
+
+    return MarkdownInputTab(view_model)
+
+
 def _build_software_tab(view_model: SettingsViewModel) -> QWidget:
     from .software_tab import SoftwareTab
 
@@ -334,6 +350,7 @@ _TAB_SPECS: dict[str, _TabSpec] = {
     "layout": _TabSpec("layout_tab", "LayoutTab", _build_layout_tab),
     "link": _TabSpec("link_tab", "LinkTab", _build_link_tab),
     "formatting": _TabSpec("formatting_tab", "FormattingTab", _build_formatting_tab),
+    "markdown_input": _TabSpec("formatting_tab", "MarkdownInputTab", _build_markdown_input_tab),
     "software": _TabSpec("software_tab", "SoftwareTab", _build_software_tab),
     "output": _TabSpec("output_tab", "OutputTab", _build_output_tab),
     "export": _TabSpec("export_tab", "ExportTab", _build_export_tab),
@@ -354,6 +371,7 @@ RESET_GROUPS: dict[str, str] = {
     "layout": "layout",
     "link": "link",
     "formatting": "formatting",
+    "markdown_input": "markdown_input",
     "software": "software",
     "output": "output",
     "export": "export",
@@ -640,6 +658,7 @@ class SettingsDialog(QDialog):
             "layout": "layout.svg",
             "link": "link.svg",
             "formatting": "formatting.svg",
+            "markdown_input": "formatting.svg",
             "templates": "templates.svg",
             "output": "output.svg",
             "export": "export.svg",
@@ -1085,6 +1104,7 @@ class SettingsDialog(QDialog):
             "other": "conversion_defaults",
             "link": "link",
             "formatting": "formatting",
+            "markdown_input": "formatting",
             "software": "software_priority",
             "output": "output",
             "export": "export",

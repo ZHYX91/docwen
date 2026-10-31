@@ -38,7 +38,7 @@ def fill_template(
     *,
     gongwen_fields_enabled: bool = True,
     attachment_alignment: Literal["spaces", "tab"] = "spaces",
-    list_separator: str = "、",
+    list_separator: str = ", ",
 ) -> None:
     """Fill the pre-render template snapshot using request-local display values.
 
@@ -96,7 +96,7 @@ def fill_yaml_placeholders(
     yaml_dict: Mapping[str, Any],
     placeholder_map: dict[str, list[Any]],
     skip_keys: set[str] | None = None,
-    list_separator: str = "、",
+    list_separator: str = ", ",
     *,
     review_notes: Mapping[str, str] | None = None,
 ) -> None:

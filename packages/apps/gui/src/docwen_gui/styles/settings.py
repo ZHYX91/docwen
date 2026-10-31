@@ -236,5 +236,17 @@ def build_settings_stylesheet(theme_name: str, font_size_preset: str | None = No
             "QWidget#settingsTabRoot QPlainTextEdit {",
             "    background-color: transparent;",
             "}",
+            "QWidget#generalTransparencyValueRow {",
+            "    background: transparent;",
+            "}",
+            "QDoubleSpinBox#generalTransparencySpinBox {",
+            "    min-width: 92px;",
+            "    max-width: 92px;",
+            "}",
+            "QLabel#generalTransparencyPercentLabel {",
+            "    color: palette(mid);",
+            f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
+            "    font-weight: 600;",
+            "}",
         ]
     )

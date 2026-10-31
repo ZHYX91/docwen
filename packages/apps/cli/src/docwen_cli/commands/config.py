@@ -23,6 +23,7 @@ _TAB_GROUP_MAP: dict[str, str] = {
     "export": "export",
     "other": "other",
     "formatting": "formatting",
+    "markdown_input": "markdown_input",
     "document": "document",
     "gongwen": "gongwen",
     "invoice": "invoice",

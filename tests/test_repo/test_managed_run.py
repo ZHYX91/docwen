@@ -272,3 +272,22 @@ def test_cleanup_root_pin_rejects_deleted_and_recreated_root_without_adopting_it
     assert record["phase"] == "cleanup-recording"
     assert record["knownOutcome"] == "completed-success"
     assert "managed_run_identity_changed" in record["recordingError"]["message"]
+
+
+def test_source_environment_preserves_parent_values_and_prioritizes_all_checkout_packages(tmp_path, monkeypatch):
+    repo = tmp_path / "current"
+    cli = repo / "packages/apps/cli/src"
+    optimizer = repo / "packages/plugins/optimizers/gongwen/src"
+    for path in (cli, optimizer):
+        path.mkdir(parents=True)
+    old = str(tmp_path / "other-checkout/src")
+    monkeypatch.setenv("PYTHONPATH", old)
+    monkeypatch.setenv("UNRELATED_CALLER_VALUE", "preserve")
+    before = dict(os.environ)
+    run = tmp_path / "owned-run"
+    env = run_source.source_environment(repo, run)
+    assert env["PYTHONPATH"].split(os.pathsep) == [str(cli), str(optimizer), old]
+    assert env["UNRELATED_CALLER_VALUE"] == "preserve"
+    assert env["DOCWEN_RUNTIME_ROOT"] == str(run / "runtime")
+    assert env["TEMP"] == env["TMP"] == env["TMPDIR"] == str(run / "temp")
+    assert dict(os.environ) == before

@@ -299,9 +299,9 @@ def test_disabling_fields_keeps_generic_inline_attachment_fill_and_empty_contain
     header = document.sections[0].header.paragraphs[0]
     header.text = "{{附件说明}}"
     _fill(document, {"附件说明": ["甲", "乙"]}, enabled=False)
-    assert inline.text == "prefix 甲、乙 suffix"
+    assert inline.text == "prefix 甲, 乙 suffix"
     assert empty.text == "主送："
-    assert header.text == "甲、乙"
+    assert header.text == "甲, 乙"
 
 
 def test_hyperlink_placeholder_and_surrounding_run_properties_are_preserved() -> None:

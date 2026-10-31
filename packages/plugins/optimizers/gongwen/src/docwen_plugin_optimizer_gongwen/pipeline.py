@@ -151,6 +151,7 @@ def convert_docx_to_md_gongwen(
     input_path: str,
     options: dict | None = None,
     *,
+    source_name: str | None = None,
     cancellation: CancellationTokenView | None = None,
     progress: ProgressSink | None = None,
     registry: Any = None,
@@ -161,7 +162,8 @@ def convert_docx_to_md_gongwen(
 
     Args:
         doc: python-docx ``Document`` instance.
-        input_path: Path of the source file.
+        input_path: Physical source path, retained for direct callers' display fallback.
+        source_name: Public presentation filename, independent of staging identity.
         options: Conversion options dict.
         cancellation: Optional token for cooperative cancellation.
         progress: Optional sink for progress reporting.
@@ -371,7 +373,7 @@ def convert_docx_to_md_gongwen(
             )
             if keep_images and image_mode in {"file", "embed"}:
                 attachment_images.extend(feature.extracted_images)
-        attachment_md = render_attachment(metadata, attachment_lines, input_path=input_path)
+        attachment_md = render_attachment(metadata, attachment_lines, input_path=input_path, source_name=source_name)
         if attachment_md.strip():
             from docwen_plugin_optimizer_gongwen.models import AttachmentDocument
 

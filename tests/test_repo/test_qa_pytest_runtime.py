@@ -581,3 +581,72 @@ def test_qa_root_pin_failure_preserves_external_hold_before_any_recursive_cleanu
     assert "pytest runtime cleanup failed" in capsys.readouterr().err
     with pytest.raises(ValueError, match="pending_run_recovery"):
         workspace_cleanup._assert_no_pending_run_recovery(runtime)
+
+
+def test_qa_subprocess_environment_preserves_owned_runtime_and_caller_environment(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    repo = tmp_path / "current"
+    source = repo / "packages/apps/cli/src"
+    source.mkdir(parents=True)
+    monkeypatch.setattr(qa, "__file__", str(repo / "tools/qa.py"))
+    supplied = {
+        "PYTHONPATH": "previous-checkout",
+        "TEMP": "owned-temp",
+        "DOCWEN_RUNTIME_ROOT": "owned-runtime",
+        "COVERAGE_FILE": "owned-coverage",
+        "DOCWEN_PYTEST_REPORT_DIR": "owned-reports",
+    }
+    before = dict(supplied)
+    observed = []
+    monkeypatch.setattr(
+        qa.subprocess, "run", lambda *args, **kwargs: observed.append(kwargs) or SimpleNamespace(returncode=0)
+    )
+    assert qa._run(["python", "-V"], env=supplied) == 0
+    env = observed[0]["env"]
+    assert env["PYTHONPATH"].split(os.pathsep) == [str(source), "previous-checkout"]
+    assert {key: env[key] for key in before if key != "PYTHONPATH"} == {
+        key: value for key, value in before.items() if key != "PYTHONPATH"
+    }
+    assert supplied == before
+
+
+@pytest.mark.parametrize("entry", ["qa", "source"])
+def test_new_interpreter_imports_current_checkout_before_another_checkout(tmp_path, monkeypatch, entry):
+    import sys
+
+    from tools import run_source
+
+    current, other = tmp_path / "current", tmp_path / "other"
+    names = {"apps/cli": "checkout_cli_probe", "plugins/optimizers/gongwen": "checkout_optimizer_probe"}
+    expected = []
+    old_sources = []
+    for checkout in (current, other):
+        for package, name in names.items():
+            source = checkout / "packages" / package / "src"
+            module = source / name / "__init__.py"
+            module.parent.mkdir(parents=True)
+            module.write_text("IDENTITY = " + repr(checkout.name), encoding="utf-8")
+            if checkout == current:
+                expected.append(str(module.resolve()))
+            else:
+                old_sources.append(str(source))
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join(old_sources))
+    output = tmp_path / "selected-imports.json"
+    command = [
+        sys.executable,
+        "-c",
+        "import json,sys; from pathlib import Path; import checkout_cli_probe as c,checkout_optimizer_probe as o; Path(sys.argv[1]).write_text(json.dumps([str(Path(c.__file__).resolve()),str(Path(o.__file__).resolve())]))",
+        str(output),
+    ]
+    if entry == "qa":
+        monkeypatch.setattr(qa, "__file__", str(current / "tools/qa.py"))
+        assert qa._run(command) == 0
+    else:
+        import subprocess
+
+        completed = subprocess.run(
+            command, cwd=current, env=run_source.source_environment(current, tmp_path / "run"), check=False
+        )
+        assert completed.returncode == 0
+    assert json.loads(output.read_text()) == expected

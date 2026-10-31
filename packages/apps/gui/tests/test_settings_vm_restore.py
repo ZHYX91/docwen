@@ -279,7 +279,7 @@ class TestResetSectionIsolation:
         assert vm.config.text.list_separator == ", "
         assert vm.config.text.table_style_mode == "custom"
         assert vm.reset_group("text") is True
-        assert vm.config.text.list_separator == "、"
+        assert vm.config.text.list_separator == ", "
         assert vm.config.text.table_style_mode == "builtin"
         assert vm.config.text.custom_table_style_name == ""
         assert vm.config.export.base64_compress_enabled is False
@@ -496,7 +496,7 @@ class TestResetSectionReload:
         assert vm.get_change_summary() == []
 
 
-def test_extension_directions_persist_cancel_and_reset_as_one_formatting_group(vm: SettingsViewModel) -> None:
+def test_extension_directions_persist_cancel_and_reset_independently(vm: SettingsViewModel) -> None:
     from docwen_core.markdown_extensions import MarkdownExtensions
 
     defaults = {direction: MarkdownExtensions().to_dict() for direction in ("input", "output")}
@@ -513,6 +513,67 @@ def test_extension_directions_persist_cancel_and_reset_as_one_formatting_group(v
     vm.cancel_changes()
     assert vm.config.formatting.markdown_extensions == expected
     assert vm.reset_section(SECTION_FORMATTING)
+    assert vm.config.formatting.markdown_extensions == expected
+    assert vm.reset_group("markdown_input")
     assert vm.config.formatting.markdown_extensions == defaults
     assert vm.load_from_controller_config()
     assert vm.config.formatting.markdown_extensions == defaults
+
+
+@pytest.mark.parametrize("reset_group", ["formatting", "markdown_input"])
+def test_direction_reset_preserves_other_page_draft_and_persistent_values(vm, config_port, reset_group):
+    from copy import deepcopy
+
+    # Both directions have saved non-default values, then independent unsaved edits.
+    vm.set_field(SECTION_FORMATTING, "bold_syntax", "underscore")
+    vm.set_field(SECTION_FORMATTING, "mermaid_mode", "image")
+    assert vm.apply_settings()
+    vm.begin_session()
+    extensions = deepcopy(vm.config.formatting.markdown_extensions)
+    extensions["input"]["structural_tables"] = True
+    extensions["output"]["typed_endnotes"] = True
+    vm.set_field(SECTION_FORMATTING, "markdown_extensions", extensions)
+    vm.set_field(SECTION_FORMATTING, "each_line_paragraph", True)
+    vm.set_field(SECTION_FORMATTING, "indent_spaces", 2)
+    assert vm.reset_group(reset_group)
+    fmt = vm.config.formatting
+    if reset_group == "formatting":
+        assert fmt.bold_syntax == "asterisk" and fmt.indent_spaces == 4
+        assert fmt.mermaid_mode == "image" and fmt.each_line_paragraph
+        assert fmt.markdown_extensions["input"]["structural_tables"]
+        assert not fmt.markdown_extensions["output"]["typed_endnotes"]
+        assert config_port.get("conversion.md_to_docx.mermaid_mode") == "image"
+    else:
+        assert fmt.mermaid_mode == "code" and not fmt.each_line_paragraph
+        assert fmt.bold_syntax == "underscore" and fmt.indent_spaces == 2
+        assert fmt.markdown_extensions["output"]["typed_endnotes"]
+        assert not fmt.markdown_extensions["input"]["structural_tables"]
+        assert config_port.get("conversion.syntax.bold") == "underscore"
+    assert vm.is_dirty
+    vm.cancel_changes()
+    assert not vm.is_dirty
+    assert vm.config.formatting.indent_spaces == 4
+    assert not vm.config.formatting.each_line_paragraph
+    assert vm.config.formatting.bold_syntax == ("asterisk" if reset_group == "formatting" else "underscore")
+    assert vm.config.formatting.mermaid_mode == ("image" if reset_group == "formatting" else "code")
+    assert vm.load_from_controller_config()
+    assert vm.config.formatting.bold_syntax == ("asterisk" if reset_group == "formatting" else "underscore")
+
+
+def test_layout_defaults_roundtrip_and_reset_preserve_other_page_draft(vm, config_port):
+    expected = {"split_mode": "odd_even", "document_format": "ODT", "render_format": "PNG", "render_dpi": 600}
+    for key, value in expected.items():
+        vm.set_conversion_default("layout", key, value)
+    assert vm.apply_settings()
+    fresh = SettingsViewModel(controller=ApplicationController(config_port=config_port))
+    assert {key: fresh.config.conversion_defaults.layout[key] for key in expected} == expected
+    assert "page_input" not in config_port.snapshot()["layout"]
+    fresh.begin_session()
+    fresh.set_field(SECTION_TEXT, "list_separator", " | ")
+    assert fresh.reset_group("layout")
+    defaults = {"split_mode": "every_page", "document_format": "DOCX", "render_format": "TIF", "render_dpi": 300}
+    assert {key: fresh.config.conversion_defaults.layout[key] for key in defaults} == defaults
+    assert fresh.config.text.list_separator == " | " and fresh.is_dirty
+    fresh.cancel_changes()
+    assert fresh.config.text.list_separator == ", "
+    assert {key: config_port.snapshot()["layout"][key] for key in defaults} == defaults
