@@ -658,7 +658,7 @@ class SettingsDialog(QDialog):
             "layout": "layout.svg",
             "link": "link.svg",
             "formatting": "formatting.svg",
-            "markdown_input": "formatting.svg",
+            "markdown_input": "markdown_input.svg",
             "templates": "templates.svg",
             "output": "output.svg",
             "export": "export.svg",

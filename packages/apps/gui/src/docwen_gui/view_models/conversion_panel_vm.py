@@ -389,6 +389,11 @@ class ConversionPanelViewModel(QObject):
             self.state_changed.emit()
 
     @property
+    def pdf_page_count_unavailable(self) -> bool:
+        """Native PDF split needs readable metadata; bridge inputs obtain it after conversion."""
+        return self._current_format == "pdf" and self._pdf_total_pages == 0
+
+    @property
     def pdf_total_pages(self) -> int:
         """Total pages of the selected PDF."""
         return self._pdf_total_pages

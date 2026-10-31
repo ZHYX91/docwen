@@ -89,3 +89,31 @@ def test_unavailable_layout_defaults_never_invent_a_conversion_route(qapp):
         assert main.controller.config_port.get("layout.render_format") == "WEBP"
     finally:
         widget.deleteLater()
+
+
+@pytest.mark.parametrize("mode", ["every_page", "odd_even", "custom"])
+def test_native_pdf_requires_page_count_for_feedback_and_submission_then_recovers(qapp, mode):
+    vm = ConversionPanelViewModel(FakeMainWindowViewModel())  # type: ignore[arg-type]
+    widget = ConversionPanel(view_model=vm)
+    submitted = []
+    vm.named_action_requested.connect(lambda *args: submitted.append(args))
+    try:
+        vm.set_file_info("layout", "pdf", file_path="/unknown.pdf")
+        vm.split_mode = mode
+        widget._page_input_edit.setText("1")
+        assert not widget._split_pdf_button.isEnabled()
+        assert widget._page_warning_label.text() == t("conversion_panel.layout.split_page_count_unavailable")
+        widget._on_split_pdf_clicked()  # Direct invocation must also refuse, not just the disabled button.
+        assert submitted == []
+        vm.set_pdf_info(3, "unknown.pdf")
+        assert widget._split_pdf_button.isEnabled()
+        assert widget._page_warning_label.isHidden()
+        widget._split_pdf_button.click()
+        assert submitted[-1][2]["split_mode"] == mode
+        vm.set_pdf_info(0, "")
+        assert not widget._split_pdf_button.isEnabled()
+        previous = list(submitted)
+        widget._on_split_pdf_clicked()
+        assert submitted == previous
+    finally:
+        widget.deleteLater()

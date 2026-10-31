@@ -8,6 +8,7 @@ import json
 import os
 import platform
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -27,7 +28,14 @@ from scripts.release.publication_download import atomic_record
 from tools.run_lease import OwnedRunLease, lease_payload, managed_run
 
 REPO = Path(__file__).resolve().parents[2]
-MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
+MACHO_MAGICS = {
+    b"\xcf\xfa\xed\xfe",
+    b"\xfe\xed\xfa\xcf",
+    b"\xca\xfe\xba\xbe",
+    b"\xbe\xba\xfe\xca",
+    b"\xca\xfe\xba\xbf",
+    b"\xbf\xba\xfe\xca",
+}
 
 
 def read_contract(path: Path) -> dict[str, Any]:
@@ -107,8 +115,43 @@ def sign_payload(root: Path) -> None:
         command(["/usr/bin/codesign", "--force", "--sign", "-", "--timestamp=none", str(framework)])
 
 
+def minimum_macos_version(load_commands: str, relative: str) -> tuple[int, int, int]:
+    """Read the arm64 deployment floor, independently of the build SDK version."""
+    versions: list[tuple[int, int, int]] = []
+    for block in re.split(r"(?m)^\s*Load command \d+\s*$", load_commands):
+        commands = re.findall(r"(?m)^\s*cmd\s+(\S+)\s*$", block)
+        relevant = [name for name in commands if name == "LC_BUILD_VERSION" or name.startswith("LC_VERSION_MIN_")]
+        if not relevant:
+            continue
+        require(len(commands) == len(relevant) == 1, f"ambiguous deployment metadata: {relative}")
+        name = relevant[0]
+        if name == "LC_BUILD_VERSION":
+            platforms = re.findall(r"(?m)^\s*platform\s+(\S+)\s*$", block)
+            require(platforms in (["MACOS"], ["1"]), f"non-macOS or missing platform metadata: {relative}")
+            field = "minos"
+        else:
+            require(name == "LC_VERSION_MIN_MACOSX", f"non-macOS deployment metadata: {relative}")
+            field = "version"
+        values = re.findall(rf"(?m)^\s*{field}\s+(\S+)\s*$", block)
+        require(
+            len(values) == 1 and re.fullmatch(r"\d+(?:\.\d+){0,2}", values[0]) is not None,
+            f"missing or ambiguous deployment version: {relative}",
+        )
+        parts = [int(part) for part in values[0].split(".")]
+        parts += [0] * (3 - len(parts))
+        versions.append((parts[0], parts[1], parts[2]))
+    require(len(versions) == 1, f"missing or ambiguous deployment metadata: {relative}")
+    version = versions[0]
+    require(
+        (0, 0, 0) < version <= (14, 0, 0),
+        f"macOS minimum {'.'.join(map(str, version))} exceeds 14.0 or is invalid: {relative}",
+    )
+    return version
+
+
 def verify_signatures(root: Path, *, app: Path | None = None) -> dict[str, Any]:
     binaries = []
+    minimum_versions = []
     verified: set[Path] = set()
     for path in macho_files(root):
         relative = path.relative_to(root).as_posix()
@@ -118,6 +161,11 @@ def verify_signatures(root: Path, *, app: Path | None = None) -> dict[str, Any]:
         if subject not in verified:
             command(["/usr/bin/codesign", "--verify", "--deep", "--strict", str(subject)])
             verified.add(subject)
+        try:
+            load_commands = command(["/usr/bin/otool", "-arch", "arm64", "-l", str(path)])
+        except PublicationError as error:
+            raise PublicationError(f"cannot read arm64 deployment metadata: {relative}: {error}") from error
+        minimum_versions.append(minimum_macos_version(load_commands, relative))
         binaries.append(relative)
     require(bool(binaries), "no Mach-O code in package")
     if app is not None:
@@ -134,7 +182,14 @@ def verify_signatures(root: Path, *, app: Path | None = None) -> dict[str, Any]:
                     "Signature=adhoc" in command(["/usr/bin/codesign", "-d", "--verbose=4", str(root / relative)]),
                     "entry point must be ad-hoc signed",
                 )
-    return {"machOCount": len(binaries), "architecture": "arm64", "appSignature": "adhoc" if app else None}
+    maximum = max(minimum_versions)
+    version_text = ".".join(map(str, maximum if maximum[2] else maximum[:2]))
+    return {
+        "machOCount": len(binaries),
+        "architecture": "arm64",
+        "appSignature": "adhoc" if app else None,
+        "maximumMachOMinimumVersion": version_text,
+    }
 
 
 def compose_app(payload: Path, root: Path, version: str) -> Path:

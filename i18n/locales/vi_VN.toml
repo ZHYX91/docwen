@@ -1189,6 +1189,7 @@ no_transparency = "Không trong suốt"
 
 # 版式转换区
 [conversion_panel.layout]
+split_page_count_unavailable = "Chưa có số trang PDF. Cần đọc được số trang trước khi tách."
 split_mode = "Chế độ tách"
 split_custom = "Theo số trang"
 split_odd_even = "Trang lẻ / chẵn"

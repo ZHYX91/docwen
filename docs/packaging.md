@@ -162,7 +162,10 @@ PRI logical resource URIs use `/Files/assets/msix/...`, while physical candidate
 
 `release/macos-production-manifest.v1.json` fixes the arm64/macOS 14 target, two versioned
 `tar.gz` assets, safe internal symlink policy and ad-hoc-only signing policy. The release
-workflow builds the GUI and CLI once on native `macos-14` with the locked Python environment.
+workflow builds the GUI and CLI once on native arm64 `macos-15` with the locked Python environment
+and `MACOSX_DEPLOYMENT_TARGET=14.0`. The runner moved after GitHub's
+[macOS 14 image retirement](https://github.com/actions/runner-images/issues/13518);
+the product's minimum OS remains 14.0.
 Its Office checks use LibreOffice 26.8.2.2 for Apple Silicon, installed from the
 [official archive](https://downloadarchive.documentfoundation.org/libreoffice/old/26.8.2.2/mac/aarch64/LibreOffice_26.8.2.2_MacOS_aarch64.dmg).
 The workflow checks the pinned SHA-256 against the downloaded bytes before mounting the DMG
@@ -180,6 +183,12 @@ Both archives preserve executable modes and validated relative links, and carry 
 inventories and checksums. Tests run after extraction, require arm64 Mach-O code and valid
 signatures, and rerun conversion, proofreading, numbering, merge/split, output protection and
 selected LibreOffice routes on each frozen CLI. The app launcher and settings smoke also run.
+Before archiving and after extraction, every Mach-O file's arm64 slice is inspected with
+`otool -arch arm64 -l`. Exactly one macOS deployment command must declare a minimum version
+at or below 14.0; absent, ambiguous, non-macOS or higher requirements fail with the file path.
+The build SDK version is independent of this minimum. Reports include the maximum actual
+Mach-O minimum version. This check preserves the package contract; it does not establish
+execution on a real macOS 14 host.
 The app and CLI default to the shared user profile rather than writing inside the signed app.
 The full candidate inventory, selected-platform retrieval, required producer jobs, provenance,
 draft asset checks and independent public readback all include the Mac archives.

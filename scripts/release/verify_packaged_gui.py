@@ -93,14 +93,17 @@ _REQUIRED_SETTINGS_TAB_KEYS: tuple[str, ...] = (
     "layout",
     "other",
     "formatting",
+    "markdown_input",
     "link",
     "export",
     "proofread",
     "gongwen",
     "invoice",
 )
+# Both Markdown directions are separate required pages implemented by the same module.
 _REQUIRED_SETTINGS_PAGE_MODULES: frozenset[str] = frozenset(
-    f"docwen_gui.widgets.settings.{key}_tab" for key in _REQUIRED_SETTINGS_TAB_KEYS
+    f"docwen_gui.widgets.settings.{'formatting' if key == 'markdown_input' else key}_tab"
+    for key in _REQUIRED_SETTINGS_TAB_KEYS
 )
 _FILE_ATTRIBUTE_REPARSE_POINT = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
 _VERIFICATION_LEASE = ".docwen-temp-lease.json"
@@ -531,8 +534,10 @@ def _verify_settings_smoke_report(report_path: Path) -> dict[str, Any]:
     if (
         report.get("success") is not True
         or not isinstance(actual_expected, list)
+        or len(actual_expected) != len(expected_tabs)
         or set(actual_expected) != set(expected_tabs)
         or not isinstance(loaded_tabs, list)
+        or len(loaded_tabs) != len(expected_tabs)
         or set(loaded_tabs) != set(expected_tabs)
         or report.get("failedTabs") != []
         or report.get("missingTabs") != []

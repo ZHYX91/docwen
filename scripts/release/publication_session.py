@@ -47,7 +47,7 @@ def verify_candidate_jobs(payload: dict[str, Any]) -> None:
         "source-checks",
         "Tests on windows-latest",
         "Tests on ubuntu-24.04",
-        "Tests on macos-14",
+        "Tests on macos-15",
         "Required checks",
         "Source identity",
         "Build Windows packages",

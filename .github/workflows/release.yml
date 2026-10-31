@@ -75,7 +75,7 @@ jobs:
     name: Mac package source checks
     needs: identity
     if: needs.identity.outputs.build == 'true' && inputs.macos_only
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 90
     env:
       QT_QPA_PLATFORM: offscreen
@@ -255,9 +255,10 @@ jobs:
       needs.identity.outputs.build == 'true' &&
       ((inputs.macos_only && needs.macos-source-checks.result == 'success') ||
        (!inputs.macos_only && needs.source-checks.result == 'success'))
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 90
     env:
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
       RELEASE_VERSION: ${{ needs.identity.outputs.version }}
       DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
       QT_QPA_PLATFORM: offscreen

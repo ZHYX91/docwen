@@ -61,10 +61,38 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
 
     formatting_plan = reset_plan_for_group("formatting")
     assert formatting_plan.files == ()
-    assert len(formatting_plan.dotted_keys) == 25
-    assert "conversion.md_to_docx.each_line_paragraph" in formatting_plan.dotted_keys
-    assert "conversion.md_to_docx.mermaid_cli_path" in formatting_plan.dotted_keys
-    assert "conversion.md_to_docx.mermaid_mode" in formatting_plan.dotted_keys
+    assert set(formatting_plan.dotted_keys) == {
+        "conversion.markdown_extensions.output.structural_tables",
+        "conversion.markdown_extensions.output.captions_references",
+        "conversion.markdown_extensions.output.extended_headings",
+        "conversion.markdown_extensions.output.typed_endnotes",
+        "conversion.syntax.bold",
+        "conversion.syntax.italic",
+        "conversion.syntax.strikethrough",
+        "conversion.syntax.highlight",
+        "conversion.syntax.superscript",
+        "conversion.syntax.subscript",
+        "conversion.syntax.unordered_list",
+        "conversion.syntax.indent_spaces",
+        "conversion.horizontal_rule.docx_to_md.page_break",
+        "conversion.horizontal_rule.docx_to_md.section_break",
+        "conversion.horizontal_rule.docx_to_md.horizontal_rule",
+    }
+    parsing_plan = reset_plan_for_group("markdown_input")
+    assert parsing_plan.files == ()
+    assert set(parsing_plan.dotted_keys) == {
+        "conversion.md_to_docx.each_line_paragraph",
+        "conversion.markdown_extensions.input.structural_tables",
+        "conversion.markdown_extensions.input.captions_references",
+        "conversion.markdown_extensions.input.extended_headings",
+        "conversion.markdown_extensions.input.typed_endnotes",
+        "conversion.md_to_docx.mermaid_mode",
+        "conversion.md_to_docx.mermaid_cli_path",
+        "conversion.horizontal_rule.md_to_docx.dash",
+        "conversion.horizontal_rule.md_to_docx.asterisk",
+        "conversion.horizontal_rule.md_to_docx.underscore",
+    }
+    assert set(formatting_plan.dotted_keys).isdisjoint(parsing_plan.dotted_keys)
     assert {
         "conversion.md_to_docx.heading_merge_mode",
         "conversion.md_to_docx.heading_merge_punctuation",
@@ -109,6 +137,9 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "layout.to_md_keep_images",
         "layout.to_md_enable_ocr",
         "layout.render_dpi",
+        "layout.split_mode",
+        "layout.document_format",
+        "layout.render_format",
     }
 
     image_plan = reset_plan_for_group("image")
@@ -203,6 +234,7 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         text_plan,
         export_plan,
         formatting_plan,
+        parsing_plan,
         document_plan,
         spreadsheet_plan,
         layout_plan,
@@ -580,3 +612,45 @@ def test_semantic_invalid_conversion_cannot_poison_request_projection(tmp_path: 
 
     assert semantics.export_base64_compress_threshold_kb == 100
     assert len(list(user_dir.glob("conversion.toml.bak_schema_failed_*"))) == 1
+
+
+@pytest.mark.parametrize("reset_group", ["formatting", "markdown_input"])
+def test_markdown_direction_reset_persists_only_its_owned_values(tmp_path: Path, reset_group: str) -> None:
+    from docwen_runtime.config.loader import ConfigLoader
+
+    output_updates = {
+        "conversion.syntax.bold": "underscore",
+        "conversion.syntax.indent_spaces": 2,
+        "conversion.markdown_extensions.output.structural_tables": True,
+        "conversion.horizontal_rule.docx_to_md.page_break": "ignore",
+    }
+    input_updates = {
+        "conversion.md_to_docx.each_line_paragraph": True,
+        "conversion.md_to_docx.mermaid_mode": "image",
+        "conversion.md_to_docx.mermaid_cli_path": "custom-renderer",
+        "conversion.markdown_extensions.input.structural_tables": True,
+        "conversion.horizontal_rule.md_to_docx.dash": "ignore",
+    }
+    unrelated_updates = {"template_fill.list_separator": " / ", "conversion.export.base64_compress_enabled": False}
+    all_updates = {**output_updates, **input_updates, **unrelated_updates}
+    owned = output_updates if reset_group == "formatting" else input_updates
+    loader = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=tmp_path / "user")
+
+    def values(current_loader: ConfigLoader) -> dict[str, object]:
+        data = current_loader.config.as_dict()
+        result = {}
+        for key in all_updates:
+            value = data
+            for part in key.split("."):
+                value = value[part]
+            result[key] = value
+        return result
+
+    defaults = values(loader)
+    assert loader.set_values(all_updates)
+    assert values(loader) == all_updates
+    assert loader.reset_group(reset_group)
+    expected = {key: defaults[key] if key in owned else override for key, override in all_updates.items()}
+    assert values(loader) == expected
+    reopened = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=tmp_path / "user")
+    assert values(reopened) == expected

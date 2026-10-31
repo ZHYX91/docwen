@@ -181,6 +181,15 @@ CLI, GUI feedback/submission and Runtime use one bounded page-selection contract
 
 CLI、GUI 反馈／提交及 Runtime 共用有界页码合同。展开任何范围前先验证完整表达式、每个 token 和端点；执行时页数须为正整数，自定义选择非空且不能等于全文。保留中文分隔符、反向范围、去重、`*` 逐页和 `#` 奇偶拆分。上限为输入 4096 字符、1024 tokens、源／选择 100000 页。Runtime 只接收整数数组，不强转 bool/float，不静默过滤越界成员。非法请求不发布拆分产物。GUI 错误反馈复用有界结果，不再二次无界展开；拒绝后可正常提交合法选择。页面 metadata 对其它路线继续保留实际非负页数。
 
+Native PDF split controls and their submission handler require a readable positive page count;
+unknown/unreadable PDF metadata disables every split mode and clears stale metadata when switching files.
+OFD/XPS bridge inputs can retain an unknown count until PDF conversion; execution still validates
+against the actual converted PDF. A later readable metadata result restores the appropriate controls.
+
+原生 PDF 拆分控件和提交处理均要求已读取的正页数；页数未知或无法读取时，所有拆分模式均不可执行。
+换文件时清除旧页数，后续读到有效页数可恢复操作。OFD/XPS 桥接输入仍可在转为 PDF 前保留未知页数，
+执行时继续按实际 PDF 页数严格验证。
+
 ## Clipboard projected-area admission / 剪贴板投影面积准入
 
 HTML table anchors and projected grid coverage have separate cumulative budgets. Each table reserves its full projected rows×columns before parsing the new cell's nested blocks or expanding coverage. The document-wide grid limit is 65536 positions, independent of the anchor limit. `rowspan=0` is resolved within its actual row group before reservation. Nested tables consume the same remaining grid budget. Rejection retains the complete frozen plain fallback; invalid HTML-only input creates no replacement. Legal merges, nested block order and explicit header associations retain the existing representability rules: native Word header prefixes where expressible, otherwise readable custom XML rather than invented prefixes.

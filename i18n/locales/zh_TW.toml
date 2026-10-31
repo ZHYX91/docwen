@@ -1122,6 +1122,7 @@ no_transparency = "不保留透明"
 
 # 版式转换区
 [conversion_panel.layout]
+split_page_count_unavailable = "PDF 頁數不可用，讀取頁數後才能分割。"
 split_mode = "分割方式"
 split_custom = "按頁碼分割"
 split_odd_even = "奇偶分割"

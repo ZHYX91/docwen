@@ -298,12 +298,13 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     assert "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     macos = _release_workflow()["jobs"]["build-macos"]
     macos_commands = _commands(macos)
-    assert macos["runs-on"] == "macos-14"
+    assert macos["runs-on"] == "macos-15"
+    assert macos["env"]["MACOSX_DEPLOYMENT_TARGET"] == "14.0"
     assert macos["needs"] == ["identity", "source-checks", "macos-source-checks"]
     assert "needs.macos-source-checks.result == 'success'" in macos["if"]
     assert "needs.source-checks.result == 'success'" in macos["if"]
     targeted = _release_workflow()["jobs"]["macos-source-checks"]
-    assert targeted["runs-on"] == "macos-14" and "tools/qa.py --suite platform" in _commands(targeted)
+    assert targeted["runs-on"] == "macos-15" and "tools/qa.py --suite platform" in _commands(targeted)
     assert "--tests-only" not in _commands(targeted) and "--skip" not in _commands(targeted)
     assert macos_commands.count("scripts/build/build.py") == 1
     assert "scripts/release/macos_package.py" in macos_commands

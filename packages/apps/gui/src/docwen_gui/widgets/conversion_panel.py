@@ -1646,6 +1646,9 @@ class ConversionPanel(QWidget):
     def _on_split_pdf_clicked(self) -> None:
         if not self._page_input_edit:
             return
+        if self._vm.pdf_page_count_unavailable:
+            self._update_page_validation(self._vm.split_expression())
+            return
         text = self._vm.split_expression()
         if not text:
             return
@@ -1679,6 +1682,18 @@ class ConversionPanel(QWidget):
 
     def _update_page_validation(self, text: str) -> None:
         """Update split availability and warning text without rebuilding controls."""
+        if self._vm.pdf_page_count_unavailable:
+            if self._split_pdf_button:
+                self._split_pdf_button.setEnabled(False)
+            if self._page_warning_label:
+                self._page_warning_label.setText(
+                    _t(
+                        "conversion_panel.layout.split_page_count_unavailable",
+                        "PDF page count is unavailable. Splitting requires a readable page count.",
+                    )
+                )
+                self._page_warning_label.show()
+            return
         if not text:
             if self._split_pdf_button:
                 self._split_pdf_button.setEnabled(False)

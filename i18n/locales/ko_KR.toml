@@ -1123,6 +1123,7 @@ no_transparency = "투명도 없음"
 
 # 版式转换区
 [conversion_panel.layout]
+split_page_count_unavailable = "PDF 페이지 수를 확인할 수 없습니다. 분할하려면 페이지 수를 읽어야 합니다."
 split_mode = "분할 방식"
 split_custom = "페이지 번호로 분할"
 split_odd_even = "홀수 / 짝수 페이지"

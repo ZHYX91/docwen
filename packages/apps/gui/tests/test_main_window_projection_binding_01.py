@@ -264,9 +264,11 @@ class TestConversionPanelPdfInfoBinding:
         assert page_edit is not None
         assert info_label is not None
         assert split_button is not None
+        window._conversion_panel_vm.split_mode = "custom"
         page_edit.setText("1-3")
         assert window._conversion_panel_vm.page_input == "1-3"
         assert window._conversion_panel_vm.pdf_total_pages == 12
+        assert split_button.isEnabled()
 
         _emit(window, projection_for(unreadable))
 

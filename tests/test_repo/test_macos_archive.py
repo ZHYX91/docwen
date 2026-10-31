@@ -94,6 +94,9 @@ def test_framework_verification_requires_the_complete_bundle_resource_seal(tmp_p
         calls.append(arguments)
         if "lipo" in arguments[0]:
             return "arm64"
+        if "otool" in arguments[0]:
+            assert arguments == ["/usr/bin/otool", "-arch", "arm64", "-l", str(binary)]
+            return "Load command 0\n      cmd LC_BUILD_VERSION\n platform MACOS\n    minos 14.0\n      sdk 15.0\n"
         assert arguments[-1] == str(framework)
         assert "--deep" in arguments and "--strict" in arguments
         if not sealed:
@@ -106,7 +109,92 @@ def test_framework_verification_requires_the_complete_bundle_resource_seal(tmp_p
     else:
         with pytest.raises(PublicationError, match="resource seal"):
             macos_package.verify_signatures(tmp_path)
-    assert len(calls) == 2
+    assert len(calls) == (3 if sealed else 2)
+
+
+@pytest.mark.parametrize(
+    ("metadata", "expected"),
+    [
+        ("cmd LC_BUILD_VERSION\n platform MACOS\n minos 14.0\n sdk 15.0\n ntools 1\n tool LD\n version 1167.5", "14.0"),
+        ("cmd LC_BUILD_VERSION\n platform 1\n minos 11.3\n sdk 15.0", "11.3"),
+        ("cmd LC_BUILD_VERSION\n platform 1\n minos 14.0.0\n sdk 15.0", "14.0"),
+        ("cmd LC_VERSION_MIN_MACOSX\n version 10.15.7\n sdk 15.0", "10.15.7"),
+    ],
+)
+@pytest.mark.parametrize("magic", sorted(macos_package.MACHO_MAGICS))
+def test_arm64_deployment_floor_uses_minimum_not_sdk(tmp_path, monkeypatch, metadata, expected, magic):
+    binary = tmp_path / "nested/library.dylib"
+    binary.parent.mkdir()
+    binary.write_bytes(magic + b"code")
+    original = binary.read_bytes()
+
+    def run(arguments):
+        if arguments[0] == "/usr/bin/lipo":
+            return "x86_64 arm64"
+        if arguments[0] == "/usr/bin/otool":
+            # Universal binaries must inspect just the supported slice; an x86 floor is irrelevant.
+            assert arguments == ["/usr/bin/otool", "-arch", "arm64", "-l", str(binary)]
+            return f"{binary} (architecture arm64):\nLoad command 0\n{metadata}\nLoad command 1\ncmd LC_UUID\n"
+        assert arguments == ["/usr/bin/codesign", "--verify", "--deep", "--strict", str(binary)]
+        return ""
+
+    monkeypatch.setattr(macos_package, "command", run)
+    report = macos_package.verify_signatures(tmp_path)
+    assert report["machOCount"] == 1
+    assert report["maximumMachOMinimumVersion"] == expected
+    assert binary.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        "cmd LC_UUID",
+        "cmd LC_BUILD_VERSION\n platform MACOS\n sdk 14.0",
+        "cmd LC_BUILD_VERSION\n platform MACOS\n minos invalid",
+        "cmd LC_BUILD_VERSION\n platform MACOS\n minos 15.0\n sdk 14.0",
+        "cmd LC_BUILD_VERSION\n platform MACOS\n minos 14.0.1",
+        "cmd LC_BUILD_VERSION\n platform MACOS\n minos 0.0",
+        "cmd LC_BUILD_VERSION\n platform IOS\n minos 11.0",
+        "cmd LC_BUILD_VERSION\n platform 2\n minos 11.0",
+        "cmd LC_BUILD_VERSION\n minos 11.0",
+        "cmd LC_BUILD_VERSION\n platform MACOS\n platform 1\n minos 11.0",
+        "cmd LC_VERSION_MIN_IPHONEOS\n version 11.0",
+        "cmd LC_VERSION_MIN_MACOSX\n version 14.0\n version 13.0",
+        "cmd LC_BUILD_VERSION\n platform MACOS\n minos 14.0\nLoad command 1\ncmd LC_VERSION_MIN_MACOSX\n version 13.0",
+        "cmd LC_BUILD_VERSION\n platform MACOS\n minos 14.0\nLoad command 1\ncmd LC_BUILD_VERSION\n platform MACOS\n minos 14.0",
+    ],
+)
+def test_invalid_deployment_metadata_rejects_and_names_the_binary(tmp_path, monkeypatch, metadata):
+    binary = tmp_path / "nested/library.dylib"
+    binary.parent.mkdir()
+    binary.write_bytes(b"\xcf\xfa\xed\xfecode")
+
+    def run(arguments):
+        if arguments[0] == "/usr/bin/lipo":
+            return "arm64"
+        if arguments[0] == "/usr/bin/otool":
+            return f"Load command 0\n{metadata}\n"
+        return ""
+
+    monkeypatch.setattr(macos_package, "command", run)
+    with pytest.raises(PublicationError, match=r"nested/library[.]dylib"):
+        macos_package.verify_signatures(tmp_path)
+
+
+def test_signature_report_records_maximum_minimum_across_all_macho_files(tmp_path, monkeypatch):
+    for name in ("lower.dylib", "higher.dylib"):
+        (tmp_path / name).write_bytes(b"\xcf\xfa\xed\xfecode")
+
+    def run(arguments):
+        if arguments[0] == "/usr/bin/lipo":
+            return "arm64"
+        if arguments[0] == "/usr/bin/otool":
+            version = "14.0" if Path(arguments[-1]).name == "higher.dylib" else "11.0"
+            return f"Load command 0\ncmd LC_BUILD_VERSION\nplatform MACOS\nminos {version}\nsdk 15.0\n"
+        return ""
+
+    monkeypatch.setattr(macos_package, "command", run)
+    assert macos_package.verify_signatures(tmp_path)["maximumMachOMinimumVersion"] == "14.0"
 
 
 @pytest.mark.parametrize("fault", ["first_copy", "second_copy", "report_link", "foreign_archive", "success"])
