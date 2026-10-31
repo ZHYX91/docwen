@@ -625,3 +625,28 @@ def test_audit_with_exact_output_is_rejected_before_conversion(tmp_path):
     assert result.error is not None
     assert "output parent directory" in result.error.message
     assert not (tmp_path / "chosen.docx").exists()
+
+
+def test_unconfirmed_process_failure_retains_only_its_task_workspace(tmp_path):
+    from docwen_core.errors import ExternalProcessCleanupUnconfirmed
+
+    def uncertain(context):
+        Path(context.workspace.staging_dir, "owner-evidence").write_text("unconfirmed")
+        raise ExternalProcessCleanupUnconfirmed("Mermaid process cleanup could not be confirmed")
+
+    manager = _build_manager(tmp_path, uncertain)
+    request = _request(tmp_path, "unconfirmed")
+    events = []
+    result = manager.execute_single(request, on_event=events.append)
+    assert not result.success
+    assert result.error is not None
+    assert result.error.diagnostic_code == "EXTERNAL_PROCESS_CLEANUP_UNCONFIRMED"
+    assert not list((tmp_path / "output").glob("*.docx"))
+    evidence = list((tmp_path / "runtime").glob("*/staging/owner-evidence"))
+    assert len(evidence) == 1
+    other = manager._workspaces.create("other-task", str(tmp_path / "unconfirmed.md"))
+    other_directory = Path(other.staging_dir).parent
+    manager._workspaces.cleanup_all()
+    assert evidence[0].exists()
+    assert not other_directory.exists()
+    assert [event.event_type for event in _terminal_events(events)] == ["task_failed"]

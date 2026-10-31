@@ -149,7 +149,7 @@ diagram images are rejected. PNGs fit the body section/columns and paragraph ind
 large reductions emit `MD2DOCX-MERMAID-SCALED` to prompt a readability check.
 
 Image rendering is best-effort per diagram. An unavailable CLI, invalid Mermaid source, timeout, or renderer failure
-produces `MD2DOCX-MERMAID-FALLBACK` and that occurrence remains a visible code block; other diagrams continue.
+produces `MD2DOCX-MERMAID-FALLBACK` only after confirmed process cleanup; that occurrence remains a visible code block and other diagrams continue. Cancellation is control flow, never a successful fallback. If process-family cleanup is unconfirmed, the task fails with `EXTERNAL_PROCESS_CLEANUP_UNCONFIRMED` and retains its registered workspace, including through `cleanup_all`. Linux uses an isolated subreaper/pidfd owner and kernel ECHILD proof; Windows retains Job ownership. macOS cancellation, timeout and nonzero renderer exit remain conservatively unconfirmed, with retained scratch and an explicit native-acceptance limitation. Normal macOS success is unchanged.
 A successfully rendered diagram is an ordinary document image and does not carry the fenced-source recovery
 carrier, so DOCX -> Markdown treats it as an image rather than reconstructing Mermaid source. The original Markdown
 file is never rewritten. The exact resolved-v4 input route remains source-preserving and does not opt into this
@@ -159,7 +159,7 @@ presentation transform.
 `code` 为兼容默认值，继续按代码块保留源码；`image` 使用本地 Mermaid CLI（`mmdc`）生成 PNG 并插入文档。
 DocWen 不会为此下载 Mermaid，也不会调用在线渲染服务；当 `mmdc` 不在 `PATH` 中时，可通过
 `DOCWEN_MERMAID_CLI` 指定可执行文件。单个图表渲染失败时会产生 `MD2DOCX-MERMAID-FALLBACK`，并将该图表
-回退为可见代码块，不影响其他图表继续转换。成功渲染的图表按普通文档图片处理，DOCX -> Markdown 不承诺
+在确认进程回收后回退为可见代码块，不影响其他图表继续转换；无法确认回收则明确失败并保留本请求工作目录，取消不伪装成成功。macOS 的取消、超时和非零退出尚无等价回收证明，按未确认处理。成功渲染的图表按普通文档图片处理，DOCX -> Markdown 不承诺
 还原 Mermaid 源码；原始 Markdown 文件始终不被改写。
 
 ## Obsidian extension interoperability / Obsidian 扩展互通

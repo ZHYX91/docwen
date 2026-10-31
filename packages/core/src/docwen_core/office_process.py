@@ -47,6 +47,24 @@ class OfficeProcessCleanupUnconfirmed(RuntimeError):
     """An interrupted wait could not prove that owned processes were reaped."""
 
 
+class _ConfirmedInterruption(BaseException):
+    def __init__(self, original: BaseException) -> None:
+        self.original = original
+
+
+@dataclass(frozen=True, slots=True)
+class OwnedProcessLaunch:
+    """Optional launch I/O for another consumer of the same Linux owner."""
+
+    cwd: str | None = None
+    environment: tuple[tuple[str, str], ...] | None = None
+    log_path: str | None = None
+    stdin_bytes: bytes | None = None
+    log_limit: int = 0
+    grace_signal: int = signal.SIGTERM
+    preserve_confirmed_interruption: bool = False
+
+
 def _proc_text(path: Path) -> str:
     with path.open(encoding="utf-8", errors="replace") as stream:
         text = stream.read(_PROC_TEXT_MAX_CHARS + 1)
@@ -206,7 +224,9 @@ def _enable_owner() -> None:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-def _owner_worker(connection: Any, stop: Any, cmd: list[str], timeout_s: float) -> None:
+def _owner_worker(
+    connection: Any, stop: Any, cmd: list[str], timeout_s: float, launch: OwnedProcessLaunch | None = None
+) -> None:
     launcher: subprocess.Popen[bytes] | None = None
     descriptors: dict[int, int] = {}
     reaped: list[int] = []
@@ -215,6 +235,8 @@ def _owner_worker(connection: Any, stop: Any, cmd: list[str], timeout_s: float) 
     stopping_at: float | None = None
     deadline = float("inf")
     cleanup_confirmed = False
+    log = None
+    resources = contextlib.ExitStack()
     try:
         _enable_owner()
         wnohang = getattr(os, "WNOHANG", None)
@@ -224,14 +246,43 @@ def _owner_worker(connection: Any, stop: Any, cmd: list[str], timeout_s: float) 
             cleanup_confirmed = True
             reason = "cancelled before Office launch"
             return
+        if launch is not None and launch.log_path is not None:
+            # The stack spans launch and the complete child-drain loop.
+            log = resources.enter_context(open(launch.log_path, "wb"))  # noqa: SIM115
         launcher = subprocess.Popen(
-            cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True
+            cmd,
+            stdin=subprocess.PIPE if launch is not None and launch.stdin_bytes is not None else subprocess.DEVNULL,
+            stdout=log if log is not None else subprocess.DEVNULL,
+            stderr=subprocess.STDOUT if log is not None else subprocess.DEVNULL,
+            cwd=launch.cwd if launch is not None else None,
+            env=dict(launch.environment) if launch is not None and launch.environment is not None else None,
+            start_new_session=True,
         )
         deadline = time.monotonic() + max(timeout_s, 0.0)
+        # Once launch succeeds, even a failed handshake must reach the drain
+        # loop. Never abandon children through the setup exception handler.
+        if launch is not None and launch.stdin_bytes is not None:
+            try:
+                assert launcher.stdin is not None
+                launcher.stdin.write(launch.stdin_bytes)
+                launcher.stdin.close()
+            except BaseException as error:
+                stopping_at = time.monotonic()
+                reason = f"Owned process launch handshake failed: {type(error).__name__}"
         with contextlib.suppress(OSError, EOFError):
             connection.send(("started", launcher.pid, deadline))
         while True:
             now = time.monotonic()
+            if stopping_at is None and launch is not None and launch.log_limit and log is not None:
+                try:
+                    oversized = os.fstat(log.fileno()).st_size > launch.log_limit
+                except OSError:
+                    stopping_at = now
+                    reason = "Owned process diagnostic bound could not be checked"
+                else:
+                    if oversized:
+                        stopping_at = now
+                        reason = "Owned process diagnostic output exceeded its limit"
             if stopping_at is None and (stop.is_set() or now >= deadline):
                 stopping_at = now
                 reason = "Office conversion timed out" if now >= deadline else "Office conversion cancelled"
@@ -279,7 +330,10 @@ def _owner_worker(connection: Any, stop: Any, cmd: list[str], timeout_s: float) 
                                 continue
                             descriptors[child] = descriptor
                         with contextlib.suppress(ProcessLookupError):
-                            send_pidfd(descriptor, kill_signal if force else signal.SIGTERM)
+                            send_pidfd(
+                                descriptor,
+                                kill_signal if force else launch.grace_signal if launch is not None else signal.SIGTERM,
+                            )
                 except OSError as error:
                     reason = f"Office process termination could not be confirmed: {type(error).__name__}"
             time.sleep(_POLL_S)
@@ -289,6 +343,8 @@ def _owner_worker(connection: Any, stop: Any, cmd: list[str], timeout_s: float) 
         # exception cannot authorize deletion; the parent retains its workspace.
         cleanup_confirmed = launcher is None
     finally:
+        with contextlib.suppress(OSError):
+            resources.close()
         for descriptor in descriptors.values():
             with contextlib.suppress(OSError):
                 os.close(descriptor)
@@ -307,11 +363,11 @@ def _owner_worker(connection: Any, stop: Any, cmd: list[str], timeout_s: float) 
         connection.close()
 
 
-def _start_owner(cmd: list[str], timeout_s: float) -> tuple[Any, Any, Any]:
+def _start_owner(cmd: list[str], timeout_s: float, launch: OwnedProcessLaunch | None = None) -> tuple[Any, Any, Any]:
     context = multiprocessing.get_context("spawn")
     parent_connection, child_connection = context.Pipe(duplex=False)
     stop = context.Event()
-    owner = context.Process(target=_owner_worker, args=(child_connection, stop, cmd, timeout_s), daemon=True)
+    owner = context.Process(target=_owner_worker, args=(child_connection, stop, cmd, timeout_s, launch), daemon=True)
     try:
         owner.start()
     except BaseException:
@@ -327,10 +383,13 @@ def run_owned_office(
     *,
     is_cancelled: Callable[[], bool],
     timeout_s: float,
+    launch: OwnedProcessLaunch | None = None,
 ) -> OfficeProcessResult:
     """Keep every interrupted/failed control-plane exit explicitly unconfirmed."""
     try:
-        return _run_owned_office(cmd, is_cancelled=is_cancelled, timeout_s=timeout_s)
+        return _run_owned_office(cmd, is_cancelled=is_cancelled, timeout_s=timeout_s, launch=launch)
+    except _ConfirmedInterruption as interrupted:
+        raise interrupted.original from None
     except OfficeProcessCleanupUnconfirmed:
         raise
     except BaseException as error:
@@ -347,11 +406,20 @@ def _run_owned_office(
     *,
     is_cancelled: Callable[[], bool],
     timeout_s: float,
+    launch: OwnedProcessLaunch | None = None,
 ) -> OfficeProcessResult:
-    if is_cancelled() or timeout_s <= 0:
+    try:
+        pre_cancelled = is_cancelled()
+    except BaseException as error:
+        if launch is not None and launch.preserve_confirmed_interruption:
+            raise _ConfirmedInterruption(error) from error
+        raise
+    if pre_cancelled or timeout_s <= 0:
         return OfficeProcessResult(False, True, "cancelled before Office launch")
     try:
-        owner, connection, stop = _start_owner(cmd, timeout_s)
+        owner, connection, stop = (
+            _start_owner(cmd, timeout_s) if launch is None else _start_owner(cmd, timeout_s, launch)
+        )
     except Exception as error:
         return OfficeProcessResult(False, False, f"Cannot confirm Office owner startup: {type(error).__name__}")
     result: OfficeProcessResult | None = None
@@ -362,7 +430,11 @@ def _run_owned_office(
     while True:
         try:
             now = time.monotonic()
-            if is_cancelled() or now >= (business_deadline if business_deadline is not None else startup_deadline):
+            if (
+                interruption is not None
+                or is_cancelled()
+                or now >= (business_deadline if business_deadline is not None else startup_deadline)
+            ):
                 if stop_deadline is None:
                     stop_deadline = now + _TERM_GRACE_S + _REAP_TIMEOUT_S + _OWNER_JOIN_S
                 stop.set()
@@ -417,5 +489,7 @@ def _run_owned_office(
     if not owner_alive:
         owner.close()
     if interruption is not None:
+        if outcome.cleanup_confirmed and launch is not None and launch.preserve_confirmed_interruption:
+            raise _ConfirmedInterruption(interruption)
         raise OfficeProcessCleanupUnconfirmed(outcome.reason or "Office cleanup was interrupted") from interruption
     return outcome

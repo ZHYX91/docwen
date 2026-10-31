@@ -23,3 +23,7 @@ class ValidationError(DocWenError):
 
 class CancellationRequested(DocWenError):
     """Raised when a task is cancelled."""
+
+
+class ExternalProcessCleanupUnconfirmed(DocWenError):
+    """Owned external processes may still use this task's workspace."""

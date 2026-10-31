@@ -22,7 +22,7 @@ from docwen_core.detection import (
     signature_info_for_ref,
     signature_validation_diagnostic,
 )
-from docwen_core.errors import CancellationRequested
+from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
 from docwen_core.events.task_events import (
     make_task_cancelled,
     make_task_completed,
@@ -244,6 +244,17 @@ class TaskManager:
 
             return self._plugin_success_result(state)
 
+        except ExternalProcessCleanupUnconfirmed as exc:
+            self._workspaces.retain_unconfirmed(task_id)
+            return self._known_failure_result(
+                state,
+                ConversionErrorInfo(
+                    error_type="conversion_failed",
+                    message=str(exc),
+                    diagnostic_code="EXTERNAL_PROCESS_CLEANUP_UNCONFIRMED",
+                ),
+                metrics=ConversionMetrics(input_bytes=input_ref.size_bytes),
+            )
         except CancellationRequested:
             return self._cancelled_result(state)
         except RouteResolutionError as exc:

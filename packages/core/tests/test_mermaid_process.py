@@ -17,19 +17,19 @@ pytestmark = [pytest.mark.integration, pytest.mark.pr_gate]
 def test_profile_cleanup_preserves_cancellation_and_reports_nonsharing_errors(tmp_path, monkeypatch, winerror) -> None:
     from docwen_core import mermaid_render
 
-    original_cleanup = mermaid_render.tempfile.TemporaryDirectory.cleanup
+    original_cleanup = mermaid_render.shutil.rmtree
     attempts = []
     error = PermissionError("profile in use")
     monkeypatch.setattr(error, "winerror", winerror, raising=False)
 
     def cleanup(temporary):
-        attempts.append(temporary.name)
+        attempts.append(temporary)
         if len(attempts) == 1:
             raise error
         original_cleanup(temporary)
 
-    monkeypatch.setattr(mermaid_render.tempfile.TemporaryDirectory, "cleanup", cleanup)
-    expected = CancellationRequested if winerror in (32, 33) else PermissionError
+    monkeypatch.setattr(mermaid_render.shutil, "rmtree", cleanup)
+    expected = CancellationRequested
     with pytest.raises(expected), _renderer_directory(tmp_path) as directory:
         (directory / "profile").write_text("owned browser data")
         raise CancellationRequested("cancelled")
@@ -50,7 +50,7 @@ def test_profile_cleanup_sharing_retry_has_a_deadline(tmp_path, monkeypatch) -> 
         raise error
 
     clock = iter([0, 0, 6])
-    monkeypatch.setattr(mermaid_render.tempfile.TemporaryDirectory, "cleanup", cleanup)
+    monkeypatch.setattr(mermaid_render.shutil, "rmtree", cleanup)
     monkeypatch.setattr(mermaid_render.time, "monotonic", lambda: next(clock))
     monkeypatch.setattr(mermaid_render.time, "sleep", lambda _: None)
     with pytest.raises(PermissionError, match="remains in use"), _renderer_directory(tmp_path):
@@ -58,6 +58,7 @@ def test_profile_cleanup_sharing_retry_has_a_deadline(tmp_path, monkeypatch) -> 
 
 
 @pytest.mark.parametrize("cancel", [False, True])
+@pytest.mark.skipif(sys.platform == "darwin", reason="macOS interrupted process-family exit remains unconfirmed")
 def test_timeout_and_cancellation_reap_real_child_processes(tmp_path, cancel) -> None:
     token = CancellationToken()
     children = []
@@ -75,7 +76,7 @@ def test_timeout_and_cancellation_reap_real_child_processes(tmp_path, cancel) ->
 
     started = time.monotonic()
     with (
-        pytest.raises(CancellationRequested if cancel else MermaidRenderError, match=r"[Cc]ancel|exceeded"),
+        pytest.raises(CancellationRequested if cancel else MermaidRenderError, match=r"[Cc]ancel|exceeded|timed out"),
         _renderer_directory(tmp_path) as job_dir,
     ):
         script = job_dir / "worker.py"
@@ -120,3 +121,37 @@ def test_timeout_and_cancellation_reap_real_child_processes(tmp_path, cancel) ->
                 return
         time.sleep(0.05)
     pytest.fail("Mermaid child survived cancellation/timeout")
+
+
+@pytest.mark.parametrize("error", [CancellationRequested("cancelled"), KeyboardInterrupt()])
+def test_profile_cleanup_cannot_replace_interruption_with_ordinary_error(tmp_path, monkeypatch, error):
+    from docwen_core import mermaid_render
+
+    def fail(_path):
+        raise OSError(39, "Directory not empty")
+
+    monkeypatch.setattr(mermaid_render.shutil, "rmtree", fail)
+    with pytest.raises(type(error)) as caught, _renderer_directory(tmp_path):
+        raise error
+    assert caught.value is error
+
+
+def test_unconfirmed_process_directory_has_no_automatic_finalizer(tmp_path):
+    import gc
+
+    from docwen_core.errors import ExternalProcessCleanupUnconfirmed
+
+    with pytest.raises(ExternalProcessCleanupUnconfirmed), _renderer_directory(tmp_path) as directory:
+        (directory / "evidence").write_text("still owned")
+        raise ExternalProcessCleanupUnconfirmed("unknown")
+    gc.collect()
+    assert (directory / "evidence").read_text() == "still owned"
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS conservative cleanup contract")
+def test_macos_nonzero_launcher_exit_preserves_unconfirmed_directory(tmp_path):
+    from docwen_core.errors import ExternalProcessCleanupUnconfirmed
+
+    with pytest.raises(ExternalProcessCleanupUnconfirmed), _renderer_directory(tmp_path) as directory:
+        _run_renderer([sys.executable, "-c", "import sys; sys.stdin.readline(); sys.exit(1)"], directory, None, 5)
+    assert directory.exists()

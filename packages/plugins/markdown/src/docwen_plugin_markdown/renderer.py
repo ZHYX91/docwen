@@ -794,6 +794,10 @@ class MdToDocxRenderer:
             self._mermaid_images.append((paragraph, shape, image.px_width, image.px_height, occurrence))
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         except Exception as exc:
+            from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
+
+            if isinstance(exc, (CancellationRequested, ExternalProcessCleanupUnconfirmed)):
+                raise
             if paragraph is not None and paragraph._p.getparent() is not None:
                 paragraph._p.getparent().remove(paragraph._p)
                 self._mermaid_images = [entry for entry in self._mermaid_images if entry[0] is not paragraph]

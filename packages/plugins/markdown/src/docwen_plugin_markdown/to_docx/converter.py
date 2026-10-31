@@ -24,7 +24,7 @@ from docwen_core.docx_semantics_v3 import (
     DocxSemanticsV3Error,
     DocxSemanticsV3Session,
 )
-from docwen_core.errors import CancellationRequested
+from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import (
     DeclaredResourceResolver,
@@ -1406,7 +1406,7 @@ class MdToDocxConverter:
             workspace.add_artifact(artifact)
             return result
 
-        except CancellationRequested:
+        except (CancellationRequested, ExternalProcessCleanupUnconfirmed):
             pending_output = locals().get("output_path")
             if isinstance(pending_output, str):
                 Path(pending_output).unlink(missing_ok=True)
