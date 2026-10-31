@@ -168,6 +168,6 @@ def test_empty_snapshot_projects_deterministic_request_defaults(tmp_path: Path) 
             "main_md",
             True,
             100,
-            "🖼️ **图片文字识别**：",
+            "",
         )
     }

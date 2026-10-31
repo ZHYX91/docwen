@@ -227,7 +227,7 @@ class TestResetSectionIsolation:
         loader.set_value("export.to_md_ocr_placement_mode", "image_md")
         loader.set_value("conversion.export.base64_compress_enabled", False)
         loader.set_value("conversion.export.base64_compress_threshold_kb", 512)
-        loader.set_value("conversion.ocr_output.show_blockquote_title", False)
+        loader.set_value("conversion.ocr_output.show_blockquote_title", True)
         loader.set_value(
             "conversion.ocr_output.blockquote_title_override_by_locale.zh_CN",
             "自定义 OCR 标题",
@@ -238,7 +238,7 @@ class TestResetSectionIsolation:
         assert vm.config.export.image_mode == "base64"
         assert vm.config.export.base64_compress_enabled is False
         assert vm.config.export.base64_compress_threshold_kb == 512
-        assert vm.config.export.ocr_title_enabled is False
+        assert vm.config.export.ocr_title_enabled is True
         assert vm.config.formatting.bold_syntax == "underscore"
 
         assert vm.reset_group("export") is True
@@ -247,7 +247,7 @@ class TestResetSectionIsolation:
         assert vm.config.export.ocr_mode == "main_md"
         assert vm.config.export.base64_compress_enabled is True
         assert vm.config.export.base64_compress_threshold_kb == 100
-        assert vm.config.export.ocr_title_enabled is True
+        assert vm.config.export.ocr_title_enabled is False
         assert loader.config.as_dict()["conversion"]["ocr_output"]["blockquote_title_override_by_locale"] == {}
         assert vm.config.formatting.bold_syntax == "underscore"
 
