@@ -515,7 +515,7 @@ def test_allocator_reserves_max_id_and_ambiguous_style_ids_without_overwriting(t
     style = properties.find(qn("w:rStyle"))
     assert style is not None
     reference_style = style.get(qn("w:val"), "")
-    assert reference_style.startswith("DocWenNumberReview")
+    assert reference_style.startswith("DocWenComment")
     output = tmp_path / "sparse-id.docx"
     document.save(output)
     assert next(iter(Document(str(output)).comments)).text == NUMBERING_REVIEW_TEXT

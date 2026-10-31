@@ -15,6 +15,7 @@ class AttachmentDocument:
     markdown: str
     paragraph_indices: tuple[int, ...]
     children: tuple[AttachmentDocument, ...] = ()
+    image_paths: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

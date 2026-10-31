@@ -1558,8 +1558,7 @@ def _run_template_resource_smoke(binary_path: Path, *, work_dir: Path) -> Path:
     node_name = resolved_output.stem
     if (
         resolved_output.suffix != ".docx"
-        or resolved_output.parent.name != node_name
-        or resolved_output.parent.parent.resolve() != output_path.resolve()
+        or resolved_output.parent.resolve() != output_path.resolve()
         or re.fullmatch(r"canonical-template-id-smoke_\d{8}_\d{6}_fromMd", node_name) is None
     ):
         raise RuntimeError(
@@ -3221,7 +3220,7 @@ def _run_machine_protocol_smoke_impl(
         or not isinstance(semantic_artifacts, list)
         or len(semantic_artifacts) != 1
         or len(semantic_documents) != 1
-        or semantic_bundle.get("layout_schema") != "docwen.document_node.v1"
+        or semantic_bundle.get("layout_schema") != "docwen.artifact_layout.v1"
     ):
         raise RuntimeError(f"packaged_machine_protocol_semantic_artifact_invalid:{semantic_bundle}")
     expected_entries = [
@@ -3240,6 +3239,8 @@ def _run_machine_protocol_smoke_impl(
     if not isinstance(semantic_locator, str) or "\\" in semantic_locator or ".." in semantic_locator.split("/"):
         raise RuntimeError(f"packaged_machine_protocol_semantic_locator_invalid:{semantic_locator}")
     semantic_output = staging / Path(semantic_locator)
+    if semantic_output.parent.resolve() != staging.resolve():
+        raise RuntimeError(f"packaged_machine_protocol_single_document_not_direct:{semantic_locator}")
     semantic_output_bytes = _read_bytes_with_long_path(semantic_output)
     if len(semantic_output_bytes) != semantic_documents[0].get("size_bytes") or hashlib.sha256(
         semantic_output_bytes

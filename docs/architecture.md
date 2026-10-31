@@ -107,6 +107,24 @@ missing or unavailable Office bridge routes cannot be hidden by an available fin
 - Plugins do not import application/runtime/apps/bundle.
 - GUI and CLI do not deep-import plugin implementations or runtime internals.
 - Network policy, configuration persistence and output placement each have one owner.
+
+Output producers declare attachment and resource ownership before publication. Runtime uses these
+relations to place child documents and their resources; Application projects the same relations into
+Artifact Bundle instead of reconstructing Gongwen-specific ownership. Shared image bytes may back
+separate resource artifacts, each owned by the document whose portable directory contains it.
+Final delivery shape belongs to Runtime: Markdown-to-document/spreadsheet conversions publish a single
+deliverable as a file; multiple deliverables or an explicitly requested audit sidecar form a result
+directory. Conversions to Markdown keep their document directory. Private intermediate
+directories in a conversion/proofreading pipeline do not dictate the final public layout.
+
+产物生产者在发布前声明附件与资源归属，Runtime 据此布局，Application 将同一关系投影到 Bundle，
+不再分别推断公文私有标记。正文和附件共用图片时可复用源字节，但各自产生有明确归属的资源产物，
+使附件目录可独立携带。最终交付形态由 Runtime 决定，流水线的私有中间目录不决定用户输出目录。
+
+DOCX numbering reviews, field reviews and proofreading share the Core comment append mechanism.
+It reserves existing package-wide identities and preserves template-owned comments and styles;
+callers retain business text, insertion provenance and exact span selection. The helper imports no
+python-docx implementation, keeping document-library integration at the caller boundary.
 - GUI view models own presentation state; widgets render or forward interaction and do not become persistence sources.
 
 These rules are enforced by Import Linter, repository guards and Pyright.

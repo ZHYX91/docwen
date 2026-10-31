@@ -21,6 +21,18 @@ IDs, missing separators/resources and dangling references with unsafe ID ambigui
 other-story numeric references reserve their IDs too. Source file hashes remain unchanged. These generated package
 checks and python-docx save/reopen do not certify native Word/WPS/LibreOffice save/reopen fidelity.
 
+`test_artifact_ownership.py`, `test_document_node_output.py` and `test_document_node_bundle_mapping.py`
+check producer ownership before publication, scoped resource links, portable attachment directories and
+the same Bundle relations. `test_gongwen_attachment_resources.py` uses a real DOCX with main-only,
+attachment-only and shared image bytes, then independently checks output hashes and resource identities.
+Single/multiple CSV and DOCX/XLSX output regressions cover flat files, grouped multi-file results,
+explicit audit sidecars, exact destinations and conversion-plus-proofreading pipelines.
+
+`test_docx_comments.py` covers package-wide ID reservation, preservation of existing comments/styles,
+main-story range restrictions and rollback of XML, relationships and related-part caches. Numbering,
+field-review and proofreading tests exercise their shared writer with their own business spans and text.
+These source regressions do not replace native Office open/save/reopen or final packaged acceptance.
+
 Local QA and CI use `tools/qa.py` for the same mandatory source checks: whole-repository Ruff,
 test governance, all Import-Linter dependency contracts, architecture cleanliness, and Pyright
 for Windows, Linux and macOS. `python tools/qa.py --skip-pytest` runs these checks before costly

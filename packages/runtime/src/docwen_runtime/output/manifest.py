@@ -93,6 +93,11 @@ class OutputManifestWriter:
         self._finalizer = finalizer
 
     @classmethod
+    def audit_enabled(cls, request: ConversionRequest) -> bool:
+        """Whether the caller explicitly requests a published audit artifact."""
+        return request.output_policy.write_artifacts and cls._context_for_request(request).policy.save_to_output
+
+    @classmethod
     def build_for_success(cls, request: ConversionRequest, result: ConversionResult) -> OutputManifestDocument | None:
         """Prepare audit facts before the grouped output transaction starts."""
         context = cls._context_for_request(request)

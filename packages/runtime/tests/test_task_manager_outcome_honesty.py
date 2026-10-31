@@ -120,7 +120,7 @@ def test_output_preflight_failure_never_starts_conversion(tmp_path: Path, monkey
     def unsupported(source: str, destination: str) -> None:
         raise AtomicPublishUnavailable(errno.EINVAL, "Choose another output folder")
 
-    monkeypatch.setattr(OutputFinalizer, "_publish_directory_no_clobber", staticmethod(unsupported))
+    monkeypatch.setattr(OutputFinalizer, "_publish_no_clobber", staticmethod(unsupported))
     request = _request(tmp_path, "unsupported-output")
     original = Path(request.input_refs[0].path).read_bytes()
     events: list[TaskEvent] = []
@@ -611,3 +611,17 @@ def test_diagnostic_deduplication_keeps_distinct_artifact_bindings() -> None:
     merged = TaskManager._merge_diagnostics([first], [second], [first])
 
     assert [diagnostic.artifact_id for diagnostic in merged] == ["resource.one", "resource.two"]
+
+
+def test_audit_with_exact_output_is_rejected_before_conversion(tmp_path):
+    def unexpected(context):
+        pytest.fail("invalid exact output with audit must not start the plugin")
+
+    request = _request(tmp_path, "audit-exact")
+    request.output_policy = OutputPolicy(output_path=str(tmp_path / "chosen.docx"))
+    request.config_snapshot = {"output": {"manifest": {"save_to_output": True}}}
+    result = _build_manager(tmp_path, unexpected).execute_single(request)
+    assert not result.success
+    assert result.error is not None
+    assert "output parent directory" in result.error.message
+    assert not (tmp_path / "chosen.docx").exists()

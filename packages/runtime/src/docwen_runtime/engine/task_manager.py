@@ -226,16 +226,6 @@ class TaskManager:
                 cancellation=state.token,
             )
             state.request = replace(state.request, conversion_identity=state.identity)
-            if (
-                request.output_policy.output_path
-                and not request.action_name
-                and (
-                    (input_ref.category == "markdown" and input_ref.format == "txt")
-                    or input_ref.format in {"md", "markdown"}
-                    or request.target_format in {"md", "markdown"}
-                )
-            ):
-                raise ValueError("Markdown conversions require output_dir, not an exact output_path")
             self._run_plugin(state, reserved_cancellation=is_reserved_cancellation)
             plugin_result = state.plugin_result
             assert plugin_result is not None
@@ -334,13 +324,14 @@ class TaskManager:
                 self._workspaces.cleanup(task_id)
 
     @staticmethod
-    def _request_groups_outputs(state: _SingleTaskState) -> bool:
-        return state.request.output_policy.group_outputs or (
-            not state.request.action_name
-            and (
-                state.input_ref.format in {"md", "markdown"}
-                or (state.input_ref.category == "markdown" and state.input_ref.format == "txt")
-            )
+    def _is_conversion_output(state: _SingleTaskState) -> bool:
+        # A post-render proofreading stage retains the original Markdown
+        # identity while its physical input is DOCX. Ordinary proofreading
+        # remains an action and keeps its existing output naming.
+        return not state.request.action_name or (
+            state.identity is not None
+            and state.identity.source_format in {"md", "markdown", "txt"}
+            and state.input_ref.format == "docx"
         )
 
     def _run_plugin(
@@ -374,12 +365,15 @@ class TaskManager:
         self._finalizer.preflight(
             state.request.output_policy,
             input_path=state.input_ref.path,
-            group_outputs=self._request_groups_outputs(state),
+            group_outputs=state.request.output_policy.group_outputs,
             # Markdown validation emits a JSON report, not Markdown artifacts.
             markdown_output=(
                 state.request.target_format in {"md", "markdown"} and state.request.action_name != "validate"
             ),
             cancellation=state.token.view(),
+            identity=state.identity,
+            conversion_output=self._is_conversion_output(state),
+            audit_output=OutputManifestWriter.audit_enabled(state.request),
         )
         workspace = self._workspaces.create(
             state.task_id,
@@ -638,8 +632,9 @@ class TaskManager:
             duration_ms=state.duration_ms,
             input_bytes=state.input_ref.size_bytes,
             cancellation=state.token.view(),
-            group_outputs=self._request_groups_outputs(state),
+            group_outputs=state.request.output_policy.group_outputs,
             identity=state.identity,
+            conversion_output=self._is_conversion_output(state),
             audit_document=OutputManifestWriter.build_for_success(
                 state.request, replace(state.plugin_result, artifacts=artifacts)
             ),

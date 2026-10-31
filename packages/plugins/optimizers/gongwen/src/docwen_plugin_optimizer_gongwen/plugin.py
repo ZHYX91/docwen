@@ -198,7 +198,7 @@ class GongwenOptimizerPlugin:
             import os
             import uuid
 
-            from docwen_core.models.artifact import ArtifactManifest
+            from docwen_core.models.artifact import ArtifactManifest, ArtifactOwnership
             from docwen_core.models.result import ConversionMetrics
 
             input_basename = os.path.basename(input_path)
@@ -222,6 +222,12 @@ class GongwenOptimizerPlugin:
             )
             context.workspace.add_artifact(artifact)
             artifacts = [artifact]
+            image_owners: list[tuple[str, tuple[str, ...]]] = [
+                (
+                    artifact.artifact_id,
+                    tuple(gongwen_result.get("main_image_paths", gongwen_result.get("image_paths", []))),
+                )
+            ]
 
             for attachment_document in attachment_documents:
                 attachment_path = context.workspace.create_artifact_path("auxiliary", ".md")
@@ -257,11 +263,14 @@ class GongwenOptimizerPlugin:
                         "attachment_ordinal": attachment_document.ordinal,
                         "attachment_title": attachment_document.title,
                         "attachment_paragraph_indices": list(attachment_document.paragraph_indices),
-                        "attachment_owner_artifact_id": artifact.artifact_id,
                         "paragraph_count": gongwen_result["stats"].get("paragraphs", 0),
                     },
                     is_primary=False,
+                    ownership=ArtifactOwnership(
+                        "attachment_of", artifact.artifact_id, "attachment", attachment_document.ordinal - 1, "附件"
+                    ),
                 )
+                image_owners.append((attachment_artifact.artifact_id, attachment_document.image_paths))
                 context.workspace.add_artifact(attachment_artifact)
                 artifacts.append(attachment_artifact)
 
@@ -269,22 +278,24 @@ class GongwenOptimizerPlugin:
 
             from docwen_core.models.artifact import ARTIFACT_KIND_IMAGE
 
-            for image_path in dict.fromkeys(gongwen_result.get("image_paths", [])):
-                image_name = os.path.basename(image_path)
-                image_artifact = ArtifactManifest(
-                    artifact_id=str(uuid.uuid4()),
-                    kind=ARTIFACT_KIND_IMAGE,
-                    staging_path=image_path,
-                    suggested_name=image_name,
-                    media_type=mimetypes.guess_type(image_name)[0] or "application/octet-stream",
-                    metadata={
-                        "source_format": "docx",
-                        "source_kind": "gongwen_image",
-                    },
-                    is_primary=False,
-                )
-                context.workspace.add_artifact(image_artifact)
-                artifacts.append(image_artifact)
+            for owner_id, image_paths in image_owners:
+                for ordinal, image_path in enumerate(dict.fromkeys(image_paths)):
+                    image_name = os.path.basename(image_path)
+                    image_artifact = ArtifactManifest(
+                        artifact_id=str(uuid.uuid4()),
+                        kind=ARTIFACT_KIND_IMAGE,
+                        staging_path=image_path,
+                        suggested_name=image_name,
+                        media_type=mimetypes.guess_type(image_name)[0] or "application/octet-stream",
+                        metadata={
+                            "source_format": "docx",
+                            "source_kind": "gongwen_image",
+                        },
+                        is_primary=False,
+                        ownership=ArtifactOwnership("resource_of", owner_id, "image", ordinal),
+                    )
+                    context.workspace.add_artifact(image_artifact)
+                    artifacts.append(image_artifact)
 
             import time as _time
 

@@ -18,12 +18,47 @@ if TYPE_CHECKING:
     from docwen_plugin_optimizer_gongwen.runtime_config import GongwenContentRuntimeConfig
 
 
+def render_feature_images(
+    pf: ParagraphFeature,
+    *,
+    image_mode: str,
+    image_link_style: str,
+    export_semantics: MarkdownExportSemantics | None,
+) -> list[str]:
+    """Render resource occurrences identically in body and attachment documents."""
+    output_parts: list[str] = []
+    for img_path in pf.extracted_images:
+        if image_mode == "base64":
+            markdown_path = img_path
+        elif "\\" in img_path:
+            markdown_path = PureWindowsPath(img_path).name
+        else:
+            markdown_path = Path(img_path).name
+        img_md = generate_image_markdown(
+            image_path=markdown_path,
+            image_mode=image_mode,
+            image_link_style=image_link_style,
+            export_semantics=export_semantics,
+        )
+        ocr_markdown = pf.image_ocr_markdown.get(img_path, "")
+        ocr_text = pf.image_ocr_texts.get(img_path, "")
+        if ocr_markdown:
+            img_md += f"\n\n{ocr_markdown}"
+        elif ocr_text:
+            img_md += f"\n> {ocr_text}"
+        if img_md.strip():
+            output_parts.append(img_md)
+            output_parts.append("")
+    return output_parts
+
+
 def render(
     metadata: GongwenMetadata,
     body_lines: list[str],
     skip_indices: list[int] | None = None,
     *,
     feature_map: Mapping[int, ParagraphFeature],
+    exclude_indices: frozenset[int] = frozenset(),
     config: GongwenContentRuntimeConfig | None = None,
     remove_numbering: bool = True,
     heading_formatter: Any | None = None,
@@ -70,36 +105,19 @@ def render(
     skip = set(skip_indices or [])
     fm = feature_map
 
-    def append_images(pf: ParagraphFeature) -> None:
-        for img_path in pf.extracted_images:
-            if image_mode == "base64":
-                markdown_path = img_path
-            elif "\\" in img_path:
-                markdown_path = PureWindowsPath(img_path).name
-            else:
-                markdown_path = Path(img_path).name
-            img_md = generate_image_markdown(
-                image_path=markdown_path,
-                image_mode=image_mode,
-                image_link_style=image_link_style,
-                export_semantics=export_semantics,
-            )
-            ocr_markdown = pf.image_ocr_markdown.get(img_path, "")
-            ocr_text = pf.image_ocr_texts.get(img_path, "")
-            if ocr_markdown:
-                img_md += f"\n\n{ocr_markdown}"
-            elif ocr_text:
-                img_md += f"\n> {ocr_text}"
-            output_parts.append(img_md)
-            output_parts.append("")
-
     for i, line in enumerate(body_lines):
+        if i in exclude_indices:
+            continue
         pf = fm.get(i)
         if i in skip:
             # Structural text may move into YAML, but a seal/signature image in
             # the same paragraph must remain reachable in the Markdown output.
             if pf and pf.extracted_images:
-                append_images(pf)
+                output_parts.extend(
+                    render_feature_images(
+                        pf, image_mode=image_mode, image_link_style=image_link_style, export_semantics=export_semantics
+                    )
+                )
             continue
 
         # Allow empty-text paragraphs that have rich content (formulas, images, breaks)
@@ -137,7 +155,11 @@ def render(
             output_parts.append("")
             # Images after formula paragraph
             if pf.extracted_images:
-                append_images(pf)
+                output_parts.extend(
+                    render_feature_images(
+                        pf, image_mode=image_mode, image_link_style=image_link_style, export_semantics=export_semantics
+                    )
+                )
             continue
 
         # Heading rendering
@@ -175,7 +197,11 @@ def render(
             output_parts.append("")
             # Images after heading paragraph
             if pf.extracted_images:
-                append_images(pf)
+                output_parts.extend(
+                    render_feature_images(
+                        pf, image_mode=image_mode, image_link_style=image_link_style, export_semantics=export_semantics
+                    )
+                )
             continue
 
         # Ordinary lists are independent of Gongwen heading-number cleanup.
@@ -189,7 +215,11 @@ def render(
 
         # Images after paragraph
         if pf and pf.extracted_images:
-            append_images(pf)
+            output_parts.extend(
+                render_feature_images(
+                    pf, image_mode=image_mode, image_link_style=image_link_style, export_semantics=export_semantics
+                )
+            )
 
         output_parts.append("")
 

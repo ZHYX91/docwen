@@ -110,10 +110,10 @@ def register_execution_parsers(subparsers: Any) -> None:
     destination.add_argument(
         "--output",
         metavar="PATH",
-        help="Exact output file for conversions that do not use Markdown.",
+        help="Exact output file for a single non-Markdown result.",
     )
     destination.add_argument(
-        "--output-dir", metavar="DIR", help="Output parent directory; required for Markdown conversions."
+        "--output-dir", metavar="DIR", help="Output parent directory; required for Markdown or multiple-file results."
     )
     _add_convert_options(convert)
     _add_write_controls(convert)

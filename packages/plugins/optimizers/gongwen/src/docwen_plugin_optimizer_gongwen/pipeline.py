@@ -336,17 +336,6 @@ def convert_docx_to_md_gongwen(
     # lookup onto the wrong source paragraph.
     body_lines = [feature.text for feature in features]
     feature_map = {f.index: f for f in features}
-    markdown = render(
-        metadata,
-        body_lines,
-        skip_indices=result.skip_indices,
-        feature_map=feature_map,
-        remove_numbering=remove_numbering,
-        heading_formatter=heading_formatter,
-        image_mode=image_mode,
-        image_link_style=image_link_style,
-        export_semantics=export_semantics,
-    )
 
     # ── 5.  Attachment rendering ─────────────────────────────────────
     if progress:
@@ -357,13 +346,31 @@ def convert_docx_to_md_gongwen(
     # content; including header/following rows duplicated the same list.
     attachment_indices = [idx for idx, c in result.candidates.items() if c.element_type == "attachment_content"]
     if attachment_indices:
+        from docwen_plugin_optimizer_gongwen.rendering.markdown_renderer import render_feature_images
+
         attachment_lines = []
+        attachment_images: list[str] = []
         for idx in sorted(attachment_indices):
             if idx >= len(features):
                 continue
-            line = _attachment_line_text(features[idx], remove_numbering=remove_numbering)
+            feature = features[idx]
+            line = (
+                feature.table_markdown
+                if feature.is_table_anchor and feature.table_markdown
+                else _attachment_line_text(feature, remove_numbering=remove_numbering)
+            )
             if line.strip():
                 attachment_lines.append(line)
+            attachment_lines.extend(
+                render_feature_images(
+                    feature,
+                    image_mode=image_mode,
+                    image_link_style=image_link_style,
+                    export_semantics=export_semantics,
+                )
+            )
+            if keep_images and image_mode in {"file", "embed"}:
+                attachment_images.extend(feature.extracted_images)
         attachment_md = render_attachment(metadata, attachment_lines, input_path=input_path)
         if attachment_md.strip():
             from docwen_plugin_optimizer_gongwen.models import AttachmentDocument
@@ -375,8 +382,25 @@ def convert_docx_to_md_gongwen(
                     title=title or "附件",
                     markdown=attachment_md,
                     paragraph_indices=tuple(sorted(attachment_indices)),
+                    image_paths=tuple(dict.fromkeys(attachment_images)),
                 )
             )
+
+    attachment_source_indices = frozenset(
+        index for attachment in attachment_documents for index in attachment.paragraph_indices
+    )
+    markdown = render(
+        metadata,
+        body_lines,
+        skip_indices=result.skip_indices,
+        feature_map=feature_map,
+        exclude_indices=attachment_source_indices,
+        remove_numbering=remove_numbering,
+        heading_formatter=heading_formatter,
+        image_mode=image_mode,
+        image_link_style=image_link_style,
+        export_semantics=export_semantics,
+    )
 
     # ── 6.  Confidence summary ──────────────────────────────────────
     from docwen_plugin_optimizer_gongwen.recognition.signals import collect_structured_signals
@@ -401,6 +425,15 @@ def convert_docx_to_md_gongwen(
             "scoring_rule_failure_count": len(scorer.rule_failures),
         },
         "image_paths": image_paths,
+        "main_image_paths": list(
+            dict.fromkeys(
+                path
+                for feature in features
+                if feature.index not in attachment_source_indices
+                for path in feature.extracted_images
+                if path in image_paths
+            )
+        ),
         "metadata": {
             "confidence": confidence,
             "findings": result.validation_finding_count,

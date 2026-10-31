@@ -125,7 +125,6 @@ def _execute_docx_proofread_pipeline(
                 output_dir=private_output,
                 overwrite_mode="error",
                 write_artifacts=True,
-                group_outputs=True,
                 open_after_done=False,
             ),
             conversion_identity=replace(identity, task_id=render_task_id),
@@ -216,8 +215,10 @@ def _execute_docx_proofread_pipeline(
             },
             output_policy=replace(
                 request.output_policy,
-                group_outputs=True,
                 output_dir=proofread_output_dir,
+                output_path=None if proofread_output is not None else request.output_policy.output_path,
+                date_subfolder="" if proofread_output is not None else request.output_policy.date_subfolder,
+                group_outputs=False if proofread_output is not None else request.output_policy.group_outputs,
             ),
             config_snapshot=dict(request.config_snapshot),
             manifest_context=request.manifest_context,
@@ -319,8 +320,11 @@ def _execute_docx_proofread_pipeline(
                 options=final_options,
                 output_policy=replace(
                     request.output_policy,
-                    group_outputs=True,
-                    output_dir=request.output_policy.output_dir or str(Path(source.path).parent),
+                    output_dir=(
+                        None
+                        if request.output_policy.output_path
+                        else request.output_policy.output_dir or str(Path(source.path).parent)
+                    ),
                 ),
                 config_snapshot=dict(request.config_snapshot),
                 manifest_context=request.manifest_context,

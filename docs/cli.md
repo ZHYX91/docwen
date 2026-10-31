@@ -67,9 +67,9 @@ Markdown 明确写出的绝对路径或带目录段的相对路径属于精确�
 
 ## Output and safety / 输出与安全
 
-Conversions from or to Markdown publish a result folder inside the parent selected with `--output-dir DIR`, even when there is only one output. Names include the source name, timestamp and current input format. Use `--output PATH` only for other conversions that produce one exact file.
+Conversions to Markdown publish a result folder inside the parent selected with `--output-dir DIR`, even for one Markdown file. Markdown-to-document/spreadsheet conversions publish one final file directly in that parent; multiple files (such as worksheet CSVs) or an explicitly requested audit sidecar use a result folder. Names include the source name, timestamp and current input format. Use `--output PATH` for one exact final file, including a single file generated from Markdown; grouped results require `--output-dir`.
 
-传入或生成 Markdown 的转换统一在 `--output-dir DIR` 指定的父目录下创建结果文件夹，即使只有一个输出文件；名称包含原文件名、时间戳和本次传入格式。其他只生成单个文件的转换才使用 `--output PATH` 指定精确文件路径。
+生成 Markdown 时始终在 `--output-dir DIR` 指定的父目录下创建结果文件夹。Markdown 转文档或表格只生成一个最终文件时直接输出；多个文件（如多个工作表 CSV），或显式要求审计附带文件时保留结果文件夹。名称包含原文件名、时间戳和本次传入格式。单文件可用 `--output PATH` 指定精确路径，包括由 Markdown 生成的单文件；分组结果使用 `--output-dir`。
 
 - JSON mode emits exactly one protocol 3 envelope conforming to [the JSON schema](specs/json-contracts.schema.json).
 - Machine meaning comes from stable fields and typed error codes, not localized messages.

@@ -19,6 +19,7 @@ from zipfile import BadZipFile, ZipFile
 
 import lxml.etree as etree
 
+from docwen_core.docx_xml import parse_word_xml_int as parse_word_note_id
 from docwen_core.links import is_markdown_source_escaped, split_markdown_block_segments
 from docwen_plugin_markdown.literal_source_spans import literal_source_spans
 
@@ -916,21 +917,6 @@ _NOTE_SPECS = (
         _ENDNOTES_CT,
     ),
 )
-_NOTE_ID = re.compile(r"[+-]?[0-9]+")
-
-
-def parse_word_note_id(value: str | None) -> int | None:
-    """Read an OOXML xsd:int without rewriting its original lexical form."""
-    if value is None:
-        return None
-    collapsed = value.strip(" \t\r\n")
-    if _NOTE_ID.fullmatch(collapsed) is None:
-        return None
-    magnitude = collapsed.lstrip("+-").lstrip("0") or "0"
-    if len(magnitude) > 10:
-        return None
-    note_id = int(("-" if collapsed.startswith("-") else "") + magnitude)
-    return note_id if -(2**31) <= note_id < 2**31 else None
 
 
 def prepare_note_context_for_document(document, note_ctx: NoteContext) -> None:

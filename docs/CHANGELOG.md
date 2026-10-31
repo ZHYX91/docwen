@@ -5,6 +5,13 @@
 
 ## Unreleased / 未发布
 
+- Publish a single Markdown-to-document/spreadsheet result directly; keep grouped directories for multiple files or explicit audit exports, and document directories for Markdown outputs.
+- Markdown 转文档／表格的单文件直接输出；多文件或显式审计导出保留结果目录，生成 Markdown 仍使用文档目录。
+- Keep Gongwen attachment images and shared resources inside their owning attachment directory, with matching portable links and Bundle ownership.
+- 公文附件图片及共享资源随各自附件目录保存，相对链接与 Bundle 归属保持一致，附件目录可单独复制。
+- Share safe DOCX comment appending across numbering reviews, Gongwen field reviews and proofreading, preserving existing template comments and conflicting styles.
+- 编号、公文字段与校对共用安全批注追加能力，保留模板原有批注与冲突样式。
+
 ## 0.21.1
 
 - Reject merged spreadsheet cell text above Excel's 32767 UTF-16 limit before writing, with the sheet, cell and contributing input names in the diagnostic.

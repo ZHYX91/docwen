@@ -12,7 +12,7 @@ import pytest
 from docwen_application.conversion_contracts import ConversionServiceError
 from docwen_application.conversion_service import ConversionService
 from docwen_core.formats import get_media_type
-from docwen_core.models import ArtifactManifest
+from docwen_core.models import ArtifactManifest, ArtifactOwnership
 from docwen_plugin_document.manifest import build_manifest as document_manifest
 from docwen_plugin_optimizer_gongwen.manifest import build_manifest as gongwen_manifest
 from docwen_runtime import capabilities
@@ -165,6 +165,7 @@ def test_optimizer_attachment_is_a_document_relation(monkeypatch: pytest.MonkeyP
                         suggested_name="attachment.md",
                         media_type="text/markdown",
                         metadata={"source_kind": "gongwen_attachment", "attachment_ordinal": 1},
+                        ownership=ArtifactOwnership("attachment_of", result.artifacts[0].artifact_id, "attachment", 0),
                     ),
                 ],
             )
