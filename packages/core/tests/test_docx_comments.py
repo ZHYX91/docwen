@@ -44,8 +44,10 @@ def test_comments_preserve_legacy_package_and_anchor_multiple_runs():
     assert {
         key: (document.part.rels[key].reltype, document.part.rels[key].target_ref) for key in old_relations
     } == old_relations
-    assert first._r.getprevious().tag == qn("w:commentRangeStart")
-    assert last._r.getnext().tag == qn("w:commentRangeEnd")
+    start = first._r.getprevious()
+    end = last._r.getnext()
+    assert start is not None and start.tag == qn("w:commentRangeStart")
+    assert end is not None and end.tag == qn("w:commentRangeEnd")
     assert first.bold is True
     stream = BytesIO()
     document.save(stream)
@@ -149,12 +151,14 @@ def test_anchor_commit_failure_rolls_back_new_comment_styles_and_part(monkeypatc
 
 @pytest.mark.parametrize("include_main", [False, True])
 def test_textbox_story_cannot_receive_main_document_comment(include_main):
+    from docx.oxml.text.paragraph import CT_P
     from docx.text.paragraph import Paragraph
 
     document = Document()
     main = document.add_paragraph("main").runs[0]
     textbox = OxmlElement("w:txbxContent")
     paragraph_xml = OxmlElement("w:p")
+    assert isinstance(paragraph_xml, CT_P)
     textbox.append(paragraph_xml)
     main._r.append(textbox)
     textbox_run = Paragraph(paragraph_xml, document).add_run("textbox")

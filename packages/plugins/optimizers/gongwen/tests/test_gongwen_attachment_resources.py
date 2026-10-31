@@ -44,7 +44,7 @@ def test_real_attachment_images_follow_their_document_owner(tmp_path: Path):
     attachment.add_run().add_picture(io.BytesIO(child_bytes))
     attachment.add_run().add_picture(io.BytesIO(shared_bytes))
     source = tmp_path / "notice.docx"
-    document.save(source)
+    document.save(str(source))
     source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     registry = PluginRegistry()
     registry.register(GongwenOptimizerPlugin())
@@ -78,7 +78,11 @@ def test_real_attachment_images_follow_their_document_owner(tmp_path: Path):
     main_hashes = {hashlib.sha256(main_bytes).hexdigest(), hashlib.sha256(shared_bytes).hexdigest()}
     child_hashes = {hashlib.sha256(child_bytes).hexdigest(), hashlib.sha256(shared_bytes).hexdigest()}
     for owner, expected_hashes in ((main, main_hashes), (child, child_hashes)):
-        owned = [item for item in resources if item.ownership.owner_artifact_id == owner.artifact_id]
+        owned = []
+        for item in resources:
+            assert item.ownership is not None
+            if item.ownership.owner_artifact_id == owner.artifact_id:
+                owned.append(item)
         assert {item.sha256 for item in owned} == expected_hashes
         content = Path(owner.staging_path).read_text(encoding="utf-8")
         for item in owned:
