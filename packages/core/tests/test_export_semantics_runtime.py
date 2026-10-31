@@ -30,7 +30,7 @@ class TestMarkdownExportSemanticsDefaults:
         s = MarkdownExportSemantics()
         assert s.image_link_style == "wiki_embed"
         assert s.md_file_link_style == "wiki_embed"
-        assert s.ocr_blockquote_title_enabled is True
+        assert s.ocr_blockquote_title_enabled is False
         assert s.ocr_blockquote_title_override_text == ""
         assert s.export_base64_compress_enabled is True
         assert s.export_base64_compress_threshold_kb == 100

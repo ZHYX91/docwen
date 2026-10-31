@@ -1219,7 +1219,7 @@ class SettingsViewModel(QObject):
             recognize_tables=bool(ocr.get("recognize_tables", True)) if isinstance(ocr, dict) else True,
             image_mode=export_defaults.get("to_md_image_extraction_mode", "file"),
             ocr_mode=export_defaults.get("to_md_ocr_placement_mode", "image_md"),
-            ocr_title_enabled=ocr_output.get("show_blockquote_title", True) if isinstance(ocr_output, dict) else True,
+            ocr_title_enabled=ocr_output.get("show_blockquote_title", False) if isinstance(ocr_output, dict) else False,
             ocr_title_text=title_text,
             base64_compress_enabled=conv_export.get("base64_compress_enabled", True)
             if isinstance(conv_export, dict)

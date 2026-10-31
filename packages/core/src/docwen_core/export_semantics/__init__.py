@@ -162,7 +162,7 @@ class MarkdownExportSemantics:
     md_file_link_style: str = "wiki_embed"
 
     # OCR blockquote title (F-H3b-031)
-    ocr_blockquote_title_enabled: bool = True
+    ocr_blockquote_title_enabled: bool = False
     ocr_blockquote_title_override_text: str = ""
 
     # Base64 export (F-H3b-001)
@@ -237,7 +237,7 @@ class MarkdownExportSemantics:
         return cls(
             image_link_style=_normalize_link_style(link.get("image_link_style", "wiki_embed")),
             md_file_link_style=_normalize_link_style(link.get("md_file_link_style", "wiki_embed")),
-            ocr_blockquote_title_enabled=bool(ocr.get("show_blockquote_title", True)),
+            ocr_blockquote_title_enabled=bool(ocr.get("show_blockquote_title", False)),
             ocr_blockquote_title_override_text=str(
                 ocr.get("blockquote_title_override_by_locale", {}).get(locale, "")
                 if isinstance(ocr.get("blockquote_title_override_by_locale"), dict)

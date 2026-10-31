@@ -29,7 +29,7 @@ def build_ocr_blockquote_title(
     snapshot = config_snapshot if isinstance(config_snapshot, Mapping) else {}
     conversion = _mapping(snapshot.get("conversion"))
     ocr_output = _mapping(conversion.get("ocr_output"))
-    if not bool(ocr_output.get("show_blockquote_title", True)):
+    if not bool(ocr_output.get("show_blockquote_title", False)):
         return ""
 
     locale = _resolve_locale(snapshot, requested_locale)

@@ -258,6 +258,31 @@ def test_exact_two_preserves_nested_fence_anchor_and_topology_carriers(tmp_path:
     assert len(workspace.registered_artifacts) == 1
 
 
+def test_exact_two_callout_note_fallback_reaches_result_and_saved_note(tmp_path: Path) -> None:
+    neutral_payload = json.loads(_NEUTRAL.read_text(encoding="utf-8"))
+    plan_payload = json.loads(_PLAN.read_text(encoding="utf-8"))
+    source = neutral_payload["document"]["authored_markdown"] + (
+        "\n> [!tip] Main title\n> Body\n\nText[^1]\n\n[^1]: > [!warning] Check\n    > Save first\n"
+    )
+    neutral_payload["source_sha256"] = plan_payload["source_sha256"] = _sha_text(source)
+    neutral_payload["document"]["authored_markdown"] = source
+    neutral, plan = tmp_path / "neutral.json", tmp_path / "plan.json"
+    neutral.write_text(json.dumps(neutral_payload), encoding="utf-8")
+    plan.write_text(json.dumps(plan_payload), encoding="utf-8")
+    context, _workspace = _context(tmp_path, _refs(neutral, plan))
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    warnings = [item for item in result.diagnostics if item.code == "CALLOUT-NOTE-TEXT"]
+    assert len(warnings) == 1 and "(1)" in warnings[0].message
+    with ZipFile(result.artifacts[0].staging_path) as package:
+        notes = etree.fromstring(package.read("word/footnotes.xml"))
+        visible = "".join(item.text or "" for item in notes.iter(qn("w:t")))
+        assert "Warning: Check" in visible and "Save first" in visible
+        assert "[!warning]" not in visible
+        comments = etree.fromstring(package.read("word/comments.xml"))
+        assert "Markdown callout type: tip" in "".join(item.text or "" for item in comments.iter(qn("w:t")))
+
+
 def test_partial_claim_and_legacy_options_fail_before_source_pipeline(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

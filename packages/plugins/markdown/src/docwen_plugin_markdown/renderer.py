@@ -37,6 +37,7 @@ from docwen_core.models.semantic_document import (
     SemanticReference,
 )
 from docwen_core.text.heading_merge import HALFWIDTH_HEADING_MERGE_PUNCTUATION
+from docwen_plugin_markdown.callouts import add_callout_comment
 from docwen_plugin_markdown.html_text import project_html_block_text
 from docwen_plugin_markdown.renderer_inlines import (
     extract_text_content,
@@ -311,6 +312,11 @@ class MdToDocxRenderer:
         self._mermaid_work_dir = mermaid_work_dir
         self._mermaid_render = mermaid_render
         self._warnings: list[tuple[str, str]] = []
+        if note_ctx is not None and getattr(note_ctx, "callout_fallback_keys", ()):
+            keys = ", ".join(note_ctx.callout_fallback_keys)
+            self._warnings.append(
+                ("CALLOUT-NOTE-TEXT", f"Callouts in notes ({keys}) use readable type labels instead of Word comments.")
+            )
         self._content_extent = content_extent
         self._mermaid_images: list[tuple[Any, Any, int, int, int]] = []
         self._mermaid_occurrences = 0
@@ -922,6 +928,8 @@ class MdToDocxRenderer:
                 paragraphs.extend(items)
         finally:
             self._quote_depth -= 1
+        if node.get("_docwen_callout") is not None:
+            add_callout_comment(self._doc, paragraphs, node["_docwen_callout"])
         if (
             self._source_carrier_session is not None
             and node.get("_docwen_v3_ordinary_anchor") is not None

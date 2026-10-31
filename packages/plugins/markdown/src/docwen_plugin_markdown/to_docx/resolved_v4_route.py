@@ -486,6 +486,9 @@ def _render_resolved_v4_docx(
         )
         for item in managed_styles.conflicts
     ]
+    diagnostics.extend(
+        ConversionDiagnostic(level="warning", code=code, message=message) for code, message in renderer.warnings
+    )
     diagnostics.append(
         ConversionDiagnostic(
             level="info",

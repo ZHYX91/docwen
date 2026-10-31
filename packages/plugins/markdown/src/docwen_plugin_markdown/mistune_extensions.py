@@ -38,6 +38,7 @@ from mistune.plugins.table import table_in_list, table_in_quote
 
 from docwen_core.links import markdown_table_cell_ranges, markdown_table_delimiter
 from docwen_core.markdown_extensions import MarkdownExtensions
+from docwen_plugin_markdown.callouts import plugin_callout_headers
 
 _EXTENDED_ATX_HEADING_TRIM = re.compile(r"(\s+|^)#+\s*$")
 _STRUCTURAL_TABLE_BLOCK = (
@@ -367,6 +368,7 @@ def create_extended_markdown(
         plugin_single_line_block_math,
         plugin_underline,
         plugin_source_breaks,
+        plugin_callout_headers,
         partial(plugin_obsidian_comment_blocks, hide_content=dialect.structural_tables),
     ]
     if dialect.structural_tables:

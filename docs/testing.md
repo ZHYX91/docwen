@@ -33,6 +33,10 @@ main-story range restrictions and rollback of XML, relationships and related-par
 field-review and proofreading tests exercise their shared writer with their own business spans and text.
 These source regressions do not replace native Office open/save/reopen or final packaged acceptance.
 
+`test_callout_comments.py` checks saved main-story callouts, literal/escaped negatives, custom types,
+nested/table anchors and readable note-story fallback. The runtime semantic round trip retains a
+callout's ordinary block ID but returns a regular quote without regenerating `[!type]` from comments.
+
 Local QA and CI use `tools/qa.py` for the same mandatory source checks: whole-repository Ruff,
 test governance, all Import-Linter dependency contracts, architecture cleanliness, and Pyright
 for Windows, Linux and macOS. `python tools/qa.py --skip-pytest` runs these checks before costly

@@ -4,6 +4,14 @@ DocWen supports a documented Markdown subset for conversion to and from office f
 
 DocWen 为 Office 双向转换支持一组明确的 Markdown 子集。语法、链接、图片、编号和模板行为在每个请求开始前冻结。
 
+## Callout presentation / 提示块呈现
+
+In the main document story, a blockquote's initial `[!type]` header is rendered as ordinary quote content. The custom title remains a separate editable paragraph; the type and optional `+`/`-` source state move to a native Word comment on the title or first content paragraph. Unknown nonempty type identifiers are retained. Nested quotes, lists and tables keep their native content; Word always displays the expanded body. Escaped markers, inline/fenced code and markers elsewhere in prose remain literal. Footnote/endnote callouts use readable type labels instead of comments, with a `CALLOUT-NOTE-TEXT` diagnostic identifying the notes; this does not introduce comments in note stories.
+
+DOCX export back to Markdown does not infer callouts from comments or textboxes. Ordinary source block IDs remain recoverable, but a converted callout returns as a regular blockquote, without regenerating its type/folding marker. This is intentionally not a lossless callout round trip.
+
+正文引用块首行的 `[!type]` 转为 Word 普通引用内容，自定义标题保留为可编辑段落，类型和可选 `+`／`-` 状态放入标题或首个内容段落的原生批注。未知非空类型保留；正文始终展开。转义、代码及普通文本中的标记不变；脚注／尾注中的提示块降级为可读的类型文字，并通过 `CALLOUT-NOTE-TEXT` 指明受影响的注释，不伪造批注。Word 回转不从批注或文本框推断 callout，普通块 ID 仍保留，但类型和折叠标记不再生成。
+
 ## Spreadsheet image text / 表格图片与文本
 
 Markdown-to-XLSX treats template-declared images and images produced by the active link policy as drawings separate from the final cell text. Temporary scoped/quoted image markers remain outside openpyxl while YAML, row/column filling and merges are planned. Only surviving cell drafts are consumed, then the actual text is checked against Excel's 32,767 UTF-16-unit limit before assignment and again before save. Internal marker length does not reduce a user's text capacity. A genuine overflow still fails without replacing an earlier published workbook. Authored marker-like text does not acquire permission to read an image, and repeated trusted image occurrences retain separate drawings.

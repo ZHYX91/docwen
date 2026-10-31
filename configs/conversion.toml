@@ -138,7 +138,7 @@ code_background_color = "E7E6E6"
 [ocr_output]
 # OCR 文本以引用块形式写入主 Markdown 时的"标题行"（只影响第一行标题，不影响后续 OCR 内容的引用块格式）
 # show_blockquote_title = false 时不输出标题行；OCR 内容仍会按引用块逐行输出
-show_blockquote_title = true
+show_blockquote_title = false
 blockquote_title_override_by_locale = {}
 
 [export]

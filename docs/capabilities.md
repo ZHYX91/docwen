@@ -6,6 +6,10 @@ This matrix is the current product capability inventory. It describes supported 
 
 Test family names in this table denote their focused shards; for example, `test_config_loader.py` means the collected `test_config_loader_*.py` modules.
 
+Callout headers in Markdown main-story quotes become native Word comments; custom titles and content remain editable quotes. Note-story callouts use readable type labels with a diagnostic. Word-to-Markdown does not regenerate callouts from comments or textboxes. See [the callout contract](specs/markdown-compatibility.md#callout-presentation--提示块呈现) and `test_callout_comments.py`. Supplemental OCR blockquotes are untitled by default; the existing explicit title option and structured table recognition remain available.
+
+Markdown 正文 callout 标记转为 Word 原生批注，标题和内容保留；脚注／尾注使用可读类型文字并提示降级。Word 回转不从批注或文本框生成 callout。附带 OCR 默认不带标题，已有显式标题选项和表格识别继续保留。
+
 Shared Markdown output conventions apply to every source in principle. Current extension/syntax coverage is strongest in ordinary Word export; spreadsheet export supports Structural Tables, while image, fixed-layout, presentation, markup and specialized optimizer routes do not implement every shared choice. These settings do not add recognition capabilities. The route-by-route implementation review is recorded in [settings information architecture](maintenance/proposals/settings-information-architecture.md); it does not establish real-file acceptance for every route.
 
 共享 Markdown 输出约定面向所有输入来源。目前普通 Word 导出的扩展／语法覆盖较完整，表格导出支持 Structural Tables；图片、版式、演示、标记文件及专项优化尚未落实全部共享选项。开启设置不会新增识别能力；逐路线代码边界见上述实现记录，不表示所有路线真实文件验收通过。

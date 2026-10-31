@@ -287,6 +287,10 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
 # ── Note extraction ─────────────────────────────────────────────────────
 
 
+def _has_callout(node: dict[str, Any]) -> bool:
+    return "_docwen_callout" in node or any(_has_callout(child) for child in node.get("children", []))
+
+
 def _extract_plain_text(node: dict[str, Any]) -> str:
     """Extract plain text from an AST subtree (inline nodes)."""
     parts: list[str] = []
@@ -298,6 +302,13 @@ def _extract_plain_text(node: dict[str, Any]) -> str:
     elif ctype == "linebreak":
         parts.append("\n")
     children = node.get("children", [])
+    callout = node.get("_docwen_callout")
+    if callout is not None:
+        # Word comments cannot be anchored in a note story. Keep the type as
+        # readable text instead of dropping it or emitting a fake comment.
+        kind, _fold = callout
+        content = "\n".join(_extract_plain_text(child) for child in children)
+        return f"{kind.capitalize()}: {content}".rstrip()
     for child in children:
         parts.append(_extract_plain_text(child))
     return "".join(parts)
@@ -351,6 +362,8 @@ def extract_notes_from_ast(
                     continue
                 para_children = _extract_inline_children_per_para(item.get("children", []))
                 decoded = decode_internal_note_key(key)
+                if _has_callout(item):
+                    note_ctx.callout_fallback_keys.append(decoded[1] if decoded is not None else key)
                 if decoded is not None:
                     kind, clean_id = decoded
                     if kind == "endnote":
@@ -445,6 +458,7 @@ class NoteContext:
         #  strong, emphasis, codespan, …)
         self._footnote_children: dict[str, list[list[dict[str, Any]]]] = {}
         self._endnote_children: dict[str, list[list[dict[str, Any]]]] = {}
+        self.callout_fallback_keys: list[str] = []
 
         # Markdown key → Word ID
         self._footnote_id_map: dict[str, int] = {}

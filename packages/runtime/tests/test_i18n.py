@@ -274,6 +274,7 @@ class TestRequestOcrBlockquoteTitle:
     def test_disabled_title_does_not_read_locale_resource(self, tmp_path) -> None:
         from docwen_runtime.config import build_ocr_blockquote_title
 
+        assert build_ocr_blockquote_title({}, locales_dir=tmp_path / "missing") == ""
         assert (
             build_ocr_blockquote_title(
                 {
