@@ -10,6 +10,8 @@ In the main document story, a blockquote's initial `[!type]` header is rendered 
 
 DOCX export back to Markdown does not infer callouts from comments or textboxes. Ordinary source block IDs remain recoverable, but a converted callout returns as a regular blockquote, without regenerating its type/folding marker. This is intentionally not a lossless callout round trip.
 
+Note-story fallback preserves code text and formula leaves as readable LaTeX (`$…$` / `$$…$$`), including formulas in ordinary note paragraphs. This is text preservation, not native OMML formula formatting in footnotes/endnotes.
+
 正文引用块首行的 `[!type]` 转为 Word 普通引用内容，自定义标题保留为可编辑段落，类型和可选 `+`／`-` 状态放入标题或首个内容段落的原生批注。未知非空类型保留；正文始终展开。转义、代码及普通文本中的标记不变；脚注／尾注中的提示块降级为可读的类型文字，并通过 `CALLOUT-NOTE-TEXT` 指明受影响的注释，不伪造批注。Word 回转不从批注或文本框推断 callout，普通块 ID 仍保留，但类型和折叠标记不再生成。
 
 ## Spreadsheet image text / 表格图片与文本

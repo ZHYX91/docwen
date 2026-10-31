@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 from docx import Document
 from docx.oxml.ns import qn
+from lxml import etree
 
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
+
+from ._md_to_docx_support import MdToDocxConverter, make_context
 
 pytestmark = pytest.mark.contract
 
@@ -110,3 +114,32 @@ def test_untitled_nested_callouts_can_share_first_paragraph(tmp_path: Path) -> N
     ]
     for tag in ("commentRangeStart", "commentRangeEnd", "commentReference"):
         assert sorted(element.get(qn("w:id")) or "" for element in restored.element.iter(qn(f"w:{tag}"))) == ["0", "1"]
+
+
+def test_note_callout_fallback_retains_literal_code_and_formula_text() -> None:
+    from docwen_plugin_markdown.to_docx.notes import process_md_body_with_notes
+
+    _body, notes = process_md_body_with_notes(
+        "Text[^1]\n\n[^1]: > [!warning] Read `[!tip]`\n    > Formula $x^2$\n"
+        "    >\n    > ```text\n    > [!danger] literal\n    > ```\n"
+        "    >\n    > $$\n    > y = 2\n    > $$\n"
+    )
+    text = "".join(str(item.get("raw", "")) for paragraph in notes._footnote_children["1"] for item in paragraph)
+    assert "Warning: Read [!tip]" in text
+    assert "$x^2$" in text
+    assert "[!danger] literal" in text
+    assert "y = 2" in text
+    assert notes.callout_fallback_keys == ["1"]
+
+
+def test_plain_note_formula_is_saved_as_readable_latex_not_omml(tmp_path: Path) -> None:
+    source = tmp_path / "note-formula.md"
+    source.write_text("Text[^1]\n\n[^1]: Inline $x^2$ and `code`.\n", encoding="utf-8")
+    context, _workspace = make_context(str(source))
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    with ZipFile(result.artifacts[0].staging_path) as package:
+        notes = etree.fromstring(package.read("word/footnotes.xml"))
+        text = "".join(item.text or "" for item in notes.iter(qn("w:t")))
+        assert "Inline $x^2$ and code." in text
+        assert not list(notes.iter(qn("m:oMath")))

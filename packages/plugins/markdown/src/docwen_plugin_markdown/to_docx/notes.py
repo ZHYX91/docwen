@@ -295,8 +295,11 @@ def _extract_plain_text(node: dict[str, Any]) -> str:
     """Extract plain text from an AST subtree (inline nodes)."""
     parts: list[str] = []
     ctype = node.get("type", "")
-    if ctype == "text":
+    if ctype in {"text", "codespan", "block_code"}:
         parts.append(node.get("raw", "") or node.get("text", ""))
+    elif ctype in {"inline_math", "block_math"}:
+        delimiter = "$$" if ctype == "block_math" else "$"
+        parts.append(f"{delimiter}{node.get('raw', '')}{delimiter}")
     elif ctype == "softbreak":
         parts.append(" ")
     elif ctype == "linebreak":
@@ -651,6 +654,10 @@ def _render_note_inlines(
             _render_note_inlines(para_elem, child.get("children", []), _fmt_set(_f, _DC_STRIKE))
         elif ctype == "codespan":
             _nr_codespan(para_elem, child)
+        elif ctype in {"inline_math", "block_math"}:
+            # Notes currently have no native formula writer. Preserve the
+            # authored formula as readable LaTeX instead of dropping its leaf.
+            _nr_text(para_elem, {"raw": _extract_plain_text(child)}, _f)
         elif ctype == "softbreak":
             _nr_softbreak(para_elem)
         elif ctype == "linebreak":
