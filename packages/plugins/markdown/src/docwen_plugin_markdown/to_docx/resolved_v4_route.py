@@ -86,7 +86,6 @@ from docwen_plugin_markdown.to_docx.bibliography import (
 from docwen_plugin_markdown.to_docx.converter import (
     MEDIA_TYPE_DOCX,
     _inject_docx_metadata,
-    _markdown_image_alt_texts,
     _normalize_table_style_key,
     _option_or_config,
     _request_heading_merge_punctuation,
@@ -95,7 +94,6 @@ from docwen_plugin_markdown.to_docx.converter import (
     _resolve_quote_style_levels,
     _resolve_table_style_name,
     _resolve_template_style_keys,
-    _restore_markdown_image_alt_texts,
 )
 from docwen_plugin_markdown.to_docx.managed_styles import (
     ManagedStyleCompletionError,
@@ -294,7 +292,7 @@ def _render_resolved_v4_docx(
     projection = compose_resolved_v4_markdown(prepared, resources)
 
     context.progress.report_progress(15.0, "Extracting YAML front matter")
-    yaml_dict, md_body = extract_yaml_front_matter(projection.markdown)
+    yaml_dict, md_body = extract_yaml_front_matter(projection.markdown.removeprefix("\ufeff"))
     # The exact-two port owns a different input envelope, but the authored
     # Markdown inside that envelope still obeys the same frozen note syntax as
     # the source-file route.  Normalize only the request-local parser
@@ -302,12 +300,13 @@ def _render_resolved_v4_docx(
     md_body = normalize_note_syntax(md_body, typed_endnotes=extensions.typed_endnotes)
 
     context.progress.report_progress(25.0, "Parsing authenticated Markdown projection")
-    source_image_alt_texts = _markdown_image_alt_texts(md_body)
     # Resolved heading/caption records are explicit semantic input, not inferred Markdown syntax.
     raw_ast = parse_markdown_text(
-        md_body, auto_link_bare_url=False, extensions=replace(extensions, extended_headings=True)
+        md_body,
+        auto_link_bare_url=False,
+        extensions=replace(extensions, extended_headings=True),
+        consume_initial_bom=False,
     )
-    _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
     raw_ast = apply_resolved_source_carriers_v4(raw_ast, projection.source_carrier_plan)
     raw_ast = apply_resolved_runtime_v4(raw_ast, projection.runtime_plan)
     prove_resolved_v4_image_inventory(raw_ast, projection)
@@ -350,8 +349,9 @@ def _render_resolved_v4_docx(
         code_font=code_font,
         code_background_color=code_background_color,
     )
-    prepare_note_context_for_document(doc, note_ctx)
     placeholder_para = find_body_placeholder(doc)
+    if placeholder_para is not None:
+        prepare_note_context_for_document(doc, note_ctx)
     placeholder_map = scan_placeholders(doc)
     bibliography_anchor = prepare_bibliography_anchor(
         doc,
@@ -369,6 +369,16 @@ def _render_resolved_v4_docx(
     session = ResolvedNumberingDocxSession(
         doc,
         prepared.port,
+        expected_ordinary_anchor_ids=tuple(
+            str(marker.payload["id"])
+            for marker in projection.source_carrier_plan.runtime_plan.markers
+            if marker.role == "ordinary_anchor"
+        ),
+        expected_fenced_source_tags=tuple(
+            str(marker.payload["record"]["tag"])
+            for marker in projection.source_carrier_plan.runtime_plan.markers
+            if marker.role == "fenced_source"
+        ),
         heading_style_ids={level: managed_styles.style_id(f"heading_{level}") for level in range(1, 10)},
         heading_style_names={
             f"heading_{level}": managed_styles.get(f"heading_{level}").name or "" for level in range(1, 10)
@@ -476,6 +486,9 @@ def _render_resolved_v4_docx(
         )
         for item in managed_styles.conflicts
     ]
+    diagnostics.extend(
+        ConversionDiagnostic(level="warning", code=code, message=message) for code, message in renderer.warnings
+    )
     diagnostics.append(
         ConversionDiagnostic(
             level="info",

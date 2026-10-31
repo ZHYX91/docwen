@@ -12,6 +12,7 @@ collects fixtures from conftest modules, not arbitrary helpers.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -29,3 +30,14 @@ def round_trip_runtime() -> Any:
     from docwen_bundle.runtime_factory import create_runtime_port
 
     return create_runtime_port()
+
+
+@pytest.fixture
+def native_round_trip_runtime(tmp_path: Path) -> Any:
+    """Explicitly opt out of the default Gongwen text-numbering policy."""
+    from docwen_bundle.runtime_factory import create_runtime_port
+    from docwen_runtime.config import ConfigLoader
+
+    loader = ConfigLoader(user_dir=tmp_path / "native-configs")
+    assert loader.set_value("template_fill.gongwen_numbering_text", False)
+    return create_runtime_port(config_loader=loader)

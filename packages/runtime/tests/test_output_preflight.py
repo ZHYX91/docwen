@@ -69,3 +69,17 @@ def test_invalid_output_parent_is_actionable_and_unchanged(tmp_path: Path):
     with pytest.raises(OutputPreflightError, match="permissions or choose another folder"):
         OutputFinalizer().preflight(OutputPolicy(output_dir=str(output)))
     assert output.read_bytes() == b"original"
+
+
+def test_audit_export_requires_output_parent_before_any_write_probe(tmp_path, monkeypatch):
+    def unexpected(*args, **kwargs):
+        pytest.fail("audit with exact output must fail before probing")
+
+    monkeypatch.setattr("docwen_runtime.output.finalizer.tempfile.TemporaryDirectory", unexpected)
+    with pytest.raises(ValueError, match="output parent directory"):
+        OutputFinalizer().preflight(
+            OutputPolicy(output_path=str(tmp_path / "chosen.docx")),
+            input_path=str(tmp_path / "source.md"),
+            audit_output=True,
+        )
+    assert not list(tmp_path.iterdir())

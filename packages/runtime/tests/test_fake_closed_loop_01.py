@@ -102,7 +102,7 @@ class TestFullClosedLoop:
         assert result.artifacts[0].staging_path.startswith(str(output_dir))
         assert os.path.isfile(result.artifacts[0].staging_path)
         output = Path(result.artifacts[0].staging_path)
-        assert output.parent.name == output.stem
+        assert output.parent == output_dir
         assert output.name.startswith("test_") and output.name.endswith("_fromMd.docx")
         assert result.metrics.extra["plugin_metric"] == "preserved"
         assert result.metrics.extra["output_dir"] == str(output_dir)

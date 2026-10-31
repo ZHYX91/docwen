@@ -205,7 +205,7 @@ def test_runtime_injects_locale_aware_ocr_title_from_the_request_snapshot() -> N
 
     for token in (
         "def build_ocr_blockquote_title(",
-        'ocr_output.get("show_blockquote_title", True)',
+        'ocr_output.get("show_blockquote_title", False)',
         'ocr_output.get("blockquote_title_override_by_locale")',
         'locales_dir / f"{locale}.toml"',
         'ocr_table.get("blockquote_prefix")',

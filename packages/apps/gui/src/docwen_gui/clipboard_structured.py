@@ -479,9 +479,12 @@ def _parse_table(
     if not rows:
         raise ClipboardDocumentError("clipboard.table_rows_invalid", "Clipboard table has no rows.")
 
+    if len(rows) > MAX_CLIPBOARD_CELLS:
+        raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard table height budget exceeded.")
     coverage: dict[tuple[int, int], ClipboardTableCell] = {}
     anchors: list[ClipboardTableCell] = []
     max_column = 0
+    reserved_area = 0
     for row_index, row_info in enumerate(rows):
         column = 0
         for node in _cell_nodes(row_info.node):
@@ -496,8 +499,19 @@ def _parse_table(
                     "clipboard.table_span_out_of_group",
                     "A row span exceeds its HTML row group.",
                 )
-            if column + column_span > MAX_CLIPBOARD_CELLS:
-                raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard table width budget exceeded.")
+            projected_width = max(max_column, column + column_span)
+            projected_area = len(rows) * projected_width
+            area_delta = projected_area - reserved_area
+            if projected_area > MAX_CLIPBOARD_CELLS or counters["grid_area"] + area_delta > MAX_CLIPBOARD_CELLS:
+                raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard table grid budget exceeded.")
+            if counters["cells"] + 1 > MAX_CLIPBOARD_CELLS:
+                raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard cell budget exceeded.")
+            # Reserve parent coverage and its anchor before nested content can
+            # consume the remaining document budget. Neither counter is a
+            # proxy for the other: a single merged anchor may cover many cells.
+            counters["grid_area"] += area_delta
+            counters["cells"] += 1
+            reserved_area = projected_area
             blocks = _blocks_from_children(node.children, counters=counters, depth=depth + 1, collector=collector)
             headers = tuple(part for part in node.attrs.get("headers", "").split() if part)
             cell = ClipboardTableCell(
@@ -521,19 +535,17 @@ def _parse_table(
                         )
                     coverage[key] = cell
             anchors.append(cell)
-            counters["cells"] += 1
-            if counters["cells"] > MAX_CLIPBOARD_CELLS:
-                raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard cell budget exceeded.")
             column += column_span
             max_column = max(max_column, column)
 
     if not max_column or len(rows) * max_column > MAX_CLIPBOARD_CELLS:
         raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard table grid budget exceeded.")
-    missing = [
-        (row, column) for row in range(len(rows)) for column in range(max_column) if (row, column) not in coverage
-    ]
-    if missing:
-        row, column = missing[0]
+    missing = next(
+        ((row, column) for row in range(len(rows)) for column in range(max_column) if (row, column) not in coverage),
+        None,
+    )
+    if missing is not None:
+        row, column = missing
         raise ClipboardDocumentError(
             "clipboard.table_grid_incomplete",
             f"Clipboard table grid is incomplete at row {row}, column {column}.",
@@ -719,7 +731,7 @@ def project_structured_clipboard_html_with_resources(
     parser = _TreeBuilder()
     parser.feed(_decode_html(payload))
     parser.close()
-    counters = {"blocks": 0, "tables": 0, "cells": 0}
+    counters = {"blocks": 0, "tables": 0, "cells": 0, "grid_area": 0}
     collector = _ResourceCollector(
         png_by_src=_preflight_inline_pngs(parser.root) if decode_inline_images else {},
         decode_inline_images=decode_inline_images,

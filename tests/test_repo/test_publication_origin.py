@@ -49,16 +49,26 @@ def test_candidate_origin_rejects_another_attempt_source_ref_or_trigger(tmp_path
 
 
 @pytest.mark.parametrize("failure", ["failure", "skipped", "cancelled", "missing", "duplicate"])
-def test_candidate_requires_every_producer_job_even_when_the_parent_run_is_complete(failure: str) -> None:
+@pytest.mark.parametrize("name", ["verify-release", "Tests on macos-15"])
+def test_candidate_requires_every_producer_job_even_when_the_parent_run_is_complete(failure: str, name: str) -> None:
     api = FakeGitHub()
+    job = next(job for job in api.jobs["jobs"] if job["name"] == name)
     if failure == "missing":
-        api.jobs["jobs"].pop()
+        api.jobs["jobs"].remove(job)
     elif failure == "duplicate":
-        api.jobs["jobs"].append(api.jobs["jobs"][-1].copy())
+        api.jobs["jobs"].append(job.copy())
     else:
-        api.jobs["jobs"][-1]["conclusion"] = failure
+        job["conclusion"] = failure
     api.jobs["total_count"] = len(api.jobs["jobs"])
     with pytest.raises(PublicationError, match="required candidate job did not pass"):
+        verify_candidate_jobs(api.jobs)
+
+
+def test_candidate_requires_the_current_macos_runner_job() -> None:
+    api = FakeGitHub()
+    job = next(job for job in api.jobs["jobs"] if job["name"] == "Tests on macos-15")
+    job["name"] = "Tests on macos-14"
+    with pytest.raises(PublicationError, match="required candidate job did not pass: Tests on macos-15"):
         verify_candidate_jobs(api.jobs)
 
 

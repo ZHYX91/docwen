@@ -213,6 +213,9 @@ class DocxSemanticsV3Recovery:
         caption_parser: Callable[..., tuple[str, str]] | None = None,
         standalone_target_tags: frozenset[str] = frozenset(),
         proven_table_role_nodes: frozenset[Any] = frozenset(),
+        proven_nested_blocks: dict[Any, tuple[Any, ...]] | None = None,
+        proven_machine_nodes: frozenset[Any] = frozenset(),
+        reserved_semantic_elements: frozenset[Any] = frozenset(),
     ) -> DocxSemanticsV3Recovery:
         from docx.oxml.ns import qn
 
@@ -239,9 +242,12 @@ class DocxSemanticsV3Recovery:
                 (ancestor for ancestor in child.iterancestors(qn("w:sdt"))),
                 None,
             )
-            prove_owned_block_parent(
-                child, tag, body, parent_sdt, sdt_tag(parent_sdt) if parent_sdt is not None else None
-            )
+            if proven_nested_blocks is None:
+                prove_owned_block_parent(
+                    child, tag, body, parent_sdt, sdt_tag(parent_sdt) if parent_sdt is not None else None
+                )
+            elif child not in proven_nested_blocks:
+                raise DocxSemanticsV3Error("owned block lacks resolved hierarchy evidence")
             prove_block_sdt_envelope(child, tag)
             content = child.find(qn("w:sdtContent"))
             if content is None:
@@ -295,6 +301,8 @@ class DocxSemanticsV3Recovery:
                     anchor.block_kind,
                     allowed_heading_bookmark_name=heading_bookmark,
                     proven_table_role_nodes=proven_table_role_nodes,
+                    proven_nested_blocks=proven_nested_blocks,
+                    proven_machine_nodes=proven_machine_nodes,
                 )
                 source_anchor = SourceAnchorV3("ordinary_anchor", anchor.source_id, anchor.block_kind)
                 anchor_group_records.append((child, source_anchor, logical))
@@ -326,6 +334,8 @@ class DocxSemanticsV3Recovery:
             caption_style_bindings,
             caption_parser=caption_parser,
             standalone_target_tags=standalone_target_tags,
+            proven_nested_blocks=proven_nested_blocks,
+            reserved_semantic_elements=reserved_semantic_elements,
         )
         prove_source_recovery_records(soft_references, [*reference_occurrences, *fenced_sources])
         fenced_sources_by_paragraph = fenced.bind_fenced_source_document_v3(body, fenced_sources)
@@ -459,7 +469,7 @@ class DocxSemanticsV3Recovery:
             if blocks is None:
                 output.append(child)
             else:
-                output.extend(logical_group_elements(blocks))
+                output.extend(logical_group_elements(blocks, proven_nested_blocks=self._block_elements))
         return output
 
     def source_anchor(self, paragraph_element: Any) -> SourceAnchorV3 | None:
@@ -502,6 +512,21 @@ class DocxSemanticsV3Recovery:
             occurrence_tokens_by_tag=self._occurrence_tokens_by_tag if emit_references else {},
         )
         return text if semantic else None
+
+    def paragraph_reference_spans(
+        self, paragraph_element: Any, *, emit_references: bool = True
+    ) -> dict[Any, tuple[Any, str]]:
+        """Project proven references onto their original sibling XML ranges."""
+        spans: dict[Any, tuple[Any, str]] = {}
+        recover_paragraph_children(
+            list(paragraph_element),
+            target_ids_by_bookmark=self._target_ids_by_bookmark,
+            emit_references=emit_references,
+            soft_tokens_by_tag=self._soft_tokens_by_tag if emit_references else {},
+            occurrence_tokens_by_tag=self._occurrence_tokens_by_tag if emit_references else {},
+            reference_spans=spans,
+        )
+        return spans
 
     def render_fenced_source(self, paragraph_element: Any) -> str | None:
         """Recover an exact authored fence only from authenticated carrier evidence."""
@@ -590,11 +615,13 @@ def _recover_captions(
     *,
     caption_parser: Callable[..., tuple[str, str]] | None = None,
     standalone_target_tags: frozenset[str] = frozenset(),
+    proven_nested_blocks: dict[Any, tuple[Any, ...]] | None = None,
+    reserved_semantic_elements: frozenset[Any] = frozenset(),
 ) -> list[RecoveredCaptionV3]:
     from docx.oxml.ns import qn
 
     recovered: list[RecoveredCaptionV3] = []
-    claimed: set[int] = set()
+    claimed: set[int] = {id(item) for item in reserved_semantic_elements}
     target_by_tag = {item.tag: item for item in targets if item.kind != "heading"}
     for outer, blocks in block_elements.items():
         tag = sdt_tag(outer)
@@ -628,9 +655,13 @@ def _recover_captions(
 
     if not caption_style_bindings:
         return recovered
-    children = list(body)
+    children = (
+        list(body)
+        if proven_nested_blocks is None
+        else list(logical_group_elements(tuple(body), proven_nested_blocks=proven_nested_blocks))
+    )
     for index, child in enumerate(children):
-        if id(child) in claimed or child.tag != qn("w:p"):
+        if id(child) in claimed or child in reserved_semantic_elements or child.tag != qn("w:p"):
             continue
         kind = caption_kind_for_paragraph_style(child, caption_style_bindings)
         if kind is None:

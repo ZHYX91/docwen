@@ -22,7 +22,7 @@ from docwen_core.models.clipboard_document import (
     clipboard_table_header_shape,
     load_clipboard_document_bytes,
 )
-from docwen_core.models.result import ConversionDiagnostic, ConversionMetrics, ConversionResult
+from docwen_core.models.result import ConversionDiagnostic, ConversionErrorInfo, ConversionMetrics, ConversionResult
 from docwen_plugin_markdown.structured_clipboard_images import (
     collect_image_occurrences,
     copy_bound_image_artifacts,
@@ -51,6 +51,7 @@ from docwen_plugin_markdown.structured_clipboard_xlsx import (
     prepare_projection_workbook,
     write_string_matrix,
 )
+from docwen_plugin_markdown.xlsx_text import XlsxCellTextTooLongError, assign_bounded_xlsx_value
 
 _DOCX_MEDIA = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 _XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -327,6 +328,29 @@ def _new_projection_workbook(template_path: str | None) -> Any:
 
 
 def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
+    try:
+        return _convert_clipboard_document_to_xlsx(context)
+    except XlsxCellTextTooLongError as exc:
+        return ConversionResult(
+            task_id=context.request.request_id,
+            success=False,
+            error=ConversionErrorInfo(
+                error_type="conversion_failed",
+                message=str(exc),
+                diagnostic_code="CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG",
+            ),
+            diagnostics=[
+                ConversionDiagnostic(
+                    level="error",
+                    code="CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG",
+                    message=str(exc),
+                    location=f"{exc.sheet}!R{exc.row}C{exc.column}",
+                )
+            ],
+        )
+
+
+def _convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
     document = _load(context)
     resources = resolve_bound_images(context, document)
     recorder = _OrderRecorder()
@@ -349,7 +373,9 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
             output_cell = sheet.cell(
                 cell_model.row + 1,
                 cell_model.column + 1,
-                _xlsx_cell_value(cell_model, recorder, projection.table_titles, resources),
+            )
+            assign_bounded_xlsx_value(
+                output_cell, _xlsx_cell_value(cell_model, recorder, projection.table_titles, resources)
             )
             output_cell.data_type = "s"
             output_cell.number_format = "@"

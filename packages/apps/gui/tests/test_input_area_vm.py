@@ -658,3 +658,21 @@ class TestFileFilter:
         vm.files_added.connect(signals.append)
         vm.add_files([str(f1)])
         assert len(signals) == 0
+
+
+@pytest.mark.parametrize("wrapper", ["{}", "{{{}}}", '"{}"', "'{}'"])
+@pytest.mark.parametrize("prefix_is_directory", [False, True])
+def test_text_payload_complete_existing_identity_owns_its_prefix(tmp_path, wrapper, prefix_is_directory):
+    prefix = tmp_path / "报告.md"
+    if prefix_is_directory:
+        prefix.mkdir()
+    else:
+        prefix.write_text("prefix", encoding="utf-8")
+    complete = tmp_path / "报告.md 2026.md"
+    complete.write_text("complete", encoding="utf-8")
+    assert InputAreaViewModel.extract_paths_from_text_payload(wrapper.format(complete)) == [str(complete)]
+    assert InputAreaViewModel.extract_paths_from_text_payload(f'"{complete}" "{prefix}"') == [
+        str(complete),
+        str(prefix),
+    ]
+    assert InputAreaViewModel.extract_paths_from_text_payload(f"{complete}\n{complete}") == [str(complete)]

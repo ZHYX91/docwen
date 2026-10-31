@@ -48,6 +48,7 @@ def test_md_to_docx_text_and_word_native_use_request_cleanup_rules() -> None:
                 "numbering_scheme": "hierarchical_standard",
                 "heading_numbering_render_mode": render_mode,
             },
+            config_values={"template_fill": {"gongwen_numbering_text": False}},
             numbering_registry=repository_numbering_registry(),
             heading_cleanup_rules=request_rules,
         )
@@ -66,11 +67,20 @@ def test_md_to_docx_uses_text_config_when_request_numbering_options_are_omitted(
 
     calls: list[tuple[str, str | None]] = []
 
-    def remove_numbering(content: str, *, rules) -> str:
+    def remove_numbering(content: str, *, rules, extended_headings: bool, structural_tables: bool) -> str:
         calls.append(("remove", None))
         return content
 
-    def add_numbering(content: str, *, scheme: str, registry) -> str:
+    def add_numbering(
+        content: str,
+        *,
+        scheme: str,
+        registry,
+        extended_headings: bool,
+        structural_tables: bool,
+        added_prefixes=None,
+        prefix_marker=None,
+    ) -> str:
         calls.append(("add", scheme))
         return content
 

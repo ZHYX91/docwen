@@ -95,6 +95,7 @@ class HistoryRowData:
     diagnostic: DiagnosticSummary | None = None
     repeat_count: int = 1
     created_at: datetime = field(default_factory=datetime.now)
+    details_message: str = ""
 
 
 @dataclass
@@ -361,6 +362,7 @@ class InfoAreaViewModel(QObject):
         operation_id: str | None = None,
         operation: str = "",
         diagnostic: DiagnosticSummary | None = None,
+        details_message: str = "",
     ) -> None:
         """Add a message to the history area.
 
@@ -387,6 +389,7 @@ class InfoAreaViewModel(QObject):
             resolved_operation_id,
             operation,
             diagnostic,
+            details_message,
         )
         timestamp = datetime.now().strftime("%H:%M:%S")
         if signature == self._last_message_signature and self._history_rows:
@@ -411,6 +414,7 @@ class InfoAreaViewModel(QObject):
             operation_id=resolved_operation_id,
             operation=operation,
             diagnostic=diagnostic,
+            details_message=details_message,
         )
         self._history_rows.append(row)
         self._enforce_message_limit()

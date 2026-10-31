@@ -69,9 +69,10 @@ class OutputPolicy:
     group_outputs: bool = False
     """Publish artifacts as one result directory instead of loose files.
 
-    Runtime normally derives this from Markdown source/target semantics.  The
-    Application sets it explicitly when a private conversion stage is followed
-    by a post-processing stage so the public result keeps the original layout.
+    Explicit grouping overrides automatic layout. Runtime otherwise keeps new
+    Markdown documents in result directories and groups Markdown-to-document
+    or spreadsheet conversions only when they produce multiple deliverables.
+    Intermediate stages do not force the final result into a directory.
     """
 
     open_after_done: bool = False

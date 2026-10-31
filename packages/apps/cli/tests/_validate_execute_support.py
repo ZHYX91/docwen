@@ -14,6 +14,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from tests.support.cli import make_controller_mock_with_cancellation
 
 from docwen_application.runtime_capability_catalog import RuntimeRoute, parse_runtime_capability_catalog
 from docwen_core.errors import DocWenError
@@ -142,7 +143,7 @@ def _validation_capability_projection() -> dict[str, object]:
 
 
 def _validation_controller() -> MagicMock:
-    controller = MagicMock()
+    controller = make_controller_mock_with_cancellation()
     controller.has_runtime = True
     controller.describe_runtime_capabilities.return_value = _validation_capability_projection()
     controller.execute_single.return_value = MagicMock(success=True)

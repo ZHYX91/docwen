@@ -34,13 +34,17 @@ from docwen_plugin_markdown.common_utils import (
     write_table_to_csv,
 )
 from docwen_plugin_markdown.template_policy import template_list_separator
+from docwen_plugin_markdown.to_spreadsheet.image_plan import XlsxImageTextPlan, image_scope_without_literal_collision
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
-    XlsxCellTextTooLongError,
+    _plain_text_from_markup,
     _plan_rectangular_merges,
     _restore_escaped_merge_marker_literals,
-    assign_bounded_xlsx_value,
     build_template_workbook,
     process_image_placeholders,
+)
+from docwen_plugin_markdown.xlsx_text import (
+    XlsxCellTextTooLongError,
+    check_workbook_text_capacity,
 )
 
 if TYPE_CHECKING:
@@ -125,7 +129,10 @@ class MdToXlsxConverter:
             progress.report_progress(5.0, "Reading Markdown input")
             content, input_bytes = read_input_markdown(input_path)
             yaml_front, markdown_body = split_yaml_front_matter_source(content)
+            extensions = resolve_markdown_extensions(context.request.options, context.config, direction="input")
+            structural_tables = extensions.structural_tables
             image_scope = secrets.token_urlsafe(24)
+            image_scope = image_scope_without_literal_collision(image_scope, content + _plain_text_from_markup(content))
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),
@@ -134,6 +141,8 @@ class MdToXlsxConverter:
                 table_safe=True,
                 temp_dir=str(workspace.staging_dir),
                 image_scope=image_scope,
+                extended_headings=extensions.extended_headings,
+                structural_tables=structural_tables,
             )
             content = yaml_front + markdown_body
 
@@ -143,11 +152,6 @@ class MdToXlsxConverter:
 
             template_name = str(getattr(context.request, "options", {}).get("template_name", "") or "").strip()
             template_stats: dict[str, int] = {}
-            structural_tables = resolve_markdown_extensions(
-                context.request.options,
-                context.config,
-                direction="input",
-            ).structural_tables
             structural_merge_warnings = 0
             if template_name:
                 template_path = Path(template_name)
@@ -197,6 +201,7 @@ class MdToXlsxConverter:
                 else:
                     actual_table_count = len(tables)
 
+                image_plan = XlsxImageTextPlan()
                 wb = Workbook()
                 # Remove default sheet
                 wb.remove(wb.active)  # pyright: ignore[reportArgumentType]
@@ -217,7 +222,7 @@ class MdToXlsxConverter:
                                 if structural_tables
                                 else raw_value
                             )
-                            assign_bounded_xlsx_value(ws.cell(row=row_idx, column=col_idx), value)
+                            image_plan.assign(ws.cell(row=row_idx, column=col_idx), value)
 
                     if structural_tables and bool(table.get("structural")):
                         merge_regions, merge_warnings = _plan_rectangular_merges(
@@ -236,6 +241,7 @@ class MdToXlsxConverter:
                     wb,
                     input_path,
                     image_scope=image_scope,
+                    image_plan=image_plan,
                 )
 
             # ── Write to staging ────────────────────────────────────
@@ -246,6 +252,7 @@ class MdToXlsxConverter:
             input_stem = _source_stem(context)
             suggested_name = f"{input_stem}.xlsx"
 
+            check_workbook_text_capacity(wb)
             wb.save(output_path)
 
             output_bytes = Path(output_path).stat().st_size
@@ -369,7 +376,10 @@ class MdToCsvConverter:
             progress.report_progress(5.0, "Reading Markdown input")
             content, input_bytes = read_input_markdown(input_path)
             yaml_front, markdown_body = split_yaml_front_matter_source(content)
+            extensions = resolve_markdown_extensions(context.request.options, context.config, direction="input")
+            structural_tables = extensions.structural_tables
             image_scope = secrets.token_urlsafe(24)
+            image_scope = image_scope_without_literal_collision(image_scope, content + _plain_text_from_markup(content))
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),
@@ -378,6 +388,8 @@ class MdToCsvConverter:
                 table_safe=True,
                 temp_dir=str(workspace.staging_dir),
                 image_scope=image_scope,
+                extended_headings=extensions.extended_headings,
+                structural_tables=structural_tables,
             )
             markdown_body = _csv_image_fallbacks(
                 markdown_body,
@@ -417,9 +429,7 @@ class MdToCsvConverter:
                     source_stem=_source_stem(context),
                     image_scope=image_scope,
                     list_separator=template_list_separator(context.config),
-                    structural_tables=resolve_markdown_extensions(
-                        context.request.options, context.config, direction="input"
-                    ).structural_tables,
+                    structural_tables=structural_tables,
                 )
                 return self._convert_template_workbook_to_csv_artifacts(
                     workbook=workbook,
@@ -436,9 +446,7 @@ class MdToCsvConverter:
             progress.report_progress(30.0, "Parsing Markdown tables")
             tables = parse_md_tables(
                 markdown_body,
-                structural_tables=resolve_markdown_extensions(
-                    context.request.options, context.config, direction="input"
-                ).structural_tables,
+                structural_tables=structural_tables,
             )
 
             if not tables:

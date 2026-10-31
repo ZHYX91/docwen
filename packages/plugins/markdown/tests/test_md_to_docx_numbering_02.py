@@ -160,6 +160,7 @@ class TestWordNativeHeadingNumbering:
                 "numbering_scheme": "hierarchical_standard",
                 "heading_numbering_render_mode": "word_native",
             },
+            config_values={"template_fill": {"gongwen_numbering_text": False}},
             numbering_registry=repository_numbering_registry(),
         )
 
@@ -221,6 +222,7 @@ class TestWordNativeHeadingNumbering:
                 "numbering_scheme": "hierarchical_standard",
                 "heading_numbering_render_mode": "word_native",
             },
+            config_values={"template_fill": {"gongwen_numbering_text": False}},
             numbering_registry=repository_numbering_registry(),
         )
 
@@ -275,6 +277,7 @@ class TestWordNativeHeadingNumbering:
                 "numbering_scheme": "gongwen_standard",
                 "heading_numbering_render_mode": "word_native",
             },
+            config_values={"template_fill": {"gongwen_numbering_text": False}},
             numbering_registry=repository_numbering_registry(),
         )
 
@@ -323,6 +326,7 @@ class TestWordNativeHeadingNumbering:
                 "numbering_scheme": "hierarchical_standard",
                 "heading_numbering_render_mode": "word_native",
             },
+            config_values={"template_fill": {"gongwen_numbering_text": False}},
             numbering_registry=repository_numbering_registry(),
         )
 

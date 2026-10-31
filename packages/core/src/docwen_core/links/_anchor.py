@@ -13,10 +13,25 @@ import logging
 import re
 from urllib.parse import unquote
 
+from docwen_core.links._block_context import (
+    THEMATIC_BREAK_RE,
+    MarkdownBlockContext,
+    _Container,
+    _indent_end,
+    markdown_table_blocks,
+    yaml_front_matter_end,
+)
+from docwen_core.links._source_document import (
+    markdown_heading_ranges,
+    markdown_heading_text,
+    markdown_source_context_lines,
+    markdown_source_projection,
+)
+
 logger = logging.getLogger(__name__)
 
-_YAML_FRONT_OPEN_RE = re.compile(r"^(?:\ufeff)?---[ \t]*(?:\r?\n)")
-_YAML_FRONT_CLOSE_RE = re.compile(r"^---[ \t]*(?:\r?\n|$)", re.MULTILINE)
+_BLOCK_ID = re.compile(r"[A-Za-z0-9-]{1,128}\Z")
+_BLOCK_SUFFIX = re.compile(r"(?<!\S)\^([A-Za-z0-9-]{1,128})[ \t]*(?:\r\n|\r|\n)?$")
 
 
 def parse_anchor(link_target: str) -> tuple[str | None, str | None, str | None]:
@@ -48,7 +63,9 @@ def parse_anchor(link_target: str) -> tuple[str | None, str | None, str | None]:
     return (file_path, anchor, None)
 
 
-def extract_section_by_heading(content: str, heading: str) -> str | None:
+def extract_section_by_heading(
+    content: str, heading: str, *, structural_tables: bool = False, extended_headings: bool = True
+) -> str | None:
     """Extract a section of Markdown content bounded by a heading.
 
     Finds the line whose heading text matches *heading* (case-insensitive,
@@ -57,53 +74,39 @@ def extract_section_by_heading(content: str, heading: str) -> str | None:
     fewer ``#``).  Trailing blank lines at the end of the section are
     trimmed.
 
-    Returns *None* when the heading is not found.
+    Returns *None* when the heading is not found. Direct callers retain the
+    historical H1..H9 default; conversion routes pass their frozen dialect.
     """
-    lines = content.split("\n")
-    target_heading = heading.strip()
-
-    start_index: int | None = None
-    start_level: int | None = None
-
-    for i, line in enumerate(lines):
-        m = re.match(r"^(#{1,9})\s+(.*)$", line)
-        if not m:
-            continue
-        level = len(m.group(1))
-        title = m.group(2).strip()
-        if title.lower().replace(" ", "") == target_heading.lower().replace(" ", ""):
-            start_index = i
-            start_level = level
-            logger.debug("Found target heading (level %d) at line %d", level, i)
-            break
-
-    if start_index is None:
+    headings = markdown_heading_ranges(
+        content, structural_tables=structural_tables, extended_headings=extended_headings
+    )
+    target_text = "".join(heading.lower().split())
+    matches = [
+        item
+        for item in headings
+        if "".join(
+            markdown_heading_text("\n".join(content[start:end] for start, end in item.text_ranges)).lower().split()
+        )
+        == target_text
+    ]
+    if not matches:
         logger.warning("Requested heading was not found")
         return None
-    if start_level is None:
-        return None
-
-    # Find end of section — next heading at same or higher level
-    end_index = len(lines)
-    for i in range(start_index + 1, len(lines)):
-        m = re.match(r"^(#{1,9})\s+", lines[i])
-        if m and len(m.group(1)) <= start_level:
-            end_index = i
-            logger.debug("Section ends at line %d (heading level %s)", i, m.group(1))
-            break
-
-    section_lines = lines[start_index:end_index]
-
-    # Trim trailing blank lines
-    while section_lines and not section_lines[-1].strip():
-        section_lines.pop()
-
-    result = "\n".join(section_lines)
-    logger.debug("Extracted section: %d lines", len(section_lines))
-    return result
+    target = matches[0]
+    end = next(
+        (item.start for item in headings if item.start > target.start and item.level <= target.level), len(content)
+    )
+    section = content[target.start : end]
+    if target.container_indent >= 4:
+        section = "".join(
+            line[(_indent_end(line, 0, target.container_indent) or 0) :] for line in section.splitlines(keepends=True)
+        )
+    return section.rstrip(" \t\r\n")
 
 
-def extract_block_by_id(content: str, block_id: str) -> str | None:
+def extract_block_by_id(
+    content: str, block_id: str, *, structural_tables: bool = False, extended_headings: bool = True
+) -> str | None:
     """Extract a paragraph marked with a ``^block-id`` marker.
 
     Block markers come in two flavours:
@@ -115,69 +118,156 @@ def extract_block_by_id(content: str, block_id: str) -> str | None:
     The marker is stripped and adjacent non-heading lines above and below
     are gathered into the result.
     """
-    lines = content.split("\n")
-    block_re = re.compile(r"\^" + re.escape(block_id) + r"\s*$")
+    if _BLOCK_ID.fullmatch(block_id) is None:
+        return None
+    projection = markdown_source_projection(
+        content, structural_tables=structural_tables, extended_headings=extended_headings
+    )
+    lines = content.splitlines(keepends=True)
+    visible_lines = projection.splitlines(keepends=True)
+    offsets: list[int] = []
+    owners: list[tuple[_Container, ...]] = []
+    content_starts: list[int] = []
+    contexts = markdown_source_context_lines(
+        content, structural_tables=structural_tables, extended_headings=extended_headings
+    )
+    offset = 0
+    matches: list[tuple[int, re.Match[str]]] = []
+    valid_markers: dict[int, re.Match[str]] = {}
+    for index, line in enumerate(visible_lines):
+        row = contexts[index]
+        offsets.append(offset)
+        owners.append(row.containers)
+        content_starts.append(row.content_start)
+        match = _BLOCK_SUFFIX.search(line)
+        original_match = _BLOCK_SUFFIX.search(lines[index])
+        if (
+            match is not None
+            and original_match is not None
+            and match.start() == original_match.start()
+            and match.group(1) == original_match.group(1)
+        ):
+            valid_markers[index] = original_match
+            if original_match.group(1) == block_id:
+                matches.append((index, original_match))
+        offset += len(line)
+    if len(matches) != 1:
+        logger.warning("Requested block id was not found or is ambiguous")
+        return None
+    index, match = matches[0]
+    heading_ranges = markdown_heading_ranges(
+        content, structural_tables=structural_tables, extended_headings=extended_headings
+    )
+    table_ranges = [
+        (start, end - 1)
+        for start, end in markdown_table_blocks(
+            [line[content_starts[index] :].rstrip("\r\n") for index, line in enumerate(visible_lines)],
+            list(owners),
+            structural_tables=structural_tables,
+            extended_headings=extended_headings,
+        )
+    ]
 
-    for i, line in enumerate(lines):
-        if not block_re.search(line):
-            continue
+    def ordinary_line(candidate: int, *, allow_marker: bool = False) -> bool:
+        if not 0 <= candidate < len(lines) or not visible_lines[candidate].strip():
+            return False
+        if owners[candidate] != owners[index]:
+            return False
+        if not allow_marker and candidate in valid_markers:
+            return False
+        body = visible_lines[candidate][content_starts[candidate] :].rstrip("\r\n")
+        if THEMATIC_BREAK_RE.fullmatch(body) or any(start <= candidate <= end for start, end in table_ranges):
+            return False
+        return not any(item.start <= offsets[candidate] < item.end for item in heading_ranges)
 
-        line_stripped = line.strip()
+    standalone = visible_lines[index][content_starts[index] :].strip() == f"^{block_id}"
+    if standalone:
+        end_index = index - 1
+        while end_index >= 0 and not lines[end_index].strip():
+            end_index -= 1
+        if end_index < 0:
+            return None
+        parent = owners[index]
+        previous = owners[end_index]
+        if len(previous) > len(parent) and previous[: len(parent)] == parent:
+            container = previous[len(parent)]
+            start_index = end_index
+            for candidate in range(end_index - 1, -1, -1):
+                path = owners[candidate]
+                if not lines[candidate].strip():
+                    start_index = candidate
+                    continue
+                if len(path) <= len(parent) or path[: len(parent)] != parent:
+                    break
+                sibling = path[len(parent)]
+                if sibling != container and not (
+                    container.kind == sibling.kind == "list" and container.marker == sibling.marker
+                ):
+                    break
+                start_index = candidate
+            return "".join(lines[start_index : end_index + 1]).strip("\r\n")
+        for start, end in table_ranges:
+            if end == end_index and owners[start] == owners[index]:
+                return "".join(lines[start : end + 1]).rstrip("\r\n")
+        if not ordinary_line(end_index):
+            return _extract_preceding_literal_block(
+                content,
+                offsets[end_index] + len(lines[end_index]),
+                structural_tables=structural_tables,
+                extended_headings=extended_headings,
+            )
+        start_index = end_index
+        while ordinary_line(start_index - 1):
+            start_index -= 1
+        return "".join(lines[start_index : end_index + 1]).rstrip(" \t\r\n")
 
-        # --- standalone marker: ^block-id on its own line ---
-        if line_stripped == f"^{block_id}":
-            logger.debug("Found standalone block marker at line %d", i)
-            paragraph_lines: list[str] = []
-            j = i - 1
-            # skip blank lines above the marker
-            while j >= 0 and not lines[j].strip():
-                j -= 1
-            # collect non-blank lines (the paragraph)
-            while j >= 0 and lines[j].strip():
-                paragraph_lines.insert(0, lines[j])
-                j -= 1
-            if paragraph_lines:
-                result = "\n".join(paragraph_lines)
-                logger.debug("Extracted block (standalone): %d lines", len(paragraph_lines))
-                return result
-            continue
+    if not ordinary_line(index, allow_marker=True):
+        return None
+    start_index = index
+    if owners[index] and owners[index][-1].kind == "list":
+        item = owners[index]
+        while start_index > 0 and owners[start_index - 1][: len(item)] == item:
+            start_index -= 1
+        end_index = index
+        while end_index + 1 < len(lines) and owners[end_index + 1][: len(item)] == item:
+            end_index += 1
+        clean_line = lines[index][: match.start()].rstrip(" \t") + lines[index][len(lines[index].rstrip("\r\n")) :]
+        return ("".join(lines[start_index:index]) + clean_line + "".join(lines[index + 1 : end_index + 1])).rstrip(
+            " \t\r\n"
+        )
+    while ordinary_line(start_index - 1):
+        start_index -= 1
+    end_index = index
+    while ordinary_line(end_index + 1):
+        end_index += 1
+    clean_line = lines[index][: match.start()].rstrip(" \t") + lines[index][len(lines[index].rstrip("\r\n")) :]
+    return ("".join(lines[start_index:index]) + clean_line + "".join(lines[index + 1 : end_index + 1])).rstrip(
+        " \t\r\n"
+    )
 
-        # --- inline marker: text ^block-id in a line ---
-        clean_line = block_re.sub("", line).rstrip()
-        paragraph_lines = [clean_line]
 
-        # scan upwards for adjacent non-heading lines
-        j = i - 1
-        while j >= 0 and lines[j].strip() and not lines[j].strip().startswith("#"):
-            paragraph_lines.insert(0, lines[j])
-            j -= 1
+def _extract_preceding_literal_block(
+    content: str, end: int, *, structural_tables: bool = False, extended_headings: bool = False
+) -> str | None:
+    from docwen_core.links._source_ownership import markdown_source_owners
 
-        # scan downwards for adjacent non-heading lines
-        j = i + 1
-        while j < len(lines) and lines[j].strip() and not lines[j].strip().startswith("#"):
-            # stop if we encounter another block marker
-            if re.search(r"\^\w+", lines[j]):
-                break
-            paragraph_lines.append(lines[j])
-            j += 1
-
-        result = "\n".join(paragraph_lines)
-        logger.debug("Extracted block (inline): %d lines", len(paragraph_lines))
-        return result
-
-    logger.warning("Requested block id was not found")
+    for owner in markdown_source_owners(
+        content, full_document=True, structural_tables=structural_tables, extended_headings=extended_headings
+    ):
+        if owner.kind == "block" and owner.start < end <= owner.end and not content[end : owner.end].strip():
+            segment = content[owner.start : owner.end]
+            context = MarkdownBlockContext(extended_headings=extended_headings)
+            first = context.line(segment.splitlines()[0]).content
+            if re.match(r" {0,3}(?:`{3,}|~{3,}|\$\$)", first):
+                return segment.rstrip(" \t\r\n")
+            return None
     return None
 
 
 def split_yaml_front_matter_source(content: str) -> tuple[str, str]:
     """Return an exact YAML front-matter prefix and the remaining body."""
-    opening = _YAML_FRONT_OPEN_RE.match(content)
-    if opening is None:
-        return "", content
-    closing = _YAML_FRONT_CLOSE_RE.search(content, opening.end())
-    if closing is None:
-        return "", content
-    return content[: closing.end()], content[closing.end() :]
+    end = yaml_front_matter_end(content)
+    return content[:end], content[end:]
 
 
 def strip_yaml_front_matter(content: str) -> str:

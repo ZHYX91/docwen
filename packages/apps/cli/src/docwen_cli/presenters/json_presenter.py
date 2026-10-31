@@ -259,6 +259,7 @@ class JsonPresenter:
         command: str = "batch convert",
         action_name: str = "",
         interrupted: bool = False,
+        timed_out: bool = False,
         input_files: list[str] | None = None,
     ) -> None:
         """Emit a batch result envelope.
@@ -269,6 +270,7 @@ class JsonPresenter:
             action_name: Resolved business action (e.g. ``""``,
                 ``"gongwen"``, ``"validate"``).
             interrupted: Whether the operation was interrupted.
+            timed_out: Whether the command deadline stopped remaining work.
             input_files: Optional original input files, aligned by index with
                 ``results``.  This avoids mutating slotted result objects.
         """
@@ -276,6 +278,9 @@ class JsonPresenter:
         total = len(results)
         success_count = sum(1 for r in results if getattr(r, "success", False))
         failed_count = total - success_count
+        processed_count = sum(
+            1 for result in results if self._execution_state(result) not in {"not_started", "cancellation_unconfirmed"}
+        )
 
         batch_items: list[dict[str, Any]] = []
         for idx, r in enumerate(results):
@@ -286,7 +291,7 @@ class JsonPresenter:
 
         data: dict[str, Any] = {
             "total": total,
-            "processed": total,
+            "processed": processed_count,
             "succeeded": success_count,
             "failed": failed_count,
             "interrupted": interrupted,
@@ -304,7 +309,18 @@ class JsonPresenter:
                 "The batch operation was interrupted.",
                 details={
                     "total": total,
-                    "processed": total,
+                    "processed": processed_count,
+                    "succeeded": success_count,
+                    "failed": failed_count,
+                },
+            )
+        elif timed_out:
+            top_level_error = self._typed_error(
+                "operation_timeout",
+                "The batch deadline expired; completed item results are preserved.",
+                details={
+                    "total": total,
+                    "processed": processed_count,
                     "succeeded": success_count,
                     "failed": failed_count,
                 },
@@ -333,7 +349,7 @@ class JsonPresenter:
 
         envelope = self._make_envelope(
             command=command,
-            success=(failed_count == 0 and not interrupted),
+            success=(failed_count == 0 and not interrupted and not timed_out),
             data=data,
             error=top_level_error,
             meta=meta,
@@ -351,6 +367,8 @@ class JsonPresenter:
             "error": None,
             "details": {},
         }
+        if state := self._execution_state(result):
+            item["details"]["execution_state"] = state
         # ── Embed proofread report inline ───────────────────────────
         if success:
             proofread = self._proofread_report_from_metrics(result)
@@ -374,6 +392,12 @@ class JsonPresenter:
                     "The batch item failed without a structured runtime error.",
                 )
         return item
+
+    @staticmethod
+    def _execution_state(result: Any) -> str:
+        extra = getattr(getattr(result, "metrics", None), "extra", None)
+        state = extra.get("execution_state", "") if isinstance(extra, dict) else ""
+        return state if state in {"not_started", "cancellation_unconfirmed"} else ""
 
     # ── Generic data output ──────────────────────────────────────
 

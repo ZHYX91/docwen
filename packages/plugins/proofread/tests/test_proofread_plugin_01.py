@@ -20,10 +20,90 @@ pytestmark = pytest.mark.golden
 
 
 @pytest.mark.contract
+def test_docx_invalid_review_text_does_not_leave_partial_comments(tmp_path, monkeypatch) -> None:
+    import docwen_plugin_proofread.docx_validator as validator_module
+
+    source = tmp_path / "invalid-review-text.docx"
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    _create_test_docx(str(source), ["１２３"])
+    monkeypatch.setattr("docwen_plugin_proofread.comment_text.format_comment", lambda *_args: "invalid\0")
+    context = _build_fake_context(
+        str(source),
+        str(staging),
+        target_format="docx",
+        action_name="validate",
+        source_format="docx",
+        options={
+            "enable_symbol_correction": True,
+            "enable_symbol_pairing": False,
+            "enable_typos_rule": False,
+            "enable_sensitive_word": False,
+        },
+    )
+    result = validator_module.DocxValidator().convert(context)
+    assert result.success
+    assert result.artifacts[0].metadata["comments_added"] == 0
+    assert result.artifacts[0].metadata["comments_failed"] == 3
+    with zipfile.ZipFile(result.artifacts[0].staging_path) as package:
+        assert "word/comments.xml" not in package.namelist()
+        assert b"commentRange" not in package.read("word/document.xml")
+
+
+@pytest.mark.contract
+def test_docx_proofreading_preserves_legacy_comment_ids_and_styles(tmp_path) -> None:
+    from docx import Document
+    from docx.enum.style import WD_STYLE_TYPE
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from lxml import etree
+
+    from docwen_plugin_proofread.docx_validator import DocxValidator
+
+    source = tmp_path / "legacy-comments.docx"
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    document = Document()
+    old = document.add_comment(document.add_paragraph("原批注").runs, "old")
+    old._element.set(qn("w:id"), "invalid")
+    old_xml = etree.tostring(old._element)
+    document.styles.add_style("CommentReference", WD_STYLE_TYPE.PARAGRAPH)
+    document.styles.add_style("CommentText", WD_STYLE_TYPE.CHARACTER)
+    orphan = OxmlElement("w:commentReference")
+    orphan.set(qn("w:id"), "+0001")
+    document.sections[0].header.paragraphs[0].add_run()._r.append(orphan)
+    document.add_paragraph("价格是１２３元。")
+    document.save(source)
+    original = source.read_bytes()
+    context = _build_fake_context(
+        str(source),
+        str(staging),
+        target_format="docx",
+        action_name="validate",
+        source_format="docx",
+        options={
+            "enable_symbol_correction": True,
+            "enable_symbol_pairing": False,
+            "enable_typos_rule": False,
+            "enable_sensitive_word": False,
+        },
+    )
+    result = DocxValidator().convert(context)
+    assert result.success is True
+    assert result.artifacts[0].metadata["comments_added"] == 3
+    reopened = Document(result.artifacts[0].staging_path)
+    comments = list(reopened.comments)
+    assert etree.tostring(comments[0]._element) == old_xml
+    assert [comment.comment_id for comment in comments[1:]] == [2, 3, 4]
+    assert reopened.styles["CommentReference"].type == WD_STYLE_TYPE.PARAGRAPH
+    assert reopened.styles["CommentText"].type == WD_STYLE_TYPE.CHARACTER
+    assert source.read_bytes() == original
+
+
+@pytest.mark.contract
 def test_docx_comment_failures_preserve_issue_count_and_emit_warning(tmp_path, monkeypatch) -> None:
     """Detected issues stay visible when Word comment insertion degrades."""
-    from docx.document import Document as DocumentClass
-
+    import docwen_plugin_proofread.docx_validator as docx_validator
     from docwen_plugin_proofread.docx_validator import DocxValidator
 
     source = tmp_path / "comment-failure.docx"
@@ -34,7 +114,7 @@ def test_docx_comment_failures_preserve_issue_count_and_emit_warning(tmp_path, m
     def _fail_add_comment(self, *_args, **_kwargs):
         raise RuntimeError("comment part unavailable")
 
-    monkeypatch.setattr(DocumentClass, "add_comment", _fail_add_comment)
+    monkeypatch.setattr(docx_validator, "append_docx_comment", _fail_add_comment)
     context = _build_fake_context(
         str(source),
         str(staging),

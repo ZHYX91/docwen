@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from docwen_core.docx_parsing.xml_ns import NS_R, NS_WP, NSMAP_WPV
+from docwen_core.docx_parsing.xml_ns import NS_A, NS_R, NS_V, NS_WP
 
 
 @dataclass(frozen=True)
@@ -15,6 +15,34 @@ class ImageInfo:
     rel_id: str
     content_type: str
     source_name: str = ""
+
+
+class ImageExtractionNames:
+    """Request-owned names for every DOCX image occurrence in one directory.
+
+    A relationship may recur in distinct paragraphs. Source names may collide
+    with each other or with a previously allocated suffix, so neither is a
+    unique resource identity. The returned path is reserved for one occurrence.
+    """
+
+    def __init__(self, output_dir: str) -> None:
+        self.directory = Path(output_dir)
+        self.directory.mkdir(parents=True, exist_ok=True)
+        self._used = {path.name.casefold() for path in self.directory.iterdir()}
+        self._next_suffix: dict[str, int] = {}
+
+    def allocate(self, name: str) -> Path:
+        path = Path(name)
+        key = name.casefold()
+        suffix = self._next_suffix.get(key, 0)
+        while True:
+            candidate = name if suffix == 0 else f"{path.stem}_{suffix}{path.suffix}"
+            result = self.directory / candidate
+            if candidate.casefold() not in self._used and not result.exists() and not result.is_symlink():
+                self._used.add(candidate.casefold())
+                self._next_suffix[key] = suffix + 1
+                return result
+            suffix += 1
 
 
 def _content_type_to_ext(content_type: str) -> str | None:
@@ -37,6 +65,7 @@ def extract_images_from_element(
     *,
     name_prefix: str = "docx-image",
     prefer_source_names: bool = False,
+    name_allocator: ImageExtractionNames | None = None,
 ) -> list[ImageInfo]:
     """Extract images from any XML element (paragraph, table, SDT, textbox, cell).
 
@@ -56,7 +85,9 @@ def extract_images_from_element(
         List of ``ImageInfo`` objects for successfully extracted images.
     """
     dest = Path(output_dir)
-    dest.mkdir(parents=True, exist_ok=True)
+    names = name_allocator or ImageExtractionNames(output_dir)
+    if names.directory != dest:
+        raise ValueError("image name allocator belongs to a different output directory")
 
     infos: list[ImageInfo] = []
     created_paths: list[Path] = []
@@ -73,9 +104,16 @@ def extract_images_from_element(
                 created_path.unlink(missing_ok=True)
             raise
 
-    # ── DrawingML (w:drawing) ────────────────────────────────────────
-    for blip in element.findall(".//a:blip", NSMAP_WPV):
-        rel_id = blip.get(f"{{{NS_R}}}embed") or blip.get(f"{{{NS_R}}}link")
+    # A paragraph or cell can alternate DrawingML and VML occurrences. Walk
+    # their real XML order once rather than concatenating two format groups.
+    for image_element in element.iter():
+        drawingml = image_element.tag == f"{{{NS_A}}}blip"
+        if drawingml:
+            rel_id = image_element.get(f"{{{NS_R}}}embed") or image_element.get(f"{{{NS_R}}}link")
+        elif image_element.tag == f"{{{NS_V}}}imagedata":
+            rel_id = image_element.get(f"{{{NS_R}}}id")
+        else:
+            continue
         if not rel_id:
             continue
 
@@ -93,27 +131,27 @@ def extract_images_from_element(
         # Alt text from drawing properties
         alt = "image"
         source_name = ""
-        # Walk up to find docPr
-        drawing_elem = blip
-        for _ in range(10):  # safety limit
-            drawing_elem = drawing_elem.getparent() if hasattr(drawing_elem, "getparent") else None  # type: ignore[assignment]
-            if drawing_elem is None:
-                break
-            doc_pr = drawing_elem.find(f"{{{NS_WP}}}docPr")
-            if doc_pr is not None:
-                name = doc_pr.get("descr") or doc_pr.get("name") or ""
-                if name:
-                    alt = name
-                source_name = doc_pr.get("title") or ""
-                break
+        if drawingml:
+            # Walk up to find docPr
+            drawing_elem = image_element
+            for _ in range(10):  # safety limit
+                drawing_elem = drawing_elem.getparent() if hasattr(drawing_elem, "getparent") else None  # type: ignore[assignment]
+                if drawing_elem is None:
+                    break
+                doc_pr = drawing_elem.find(f"{{{NS_WP}}}docPr")
+                if doc_pr is not None:
+                    description = doc_pr.get("descr")
+                    name = description if description is not None else doc_pr.get("name")
+                    if name is not None:
+                        alt = name
+                    source_name = doc_pr.get("title") or ""
+                    break
 
         counter += 1
         fname = _safe_source_filename(source_name, ext) if prefer_source_names else ""
         if not fname:
             fname = f"{name_prefix}_{counter}_{rel_id}{ext}"
-        fpath = dest / fname
-        if fpath.exists():
-            fpath = dest / f"{fpath.stem}_{counter}{fpath.suffix}"
+        fpath = names.allocate(fname)
         write_image(fpath, image_bytes)
         infos.append(
             ImageInfo(
@@ -124,30 +162,6 @@ def extract_images_from_element(
                 source_name=source_name,
             )
         )
-
-    # ── VML (w:pict) ─────────────────────────────────────────────────
-    for imagedata in element.findall(".//v:imagedata", NSMAP_WPV):
-        rel_id = imagedata.get(f"{{{NS_R}}}id")
-        if not rel_id:
-            continue
-
-        try:
-            image_part = related_parts[rel_id]
-            image_bytes = image_part.blob
-        except (KeyError, AttributeError):
-            continue
-
-        content_type = getattr(image_part, "content_type", "")
-        ext = _content_type_to_ext(content_type)
-        if ext is None:
-            continue
-
-        alt = "image"
-        counter += 1
-        fname = f"{name_prefix}_{counter}_{rel_id}{ext}"
-        fpath = dest / fname
-        write_image(fpath, image_bytes)
-        infos.append(ImageInfo(alt=alt, path=str(fpath), rel_id=rel_id, content_type=content_type))
 
     return infos
 

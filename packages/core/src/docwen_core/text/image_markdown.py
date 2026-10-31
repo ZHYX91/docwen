@@ -14,7 +14,7 @@ from pathlib import Path
 from PIL import Image
 
 from docwen_core.detection import detect_content_format
-from docwen_core.export_semantics import MarkdownExportSemantics
+from docwen_core.export_semantics import MarkdownExportSemantics, format_image_link
 from docwen_core.formats import CATEGORY_IMAGE, get_category, get_media_type
 from docwen_core.markdown_utils import format_md_file_link
 from docwen_core.yaml_tools import generate_basic_yaml_frontmatter
@@ -184,19 +184,16 @@ def generate_image_markdown(
         target = f"./{Path(image_path).name}"
     else:
         target = str(image_path)
-    return _format_link(alt_text, target, image_link_style)
+    return _format_link(alt_text, target, image_link_style, raw_resource_path=image_mode != "base64")
 
 
-def _format_link(alt: str, target: str, style: str) -> str:
+def _format_link(alt: str, target: str, style: str, *, raw_resource_path: bool = True) -> str:
     if style == "wiki_embed":
         return f"![[{target}]]"
-    if style == "wiki_link":
-        return f"[[{alt or target}|{target}]]"
-    if style == "markdown_embed":
-        return f"![{alt}]({target})"
-    if style == "markdown_link":
-        return f"[{alt or target}]({target})"
-    return f"![{alt}]({target})"
+    if style not in {"wiki_link", "markdown_embed", "markdown_link"}:
+        style = "markdown_embed"
+    label = (alt or target) if style == "markdown_link" else alt
+    return format_image_link(label, target, style=style, raw_resource_path=raw_resource_path)
 
 
 def build_image_ocr_sidecar(

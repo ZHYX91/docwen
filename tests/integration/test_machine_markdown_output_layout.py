@@ -20,7 +20,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.pr_gate]
 
 
 @pytest.mark.parametrize("authored", ["####### Level seven\n", "Plain paragraph.\n"])
-def test_declared_markdown_source_retains_document_node_layout(
+def test_declared_markdown_source_publishes_single_document_directly(
     round_trip_runtime: Any, tmp_path: Path, authored: str
 ) -> None:
     source = tmp_path / "authored.md"
@@ -52,10 +52,10 @@ def test_declared_markdown_source_retains_document_node_layout(
     outcome = service.execute_accepted(service.accept(plan.plan_id))
     assert outcome.state == "completed", outcome.error
     assert outcome.bundle is not None
-    assert outcome.bundle.layout_schema == "docwen.document_node.v1"
+    assert outcome.bundle.layout_schema == "docwen.artifact_layout.v1"
     [artifact] = outcome.bundle.artifacts
     output = filesystem_path(staging / artifact.locator)
-    assert output.parent.name == output.stem
+    assert output.parent == filesystem_path(staging)
     document = Document(str(output))
     assert any(p.text == authored.strip().lstrip("# ") for p in document.paragraphs)
     if authored.startswith("#######"):
@@ -74,14 +74,14 @@ def test_declared_markdown_source_retains_document_node_layout(
     assert direct.success, direct.error
     [direct_artifact] = direct.artifacts
     direct_output = filesystem_path(direct_artifact.staging_path)
-    assert direct_output.parent.name == direct_output.stem
-    assert direct_artifact.metadata["document_node_schema"] == "docwen.document_node.v1"
+    assert direct_output.parent == filesystem_path(tmp_path / "direct")
+    assert "document_node_schema" not in direct_artifact.metadata
     direct_document = Document(str(direct_output))
     assert [p.text for p in direct_document.paragraphs] == [p.text for p in document.paragraphs]
     assert source.read_bytes() == original
 
     exact = tmp_path / "exact.docx"
-    refused = controller.execute_single(
+    exact_result = controller.execute_single(
         ConversionRequest(
             request_id="direct-markdown-exact-path",
             input_refs=[FileRef(str(source), "markdown", "markdown")],
@@ -90,5 +90,6 @@ def test_declared_markdown_source_retains_document_node_layout(
             options=request.options,
         )
     )
-    assert not refused.success
-    assert not exact.exists()
+    assert exact_result.success, exact_result.error
+    assert exact.is_file()
+    assert [p.text for p in Document(str(exact)).paragraphs] == [p.text for p in document.paragraphs]

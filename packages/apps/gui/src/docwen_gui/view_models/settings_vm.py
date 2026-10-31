@@ -153,11 +153,41 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("conversion_defaults", "layout", "to_md_keep_images"),
         ("conversion_defaults", "layout", "to_md_enable_ocr"),
         ("conversion_defaults", "layout", "render_dpi"),
+        ("conversion_defaults", "layout", "split_mode"),
+        ("conversion_defaults", "layout", "document_format"),
+        ("conversion_defaults", "layout", "render_format"),
     ),
-    "gongwen": (("text", "gongwen_fields_enabled"), ("text", "attachment_alignment")),
+    "gongwen": (
+        ("text", "gongwen_fields_enabled"),
+        ("text", "gongwen_numbering_comments"),
+        ("text", "gongwen_numbering_text"),
+        ("text", "attachment_alignment"),
+    ),
     "invoice": (),
     "link": (("link",),),
-    "formatting": (("formatting",),),
+    "formatting": (
+        ("formatting", "page_break_sep"),
+        ("formatting", "section_break_sep"),
+        ("formatting", "horizontal_rule_sep"),
+        ("formatting", "bold_syntax"),
+        ("formatting", "italic_syntax"),
+        ("formatting", "strikethrough_syntax"),
+        ("formatting", "highlight_syntax"),
+        ("formatting", "superscript_syntax"),
+        ("formatting", "subscript_syntax"),
+        ("formatting", "unordered_list_syntax"),
+        ("formatting", "indent_spaces"),
+        ("formatting", "markdown_extensions", "output"),
+    ),
+    "markdown_input": (
+        ("formatting", "each_line_paragraph"),
+        ("formatting", "mermaid_mode"),
+        ("formatting", "mermaid_cli_path"),
+        ("formatting", "dash_sep"),
+        ("formatting", "asterisk_sep"),
+        ("formatting", "underscore_sep"),
+        ("formatting", "markdown_extensions", "input"),
+    ),
     "output": (("output",),),
     "export": (("conversion_defaults", "export"), ("export",)),
     "logging": (("logging",),),
@@ -212,6 +242,8 @@ def _normalize_priority(values: object, allowed_backends: tuple[str, ...]) -> li
 
 
 def _normalize_settings_config(config: SettingsConfig) -> SettingsConfig:
+    if not config.text.gongwen_numbering_text:
+        config.text.gongwen_numbering_comments = False
     for key, allowed_backends in _SPECIAL_CONVERSION_ALLOWED_BACKENDS.items():
         setattr(
             config.software_priority,
@@ -433,6 +465,13 @@ class SettingsViewModel(QObject):
             if not hasattr(section_obj, key):
                 return
             value = _normalize_field_value(section, key, value)
+            comments_cleared = False
+            if section == SECTION_TEXT:
+                if key == "gongwen_numbering_comments" and not self._config.text.gongwen_numbering_text:
+                    value = False
+                elif key == "gongwen_numbering_text" and value is False:
+                    comments_cleared = self._config.text.gongwen_numbering_comments
+                    self._config.text.gongwen_numbering_comments = False
             old = getattr(section_obj, key)
             if old == value:
                 return
@@ -440,6 +479,8 @@ class SettingsViewModel(QObject):
             self._config.mark_dirty(section)
             dirty = self._recompute_dirty()
         self.config_changed.emit(section, key, value)
+        if comments_cleared:
+            self.config_changed.emit(section, "gongwen_numbering_comments", False)
         if dirty != self._is_dirty:
             self._is_dirty = dirty
             self.dirty_state_changed.emit(dirty)
@@ -483,6 +524,7 @@ class SettingsViewModel(QObject):
                     changed = True
             if not changed:
                 return
+            _normalize_settings_config(self._config)
             self._config.mark_dirty(section)
             dirty = self._recompute_dirty()
         self.config_reloaded.emit()
@@ -983,10 +1025,16 @@ class SettingsViewModel(QObject):
 
         template_fill = raw.get("template_fill", {})
         config.text.list_separator = (
-            str(template_fill.get("list_separator", "、")) if isinstance(template_fill, dict) else "、"
+            str(template_fill.get("list_separator", ", ")) if isinstance(template_fill, dict) else ", "
         )
         config.text.gongwen_fields_enabled = (
             template_fill.get("gongwen_fields_enabled", True) if isinstance(template_fill, dict) else True
+        )
+        config.text.gongwen_numbering_comments = (
+            template_fill.get("gongwen_numbering_comments", True) if isinstance(template_fill, dict) else True
+        )
+        config.text.gongwen_numbering_text = (
+            template_fill.get("gongwen_numbering_text", True) if isinstance(template_fill, dict) else True
         )
         config.text.attachment_alignment = (
             str(template_fill.get("attachment_alignment", "tab")) if isinstance(template_fill, dict) else "tab"
@@ -1196,7 +1244,7 @@ class SettingsViewModel(QObject):
             recognize_tables=bool(ocr.get("recognize_tables", True)) if isinstance(ocr, dict) else True,
             image_mode=export_defaults.get("to_md_image_extraction_mode", "file"),
             ocr_mode=export_defaults.get("to_md_ocr_placement_mode", "image_md"),
-            ocr_title_enabled=ocr_output.get("show_blockquote_title", True) if isinstance(ocr_output, dict) else True,
+            ocr_title_enabled=ocr_output.get("show_blockquote_title", False) if isinstance(ocr_output, dict) else False,
             ocr_title_text=title_text,
             base64_compress_enabled=conv_export.get("base64_compress_enabled", True)
             if isinstance(conv_export, dict)
@@ -1223,6 +1271,24 @@ class SettingsViewModel(QObject):
             )
 
         return _normalize_settings_config(config)
+
+    def layout_format_choices(self, category: str) -> list[tuple[str, str]]:
+        """Offer only discovered fixed-layout routes as persisted target preferences."""
+        from docwen_core.formats.categories import get_category
+
+        from ._runtime_route_filter import RuntimeRouteSource, discover_runtime_route_choices
+
+        targets: set[str] = set()
+        for source in ("pdf", "ofd", "xps"):
+            result = discover_runtime_route_choices(
+                self._controller,
+                sources=(RuntimeRouteSource(detected_format=source, source_category="layout"),),
+                operation="conversion",
+            )
+            targets.update(
+                choice.target.upper() for choice in result.choices if get_category(choice.target) == category
+            )
+        return [(target, target) for target in sorted(targets)]
 
     def reset_section(self, section: str) -> bool:
         """Reset a GUI section through its runtime-owned logical group plan."""
@@ -1416,6 +1482,8 @@ class SettingsViewModel(QObject):
         put("conversion.md_to_docx.heading_merge_punctuation", text.heading_merge_punctuation)
         put("template_fill.list_separator", text.list_separator)
         put("template_fill.gongwen_fields_enabled", text.gongwen_fields_enabled)
+        put("template_fill.gongwen_numbering_comments", text.gongwen_numbering_comments)
+        put("template_fill.gongwen_numbering_text", text.gongwen_numbering_text)
         put("template_fill.attachment_alignment", text.attachment_alignment)
         put("document.style.table.md_to_docx.table_style_mode", text.table_style_mode)
         put("document.style.table.md_to_docx.builtin_style_key", text.builtin_table_style)
@@ -1518,6 +1586,9 @@ class SettingsViewModel(QObject):
                 "to_md_enable_ocr",
                 "to_md_optimization",
                 "render_dpi",
+                "split_mode",
+                "document_format",
+                "render_format",
             ),
             "other": (
                 "to_md_keep_images",

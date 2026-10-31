@@ -65,8 +65,7 @@ from docwen_core._docx_semantics_v3_styles import (
 )
 from docwen_core._docx_semantics_v3_topology import anchor_topology_map_xml, order_ordinary_anchor_bindings
 from docwen_core.docx_bookmarks import (
-    BOOKMARK_ID_MAX,
-    bookmark_id_key,
+    DocxBookmarkAllocator,
     build_docx_bookmark_inventory,
 )
 from docwen_core.docx_standalone_caption_occurrence import (
@@ -115,6 +114,7 @@ class DocxSemanticsV3Session:
         self._soft_references: list[SoftReferenceIdentityV3] = []
         self._fenced_sources: list[FencedSourceBindingV3] = []
         self._owned_source_ids: set[str] = set()
+        self._bookmark_allocator: DocxBookmarkAllocator | None = None
         self._finalized = False
 
     @property
@@ -513,16 +513,19 @@ class DocxSemanticsV3Session:
             raise DocxSemanticsV3Error(f"duplicate semantic/anchor source ID: {source_id}")
         self._owned_source_ids.add(source_id)
 
+    @property
+    def bookmark_allocator(self) -> DocxBookmarkAllocator:
+        """Share reservations with request-owned table-role writers."""
+
+        if self._bookmark_allocator is None:
+            self._bookmark_allocator = DocxBookmarkAllocator(build_docx_bookmark_inventory(self._document))
+        return self._bookmark_allocator
+
     def _reserve_bookmark(self, bookmark_name: str) -> str:
-        inventory = build_docx_bookmark_inventory(self._document)
-        if bookmark_name.casefold() in inventory.used_name_keys:
-            raise DocxSemanticsV3Error(f"semantic bookmark conflicts with existing package name: {bookmark_name}")
-        used_ids = set(inventory.used_id_keys)
-        for candidate in range(BOOKMARK_ID_MAX + 1):
-            raw = str(candidate)
-            if bookmark_id_key(raw) not in used_ids:
-                return raw
-        raise DocxSemanticsV3Error("no portable DOCX bookmark IDs remain")
+        try:
+            return self.bookmark_allocator.reserve(bookmark_name)
+        except ValueError as exc:
+            raise DocxSemanticsV3Error(str(exc)) from exc
 
     @staticmethod
     def _wrap_caption_seq_with_bookmark(

@@ -12,6 +12,7 @@ from docwen_core.detection._sniffing import (
     SUPPORTED_EXTENSION_FORMATS,
     delimited_text_encodings,
     detect_content_format,
+    sniff_delimited_separator,
 )
 from docwen_core.detection._validation import (
     FileAdmissionError,
@@ -58,4 +59,5 @@ __all__ = [
     "signature_derived_output_diagnostic",
     "signature_info_for_ref",
     "signature_validation_diagnostic",
+    "sniff_delimited_separator",
 ]

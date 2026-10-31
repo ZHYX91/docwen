@@ -159,3 +159,22 @@ def test_body_extent_uses_placeholder_section_and_columns() -> None:
     second.page_width = Inches(12)
     assert body_content_extent(doc, placeholder)[0] == int(Inches(2.75))
     assert body_content_extent(doc)[0] == int(Inches(4.75))
+
+
+@pytest.mark.parametrize("kind", ["cancel", "cleanup"])
+def test_control_flow_without_cancelled_token_cannot_become_fallback(kind):
+    from docwen_core.cancellation import CancellationToken
+    from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
+
+    error = CancellationRequested("cancel") if kind == "cancel" else ExternalProcessCleanupUnconfirmed("unknown")
+
+    def fail(_source):
+        raise error
+
+    doc = Document()
+    renderer = MdToDocxRenderer(doc, mermaid_mode="image", mermaid_render=fail, cancellation=CancellationToken())
+    with pytest.raises(type(error)) as caught:
+        renderer.render([_mermaid_node()])
+    assert caught.value is error
+    assert not doc.paragraphs
+    assert not renderer.warnings

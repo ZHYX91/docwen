@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import csv
+from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -17,6 +19,7 @@ from docwen_core.docx_parsing.document_semantics import extract_semantic_table_m
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_core.models.clipboard_document import CLIPBOARD_DOCUMENT_MEDIA_TYPE, clipboard_document_to_bytes
+from docwen_core.models.document_node import ConversionIdentity
 from docwen_core.models.file_ref import (
     MANAGED_INPUT_SHA256_METADATA_KEY,
     MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
@@ -31,7 +34,7 @@ from docwen_runtime.engine.route_resolver import RouteResolver
 from docwen_runtime.engine.task_manager import TaskManager
 from docwen_runtime.output.finalizer import OutputFinalizer
 from docwen_runtime.plugin_registry.registry import PluginRegistry
-from docwen_runtime.templates import TemplateRegistry
+from docwen_runtime.templates import TemplateManager, TemplateRegistry
 from docwen_runtime.templates.state import user_templates_dir
 from docwen_runtime.workspace.manager import WorkspaceManager
 
@@ -120,6 +123,185 @@ def _template_id(kind: str, filename: str) -> str:
 def _primary(result) -> Path:
     assert result.success, result.error
     return Path(next(item for item in result.artifacts if item.is_primary).staging_path)
+
+
+@pytest.mark.parametrize("custom_template", [False, True])
+@pytest.mark.parametrize("projection", ["table", "order", "semantics"])
+@pytest.mark.parametrize(
+    "value",
+    ["x" * 32767, "😀" * 16383 + "x", "中" * 32768, "😀" * 16384],
+    ids=["ascii-limit", "utf16-limit", "cjk-over", "utf16-over"],
+)
+def test_clipboard_xlsx_final_strings_have_excel_capacity_boundary(
+    tmp_path: Path, custom_template: bool, projection: str, value: str
+) -> None:
+    options = {}
+    template_path = None
+    template_bytes = None
+    if custom_template:
+        directory = user_templates_dir()
+        directory.mkdir(parents=True, exist_ok=True)
+        template_path = directory / "capacity.xlsx"
+        template = Workbook()
+        template.save(template_path)
+        template_bytes = template_path.read_bytes()
+        options["template_name"] = _template_id("xlsx", template_path.name)
+    html = {
+        "table": f"<table><tr><td>{value}</td></tr></table>",
+        "order": f"<p>{value}</p>",
+        "semantics": f'<table><tr><th id="{value}">header</th></tr></table>',
+    }[projection].encode("utf-8")
+    request = _request(tmp_path, request_id="capacity", target="xlsx", html=html, options=options)
+    source = Path(request.input_refs[0].path)
+    source_bytes = source.read_bytes()
+    result = _controller(tmp_path).execute_single(request)
+    assert source.read_bytes() == source_bytes
+    if template_path is not None:
+        assert template_path.read_bytes() == template_bytes
+    if len(value.encode("utf-16-le")) // 2 > 32767:
+        assert not result.success
+        assert result.error is not None
+        assert result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
+        assert len(result.error.message) < 300
+        assert "32767" in result.error.message
+        assert not result.artifacts
+        output_dir = Path(request.output_policy.output_dir)
+        assert not output_dir.exists() or not any(output_dir.iterdir())
+    else:
+        workbook = load_workbook(_primary(result))
+        sheet, coordinate = {
+            "table": ("Table 1", "A1"),
+            "order": ("Document Order", "C2"),
+            "semantics": ("Table Semantics", "K2"),
+        }[projection]
+        assert workbook[sheet][coordinate].value == value
+        workbook.close()
+
+
+def test_clipboard_xlsx_checks_composed_paragraphs_and_leaves_markdown_unlimited(tmp_path: Path) -> None:
+    html = ("<table><tr><td><p>" + "x" * 16384 + "</p><p>" + "y" * 16384 + "</p></td></tr></table>").encode()
+    controller = _controller(tmp_path)
+    result = controller.execute_single(_request(tmp_path, request_id="composed", target="xlsx", html=html))
+    assert not result.success
+    assert result.error is not None and result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
+    markdown = controller.execute_single(_request(tmp_path, request_id="unlimited", target="md", html=html))
+    assert "y" * 16384 in _primary(markdown).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("overflow", ["x" * 32768, "😀" * 16384], ids=["ascii", "nonbmp"])
+def test_clipboard_xlsx_overflow_preserves_existing_same_name_workbook(tmp_path: Path, overflow: str) -> None:
+    identity = ConversionIdentity.create(
+        task_id="same-name",
+        source_stem="same-name",
+        source_format="clipboard_document",
+        created_at=datetime(2026, 10, 26, tzinfo=UTC),
+    )
+    controller = _controller(tmp_path)
+    first = replace(
+        _request(
+            tmp_path,
+            request_id="same-name",
+            target="xlsx",
+            html=b"<table><tr><td>Existing result sentinel</td></tr></table>",
+        ),
+        conversion_identity=identity,
+    )
+    sentinel = _primary(controller.execute_single(first))
+    original = sentinel.read_bytes()
+    rejected = replace(
+        _request(
+            tmp_path,
+            request_id="same-name",
+            target="xlsx",
+            html=f"<table><tr><td>{overflow}</td></tr></table>".encode(),
+        ),
+        conversion_identity=identity,
+    )
+    result = controller.execute_single(rejected)
+    assert not result.success and not result.artifacts
+    assert result.error is not None and result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
+    assert sentinel.read_bytes() == original
+    assert list(Path(rejected.output_policy.output_dir).rglob("*.xlsx")) == [sentinel]
+
+
+def test_imported_template_retained_text_is_checked_before_replacing_prior_result(tmp_path: Path) -> None:
+    controller = _controller(tmp_path)
+    identity = ConversionIdentity.create(
+        task_id="retained-template",
+        source_stem="retained-template",
+        source_format="clipboard_document",
+        created_at=datetime(2026, 10, 26, tzinfo=UTC),
+    )
+    first = replace(
+        _request(
+            tmp_path,
+            request_id="retained-template",
+            target="xlsx",
+            html=b"<table><tr><td>Existing sentinel</td></tr></table>",
+        ),
+        conversion_identity=identity,
+    )
+    sentinel = _primary(controller.execute_single(first))
+    sentinel_bytes = sentinel.read_bytes()
+    incoming = tmp_path / "retained-template.xlsx"
+    template = Workbook()
+    template.active.title = "Template"
+    template.active["Z100"] = "😀" * 16384
+    template.save(incoming)
+    incoming_bytes = incoming.read_bytes()
+    imported = TemplateManager.default().import_template(incoming)
+    imported_bytes = imported.path.read_bytes()
+    request = replace(
+        _request(
+            tmp_path,
+            request_id="retained-template",
+            target="xlsx",
+            html=b"<table><tr><td>ok</td></tr></table>",
+            options={"template_name": imported.id},
+        ),
+        conversion_identity=identity,
+    )
+    result = controller.execute_single(request)
+    assert not result.success and not result.artifacts
+    assert result.error is not None and result.error.diagnostic_code == "CLIPBOARD-XLSX-CELL-TEXT-TOO-LONG"
+    assert "Template" in result.error.message and "row 100, column 26" in result.error.message
+    assert sentinel.read_bytes() == sentinel_bytes
+    assert incoming.read_bytes() == incoming_bytes and imported.path.read_bytes() == imported_bytes
+    assert list(Path(request.output_policy.output_dir).rglob("*.xlsx")) == [sentinel]
+
+
+def test_imported_template_boundary_formulas_and_sparse_retained_cells_remain_exact(tmp_path: Path) -> None:
+    incoming = tmp_path / "sparse-boundary.xlsx"
+    template = Workbook()
+    sheet = template.active
+    sheet.title = "Template"
+    value = "😀" * 16383 + "x"
+    sheet["Z100"] = value
+    sheet["Z101"] = "=1+2"
+    sheet["XFD1048576"] = "far retained cell"
+    template.save(incoming)
+    imported = TemplateManager.default().import_template(incoming)
+    original = imported.path.read_bytes()
+    result = _controller(tmp_path).execute_single(
+        _request(
+            tmp_path,
+            request_id="sparse-boundary",
+            target="xlsx",
+            html=b"<table><tr><td>ok</td></tr></table>",
+            options={"template_name": imported.id},
+        )
+    )
+    workbook = load_workbook(_primary(result))
+    try:
+        for name in ["Template", "Table 1"]:
+            output = workbook[name]
+            assert output["Z100"].value == value
+            assert output["Z101"].value == "=1+2" and output["Z101"].data_type == "f"
+            assert output["XFD1048576"].value == "far retained cell"
+            assert len(output._cells) <= 4
+    finally:
+        workbook.close()
+    assert imported.path.read_bytes() == original
 
 
 def test_docx_preserves_native_header_shape_and_reversible_html_associations(tmp_path: Path) -> None:

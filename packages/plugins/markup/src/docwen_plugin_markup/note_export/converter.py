@@ -26,6 +26,9 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from docwen_core.text.placeholders import restore_placeholders
+from docwen_plugin_markup.markdown_resources import MarkdownResourceWriter
+
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
 
@@ -43,8 +46,8 @@ class _EnexResource:
 class EnexToMarkdownConverter:
     """Convert an ENEX (Evernote Export) file to Markdown.
 
-    Each ENEX note becomes one Markdown file.  Embedded resources
-    (images, attachments) are extracted to the staging directory.
+    All ENEX notes form one Markdown document. Embedded resources
+    share request-owned names in the staging directory.
     """
 
     def convert(self, context: ConverterContext) -> Any:
@@ -271,6 +274,7 @@ class EnexToMarkdownConverter:
         note_titles: list[str] = []
         total_resources = 0
         total_notes = len(list(root.findall("note")))
+        resource_writer = MarkdownResourceWriter()
 
         for idx, note_el in enumerate(root.findall("note"), 1):
             context.cancellation.check()
@@ -284,10 +288,8 @@ class EnexToMarkdownConverter:
             note_titles.append(note_title)
 
             # Normalize ENML to HTML
-            html_content = self._normalize_enml_to_html(content)
-            referenced_hashes = {
-                match.lower() for match in re.findall(r"__DOCWEN_RES_([0-9a-fA-F]{32})__", html_content)
-            }
+            html_content, token_resources = self._normalize_enml_to_html(content)
+            referenced_hashes = set(token_resources.values())
             missing_hashes = sorted(referenced_hashes.difference(resources))
             if missing_hashes:
                 raise ValueError(
@@ -309,10 +311,11 @@ class EnexToMarkdownConverter:
                 ocr_language=ocr_language,
                 current_locale=current_locale,
                 image_link_style=image_link_style,
+                writer=resource_writer,
             )
-            for md5, replacement in res_map.items():
-                token = f"__DOCWEN_RES_{md5}__"
-                md_body = _replace_resource_token(md_body, token, replacement)
+            md_body = restore_placeholders(
+                md_body, {token: res_map.get(digest, "") for token, digest in token_resources.items()}
+            )
 
             total_resources += len(resources)
 
@@ -368,27 +371,16 @@ class EnexToMarkdownConverter:
         return title, content, resources
 
     @staticmethod
-    def _normalize_enml_to_html(enml: str) -> str:
+    def _normalize_enml_to_html(enml: str) -> tuple[str, dict[str, str]]:
         """Normalize Evernote ENML to the HTML fragment sent to markdownify.
 
         ``<content>`` stores XML-wrapped ENML, while markdownify expects an
         HTML fragment.  Strip the XML envelope and replace ``<en-media>`` tags
-        with ``<img>`` placeholder tokens that are resolved after conversion.
+        with collision-checked text placeholders resolved once after conversion.
         """
-        if not enml:
-            return ""
-        s = enml
-        s = re.sub(r"^\s*<\?xml[^>]*\?>", "", s, flags=re.IGNORECASE)
-        s = re.sub(r"^\s*<!DOCTYPE[^>]*>", "", s, flags=re.IGNORECASE)
-        s = re.sub(r"^\s*<en-note\b[^>]*>", "", s, flags=re.IGNORECASE)
-        s = re.sub(r"</en-note>\s*$", "", s, flags=re.IGNORECASE)
-        s = re.sub(
-            r'<en-media[^>]*\bhash="([0-9a-fA-F]{32})"[^>]*/?>',
-            lambda m: f'<img src="__DOCWEN_RES_{m.group(1).lower()}__" />',
-            s,
-            flags=re.IGNORECASE,
-        )
-        return s.strip()
+        from docwen_plugin_markup.note_export.enml import normalize_enml
+
+        return normalize_enml(enml)
 
     @staticmethod
     def _write_resources(
@@ -404,6 +396,7 @@ class EnexToMarkdownConverter:
         ocr_language: str,
         current_locale: str,
         image_link_style: str | None,
+        writer: MarkdownResourceWriter | None = None,
     ) -> dict[str, str]:
         """Write embedded ENEX resources to staging and populate aux_artifacts.
 
@@ -414,7 +407,6 @@ class EnexToMarkdownConverter:
         """
         from docwen_plugin_markup.markdown_resources import (
             MarkdownResource,
-            MarkdownResourceWriter,
         )
 
         out: dict[str, str] = {}
@@ -434,7 +426,7 @@ class EnexToMarkdownConverter:
                 )
             )
 
-        written = MarkdownResourceWriter().write_all(
+        written = (writer or MarkdownResourceWriter()).write_all(
             context,
             resources_to_write,
             image_link_style=image_link_style,
@@ -483,12 +475,6 @@ def _ext_from_resource(res: _EnexResource) -> str:
         "application/pdf": "pdf",
     }
     return mime_map.get(mime, "bin")
-
-
-def _replace_resource_token(markdown: str, token: str, replacement: str) -> str:
-    pattern = re.compile(r"!\[[^\]]*\]\(\s*" + re.escape(token) + r"\s*\)")
-    markdown = pattern.sub(replacement, markdown)
-    return markdown.replace(token, replacement)
 
 
 def _make_aux_artifact(artifact_id: str, staging_path: str, filename: str, mime: str) -> Any:

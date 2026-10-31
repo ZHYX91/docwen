@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import Any, Literal
 
 BOOKMARK_ID_MAX = 2_147_483_647
@@ -33,24 +35,91 @@ class DocxBookmarkInventory:
 
     starts: tuple[DocxBookmarkOccurrence, ...]
     ends: tuple[DocxBookmarkOccurrence, ...]
+    _starts_by_name: Mapping[str, tuple[DocxBookmarkOccurrence, ...]] = field(init=False, repr=False, compare=False)
+    _starts_by_id: Mapping[BookmarkIdKey, tuple[DocxBookmarkOccurrence, ...]] = field(
+        init=False, repr=False, compare=False
+    )
+    _ends_by_id: Mapping[BookmarkIdKey, tuple[DocxBookmarkOccurrence, ...]] = field(
+        init=False, repr=False, compare=False
+    )
+    _used_ids: frozenset[BookmarkIdKey] = field(init=False, repr=False, compare=False)
+    _used_names: frozenset[str] = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        named: dict[str, list[DocxBookmarkOccurrence]] = {}
+        starts: dict[BookmarkIdKey, list[DocxBookmarkOccurrence]] = {}
+        ends: dict[BookmarkIdKey, list[DocxBookmarkOccurrence]] = {}
+        for item in self.starts:
+            starts.setdefault(item.id_key, []).append(item)
+            if item.name is not None:
+                named.setdefault(item.name.casefold(), []).append(item)
+        for item in self.ends:
+            ends.setdefault(item.id_key, []).append(item)
+        object.__setattr__(
+            self, "_starts_by_name", MappingProxyType({key: tuple(value) for key, value in named.items()})
+        )
+        object.__setattr__(
+            self, "_starts_by_id", MappingProxyType({key: tuple(value) for key, value in starts.items()})
+        )
+        object.__setattr__(self, "_ends_by_id", MappingProxyType({key: tuple(value) for key, value in ends.items()}))
+        object.__setattr__(self, "_used_ids", frozenset(starts) | frozenset(ends))
+        object.__setattr__(self, "_used_names", frozenset(named))
 
     @property
     def used_id_keys(self) -> frozenset[BookmarkIdKey]:
-        return frozenset(item.id_key for item in (*self.starts, *self.ends))
+        return self._used_ids
 
     @property
     def used_name_keys(self) -> frozenset[str]:
-        return frozenset(item.name.casefold() for item in self.starts if item.name is not None)
+        return self._used_names
 
     def starts_named(self, name: str) -> tuple[DocxBookmarkOccurrence, ...]:
         name_key = name.casefold()
-        return tuple(item for item in self.starts if item.name is not None and item.name.casefold() == name_key)
+        return self._starts_by_name.get(name_key, ())
 
     def starts_with_id(self, id_key: BookmarkIdKey) -> tuple[DocxBookmarkOccurrence, ...]:
-        return tuple(item for item in self.starts if item.id_key == id_key)
+        return self._starts_by_id.get(id_key, ())
 
     def ends_with_id(self, id_key: BookmarkIdKey) -> tuple[DocxBookmarkOccurrence, ...]:
-        return tuple(item for item in self.ends if item.id_key == id_key)
+        return self._ends_by_id.get(id_key, ())
+
+
+class DocxBookmarkAllocator:
+    """Request-local reservations from one fresh package inventory.
+
+    This is allocation state, never proof evidence. Callers must still build
+    a fresh physical inventory when proving the completed/reopened package,
+    including bookmarks inserted by other package writers after allocation.
+    """
+
+    def __init__(self, inventory: DocxBookmarkInventory) -> None:
+        self._used_ids = set(inventory.used_id_keys)
+        self._used_names = set(inventory.used_name_keys)
+        self._next_id = 0
+
+    def include_inventory(self, inventory: DocxBookmarkInventory) -> None:
+        """Observe a controlled writer's fresh package view before reserving.
+
+        Reservations remain claimed even if a previous physical range was
+        removed. Physical ambiguity is still rejected by the final proof.
+        """
+
+        self._used_ids.update(inventory.used_id_keys)
+        self._used_names.update(inventory.used_name_keys)
+
+    def reserve(self, name: str) -> str:
+        name_key = name.casefold()
+        if not is_legal_bookmark_name(name) or name_key in self._used_names:
+            raise ValueError("semantic bookmark conflicts with an existing or reserved package name")
+        while self._next_id <= BOOKMARK_ID_MAX and ("numeric", self._next_id) in self._used_ids:
+            self._next_id += 1
+        if self._next_id > BOOKMARK_ID_MAX:
+            raise ValueError("no portable DOCX bookmark IDs remain")
+        reserved = self._next_id
+        self._used_ids.add(("numeric", reserved))
+        self._used_names.add(name_key)
+        self._next_id += 1
+        return str(reserved)
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,6 +259,7 @@ __all__ = [
     "BOOKMARK_ID_MAX",
     "BOOKMARK_NAME_MAX_LENGTH",
     "BookmarkIdKey",
+    "DocxBookmarkAllocator",
     "DocxBookmarkInventory",
     "DocxBookmarkOccurrence",
     "DocxBookmarkProof",

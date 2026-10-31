@@ -6,13 +6,22 @@ import logging
 import re
 import secrets
 from collections.abc import Callable, Sequence
+from copy import copy
 from pathlib import Path, PureWindowsPath
 from urllib.parse import quote, unquote, urlsplit
 
+from docwen_core.links._block_context import (
+    MarkdownBlockContext,
+    html_block_mode,
+    markdown_inline_regions,
+    yaml_front_matter_end,
+)
 from docwen_core.links._embed_dispatch import _is_table_context
 from docwen_core.links._error_semantics import LinkErrorKind, dispatch_error_output
 from docwen_core.links._markdown_inline import (
     _ACTIVE_PROTECTED_TOKENS,
+    _ANGLE_AUTOLINK_RE,
+    _INLINE_HTML_RE,
     MarkdownInlineSourceOwner,
     _contains_active_protected_token,
     _is_backslash_escaped,
@@ -32,122 +41,10 @@ logger = logging.getLogger(__name__)
 
 _WIKI_NON_EMBED_RE = re.compile(r"(?<!!)" + WIKI_EMBED_PATTERN[1:])
 _WIKI_EMBED_RE = re.compile(WIKI_EMBED_PATTERN)
-_ANGLE_AUTOLINK_RE = re.compile(
-    r"<[A-Za-z][A-Za-z0-9.+-]{1,31}:[^<>\x00-\x20]*>"
-    r"|<[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9]"
-    r"(?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
-    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*>"
-)
-_INLINE_HTML_RE = re.compile(
-    r"<[A-Za-z][A-Za-z0-9-]*"
-    r"(?:\s+[A-Za-z_:][A-Za-z0-9_.:-]*"
-    r"(?:\s*=\s*(?:[^ !\"'=<>`]+|'[^']*?'|\"[^\"]*?\"))?)*\s*/?>"
-    r"|</[A-Za-z][A-Za-z0-9-]*\s*>"
-    r"|<!--(?!>|->)(?:(?!--)[\s\S])+?(?<!-)-->"
-    r"|<\?[\s\S]+?\?>"
-    r"|<![A-Z][\s\S]+?>"
-    r"|<!\[CDATA[\s\S]+?\]\]>"
-)
 _INLINE_MATH_RE = re.compile(r"\$(?!\s)(?:[^$\\]|\\.)+?(?!\s)\$")
-_HTML_PRE_TAGS = frozenset({"pre", "script", "style", "textarea"})
-_HTML_BLOCK_TAGS = frozenset(
-    {
-        "address",
-        "article",
-        "aside",
-        "base",
-        "basefont",
-        "blockquote",
-        "body",
-        "caption",
-        "center",
-        "col",
-        "colgroup",
-        "dd",
-        "details",
-        "dialog",
-        "dir",
-        "div",
-        "dl",
-        "dt",
-        "fieldset",
-        "figcaption",
-        "figure",
-        "footer",
-        "form",
-        "frame",
-        "frameset",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "head",
-        "header",
-        "hr",
-        "html",
-        "iframe",
-        "legend",
-        "li",
-        "link",
-        "main",
-        "menu",
-        "menuitem",
-        "meta",
-        "nav",
-        "noframes",
-        "ol",
-        "optgroup",
-        "option",
-        "p",
-        "param",
-        "section",
-        "source",
-        "summary",
-        "table",
-        "tbody",
-        "td",
-        "tfoot",
-        "th",
-        "thead",
-        "title",
-        "tr",
-        "track",
-        "ul",
-    }
-)
-
-
-def _line_completes_markdown_block(
-    line: str,
-    *,
-    setext_context: bool = False,
-) -> bool:
-    """Return whether *line* permits an immediately following indented block."""
-    without_eol = line.rstrip("\r\n")
-    if re.match(r"^ {0,3}#{1,9}(?!#)(?:[ \t]+|$)", without_eol):
-        return True
-    if setext_context and re.match(r"^ {0,3}(?:=+|-+)[ \t]*$", without_eol):
-        return True
-    return bool(
-        re.match(
-            r"^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$",
-            without_eol,
-        )
-    )
-
-
-def _line_can_precede_setext_heading(line: str) -> bool:
-    """Conservatively recognize paragraph text eligible for setext syntax."""
-    without_eol = line.rstrip("\r\n")
-    if not without_eol.strip():
-        return False
-    if re.match(r"^ {0,3}(?:#{1,9}(?!#)(?:[ \t]+|$)|>|`{3,}|~{3,})", without_eol):
-        return False
-    if re.match(r"^ {0,3}(?:[-+*](?:[ \t]+|$)|\d+[.)](?:[ \t]+|$))", without_eol):
-        return False
-    return not _line_completes_markdown_block(without_eol)
+_SINGLE_LINE_BLOCK_MATH_RE = re.compile(r" {0,3}\$\$[^\r\n]*?\$\$[ \t]*$")
+_BLOCK_MATH_OPEN_RE = re.compile(r" {0,3}\$\$[ \t]*$")
+_BLOCK_MATH_CLOSE_RE = re.compile(r"\$\$[ \t]*$")
 
 
 def _unescape_pipe(text: str) -> str:
@@ -216,103 +113,68 @@ def _protected_inline_atom_end(
     return None
 
 
-def _is_indented_code_line(line: str) -> bool:
-    """Recognize a four-column CommonMark indentation prefix."""
-    columns = 0
-    for char in line:
-        if char == " ":
-            columns += 1
-        elif char == "\t":
-            columns += 4 - (columns % 4)
-        else:
-            break
-        if columns >= 4:
-            return True
-    return False
+def _matching_math_block_end(
+    lines: Sequence[str],
+    start: int,
+    context: MarkdownBlockContext,
+    containers: tuple[object, ...],
+) -> tuple[int | None, int]:
+    """Prove one complete math block in the current logical container scope.
+
+    The production multiline rule needs a content line between the delimiters;
+    its closing delimiter starts in column zero of the extracted container.
+    A snapshot uses the same qualified container exits as the main block scan.
+    Context rows replace their state collections, so this shallow copy cannot
+    mutate the caller's lifecycle.
+    """
+    candidate_context = copy(context)
+    candidate_context.end_paragraph()
+    for index in range(start + 1, len(lines)):
+        row = candidate_context.line(lines[index], allow_new=False, allow_lazy=True, literal=True)
+        if row.containers[: len(containers)] != containers:
+            return None, index
+        if index > start + 1 and _BLOCK_MATH_CLOSE_RE.fullmatch(row.content.rstrip("\r\n")):
+            return index, index
+    return None, len(lines)
 
 
-def _html_block_mode(
-    line: str,
-    *,
-    allow_type7: bool,
-) -> tuple[str | None, bool] | None:
-    """Return ``(end marker, until blank)`` for a Mistune HTML block start."""
-    leading = re.match(r"^ {0,3}", line)
-    assert leading is not None
-    content = line[leading.end() :]
-    if content.startswith("<!--"):
-        return "-->", False
-    if content.startswith("<?"):
-        return "?>", False
-    if content.startswith("<![CDATA["):
-        return "]]>", False
-    if re.match(r"<![A-Z]", content):
-        return ">", False
-
-    match = re.match(
-        r"</?([A-Za-z][A-Za-z0-9-]*)\b",
-        content,
-        re.IGNORECASE,
-    )
-    if match is None:
-        return None
-    marker = match.group(0).lower()
-    tag = (match.group(1) or "").lower()
-    if tag in _HTML_PRE_TAGS and not marker.startswith("</"):
-        return f"</{tag}>", False
-    if tag in _HTML_BLOCK_TAGS or tag in _HTML_PRE_TAGS:
-        return None, True
-    candidate = line.lstrip(" ").rstrip(" \t\r\n")
-    generic_self_closing = candidate.startswith("<") and not candidate.startswith("</") and candidate.endswith("/>")
-    if allow_type7 and not generic_self_closing and _INLINE_HTML_RE.fullmatch(candidate) is not None:
-        return None, True
-    return None
-
-
-def _strip_block_quote_prefix(line: str) -> str:
-    """Strip repeated CommonMark blockquote markers for block detection."""
-    result = line
-    while True:
-        match = re.match(r"^ {0,3}>[ \t]?", result)
-        if match is None:
-            return result
-        result = result[match.end() :]
-
-
-def _container_block_line(line: str) -> tuple[str, bool]:
-    """Return parser-visible block content and whether a list marker owned it."""
-    quoted = _strip_block_quote_prefix(line)
-    match = re.match(r"^ {0,3}(?:[-+*]|[0-9]{1,9}[.)])[ \t]+(.*)$", quoted)
-    if match is None:
-        return quoted, False
-    return match.group(1), True
-
-
-def _split_fenced_code_blocks(md: str) -> list[tuple[str, bool]]:
+def _split_fenced_code_blocks(md: str, *, extended_headings: bool = False) -> list[tuple[str, bool]]:
     """Split Markdown into ``(segment, is_fenced_code)`` pairs."""
     segments: list[tuple[str, bool]] = []
     if not md:
         return segments
 
-    lines = md.splitlines(keepends=True)
+    front_matter_end = yaml_front_matter_end(md)
+    if not front_matter_end and md.startswith("\ufeff"):
+        front_matter_end = 1
+    if front_matter_end:
+        segments.append((md[:front_matter_end], True))
+    lines = md[front_matter_end:].splitlines(keepends=True)
+    context = MarkdownBlockContext(extended_headings=extended_headings)
     buffer: list[str] = []
     in_fence = False
     in_math_block = False
+    math_end_index: int | None = None
+    math_no_closer_until: dict[tuple[object, ...], int] = {}
     html_end_marker: str | None = None
     html_until_blank = False
     fence = ""
-    fence_in_list = False
-    fence_in_quote = False
-    in_indented_code = False
-    indented_code_allowed = True
-    previous_line_can_be_setext = False
+    literal_containers: tuple[object, ...] = ()
 
     for line_index, line in enumerate(lines):
-        line_has_quote_marker = re.match(r"^ {0,3}>", line) is not None
-        quoted_line = _strip_block_quote_prefix(line)
-        block_line, line_has_list_marker = _container_block_line(line)
+        in_literal = in_fence or in_math_block or html_end_marker is not None or html_until_blank
+        source_line = context.line(line, allow_new=not in_literal, allow_lazy=True, literal=in_literal)
+        if in_literal and source_line.containers[: len(literal_containers)] != literal_containers:
+            segments.append(("".join(buffer), True))
+            buffer = []
+            in_fence = in_math_block = html_until_blank = False
+            math_end_index = None
+            html_end_marker = None
+            fence = ""
+            source_line = context.line(line, allow_lazy=True)
+        block_line = source_line.content
         if html_end_marker is not None or html_until_blank:
-            if html_until_blank and not quoted_line.strip():
+            if html_until_blank and not block_line.strip():
                 segments.append(("".join(buffer), True))
                 buffer = []
                 html_until_blank = False
@@ -322,62 +184,62 @@ def _split_fenced_code_blocks(md: str) -> list[tuple[str, bool]]:
                     segments.append(("".join(buffer), True))
                     buffer = []
                     html_end_marker = None
-                    indented_code_allowed = True
-                    previous_line_can_be_setext = False
                 continue
         if in_math_block:
             buffer.append(line)
-            if re.match(r"^\$\$[ \t]*(?:\r?\n)?$", line):
+            if line_index == math_end_index:
                 segments.append(("".join(buffer), True))
                 buffer = []
                 in_math_block = False
-                indented_code_allowed = True
-                previous_line_can_be_setext = False
+                math_end_index = None
             continue
         if not in_fence:
-            html_mode = _html_block_mode(
+            html_mode = html_block_mode(
                 block_line,
-                allow_type7=indented_code_allowed,
+                allow_type7=not source_line.paragraph_continuation,
             )
             if html_mode is not None:
                 if buffer:
                     segments.append(("".join(buffer), False))
                     buffer = []
                 html_end_marker, html_until_blank = html_mode
+                literal_containers = source_line.containers
                 buffer.append(line)
                 if html_end_marker is not None and html_end_marker in line.lower():
                     segments.append(("".join(buffer), True))
                     buffer = []
                     html_end_marker = None
-                in_indented_code = False
-                indented_code_allowed = False
-                previous_line_can_be_setext = False
                 continue
-            single_line_math = re.match(
-                r"^ {0,3}\$\$[^\r\n]+?\$\$[ \t]*(?:\r?\n)?$",
-                line,
-            )
+            logical_line = block_line.rstrip("\r\n")
+            single_line_math = _SINGLE_LINE_BLOCK_MATH_RE.fullmatch(logical_line)
             if single_line_math:
+                context.end_paragraph()
                 if buffer:
                     segments.append(("".join(buffer), False))
                     buffer = []
                 segments.append((line, True))
-                in_indented_code = False
-                indented_code_allowed = True
-                previous_line_can_be_setext = False
                 continue
-            if re.match(r"^ {0,3}\$\$[ \t]*(?:\r?\n)$", line) and any(
-                re.match(r"^\$\$[ \t]*(?:\r?\n)?$", candidate) is not None for candidate in lines[line_index + 1 :]
+            if (
+                _BLOCK_MATH_OPEN_RE.fullmatch(logical_line)
+                and math_no_closer_until.get(source_line.containers, -1) <= line_index
             ):
-                if buffer:
-                    segments.append(("".join(buffer), False))
-                    buffer = []
-                in_math_block = True
-                buffer.append(line)
-                in_indented_code = False
-                indented_code_allowed = False
-                previous_line_can_be_setext = False
-                continue
+                closing_index, checked_until = _matching_math_block_end(
+                    lines, line_index, context, source_line.containers
+                )
+                if closing_index is None:
+                    # Several unclosed openers in one owner must not rescan its
+                    # whole suffix. A new container identity has its own scope.
+                    math_no_closer_until[source_line.containers] = checked_until
+                else:
+                    if buffer:
+                        segments.append(("".join(buffer), False))
+                        buffer = []
+                    in_math_block = True
+                    math_end_index = closing_index
+                    context.end_paragraph()
+                    literal_containers = source_line.containers
+                    buffer.append(line)
+                    continue
             match = re.match(r"^ {0,3}(`{3,}|~{3,})([^\r\n]*)", block_line)
             if match and (match.group(1)[0] == "~" or "`" not in match.group(2)):
                 if buffer:
@@ -385,68 +247,28 @@ def _split_fenced_code_blocks(md: str) -> list[tuple[str, bool]]:
                     buffer = []
                 in_fence = True
                 fence = match.group(1)
-                fence_in_list = line_has_list_marker
-                fence_in_quote = line_has_quote_marker
+                literal_containers = source_line.containers
                 buffer.append(line)
-                in_indented_code = False
-                indented_code_allowed = False
-                previous_line_can_be_setext = False
                 continue
-            if _is_indented_code_line(block_line) and (in_indented_code or indented_code_allowed):
+            if source_line.block_kind == "indented_code":
                 if buffer:
                     segments.append(("".join(buffer), False))
                     buffer = []
                 segments.append((line, True))
-                in_indented_code = True
-                indented_code_allowed = True
-                previous_line_can_be_setext = False
                 continue
-            if line.strip():
-                in_indented_code = False
             buffer.append(line)
-            completes_block = _line_completes_markdown_block(
-                line,
-                setext_context=previous_line_can_be_setext,
-            )
-            indented_code_allowed = not line.strip() or completes_block
-            previous_line_can_be_setext = not completes_block and _line_can_precede_setext_heading(line)
-            continue
-
-        if fence_in_quote and line.strip() and not line_has_quote_marker:
-            segments.append(("".join(buffer), True))
-            buffer = [line]
-            in_fence = False
-            fence = ""
-            fence_in_list = False
-            fence_in_quote = False
-            in_indented_code = False
-            completes_block = _line_completes_markdown_block(
-                line,
-                setext_context=previous_line_can_be_setext,
-            )
-            indented_code_allowed = not line.strip() or completes_block
-            previous_line_can_be_setext = not completes_block and _line_can_precede_setext_heading(line)
             continue
 
         buffer.append(line)
-        closing_line = block_line.lstrip(" \t") if fence_in_list else block_line
         closing = re.match(
-            r"^ {0,3}(`{3,}|~{3,})[ \t]*(?:\r?\n)?$",
-            closing_line,
+            r"^ {0,3}(`{3,}|~{3,})[ \t]*(?:\r\n|\r|\n)?$",
+            block_line,
         )
         if closing and closing.group(1)[0] == fence[0] and len(closing.group(1)) >= len(fence):
             segments.append(("".join(buffer), True))
             buffer = []
             in_fence = False
             fence = ""
-            fence_in_list = False
-            fence_in_quote = False
-            # A fenced block is a complete block boundary.  A following
-            # four-space line may therefore begin indented code even without
-            # an intervening blank line; only paragraph continuations are
-            # forbidden from doing so.
-            indented_code_allowed = True
-            previous_line_can_be_setext = False
 
     if buffer:
         segments.append(
@@ -458,10 +280,10 @@ def _split_fenced_code_blocks(md: str) -> list[tuple[str, bool]]:
     return segments
 
 
-def split_markdown_block_segments(md: str) -> list[tuple[str, bool]]:
+def split_markdown_block_segments(md: str, *, extended_headings: bool = False) -> list[tuple[str, bool]]:
     """Split Markdown into visible and renderer-protected block segments."""
 
-    return _split_fenced_code_blocks(md)
+    return _split_fenced_code_blocks(md, extended_headings=extended_headings)
 
 
 def _inline_source_owners(
@@ -470,6 +292,7 @@ def _inline_source_owners(
     protect_bare_urls: bool = True,
     protect_link_label_atoms: bool = False,
     include_link_metadata: bool = False,
+    include_link_syntax: bool = False,
 ) -> list[MarkdownInlineSourceOwner]:
     """Collect exact source ranges with the same grammar used by link policy."""
     owners: list[MarkdownInlineSourceOwner] = []
@@ -485,6 +308,10 @@ def _inline_source_owners(
         if construct is None:
             construct = parse_inline_link(segment, index, image=False)
         if construct is not None:
+            if include_link_syntax:
+                owners.append(
+                    MarkdownInlineSourceOwner(index, index + (2 if construct.is_image else 1), "link_metadata")
+                )
             if protect_link_label_atoms:
                 label_start = index + (2 if construct.is_image else 1)
                 for owner in _inline_source_owners(
@@ -492,6 +319,7 @@ def _inline_source_owners(
                     protect_bare_urls=protect_bare_urls,
                     protect_link_label_atoms=True,
                     include_link_metadata=include_link_metadata,
+                    include_link_syntax=include_link_syntax,
                 ):
                     owners.append(
                         MarkdownInlineSourceOwner(label_start + owner.start, label_start + owner.end, owner.kind)
@@ -546,7 +374,9 @@ def _inline_source_owners(
     return owners
 
 
-def markdown_inline_source_owners(segment: str) -> list[MarkdownInlineSourceOwner]:
+def markdown_inline_source_owners(
+    segment: str, *, include_link_syntax: bool = False
+) -> list[MarkdownInlineSourceOwner]:
     """Return renderer literals and parsed link metadata at exact source offsets.
 
     Callers project authoritative blocks first. Wiki ownership protects its
@@ -554,7 +384,9 @@ def markdown_inline_source_owners(segment: str) -> list[MarkdownInlineSourceOwne
     This scanner does not decide comment ownership: an earlier comment can
     invalidate later-looking owners, requiring a scan of the remaining suffix.
     """
-    return _inline_source_owners(segment, protect_link_label_atoms=True, include_link_metadata=True)
+    return _inline_source_owners(
+        segment, protect_link_label_atoms=True, include_link_metadata=True, include_link_syntax=include_link_syntax
+    )
 
 
 def _split_inline_code_spans(
@@ -585,6 +417,8 @@ def split_markdown_inline_segments(
     *,
     protect_bare_urls: bool = True,
     protect_link_label_atoms: bool = False,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
 ) -> list[tuple[str, bool]]:
     """Split one block segment into visible and protected inline atoms.
 
@@ -593,11 +427,17 @@ def split_markdown_inline_segments(
     label are protected; ordinary label text remains visible.
     """
 
-    return _split_inline_code_spans(
-        segment,
-        protect_bare_urls=protect_bare_urls,
-        protect_link_label_atoms=protect_link_label_atoms,
-    )
+    return [
+        part
+        for start, end in markdown_inline_regions(
+            segment, structural_tables=structural_tables, extended_headings=extended_headings
+        )
+        for part in _split_inline_code_spans(
+            segment[start:end],
+            protect_bare_urls=protect_bare_urls,
+            protect_link_label_atoms=protect_link_label_atoms,
+        )
+    ]
 
 
 def _map_visible_markdown(
@@ -606,6 +446,8 @@ def _map_visible_markdown(
     *,
     protect_bare_urls: bool = True,
     protect_source_comments: bool = False,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
     cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Apply *transform* once with renderer atoms replaced by scoped tokens."""
@@ -645,14 +487,12 @@ def _map_visible_markdown(
     if protect_source_comments:
         from docwen_core.links._source_ownership import markdown_source_owners
 
-        projection = "".join(
-            "".join(char if char in "\r\n" else " " for char in segment) if is_protected else segment
-            for segment, is_protected in _split_fenced_code_blocks(text)
-        )
         check_cancelled()
         comment_parts: list[str] = []
         cursor = 0
-        for owner in markdown_source_owners(projection):
+        for owner in markdown_source_owners(
+            text, full_document=True, structural_tables=structural_tables, extended_headings=extended_headings
+        ):
             check_cancelled()
             if owner.kind == "comment":
                 comment_parts.append(text[cursor : owner.start])
@@ -663,14 +503,16 @@ def _map_visible_markdown(
     check_cancelled()
     block_masked = "".join(
         mask(segment) if is_protected else segment
-        for segment, is_protected in _split_fenced_code_blocks(comment_masked)
+        for segment, is_protected in _split_fenced_code_blocks(comment_masked, extended_headings=extended_headings)
     )
     check_cancelled()
     inline_masked = "".join(
         mask(segment) if is_protected else segment
-        for segment, is_protected in _split_inline_code_spans(
+        for segment, is_protected in split_markdown_inline_segments(
             block_masked,
             protect_bare_urls=protect_bare_urls,
+            structural_tables=structural_tables,
+            extended_headings=extended_headings,
         )
     )
     check_cancelled()
@@ -812,6 +654,8 @@ def _process_non_embed_links(
     hyperlink_renderer: Callable[[str, str], str] | None = None,
     declared_wiki_link: Callable[[str, str], str | None] | None = None,
     protect_source_comments: bool = False,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
     cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Process links outside fenced and inline code.
@@ -1011,6 +855,8 @@ def _process_non_embed_links(
         text,
         _process_visible,
         protect_source_comments=protect_source_comments,
+        structural_tables=structural_tables,
+        extended_headings=extended_headings,
         cancellation_check=cancellation_check,
     )
     logger.debug("Processed non-embed links: input=%d output=%d", len(text), len(result))

@@ -11,19 +11,18 @@ which delegates to the parent ``MainWindowViewModel``.
 from __future__ import annotations
 
 import logging
-import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, Signal
 
 from docwen_core.formats.categories import CATEGORY_DOCUMENT, CATEGORY_IMAGE, CATEGORY_SPREADSHEET, get_category
+from docwen_core.page_selection import PageSelectionError, parse_pdf_split_input
 from docwen_gui.format_presentation import (
     FormatChoice,
     format_choice,
     normalize_format,
 )
-from docwen_gui.i18n import t as _t
 from docwen_gui.spreadsheet_protection import SpreadsheetProtectionInfo
 
 from ._runtime_route_filter import (
@@ -110,11 +109,15 @@ class ConversionPanelViewModel(QObject):
         self._reference_table_name: str = ""
 
         # Layout section state
+        self._layout_overrides: set[str] = set()
+        self._document_format = "DOCX"
+        self._split_mode = "every_page"
         self._render_format: str = "TIF"
         self._render_dpi: int = self._normalize_render_dpi(self._read_int_default("layout.render_dpi", 300))
         self._page_input: str = ""
         self._pdf_total_pages: int = 0
         self._pdf_file_name: str = ""
+        self.refresh_layout_defaults()
 
         # Validation options
         self._validation_options: dict[str, bool] = {
@@ -303,6 +306,50 @@ class ConversionPanelViewModel(QObject):
     # ── Layout section properties ─────────────────────────────────────────
 
     @property
+    def document_format(self) -> str:
+        return self._document_format
+
+    @document_format.setter
+    def document_format(self, value: str) -> None:
+        self._layout_overrides.add("document_format")
+        if self._document_format != value:
+            self._document_format = value
+            self.state_changed.emit()
+
+    @property
+    def split_mode(self) -> str:
+        return self._split_mode
+
+    @split_mode.setter
+    def split_mode(self, value: str) -> None:
+        if value not in {"every_page", "odd_even", "custom"}:
+            raise ValueError(f"Invalid split mode: {value!r}")
+        self._layout_overrides.add("split_mode")
+        if self._split_mode != value:
+            self._split_mode = value
+            self.state_changed.emit()
+
+    def refresh_layout_defaults(self, *, emit: bool = True) -> None:
+        """Refresh committed defaults while retaining explicit operation choices."""
+        for key, fallback in (("document_format", "DOCX"), ("render_format", "TIF"), ("split_mode", "every_page")):
+            if key not in self._layout_overrides:
+                value = str(self._read_config_default(f"layout.{key}", fallback))
+                if key != "split_mode":
+                    value = value.upper()
+                allowed = {"every_page", "odd_even", "custom"} if key == "split_mode" else None
+                if allowed is not None and value not in allowed:
+                    value = fallback
+                setattr(self, f"_{key}", value)
+        if "render_dpi" not in self._layout_overrides:
+            self._render_dpi = self._normalize_render_dpi(self._read_int_default("layout.render_dpi", 300))
+        if emit:
+            self.state_changed.emit()
+
+    def split_expression(self) -> str:
+        """Adapt the UI mode to the existing bounded page-selection protocol."""
+        return {"every_page": "*", "odd_even": "#"}.get(self._split_mode, self._page_input.strip())
+
+    @property
     def render_format(self) -> str:
         """Layout render format: ``"TIF"`` or ``"JPG"``."""
         return self._render_format
@@ -311,6 +358,7 @@ class ConversionPanelViewModel(QObject):
     def render_format(self, value: str) -> None:
         if value not in ("PNG", "TIF", "JPG"):
             raise ValueError(f"Invalid render_format: {value!r}")
+        self._layout_overrides.add("render_format")
         if self._render_format != value:
             self._render_format = value
             self.state_changed.emit()
@@ -324,6 +372,7 @@ class ConversionPanelViewModel(QObject):
     def render_dpi(self, value: int) -> None:
         if value not in (150, 300, 600):
             raise ValueError(f"Invalid render_dpi: {value}")
+        self._layout_overrides.add("render_dpi")
         if self._render_dpi != value:
             self._render_dpi = value
             self.state_changed.emit()
@@ -340,15 +389,18 @@ class ConversionPanelViewModel(QObject):
             self.state_changed.emit()
 
     @property
+    def pdf_page_count_unavailable(self) -> bool:
+        """Native PDF split needs readable metadata; bridge inputs obtain it after conversion."""
+        return self._current_format == "pdf" and self._pdf_total_pages == 0
+
+    @property
     def pdf_total_pages(self) -> int:
         """Total pages of the selected PDF."""
         return self._pdf_total_pages
 
     @pdf_total_pages.setter
     def pdf_total_pages(self, value: int) -> None:
-        if self._pdf_total_pages != value:
-            self._pdf_total_pages = value
-            self.state_changed.emit()
+        self.set_pdf_info(value, self._pdf_file_name)
 
     @property
     def pdf_file_name(self) -> str:
@@ -363,7 +415,11 @@ class ConversionPanelViewModel(QObject):
 
     def set_pdf_info(self, total_pages: int, file_name: str) -> None:
         """Set selected-PDF metadata used by layout split controls."""
-        normalized_pages = max(0, int(total_pages))
+        if not isinstance(total_pages, int) or isinstance(total_pages, bool) or total_pages < 0:
+            raise ValueError("PDF page count must be a non-negative integer.")
+        # Metadata may describe a source larger than the split budget. Keep
+        # that fact for other routes; split validation independently refuses it.
+        normalized_pages = total_pages
         normalized_name = str(file_name or "")
         if self._pdf_total_pages == normalized_pages and self._pdf_file_name == normalized_name:
             return
@@ -417,6 +473,9 @@ class ConversionPanelViewModel(QObject):
             current_format,
             ui_mode,
         )
+        if (file_path, category, ui_mode) != (self._current_file_path, self._file_category, self._ui_mode):
+            self._layout_overrides.clear()
+            self.refresh_layout_defaults(emit=False)
         if file_path != self._current_file_path:
             self._page_input = ""
             self._pdf_total_pages = 0
@@ -468,7 +527,8 @@ class ConversionPanelViewModel(QObject):
         self._pdf_quality = self._normalize_pdf_quality(self._read_image_default("pdf_quality", "original"))
         self._merge_mode = self._normalize_merge_mode(self._read_int_default("spreadsheet.merge_mode", 3))
         self._reference_table_name = ""
-        self._render_format = "TIF"
+        self._layout_overrides.clear()
+        self.refresh_layout_defaults(emit=False)
         self._render_dpi = self._normalize_render_dpi(self._read_int_default("layout.render_dpi", 300))
         self._page_input = ""
         self._pdf_total_pages = 0
@@ -628,100 +688,26 @@ class ConversionPanelViewModel(QObject):
 
     @staticmethod
     def validate_page_input(input_text: str, total_pages: int = 0) -> bool:
-        """Validate page range input for PDF split.
-
-        Args:
-            input_text: Page range expression.
-            total_pages: Total pages in the PDF (0 if unknown).
-
-        Returns:
-            True if the input is a valid page range expression.
-        """
-        text = input_text.strip()
-        if not text:
-            return False
-
-        # Wildcards
-        if text in ("*", "#"):
-            return not 0 < total_pages <= 1
-
-        # Check for valid characters
-        if not re.match(r"^[\d,，;；、\-~－至\s]+$", text):
-            return False
-
+        """Validate the complete selection before bounded expansion."""
         try:
-            pages = ConversionPanelViewModel.parse_page_ranges(text)
-        except ValueError:
+            parse_pdf_split_input(input_text, total_pages=total_pages)
+        except PageSelectionError:
             return False
-
-        if not pages:
-            return False
-
-        if total_pages > 0:
-            max_page = max(pages)
-            if max_page > total_pages:
-                valid_pages = [p for p in pages if p <= total_pages]
-                if not valid_pages:
-                    return False
-            elif set(pages) == set(range(1, total_pages + 1)):
-                return False
-
         return True
 
     @staticmethod
-    def parse_split_input(input_text: str) -> tuple[str, list[int] | None]:
-        """Parse split input into mode and page list.
-
-        Returns:
-            Tuple of (mode, pages_or_None).
-            mode is one of: ``"every_page"``, ``"odd_even"``, ``"custom"``.
-        """
-        text = input_text.strip()
-        if text == "*":
-            return ("every_page", None)
-        if text == "#":
-            return ("odd_even", None)
-        return ("custom", ConversionPanelViewModel.parse_page_ranges(text))
+    def parse_split_input(input_text: str, total_pages: int = 0) -> tuple[str, list[int] | None]:
+        """Return one validated split mode and its complete custom selection."""
+        selection = parse_pdf_split_input(input_text, total_pages=total_pages)
+        return selection.mode, list(selection.pages) if selection.mode == "custom" else None
 
     @staticmethod
     def parse_page_ranges(input_text: str) -> list[int]:
-        """Parse a custom page range string into a sorted list of page numbers.
-
-        Supports comma/semicolon/Chinese comma separators and range notation
-        with ``-``, ``~``, ``－``, ``至``.
-        """
-        pages: set[int] = set()
-        text = re.sub(r"\s+", "", input_text)
-        text = re.sub(r"[，;；、]", ",", text)
-        text = re.sub(r"[~－至]", "-", text)
-        for part in text.split(","):
-            part = part.strip()
-            if not part:
-                continue
-            if "-" in part:
-                rng = part.split("-")
-                if len(rng) == 2:
-                    try:
-                        start, end = int(rng[0]), int(rng[1])
-                        if start > end:
-                            start, end = end, start
-                        pages.update(range(start, end + 1))
-                    except ValueError:
-                        raise ValueError(
-                            _t("conversion_panel.layout.invalid_page_range", "Invalid page range: {part}").format(
-                                part=part
-                            )
-                        ) from None
-            else:
-                try:
-                    page = int(part)
-                    if page > 0:
-                        pages.add(page)
-                except ValueError:
-                    raise ValueError(
-                        _t("conversion_panel.layout.invalid_page", "Invalid page: {part}").format(part=part)
-                    ) from None
-        return sorted(pages)
+        """Parse a bounded custom expression using the shared input dialect."""
+        selection = parse_pdf_split_input(input_text)
+        if selection.mode != "custom":
+            raise PageSelectionError("invalid_mode", "A custom page expression is required.")
+        return list(selection.pages)
 
     @staticmethod
     def normalize_format(fmt: str) -> str:

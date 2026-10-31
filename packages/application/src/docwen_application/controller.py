@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import tempfile
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -175,6 +176,7 @@ class ApplicationController:
         request: Any,
         *,
         batch: bool = False,
+        on_reserved: Callable[[object], None] | None = None,
     ) -> _ExecutionCancellationScope:
         """Reserve an operation scope before an asynchronous worker starts.
 
@@ -182,8 +184,13 @@ class ApplicationController:
         a cancel click can never race ahead of Application registration.
         ``release_execution_cancellation`` releases the retained terminal
         scope after the worker's completion signal has been projected.
+
+        ``on_reserved`` captures the exact release handle before any alias is
+        published. It must only record that handle: it runs under the scope
+        lock. This exclusive capture mode refuses an already owned task ID;
+        callers without the callback retain their existing reuse semantics.
         """
-        return self._obtain_cancellation_scope(request, batch=batch, claim=False, retain=True)
+        return self._obtain_cancellation_scope(request, batch=batch, claim=False, retain=True, on_reserved=on_reserved)
 
     def release_execution_cancellation(self, task_id: str, reservation: object) -> None:
         """Release a scope retained for an asynchronous presentation owner."""
@@ -192,20 +199,22 @@ class ApplicationController:
             if scope is not None and reservation is scope:
                 self._remove_cancellation_scope_locked(scope)
 
-    def cancel(self, task_id: str) -> None:
+    def cancel(self, task_id: str, *, reservation: object | None = None) -> None:
         """Cancel one canonical Application operation.
 
         Before Runtime admission this only trips the operation-owned token,
         so a request that never reaches Runtime cannot leave a pending Runtime
         cancellation behind.  During Runtime execution only the currently
         admitted child is forwarded; future batch children are cancelled by
-        Application before they enter Runtime.
+        Application before they enter Runtime. A supplied ``reservation``
+        additionally requires exact scope identity, so a delayed cancellation
+        cannot affect a later operation that reused the same task ID.
         """
         runtime_target: str | None = None
         tracked_scope: _ExecutionCancellationScope | None = None
         with self._cancellation_lock:
             scope = self._cancellation_scopes.get(task_id)
-            if scope is None:
+            if scope is None or (reservation is not None and scope is not reservation):
                 return
             elif scope.phase != "committed":
                 scope.token.cancel(reason="user_cancelled")
@@ -270,10 +279,15 @@ class ApplicationController:
         batch: bool,
         claim: bool,
         retain: bool,
+        on_reserved: Callable[[object], None] | None = None,
     ) -> _ExecutionCancellationScope:
         canonical_task_id, aliases, runtime_task_ids = self._cancellation_scope_shape(request, batch=batch)
         with self._cancellation_lock:
             existing = self._cancellation_scopes.get(canonical_task_id)
+            if existing is not None and on_reserved is not None:
+                # A failed capture must never acquire or release another
+                # presentation owner's retained scope, even for the same ID.
+                raise ControllerError(f"Cancellation scope is already owned: {canonical_task_id!r}")
             if existing is not None and existing.phase == "committed":
                 if existing.retain_until_release:
                     raise ControllerError(f"Cancellation scope is awaiting release: {canonical_task_id!r}")
@@ -299,8 +313,16 @@ class ApplicationController:
                 retain_until_release=retain,
                 claimed=claim,
             )
-            for alias in aliases:
-                self._cancellation_scopes[alias] = scope
+            try:
+                if on_reserved is not None:
+                    on_reserved(scope)
+                for alias in aliases:
+                    self._cancellation_scopes[alias] = scope
+            except BaseException:
+                # SIGINT may arrive after only some aliases were registered.
+                # Remove only entries still identifying this exact scope.
+                self._remove_cancellation_scope_locked(scope)
+                raise
             return scope
 
     def _remove_cancellation_scope_locked(self, scope: _ExecutionCancellationScope) -> None:

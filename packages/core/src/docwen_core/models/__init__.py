@@ -11,6 +11,8 @@ from docwen_core.models.artifact import (
     ARTIFACT_KIND_MANIFEST,
     ARTIFACT_KIND_PRIMARY,
     ArtifactManifest,
+    ArtifactOwnership,
+    validate_artifact_ownership,
 )
 from docwen_core.models.artifact_bundle import (
     ARTIFACT_BUNDLE_SCHEMA,
@@ -162,6 +164,7 @@ __all__ = [
     "ArtifactBundle",
     "ArtifactBundleValidationError",
     "ArtifactManifest",
+    "ArtifactOwnership",
     "BundleArtifact",
     "BundleDraft",
     "BundleDraftArtifact",
@@ -255,6 +258,7 @@ __all__ = [
     "sanitize_node_label",
     "validate_artifact_bundle",
     "validate_artifact_bundle_draft",
+    "validate_artifact_ownership",
     "validate_logical_path",
     "validate_markdown_node_path",
     "validate_semantic_document",

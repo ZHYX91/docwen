@@ -429,14 +429,27 @@ def test_standard_list_page_break_supports_wide_ordered_marker():
     run = para.add_run("Before")
     run.add_break(WD_BREAK.PAGE)
     run.add_text("After")
-    _inject_numpr(para, num_id="9", ilvl=0)
-    level = MagicMock()
-    level.num_fmt = "decimal"
-    numbering_index = MagicMock()
-    numbering_index.lookup.return_value = level
-    numbering_index.lookup_by_style_id.return_value = None
-    list_counter = MagicMock()
-    list_counter.next.return_value = 100
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.numbering_index import NumberingIndex
+
+    _inject_numpr(para, num_id="99", ilvl=0)
+    abstract = OxmlElement("w:abstractNum")
+    abstract.set(qn("w:abstractNumId"), "99")
+    level = OxmlElement("w:lvl")
+    level.set(qn("w:ilvl"), "0")
+    for tag, value in (("start", "100"), ("numFmt", "decimal"), ("lvlText", "%1."), ("suff", "space")):
+        child = OxmlElement(f"w:{tag}")
+        child.set(qn("w:val"), value)
+        level.append(child)
+    abstract.append(level)
+    number = OxmlElement("w:num")
+    number.set(qn("w:numId"), "99")
+    binding = OxmlElement("w:abstractNumId")
+    binding.set(qn("w:val"), "99")
+    number.append(binding)
+    doc.part.numbering_part.element.extend((abstract, number))
+    numbering_index = NumberingIndex(doc)
+    list_counter = ListCounterManager()
 
     lines, _stats = DocxToMarkdownConverter()._process_paragraph(
         para._element,

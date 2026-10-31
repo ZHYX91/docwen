@@ -61,7 +61,7 @@ def test_ci_has_one_full_coverage_run_and_one_run_per_other_platform() -> None:
     assert jobs["tests"]["strategy"]["matrix"]["include"] == [
         {"os": "windows-latest", "suite": "full", "coverage": "true"},
         {"os": "ubuntu-24.04", "suite": "platform", "coverage": "false"},
-        {"os": "macos-14", "suite": "platform", "coverage": "false"},
+        {"os": "macos-15", "suite": "platform", "coverage": "false"},
     ]
     assert jobs["required"]["needs"] == ["source-checks", "tests"]
     assert "if" not in jobs["tests"]

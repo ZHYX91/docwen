@@ -7,6 +7,7 @@ and delegates note references to NoteExtractor.
 from __future__ import annotations
 
 from collections.abc import Callable
+from itertools import pairwise
 from typing import Any
 
 from docwen_core.docx_parsing.format_features import (
@@ -366,6 +367,43 @@ def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> t
     return None
 
 
+def _reference_covered_nodes(element: Any, spans: dict[Any, tuple[Any, str]]) -> set[Any]:
+    """Map proven inclusive XML ranges without widening them to whole runs.
+
+    A range can own a complete SDT or begin/end inside different runs. Only
+    wholly contained subtrees are skipped; a boundary run still renders its
+    text and breaks outside the field. Build one paragraph inventory for all
+    spans, independent of the number of reference occurrences.
+    """
+    if not spans:
+        return set()
+    nodes = list(element.iter())
+    positions = {node: index for index, node in enumerate(nodes)}
+    ends: dict[Any, int] = {}
+    for node in reversed(nodes):
+        ends[node] = max((ends[child] for child in node), default=positions[node])
+    intervals: list[tuple[int, int]] = []
+    for first, (last, _token) in spans.items():
+        start, end = positions.get(first), ends.get(last)
+        if start is None or end is None or end < start:
+            raise ValueError("authenticated reference range is outside its original paragraph")
+        intervals.append((start, end))
+    intervals.sort()
+    if any(right[0] <= left[1] for left, right in pairwise(intervals)):
+        raise ValueError("authenticated reference XML ranges overlap")
+    covered: set[Any] = set()
+    interval_index = 0
+    for index, node in enumerate(nodes):
+        while interval_index < len(intervals) and intervals[interval_index][1] < index:
+            interval_index += 1
+        if interval_index == len(intervals):
+            break
+        start, end = intervals[interval_index]
+        if start <= index and ends[node] <= end:
+            covered.add(node)
+    return covered
+
+
 def _render_paragraph_run_segments(
     para: Any,
     note_extractor: Any = None,
@@ -376,9 +414,15 @@ def _render_paragraph_run_segments(
     split_page_breaks: bool,
     math_renderer: Callable[[Any], str | None] | None = None,
     root_element: Any | None = None,
+    line_break_text: str = "\n",
+    reference_spans: dict[Any, tuple[Any, str]] | None = None,
+    literal_text: bool = False,
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
+    element = root_element if root_element is not None else getattr(para, "_p", para)
+    spans = (reference_spans or {}) if not literal_text else {}
+    covered_nodes = _reference_covered_nodes(element, spans)
 
     def _parts() -> list[str]:
         return segments[-1]
@@ -392,23 +436,23 @@ def _render_paragraph_run_segments(
         if split_page_breaks and break_type == "page":
             segments.append([])
         else:
-            _parts().append("\n")
+            # Only an actual OOXML break receives this projection. Literal
+            # w:t text and already-rendered code/formatting remain untouched.
+            _parts().append(line_break_text)
 
     def _process_hyperlink(child: Any) -> None:
+        nonlocal segments
         url = resolve_hyperlink_target(para, child) or ""
-        hyperlink_segments = _render_paragraph_run_segments(
-            para,
-            note_extractor=note_extractor,
-            preserve_formatting=preserve_formatting,
-            syntax_config=syntax_config,
-            style_detector_config=style_detector_config,
-            split_page_breaks=split_page_breaks,
-            math_renderer=math_renderer,
-            root_element=child,
-        )
+        outer_segments = segments
+        segments = [[]]
+        try:
+            _process_children(child)
+            hyperlink_segments = ["".join(parts) for parts in segments]
+        finally:
+            segments = outer_segments
         for index, text in enumerate(hyperlink_segments):
             if text:
-                _append(f"[{text}]({url})" if url else text)
+                _append(f"[{text}]({url})" if url and not literal_text else text)
             if index < len(hyperlink_segments) - 1:
                 if split_page_breaks:
                     segments.append([])
@@ -421,10 +465,15 @@ def _render_paragraph_run_segments(
         for index, child in enumerate(children):
             if index <= consumed_through:
                 continue
+            if child in covered_nodes:
+                reference = spans.get(child)
+                if reference is not None:
+                    _append(reference[1])
+                continue
             tag = child.tag.split("}")[-1] if child.tag and "}" in child.tag else (child.tag or "")
 
             if tag == "r":
-                resolver = getattr(note_extractor, "get_noteref_text", None)
+                resolver = getattr(note_extractor, "get_noteref_text", None) if not literal_text else None
                 resolved = _complex_note_reference(children, index, resolver) if resolver is not None else None
                 if resolved is not None:
                     reference, consumed_through = resolved
@@ -434,7 +483,7 @@ def _render_paragraph_run_segments(
             elif tag == "hyperlink":
                 _process_hyperlink(child)
             elif tag == "fldSimple":
-                resolver = getattr(note_extractor, "get_noteref_text", None)
+                resolver = getattr(note_extractor, "get_noteref_text", None) if not literal_text else None
                 visible_runs = (
                     len(child) > 0
                     and all(
@@ -491,6 +540,9 @@ def _render_paragraph_run_segments(
 
     def _append_run_text(run: Any, text: str) -> None:
         w_ns = NS_W
+        if literal_text:
+            _append(text)
+            return
 
         # ── M1: Task list checkbox detection ────────────────────────────
         # Unicode checkbox characters (detect before any formatting)
@@ -549,6 +601,12 @@ def _render_paragraph_run_segments(
                 text_parts.clear()
 
         for child in run:
+            if child in covered_nodes:
+                _flush_text()
+                reference = spans.get(child)
+                if reference is not None:
+                    _append(reference[1])
+                continue
             tag = child.tag.split("}")[-1] if child.tag and "}" in child.tag else (child.tag or "")
             if tag == "t" and child.text is not None:
                 text_parts.append(child.text)
@@ -562,12 +620,12 @@ def _render_paragraph_run_segments(
             elif tag in ("br", "cr"):
                 _flush_text()
                 _handle_break(child)
-            elif tag == "footnoteReference" and note_extractor is not None:
+            elif tag == "footnoteReference" and note_extractor is not None and not literal_text:
                 _flush_text()
                 w_id = child.get(f"{{{w_ns}}}id")
                 if w_id is not None:
                     _append(note_extractor.get_reference_text("footnote", int(w_id)))
-            elif tag == "endnoteReference" and note_extractor is not None:
+            elif tag == "endnoteReference" and note_extractor is not None and not literal_text:
                 _flush_text()
                 w_id = child.get(f"{{{w_ns}}}id")
                 if w_id is not None:
@@ -575,7 +633,6 @@ def _render_paragraph_run_segments(
 
         _flush_text()
 
-    element = root_element if root_element is not None else getattr(para, "_p", para)
     _process_children(element)
     return ["".join(parts) for parts in segments]
 
@@ -588,6 +645,8 @@ def render_paragraph_runs(
     syntax_config: DocxMarkdownSyntaxConfig,
     style_detector_config: StyleDetectorConfig | None = None,
     math_renderer: Callable[[Any], str | None] | None = None,
+    reference_spans: dict[Any, tuple[Any, str]] | None = None,
+    literal_text: bool = False,
 ) -> str:
     """Render paragraph XML children in order, producing Markdown text.
 
@@ -613,6 +672,8 @@ def render_paragraph_runs(
         style_detector_config=style_detector_config,
         split_page_breaks=False,
         math_renderer=math_renderer,
+        reference_spans=reference_spans,
+        literal_text=literal_text,
     )[0]
 
 
@@ -624,6 +685,9 @@ def render_paragraph_runs_split_on_page_breaks(
     syntax_config: DocxMarkdownSyntaxConfig,
     style_detector_config: StyleDetectorConfig | None = None,
     math_renderer: Callable[[Any], str | None] | None = None,
+    line_break_text: str = "\n",
+    reference_spans: dict[Any, tuple[Any, str]] | None = None,
+    literal_text: bool = False,
 ) -> list[str]:
     """Render rich Markdown segments separated at accepted page breaks.
 
@@ -641,4 +705,7 @@ def render_paragraph_runs_split_on_page_breaks(
         style_detector_config=style_detector_config,
         split_page_breaks=True,
         math_renderer=math_renderer,
+        line_break_text=line_break_text,
+        reference_spans=reference_spans,
+        literal_text=literal_text,
     )

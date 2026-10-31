@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from tests.support.cli import make_controller_mock_with_cancellation
 
 from docwen_application.runtime_capability_catalog import RuntimeRoute
 from docwen_core.models import (
@@ -209,7 +210,7 @@ def _aggregate_capability_projection() -> dict[str, object]:
 
 
 def _aggregate_controller() -> MagicMock:
-    controller = MagicMock()
+    controller = make_controller_mock_with_cancellation()
     controller.has_runtime = True
     controller.describe_runtime_capabilities.return_value = _aggregate_capability_projection()
     controller.execute_aggregate.return_value = MagicMock(success=True)

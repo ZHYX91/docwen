@@ -10,6 +10,7 @@ from docwen_core.links._anchor import (
     split_yaml_front_matter_source,
     strip_yaml_front_matter,
 )
+from docwen_core.links._block_context import markdown_table_cell_ranges, markdown_table_delimiter
 from docwen_core.links._data_uri import (
     decode_data_uri_image,
     is_data_uri_image,
@@ -67,6 +68,14 @@ from docwen_core.links._resolver import (
     normalize_link_target,
     resolve_file_path,
 )
+from docwen_core.links._resource_targets import rewrite_markdown_resource_targets
+from docwen_core.links._source_document import (
+    MarkdownBlockLine,
+    MarkdownHeadingRange,
+    markdown_heading_ranges,
+    markdown_source_context_lines,
+    markdown_source_projection,
+)
 from docwen_core.links._source_ownership import markdown_source_owners
 from docwen_core.links.declared_resources import (
     DeclaredResourceError,
@@ -86,6 +95,8 @@ __all__ = [
     "EmbeddedImageMode",
     "EmbeddedMdMode",
     "LinkErrorKind",
+    "MarkdownBlockLine",
+    "MarkdownHeadingRange",
     "MarkdownInlineSourceOwner",
     "NotFoundAction",
     "_process_non_embed_links",
@@ -102,8 +113,13 @@ __all__ = [
     "make_error_placeholder",
     "make_keep_link",
     "make_table_safe",
+    "markdown_heading_ranges",
     "markdown_inline_source_owners",
+    "markdown_source_context_lines",
     "markdown_source_owners",
+    "markdown_source_projection",
+    "markdown_table_cell_ranges",
+    "markdown_table_delimiter",
     "normalize_link_target",
     "parse_anchor",
     "process_embedded_image",
@@ -116,6 +132,7 @@ __all__ = [
     "resolve_embedded_links",
     "resolve_file_path",
     "restore_table_safe_breaks",
+    "rewrite_markdown_resource_targets",
     "split_alt_text_and_size",
     "split_markdown_block_segments",
     "split_markdown_inline_segments",

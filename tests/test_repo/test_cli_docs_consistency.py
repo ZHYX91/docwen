@@ -30,12 +30,16 @@ def test_cli_docs_describe_the_current_public_commands() -> None:
         "`resources list|show TYPE`",
         "`schema [COMMAND_PATH...]`",
         "`convert FILE --to FORMAT --output PATH`",
-        "`convert MARKDOWN --to docx --output-dir DIR --proofread [--check CHECK]...`",
+        "`convert MARKDOWN --to FORMAT --output-dir DIR --proofread [--check CHECK]...`",
         "`validate FILE [--report PATH]`",
         "`config reset GROUP --yes`",
         "`doctor`",
     ):
         assert token in cli
+    assert "Markdown sources support final DOCX/DOC/ODT/RTF/WPS targets" in cli
+    assert "proofreading runs on the intermediate DOCX" in cli
+    assert "Availability of the selected target still depends on its bridge" in cli
+    assert "Non-Markdown sources do not support conversion proofreading" in cli
     assert "convert FILE --to FORMAT (--output-dir DIR" in row
     assert "--output PATH)" in row
     assert "`run` 命令" not in row

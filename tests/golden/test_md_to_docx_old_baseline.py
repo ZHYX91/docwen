@@ -69,8 +69,8 @@ class TestMdToDocxOldBaseline:
         )
         assert exit_code == 0, f"CLI conversion failed with exit code {exit_code}"
 
-        [new_docx] = output_parent.glob("*/*.docx")
-        assert new_docx.parent.name == new_docx.stem
+        [new_docx] = output_parent.glob("*.docx")
+        assert new_docx.parent == output_parent
         assert new_docx.exists(), (
             f"Expected output DOCX not found at {new_docx}\ntmp_path contents: {list(tmp_path.iterdir())}"
         )

@@ -58,7 +58,7 @@ def _convert_matrix_rows(mtable_elem) -> str:
             cells: list[str] = []
             for mtd_elem in mtr_elem:
                 if etree.QName(mtd_elem).localname == "mtd":
-                    cell_content = "".join([_mathml_node_to_latex(c) for c in mtd_elem]).strip()
+                    cell_content = _join_latex([_mathml_node_to_latex(c) for c in mtd_elem]).strip()
                     cells.append(cell_content)
             if cells:
                 rows.append(" & ".join(cells))
@@ -121,6 +121,36 @@ def _detect_matrix_from_bracket_markers(
     return 0, False
 
 
+def _join_latex(parts: list[str]) -> str:
+    """Join generated atoms without extending a preceding TeX control word."""
+    output: list[str] = []
+    follows_control_word = False
+    for part in parts:
+        if not part:
+            continue
+        if follows_control_word and re.match(r"[A-Za-z]", part):
+            output.append("{}")
+        output.append(part)
+        follows_control_word = re.search(r"(?<!\\)(?:\\\\)*\\[A-Za-z]+$", part) is not None
+    return "".join(output)
+
+
+def _text_to_latex(text: str) -> str:
+    escapes = {
+        "\\": r"\textbackslash{}",
+        "{": r"\{",
+        "}": r"\}",
+        "$": r"\$",
+        "&": r"\&",
+        "%": r"\%",
+        "#": r"\#",
+        "_": r"\_",
+        "^": r"\textasciicircum{}",
+        "~": r"\textasciitilde{}",
+    }
+    return "\\text{" + "".join(escapes.get(character, character) for character in text) + "}"
+
+
 def _mathml_node_to_latex(node) -> str:
     """Recursively convert MathML node to LaTeX."""
     tag = etree.QName(node).localname
@@ -136,7 +166,10 @@ def _mathml_node_to_latex(node) -> str:
                 continue
             parts.append(_mathml_node_to_latex(children[i]))
             i += 1
-        return "".join(parts)
+        return _join_latex(parts)
+
+    elif tag == "mtext":
+        return _text_to_latex(node.text or "")
 
     elif tag in ("mi", "mn", "mo"):
         text = node.text or ""
@@ -200,7 +233,7 @@ def _mathml_node_to_latex(node) -> str:
         return ""
 
     elif tag == "msqrt":
-        content = "".join([_mathml_node_to_latex(child) for child in node]).strip()
+        content = _join_latex([_mathml_node_to_latex(child) for child in node]).strip()
         return f"\\sqrt{{{content}}}"
 
     elif tag == "mroot":
@@ -274,7 +307,7 @@ def _mathml_node_to_latex(node) -> str:
 
             i += 1
 
-        return "".join(parts)
+        return _join_latex(parts)
 
     elif tag == "mtable":
         matrix_content = _convert_matrix_rows(node)
@@ -325,12 +358,15 @@ def _mathml_node_to_latex(node) -> str:
                 return f"\\begin{{{matrix_type}}}\n\\end{{{matrix_type}}}"
 
         logger.debug("mfenced does not contain a matrix, treating as plain brackets")
-        content = "".join([_mathml_node_to_latex(child) for child in node])
+        content = _join_latex([_mathml_node_to_latex(child) for child in node])
         return f"{open_char}{content}{close_char}"
 
     else:
-        # Unknown tag: recurse into children
-        return "".join([_mathml_node_to_latex(child) for child in node])
+        if len(node) == 0:
+            logger.warning("Unsupported MathML leaf %s; preserve the source formula", tag)
+            raise ValueError(f"unsupported MathML leaf: {tag}")
+        # Preserve modeled children of transparent containers in source order.
+        return _join_latex([_mathml_node_to_latex(child) for child in node])
 
 
 def mathml_to_latex(mathml_str: str) -> str | None:

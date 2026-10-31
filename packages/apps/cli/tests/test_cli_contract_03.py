@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tests.support.cli import make_controller_mock_with_cancellation
+
 from ._cli_contract_support import (
     ExitCode,
     MagicMock,
@@ -24,7 +26,7 @@ class TestExecuteConvertActionPath:
 
         src = tmp_path / "plain.txt"
         src.write_text("ordinary text without Markdown syntax\nsecond line\n", encoding="utf-8")
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -84,7 +86,7 @@ class TestExecuteConvertActionPath:
 
         src = tmp_path / "actually-markdown.docx"
         src.write_text("# Title\n\ncontent\n", encoding="utf-8")
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
         args = _make_execution_args(
@@ -116,7 +118,7 @@ class TestExecuteConvertActionPath:
         assert worksheet is not None
         worksheet["A1"] = "value"
         workbook.save(str(src))
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
         prompts: list[str] = []
@@ -181,7 +183,7 @@ class TestExecuteConvertActionPath:
         src2 = tmp_path / "b.pdf"
         src2.write_bytes(b"%PDF-1.4\n%\x00\x00\x00\x00\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_aggregate.return_value = MagicMock(success=True)
 
@@ -213,7 +215,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "scan.png"
         src.write_bytes(b"\x89PNG\r\n\x1a\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -249,7 +251,7 @@ class TestExecuteConvertActionPath:
 
         src = tmp_path / filename
         src.write_bytes(content)
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -270,7 +272,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "layout.pdf"
         src.write_bytes(b"%PDF-1.4\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -318,7 +320,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "invoice.jpg"
         src.write_bytes(b"\xff\xd8\xff\xe0")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -344,7 +346,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "invoice.pdf"
         src.write_bytes(b"%PDF-1.4\n%\x00\x00\x00\x00\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -368,7 +370,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "layout.pdf"
         src.write_bytes(b"%PDF-1.4\n%\x00\x00\x00\x00\n")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -395,7 +397,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "notes.txt"
         src.write_text("# Title\n\ncontent\n", encoding="utf-8")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 
@@ -465,7 +467,7 @@ class TestExecuteConvertActionPath:
         src = tmp_path / "notes.txt"
         src.write_text("# Title\n", encoding="utf-8")
 
-        mock_controller = MagicMock()
+        mock_controller = make_controller_mock_with_cancellation()
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
 

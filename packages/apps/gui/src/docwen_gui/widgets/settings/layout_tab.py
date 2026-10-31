@@ -31,6 +31,34 @@ class LayoutTab(DynamicSettingsTab):
                 ],
             },
             {
+                "title": t("settings.layout.defaults_section", "Conversion defaults"),
+                "presentation": "card",
+                "fields": [
+                    {
+                        "key": "split_mode",
+                        "type": "combobox",
+                        "label": t("conversion_panel.layout.split_mode", "Split mode"),
+                        "items": [
+                            (t("conversion_panel.layout.split_every_page", "Every page"), "every_page"),
+                            (t("conversion_panel.layout.split_odd_even", "Odd / even pages"), "odd_even"),
+                            (t("conversion_panel.layout.split_custom", "By page numbers"), "custom"),
+                        ],
+                    },
+                    {
+                        "key": "document_format",
+                        "type": "combobox",
+                        "label": t("settings.layout.document_format", "Document format"),
+                        "items": view_model.layout_format_choices("document"),
+                    },
+                    {
+                        "key": "render_format",
+                        "type": "combobox",
+                        "label": t("conversion_panel.layout.image_format", "Image format"),
+                        "items": view_model.layout_format_choices("image"),
+                    },
+                ],
+            },
+            {
                 "title": t("settings.layout.dpi_section", "DPI Settings"),
                 "description": t("settings.layout.dpi_desc", "Set render DPI for PDF to image conversion."),
                 "presentation": "card",

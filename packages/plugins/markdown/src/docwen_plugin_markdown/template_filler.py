@@ -9,12 +9,12 @@ from collections.abc import Iterator, Mapping
 from copy import deepcopy
 from typing import Any, Literal, cast
 
-from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.oxml.text.run import CT_R
 from docx.text.run import Run
 
+from docwen_core.docx_comments import append_docx_comment
 from docwen_plugin_markdown.gongwen_fields import (
     gongwen_review_notes,
     prepare_gongwen_fields,
@@ -38,7 +38,7 @@ def fill_template(
     *,
     gongwen_fields_enabled: bool = True,
     attachment_alignment: Literal["spaces", "tab"] = "spaces",
-    list_separator: str = "、",
+    list_separator: str = ", ",
 ) -> None:
     """Fill the pre-render template snapshot using request-local display values.
 
@@ -96,7 +96,7 @@ def fill_yaml_placeholders(
     yaml_dict: Mapping[str, Any],
     placeholder_map: dict[str, list[Any]],
     skip_keys: set[str] | None = None,
-    list_separator: str = "、",
+    list_separator: str = ", ",
     *,
     review_notes: Mapping[str, str] | None = None,
 ) -> None:
@@ -174,16 +174,7 @@ def _replace_placeholder_runs(
             # earlier original offsets valid even after splitting this run.
             _split_text_run(start_element, start_offset + len(replacement))
             inserted = _split_text_run(start_element, start_offset)
-            _ensure_comment_reference_style(doc)
-            doc.add_comment(Run(cast(CT_R, inserted), paragraph), text=note, author="DocWen", initials="DW")
-
-
-def _ensure_comment_reference_style(doc: Any) -> None:
-    """Word comments reference a character style required by style completion."""
-    if "CommentReference" not in doc.styles:
-        doc.styles.add_style("CommentReference", WD_STYLE_TYPE.CHARACTER)
-    if "CommentText" not in doc.styles:
-        doc.styles.add_style("CommentText", WD_STYLE_TYPE.PARAGRAPH)
+            append_docx_comment(doc, [Run(cast(CT_R, inserted), paragraph)], text=note)
 
 
 def _split_text_run(text_element, offset: int):

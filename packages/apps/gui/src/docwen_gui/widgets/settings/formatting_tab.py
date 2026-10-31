@@ -5,8 +5,7 @@ from __future__ import annotations
 from typing import Literal
 from typing import cast as _cast
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QPushButton
+from PySide6.QtWidgets import QCheckBox, QComboBox, QPushButton
 
 from docwen_core.markdown_extensions import EXTENSION_NAMES
 
@@ -116,7 +115,8 @@ _EXTENSION_HELP_FALLBACKS: dict[tuple[str, str], str] = {
 class FormattingTab(BaseSettingsTab):
     """Formatting settings tab backed by typed draft state."""
 
-    def __init__(self, view_model: SettingsViewModel) -> None:
+    def __init__(self, view_model: SettingsViewModel, *, direction: Literal["input", "output"] = "output") -> None:
+        self._direction: Literal["input", "output"] = direction
         self._vm = view_model
         self._extension_checks: dict[tuple[str, str], QCheckBox] = {}
         self._each_line_paragraph: QCheckBox = _cast(QCheckBox, None)
@@ -137,23 +137,49 @@ class FormattingTab(BaseSettingsTab):
         self._asterisk_sep: QComboBox = _cast(QComboBox, None)
         self._underscore_sep: QComboBox = _cast(QComboBox, None)
         super().__init__()
+        for name, key in (
+            ("_page_break", "page_break_sep"),
+            ("_section_break", "section_break_sep"),
+            ("_horizontal_rule", "horizontal_rule_sep"),
+            ("_bold_syntax", "bold_syntax"),
+            ("_italic_syntax", "italic_syntax"),
+            ("_strike_syntax", "strikethrough_syntax"),
+            ("_highlight_syntax", "highlight_syntax"),
+            ("_super_syntax", "superscript_syntax"),
+            ("_sub_syntax", "subscript_syntax"),
+            ("_ul_syntax", "unordered_list_syntax"),
+            ("_indent_spaces", "indent_spaces"),
+            ("_mermaid_mode", "mermaid_mode"),
+            ("_dash_sep", "dash_sep"),
+            ("_asterisk_sep", "asterisk_sep"),
+            ("_underscore_sep", "underscore_sep"),
+        ):
+            combo = getattr(self, name)
+            if combo is not None:
+                self._wire_combo(combo, key)
         self._load_values()
 
     def _create_interface(self) -> None:
-        self.set_tab_description(
-            t(
-                "settings.markdown_extensions.description",
-                "Choose which Markdown extensions to recognize and generate. Your source files are never rewritten.",
+        if self._direction == "output":
+            description = t("settings.markdown_extensions.description", "Configure generated Markdown.")
+        else:
+            description = t(
+                "settings.markdown_extensions.input_description", "Configure Markdown recognition and DOCX output."
             )
-        )
-        self._create_extension_card("output")
+        self.set_tab_description(description)
+        self._create_extension_card(self._direction)
+        if self._direction == "output":
+            self._create_output_controls()
+        else:
+            self._create_input_controls()
 
+    def _create_output_controls(self) -> None:
         # ── Shared Markdown output syntax ──────────────────────────────────────────
         _c3, f3 = self.add_settings_card(
-            f"{t('settings.formatting.output_section', 'Generate Markdown')} — {t('settings.formatting.syntax_selection', 'Syntax Selection')}",
+            t("settings.formatting.syntax_selection", "Syntax Selection"),
             t(
                 "settings.formatting.syntax_selection_tooltip",
-                "These output styles currently apply primarily to ordinary Word-to-Markdown conversion. "
+                "These output styles currently apply primarily to ordinary DOCX-to-Markdown conversion. "
                 "Other sources and specialized optimizers do not yet implement all choices. "
                 "These choices do not restrict Markdown input recognition.",
             ),
@@ -196,18 +222,9 @@ class FormattingTab(BaseSettingsTab):
         )
         self.add_form_row(f3, t("settings.formatting.indent_spaces_label", "Indent:"), self._indent_spaces)
 
-        self._create_extension_card("input")
-
-        mappings_title = QLabel(t("settings.formatting.word_mappings_title"), self._scroll_container)
-        mappings_title.setObjectName("formattingWordMappingsTitle")
-        mappings_title.setProperty("settingsRole", "fieldLabel")
-        mappings_title.setTextFormat(Qt.TextFormat.PlainText)
-        mappings_title.setWordWrap(True)
-        self._scroll_layout.addWidget(mappings_title)
-
         # ── DOCX → MD: Separator Mapping ───────────────────────────────
         _c2, f2 = self.add_settings_card(
-            f"{t('settings.formatting.docx_to_md_section', 'DOCX to MD')} — {t('settings.formatting.separator_mapping', 'Separator Mapping')}",
+            t("settings.formatting.separator_mapping", "Separator Mapping"),
             t("settings.formatting.separator_mapping_tooltip", "Map document separators to Markdown equivalents."),
             object_name="formattingDocxSeparatorsCard",
         )
@@ -224,9 +241,10 @@ class FormattingTab(BaseSettingsTab):
         )
         self.add_form_row(f2, t("settings.formatting.horizontal_rule_label", "Horizontal Rule:"), self._horizontal_rule)
 
+    def _create_input_controls(self) -> None:
         # ── MD → DOCX: Separator Mapping ───────────────────────────────
         _c5, f5 = self.add_settings_card(
-            f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.md_separator_mapping', 'Separator Mapping')}",
+            t("settings.formatting.md_separator_mapping", "Separator Mapping"),
             t("settings.formatting.md_separator_mapping_tooltip", "Map Markdown separators to document equivalents."),
             object_name="formattingMdSeparatorsCard",
         )
@@ -245,14 +263,14 @@ class FormattingTab(BaseSettingsTab):
 
         # ── MD → Word: ordinary prose paragraph policy ────────────────
         _paragraph_card, paragraph_form = self.add_settings_card(
-            t("settings.formatting.line_paragraph_section", "Markdown to Word"),
+            t("settings.formatting.line_paragraph_section", "Paragraph handling"),
             object_name="formattingLineParagraphCard",
         )
         self._each_line_paragraph = self.create_settings_toggle(
             t("settings.formatting.each_line_paragraph", "Each line as a paragraph"),
             t(
                 "settings.formatting.each_line_paragraph_help",
-                "Create separate Word paragraphs for consecutive ordinary Markdown text lines. "
+                "Create separate DOCX paragraphs for consecutive ordinary Markdown text lines. "
                 "Explicit hard breaks, headings, lists, quotes, tables and code remain unchanged.",
             ),
         )
@@ -264,7 +282,7 @@ class FormattingTab(BaseSettingsTab):
 
         # ── MD → DOCX: Mermaid ────────────────────────────────────────
         _c_mermaid, f_mermaid = self.add_settings_card(
-            f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.mermaid_title', 'Mermaid diagrams')}",
+            t("settings.formatting.mermaid_title", "Mermaid"),
             t(
                 "settings.formatting.mermaid_tooltip",
                 "Render Mermaid fenced blocks as images with the local Mermaid CLI, or keep the source as code. "
@@ -280,7 +298,7 @@ class FormattingTab(BaseSettingsTab):
             _mermaid_options(),
             t(
                 "settings.formatting.mermaid_mode_tooltip",
-                "Choose how Mermaid fenced blocks are written to generated documents.",
+                "Choose how Mermaid fenced blocks are written to generated DOCX files.",
             ),
         )
         self._mermaid_mode.setObjectName("formattingMermaidMode")
@@ -295,27 +313,10 @@ class FormattingTab(BaseSettingsTab):
         )
         self._mermaid_controls = MermaidControls(self, f_mermaid, self._vm)
 
-        # Wire all combos
-        self._wire_combo(self._page_break, "page_break_sep")
-        self._wire_combo(self._section_break, "section_break_sep")
-        self._wire_combo(self._horizontal_rule, "horizontal_rule_sep")
-        self._wire_combo(self._bold_syntax, "bold_syntax")
-        self._wire_combo(self._italic_syntax, "italic_syntax")
-        self._wire_combo(self._strike_syntax, "strikethrough_syntax")
-        self._wire_combo(self._highlight_syntax, "highlight_syntax")
-        self._wire_combo(self._super_syntax, "superscript_syntax")
-        self._wire_combo(self._sub_syntax, "subscript_syntax")
-        self._wire_combo(self._ul_syntax, "unordered_list_syntax")
-        self._wire_combo(self._indent_spaces, "indent_spaces")
-        self._wire_combo(self._mermaid_mode, "mermaid_mode")
-        self._wire_combo(self._dash_sep, "dash_sep")
-        self._wire_combo(self._asterisk_sep, "asterisk_sep")
-        self._wire_combo(self._underscore_sep, "underscore_sep")
-
     def _save_extensions(self, _checked: bool = False) -> None:
-        values = {
-            direction: {name: self._extension_checks[(direction, name)].isChecked() for name in EXTENSION_NAMES}
-            for direction in ("input", "output")
+        values = {direction: dict(items) for direction, items in self._vm.config.formatting.markdown_extensions.items()}
+        values[self._direction] = {
+            name: self._extension_checks[(self._direction, name)].isChecked() for name in EXTENSION_NAMES
         }
         self._vm.set_field(SECTION_FORMATTING, "markdown_extensions", values)
 
@@ -356,29 +357,39 @@ class FormattingTab(BaseSettingsTab):
 
     def _load_values(self) -> None:
         fmt = self._vm.config.formatting
-        self._each_line_paragraph.blockSignals(True)
-        self._each_line_paragraph.setChecked(fmt.each_line_paragraph)
-        self._each_line_paragraph.blockSignals(False)
+        if self._direction == "input":
+            self._each_line_paragraph.blockSignals(True)
+            self._each_line_paragraph.setChecked(fmt.each_line_paragraph)
+            self._each_line_paragraph.blockSignals(False)
         for (direction, name), checkbox in self._extension_checks.items():
             checkbox.blockSignals(True)
             checkbox.setChecked(fmt.markdown_extensions[direction][name])
             checkbox.blockSignals(False)
-        self.set_combo_data(self._page_break, fmt.page_break_sep)
-        self.set_combo_data(self._section_break, fmt.section_break_sep)
-        self.set_combo_data(self._horizontal_rule, fmt.horizontal_rule_sep)
-        self.set_combo_data(self._bold_syntax, fmt.bold_syntax)
-        self.set_combo_data(self._italic_syntax, fmt.italic_syntax)
-        self.set_combo_data(self._strike_syntax, fmt.strikethrough_syntax)
-        self.set_combo_data(self._highlight_syntax, fmt.highlight_syntax)
-        self.set_combo_data(self._super_syntax, fmt.superscript_syntax)
-        self.set_combo_data(self._sub_syntax, fmt.subscript_syntax)
-        self.set_combo_data(self._ul_syntax, fmt.unordered_list_syntax)
-        self.set_combo_data(self._indent_spaces, fmt.indent_spaces)
-        self.set_combo_data(self._mermaid_mode, fmt.mermaid_mode)
-        self._mermaid_controls.load(fmt.mermaid_cli_path)
-        self.set_combo_data(self._dash_sep, fmt.dash_sep)
-        self.set_combo_data(self._asterisk_sep, fmt.asterisk_sep)
-        self.set_combo_data(self._underscore_sep, fmt.underscore_sep)
+        if self._direction == "output":
+            self.set_combo_data(self._page_break, fmt.page_break_sep)
+            self.set_combo_data(self._section_break, fmt.section_break_sep)
+            self.set_combo_data(self._horizontal_rule, fmt.horizontal_rule_sep)
+            self.set_combo_data(self._bold_syntax, fmt.bold_syntax)
+            self.set_combo_data(self._italic_syntax, fmt.italic_syntax)
+            self.set_combo_data(self._strike_syntax, fmt.strikethrough_syntax)
+            self.set_combo_data(self._highlight_syntax, fmt.highlight_syntax)
+            self.set_combo_data(self._super_syntax, fmt.superscript_syntax)
+            self.set_combo_data(self._sub_syntax, fmt.subscript_syntax)
+            self.set_combo_data(self._ul_syntax, fmt.unordered_list_syntax)
+            self.set_combo_data(self._indent_spaces, fmt.indent_spaces)
+        if self._direction == "input":
+            self.set_combo_data(self._mermaid_mode, fmt.mermaid_mode)
+            self._mermaid_controls.load(fmt.mermaid_cli_path)
+            self.set_combo_data(self._dash_sep, fmt.dash_sep)
+            self.set_combo_data(self._asterisk_sep, fmt.asterisk_sep)
+            self.set_combo_data(self._underscore_sep, fmt.underscore_sep)
 
     def reload_from_config(self) -> None:
         self._load_values()
+
+
+class MarkdownInputTab(FormattingTab):
+    """Markdown input recognition and DOCX generation, with independent reset ownership."""
+
+    def __init__(self, view_model: SettingsViewModel) -> None:
+        super().__init__(view_model, direction="input")

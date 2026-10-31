@@ -78,14 +78,28 @@ def test_refused_mutation_is_recorded_and_never_retried(tmp_path: Path, monkeypa
     assert "PermissionError" in progress["pending"]["error"]
 
 
-def test_concurrent_apply_is_refused_without_removing_any_target(tmp_path: Path) -> None:
+def test_concurrent_apply_is_refused_without_removing_any_target(tmp_path: Path, capsys) -> None:
     workspace, saved, roots = _plan(tmp_path)
-    with (
-        housekeeping_journal.exclusive_apply(workspace / "diagnostics" / "housekeeping-apply.lock"),
-        pytest.raises(OSError),
-    ):
-        workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
-    assert all(root.exists() for root in roots)
+    lock = workspace / "diagnostics" / "housekeeping-apply.lock"
+    with housekeeping_journal.exclusive_apply(lock):
+        with pytest.raises(OSError, match="housekeeping_apply_lock_unavailable") as failure:
+            workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
+        cause = failure.value.__cause__
+        assert isinstance(cause, OSError)
+        assert type(failure.value) is type(cause)
+        assert failure.value.errno == cause.errno
+        assert failure.value.filename == str(lock)
+        assert repr(str(lock)) in str(failure.value)
+        assert not saved.with_suffix(".progress.json").exists()
+        # A failed contender must not release the first owner's native lock.
+        with (
+            pytest.raises(OSError, match="housekeeping_apply_lock_unavailable"),
+            housekeeping_journal.exclusive_apply(lock),
+        ):
+            pytest.fail("the original owner still holds this lock")
+    with housekeeping_journal.exclusive_apply(lock):
+        assert all((root / "input.txt").read_text() == "controlled scratch" for root in roots)
+    assert "[housekeeping] preflight" not in capsys.readouterr().err
 
 
 def test_manual_retention_deadline_requests_review_but_never_selects_for_removal(tmp_path: Path) -> None:

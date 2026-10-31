@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from docwen_plugin_proofread._common import request_source_ref
 from docwen_plugin_proofread.docx_validator import DocxValidator
 from docwen_plugin_proofread.manifest import build_manifest
 from docwen_plugin_proofread.md_validator import MarkdownValidator
@@ -58,14 +59,20 @@ class ProofreadPlugin:
             ConversionResult,
         )
 
-        source = context.request.input_refs[0].format if context.request.input_refs else ""
+        source_ref = request_source_ref(context)
+        source = source_ref.format if source_ref is not None else ""
+        category = source_ref.category if source_ref is not None else ""
         target = context.request.target_format
         action = context.request.action_name
 
         if action == "validate" and source == "docx" and target in ("docx", ""):
             return DocxValidator().convert(context)
 
-        if action == "validate" and source == "markdown" and target in ("markdown", ""):
+        if (
+            action == "validate"
+            and (source == "markdown" or (source == "txt" and category == "markdown"))
+            and target in ("markdown", "")
+        ):
             return MarkdownValidator().convert(context)
 
         msg = f"No handler for action='{action}', source='{source}', target='{target}'"

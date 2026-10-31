@@ -16,7 +16,12 @@ from zipfile import ZipFile
 
 import lxml.etree as etree
 
-from docwen_core.docx_bookmarks import BOOKMARK_ID_MAX, build_docx_bookmark_inventory, prove_bookmark_name
+from docwen_core.docx_bookmarks import (
+    BOOKMARK_ID_MAX,
+    DocxBookmarkAllocator,
+    build_docx_bookmark_inventory,
+    prove_bookmark_name,
+)
 
 TABLE_ROLES_NAMESPACE = "urn:docwen:table-roles:v1"
 _NAMESPACE = TABLE_ROLES_NAMESPACE
@@ -128,7 +133,9 @@ def _shape(table: Any) -> tuple[str, int, int]:
     return digest, len(grid), len(grid[0])
 
 
-def prepare_table_roles(document: Any, *, tables: tuple[Any, ...] | None = None) -> bytes | None:
+def prepare_table_roles(
+    document: Any, *, tables: tuple[Any, ...] | None = None, bookmark_allocator: DocxBookmarkAllocator | None = None
+) -> bytes | None:
     """Bind final rendered tables before saving; do not depend on table order."""
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
@@ -136,6 +143,8 @@ def prepare_table_roles(document: Any, *, tables: tuple[Any, ...] | None = None)
     from docwen_core.docx_parsing.document_semantics import extract_semantic_table_metadata
 
     inventory = build_docx_bookmark_inventory(document)
+    if bookmark_allocator is not None:
+        bookmark_allocator.include_inventory(inventory)
     used_ids = set(inventory.used_id_keys)
     used_names = set(inventory.used_name_keys)
     root = etree.Element(f"{{{_NAMESPACE}}}tableRoles", nsmap=cast(Any, {None: _NAMESPACE}), version="1")
@@ -176,6 +185,8 @@ def prepare_table_roles(document: Any, *, tables: tuple[Any, ...] | None = None)
             used_names.add(name.casefold())
             if next_id > BOOKMARK_ID_MAX:
                 raise ValueError("Table role bookmark identifiers exhausted")
+            if bookmark_allocator is not None:
+                next_id = int(bookmark_allocator.reserve(name))
             used_ids.add(("numeric", next_id))
             start = OxmlElement("w:bookmarkStart")
             start.set(qn("w:id"), str(next_id))

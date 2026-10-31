@@ -35,6 +35,209 @@ class ManagedRun:
     state: str = "completed-success"
 
 
+def _same_entry(path: Path, expected: os.stat_result) -> bool:
+    actual = path.lstat()
+    return (
+        (actual.st_dev, actual.st_ino) == (expected.st_dev, expected.st_ino)
+        and not stat.S_ISLNK(actual.st_mode)
+        and not (getattr(actual, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+    )
+
+
+@dataclass
+class OwnedRunLease:
+    """A captured lease identity, never authority to adopt an unknown run."""
+
+    root: Path
+    root_identity: os.stat_result
+    marker_identity: os.stat_result
+    lease: dict[str, Any]
+    owner: str
+    marker_content: bytes
+
+    @property
+    def marker(self) -> Path:
+        return self.root / ".docwen-temp-lease.json"
+
+    @classmethod
+    def capture(cls, root: Path, *, owner: str, kind: str) -> OwnedRunLease:
+        root_identity = root.lstat()
+        marker = root / ".docwen-temp-lease.json"
+        marker_identity = marker.lstat()
+        if not stat.S_ISREG(marker_identity.st_mode) or not _same_entry(marker, marker_identity):
+            raise ValueError(f"managed_run_marker_changed:{marker}")
+        with marker.open("rb") as stream:
+            opened = os.fstat(stream.fileno())
+            if (opened.st_dev, opened.st_ino) != (marker_identity.st_dev, marker_identity.st_ino):
+                raise ValueError(f"managed_run_marker_changed:{marker}")
+            marker_content = stream.read()
+            lease = json.loads(marker_content)
+        if (
+            not isinstance(lease, dict)
+            or lease.get("schemaVersion") != 1
+            or lease.get("state") not in STATES
+            or lease.get("owner") != owner
+            or lease.get("kind") != kind
+            or lease.get("root") != str(root)
+            or not _same_entry(marker, marker_identity)
+        ):
+            raise ValueError(f"managed_run_lease_identity_changed:{root}")
+        captured = cls(root, root_identity, marker_identity, lease, owner, marker_content)
+        captured.check_root()
+        return captured
+
+    def check_root(self) -> None:
+        if self.root.resolve(strict=True) != self.root or not _same_entry(self.root, self.root_identity):
+            raise ValueError(f"managed_run_identity_changed:{self.root}")
+
+    @contextmanager
+    def pin_root(self) -> Iterator[None]:
+        """Keep the verified directory object alive through cleanup and recovery.
+
+        The pin prevents reuse of a deleted root's inode/file ID during this
+        interval. It does not turn path replacement into an atomic CAS.
+        Windows permits delete sharing so ordinary recursive cleanup can finish;
+        its final directory removal completes when this handle is closed.
+        """
+        self.check_root()
+        if os.name == "nt":
+            try:
+                import msvcrt
+
+                import pywintypes
+                import win32api
+                import win32file
+            except ImportError as error:
+                raise OSError("managed_run_root_pin_unavailable:windows") from error
+            name = str(self.root)
+            if not name.startswith("\\\\?\\"):
+                name = "\\\\?\\UNC\\" + name[2:] if name.startswith("\\\\") else "\\\\?\\" + name
+            try:
+                handle = win32file.CreateFile(
+                    name, 0x80, 7, None, 3, 0x00200000 | 0x02000000, None
+                )  # READ_ATTRIBUTES; share READ/WRITE/DELETE; no reparse traversal
+            except pywintypes.error as error:
+                raise OSError(f"managed_run_root_pin_unavailable:{self.root}: {error}") from error
+            raw_handle = handle.Detach()
+            try:
+                descriptor = msvcrt.open_osfhandle(raw_handle, os.O_RDONLY | os.O_BINARY)
+            except BaseException as primary:
+                try:
+                    win32api.CloseHandle(raw_handle)
+                except pywintypes.error as secondary:
+                    self.report_secondary(primary, secondary)
+                raise
+        elif os.name == "posix":
+            directory = getattr(os, "O_DIRECTORY", None)
+            nofollow = getattr(os, "O_NOFOLLOW", None)
+            if directory is None or nofollow is None:
+                raise OSError("managed_run_root_pin_unavailable:directory_flags")
+            descriptor = os.open(self.root, os.O_RDONLY | directory | nofollow | getattr(os, "O_CLOEXEC", 0))
+        else:
+            raise OSError("managed_run_root_pin_unavailable:platform")
+        primary: BaseException | None = None
+        try:
+            opened = os.fstat(descriptor)
+            if (
+                not stat.S_ISDIR(opened.st_mode)
+                or not opened.st_ino
+                or getattr(opened, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+                or (opened.st_dev, opened.st_ino) != (self.root_identity.st_dev, self.root_identity.st_ino)
+            ):
+                raise ValueError(f"managed_run_identity_changed:{self.root}")
+            self.check_root()
+            yield
+        except BaseException as error:
+            primary = error
+            raise
+        finally:
+            try:
+                os.close(descriptor)
+            except OSError as secondary:
+                if primary is None:
+                    raise
+                self.report_secondary(primary, secondary)
+
+    def report_secondary(self, primary: BaseException, secondary: BaseException) -> None:
+        note = f"Managed run closeout failed; inspect {self.root}: {secondary}"
+        primary.add_note(note)
+        print(note, file=sys.stderr)
+
+    def save(self, state: str, *, restore_missing: bool = False) -> None:
+        self.check_root()
+        try:
+            marker_matches = (
+                _same_entry(self.marker, self.marker_identity) and self.marker.read_bytes() == self.marker_content
+            )
+        except FileNotFoundError:
+            if not restore_missing:
+                raise
+            # Partial recursive cleanup may have removed our marker. The root
+            # still has its original identity; exclusive creation cannot replace
+            # a new owner's marker that appears after this check.
+            transition(self.lease, root=self.root, owner=self.owner, state=state)
+            with self.marker.open("x", encoding="utf-8") as stream:
+                self.marker_identity = os.fstat(stream.fileno())
+                stream.write(json.dumps(self.lease))
+                stream.flush()
+                os.fsync(stream.fileno())
+            self.marker_content = json.dumps(self.lease).encode("utf-8")
+            return
+        if not marker_matches:
+            raise ValueError(f"managed_run_marker_changed:{self.marker}")
+        transition(self.lease, root=self.root, owner=self.owner, state=state)
+        temporary = self.root / ".docwen-temp-lease.next"
+        with temporary.open("x", encoding="utf-8") as stream:
+            next_identity = os.fstat(stream.fileno())
+            json.dump(self.lease, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        self.check_root()
+        if not _same_entry(self.marker, self.marker_identity) or self.marker.read_bytes() != self.marker_content:
+            raise ValueError(f"managed_run_marker_changed:{self.marker}")
+        temporary.replace(self.marker)
+        self.marker_identity = next_identity
+        self.marker_content = json.dumps(self.lease).encode("utf-8")
+
+    def record_recovery(
+        self,
+        primary: BaseException,
+        phase: str,
+        *,
+        outcome: str,
+        recording_error: BaseException,
+        execution_error: BaseException | None = None,
+    ) -> None:
+        recovery = self.root.parent / f"{self.root.name}.recovery.json"
+        try:
+            # This compact recovery record is outside the recursively cleaned
+            # run. It is evidence for manual reconciliation, never deletion authority.
+            with recovery.open("x", encoding="utf-8") as stream:
+                stream.write(
+                    json.dumps(
+                        {
+                            "schema": "docwen.managed-run-recovery.v1",
+                            "root": str(self.root),
+                            "rootIdentity": {"device": self.root_identity.st_dev, "inode": self.root_identity.st_ino},
+                            "lease": self.lease,
+                            "knownOutcome": outcome,
+                            "executionError": (
+                                {"type": type(execution_error).__name__, "message": str(execution_error)}
+                                if execution_error is not None
+                                else None
+                            ),
+                            "recordingError": {"type": type(recording_error).__name__, "message": str(recording_error)},
+                            "phase": phase,
+                            "error": str(primary),
+                        }
+                    )
+                )
+            primary.add_note(f"Managed run recovery record: {recovery}")
+            print(f"Managed run recovery record: {recovery}", file=sys.stderr)
+        except OSError as secondary:
+            self.report_secondary(primary, secondary)
+
+
 @contextmanager
 def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator[ManagedRun]:
     """Own allocation through teardown, preserving a primary failure on closeout errors."""
@@ -50,16 +253,8 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
     marker = root / ".docwen-temp-lease.json"
     marker_identity: os.stat_result | None = None
 
-    def same_entry(path: Path, expected: os.stat_result) -> bool:
-        actual = path.lstat()
-        return (
-            (actual.st_dev, actual.st_ino) == (expected.st_dev, expected.st_ino)
-            and not stat.S_ISLNK(actual.st_mode)
-            and not (getattr(actual, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
-        )
-
     def check_root() -> None:
-        if root.parent != parent or root.resolve(strict=True) != root or not same_entry(root, root_identity):
+        if root.parent != parent or root.resolve(strict=True) != root or not _same_entry(root, root_identity):
             raise ValueError(f"managed_run_identity_changed:{root}")
 
     def report_secondary(primary: BaseException, secondary: BaseException) -> None:
@@ -77,79 +272,17 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
             check_root()
             # Only remove our own partial marker and an otherwise empty directory.
             # Never recursively erase an incompletely initialized run.
-            if marker_identity is not None and same_entry(marker, marker_identity):
+            if marker_identity is not None and _same_entry(marker, marker_identity):
                 marker.unlink()
             root.rmdir()
         except (OSError, ValueError) as secondary:
             report_secondary(primary, secondary)
         raise
 
-    def save(state: str, *, restore_missing: bool = False) -> None:
-        nonlocal marker_identity
-        check_root()
-        try:
-            marker_matches = marker_identity is not None and same_entry(marker, marker_identity)
-        except FileNotFoundError:
-            if not restore_missing:
-                raise
-            # Partial recursive cleanup may have removed our marker. The root
-            # still has its original identity; exclusive creation cannot replace
-            # a new owner's marker that appears after this check.
-            transition(lease, root=root, owner=owner, state=state)
-            with marker.open("x", encoding="utf-8") as stream:
-                marker_identity = os.fstat(stream.fileno())
-                stream.write(json.dumps(lease))
-                stream.flush()
-                os.fsync(stream.fileno())
-            return
-        if not marker_matches:
-            raise ValueError(f"managed_run_marker_changed:{marker}")
-        transition(lease, root=root, owner=owner, state=state)
-        temporary = root / ".docwen-temp-lease.next"
-        with temporary.open("x", encoding="utf-8") as stream:
-            next_identity = os.fstat(stream.fileno())
-            json.dump(lease, stream)
-            stream.flush()
-            os.fsync(stream.fileno())
-        temporary.replace(marker)
-        marker_identity = next_identity
-
-    def record_recovery(
-        primary: BaseException,
-        phase: str,
-        *,
-        outcome: str,
-        recording_error: BaseException,
-        execution_error: BaseException | None = None,
-    ) -> None:
-        recovery = parent / f"{root.name}.recovery.json"
-        try:
-            # This compact recovery record is outside the recursively cleaned
-            # run. It is evidence for manual reconciliation, never deletion authority.
-            with recovery.open("x", encoding="utf-8") as stream:
-                stream.write(
-                    json.dumps(
-                        {
-                            "schema": "docwen.managed-run-recovery.v1",
-                            "root": str(root),
-                            "rootIdentity": {"device": root_identity.st_dev, "inode": root_identity.st_ino},
-                            "lease": lease,
-                            "knownOutcome": outcome,
-                            "executionError": (
-                                {"type": type(execution_error).__name__, "message": str(execution_error)}
-                                if execution_error is not None
-                                else None
-                            ),
-                            "recordingError": {"type": type(recording_error).__name__, "message": str(recording_error)},
-                            "phase": phase,
-                            "error": str(primary),
-                        }
-                    )
-                )
-            primary.add_note(f"Managed run recovery record: {recovery}")
-            print(f"Managed run recovery record: {recovery}", file=sys.stderr)
-        except OSError as secondary:
-            report_secondary(primary, secondary)
+    assert marker_identity is not None
+    captured = OwnedRunLease(root, root_identity, marker_identity, lease, owner, json.dumps(lease).encode("utf-8"))
+    save = captured.save
+    record_recovery = captured.record_recovery
 
     run = ManagedRun(root)
     try:
@@ -171,15 +304,32 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
             record_recovery(primary, "terminal-recording", outcome=run.state, recording_error=primary)
             raise
         if run.state == "completed-success":
+            root_pinned = False
+            cleanup_failure_recorded = False
             try:
-                check_root()
-                shutil.rmtree(root)
+                with captured.pin_root():
+                    root_pinned = True
+                    try:
+                        check_root()
+                        shutil.rmtree(root)
+                    except (OSError, ValueError) as primary:
+                        try:
+                            save("retained-cleanup-failure", restore_missing=True)
+                        except (OSError, ValueError) as secondary:
+                            report_secondary(primary, secondary)
+                            record_recovery(primary, "cleanup-recording", outcome=run.state, recording_error=secondary)
+                        cleanup_failure_recorded = True
+                        raise
             except (OSError, ValueError) as primary:
-                try:
-                    save("retained-cleanup-failure", restore_missing=True)
-                except (OSError, ValueError) as secondary:
-                    report_secondary(primary, secondary)
-                    record_recovery(primary, "cleanup-recording", outcome=run.state, recording_error=secondary)
+                if not cleanup_failure_recorded:
+                    # No trusted root pin: do not write a possibly foreign marker.
+                    # The external hold protects even a previous success lease.
+                    record_recovery(
+                        primary,
+                        "cleanup-close" if root_pinned else "cleanup-identity",
+                        outcome=run.state,
+                        recording_error=primary,
+                    )
                 raise
 
 

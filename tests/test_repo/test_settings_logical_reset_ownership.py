@@ -47,10 +47,13 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "conversion.export.base64_compress_threshold_kb",
     }
     assert formatting_plan.files == ()
-    assert len(formatting_plan.dotted_keys) == 25
-    assert "conversion.md_to_docx.each_line_paragraph" in formatting_plan.dotted_keys
-    assert "conversion.md_to_docx.mermaid_cli_path" in formatting_plan.dotted_keys
-    assert "conversion.md_to_docx.mermaid_mode" in formatting_plan.dotted_keys
+    assert len(formatting_plan.dotted_keys) == 15
+    parsing_plan = reset_plan_for_group("markdown_input")
+    assert parsing_plan.files == ()
+    assert set(parsing_plan.dotted_keys).isdisjoint(formatting_plan.dotted_keys)
+    assert "conversion.md_to_docx.each_line_paragraph" in parsing_plan.dotted_keys
+    assert "conversion.md_to_docx.mermaid_cli_path" in parsing_plan.dotted_keys
+    assert "conversion.md_to_docx.mermaid_mode" in parsing_plan.dotted_keys
     assert "document.style.table.md_to_docx.table_style_mode" in reset_plan_for_group("text").dotted_keys
     assert "conversion.code_detection.code_font" not in formatting_plan.dotted_keys
     assert "conversion.export.base64_compress_enabled" not in formatting_plan.dotted_keys
@@ -63,12 +66,13 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "general": 7,
         "text": 15,
         "proofread": 6,
-        "formatting": 25,
+        "formatting": 15,
+        "markdown_input": 10,
         "document": 9,
         "spreadsheet": 4,
-        "layout": 3,
+        "layout": 6,
         "image": 7,
-        "gongwen": 2,
+        "gongwen": 4,
         "invoice": 0,
         "link": 8,
         "other": 2,
@@ -82,6 +86,14 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
 
     assert "template_fill.gongwen_fields_enabled" not in reset_plan_for_group("text").dotted_keys
     assert "template_fill.attachment_alignment" not in reset_plan_for_group("text").dotted_keys
+    assert set(reset_plan_for_group("gongwen").dotted_keys) == {
+        "template_fill.gongwen_fields_enabled",
+        "template_fill.attachment_alignment",
+        "template_fill.gongwen_numbering_text",
+        "template_fill.gongwen_numbering_comments",
+    }
+    for key in ("template_fill.gongwen_numbering_text", "template_fill.gongwen_numbering_comments"):
+        assert key not in reset_plan_for_group("text").dotted_keys
     for category in ("document", "layout", "image"):
         assert f"{category}.to_md_optimization" not in reset_plan_for_group(category).dotted_keys
     assert reset_plan_for_group("gongwen").conditional_dotted_keys == (("document.to_md_optimization", "gongwen"),)

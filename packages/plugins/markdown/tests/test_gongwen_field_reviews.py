@@ -55,8 +55,25 @@ def _anchors(document) -> dict[str, str]:
     return complete
 
 
+def test_field_reviews_preserve_malformed_comments_and_conflicting_styles():
+    document = Document()
+    old = document.add_comment(document.add_paragraph("original").runs, "old review")
+    old._element.set(qn("w:id"), "bad-id")
+    document.styles.add_style("CommentReference", WD_STYLE_TYPE.PARAGRAPH)
+    document.styles.add_style("CommentText", WD_STYLE_TYPE.CHARACTER)
+    paragraph = document.add_paragraph("前 {{签发人}} 后")
+    _fill(document, {"签发人": ["甲", "乙"]}, {"签发人": [paragraph]})
+    reopened = _roundtrip(document)
+    comments = list(reopened.comments)
+    assert comments[0]._element.get(qn("w:id")) == "bad-id"
+    assert comments[1].comment_id == 1
+    assert _anchors(reopened)["1"] == "甲、乙"
+    assert reopened.styles["CommentReference"].type == WD_STYLE_TYPE.PARAGRAPH
+    assert reopened.styles["CommentText"].type == WD_STYLE_TYPE.CHARACTER
+
+
 @pytest.mark.parametrize("key", FIELDS)
-@pytest.mark.parametrize("separator", [" / ", "，", "", " "])
+@pytest.mark.parametrize("separator", [", ", " / ", "，", "", " "])
 def test_multi_item_fields_override_generic_separator_and_annotate_only_value(key, separator) -> None:
     document = Document()
     paragraph = document.add_paragraph(f"前文 {{{{{key}}}}} 后文")

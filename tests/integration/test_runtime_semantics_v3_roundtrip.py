@@ -263,7 +263,7 @@ def test_production_each_list_item_anchor_round_trip(
     ("case_id", "source", "anchor_id", "block_kind"),
     [
         ("quote", "> first\n> second\n\n^quote-id\n", "quote-id", "block_quote"),
-        ("callout", "> [!NOTE] Title\n> body\n\n^callout-id\n", "callout-id", "callout"),
+        ("callout", "> [!NOTE] Title\n> body\n\n^callout-id\n", "callout-id", "block_quote"),
         ("table", "| A | B |\n|---|---|\n| 1 | 2 |\n\n^table-id\n", "table-id", "table"),
         ("equation", "$$\nE = mc^2\n$$\n\n^equation-id\n", "equation-id", "equation"),
     ],
@@ -295,6 +295,8 @@ def test_production_structured_ordinary_anchor_matrix_round_trip(
     assert " REF " not in document_xml
 
     returned = docx_to_md(round_trip_runtime, docx_path, tmp_path / f"{case_id}-reverse")
+    if case_id == "callout":
+        assert "[!NOTE]" not in returned
     analysis = analyze_markdown_semantics_v3(returned, input_id="returned.md")
     assert not analysis.has_errors
     assert [(item["id"], item["block_kind"], item["placement"]) for item in analysis.projection["anchors"]] == [

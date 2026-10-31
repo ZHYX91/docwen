@@ -28,6 +28,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--settings-width", type=int, default=960)
     parser.add_argument("--settings-height", type=int, default=880)
     parser.add_argument("--device-pixel-ratio", type=int, choices=(1, 2), default=1)
+    parser.add_argument(
+        "--show-recent-template",
+        action="store_true",
+        help="Populate sample session history with the selected real template",
+    )
     parser.add_argument("--output", type=Path, required=True, help="Dedicated directory for reviewed media")
     args = parser.parse_args(argv)
     repo = args.repo.resolve(strict=True)
@@ -120,6 +125,7 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
         "font": args.font,
         "input": args.input,
         "devicePixelRatio": args.device_pixel_ratio,
+        "showRecentTemplate": args.show_recent_template,
         "requestedSizes": {
             "markdown": {"width": args.width, "height": args.height},
             args.section: {"width": args.settings_width, "height": args.settings_height},
@@ -218,6 +224,11 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
                         )
                         ready_ticks = ready_ticks + 1 if ready else 0
                         if ready_ticks >= 3:
+                            if args.show_recent_template:
+                                selected = window._template_selector.get_selected_template_resource()
+                                assert selected is not None
+                                window._template_selector.mark_used(selected[1])
+                                record["sampleRecentTemplate"] = selected[1]
                             # Input inspection reveals the template panel and expands the
                             # normal window. Resize only after that transition settles;
                             # an earlier resize would become the collapsed-window width.

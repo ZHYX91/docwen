@@ -24,6 +24,7 @@ from docx.enum.text import WD_COLOR_INDEX
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Emu, Pt
+from docx.text.run import Run
 
 from docwen_plugin_markdown.renderer_utils import (
     add_word_soft_break,
@@ -118,13 +119,27 @@ def render_inlines(
         elif ctype == "inline_html":
             _render_inline_html(parent, child)
         elif ctype in ("highlight", "mark"):
-            _render_highlight(parent, child)
-        elif ctype == "superscript":
-            _render_superscript(parent, child)
-        elif ctype == "subscript":
-            _render_subscript(parent, child)
-        elif ctype in ("underline", "insert"):
-            _render_underline(parent, child)
+            _render_formatted_container(
+                parent,
+                child,
+                strip_formatting=strip_formatting,
+                code_font=code_font,
+                code_bg_color=code_bg_color,
+                override_style=override_style,
+                renderer_instance=renderer_instance,
+                property_name="highlight",
+            )
+        elif ctype in ("superscript", "subscript", "underline", "insert"):
+            _render_formatted_container(
+                parent,
+                child,
+                strip_formatting=strip_formatting,
+                code_font=code_font,
+                code_bg_color=code_bg_color,
+                override_style=override_style,
+                renderer_instance=renderer_instance,
+                property_name="underline" if ctype == "insert" else ctype,
+            )
         elif ctype == "footnote_ref":
             _render_footnote_ref(parent, child, renderer_instance)
         elif ctype == "semantic_cross_reference":
@@ -247,18 +262,30 @@ def _render_formatted_container(
     renderer_instance: Any,
     property_name: str,
 ) -> None:
+    # Preserve the existing heading-strip policy for underline and scripts;
+    # recurse with that policy so child bold/italic/strike remain removable.
+    apply_style = not strip_formatting or property_name in {"underline", "superscript", "subscript"}
+
+    def apply_property(run: Run) -> None:
+        if property_name in {"strike", "superscript", "subscript"}:
+            setattr(run.font, property_name, True)
+        elif property_name == "highlight":
+            run.font.highlight_color = WD_COLOR_INDEX.YELLOW
+        else:
+            setattr(run, property_name, True)
+
     children = child.get("children")
     if not isinstance(children, list) or not children:
         text = str(child.get("raw", "") or child.get("text", ""))
         run = parent.add_run(text)
-        if not strip_formatting:
-            if property_name == "strike":
-                run.font.strike = True
-            else:
-                setattr(run, property_name, True)
+        if apply_style:
+            apply_property(run)
         return
 
-    first_run = len(parent.runs)
+    # A formatted container owns semantic children, not their plain-text
+    # summary. Remember an XML boundary so hyperlink runs are decorated too;
+    # Paragraph.runs excludes runs nested under w:hyperlink and w:sdt.
+    previous = parent._p[-1] if len(parent._p) else None
     render_inlines(
         parent,
         children,
@@ -268,13 +295,13 @@ def _render_formatted_container(
         strip_formatting=strip_formatting,
         renderer_instance=renderer_instance,
     )
-    if strip_formatting:
+    if not apply_style:
         return
-    for run in parent.runs[first_run:]:
-        if property_name == "strike":
-            run.font.strike = True
-        else:
-            setattr(run, property_name, True)
+    element = previous.getnext() if previous is not None else next(iter(parent._p), None)
+    while element is not None:
+        for run_element in element.iter(qn("w:r")):
+            apply_property(Run(run_element, parent))
+        element = element.getnext()
 
 
 def _render_codespan(
@@ -363,7 +390,11 @@ def _render_inline_math(parent, child: dict[str, Any], renderer_instance: Any) -
     raw = child.get("raw", "") or child.get("text", "")
     if raw.strip():
         style_reference = getattr(renderer_instance, "inline_formula_style_reference", None)
-        render_inline_formula(parent, raw.strip(), style_reference=style_reference)
+        native = render_inline_formula(parent, raw.strip(), style_reference=style_reference)
+        if not native and renderer_instance is not None:
+            renderer_instance._warnings.append(
+                ("MD2DOCX-FORMULA-TEXT-FALLBACK", "An unsupported formula was preserved as its original LaTeX text.")
+            )
 
 
 def _render_inline_html(parent, child: dict[str, Any]) -> None:
@@ -371,34 +402,6 @@ def _render_inline_html(parent, child: dict[str, Any]) -> None:
     text = child.get("raw", "") or child.get("text", "")
     if text.strip():
         parent.add_run(text)
-
-
-def _render_highlight(parent, child: dict[str, Any]) -> None:
-    """Render ``==highlight==`` as Word highlighted text."""
-    text = child.get("raw", "") or extract_text_content(child.get("children", []))
-    run = parent.add_run(text)
-    run.font.highlight_color = WD_COLOR_INDEX.YELLOW
-
-
-def _render_superscript(parent, child: dict[str, Any]) -> None:
-    """Render ``^superscript^`` as superscript text."""
-    text = child.get("raw", "") or extract_text_content(child.get("children", []))
-    run = parent.add_run(text)
-    run.font.superscript = True
-
-
-def _render_subscript(parent, child: dict[str, Any]) -> None:
-    """Render ``~subscript~`` as subscript text."""
-    text = child.get("raw", "") or extract_text_content(child.get("children", []))
-    run = parent.add_run(text)
-    run.font.subscript = True
-
-
-def _render_underline(parent, child: dict[str, Any]) -> None:
-    """Render ``<u>underline</u>`` as underlined text."""
-    text = child.get("raw", "") or extract_text_content(child.get("children", []))
-    parent.add_run(text)
-    parent.runs[-1].underline = True
 
 
 def _render_footnote_ref(parent, child: dict[str, Any], renderer_instance: Any) -> None:
@@ -414,7 +417,7 @@ def _render_footnote_ref(parent, child: dict[str, Any], renderer_instance: Any) 
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def render_formula(doc, node: dict[str, Any], *, block_style=None) -> None:
+def render_formula(doc, node: dict[str, Any], *, block_style=None) -> bool:
     """Render a block-level formula as OMML in a new paragraph.
 
     Args:
@@ -424,7 +427,7 @@ def render_formula(doc, node: dict[str, Any], *, block_style=None) -> None:
     from docwen_plugin_markdown.to_docx.formula_renderer import render_block_formula
 
     raw = node.get("text", "") or node.get("raw", "")
-    render_block_formula(doc, raw.strip(), block_style=block_style)
+    return render_block_formula(doc, raw.strip(), block_style=block_style)
 
 
 # ═══════════════════════════════════════════════════════════════════════════

@@ -195,31 +195,47 @@ def test_formula_cache_scan_cancellation_closes_both_workbook_views(
     from docwen_plugin_spreadsheet.csv_xlsx import converter as converter_module
 
     source = tmp_path / "input.xlsx"
-    source.write_bytes(b"placeholder")
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    assert sheet is not None
+    sheet["A1"] = "Value"
+    sheet["A2"] = "=1+1"
+    workbook.save(source)
+    workbook.close()
+    original_source = source.read_bytes()
     staging = tmp_path / "staging"
     staging.mkdir()
     context = _build_fake_context(str(source), str(staging), target_format="csv")
+    loaded: list[openpyxl.Workbook] = []
+    closed: set[int] = set()
+    load_views = converter_module._load_xlsx_views
 
-    class _WorkbookView:
-        def __init__(self) -> None:
-            self.sheetnames = ["Sheet1"]
-            self.closed = False
+    def load_then_cancel(path: str):
+        values, formulas = load_views(path)
+        loaded.extend((values, formulas))
+        assert values.worksheets[0]["A2"].value is None
+        assert formulas.worksheets[0]["A2"].value == "=1+1"
+        for view in (values, formulas):
+            original_close = view.close
+            view_identity = id(view)
 
-        def close(self) -> None:
-            self.closed = True
+            def close(*, close_view=original_close, identity=view_identity) -> None:
+                closed.add(identity)
+                close_view()
 
-    values = _WorkbookView()
-    formulas = _WorkbookView()
-    monkeypatch.setattr(converter_module, "_load_xlsx_views", lambda _path: (values, formulas))
+            monkeypatch.setattr(view, "close", close)
+        context.cancellation.cancel("scan cancellation")
+        return values, formulas
 
-    def cancel_scan(*_args: object, **_kwargs: object) -> tuple[int, list[str]]:
-        raise CancellationRequested("scan cancellation")
+    monkeypatch.setattr(converter_module, "_load_xlsx_views", load_then_cancel)
 
-    monkeypatch.setattr(converter_module, "_find_unavailable_formula_caches", cancel_scan)
-
-    with pytest.raises(CancellationRequested, match="scan cancellation"):
+    # The real cache scanner receives the cancelled token after both native
+    # views are open. No placeholder ZIP or replacement scanner can hide leaks.
+    with pytest.raises(CancellationRequested, match="Task has been cancelled"):
         XlsxToCsvConverter().convert(context)
 
-    assert values.closed is True
-    assert formulas.closed is True
+    assert len(loaded) == 2
+    assert closed == {id(view) for view in loaded}
     assert context.workspace.registered_artifacts == []
+    assert not list(staging.glob("*.csv"))
+    assert source.read_bytes() == original_source

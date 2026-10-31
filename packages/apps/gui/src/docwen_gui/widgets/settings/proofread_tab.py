@@ -84,8 +84,35 @@ def _clean_inline_comment(comment: Any) -> str:
     return comment.lstrip("#").strip()
 
 
+def _join_multi_value(values: list[str]) -> str:
+    """Encode array elements without reinterpreting literal separators or spaces."""
+    return "|".join(value.replace("\\", "\\\\").replace("|", "\\|") for value in values)
+
+
 def _split_multi_value(value: str) -> list[str]:
-    return [part.strip() for part in str(value).split("|") if part.strip()]
+    """Decode the editor grammar; only escaped pipe/backslash are special.
+
+    An empty cell denotes an empty array. Empty elements within a nonempty
+    cell remain empty so the configuration schema, not the UI, rejects them.
+    """
+    if not value:
+        return []
+    parts: list[str] = []
+    current: list[str] = []
+    index = 0
+    while index < len(value):
+        character = value[index]
+        if character == "\\" and index + 1 < len(value) and value[index + 1] in "\\|":
+            index += 1
+            current.append(value[index])
+        elif character == "|":
+            parts.append("".join(current))
+            current.clear()
+        else:
+            current.append(character)
+        index += 1
+    parts.append("".join(current))
+    return parts
 
 
 def _choose_duplicate_strategy(
@@ -162,7 +189,7 @@ class _BaseEditorDialog(QDialog):
         hint = WrappingLabel(
             t(
                 "editors.mapping.multi_value_hint",
-                "Tip: use | to separate multiple values (for example: value1|value2|value3)",
+                "Tip: separate values with |; write \\| for a literal pipe and \\\\ for a backslash. Spaces are preserved.",
             ),
             self,
         )
@@ -288,7 +315,7 @@ class _BaseEditorDialog(QDialog):
                 by_key[key] = dict(entry)
             else:
                 merged_values = list(dict.fromkeys([*current_values, *new_values]))
-                current[values_field] = "|".join(merged_values)
+                current[values_field] = _join_multi_value(merged_values)
                 if entry.get(comment_field, "").strip():
                     current[comment_field] = entry[comment_field].strip()
         return [by_key[key] for key in ordered_keys if key in by_key]
@@ -494,7 +521,7 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
                 key = str(key_item)
                 raw_val: Any = val_item.value if hasattr(val_item, "value") else val_item
                 if isinstance(raw_val, list):
-                    misspellings = "|".join(str(v) for v in raw_val)
+                    misspellings = _join_multi_value([str(v) for v in raw_val])
                 else:
                     misspellings = str(raw_val) if raw_val else ""
                 remark = ""
@@ -511,7 +538,9 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
         else:
             # Plain dict fallback
             for key, val in raw_typos.items():
-                misspellings = "|".join(str(v) for v in val) if isinstance(val, list) else (str(val) if val else "")
+                misspellings = (
+                    _join_multi_value([str(v) for v in val]) if isinstance(val, list) else (str(val) if val else "")
+                )
                 self._entries.append(
                     {
                         "correct_word": str(key),
@@ -524,11 +553,11 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
         typos_tbl = toml_table()
         for entry in self._entries:
             correct_word = entry.get("correct_word", "").strip()
-            misspellings_text = entry.get("misspellings", "").strip()
+            misspellings_text = entry.get("misspellings", "")
             remark = entry.get("remark", "").strip()
             if not correct_word:
                 continue
-            misspellings = [c.strip() for c in misspellings_text.split("|") if c.strip()]
+            misspellings = _split_multi_value(misspellings_text)
             typos_tbl[correct_word] = toml_value(misspellings, remark if remark else "")
         self._doc["entries"] = typos_tbl
         ok = _save_toml_document(
@@ -616,7 +645,7 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
             misspellings_item = self._table.item(row, 1)
             rmk_item = self._table.item(row, 2)
             correct_word = correct_item.text().strip() if correct_item else ""
-            misspellings_text = misspellings_item.text().strip() if misspellings_item else ""
+            misspellings_text = misspellings_item.text() if misspellings_item else ""
             remark = rmk_item.text().strip() if rmk_item else ""
             if correct_word:
                 self._entries.append(
@@ -686,7 +715,7 @@ class _SymbolErrorEditor(_BaseEditorDialog):
                 correct = str(key_item)
                 raw_val: Any = val_item.value if hasattr(val_item, "value") else val_item
                 if isinstance(raw_val, list):
-                    errors = "|".join(str(v) for v in raw_val)
+                    errors = _join_multi_value([str(v) for v in raw_val])
                 else:
                     errors = str(raw_val) if raw_val else ""
                 remark = ""
@@ -704,7 +733,7 @@ class _SymbolErrorEditor(_BaseEditorDialog):
             for correct, raw_val in raw_symbols.items():
                 errors = ""
                 if isinstance(raw_val, list):
-                    errors = "|".join(str(v) for v in raw_val)
+                    errors = _join_multi_value([str(v) for v in raw_val])
                 elif raw_val:
                     errors = str(raw_val)
                 self._entries.append(
@@ -719,11 +748,11 @@ class _SymbolErrorEditor(_BaseEditorDialog):
         tbl = toml_table()
         for entry in self._entries:
             correct = entry.get("correct", "").strip()
-            error_str = entry.get("errors", "").strip()
+            error_str = entry.get("errors", "")
             remark = entry.get("remark", "").strip()
             if not correct:
                 continue
-            error_list = [item.strip() for item in error_str.split("|") if item.strip()]
+            error_list = _split_multi_value(error_str)
             tbl[correct] = toml_value(error_list, remark if remark else "")
         self._doc["entries"] = tbl
         ok = _save_toml_document(
@@ -811,7 +840,7 @@ class _SymbolErrorEditor(_BaseEditorDialog):
             err_item = self._table.item(row, 1)
             rmk_item = self._table.item(row, 2)
             correct = corr_item.text().strip() if corr_item else ""
-            errors = err_item.text().strip() if err_item else ""
+            errors = err_item.text() if err_item else ""
             remark = rmk_item.text().strip() if rmk_item else ""
             if correct:
                 self._entries.append(
@@ -885,7 +914,7 @@ class _SensitiveWordEditor(_BaseEditorDialog):
                 word = str(key_item)
                 raw_val: Any = val_item.value if hasattr(val_item, "value") else val_item
                 if isinstance(raw_val, list):
-                    exception_items = "|".join(str(v) for v in raw_val)
+                    exception_items = _join_multi_value([str(v) for v in raw_val])
                 else:
                     exception_items = str(raw_val) if raw_val else ""
                 remark = ""
@@ -903,7 +932,7 @@ class _SensitiveWordEditor(_BaseEditorDialog):
             for word, raw_val in raw_words.items():
                 exception_items = ""
                 if isinstance(raw_val, list):
-                    exception_items = "|".join(str(v) for v in raw_val)
+                    exception_items = _join_multi_value([str(v) for v in raw_val])
                 elif raw_val:
                     exception_items = str(raw_val)
                 self._entries.append(
@@ -918,11 +947,11 @@ class _SensitiveWordEditor(_BaseEditorDialog):
         tbl = toml_table()
         for entry in self._entries:
             word = entry.get("word", "").strip()
-            exception_items = entry.get("exception_items", "").strip()
+            exception_items = entry.get("exception_items", "")
             remark = entry.get("remark", "").strip()
             if not word:
                 continue
-            exceptions = [item.strip() for item in exception_items.split("|") if item.strip()]
+            exceptions = _split_multi_value(exception_items)
             tbl[word] = toml_value(exceptions, remark if remark else "")
         self._doc["entries"] = tbl
         ok = _save_toml_document(
@@ -1010,7 +1039,7 @@ class _SensitiveWordEditor(_BaseEditorDialog):
             exception_item = self._table.item(row, 1)
             rmk_item = self._table.item(row, 2)
             word = word_item.text().strip() if word_item else ""
-            exception_items = exception_item.text().strip() if exception_item else ""
+            exception_items = exception_item.text() if exception_item else ""
             remark = rmk_item.text().strip() if rmk_item else ""
             if word:
                 self._entries.append(

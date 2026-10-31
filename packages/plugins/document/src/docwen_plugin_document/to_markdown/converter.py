@@ -42,8 +42,12 @@ from docwen_core.docx_parsing.format_features import (
     DocxMarkdownFormattingConfig,
     DocxMarkdownSyntaxConfig,
 )
+from docwen_core.docx_parsing.image_extraction import ImageExtractionNames
 from docwen_core.docx_parsing.textbox_extraction import extract_textbox_paragraphs
-from docwen_core.docx_resolved_numbering_recovery import ResolvedNumberingV4Recovery
+from docwen_core.docx_resolved_numbering_recovery import (
+    ResolvedNumberingV4Recovery,
+    ordinary_container_list_bindings,
+)
 from docwen_core.docx_semantics_v3 import DocxSemanticsV3Recovery
 from docwen_core.export_semantics import MarkdownExportSemantics
 from docwen_core.formula.constants import OMML_NS
@@ -143,12 +147,14 @@ class DocxToMarkdownConverter:
         self._semantic_v3_recovery = DocxSemanticsV3Recovery()
         self._extensions = MarkdownExtensions.obsidian()
         self._resolved_v4_recovery: ResolvedNumberingV4Recovery | None = None
+        self._ordinary_container_list_bindings: frozenset[tuple[str, str]] = frozenset()
         self._resolved_v4_diagnostics: list[tuple[str, str, str]] = []
         self._table_role_diagnostics: list[str] = []
         self._table_role_overrides: dict[Any, tuple[int, int]] = {}
         self._pending_artifacts: list[Any] = []
         self._pending_primary_path: str | None = None
         self._conversion_lock = RLock()
+        self._image_names: ImageExtractionNames | None = None
 
     def _syntax_for_rendering(self) -> DocxMarkdownSyntaxConfig:
         """Return the request syntax, or the deterministic constructor default."""
@@ -174,6 +180,7 @@ class DocxToMarkdownConverter:
         """Serialize use of request-owned state on one converter instance."""
         with self._conversion_lock:
             self._discard_pending_artifacts()
+            self._image_names = ImageExtractionNames(str(context.workspace.staging_dir))
             return self._convert_once(context)
 
     def _convert_once(self, context: PluginExecutionContext) -> Any:
@@ -548,6 +555,7 @@ class DocxToMarkdownConverter:
         from docwen_core.docx_parsing.numbering_index import NumberingIndex
 
         numbering_index = NumberingIndex(doc)
+        self._ordinary_container_list_bindings = ordinary_container_list_bindings(doc)
         list_counter = ListCounterManager()
 
         # Border group tracker for paragraph-border → horizontal-rule
@@ -666,7 +674,15 @@ class DocxToMarkdownConverter:
                 declaration += f" {caption.title}"
             if caption.source_id is not None:
                 declaration += f" ^{caption.source_id}"
-            return declaration
+            owners = self._semantic_v3_recovery.ordinary_anchor_groups(caption.caption_element)
+            prefix = _nested_ordinary_anchor_marker_prefix(
+                tuple(
+                    group
+                    for group in owners
+                    if group.anchor.block_kind in {"block_quote", "callout", "list", "list_item"}
+                )
+            )
+            return f"{prefix}{declaration}"
 
         for idx, child in enumerate(body_elements):
             # Check cancellation periodically
@@ -681,6 +697,16 @@ class DocxToMarkdownConverter:
                 recovered_caption = self._semantic_v3_recovery.caption_for_element(child)
                 if recovered_caption is not None and not recovered_caption.object_elements:
                     lines.extend((_v3_caption_declaration(recovered_caption), ""))
+                # Figure captions follow their native carrier physically. A
+                # container that ends here still needs its source anchor even
+                # though the caption declaration was emitted with the object.
+                anchor_groups = self._semantic_v3_recovery.ordinary_anchor_groups(child)
+                for group_position, group in enumerate(anchor_groups):
+                    if group.index == len(group.elements) - 1:
+                        prefix = _nested_ordinary_anchor_marker_prefix(anchor_groups[group_position + 1 :])
+                        if ">" in prefix:
+                            lines.append(prefix.rstrip())
+                        lines.extend(("", f"{prefix}^{group.anchor.source_id}", ""))
                 _append_textboxes(body_textboxes_by_anchor.get(idx, []))
                 continue
 
@@ -750,6 +776,13 @@ class DocxToMarkdownConverter:
                         active_list_context_level = None
                     _append_textboxes(body_textboxes_by_anchor.get(idx, []))
                     continue
+                anchor_groups = self._semantic_v3_recovery.ordinary_anchor_groups(child)
+                closes_container = any(
+                    group.anchor.block_kind not in {"paragraph", "image", "list_item"}
+                    and group.index == len(group.elements) - 1
+                    for group in anchor_groups
+                )
+                trailing_separators: list[str] = []
                 para_lines, para_stats = self._process_paragraph(
                     child,
                     para_by_element,
@@ -764,8 +797,8 @@ class DocxToMarkdownConverter:
                     continuation_list_level=continuation_list_level,
                     diagnostic_sink=context.progress,
                     diagnostic_location=f"document.xml body element {idx}",
+                    post_anchor_separators=trailing_separators if closes_container else None,
                 )
-                anchor_groups = self._semantic_v3_recovery.ordinary_anchor_groups(child)
                 anchor_group = anchor_groups[0] if anchor_groups else None
                 preserve_image_owner = (v3_caption is not None and v3_caption.kind == "figure") or (
                     anchor_group is not None and anchor_group.anchor.block_kind == "image"
@@ -837,6 +870,19 @@ class DocxToMarkdownConverter:
                         if ">" in blank_container:
                             lines.append(blank_container)
                         lines.extend((f"{marker_prefix}^{group.anchor.source_id}", ""))
+                if trailing_separators:
+                    remaining_containers = tuple(
+                        group
+                        for group in anchor_groups
+                        if group.anchor.block_kind in {"block_quote", "callout", "list", "list_item"}
+                        and group.index < len(group.elements) - 1
+                    )
+                    separator_prefix = _nested_ordinary_anchor_marker_prefix(remaining_containers)
+                    blank_container = separator_prefix.rstrip()
+                    for separator in trailing_separators:
+                        if blank_container:
+                            lines.append(blank_container)
+                        lines.extend((f"{separator_prefix}{separator}", blank_container))
                 stats["paragraphs"] += para_stats.get("paragraphs", 0)
                 stats["headings"] += para_stats.get("headings", 0)
                 if list_item_level is not None:
@@ -1184,6 +1230,7 @@ class DocxToMarkdownConverter:
         heading_cleanup_rules: Any = (),
         diagnostic_sink: Any = None,
         diagnostic_location: str = "",
+        post_anchor_separators: list[str] | None = None,
     ) -> tuple[list[str], dict[str, int]]:
         """Process a single ``<w:p>`` element.
 
@@ -1201,9 +1248,14 @@ class DocxToMarkdownConverter:
 
         # Get the Paragraph object for proper text extraction
         para = para_by_element.get(id(para_element))
-        paragraph_text = (
-            para.text.strip() if para is not None else self._extract_paragraph_text_raw(para_element).strip()
+        # The shared renderer owns the visible XML projection. An empty
+        # projection is a valid result (for example an all-hidden paragraph).
+        visible_paragraph_text = self._extract_paragraph_text_formatted(
+            para if para is not None else para_element,
+            preserve_formatting=False,
+            style_detector_config=style_detector_config,
         )
+        paragraph_text = visible_paragraph_text.strip()
         semantic_bookmark_inventory = self._semantic_bookmark_inventory
         semantic_reference_text = self._semantic_v3_recovery.render_paragraph_text(
             para_element, emit_references=self._extensions.captions_references
@@ -1218,28 +1270,13 @@ class DocxToMarkdownConverter:
                 bookmark_inventory=semantic_bookmark_inventory,
             )
         if semantic_reference_text is not None:
-            paragraph_text = semantic_reference_text.strip()
-        has_visible_wrapper = False
-        if para is not None:
-            w_ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-            has_visible_wrapper = any(
-                para._p.find(f".//{{{w_ns}}}{tag}") is not None for tag in ("ins", "fldSimple", "hyperlink", "sdt")
-            )
-        if para is not None and (not paragraph_text or has_visible_wrapper):
-            # python-docx Paragraph.text can be empty when all visible text is
-            # wrapped by w:ins, w:fldSimple, or another XML container.  It can
-            # also be only partially populated when a direct run is followed
-            # by one of those wrappers.  The shared renderer owns the accepted
-            # revision/field policy, so prefer its complete visible projection
-            # whenever such a wrapper is present.
-            rendered_text = self._extract_paragraph_text_formatted(
-                para,
+            semantic_reference_text = self._extract_paragraph_text_formatted(
+                para if para is not None else para_element,
                 preserve_formatting=False,
                 style_detector_config=style_detector_config,
-            ).strip()
-            if rendered_text:
-                paragraph_text = rendered_text
-
+                reference_spans=self._paragraph_reference_spans(para_element),
+            )
+            paragraph_text = semantic_reference_text.strip()
         # ── 0. Page/section break detection ─────────────────────────
         from docwen_core.docx_parsing.break_utils import (
             detect_all_breaks,
@@ -1290,9 +1327,14 @@ class DocxToMarkdownConverter:
         if paragraph_list_context_level == 0 and continuation_list_level is not None:
             paragraph_list_context_level = continuation_list_level + 1
 
-        def _append_block_separator(separator: str, *, indent: str = "") -> None:
-            """Emit a thematic separator as a distinct Markdown block."""
+        def _append_block_separator(separator: str, *, indent: str = "", destination: list[str] | None = None) -> None:
+            """Emit a native separator without detaching a closing source ID."""
             if not separator:
+                return
+            if destination is not None:
+                # Placement belongs to the body walker after it has emitted
+                # closing source IDs. Do not retain an already-closed path.
+                destination.append(separator)
                 return
             if lines and lines[-1] != "":
                 lines.append("")
@@ -1305,6 +1347,8 @@ class DocxToMarkdownConverter:
                 code_parts = self._render_page_break_parts(
                     para,
                     preserve_formatting=False,
+                    preserve_whitespace=True,
+                    literal_text=True,
                     style_detector_config=style_detector_config,
                 )
                 for part_type, part in code_parts:
@@ -1326,7 +1370,14 @@ class DocxToMarkdownConverter:
             if code_block_acc is not None:
                 if not code_block_acc.in_code_block:
                     code_block_acc.start(list_level=paragraph_list_context_level)
-                code_block_acc.add_line(paragraph_text)
+                code_block_acc.add_line(
+                    self._extract_paragraph_text_formatted(
+                        para if para is not None else para_element,
+                        preserve_formatting=False,
+                        style_detector_config=style_detector_config,
+                        literal_text=True,
+                    )
+                )
 
         def _finish_code_at_section_break() -> None:
             if not has_section_break or not self._section_break_separator:
@@ -1377,22 +1428,51 @@ class DocxToMarkdownConverter:
                 if cb_md:
                     lines.append(cb_md)
                     lines.append("")
+            anchor_groups = self._semantic_v3_recovery.ordinary_anchor_groups(para_element)
+            source_anchor = self._semantic_v3_recovery.source_anchor(para_element)
+            inline_anchor_id: str | None = None
+            if (
+                source_anchor is not None
+                and source_anchor.owner_kind == "ordinary_anchor"
+                and (
+                    source_anchor.block_kind == "paragraph"
+                    or (source_anchor.block_kind == "list_item" and (not anchor_groups or anchor_groups[0].index == 0))
+                )
+            ):
+                inline_anchor_id = source_anchor.source_id
             quote_parts = (
                 self._render_page_break_parts(
                     para,
                     preserve_formatting=self._preserve_formatting,
                     style_detector_config=style_detector_config,
+                    line_break_text="<br>" if inline_anchor_id is not None else "\n",
+                    recover_semantic_references=True,
                 )
-                if para is not None and (has_page_break or semantic_reference_text is None)
+                if para is not None
+                and (inline_anchor_id is not None or has_page_break or semantic_reference_text is None)
                 else [
                     ("text", semantic_reference_text.strip() if semantic_reference_text is not None else paragraph_text)
                 ]
             )
+            if inline_anchor_id is not None:
+                # Keep the paragraph/item ID on prose, before any trailing
+                # page or section separator. Whole-container IDs are emitted
+                # separately by the body walker after their final child.
+                for part_index in range(len(quote_parts) - 1, -1, -1):
+                    part_type, part = quote_parts[part_index]
+                    if part_type == "text" and part.strip():
+                        quote_parts[part_index] = ("text", f"{part} ^{inline_anchor_id}")
+                        break
+                else:
+                    raise ValueError("an authenticated inline quote anchor has no visible paragraph content")
             level = style_value if isinstance(style_value, int) else 1
             prefix = ">" * max(level, 1)
             quote_indent = " " * self._list_indent_spaces * paragraph_list_context_level
-            anchor_groups = self._semantic_v3_recovery.ordinary_anchor_groups(para_element)
-            owner_kinds = tuple(group.anchor.block_kind for group in anchor_groups)
+            owner_kinds = tuple(
+                group.anchor.block_kind
+                for group in anchor_groups
+                if group.anchor.block_kind not in {"paragraph", "image", "list_item"}
+            )
             list_inside_quote = owner_kinds[:2] in {
                 ("list", "block_quote"),
                 ("list", "callout"),
@@ -1419,38 +1499,44 @@ class DocxToMarkdownConverter:
                     list_inside_quote = list_inside_quote or nested_list_type is not None or disabled_marker
                     quote_indent = ""
 
-                def _nested_list_marker() -> str:
+                def _nested_list_prefix() -> str:
                     if nested_list_type == "ordered" and nested_num_id is not None and list_counter is not None:
-                        native_level = (
-                            numbering_index.lookup_by_abstract(nested_num_id[4:], nested_level)
-                            if nested_num_id.startswith("abs_")
-                            else numbering_index.lookup(nested_num_id, nested_level)
+                        native_level = numbering_index.lookup(nested_num_id, nested_level)
+                        ordinal = list_counter.next(
+                            nested_num_id, nested_level, start=native_level.start if native_level else 1
                         )
-                        return format_list_marker(
-                            "ordered",
-                            list_counter.next(
-                                nested_num_id, nested_level, start=native_level.start if native_level else 1
-                            ),
-                        )
-                    return format_list_marker("bullet", 0, self._unordered_list_marker_type)
+                        if native_level is not None:
+                            return numbering_index.render_numbering_text(
+                                native_level, ordinal, parent_counters=list_counter.snapshot(nested_num_id)
+                            )
+                        return format_list_marker("ordered", ordinal) + " "
+                    return format_list_marker("bullet", 0, self._unordered_list_marker_type) + " "
 
-            for part_type, part in quote_parts:
+            last_prose_index = max(
+                (index for index, (kind, text) in enumerate(quote_parts) if kind == "text" and text.strip()),
+                default=-1,
+            )
+            for part_index, (part_type, part) in enumerate(quote_parts):
                 if part_type == "separator":
-                    _append_block_separator(part, indent=quote_indent)
+                    _append_block_separator(
+                        part,
+                        indent=quote_indent,
+                        destination=post_anchor_separators if part_index > last_prose_index else None,
+                    )
                     continue
                 if not part:
                     continue
                 for line_index, qline in enumerate(part.splitlines()):
                     if list_inside_quote:
-                        marker = _nested_list_marker() if line_index == 0 and nested_list_type is not None else ""
+                        marker = _nested_list_prefix() if line_index == 0 and nested_list_type is not None else ""
                         list_indent = " " * self._list_indent_spaces * nested_level
-                        list_prefix = f"{list_indent}{marker} " if marker else f"{list_indent}  "
+                        list_prefix = f"{list_indent}{marker}" if marker else f"{list_indent}  "
                         lines.append(f"{prefix} {list_prefix}{qline}".rstrip())
                     elif quote_inside_list:
                         if nested_list_type is not None and line_index == 0:
-                            marker = _nested_list_marker()
+                            marker = _nested_list_prefix()
                             list_indent = " " * self._list_indent_spaces * nested_level
-                            lines.append(f"{list_indent}{marker} {prefix} {qline}".rstrip())
+                            lines.append(f"{list_indent}{marker}{prefix} {qline}".rstrip())
                         else:
                             lines.append(f"  {prefix} {qline}".rstrip())
                     else:
@@ -1458,7 +1544,7 @@ class DocxToMarkdownConverter:
                         lines.append(f"{quote_indent}{quote_line}" if quote_indent else quote_line)
                 lines.append("")
             if has_section_break and self._section_break_separator:
-                _append_block_separator(self._section_break_separator)
+                _append_block_separator(self._section_break_separator, destination=post_anchor_separators)
             return lines, stats
 
         # ── 4. Close code block if exiting to normal content ────────
@@ -1555,6 +1641,7 @@ class DocxToMarkdownConverter:
                     para,
                     preserve_formatting=self._preserve_heading_formatting,
                     style_detector_config=style_detector_config,
+                    recover_semantic_references=True,
                 )
                 heading_text_index = next(
                     (index for index, (part_type, _part) in enumerate(heading_parts) if part_type == "text"),
@@ -1583,27 +1670,66 @@ class DocxToMarkdownConverter:
                 # authenticated resolved-v4 package.  A v4 Word list number is
                 # a separate proven fact and is never inserted into or parsed
                 # from the authored Heading text.
-                if (
-                    numbering_index is not None
-                    and list_counter is not None
-                    and para is not None
-                    and para.style is not None
-                ):
-                    style_id = getattr(para.style, "style_id", None)
-                    if isinstance(style_id, str) and style_id:
-                        level_info = numbering_index.lookup_by_style_id(style_id)
-                        if level_info is not None:
-                            num_id_key = f"abs_{level_info.abstract_num_id}"
-                            counter_val = (
-                                list_counter.next(num_id_key, level_info.ilvl, start=level_info.start)
-                                if list_counter
-                                else level_info.start
+                if numbering_index is not None and list_counter is not None and para is not None:
+                    from docwen_core.docx_parsing.list_processing import detect_list_item, format_list_marker
+
+                    native_num_id, native_ilvl, _native_type = detect_list_item(para, numbering_index)
+                    level_info = (
+                        numbering_index.lookup(native_num_id, native_ilvl)
+                        if native_num_id is not None and native_ilvl is not None
+                        else None
+                    )
+                    if level_info is not None:
+                        counter_val = list_counter.next(level_info.num_id, level_info.ilvl, start=level_info.start)
+                        is_ordinary_container = (
+                            level_info.num_id,
+                            str(level_info.ilvl),
+                        ) in self._ordinary_container_list_bindings and level_info.num_fmt in {"decimal", "bullet"}
+                        if is_ordinary_container:
+                            # A native container marker owns the Heading block,
+                            # not its authored text. Count once even when the
+                            # Heading's own numbering is being removed.
+                            marker = format_list_marker(
+                                "bullet" if level_info.num_fmt == "bullet" else "ordered",
+                                counter_val,
+                                self._unordered_list_marker_type,
                             )
-                            parent_counters = list_counter.snapshot(num_id_key) if list_counter else None
+                            indent = " " * self._list_indent_spaces * level_info.ilvl
+                            marker_prefix = f"{indent}{marker} "
+                            if ">" in quote_prefix:
+                                owners = tuple(
+                                    group
+                                    for group in reversed(
+                                        self._semantic_v3_recovery.ordinary_anchor_groups(para_element)
+                                    )
+                                    if group.anchor.block_kind in {"block_quote", "callout", "list", "list_item"}
+                                )
+                                list_positions = [
+                                    index
+                                    for index, group in enumerate(owners)
+                                    if group.anchor.block_kind in {"list", "list_item"}
+                                ]
+                                marker_owner = list_positions[-1] if list_positions else None
+                                container_prefix = "".join(
+                                    "> "
+                                    if group.anchor.block_kind in {"block_quote", "callout"}
+                                    else f"{marker} "
+                                    if index == marker_owner
+                                    else "  "
+                                    for index, group in enumerate(owners)
+                                )
+                                if marker_owner is None:
+                                    container_prefix += marker_prefix
+                                prefix = container_prefix + "#" * (
+                                    heading_level if self._extensions.extended_headings else min(heading_level, 6)
+                                )
+                            else:
+                                prefix = f"{marker_prefix}{prefix}"
+                        else:
                             num_prefix = numbering_index.render_numbering_text(
                                 level_info,
                                 counter_val,
-                                parent_counters=parent_counters,
+                                parent_counters=list_counter.snapshot(level_info.num_id),
                             )
                             if num_prefix and not remove_numbering:
                                 display_text = f"{num_prefix}{display_text}"
@@ -1675,14 +1801,19 @@ class DocxToMarkdownConverter:
             if _formula_text is not None:
                 display = _formula_text
             elif semantic_reference_text is not None:
-                display = semantic_reference_text
+                display = self._extract_paragraph_text_formatted(
+                    para if para is not None else para_element,
+                    preserve_formatting=self._preserve_formatting,
+                    style_detector_config=style_detector_config,
+                    reference_spans=self._paragraph_reference_spans(para_element),
+                )
             else:
                 formatted_text = self._extract_paragraph_text_formatted(
                     para if para is not None else para_element,
                     preserve_formatting=self._preserve_formatting,
                     style_detector_config=style_detector_config,
                 )
-                display = formatted_text if formatted_text.strip() else text
+                display = formatted_text
             if source_anchor is not None:
                 if source_anchor.owner_kind == "semantic_target" and source_anchor.block_kind in {
                     "figure",
@@ -1704,17 +1835,26 @@ class DocxToMarkdownConverter:
                     para,
                     preserve_formatting=self._preserve_formatting,
                     style_detector_config=style_detector_config,
+                    recover_semantic_references=True,
                 )
                 if has_page_break and para is not None
                 else None
             )
 
-            # Handle pStyle-based numbering (abs_ num_id from pStyle fallback)
-            if list_type and num_id and num_id.startswith("abs_") and numbering_index is not None:
-                abs_id = num_id[4:]  # strip "abs_" prefix
-                level_info = numbering_index.lookup_by_abstract(abs_id, ilvl if isinstance(ilvl, int) else 0)
+            # Keep the established pStyle layout/removal policy while using
+            # the concrete binding and the same counter as direct numPr.
+            style_numbering = (
+                para is not None
+                and para._p.find(
+                    "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}pPr/"
+                    "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}numPr"
+                )
+                is None
+            )
+            if list_type and num_id and style_numbering and numbering_index is not None:
+                level_info = numbering_index.lookup(num_id, ilvl if isinstance(ilvl, int) else 0)
                 if level_info is not None and not remove_numbering:
-                    num_id_key = f"abs_{abs_id}"
+                    num_id_key = num_id
                     counter_val = (
                         list_counter.next(num_id_key, level_info.ilvl, start=level_info.start)
                         if list_counter
@@ -1755,23 +1895,29 @@ class DocxToMarkdownConverter:
                 if list_type == "ordered":
                     native_level = numbering_index.lookup(num_id, level)
                     ordinal = list_counter.next(num_id, level, start=native_level.start if native_level else 1)
-                    marker = format_list_marker("ordered", ordinal)
+                    first_prefix = (
+                        numbering_index.render_numbering_text(
+                            native_level, ordinal, parent_counters=list_counter.snapshot(num_id)
+                        )
+                        if native_level is not None
+                        else format_list_marker("ordered", ordinal) + " "
+                    )
                 else:
-                    marker = format_list_marker("bullet", 0, self._unordered_list_marker_type)
+                    first_prefix = format_list_marker("bullet", 0, self._unordered_list_marker_type) + " "
                 if page_parts is not None:
                     first_text = True
-                    content_indent = " " * max(self._list_indent_spaces, len(marker) + 1)
+                    content_indent = " " * max(self._list_indent_spaces, len(first_prefix))
                     continuation_indent = f"{indent}{content_indent}"
                     for part_type, part in page_parts:
                         if part_type == "separator":
                             _append_block_separator(part, indent=continuation_indent if not first_text else indent)
                         elif first_text:
-                            lines.append(f"{indent}{marker} {part}")
+                            lines.append(f"{indent}{first_prefix}{part}")
                             first_text = False
                         else:
                             lines.append(f"{continuation_indent}{part}")
                 else:
-                    lines.append(f"{indent}{marker} {display}")
+                    lines.append(f"{indent}{first_prefix}{display}")
             elif continuation_list_level is not None:
                 indent = " " * self._list_indent_spaces * (continuation_list_level + 1)
                 if page_parts is not None:
@@ -1810,7 +1956,11 @@ class DocxToMarkdownConverter:
         para: Any,
         *,
         preserve_formatting: bool | None = None,
+        preserve_whitespace: bool = False,
+        literal_text: bool = False,
         style_detector_config: Any = None,
+        line_break_text: str = "\n",
+        recover_semantic_references: bool = False,
     ) -> list[tuple[str, str]]:
         """Render page-separated paragraph parts without losing rich content."""
         from docwen_plugin_document.shared.markdown_runs import (
@@ -1833,17 +1983,20 @@ class DocxToMarkdownConverter:
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
             math_renderer=_render_formula,
+            line_break_text=line_break_text,
+            reference_spans=(self._paragraph_reference_spans(para._p) if recover_semantic_references else None),
+            literal_text=literal_text,
         )
         parts: list[tuple[str, str]] = []
         for index, segment in enumerate(segments):
-            text = segment.strip()
+            text = segment if preserve_whitespace else segment.strip()
             if text:
                 parts.append(("text", text))
             if index < len(segments) - 1 and self._page_break_separator and (not parts or parts[-1][0] != "separator"):
                 parts.append(("separator", self._page_break_separator))
 
         if not parts:
-            return [("text", getattr(para, "text", ""))]
+            return [("text", "")]
         return parts
 
     def _paragraph_list_item_level(self, para: Any, numbering_index: Any = None) -> int | None:
@@ -1928,9 +2081,14 @@ class DocxToMarkdownConverter:
         """Render formulas and surrounding text through the shared run walker."""
         from docwen_plugin_document.shared.markdown_runs import render_paragraph_runs
 
-        paragraph_text = (
-            para.text.strip() if para is not None else self._extract_paragraph_text_raw(para_element).strip()
+        # The shared renderer owns the visible XML projection. An empty
+        # projection is a valid result (for example an all-hidden paragraph).
+        visible_paragraph_text = self._extract_paragraph_text_formatted(
+            para if para is not None else para_element,
+            preserve_formatting=False,
+            style_detector_config=style_detector_config,
         )
+        paragraph_text = visible_paragraph_text.strip()
         standalone_formula = not paragraph_text
 
         def render_formula(child: Any) -> str | None:
@@ -1944,6 +2102,7 @@ class DocxToMarkdownConverter:
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
             math_renderer=render_formula,
+            reference_spans=self._paragraph_reference_spans(para_element),
         )
 
     def _extract_paragraph_text_raw(self, para_element: Any) -> str:
@@ -1957,12 +2116,26 @@ class DocxToMarkdownConverter:
                 parts.append(t.text)
         return "".join(parts)
 
+    def _paragraph_reference_spans(self, paragraph_element: Any) -> dict[Any, tuple[Any, str]]:
+        spans = self._semantic_v3_recovery.paragraph_reference_spans(
+            paragraph_element, emit_references=self._extensions.captions_references
+        )
+        if not spans and self._extensions.captions_references and self._semantic_bookmark_inventory is not None:
+            render_semantic_reference_text(
+                paragraph_element,
+                bookmark_inventory=self._semantic_bookmark_inventory,
+                reference_spans=spans,
+            )
+        return spans
+
     def _extract_paragraph_text_formatted(
         self,
         para_element: Any,
         *,
         preserve_formatting: bool = True,
         style_detector_config: Any = None,
+        reference_spans: dict[Any, tuple[Any, str]] | None = None,
+        literal_text: bool = False,
     ) -> str:
         """Extract text with inline formatting markers.
 
@@ -1977,7 +2150,14 @@ class DocxToMarkdownConverter:
             preserve_formatting=preserve_formatting,
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
+            reference_spans=reference_spans,
+            literal_text=literal_text,
         )
+
+    def _image_names_for_output(self, output_dir: str) -> ImageExtractionNames:
+        if self._image_names is None or str(self._image_names.directory) != output_dir:
+            self._image_names = ImageExtractionNames(output_dir)
+        return self._image_names
 
     def _process_images_for_output(
         self,
@@ -2009,6 +2189,7 @@ class DocxToMarkdownConverter:
             output_dir,
             name_prefix="docx-image",
             prefer_source_names=prefer_source_names,
+            name_allocator=self._image_names_for_output(output_dir),
         )
         export_modes = self._request_policy.resolve_export_modes()
         image_mode = export_modes["image_extraction_mode"]
@@ -2124,6 +2305,7 @@ class DocxToMarkdownConverter:
             doc.part.related_parts,
             output_dir,
             name_prefix="docx-image",
+            name_allocator=self._image_names_for_output(output_dir),
         )
 
         refs = [f"![{info.alt}]({info.path})\n" for info in infos]
@@ -2457,7 +2639,12 @@ class DocxToMarkdownConverter:
                         bookmark_inventory=self._semantic_bookmark_inventory,
                     )
                 if semantic_text is not None:
-                    formatted = semantic_text
+                    formatted = self._extract_paragraph_text_formatted(
+                        para,
+                        preserve_formatting=preserve_formatting,
+                        style_detector_config=self._request_policy.style_detector,
+                        reference_spans=self._paragraph_reference_spans(para_elem),
+                    )
                 else:
                     formatted = render_paragraph_runs(
                         para,
@@ -2482,7 +2669,12 @@ class DocxToMarkdownConverter:
                         para_elem,
                         bookmark_inventory=self._semantic_bookmark_inventory,
                     )
-                text = semantic_text if semantic_text is not None else self._extract_paragraph_text_raw(para_elem)
+                text = self._extract_paragraph_text_formatted(
+                    para_elem,
+                    preserve_formatting=preserve_formatting,
+                    style_detector_config=self._request_policy.style_detector,
+                    reference_spans=self._paragraph_reference_spans(para_elem) if semantic_text is not None else None,
+                )
                 if text.strip():
                     cell_text_parts.append(text.strip())
             if paragraph_image_renderer is not None:

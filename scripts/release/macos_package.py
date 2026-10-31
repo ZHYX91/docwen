@@ -8,6 +8,7 @@ import json
 import os
 import platform
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -22,11 +23,19 @@ if __package__ in {None, ""}:
 from scripts.release.macos_archive import archive_payload, inventory, verify_extracted, write_inventory
 from scripts.release.macos_functional import run_cases
 from scripts.release.macos_functional_cases import MARKDOWN, TOKEN
-from scripts.release.publication_contract import canonical_json, file_identity, require
-from tools.run_lease import lease_payload, managed_run
+from scripts.release.publication_contract import PublicationError, canonical_json, file_identity, require
+from scripts.release.publication_download import atomic_record
+from tools.run_lease import OwnedRunLease, lease_payload, managed_run
 
 REPO = Path(__file__).resolve().parents[2]
-MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
+MACHO_MAGICS = {
+    b"\xcf\xfa\xed\xfe",
+    b"\xfe\xed\xfa\xcf",
+    b"\xca\xfe\xba\xbe",
+    b"\xbe\xba\xfe\xca",
+    b"\xca\xfe\xba\xbf",
+    b"\xbf\xba\xfe\xca",
+}
 
 
 def read_contract(path: Path) -> dict[str, Any]:
@@ -106,8 +115,43 @@ def sign_payload(root: Path) -> None:
         command(["/usr/bin/codesign", "--force", "--sign", "-", "--timestamp=none", str(framework)])
 
 
+def minimum_macos_version(load_commands: str, relative: str) -> tuple[int, int, int]:
+    """Read the arm64 deployment floor, independently of the build SDK version."""
+    versions: list[tuple[int, int, int]] = []
+    for block in re.split(r"(?m)^\s*Load command \d+\s*$", load_commands):
+        commands = re.findall(r"(?m)^\s*cmd\s+(\S+)\s*$", block)
+        relevant = [name for name in commands if name == "LC_BUILD_VERSION" or name.startswith("LC_VERSION_MIN_")]
+        if not relevant:
+            continue
+        require(len(commands) == len(relevant) == 1, f"ambiguous deployment metadata: {relative}")
+        name = relevant[0]
+        if name == "LC_BUILD_VERSION":
+            platforms = re.findall(r"(?m)^\s*platform\s+(\S+)\s*$", block)
+            require(platforms in (["MACOS"], ["1"]), f"non-macOS or missing platform metadata: {relative}")
+            field = "minos"
+        else:
+            require(name == "LC_VERSION_MIN_MACOSX", f"non-macOS deployment metadata: {relative}")
+            field = "version"
+        values = re.findall(rf"(?m)^\s*{field}\s+(\S+)\s*$", block)
+        require(
+            len(values) == 1 and re.fullmatch(r"\d+(?:\.\d+){0,2}", values[0]) is not None,
+            f"missing or ambiguous deployment version: {relative}",
+        )
+        parts = [int(part) for part in values[0].split(".")]
+        parts += [0] * (3 - len(parts))
+        versions.append((parts[0], parts[1], parts[2]))
+    require(len(versions) == 1, f"missing or ambiguous deployment metadata: {relative}")
+    version = versions[0]
+    require(
+        (0, 0, 0) < version <= (14, 0, 0),
+        f"macOS minimum {'.'.join(map(str, version))} exceeds 14.0 or is invalid: {relative}",
+    )
+    return version
+
+
 def verify_signatures(root: Path, *, app: Path | None = None) -> dict[str, Any]:
     binaries = []
+    minimum_versions = []
     verified: set[Path] = set()
     for path in macho_files(root):
         relative = path.relative_to(root).as_posix()
@@ -117,6 +161,11 @@ def verify_signatures(root: Path, *, app: Path | None = None) -> dict[str, Any]:
         if subject not in verified:
             command(["/usr/bin/codesign", "--verify", "--deep", "--strict", str(subject)])
             verified.add(subject)
+        try:
+            load_commands = command(["/usr/bin/otool", "-arch", "arm64", "-l", str(path)])
+        except PublicationError as error:
+            raise PublicationError(f"cannot read arm64 deployment metadata: {relative}: {error}") from error
+        minimum_versions.append(minimum_macos_version(load_commands, relative))
         binaries.append(relative)
     require(bool(binaries), "no Mach-O code in package")
     if app is not None:
@@ -133,7 +182,14 @@ def verify_signatures(root: Path, *, app: Path | None = None) -> dict[str, Any]:
                     "Signature=adhoc" in command(["/usr/bin/codesign", "-d", "--verbose=4", str(root / relative)]),
                     "entry point must be ad-hoc signed",
                 )
-    return {"machOCount": len(binaries), "architecture": "arm64", "appSignature": "adhoc" if app else None}
+    maximum = max(minimum_versions)
+    version_text = ".".join(map(str, maximum if maximum[2] else maximum[:2]))
+    return {
+        "machOCount": len(binaries),
+        "architecture": "arm64",
+        "appSignature": "adhoc" if app else None,
+        "maximumMachOMinimumVersion": version_text,
+    }
 
 
 def compose_app(payload: Path, root: Path, version: str) -> Path:
@@ -379,16 +435,110 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 "defaultUserProfile": "passed-with-isolated-home" if app else "not-applicable",
             }
             archives.append(archive)
-        output.mkdir(parents=True)
-        (output / ".docwen-temp-lease.json").write_bytes(
+        _publish_archives(archives, output=output, report=report, results=results)
+
+
+def _publish_archives(archives: list[Path], *, output: Path, report: Path, results: dict[str, Any]) -> None:
+    """Publish one already verified build without leaving anonymous partial archives."""
+    require(not output.exists() and not output.is_symlink(), "package outputs must be new")
+    require(not report.exists() and not report.is_symlink(), "package report must be new")
+    require(len({archive.name for archive in archives}) == len(archives), "archive names must be unique")
+    require(report not in {output / archive.name for archive in archives}, "package report conflicts with archive")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    identities = {archive.name: file_identity(archive) for archive in archives}
+    with managed_run(
+        output.parent, prefix=".docwen-macos-publish-", owner="docwen.release.macos", kind="macos-publication"
+    ) as publication:
+        atomic_record(
+            publication.root / "publication.json",
             canonical_json(
-                lease_payload(output, owner="docwen.release.macos", kind="macos-candidate", state="completed-success")
-            )
+                {
+                    "output": str(output),
+                    "archives": identities,
+                    "report": {"path": str(report), "content": results},
+                }
+            ),
         )
         for archive in archives:
-            shutil.copyfile(archive, output / archive.name)
-        report.parent.mkdir(parents=True, exist_ok=True)
-        report.write_bytes(canonical_json(results))
+            staged = publication.root / archive.name
+            shutil.copyfile(archive, staged)
+            require(file_identity(staged) == identities[archive.name], "candidate archive copy mismatch")
+        output.mkdir()
+        root_identity = output.lstat()
+        try:
+            atomic_record(
+                publication.root / "candidate-identity.json",
+                canonical_json(
+                    {
+                        "root": str(output),
+                        "rootIdentity": {"device": root_identity.st_dev, "inode": root_identity.st_ino},
+                        "owner": "docwen.release.macos",
+                        "kind": "macos-candidate",
+                    }
+                ),
+            )
+            lease = lease_payload(output, owner="docwen.release.macos", kind="macos-candidate")
+            lease["publicationRoot"] = str(publication.root)
+            lease["artifacts"] = identities
+            lease["report"] = str(report)
+            marker = output / ".docwen-temp-lease.json"
+            atomic_record(marker, canonical_json(lease))
+            marker_identity = marker.lstat()
+        except BaseException as error:
+            error.add_note(
+                f"Candidate reservation: {output}; device={root_identity.st_dev}; inode={root_identity.st_ino}; "
+                f"publication evidence: {publication.root}"
+            )
+            try:
+                current = output.lstat()
+                if (current.st_dev, current.st_ino) == (
+                    root_identity.st_dev,
+                    root_identity.st_ino,
+                ) and not output.is_symlink():
+                    # Only an empty directory can be retired here. A partial
+                    # marker or unexpected entry remains with its reservation.
+                    output.rmdir()
+            except OSError as cleanup_error:
+                error.add_note(f"Candidate initialization cleanup retained: {cleanup_error}")
+            raise
+
+        candidate = OwnedRunLease(
+            output, root_identity, marker_identity, lease, "docwen.release.macos", canonical_json(lease)
+        )
+
+        try:
+            for archive in archives:
+                os.link(publication.root / archive.name, output / archive.name)
+            report.parent.mkdir(parents=True, exist_ok=True)
+            atomic_record(report, canonical_json(results))
+            for archive in archives:
+                require(file_identity(output / archive.name) == identities[archive.name], "published archive changed")
+        except BaseException as error:
+            outcome = "retained-interrupted" if isinstance(error, KeyboardInterrupt) else "retained-failure"
+            try:
+                candidate.save(outcome)
+            except (OSError, ValueError, PublicationError) as recording_error:
+                error.add_note(f"Could not record candidate failure; inspect {publication.root}: {recording_error}")
+                candidate.record_recovery(
+                    error,
+                    "failure-recording",
+                    outcome=outcome,
+                    recording_error=recording_error,
+                    execution_error=error,
+                )
+            raise
+        try:
+            candidate.save("completed-success")
+        except (OSError, ValueError, PublicationError) as error:
+            # All archive bytes and the receipt are committed. A terminal lease
+            # recording failure must not rewrite that fact as a failed build.
+            candidate.record_recovery(
+                error,
+                "terminal-recording",
+                outcome="completed-success",
+                recording_error=error,
+            )
+            raise
 
 
 def main() -> None:

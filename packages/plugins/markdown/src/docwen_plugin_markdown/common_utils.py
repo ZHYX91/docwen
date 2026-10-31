@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from docwen_core.links import restore_table_safe_breaks
+from docwen_core.links import markdown_heading_ranges, restore_table_safe_breaks
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.models.file_inspection import FILE_INSPECTION_METADATA_KEY, DetectionMethod
 from docwen_core.models.request import ConversionRequest
@@ -65,43 +66,23 @@ def read_input_markdown(path: str) -> tuple[str, int]:
 # ── Heading numbering removal/addition ─────────────────────────────────
 
 
-def remove_md_numbering(content: str, *, rules: Any = ()) -> str:
+def remove_md_numbering(
+    content: str, *, rules: Any = (), extended_headings: bool = False, structural_tables: bool = False
+) -> str:
     """Remove heading numbering patterns from Markdown headings."""
-    lines = content.splitlines(keepends=True)
     result: list[str] = []
-    in_fence = False
-    fence_marker = ""
-    for line in lines:
-        line_body = line.rstrip("\r\n")
-        line_ending = line[len(line_body) :]
-        stripped = line_body.lstrip()
-        opening_fence = _opening_fence(line_body) if not in_fence else None
-        if opening_fence is not None:
-            in_fence = True
-            fence_marker = opening_fence
-            result.append(line)
-            continue
-        if in_fence and _is_closing_fence(line_body, fence_marker):
-            in_fence = False
-            fence_marker = ""
-            result.append(line)
-            continue
-        if in_fence:
-            result.append(line)
-            continue
-        if line_body.startswith(("    ", "\t")):
-            result.append(line)
-            continue
-        if stripped.startswith("#"):
-            h_match = re.match(r"^(#+)\s+(.*)$", stripped)
-            if h_match:
-                heading_text = h_match.group(2)
-                _, heading_text = strip_heading_prefix(heading_text, rules=rules)
-                heading_text = heading_text.lstrip()
-                indent = line_body[: len(line_body) - len(stripped)]
-                result.append(f"{indent}{h_match.group(1)} {heading_text}{line_ending}")
-                continue
-        result.append(line)
+    cursor = 0
+    for heading in markdown_heading_ranges(
+        content, extended_headings=extended_headings, structural_tables=structural_tables
+    ):
+        result.append(content[cursor : heading.text_start])
+        original = content[heading.text_start : heading.text_end]
+        prefix, cleaned = strip_heading_prefix(original, rules=rules)
+        if prefix:
+            cleaned = cleaned.lstrip(" \t")
+        result.append(cleaned)
+        cursor = heading.text_end
+    result.append(content[cursor:])
     return "".join(result)
 
 
@@ -109,6 +90,11 @@ def add_md_numbering(
     content: str,
     scheme: str = "",
     registry: Any = None,
+    *,
+    extended_headings: bool = False,
+    structural_tables: bool = False,
+    added_prefixes: list[str] | None = None,
+    prefix_marker: Callable[[str], str] | None = None,
 ) -> str:
     """Add heading numbering using one exact configured scheme.
 
@@ -119,59 +105,57 @@ def add_md_numbering(
         content: Raw Markdown content.
         scheme: Exact scheme ID (e.g. ``"gongwen_standard"``).
         registry: Request-owned numbering scheme registry.
+        added_prefixes: Optional insertion provenance in heading inventory order;
+            empty prefixes still reserve their heading slot.
 
     Returns:
         Markdown content with heading numbers inserted.
     """
     scheme_config = resolve_heading_numbering_scheme(scheme, registry)
     formatter = HeadingFormatter(scheme_config)
-    return _apply_numbering(content, formatter)
+    return _apply_numbering(
+        content,
+        formatter,
+        extended_headings=extended_headings,
+        structural_tables=structural_tables,
+        added_prefixes=added_prefixes,
+        prefix_marker=prefix_marker,
+    )
 
 
-def _apply_numbering(content: str, formatter: Any) -> str:
+def _apply_numbering(
+    content: str,
+    formatter: Any,
+    *,
+    extended_headings: bool = False,
+    structural_tables: bool = False,
+    added_prefixes: list[str] | None = None,
+    prefix_marker: Callable[[str], str] | None = None,
+) -> str:
     """Apply a ``HeadingFormatter`` to all heading lines in Markdown content.
 
-    Splits *content* by newlines, processes lines starting with ``#``,
-    and returns the full text with numbering inserted.
+    Patch only parser-owned heading text ranges. Non-target source, including
+    YAML, comments, delimiters, indentation, BOM and line endings, stays exact.
     """
-    lines = content.split("\n")
     result: list[str] = []
-    in_fence = False
-    fence_marker = ""
-    for line in lines:
-        stripped = line.lstrip()
-        opening_fence = _opening_fence(line) if not in_fence else None
-        if opening_fence is not None:
-            in_fence = True
-            fence_marker = opening_fence
-            result.append(line)
-            continue
-        if in_fence and _is_closing_fence(line, fence_marker):
-            in_fence = False
-            fence_marker = ""
-            result.append(line)
-            continue
-        if in_fence:
-            result.append(line)
-            continue
-        if line.startswith(("    ", "\t")):
-            result.append(line)
-            continue
-        if stripped.startswith("#"):
-            # Count heading level
-            level = 0
-            for ch in stripped:
-                if ch == "#":
-                    level += 1
-                else:
-                    break
-            heading_text = stripped[level:].strip()
-            indent = line[: len(line) - len(stripped)]
-            formatted = formatter.format_heading(heading_text, level)
-            result.append(f"{indent}{'#' * level} {formatted}")
-        else:
-            result.append(line)
-    return "\n".join(result)
+    cursor = 0
+    for heading in markdown_heading_ranges(
+        content, extended_headings=extended_headings, structural_tables=structural_tables
+    ):
+        result.append(content[cursor : heading.text_start])
+        heading_text = content[heading.text_start : heading.text_end]
+        formatted = formatter.format_heading(heading_text, heading.level)
+        prefix = formatted[: len(formatted) - len(heading_text)] if heading_text else formatted
+        if added_prefixes is not None:
+            added_prefixes.append(prefix)
+        if formatted and heading.requires_separator:
+            result.append(" ")
+        if prefix_marker is not None and prefix:
+            result.append(prefix_marker(prefix))
+        result.append(formatted)
+        cursor = heading.text_end
+    result.append(content[cursor:])
+    return "".join(result)
 
 
 # ── MD → Spreadsheet helpers ──────────────────────────────────────────

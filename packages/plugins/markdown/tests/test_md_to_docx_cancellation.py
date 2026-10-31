@@ -19,7 +19,7 @@ pytestmark = pytest.mark.contract
     [
         ("read_input_markdown", "prepare_runtime_semantics_v3"),
         ("prepare_runtime_semantics_v3", "resolve_template"),
-        ("_markdown_image_alt_texts", "process_markdown_links"),
+        ("materialize_image_placeholders", "normalize_note_syntax"),
         ("process_markdown_links", "materialize_image_placeholders"),
         ("normalize_note_syntax", "parse_markdown_text"),
         ("apply_runtime_semantics_v3", "annotate_ast_with_merges"),

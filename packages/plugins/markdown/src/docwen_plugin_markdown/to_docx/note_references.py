@@ -15,6 +15,7 @@ from docwen_core.text.numbering import (
     number_to_roman_lower,
     number_to_roman_upper,
 )
+from docwen_plugin_markdown.to_docx.notes import parse_word_note_id
 
 _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
@@ -82,7 +83,9 @@ def _cached_note_marks(document, kind: str) -> dict[int, str | None]:
             # not advance its numbering sequence (OOXML customMarkFollows).
             if reference.get(_W + "customMarkFollows") in {"true", "1", "on"}:
                 continue
-            note_id = int(reference.get(_W + "id"))
+            note_id = parse_word_note_id(reference.get(_W + "id"))
+            if note_id is None:
+                raise ValueError("Uninterpretable template note reference")
             if note_id in marks:
                 continue
             counter += 1
@@ -111,26 +114,39 @@ def project_repeated_note_references(
 
     One native reference owns the note. Subsequent references are ordinary
     NOTEREF fields, with a bookmark around the first reference. Inventory the
-    complete package after rendering so template and caption bookmarks count.
+    complete package only when a repeat requires a new bookmark, so template
+    and caption names/IDs count without auditing an unrelated bookmark graph.
     """
     document = Document(BytesIO(package))
     root = document.element
-    inventory = build_docx_bookmark_inventory(document)
-    used_ids = set(inventory.used_id_keys)
-    used_names = set(inventory.used_name_keys)
+    inventory = None
+    used_ids = set()
+    used_names = set()
     next_id = 0
     deferred_count = 0
     for kind, owned_ids in (("footnote", footnotes), ("endnote", endnotes)):
-        cached_marks = _cached_note_marks(document, kind)
+        if not owned_ids:
+            continue
+        cached_marks = None
         grouped: dict[int, list] = defaultdict(list)
         for reference in root.iter(_W + kind + "Reference"):
             value = reference.get(_W + "id")
-            if value is None:
-                raise ValueError("Note reference has no ID")
-            grouped[int(value)].append(reference)
+            note_id = parse_word_note_id(value)
+            if note_id is not None and note_id in owned_ids:
+                grouped[note_id].append(reference)
         for note_id, references in grouped.items():
             if note_id not in owned_ids or len(references) < 2:
                 continue
+            if inventory is None:
+                inventory = build_docx_bookmark_inventory(document)
+                used_ids.update(inventory.used_id_keys)
+                used_names.update(inventory.used_name_keys)
+            if cached_marks is None:
+                try:
+                    cached_marks = _cached_note_marks(document, kind)
+                except (TypeError, ValueError):
+                    # Uninterpretable template numbering cannot justify a guessed cache.
+                    cached_marks = dict.fromkeys(owned_ids)
             while ("numeric", next_id) in used_ids:
                 next_id += 1
             if next_id > 2_147_483_647:

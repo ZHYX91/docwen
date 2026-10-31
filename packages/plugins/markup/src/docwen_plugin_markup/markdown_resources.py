@@ -52,7 +52,10 @@ class WrittenMarkdownResource:
 
 
 class MarkdownResourceWriter:
-    """Write binary resources and return Markdown link mappings."""
+    """Write resources with one name inventory for the complete request."""
+
+    def __init__(self) -> None:
+        self._used_names: set[str] = set()
 
     def write_all(
         self,
@@ -71,7 +74,7 @@ class MarkdownResourceWriter:
         ocr_blockquote_title: str | None = None,
     ) -> dict[str, WrittenMarkdownResource]:
         written: dict[str, WrittenMarkdownResource] = {}
-        used_names: set[str] = set()
+        used_names = self._used_names
         request_policy = resolve_markdown_request_policy(context)
         export_semantics = export_semantics or request_policy.export
         resolved_ocr_title = (
@@ -118,6 +121,8 @@ class MarkdownResourceWriter:
                     suggested_name=suggested_name,
                     media_type=resolved_media_type,
                     metadata={
+                        "source_kind": "embedded_resource",
+                        "source_format": source_format,
                         "source_key": source_key,
                         "detected_format": detected_format,
                         "declared_media_type": resource.media_type,
@@ -153,6 +158,7 @@ class MarkdownResourceWriter:
                     image_format=detected_format,
                     source_format=source_format,
                     ocr_blockquote_title=resolved_ocr_title,
+                    used_names=used_names,
                 )
                 item_artifacts.extend(ocr_artifacts)
             else:
@@ -226,7 +232,7 @@ def _format_image_resource_link(
         )
         return format_image_link(label, target, style=image_link_style)
     target = f"./{suggested_name}" if image_mode == "embed" else suggested_name
-    return format_image_link(label, target, style=image_link_style)
+    return format_image_link(label, target, style=image_link_style, raw_resource_path=True)
 
 
 def normalize_resource_key(value: str, *, case_sensitive: bool = False) -> str:
@@ -276,6 +282,7 @@ def _apply_image_ocr(
     image_format: str,
     source_format: str,
     ocr_blockquote_title: str,
+    used_names: set[str] | None = None,
 ) -> tuple[str, list[ArtifactManifest]]:
     if not enable_ocr:
         return image_link, []
@@ -331,6 +338,7 @@ def _apply_image_ocr(
             md_file_link_style=md_file_link_style,
             source_format=source_format,
             ocr_blockquote_title=ocr_blockquote_title,
+            used_names=used_names,
         )
 
     inline = ocr_markdown or _format_inline_ocr_block(ocr_text, ocr_blockquote_title)
@@ -364,8 +372,11 @@ def _write_image_ocr_sidecar(
     md_file_link_style: str,
     source_format: str,
     ocr_blockquote_title: str,
+    used_names: set[str] | None = None,
 ) -> tuple[str, list[ArtifactManifest]]:
-    sidecar_stem = f"{PurePosixPath(suggested_name).stem or 'image'}_ocr"
+    desired_name = sanitize_filename(f"{PurePosixPath(suggested_name).stem or 'image'}_ocr.md")
+    sidecar_name = _unique_name(desired_name, used_names if used_names is not None else set())
+    sidecar_stem = PurePosixPath(sidecar_name).stem
     sidecar_text, replacement_link = build_image_ocr_sidecar(
         sidecar_stem=sidecar_stem,
         source_format=source_format,
@@ -381,7 +392,7 @@ def _write_image_ocr_sidecar(
         artifact_id=new_artifact_id(),
         kind=ARTIFACT_KIND_AUXILIARY,
         staging_path=sidecar_path,
-        suggested_name=sanitize_filename(f"{sidecar_stem}.md"),
+        suggested_name=sidecar_name,
         media_type="text/markdown",
         metadata={"source_format": source_format, "ocr": True, "image": suggested_name},
         is_primary=False,

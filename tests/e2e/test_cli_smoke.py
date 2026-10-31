@@ -70,8 +70,8 @@ def test_cli_markdown_docx_roundtrip(tmp_path: Path) -> None:
         runtime_root=tmp_path,
     )
     assert converted.returncode == 0, converted.stderr[-4000:]
-    [output_docx] = output_docx_parent.glob("*/*.docx")
-    assert output_docx.parent.stem == output_docx.stem
+    [output_docx] = output_docx_parent.glob("*.docx")
+    assert output_docx.parent == output_docx_parent
 
     roundtripped = _run_cli(
         ["convert", str(output_docx), "--to", "md", "--output-dir", str(output_directory)],

@@ -40,6 +40,7 @@ def test_size_limit_remains_readable_during_resize(qapp: QApplication, qtbot, th
         rects = [QRect(control.mapTo(row, QPoint(0, 0)), control.size()) for control in (number, unit)]
         assert all(row.rect().contains(rect) for rect in rects), (row.rect(), rects)
         assert not rects[0].intersects(rects[1]), rects
+        assert abs(rects[0].center().y() - rects[1].center().y()) <= 1, rects
 
     try:
         panel.show()

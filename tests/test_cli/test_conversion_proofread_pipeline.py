@@ -81,7 +81,9 @@ def test_composed_output_matches_manual_convert_then_validate(tmp_path, invoke, 
 
     assert _content(_docx(composed)) == _content(manual)
     assert len(list(composed.iterdir())) == 1
-    assert "_fromMd" in _docx(composed).parent.name
+    assert _docx(composed).parent == composed
+    assert _docx(composed).name.startswith(f"{source.stem}_")
+    assert _docx(composed).name.endswith("_fromMd.docx")
     assert source.read_bytes() == original
 
 

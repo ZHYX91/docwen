@@ -188,6 +188,10 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
 
             history_payload: list[dict[str, object]] = []
             warning_index = -1
+            operation_id = str(getattr(entry, "operation_id", "") or "")
+            normalized_source = str(state.get("normalized_path") or "")
+            warning_record_payload: dict[str, object] = {}
+            warning_messages: tuple[str, ...] = ()
             warning_row_tone = ""
             warning_row_tooltip = ""
             warning_row_visible = False
@@ -217,10 +221,18 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
                         {
                             "message": message,
                             "messageType": message_type,
+                            "operationId": str(getattr(row, "operation_id", "") or ""),
                             "filePath": str(getattr(row, "file_path", "") or ""),
                         }
                     )
-                    if expected_warning and message == expected_warning and message_type == "warning":
+                    if (
+                        expected_warning
+                        and operation_id
+                        and message == expected_warning
+                        and message_type == "warning"
+                        and str(getattr(row, "operation_id", "") or "") == operation_id
+                        and str(getattr(row, "file_path", "") or "") in {normalized_source, output_raw}
+                    ):
                         warning_index = index
 
                 summary = getattr(info_vm, "task_summary", None)
@@ -241,9 +253,18 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
             if info_area is not None:
                 info_area_visible = bool(info_area.isVisible())
                 if warning_index >= 0:
-                    dialog = window._show_activity_records()
-                    dialog.search.setText(expected_warning)
+                    dialog = window._show_activity_records(operation_id=operation_id, source_path=normalized_source)
                     app.processEvents()
+                    record = dialog._selected()
+                    if record is not None:
+                        warning_messages = record.warning_messages
+                        warning_record_payload = {
+                            "operationId": record.operation_id,
+                            "sourcePath": record.source_path,
+                            "outputPath": record.output_path,
+                            "warnings": list(record.warning_messages),
+                            "details": record.details,
+                        }
                     row_widget = dialog.details
                     if row_widget is not None:
                         warning_row_tone = str(row_widget.property("activityStatus") or "")
@@ -278,7 +299,11 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
             warning_ui_matches = not expected_warning or (
                 warning_index >= 0
                 and warning_row_tone == "warning"
-                and warning_row_tooltip == expected_warning
+                and warning_record_payload.get("operationId") == operation_id
+                and warning_record_payload.get("sourcePath") == normalized_source
+                and warning_record_payload.get("outputPath") == output_raw
+                and expected_warning in warning_messages
+                and warning_row_tooltip == warning_record_payload.get("details")
                 and warning_row_visible
                 and status_source == "task"
                 and status_tone == "warning"
@@ -319,6 +344,8 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
                     "historyRows": history_payload,
                     "warningHistoryIndex": warning_index,
                     "warningRecordStatus": warning_row_tone,
+                    "operationId": operation_id,
+                    "warningRecord": warning_record_payload,
                     "warningDetailsText": warning_row_tooltip,
                     "warningDetailsVisible": warning_row_visible,
                     "warningDetailsScreenshotPath": (

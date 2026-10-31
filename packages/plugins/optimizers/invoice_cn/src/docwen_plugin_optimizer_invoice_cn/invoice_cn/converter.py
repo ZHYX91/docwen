@@ -189,7 +189,7 @@ class InvoiceCnConverter:
                             parse_pdf_invoice,
                         )
 
-                        metadata, rows = parse_pdf_invoice(input_path)
+                        metadata, rows = parse_pdf_invoice(input_path, diagnostic_sink=context.progress)
                     _report_ocr_best_effort(
                         context,
                         outcome,
@@ -208,13 +208,13 @@ class InvoiceCnConverter:
                         parse_pdf_invoice,
                     )
 
-                    metadata, rows = parse_pdf_invoice(input_path)
+                    metadata, rows = parse_pdf_invoice(input_path, diagnostic_sink=context.progress)
                 else:
                     from docwen_plugin_optimizer_invoice_cn.invoice_cn.pdf_parser import (
                         parse_pdf_invoice,
                     )
 
-                    metadata, rows = parse_pdf_invoice(input_path)
+                    metadata, rows = parse_pdf_invoice(input_path, diagnostic_sink=context.progress)
 
             elif source_format == "ofd":
                 context.progress.report_progress(20.0, "Extracting OFD invoice data")

@@ -316,11 +316,10 @@ class TestExtractBlockById:
         assert result is not None
         assert "Paragraph with hyphen id" in result
 
-    def test_block_id_with_underscore(self) -> None:
+    def test_block_id_with_underscore_is_not_a_canonical_anchor(self) -> None:
         content = "Paragraph with underscore id. ^my_block_id\n\n# Next"
         result = extract_block_by_id(content, "my_block_id")
-        assert result is not None
-        assert "Paragraph with underscore id" in result
+        assert result is None
 
     def test_standalone_no_preceding_paragraph(self) -> None:
         """Standalone marker with only blank lines above — no paragraph to extract."""

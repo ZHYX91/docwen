@@ -303,6 +303,21 @@ def mark_transaction_committed(
     write_transaction_journal(user_dir, operation, preimages, state=_COMMITTED)
 
 
+def prepare_transaction_rollback(
+    user_dir: Path,
+    operation: str,
+    preimages: Iterable[UserFilePreimage],
+) -> None:
+    """Make rollback authoritative before restoring any before-image.
+
+    A failed commit write may already have replaced the journal with COMMITTED
+    before its directory barrier failed.  Re-publishing PREPARED durably is
+    therefore required even when the commit call raised.  If this call fails,
+    the owner must leave every user file untouched and retain the evidence.
+    """
+    write_transaction_journal(user_dir, operation, preimages, state=_PREPARED)
+
+
 def remove_transaction_journal(user_dir: Path) -> None:
     """Durably remove the authoritative journal, if present."""
     toml_io.durable_unlink(user_dir / CONFIG_JOURNAL_NAME, missing_ok=True)

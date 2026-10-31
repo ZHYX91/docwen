@@ -180,6 +180,10 @@ class TestRuntimeRequestBinding:
             return None
 
         monkeypatch.setattr(controller.config_port, "get", fail_output_settings)
+        window._info_area_vm.set_task_summary(
+            state="success", operation_id="previous-success", total_count=1, completed_count=1
+        )
+        previous_summary = window._info_area_vm.task_summary
         window._workflow.single(
             file_path=str(source),
             target_format="docx",
@@ -190,6 +194,12 @@ class TestRuntimeRequestBinding:
         assert not window._execution.threads
         assert window._info_area_vm.history_rows[-1].message == t("main_window.output_settings_unavailable")
         assert window._info_area_vm.history_rows[-1].message_type == "error"
+        assert window._info_area_vm.status_source == "task"
+        assert window._info_area_vm.notification_text == t("main_window.output_settings_unavailable")
+        assert window._info_area_vm.task_summary == previous_summary
+        window._info_area_vm.clear_transient_message("error:output-policy-config")
+        assert not window._info_area_vm.notification_text
+        assert window._info_area_vm.task_summary.operation_id == "previous-success"
 
     def test_template_registry_failure_is_not_rendered_as_successful_empty_catalog(
         self,

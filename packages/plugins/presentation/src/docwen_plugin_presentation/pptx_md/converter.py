@@ -25,6 +25,7 @@ import uuid
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
+from docwen_core.markdown_utils import encode_markdown_table_cell
 from docwen_core.text.ocr import report_ocr_outcome
 from docwen_plugin_presentation.pptx_md.request_policy import (
     PresentationMarkdownRequestPolicy,
@@ -987,7 +988,7 @@ class PptxToMarkdownConverter:
         lines = [f"### Chart: {display_title}"]
         headers = ["Category", *[name or f"Series {index}" for index, name in enumerate(series_names, 1)]]
         table_lines = [
-            "| " + " | ".join(headers) + " |",
+            "| " + " | ".join(encode_markdown_table_cell(value) for value in headers) + " |",
             "| " + " | ".join("---" for _ in headers) + " |",
         ]
         for category_index, category in enumerate(categories):
@@ -995,7 +996,7 @@ class PptxToMarkdownConverter:
             for series_values in values:
                 value = series_values[category_index] if category_index < len(series_values) else ""
                 row.append("" if value is None else str(value))
-            table_lines.append("| " + " | ".join(row) + " |")
+            table_lines.append("| " + " | ".join(encode_markdown_table_cell(value) for value in row) + " |")
         lines.append("\n".join(table_lines))
 
         try:
@@ -1156,22 +1157,21 @@ class PptxToMarkdownConverter:
         for row in rows:
             row_cells: list[str] = []
             for cell in row.cells:
-                row_cells.append((cell.text or "").replace("\n", " ").strip())
+                row_cells.append(cell.text or "")
             grid.append(row_cells)
 
         header = grid[0]
 
-        def esc(value: str) -> str:
-            return value.replace("|", "\\|")
-
         out_lines: list[str] = []
-        out_lines.append("| " + " | ".join(esc(value) for value in header) + " |")
+        out_lines.append("| " + " | ".join(encode_markdown_table_cell(value) for value in header) + " |")
         out_lines.append("| " + " | ".join("---" for _ in header) + " |")
 
         for row in grid[1:]:
             if len(row) < len(header):
                 row = row + [""] * (len(header) - len(row))
-            out_lines.append("| " + " | ".join(esc(value) for value in row[: len(header)]) + " |")
+            out_lines.append(
+                "| " + " | ".join(encode_markdown_table_cell(value) for value in row[: len(header)]) + " |"
+            )
 
         return "\n".join(out_lines)
 

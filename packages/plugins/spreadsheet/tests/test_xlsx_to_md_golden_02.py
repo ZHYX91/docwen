@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ._markdown_table_oracle import assert_old_workbook_source_values
 from ._xlsx_to_md_golden_support import (
     Any,
     Generator,
@@ -152,8 +153,7 @@ class TestSpreadsheetToMdPipeline:
         assert str(Path(pipeline["ws_root"])) not in content
         assert f"Titel: {sample_xlsx_path.stem}" in content
         assert f"title: {sample_xlsx_path.stem}" not in content
-        for expected in fixture["expected_markdown_semantics"]["contains"]:
-            assert expected in content
+        assert_old_workbook_source_values(content, fixture)
         for heading in fixture["expected_markdown_semantics"]["sheet_headings"]:
             assert heading in content
 

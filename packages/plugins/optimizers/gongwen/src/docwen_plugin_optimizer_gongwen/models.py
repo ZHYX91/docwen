@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,6 +15,15 @@ class AttachmentDocument:
     markdown: str
     paragraph_indices: tuple[int, ...]
     children: tuple[AttachmentDocument, ...] = ()
+    image_paths: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ParagraphAtom:
+    """One source-owned text or math occurrence in paragraph XML order."""
+
+    kind: Literal["text", "inline_math", "block_math"]
+    text: str
 
 
 @dataclass
@@ -35,6 +45,7 @@ class ParagraphFeature:
     has_formula: bool = False
     formula_type: str = ""  # "inline" | "block" | ""
     formula_latex: str = ""  # extracted LaTeX, if any
+    formula_atoms: tuple[ParagraphAtom, ...] = ()
     has_page_break: bool = False
     has_section_break: bool = False
     heading_level: int = 0  # 1-5 if heading detected, 0 otherwise
@@ -90,6 +101,7 @@ class RecognitionResult:
     review_signals: list[str]
     missing_required: list[str]
     validation_finding_count: int
+    preserved_source_indices: dict[int, str] = field(default_factory=dict)
 
 
 @dataclass

@@ -10,12 +10,12 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from typing import Any
 
 from docwen_application.controller import CapabilityUnavailableError
 from docwen_application.conversion_routes import resolve_conversion_route_plan
 from docwen_application.runtime_capability_catalog import RuntimeCapabilityCatalog, RuntimeRoute
+from docwen_cli.batch_execution import execute_batch_requests
 from docwen_cli.capabilities import normalize_target_format, runtime_route_catalog
 from docwen_cli.commands import execution_request
 from docwen_cli.commands.execution_errors import (
@@ -572,7 +572,6 @@ def _execute_batch(
         else:
             files_to_convert.append((index, file_path))
     seen_result_count = 0
-    stop_on_error = not continue_on_error
 
     def _build_request(file_path: str) -> ConversionRequest:
         inspection = _inspection_for(file_path, inspections)
@@ -600,106 +599,29 @@ def _execute_batch(
         )
 
     requests_to_convert = [(result_index, _build_request(file_path)) for result_index, file_path in files_to_convert]
-    reservations: dict[str, Any] = {}
 
-    def _convert_one(request: ConversionRequest) -> Any:
-        try:
-            return controller.execute_single(request)
-        finally:
-            deadline.release(request, reservations[str(request.request_id)])
+    def _on_result(index: int, result: Any) -> None:
+        nonlocal seen_result_count
+        results[index] = result
+        seen_result_count += 1
+        if progress_cb:
+            progress_cb(f"... {seen_result_count}/{len(files)}")
 
-    try:
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            request_iter = iter(requests_to_convert)
-            future_to_index: dict[Any, int] = {}
-            submitted_count = 0
-            stop_triggered = False
+    def _on_submit(count: int) -> None:
+        if progress_cb:
+            progress_cb(f"... {count}/{len(files_to_convert)}")
 
-            def _submit_next() -> bool:
-                nonlocal submitted_count
-                try:
-                    result_index, request = next(request_iter)
-                except StopIteration:
-                    return False
-                submitted_count += 1
-                if progress_cb:
-                    progress_cb(f"... {submitted_count}/{len(files_to_convert)}")
-                reservations[str(request.request_id)] = deadline.register(request)
-                future = executor.submit(_convert_one, request)
-                future_to_index[future] = result_index
-                return True
-
-            while len(future_to_index) < max_workers and _submit_next():
-                pass
-
-            while future_to_index:
-                completed, _pending = wait(tuple(future_to_index), return_when=FIRST_COMPLETED)
-                for future in completed:
-                    idx = future_to_index.pop(future)
-                    try:
-                        result = future.result()
-                    except Exception as exc:
-                        from docwen_core.models.result import (
-                            ConversionErrorInfo,
-                            ConversionMetrics,
-                            ConversionResult,
-                        )
-
-                        result = ConversionResult(
-                            task_id=f"batch-{idx}",
-                            success=False,
-                            error=ConversionErrorInfo(
-                                error_type="conversion_failed",
-                                message=str(exc),
-                            ),
-                            metrics=ConversionMetrics(),
-                        )
-
-                    results[idx] = result
-                    seen_result_count += 1
-
-                    if progress_cb:
-                        progress_cb(f"... {seen_result_count}/{len(files)}")
-
-                    if stop_on_error and not getattr(result, "success", False):
-                        stop_triggered = True
-
-                if not stop_triggered:
-                    while len(future_to_index) < max_workers and _submit_next():
-                        pass
-    except KeyboardInterrupt:
-        if json_mode:
-            from docwen_cli.presenters.json_presenter import JsonPresenter
-
-            p = JsonPresenter(include_timing=include_timing)
-            _add_json_warnings(p, [_inspection_for(path, inspections) for path in files])
-            p.present_error(execution_request.public_command(args), "用户中断", error_code="operation_cancelled")
-        else:
-            print("错误: 用户中断", file=sys.stderr)
-        return int(ExitCode.CANCELLED)
-
-    deadline.finish()
-
-    # Fill in any None slots (cancelled/skipped)
-    for i in range(len(results)):
-        if results[i] is None:
-            from docwen_core.models.result import (
-                ConversionErrorInfo,
-                ConversionMetrics,
-                ConversionResult,
-            )
-
-            results[i] = ConversionResult(
-                task_id=f"batch-{i}",
-                success=False,
-                error=ConversionErrorInfo(
-                    error_type="skipped",
-                    message="Skipped",
-                ),
-                metrics=ConversionMetrics(),
-            )
-
-    results = [timeout_result(result, timed_out=deadline.timed_out) for result in results]
+    batch = execute_batch_requests(
+        controller,
+        requests_to_convert,
+        deadline=deadline,
+        max_workers=max_workers,
+        stop_on_error=not continue_on_error,
+        on_result=_on_result,
+        on_submit=_on_submit,
+    )
+    for index, result in batch.results.items():
+        results[index] = result
 
     if json_mode:
         from docwen_cli.presenters.json_presenter import JsonPresenter
@@ -710,6 +632,8 @@ def _execute_batch(
             results,
             command=execution_request.public_command(args),
             action_name=action,
+            interrupted=batch.interrupted,
+            timed_out=batch.timed_out,
             input_files=presentation_files,
         )
     else:
@@ -724,6 +648,10 @@ def _execute_batch(
     if progress_cb:
         progress_cb("完成")
 
+    if batch.interrupted:
+        return int(ExitCode.CANCELLED)
+    if batch.timed_out:
+        return int(ExitCode.TIMEOUT)
     return _batch_exit_code(results)
 
 

@@ -57,8 +57,7 @@ class MarkdownImagePlan:
         if self.mode == "omit":
             label = image.alt or resources[image.resource_id].suggested_name
             return f"<!-- image omitted: {label} -->"
-        label = image.alt or Path(resources[image.resource_id].suggested_name).stem
-        return format_image_link(label, target, style=self.style)
+        return format_image_link(image.alt, target, style=self.style, raw_resource_path=self.mode != "base64")
 
 
 def resolve_bound_images(context: Any, document: ClipboardDocument) -> dict[str, BoundClipboardImage]:

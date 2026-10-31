@@ -335,19 +335,42 @@ class TestConvertProofreadValidation:
         with pytest.raises(ValueError, match="requires --proofread"):
             validate_execution_options(args)
 
-    def test_convert_proofread_requires_docx_target(self) -> None:
+    def test_convert_proofread_rejects_unsupported_document_target(self) -> None:
         from docwen_cli.commands.execution_options import validate_execution_options
 
         args = _fake_convert_args({"to": "pdf", "proofread": True})
-        with pytest.raises(ValueError, match="only with convert --to docx"):
+        with pytest.raises(ValueError, match="document targets"):
             validate_execution_options(args)
 
-    def test_convert_proofread_rejects_none_check(self) -> None:
-        from docwen_cli.commands.execution_options import validate_execution_options
+    @pytest.mark.parametrize("target", ["docx", "doc", "odt", "rtf", "wps"])
+    @pytest.mark.parametrize("checks", [[], ["typo"], ["none"]])
+    def test_convert_proofread_accepts_document_target_and_explicit_none(self, target, checks) -> None:
+        from docwen_cli.commands.execution_options import build_execution_options, validate_execution_options
+        from docwen_cli.commands.execution_request import project_route_options
+        from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 
-        args = _fake_convert_args({"to": "docx", "proofread": True, "check": ["none"]})
-        with pytest.raises(ValueError, match="cannot be combined"):
-            validate_execution_options(args)
+        args = _fake_convert_args({"to": target, "proofread": True, "check": checks})
+        validate_execution_options(args)
+        projected = project_route_options(
+            build_execution_options(args),
+            route_id=f"convert.markdown.to_{target}",
+            route_options=(),
+            source_format="markdown",
+            target_format=target,
+            action_name="",
+            proofread_requested=True,
+        )
+        expected = (
+            {}
+            if not checks
+            else {
+                "enable_symbol_pairing": False,
+                "enable_symbol_correction": False,
+                "enable_typos_rule": checks == ["typo"],
+                "enable_sensitive_word": False,
+            }
+        )
+        assert projected == {POSTPROCESS_PROOFREAD_OPTION: expected}
 
     def test_convert_proofread_without_check_uses_application_defaults(self) -> None:
         from docwen_cli.commands.execution_options import build_execution_options, validate_execution_options
@@ -429,3 +452,24 @@ class TestBuildConvertOptionsProofread:
         assert opts["enable_sensitive_word"] is True
         assert opts["enable_symbol_pairing"] is False
         assert opts["enable_symbol_correction"] is False
+
+
+@pytest.mark.parametrize("command", [["convert"], ["batch", "convert"]])
+def test_proofread_schema_and_help_share_the_application_targets(capsys, command):
+    import json
+
+    from docwen_application.postprocessing import PROOFREAD_DOCUMENT_TARGETS
+    from docwen_cli.commands.schema_v3 import _resolve_parser
+    from docwen_cli.main import _build_parser, main
+
+    assert main(["schema", *command, "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["data"]["constraints"]["proofread"] == {
+        "source_workflow": "markdown",
+        "target_formats": sorted(PROOFREAD_DOCUMENT_TARGETS),
+    }
+    parser, _ = _resolve_parser(_build_parser(), command)
+    action = next(action for action in parser._actions if action.dest == "proofread")
+    assert action.help is not None
+    assert all(target in action.help for target in ["docx", "doc", "odt", "rtf", "wps"])
+    assert "only with --to docx" not in action.help

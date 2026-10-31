@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.errors import CancellationRequested
-from docwen_core.models.artifact import ArtifactManifest
+from docwen_core.models.artifact import ArtifactManifest, validate_artifact_ownership
 from docwen_core.models.result import (
     ConversionDiagnostic,
     ConversionErrorInfo,
@@ -32,6 +32,7 @@ from docwen_runtime.output.document_node import (
     DocumentNodeLayoutPlan,
     has_markdown_artifacts,
     plan_document_node_layout,
+    plan_single_artifact_layout,
     relocated_markdown_bytes,
 )
 from docwen_runtime.output.node_audit import stage_node_audit
@@ -119,13 +120,24 @@ class OutputFinalizer:
         """Resolve the exact final directory for trusted runtime sidecars."""
         return os.path.abspath(self._resolve_output_dir(policy, input_path))
 
+    @staticmethod
+    def _is_markdown_conversion(input_path: str, identity: ConversionIdentity | None, conversion_output: bool) -> bool:
+        source_format = identity.source_format if identity is not None else Path(input_path).suffix.lstrip(".").lower()
+        return conversion_output and source_format in {"md", "markdown", "txt"}
+
     def _uses_document_node(
         self, policy: OutputPolicy, input_path: str, *, group_outputs: bool, markdown_output: bool
     ) -> bool:
         if not (group_outputs or markdown_output):
             return False
         if policy.output_path:
-            if input_path and self._lock_key(policy.output_path) == self._lock_key(input_path):
+            if (
+                markdown_output
+                and not group_outputs
+                and input_path
+                and Path(input_path).suffix.lower() in {".md", ".markdown", ".txt"}
+                and self._lock_key(policy.output_path) == self._lock_key(input_path)
+            ):
                 return False
             raise ValueError("Grouped conversion output requires an output parent directory, not output_path")
         return True
@@ -138,6 +150,9 @@ class OutputFinalizer:
         group_outputs: bool = False,
         markdown_output: bool = False,
         cancellation: CancellationTokenView | None = None,
+        identity: ConversionIdentity | None = None,
+        conversion_output: bool = True,
+        audit_output: bool = False,
     ) -> None:
         """Exercise the actual publication primitive on private, empty entries.
 
@@ -147,7 +162,14 @@ class OutputFinalizer:
         if not policy.write_artifacts:
             return
         group_outputs = self._uses_document_node(
-            policy, input_path, group_outputs=group_outputs, markdown_output=markdown_output
+            policy,
+            input_path,
+            group_outputs=(
+                group_outputs
+                or policy.group_outputs
+                or (audit_output and self._is_markdown_conversion(input_path, identity, conversion_output))
+            ),
+            markdown_output=markdown_output,
         )
         self._check_cancellation(cancellation)
         directory = self._io_path(self.resolve_output_dir(policy, input_path))
@@ -203,13 +225,26 @@ class OutputFinalizer:
         group_outputs: bool = False,
         identity: ConversionIdentity | None = None,
         audit_document: OutputManifestDocument | None = None,
+        conversion_output: bool = True,
     ) -> ConversionResult:
-        """Finalize a set of artifacts."""
+        """Finalize a set of artifacts, choosing layout from final deliverables."""
+        validate_artifact_ownership(artifacts)
         self._check_cancellation(cancellation)
         output_dir = self._resolve_output_dir(policy, input_path)
         node_plan: DocumentNodeLayoutPlan | None = None
+        markdown_source = self._is_markdown_conversion(input_path, identity, conversion_output)
+        deliverables = [
+            artifact
+            for artifact in artifacts
+            if artifact.kind not in {"manifest", "log"} and artifact.metadata.get("source") != "preconversion"
+        ]
+        grouped = (
+            group_outputs
+            or policy.group_outputs
+            or (markdown_source and (len(deliverables) > 1 or audit_document is not None))
+        )
         if artifacts and self._uses_document_node(
-            policy, input_path, group_outputs=group_outputs, markdown_output=has_markdown_artifacts(artifacts)
+            policy, input_path, group_outputs=grouped, markdown_output=has_markdown_artifacts(deliverables)
         ):
             node_plan = plan_document_node_layout(
                 task_id=task_id,
@@ -219,6 +254,10 @@ class OutputFinalizer:
             )
             artifacts = list(node_plan.artifacts)
         else:
+            if markdown_source and deliverables and not policy.output_path:
+                artifacts = plan_single_artifact_layout(
+                    task_id=task_id, artifacts=artifacts, input_path=input_path, identity=identity
+                )
             artifacts = self._artifacts_for_policy(artifacts, policy)
         lock_paths = self._finalization_lock_paths(output_dir, artifacts)
         with self._finalization_locks(lock_paths, cancellation):
@@ -1025,10 +1064,19 @@ class OutputFinalizer:
         metadata = dict(item.artifact.metadata)
         if skipped:
             metadata.update({"skipped": True, "reason": "file_exists"})
+        logical_path = item.artifact.logical_path
+        suggested_name = item.suggested_name
+        if logical_path is not None and "document_node_schema" not in metadata:
+            # Direct conversion files also expose their actual collision-resolved
+            # name to Machine consumers, not the pre-publication suggestion.
+            logical_path = os.path.basename(destination)
+            suggested_name = logical_path
+            metadata["logical_path"] = logical_path
         return replace(
             item.artifact,
             staging_path=destination,
-            suggested_name=item.suggested_name,
+            suggested_name=suggested_name,
+            logical_path=logical_path,
             metadata=metadata,
         )
 

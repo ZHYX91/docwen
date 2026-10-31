@@ -528,6 +528,7 @@ def render_semantic_reference_text(
     paragraph_element: Any,
     *,
     bookmark_inventory: DocxBookmarkInventory,
+    reference_spans: dict[Any, tuple[Any, str]] | None = None,
 ) -> str | None:
     """Replace supported REF fields with canonical ``@target-id`` tokens."""
 
@@ -539,6 +540,7 @@ def render_semantic_reference_text(
     in_field = False
     in_result = False
     found_reference = False
+    field_start: Any = None
 
     for element in paragraph_element.iter():
         if element.tag == qn("w:fldSimple"):
@@ -550,6 +552,8 @@ def render_semantic_reference_text(
             if replacement is not None:
                 output.append(replacement)
                 found_reference = True
+                if reference_spans is not None:
+                    reference_spans[element] = (element, replacement)
             else:
                 output.extend(text.text or "" for text in element.iter(qn("w:t")))
             continue
@@ -560,6 +564,7 @@ def render_semantic_reference_text(
                 in_result = False
                 field_instruction = []
                 field_result = []
+                field_start = element
             elif in_field and field_type == "separate":
                 in_result = True
             elif in_field and field_type == "end":
@@ -571,6 +576,8 @@ def render_semantic_reference_text(
                 if replacement is not None:
                     output.append(replacement)
                     found_reference = True
+                    if reference_spans is not None and field_start is not None:
+                        reference_spans[field_start] = (element, replacement)
                 else:
                     output.append("".join(field_result))
                 in_field = False

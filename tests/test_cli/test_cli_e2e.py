@@ -662,3 +662,33 @@ def test_cli_merge_images_uses_exact_output_path(tmp_path: Path) -> None:
         assert sum(1 for _ in ImageSequence.Iterator(image)) == 2
     finally:
         image.close()
+
+
+@pytest.mark.pr_gate
+@pytest.mark.parametrize("exact", [False, True])
+def test_cli_markdown_single_docx_publishes_directly_and_accepts_exact_overwrite(tmp_path: Path, exact: bool) -> None:
+    source = tmp_path / "authored.md"
+    original = b"# Authored title\n\nBody to retain.\n"
+    source.write_bytes(original)
+    published = tmp_path / "published"
+    published.mkdir()
+    if exact:
+        chosen = published / "chosen.docx"
+        chosen.write_bytes(b"old document")
+        destination = ["--output", str(chosen), "--overwrite"]
+    else:
+        destination = ["--output-dir", str(published)]
+    converted = _run("convert", str(source), "--to", "docx", *destination, "--json")
+    assert converted.returncode == 0, converted.stderr
+    payload = _payload(converted)
+    output = Path(payload["data"]["output"])
+    assert output.parent == published.resolve()
+    assert output.is_file()
+    assert list(published.iterdir()) == [output]
+    if exact:
+        assert output.name == "chosen.docx"
+    else:
+        assert output.name.startswith("authored_") and output.name.endswith("_fromMd.docx")
+    text = "\n".join(paragraph.text for paragraph in Document(str(output)).paragraphs)
+    assert "Authored title" in text and "Body to retain." in text
+    assert source.read_bytes() == original

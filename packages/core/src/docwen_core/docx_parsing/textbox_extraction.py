@@ -1,7 +1,7 @@
 """Extract textbox paragraphs from DOCX body, headers, and footers.
 
 Handles DrawingML, VML, and ``mc:AlternateContent`` Choice/Fallback
-structures with element-level and content-level deduplication.
+structures by XML occurrence, selecting one alternate representation.
 """
 
 from __future__ import annotations
@@ -23,14 +23,6 @@ class ExtractedParagraph:
     anchor_index: int | None  # element order anchor in body
     source: str  # textbox, header_textbox, footer_textbox
     part_name: str  # document, headerN, footerN
-
-
-def _dedupe_key(text: str, anchor_index: int | None, source: str) -> tuple[str, int, str]:
-    return (
-        text.strip(),
-        anchor_index if anchor_index is not None else -1,
-        source,
-    )
 
 
 def extract_textbox_paragraphs(doc) -> list[ExtractedParagraph]:
@@ -67,15 +59,7 @@ def extract_textbox_paragraphs(doc) -> list[ExtractedParagraph]:
             _extract_from_part(body_elem, ftr_part, anchor_offset=None, source="footer_textbox", part_name=f"footer{i}")
         )
 
-    # Re-deduplicate across parts
-    seen_keys: set[tuple[str, int, str]] = set()
-    unique: list[ExtractedParagraph] = []
-    for ep in results:
-        key = _dedupe_key(ep.text, ep.anchor_index, ep.source)
-        if key not in seen_keys:
-            seen_keys.add(key)
-            unique.append(ep)
-    return unique
+    return results
 
 
 def _extract_from_part(
@@ -93,92 +77,30 @@ def _extract_from_part(
     # textboxes, after which CPython may reuse the id for a different paragraph
     # and silently discard valid content.
     processed_elements: set[object] = set()
-    processed_text_keys: set[tuple[int | None, str]] = set()
 
-    # ── 1. mc:AlternateContent/mc:Choice//wps:txbx ────────────────
-    for alt in body_elem.findall(f".//{{{NS_MC}}}AlternateContent", NSMAP_WPV):
-        choice_text_found = False
-        for choice in alt.findall(f"{{{NS_MC}}}Choice", NSMAP_WPV):
-            for txbx in choice.findall(f".//{{{NS_WPS}}}txbx", NSMAP_WPV):
-                anchor_index = _resolve_anchor_index(body_elem, txbx, anchor_offset)
-                extracted = _extract_from_txbx(
-                    txbx,
-                    part,
-                    anchor_index,
-                    source,
-                    part_name,
-                    processed_elements,
-                    processed_text_keys,
-                )
-                results.extend(extracted)
-                if extracted:
-                    choice_text_found = True
+    def walk(element) -> list[ExtractedParagraph]:
+        if element.tag == f"{{{NS_MC}}}AlternateContent":
+            # Choice/Fallback are representations of one shape, not separate
+            # authored occurrences. Select the first supported nonempty Choice;
+            # only use Fallback when no Choice provides textbox paragraphs.
+            for choice in element.findall(f"{{{NS_MC}}}Choice", NSMAP_WPV):
+                selected = walk(choice)
+                if selected:
+                    return selected
+            fallback = element.find(f"{{{NS_MC}}}Fallback", NSMAP_WPV)
+            return walk(fallback) if fallback is not None else []
+        if element.tag in {f"{{{NS_WPS}}}txbx", f"{{{NS_V}}}textbox"}:
+            return _extract_from_txbx(
+                element,
+                part,
+                _resolve_anchor_index(body_elem, element, anchor_offset),
+                source,
+                part_name,
+                processed_elements,
+            )
+        return [paragraph for child in element for paragraph in walk(child)]
 
-        if not choice_text_found:
-            # Fallback: only process when Choice produced no text
-            for fallback in alt.findall(f"{{{NS_MC}}}Fallback", NSMAP_WPV):
-                for vtb in fallback.findall(f".//{{{NS_V}}}textbox", NSMAP_WPV):
-                    anchor_index = _resolve_anchor_index(body_elem, vtb, anchor_offset)
-                    extracted = _extract_from_v_textbox(
-                        vtb,
-                        part,
-                        anchor_index,
-                        source,
-                        part_name,
-                        processed_elements,
-                        processed_text_keys,
-                    )
-                    results.extend(extracted)
-
-    # ── 2. standalone wps:txbx (not inside AlternateContent) ──────
-    for txbx in body_elem.findall(f".//{{{NS_WPS}}}txbx", NSMAP_WPV):
-        # Skip if inside mc:AlternateContent (already handled above)
-        parent = txbx.getparent() if hasattr(txbx, "getparent") else None
-        in_alt = False
-        while parent is not None:
-            ptag = parent.tag.split("}")[-1] if "}" in (parent.tag or "") else (parent.tag or "")
-            if ptag == "AlternateContent":
-                in_alt = True
-                break
-            parent = parent.getparent() if hasattr(parent, "getparent") else None
-        if in_alt:
-            continue
-        anchor_index = _resolve_anchor_index(body_elem, txbx, anchor_offset)
-        extracted = _extract_from_txbx(
-            txbx,
-            part,
-            anchor_index,
-            source,
-            part_name,
-            processed_elements,
-            processed_text_keys,
-        )
-        results.extend(extracted)
-
-    # ── 3. standalone v:textbox (not inside AlternateContent) ─────
-    for vtb in body_elem.findall(f".//{{{NS_V}}}textbox", NSMAP_WPV):
-        parent = vtb.getparent() if hasattr(vtb, "getparent") else None
-        in_alt = False
-        while parent is not None:
-            ptag = parent.tag.split("}")[-1] if "}" in (parent.tag or "") else (parent.tag or "")
-            if ptag == "AlternateContent":
-                in_alt = True
-                break
-            parent = parent.getparent() if hasattr(parent, "getparent") else None
-        if in_alt:
-            continue
-        anchor_index = _resolve_anchor_index(body_elem, vtb, anchor_offset)
-        extracted = _extract_from_v_textbox(
-            vtb,
-            part,
-            anchor_index,
-            source,
-            part_name,
-            processed_elements,
-            processed_text_keys,
-        )
-        results.extend(extracted)
-
+    results.extend(walk(body_elem))
     return results
 
 
@@ -205,68 +127,23 @@ def _extract_from_txbx(
     source,
     part_name,
     processed_elements,
-    processed_text_keys,
 ) -> list[ExtractedParagraph]:
-    """Extract paragraphs from a DrawingML wps:txbx element."""
+    """Extract each real paragraph occurrence from a DrawingML or VML box."""
     results: list[ExtractedParagraph] = []
     for para_elem in txbx.findall(f".//{{{NS_W}}}p", NSMAP_WPV):
         if para_elem in processed_elements:
             continue
         processed_elements.add(para_elem)
-
         text = _extract_para_text(para_elem, part)
-        if not text:
-            continue
-
-        key = (anchor_offset, text.strip())
-        if key in processed_text_keys:
-            continue
-        processed_text_keys.add(key)
-
-        results.append(
-            ExtractedParagraph(
-                text=text,
-                anchor_index=anchor_offset,
-                source=source,
-                part_name=part_name,
+        if text:
+            results.append(
+                ExtractedParagraph(
+                    text=text,
+                    anchor_index=anchor_offset,
+                    source=source,
+                    part_name=part_name,
+                )
             )
-        )
-    return results
-
-
-def _extract_from_v_textbox(
-    vtb,
-    part,
-    anchor_offset,
-    source,
-    part_name,
-    processed_elements,
-    processed_text_keys,
-) -> list[ExtractedParagraph]:
-    """Extract paragraphs from a VML v:textbox element."""
-    results: list[ExtractedParagraph] = []
-    for para_elem in vtb.findall(f".//{{{NS_W}}}p", NSMAP_WPV):
-        if para_elem in processed_elements:
-            continue
-        processed_elements.add(para_elem)
-
-        text = _extract_para_text(para_elem, part)
-        if not text:
-            continue
-
-        key = (anchor_offset, text.strip())
-        if key in processed_text_keys:
-            continue
-        processed_text_keys.add(key)
-
-        results.append(
-            ExtractedParagraph(
-                text=text,
-                anchor_index=anchor_offset,
-                source=source,
-                part_name=part_name,
-            )
-        )
     return results
 
 

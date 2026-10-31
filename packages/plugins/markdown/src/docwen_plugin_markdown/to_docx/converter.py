@@ -24,7 +24,7 @@ from docwen_core.docx_semantics_v3 import (
     DocxSemanticsV3Error,
     DocxSemanticsV3Session,
 )
-from docwen_core.errors import CancellationRequested
+from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import (
     DeclaredResourceResolver,
@@ -115,6 +115,7 @@ from docwen_plugin_markdown.to_docx.notes import (
     prepare_note_context_for_document,
     write_notes_to_docx,
 )
+from docwen_plugin_markdown.to_docx.numbering_comments import NumberingProvenance, annotate_numbering_prefixes
 from docwen_plugin_markdown.yaml_links import YamlLinkProjection
 from docwen_plugin_markdown.yaml_processor import (
     TITLE_PLACEHOLDER_ALIASES,
@@ -283,31 +284,6 @@ def _normalize_table_style_key(builtin_key: str) -> str:
     return "three_line_table"
 
 
-def _markdown_image_alt_texts(markdown: str) -> list[str]:
-    """Capture authored image alt text before link materialization."""
-
-    return [
-        "".join(str(child.get("raw", "") or child.get("text", "")) for child in image.get("children", []))
-        for image in _iter_ast_images(parse_markdown_text(markdown, auto_link_bare_url=False))
-    ]
-
-
-def _iter_ast_images(nodes: list[dict[str, Any]]):
-    for node in nodes:
-        if node.get("type") == "image":
-            yield node
-        children = node.get("children")
-        if isinstance(children, list):
-            yield from _iter_ast_images(children)
-
-
-def _restore_markdown_image_alt_texts(ast: list[dict[str, Any]], alt_texts: list[str]) -> None:
-    """Restore alts lost by path-only image placeholder materialization."""
-
-    for image, alt_text in zip(_iter_ast_images(ast), alt_texts, strict=False):
-        image["children"] = [{"type": "text", "raw": alt_text}]
-
-
 def _resolve_quote_style_levels(config: object) -> dict[int, int]:
     """Resolve configured ``quote_N`` style keys to semantic levels.
 
@@ -432,21 +408,23 @@ def _note_failure(
     error: NoteWritebackError,
     *,
     output_path: str | None = None,
+    numbering_provenance: NumberingProvenance | None = None,
 ) -> ConversionResult:
     if output_path is not None:
         Path(output_path).unlink(missing_ok=True)
+    message = numbering_provenance.strip_markers(str(error)) if numbering_provenance is not None else str(error)
     return ConversionResult(
         task_id=task_id,
         success=False,
         error=ConversionErrorInfo(
             error_type=error.error_type,
-            message=str(error),
+            message=message,
             diagnostic_code=error.diagnostic_code,
         ),
         diagnostics=[
             ConversionDiagnostic(
                 level="error",
-                message=str(error),
+                message=message,
                 code=error.diagnostic_code,
             )
         ],
@@ -680,6 +658,15 @@ class MdToDocxConverter:
             scheme_config: dict[str, dict[str, str]] | None = None
             supported_heading_levels: set[int] | None = None
 
+            numbering_text = bool(_config_value(context.config, "template_fill.gongwen_numbering_text", True))
+            numbering_comments = numbering_text and bool(
+                _config_value(context.config, "template_fill.gongwen_numbering_comments", True)
+            )
+            if numbering_text:
+                render_mode = "text"
+            numbering_provenance = NumberingProvenance(content) if numbering_text else None
+            added_prefixes: list[str] = []
+            unanchored_number_comments = 0
             if add_num and render_body:
                 scheme = str(
                     options.get(
@@ -779,20 +766,33 @@ class MdToDocxConverter:
 
             if remove_num and render_body:
                 progress.report_progress(10.0, "Removing heading numbering")
-                content = remove_md_numbering(content, rules=cleanup_rules)
+                content = remove_md_numbering(
+                    content,
+                    rules=cleanup_rules,
+                    extended_headings=extensions.extended_headings,
+                    structural_tables=extensions.structural_tables,
+                )
                 cancellable.check()
 
             if add_num and render_body:
                 if render_mode == "word_native":
                     # Word adds the resolved scheme; source text remains clean.
                     if not remove_num:
-                        content = remove_md_numbering(content, rules=cleanup_rules)
+                        content = remove_md_numbering(
+                            content,
+                            rules=cleanup_rules,
+                            extended_headings=extensions.extended_headings,
+                            structural_tables=extensions.structural_tables,
+                        )
                 else:
                     try:
                         content = add_md_numbering(
                             content,
                             scheme=scheme,
                             registry=context.numbering_registry,
+                            extended_headings=extensions.extended_headings,
+                            structural_tables=extensions.structural_tables,
+                            prefix_marker=numbering_provenance.mark if numbering_provenance is not None else None,
                         )
                     except NumberingSchemeResolutionError as exc:
                         return _numbering_resolution_failure(task_id, t_start, exc)
@@ -800,7 +800,9 @@ class MdToDocxConverter:
             # ── Stage 1: YAML extraction ───────────────────────────────
             progress.report_progress(15.0, "Extracting YAML front matter")
             cancellable.check()
-            yaml_dict, md_body = extract_yaml_front_matter(content)
+            # Consume the complete document's signature only in this render
+            # projection. A leading U+FEFF after YAML is authored body text.
+            yaml_dict, md_body = extract_yaml_front_matter(content.removeprefix("\ufeff"))
             cancellable.check()
             link_config = _request_link_config(context.config)
 
@@ -810,7 +812,6 @@ class MdToDocxConverter:
             cleaned_ast = []
             note_ctx = NoteContext()
             if render_body:
-                source_image_alt_texts = _markdown_image_alt_texts(md_body)
                 cancellable.check()
 
                 # Numbering may have changed the full shielded source. Use the
@@ -832,6 +833,8 @@ class MdToDocxConverter:
                     target_format="docx",
                     temp_dir=str(workspace.staging_dir),
                     image_scope=image_scope,
+                    extended_headings=extensions.extended_headings,
+                    structural_tables=extensions.structural_tables,
                     protect_source_comments=True,
                     cancellation_check=cancellable.check,
                     declared_image=(
@@ -845,6 +848,8 @@ class MdToDocxConverter:
                 md_body = materialize_image_placeholders(
                     md_body,
                     image_scope=image_scope,
+                    extended_headings=extensions.extended_headings,
+                    structural_tables=extensions.structural_tables,
                 )
 
                 # 2d. Validate the cross-project footnote/endnote contract and
@@ -854,7 +859,7 @@ class MdToDocxConverter:
                     cancellable.check()
                     md_body = normalize_note_syntax(md_body, typed_endnotes=extensions.typed_endnotes)
                 except NoteWritebackError as exc:
-                    return _note_failure(task_id, t_start, exc)
+                    return _note_failure(task_id, t_start, exc, numbering_provenance=numbering_provenance)
 
                 # 2e. Detect heading merge boundaries
                 heading_merge_mode = _option_or_config(
@@ -868,9 +873,22 @@ class MdToDocxConverter:
                 # 2g. Parse with extended mistune
                 progress.report_progress(30.0, "Parsing Markdown")
                 cancellable.check()
-                raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)
+                if numbering_provenance is not None:
+                    md_body, added_prefixes, unanchored_number_comments = numbering_provenance.prepare_source(
+                        md_body,
+                        extended_headings=extensions.extended_headings,
+                        structural_tables=extensions.structural_tables,
+                    )
+                    if not numbering_comments:
+                        unanchored_number_comments = 0
+                raw_ast = parse_markdown_text(
+                    md_body, auto_link_bare_url=False, extensions=extensions, consume_initial_bom=False
+                )
+                if added_prefixes:
+                    unanchored_number_comments += annotate_numbering_prefixes(
+                        raw_ast, added_prefixes, comments=numbering_comments, text_numbering=numbering_text
+                    )
                 cancellable.check()
-                _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
                 try:
                     raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
                 except RuntimeSemanticsV3InvariantError as exc:
@@ -991,7 +1009,8 @@ class MdToDocxConverter:
             placeholder_para = find_body_placeholder(doc)
             render_body = placeholder_para is not None
             try:
-                prepare_note_context_for_document(doc, note_ctx)
+                if render_body:
+                    prepare_note_context_for_document(doc, note_ctx)
             except NoteWritebackError as exc:
                 return _note_failure(task_id, t_start, exc)
             placeholder_map = scan_placeholders(doc)
@@ -1333,6 +1352,17 @@ class MdToDocxConverter:
                 ConversionDiagnostic(level="warning", message=message, code=code)
                 for code, message in (renderer.warnings if renderer is not None else ())
             ]
+            if unanchored_number_comments:
+                diagnostics.append(
+                    ConversionDiagnostic(
+                        level="warning",
+                        code="MD2DOCX-NUMBERING-COMMENTS-UNANCHORED",
+                        message=(
+                            "Some added heading numbers could not be isolated as text in this scheme. "
+                            "Their review comments were skipped; the heading content was preserved."
+                        ),
+                    )
+                )
             if approximate_warning:
                 diagnostics.insert(
                     0,
@@ -1376,7 +1406,7 @@ class MdToDocxConverter:
             workspace.add_artifact(artifact)
             return result
 
-        except CancellationRequested:
+        except (CancellationRequested, ExternalProcessCleanupUnconfirmed):
             pending_output = locals().get("output_path")
             if isinstance(pending_output, str):
                 Path(pending_output).unlink(missing_ok=True)
@@ -1387,6 +1417,9 @@ class MdToDocxConverter:
                 Path(pending_output).unlink(missing_ok=True)
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
             error_text = conversion_error_text(context.request, exc)
+            provenance = locals().get("numbering_provenance")
+            if isinstance(provenance, NumberingProvenance):
+                error_text = provenance.strip_markers(error_text)
             diagnostic_code = exc.diagnostic_code if isinstance(exc, GongwenFieldPlacementError) else "MD2DOCX-ERROR"
             logger.error(f"MD→DOCX failed: {error_text}")
             return ConversionResult(
