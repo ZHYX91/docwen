@@ -18,6 +18,7 @@ import os
 import re
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, Any
@@ -1285,6 +1286,7 @@ class DocxToMarkdownConverter:
                 para if para is not None else para_element,
                 preserve_formatting=False,
                 style_detector_config=style_detector_config,
+                escape_literal_text=False,
                 reference_spans=self._paragraph_reference_spans(para_element),
             )
             paragraph_text = semantic_reference_text.strip()
@@ -1390,6 +1392,16 @@ class DocxToMarkdownConverter:
                     )
                 )
 
+        def _append_code_images() -> None:
+            references = self._render_inline_images(para_element)
+            if not references:
+                return
+            if code_block_acc is not None and code_block_acc.in_code_block:
+                code_markdown = code_block_acc.finalize()
+                if code_markdown:
+                    lines.extend((code_markdown, ""))
+            lines.extend((references, ""))
+
         def _finish_code_at_section_break() -> None:
             if not has_section_break or not self._section_break_separator:
                 return
@@ -1403,6 +1415,7 @@ class DocxToMarkdownConverter:
         # 3a. Code block (style-based)
         if style_type == "code_block":
             _accumulate_code_paragraph()
+            _append_code_images()
             _finish_code_at_section_break()
             return lines, stats
 
@@ -1414,6 +1427,7 @@ class DocxToMarkdownConverter:
             word_enabled=effective_style_config.word_shading_enabled,
         ):
             _accumulate_code_paragraph()
+            _append_code_images()
             _finish_code_at_section_break()
             return lines, stats
 
@@ -1426,6 +1440,7 @@ class DocxToMarkdownConverter:
             )
             if run_style_type == "code_block":
                 _accumulate_code_paragraph()
+                _append_code_images()
                 _finish_code_at_section_break()
                 return lines, stats
             if run_style_type == "quote":
@@ -1753,21 +1768,48 @@ class DocxToMarkdownConverter:
                 if remove_numbering:
                     from docwen_core.text.heading_numbering import strip_heading_prefix
 
-                    numbering, plain_without_numbering = strip_heading_prefix(
+                    numbering, _plain_without_numbering = strip_heading_prefix(
                         text,
                         rules=heading_cleanup_rules,
                     )
                     if numbering:
-                        marker_index = display_text.find(numbering)
-                        if marker_index >= 0:
-                            display_text = display_text[:marker_index] + display_text[marker_index + len(numbering) :]
+                        start = visible_paragraph_text.find(numbering)
+                        if start < 0:
+                            raise ValueError("heading cleanup prefix is outside the visible source text")
+                        end = start + len(numbering)
+                        cursor = 0
+
+                        def _remove_source_prefix(fragment: str) -> str:
+                            nonlocal cursor
+                            offset = cursor
+                            cursor += len(fragment)
+                            lo = max(0, start - offset)
+                            hi = min(len(fragment), end - offset)
+                            return fragment[:lo] + fragment[hi:] if lo < hi else fragment
+
+                        if heading_parts is not None and para is not None:
+                            heading_parts = self._render_page_break_parts(
+                                para,
+                                preserve_formatting=self._preserve_heading_formatting,
+                                style_detector_config=style_detector_config,
+                                recover_semantic_references=True,
+                                text_transform=_remove_source_prefix,
+                            )
+                            heading_text_index = next(
+                                (index for index, (kind, _part) in enumerate(heading_parts) if kind == "text"),
+                                None,
+                            )
+                            display_text = (
+                                heading_parts[heading_text_index][1] if heading_text_index is not None else ""
+                            )
                         else:
-                            display_text = plain_without_numbering
-                    else:
-                        _, display_text = strip_heading_prefix(
-                            display_text,
-                            rules=heading_cleanup_rules,
-                        )
+                            display_text = self._build_paragraph_text_with_formulas(
+                                para_element,
+                                para,
+                                preserve_formatting=self._preserve_heading_formatting,
+                                style_detector_config=style_detector_config,
+                                text_transform=_remove_source_prefix,
+                            )
 
                 # Add new numbering after potential removal on the isolated
                 # historical route only.
@@ -1985,6 +2027,7 @@ class DocxToMarkdownConverter:
         style_detector_config: Any = None,
         line_break_text: str = "\n",
         recover_semantic_references: bool = False,
+        text_transform: Callable[[str], str] | None = None,
     ) -> list[tuple[str, str]]:
         """Render page-separated paragraph parts without losing rich content."""
         from docwen_plugin_document.shared.markdown_runs import (
@@ -2009,6 +2052,7 @@ class DocxToMarkdownConverter:
             math_renderer=_render_formula,
             image_renderer=self._render_inline_images,
             line_break_text=line_break_text,
+            text_transform=text_transform,
             reference_spans=(self._paragraph_reference_spans(para._p) if recover_semantic_references else None),
             literal_text=literal_text,
         )
@@ -2102,6 +2146,7 @@ class DocxToMarkdownConverter:
         *,
         preserve_formatting: bool = True,
         style_detector_config: Any = None,
+        text_transform: Callable[[str], str] | None = None,
     ) -> str:
         """Render formulas and surrounding text through the shared run walker."""
         from docwen_plugin_document.shared.markdown_runs import render_paragraph_runs
@@ -2128,6 +2173,7 @@ class DocxToMarkdownConverter:
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
             math_renderer=render_formula,
+            text_transform=text_transform,
             image_renderer=self._render_inline_images,
             reference_spans=self._paragraph_reference_spans(para_element),
         )
@@ -2164,6 +2210,7 @@ class DocxToMarkdownConverter:
         reference_spans: dict[Any, tuple[Any, str]] | None = None,
         literal_text: bool = False,
         escape_literal_text: bool = True,
+        text_transform: Callable[[str], str] | None = None,
     ) -> str:
         """Extract text with inline formatting markers.
 
@@ -2181,6 +2228,7 @@ class DocxToMarkdownConverter:
             reference_spans=reference_spans,
             literal_text=literal_text,
             escape_literal_text=escape_literal_text,
+            text_transform=text_transform,
             image_renderer=self._render_inline_images,
         )
 

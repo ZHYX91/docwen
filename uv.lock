@@ -265,7 +265,7 @@ wheels = [
 
 [[package]]
 name = "docwen"
-version = "0.21.1"
+version = "0.21.2"
 source = { editable = "." }
 dependencies = [
     { name = "docwen-bundle" },
@@ -381,7 +381,7 @@ provides-extras = ["dev", "lint", "test"]
 
 [[package]]
 name = "docwen-application"
-version = "0.21.1"
+version = "0.21.2"
 source = { editable = "packages/application" }
 dependencies = [
     { name = "docwen-core" },
@@ -392,7 +392,7 @@ requires-dist = [{ name = "docwen-core", editable = "packages/core" }]
 
 [[package]]
 name = "docwen-bundle"
-version = "0.21.1"
+version = "0.21.2"
 source = { editable = "packages/bundle" }
 dependencies = [
     { name = "docwen-application" },
@@ -435,7 +435,7 @@ requires-dist = [
 
 [[package]]
 name = "docwen-cli"
-version = "0.21.1"
+version = "0.21.2"
 source = { editable = "packages/apps/cli" }
 dependencies = [
     { name = "docwen-application" },
@@ -454,7 +454,7 @@ requires-dist = [
 
 [[package]]
 name = "docwen-core"
-version = "0.21.1"
+version = "0.21.2"
 source = { editable = "packages/core" }
 dependencies = [
     { name = "pillow" },
@@ -471,7 +471,7 @@ requires-dist = [
 
 [[package]]
 name = "docwen-gui"
-version = "0.21.1"
+version = "0.21.2"
 source = { editable = "packages/apps/gui" }
 dependencies = [
     { name = "docwen-application" },
@@ -692,7 +692,7 @@ requires-dist = [
 
 [[package]]
 name = "docwen-runtime"
-version = "0.21.1"
+version = "0.21.2"
 source = { editable = "packages/runtime" }
 dependencies = [
     { name = "docwen-core" },

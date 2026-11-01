@@ -88,6 +88,11 @@ def _append_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, s
     parts.append(_RenderedRunPart(raw_text, wrappers))
 
 
+def append_literal_run_text(parts: list[str], raw_text: str) -> None:
+    """Join plain run fragments before encoding their possible Markdown syntax."""
+    _append_wrapped(parts, raw_text, [])
+
+
 def _longest_backtick_run(text: str) -> int:
     longest = 0
     current = 0
@@ -420,6 +425,7 @@ def _render_paragraph_run_segments(
     reference_spans: dict[Any, tuple[Any, str]] | None = None,
     literal_text: bool = False,
     escape_literal_text: bool = True,
+    text_transform: Callable[[str], str] | None = None,
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
@@ -435,6 +441,8 @@ def _render_paragraph_run_segments(
             _parts().append(text)
 
     def _handle_break(child: Any) -> None:
+        if text_transform is not None:
+            text_transform("\n")  # advance source coordinates; native breaks remain structural
         break_type = child.get(f"{{{NS_W}}}type")
         if split_page_breaks and break_type == "page":
             segments.append([])
@@ -542,6 +550,10 @@ def _render_paragraph_run_segments(
                         break
 
     def _append_run_text(run: Any, text: str) -> None:
+        if text_transform is not None:
+            text = text_transform(text)
+        if not text:
+            return
         w_ns = NS_W
         if literal_text:
             _append(text)
@@ -583,7 +595,7 @@ def _render_paragraph_run_segments(
             if not escape_literal_text:
                 _append(text)
                 return
-            _append_wrapped(_parts(), text, [])
+            append_literal_run_text(_parts(), text)
             return
 
         append_formatted_run_text(
@@ -624,7 +636,7 @@ def _render_paragraph_run_segments(
                 _append(image)
             elif tag == "tab":
                 _flush_text()
-                _parts().append("\t")
+                _parts().append(text_transform("\t") if text_transform is not None else "\t")
             elif tag == "noBreakHyphen":
                 text_parts.append("\u2011")
             elif tag == "softHyphen":
@@ -661,6 +673,7 @@ def render_paragraph_runs(
     reference_spans: dict[Any, tuple[Any, str]] | None = None,
     literal_text: bool = False,
     escape_literal_text: bool = True,
+    text_transform: Callable[[str], str] | None = None,
 ) -> str:
     """Render paragraph XML children in order, producing Markdown text.
 
@@ -690,6 +703,7 @@ def render_paragraph_runs(
         reference_spans=reference_spans,
         literal_text=literal_text,
         escape_literal_text=escape_literal_text,
+        text_transform=text_transform,
     )[0]
 
 
@@ -706,6 +720,7 @@ def render_paragraph_runs_split_on_page_breaks(
     reference_spans: dict[Any, tuple[Any, str]] | None = None,
     literal_text: bool = False,
     escape_literal_text: bool = True,
+    text_transform: Callable[[str], str] | None = None,
 ) -> list[str]:
     """Render rich Markdown segments separated at accepted page breaks.
 
@@ -728,4 +743,5 @@ def render_paragraph_runs_split_on_page_breaks(
         reference_spans=reference_spans,
         literal_text=literal_text,
         escape_literal_text=escape_literal_text,
+        text_transform=text_transform,
     )

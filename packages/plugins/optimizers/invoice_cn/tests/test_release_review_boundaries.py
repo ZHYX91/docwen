@@ -52,3 +52,28 @@ def test_release_review_invoice_public_source_title(
     assert metadata["标题"] == Path(public_name).stem
     assert metadata["aliases"] == [Path(public_name).stem]
     assert "input-0000" not in text
+
+
+@pytest.mark.parametrize(
+    "source", ["$x^2$", "Price $5 + $6", "%%\nhidden literal\n%%", "@cite-one", "Figure: ordinary prose"]
+)
+def test_release_review_literal_output_does_not_activate_docwen_dialect(source: str) -> None:
+    from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
+    from docwen_plugin_markdown.number_suite_direct_semantics import analyze_markdown_semantics_v3
+
+    source = source.replace("\n", " ")
+    markdown = _render_markdown_table(headers=["Name"], rows=[{"Name": source}])
+    tokens = parse_markdown_text(markdown)
+
+    def flatten(nodes):
+        for node in nodes:
+            yield node
+            yield from flatten(node.get("children", []))
+
+    all_nodes = list(flatten(tokens))
+    assert not {"inline_math", "block_math", "comment"}.intersection(node.get("type") for node in all_nodes)
+    visible = "".join(node.get("raw", "") for node in all_nodes if node.get("type") == "text")
+    assert source.replace("\n", "") in visible.replace("\n", "")
+    semantic = analyze_markdown_semantics_v3(markdown, input_id="literal.md", consumer_profile="number_suite_direct")
+    assert not semantic.projection["citations"]
+    assert not semantic.projection["targets"]

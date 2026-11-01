@@ -5,6 +5,21 @@
 
 ## Unreleased / 未发布
 
+## 0.21.2
+
+- Preserve the XML order of prose and embedded images in ordinary DOCX paragraphs and structured document controls, with unchanged resource ownership and OCR policy. Keep images reachable when a Word code paragraph is flattened to Markdown code plus adjacent resources.
+- 普通 DOCX 段落及内容控件按原生 XML 顺序保留图文，继续遵守资源归属和 OCR 策略；代码段中的图片作为相邻资源保留，不再丢失引用。
+- Preserve literal Markdown characters in DOCX prose, heading cleanup, unformatted note definitions and invoice detail cells, while keeping real formatting, generated math and authenticated references.
+- DOCX 正文、标题去编号、关闭格式的注释及发票明细保留字面 Markdown 字符，真实格式、生成公式及认证引用继续保留。
+- Accept correctly typed ODS cached strings containing `#REF!`, while rejecting mismatched values, true error cells, formulas and residual external links in flattened external-cell output.
+- ODS 外链扁平化接受类型和值正确的 `#REF!` 字符串，继续拒绝错值、真实错误、公式和残余外部链接。
+- Use the complete public source name for invoice and multi-note ENEX titles and aliases, instead of staged input names or shortened output filenames.
+- 发票及多笔记 ENEX 的标题和别名使用完整公开来源名，不再采用中间输入名或缩短后的输出文件名。
+- Validate ordinary-anchor ownership with an interval sweep while retaining strict nesting, duplicate-identity and missing-parent checks.
+- 普通锚点归属改用区间扫描校验，继续严格检查嵌套、重复身份及缺失父级。
+- Pin compatible macOS Qt bindings and retain the macOS 14 minimum-system package gate.
+- 固定兼容的 macOS Qt 绑定，保留 macOS 14 最低系统打包门禁。
+
 - Publish a single Markdown-to-document/spreadsheet result directly; keep grouped directories for multiple files or explicit audit exports, and document directories for Markdown outputs.
 - Markdown 转文档／表格的单文件直接输出；多文件或显式审计导出保留结果目录，生成 Markdown 仍使用文档目录。
 - Keep Gongwen attachment images and shared resources inside their owning attachment directory, with matching portable links and Bundle ownership.

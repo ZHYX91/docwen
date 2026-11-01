@@ -3,7 +3,7 @@
   "manifestId": "docwen-windows-production",
   "product": {
     "name": "DocWen",
-    "version": "0.21.1",
+    "version": "0.21.2",
     "stableSemverOnly": true,
     "cliJsonProtocolVersion": 3,
     "releaseTagFormat": "{version}"
@@ -244,7 +244,7 @@
     },
     "lock": {
       "path": "uv.lock",
-      "sha256": "c97c9800e00c86e142150ecefdcb453e0adce354b7f769f3db58fd49788b08fb"
+      "sha256": "520fc3569c0cda4dc1a5fd04e6bccf7fbf2d9ea83453ca6919e787a29ef23107"
     },
     "pyinstallerVersion": "6.16.0"
   },
@@ -275,10 +275,10 @@
   },
   "releaseAssetAllowlist": [
     "DocWen-windows-x64.zip",
-    "DocWen-0.21.1-linux-x64.tar.gz",
-    "DocWenCLI-0.21.1-linux-x64.tar.gz",
-    "DocWen-0.21.1-macos-arm64.tar.gz",
-    "DocWenCLI-0.21.1-macos-arm64.tar.gz",
+    "DocWen-0.21.2-linux-x64.tar.gz",
+    "DocWenCLI-0.21.2-linux-x64.tar.gz",
+    "DocWen-0.21.2-macos-arm64.tar.gz",
+    "DocWenCLI-0.21.2-macos-arm64.tar.gz",
     "SHA256SUMS.txt"
   ]
 }

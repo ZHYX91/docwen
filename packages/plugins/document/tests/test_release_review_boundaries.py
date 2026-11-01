@@ -141,3 +141,77 @@ def test_release_review_unformatted_heading_is_literal() -> None:
     children = tokens[1].children
     assert children is not None
     assert children[0].content == "*literal* <br>"
+
+
+@pytest.mark.parametrize("styled", [False, True])
+@pytest.mark.parametrize("split_prefix", [False, True])
+def test_release_review_heading_cleanup_acts_before_literal_encoding(styled: bool, split_prefix: bool) -> None:
+    from docwen_core.text.heading_numbering import compile_clean_rules_from_data
+    from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
+
+    source = "*literal* [link](target) &amp; <b>raw</b>"
+    paragraph = Document().add_paragraph(style="Heading 1")
+    if split_prefix:
+        paragraph.add_run("1").italic = True
+        paragraph.add_run(". ").bold = True
+    else:
+        paragraph.add_run("1. ")
+    paragraph.add_run(source).bold = styled
+    converter = DocxToMarkdownConverter()
+    converter._preserve_heading_formatting = True
+    rules = compile_clean_rules_from_data([{"id": "arabic", "pattern": r"^\d+\.\s*", "level": 1}])
+    lines, _stats = converter._process_paragraph(
+        paragraph._p, {id(paragraph._p): paragraph}, remove_numbering=True, heading_cleanup_rules=rules
+    )
+    children = _inline("\n".join(lines))
+    assert not {"em_open", "link_open", "html_inline"}.intersection(child.type for child in children)
+    assert "".join(child.content for child in children if child.type == "text") == source
+    assert any(child.type == "strong_open" for child in children) is styled
+
+
+def test_release_review_code_paragraph_retains_extracted_image(tmp_path: Path) -> None:
+    from docx.enum.style import WD_STYLE_TYPE
+
+    image = tmp_path / "code.png"
+    Image.new("RGB", (4, 4), "red").save(image)
+    document = Document()
+    document.styles.add_style("Code Block", WD_STYLE_TYPE.PARAGRAPH)
+    paragraph = document.add_paragraph(style="Code Block")
+    run = paragraph.add_run("BEFORE")
+    run.add_picture(str(image))
+    run.add_text("AFTER")
+    markdown = _convert_document_fixture_to_markdown(
+        tmp_path, document, request_id="code-image", options={"image_link_style": "markdown_embed"}
+    )
+    tokens = MarkdownIt().parse(markdown.split("---", 2)[-1])
+    assert [token.content for token in tokens if token.type == "fence"] == ["BEFOREAFTER\n"]
+    assert sum(child.type == "image" for child in _inline(markdown.split("---", 2)[-1])) == 1
+    assert (
+        hashlib.sha256(next((tmp_path / "code-image-staging").glob("*.png")).read_bytes()).digest()
+        == hashlib.sha256(image.read_bytes()).digest()
+    )
+
+
+@pytest.mark.parametrize(
+    "source", ["$x^2$", "Price $5 + $6", "%%\nhidden literal\n%%", "@cite-one", "Figure: ordinary prose"]
+)
+def test_release_review_literal_output_does_not_activate_docwen_dialect(source: str) -> None:
+    from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
+    from docwen_plugin_markdown.number_suite_direct_semantics import analyze_markdown_semantics_v3
+
+    paragraph = Document().add_paragraph(source)
+    markdown = render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig())
+    tokens = parse_markdown_text(markdown)
+
+    def flatten(nodes):
+        for node in nodes:
+            yield node
+            yield from flatten(node.get("children", []))
+
+    all_nodes = list(flatten(tokens))
+    assert not {"inline_math", "block_math", "comment"}.intersection(node.get("type") for node in all_nodes)
+    visible = "".join(node.get("raw", "") for node in all_nodes if node.get("type") == "text")
+    assert source.replace("\n", "") in visible.replace("\n", "")
+    semantic = analyze_markdown_semantics_v3(markdown, input_id="literal.md", consumer_profile="number_suite_direct")
+    assert not semantic.projection["citations"]
+    assert not semantic.projection["targets"]
