@@ -75,7 +75,7 @@ def test_docx_note_formatting_follows_request_policy(round_trip_runtime: Any, tm
         expected = (
             f"{domain} **bold** and *italic* with `` `code` ``."
             if preserve
-            else f"{domain} bold and italic with `code`."
+            else rf"{domain} bold and italic with \`code\`."
         )
         assert expected in markdown
 

@@ -77,7 +77,7 @@ See [[Page#^raw]], ![[Page#^raw]], @[[#^intro|Intro]], @[[#Other|Other]], and @f
     assert "# Intro ^intro" in returned
     assert "Plain block ^raw" in returned
     assert (
-        r"See \[\[Page\#\^raw\]\], \!\[\[Page\#\^raw\]\], @[[#^intro|Intro]], @[[#Other|Other]], and @fig-legacy."
+        r"See \[\[Page\#\^raw\]\], \!\[\[Page\#\^raw\]\], @[[#^intro|Intro]], @[[#Other|Other]], and \@fig-legacy."
     ) in returned
 
 

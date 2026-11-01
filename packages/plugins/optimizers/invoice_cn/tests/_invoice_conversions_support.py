@@ -48,7 +48,20 @@ def _parse_invoice_markdown(markdown: str) -> tuple[dict[str, str], list[str]]:
                     key, value = line.split(":", 1)
                     yaml_fields[key.strip()] = value.strip().strip("\"'")
 
-    table_rows = [line for line in markdown.splitlines() if line.startswith("|") and "---" not in line]
+    # Compare the historical visible cell strings, not the new literal
+    # escaping syntax. The independent table parser retains column ownership.
+    from markdown_it import MarkdownIt
+
+    table_rows: list[str] = []
+    current_row: list[str] | None = None
+    for token in MarkdownIt().enable("table").parse(markdown):
+        if token.type == "tr_open":
+            current_row = []
+        elif token.type == "inline" and current_row is not None:
+            current_row.append("".join(child.content for child in token.children or []))
+        elif token.type == "tr_close" and current_row is not None:
+            table_rows.append("| " + " | ".join(current_row) + " |")
+            current_row = None
     return yaml_fields, table_rows
 
 
