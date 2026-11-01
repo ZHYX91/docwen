@@ -11,7 +11,7 @@ from docwen_core.models.file_ref import SOURCE_PRESENTATION_NAME_METADATA_KEY
 from docwen_plugin_optimizer_invoice_cn.invoice_cn.converter import InvoiceCnConverter
 from docwen_plugin_optimizer_invoice_cn.invoice_cn.markdown_writer import _render_markdown_table
 
-from ._invoice_conversions_support import _build_fake_context
+from ._invoice_conversions_support import _build_fake_context, _parse_invoice_table_cells
 
 pytestmark = pytest.mark.contract
 
@@ -52,3 +52,18 @@ def test_release_review_invoice_public_source_title(
     assert metadata["标题"] == Path(public_name).stem
     assert metadata["aliases"] == [Path(public_name).stem]
     assert "input-0000" not in text
+
+
+def test_release_review_invoice_grid_oracle_retains_cell_boundaries() -> None:
+    literal_pipe = "| One | Two |\n| --- | --- |\n| A \\| B | C |\n"
+    three_cells = "| One | Two | Three |\n| --- | --- | --- |\n| A | B | C |\n"
+    assert _parse_invoice_table_cells(literal_pipe) == [["One", "Two"], ["A | B", "C"]]
+    assert _parse_invoice_table_cells(literal_pipe) != _parse_invoice_table_cells(three_cells)
+    with pytest.raises(AssertionError, match="row width"):
+        _parse_invoice_table_cells("| One | Two |\n| --- | --- |\n| A | B | C |\n")
+
+
+@pytest.mark.parametrize("value", ["**formatted**", "`code`", "[link](target)", "<b>html</b>"])
+def test_release_review_invoice_grid_oracle_rejects_added_formatting(value: str) -> None:
+    with pytest.raises(AssertionError, match="formatting"):
+        _parse_invoice_table_cells(f"| Name |\n| --- |\n| {value} |\n")
