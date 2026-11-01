@@ -454,7 +454,8 @@ class TestScanPageInConverter:
         )
         fallback_calls: list[str] = []
 
-        def parse_pdf_invoice(input_path: str):
+        def parse_pdf_invoice(input_path: str, *, diagnostic_sink=None):
+            assert diagnostic_sink is not None
             fallback_calls.append(input_path)
             return {INVOICE_CN_YAML_SCHEMA[0]: "BASE-PARSER-RESULT"}, []
 

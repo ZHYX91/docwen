@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from dataclasses import fields
 from pathlib import Path
 
@@ -15,6 +16,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 def _read(relative_path: str) -> str:
     return read_source_text(PROJECT_ROOT / relative_path)
+
+
+def _calls(tree: ast.AST, name: str) -> list[ast.Call]:
+    return [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == name
+    ]
 
 
 def test_link_runtime_is_a_twelve_field_request_snapshot_without_global_fallback() -> None:
@@ -57,7 +66,28 @@ def test_markdown_routes_keep_scoped_marker_and_bare_url_ownership_explicit() ->
     assert "image_scope = secrets.token_urlsafe(24)" in docx
     assert 'target_format="docx"' in docx
     assert "materialize_image_placeholders(" in docx and "image_scope=image_scope" in docx
-    assert "parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)" in docx
+    # Source ownership already handled a complete document's signature. This
+    # parser projection must retain a literal BOM at the transformed body edge.
+    docx_tree = ast.parse(docx)
+    [parse] = _calls(docx_tree, "parse_markdown_text")
+    assert len(parse.args) == 1
+    assert isinstance(parse.args[0], ast.Name) and parse.args[0].id == "md_body"
+    keywords = {keyword.arg: keyword.value for keyword in parse.keywords}
+    for flag in ("auto_link_bare_url", "consume_initial_bom"):
+        assert isinstance(keywords[flag], ast.Constant) and keywords[flag].value is False
+    assert isinstance(keywords["extensions"], ast.Name) and keywords["extensions"].id == "extensions"
+    [rewrite] = _calls(docx_tree, "process_markdown_links")
+    [materialize] = _calls(docx_tree, "materialize_image_placeholders")
+    for call in (rewrite, materialize):
+        [scope] = [keyword.value for keyword in call.keywords if keyword.arg == "image_scope"]
+        assert isinstance(scope, ast.Name) and scope.id == "image_scope"
+    bom_tests = ast.parse(_read("packages/plugins/markdown/tests/test_markdown_bom_projection.py"))
+    assert {
+        "test_parser_requires_document_context_to_consume_a_leading_bom",
+        "test_document_parser_consumes_at_most_one_signature",
+        "test_yaml_hyperlink_label_keeps_its_leading_literal_bom_in_the_package",
+        "test_note_body_fragment_keeps_literal_boms_in_document_and_note_parts",
+    } <= {node.name for node in ast.walk(bom_tests) if isinstance(node, ast.FunctionDef)}
 
     assert spreadsheet.count("image_scope = secrets.token_urlsafe(24)") >= 2
     assert 'target_format="xlsx"' in spreadsheet

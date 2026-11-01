@@ -48,7 +48,7 @@ jobs:
           - os: ubuntu-24.04
             suite: platform
             coverage: false
-          - os: macos-14
+          - os: macos-15
             suite: platform
             coverage: false
     steps:

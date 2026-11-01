@@ -180,9 +180,10 @@ def _preflight_destination(args: argparse.Namespace) -> tuple[str, str, dict[str
     """Fail before runtime startup or side effects when a destination is unsafe."""
 
     if getattr(args, "command_path", "") in {"convert", "batch convert"} and getattr(args, "overwrite", False):
-        grouped = normalize_target_format(str(getattr(args, "to", ""))) == "md" or any(
-            Path(value).suffix.lower() in {".md", ".markdown"} for value in getattr(args, "files", [])
-        )
+        # The input extension cannot predict the number of final worksheets.
+        # Runtime decides multi-file output after conversion; only a Markdown
+        # target is known here to require a result directory.
+        grouped = normalize_target_format(str(getattr(args, "to", ""))) == "md"
         if grouped:
             return (
                 "invalid_input",

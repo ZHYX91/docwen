@@ -1,5 +1,7 @@
 # Offline OCR table recognition
 
+Supplemental OCR text uses an untitled blockquote by default. The existing title setting can still be explicitly enabled; no new option or formula model is introduced. Structured tables remain Markdown tables rather than becoming fenced OCR text.
+
 The implementation localises table regions with a hash-pinned PP-Structure PicoDet model, then decodes each crop with SLANet-plus. It reuses the admitted RapidOCR boxes, text and confidence; it never reruns OCR for a table. Ruled-grid boundaries refine loose crops without trimming empty cells. Aligned multi-column rows may propose borderless crops, which still require a valid structure-model result.
 
 Only OCR regions actually matched into a valid table are consumed. The first consumed OCR index anchors each table in reading order. Unmatched regions, captions, prose and failed crops remain plain text. A successful table elsewhere does not discard a failed table. HTML-like OCR strings are escaped before structure assembly; Markdown cells escape literal pipes and angle brackets. Merged cells use the existing fill/empty/marker semantics. This is best-effort recognition, not a guarantee of exact geometry for every scan or a formula-recognition feature.

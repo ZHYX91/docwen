@@ -11,6 +11,31 @@ from docwen_gui.widgets.settings.gongwen_tab import GongwenTab
 pytestmark = pytest.mark.gui
 
 
+def test_numbering_text_and_review_default_on_with_independent_fields_and_linked_controls(qapp) -> None:
+    vm = SettingsViewModel(config=SettingsConfig(text=TextConfig(gongwen_fields_enabled=False, add_numbering=False)))
+    tab = GongwenTab(vm)
+    try:
+        assert tab._numbering_text.isChecked()
+        assert tab._numbering_comments.isChecked()
+        assert tab._numbering_comments.isEnabled()
+        assert tab._numbering_comments.toolTip() == t("settings.gongwen.numbering_comments_help")
+        tab._numbering_text.setChecked(False)
+        assert not tab._numbering_comments.isChecked()
+        assert not tab._numbering_comments.isEnabled()
+        tab._numbering_text.setChecked(True)
+        assert not tab._numbering_comments.isChecked()
+        assert tab._numbering_comments.isEnabled()
+        tab._numbering_comments.setChecked(True)
+        assert vm.config.text.gongwen_numbering_comments is True
+        assert vm.config.text.add_numbering is False
+        assert vm.config.text.gongwen_fields_enabled is False
+        vm.cancel()
+        assert tab._numbering_text.isChecked()
+        assert tab._numbering_comments.isChecked()
+    finally:
+        tab.close()
+
+
 @pytest.mark.parametrize("language", ["zh_CN", "en_US", "ar_SA"])
 def test_gongwen_fields_toggle_has_help_and_is_independent_of_ui_language(qapp, language) -> None:
     previous_locale = get_locale()

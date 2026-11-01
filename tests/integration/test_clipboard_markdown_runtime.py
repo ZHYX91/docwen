@@ -472,7 +472,8 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
     assert primary.suggested_name.endswith("_fromMd.docx")
     assert output.suffix == ".docx"
     assert logical_stem in output.name
-    assert logical_stem in output.parent.name
+    assert output.parent == tmp_path / "published"
+    assert list(output.parent.iterdir()) == [output]
     assert physical_stem not in output.name
     assert physical_stem not in output.parent.name
 

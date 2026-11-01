@@ -205,7 +205,7 @@ def test_markdown_docx_proofread_is_two_private_then_public_runtime_stages(
     assert render.action_name == ""
     assert POSTPROCESS_PROOFREAD_OPTION not in render.options
     assert render.output_policy.output_dir != str(published)
-    assert render.output_policy.group_outputs is True
+    assert render.output_policy.group_outputs is False
     assert render.conversion_identity is not None
     private_output = render.output_policy.output_dir
     assert private_output is not None
@@ -221,7 +221,7 @@ def test_markdown_docx_proofread_is_two_private_then_public_runtime_stages(
         "enable_sensitive_word": False,
     }
     assert proofread.output_policy.output_dir == str(published)
-    assert proofread.output_policy.group_outputs is True
+    assert proofread.output_policy.group_outputs is False
     assert render.conversion_identity is not None
     assert proofread.conversion_identity is not None
     assert render.conversion_identity.task_id == "pipeline-render"
@@ -256,8 +256,9 @@ def test_postprocess_proofread_rejects_non_docx_target(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("target", ["doc", "odt", "rtf", "wps"])
+@pytest.mark.parametrize("exact", [False, True])
 def test_generated_legacy_document_is_proofread_before_final_bridge(
-    target: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    target: str, exact: bool, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setattr("docwen_core.detection.enforce_file_admission", lambda request: request)
     source = tmp_path / "note.md"
@@ -270,11 +271,19 @@ def test_generated_legacy_document_is_proofread_before_final_bridge(
         calls.append(stage)
         if len(calls) == 1:
             assert stage.target_format == "docx" and not stage.action_name
+            assert stage.output_policy.output_path is None
         elif len(calls) == 2:
             assert stage.target_format == "docx" and stage.action_name == "validate"
+            assert stage.output_policy.output_path is None
+            assert stage.output_policy.group_outputs is False
         else:
             assert stage.target_format == target and not stage.action_name
-        private = Path(stage.output_policy.output_dir or "")
+            assert stage.output_policy.output_path == (str(public / f"chosen.{target}") if exact else None)
+        private = (
+            Path(stage.output_policy.output_path).parent
+            if stage.output_policy.output_path
+            else Path(stage.output_policy.output_dir or "")
+        )
         private.mkdir(parents=True, exist_ok=True)
         if len(calls) == 3:
             filename = private / f"final.{target}"
@@ -308,14 +317,17 @@ def test_generated_legacy_document_is_proofread_before_final_bridge(
             input_refs=[FileRef(path=str(source), format="markdown", category="markdown")],
             target_format=target,
             options={POSTPROCESS_PROOFREAD_OPTION: {"enable_symbol_pairing": True}},
-            output_policy=OutputPolicy(output_dir=str(public)),
+            output_policy=OutputPolicy(
+                output_dir=None if exact else str(public),
+                output_path=str(public / f"chosen.{target}") if exact else None,
+            ),
         )
     )
     assert result.success
     assert len(calls) == 3
     assert calls[0].output_policy.output_dir != str(public)
     assert calls[1].output_policy.output_dir != str(public)
-    assert calls[2].output_policy.output_dir == str(public)
+    assert calls[2].output_policy.output_dir == (None if exact else str(public))
     assert calls[2].input_refs[0].logical_path == "note_checked.docx"
     assert calls[2].conversion_identity is not None
     assert calls[2].conversion_identity.source_stem == "note"

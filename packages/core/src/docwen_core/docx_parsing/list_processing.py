@@ -82,9 +82,7 @@ def detect_list_item(
     w_ns = NS_W
     try:
         pPr = para._p.find(f"{{{w_ns}}}pPr")
-        if pPr is None:
-            return None, None, None
-        numPr = pPr.find(f"{{{w_ns}}}numPr")
+        numPr = pPr.find(f"{{{w_ns}}}numPr") if pPr is not None else None
         if numPr is None:
             # Fallback: resolve via paragraph style → numbering definition
             if numbering_index is not None and para.style is not None:
@@ -93,7 +91,7 @@ def detect_list_item(
                     level_info = numbering_index.lookup_by_style_id(style_id)
                     if level_info is not None:
                         list_type = "bullet" if level_info.num_fmt == "bullet" else "ordered"
-                        return f"abs_{level_info.abstract_num_id}", level_info.ilvl, list_type
+                        return level_info.num_id, level_info.ilvl, list_type
             return None, None, None
 
         num_id_elem = numPr.find(f"{{{w_ns}}}numId")
@@ -107,7 +105,7 @@ def detect_list_item(
         # follow a list and must not fall through to the default bullet type.
         if num_id == "0":
             return None, None, None
-        ilvl = int(ilvl_elem.get(f"{{{w_ns}}}val") or "0")
+        ilvl = int(ilvl_elem.get(f"{{{w_ns}}}val") or "0") if ilvl_elem is not None else 0
 
         # Determine list type (bullet vs numbered)
         list_type = "bullet"  # default

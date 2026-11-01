@@ -21,6 +21,41 @@ from tests.support.release_packaging import (
 pytestmark = pytest.mark.unit
 
 
+_EXPECTED_SETTINGS_TABS = (
+    "general",
+    "output",
+    "templates",
+    "software",
+    "logging",
+    "text",
+    "document",
+    "spreadsheet",
+    "image",
+    "layout",
+    "other",
+    "formatting",
+    "markdown_input",
+    "link",
+    "export",
+    "proofread",
+    "gongwen",
+    "invoice",
+)
+
+
+def _complete_settings_report() -> dict[str, object]:
+    return {
+        "success": True,
+        "expectedTabs": list(_EXPECTED_SETTINGS_TABS),
+        "loadedTabs": list(_EXPECTED_SETTINGS_TABS),
+        "failedTabs": [],
+        "missingTabs": [],
+        "unexpectedTabs": [],
+        "pageObjectNames": dict.fromkeys(_EXPECTED_SETTINGS_TABS, "settingsTabRoot"),
+        "error": None,
+    }
+
+
 @pytest.fixture(autouse=True)
 def _use_compact_pymupdf_layout_manifest(monkeypatch: pytest.MonkeyPatch) -> None:
     use_compact_pymupdf_layout_manifest(monkeypatch)
@@ -106,18 +141,24 @@ def test_packaged_gui_settings_archive_contract_tracks_dialog_pages() -> None:
     expected.add("docwen_gui.widgets.settings.templates_tab")
 
     assert expected == verify_packaged_gui._REQUIRED_SETTINGS_PAGE_MODULES
-    assert tuple(TAB_KEYS) == verify_packaged_gui._REQUIRED_SETTINGS_TAB_KEYS
+    assert tuple(TAB_KEYS) == _EXPECTED_SETTINGS_TABS
+    assert verify_packaged_gui._REQUIRED_SETTINGS_TAB_KEYS == _EXPECTED_SETTINGS_TABS
 
 
+@pytest.mark.parametrize("missing_page", _EXPECTED_SETTINGS_TABS)
 def test_packaged_gui_settings_archive_rejects_a_missing_page(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    missing_page: str,
 ) -> None:
     from scripts.release import verify_packaged_gui
 
     binary_path = tmp_path / "DocWen.exe"
     binary_path.write_bytes(b"placeholder")
-    missing_module = "docwen_gui.widgets.settings.general_tab"
+    from docwen_gui.widgets.settings.dialog import _TAB_SPECS
+
+    module_name = "templates_tab" if missing_page == "templates" else _TAB_SPECS[missing_page].module_name
+    missing_module = f"docwen_gui.widgets.settings.{module_name}"
     monkeypatch.setattr(
         verify_packaged_gui,
         "_read_pyinstaller_module_names",
@@ -126,6 +167,43 @@ def test_packaged_gui_settings_archive_rejects_a_missing_page(
 
     with pytest.raises(RuntimeError, match="packaged_gui_settings_modules_missing"):
         verify_packaged_gui._verify_settings_page_archive(binary_path)
+
+
+def test_packaged_gui_settings_smoke_requires_the_complete_directional_page_set(tmp_path: Path) -> None:
+    from scripts.release import verify_packaged_gui
+
+    report = _complete_settings_report()
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps(report), encoding="utf-8")
+    assert verify_packaged_gui._verify_settings_smoke_report(path) == report
+
+
+@pytest.mark.parametrize("field", ["expectedTabs", "loadedTabs"])
+@pytest.mark.parametrize("missing_page", _EXPECTED_SETTINGS_TABS)
+def test_packaged_gui_settings_smoke_rejects_each_missing_page(tmp_path: Path, field: str, missing_page: str) -> None:
+    from scripts.release import verify_packaged_gui
+
+    report = _complete_settings_report()
+    report[field] = [page for page in _EXPECTED_SETTINGS_TABS if page != missing_page]
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps(report), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="packaged_gui_settings_smoke_failed"):
+        verify_packaged_gui._verify_settings_smoke_report(path)
+
+
+@pytest.mark.parametrize("field", ["expectedTabs", "loadedTabs"])
+@pytest.mark.parametrize("extra_page", ["unexpected_page", "formatting", "markdown_input"])
+def test_packaged_gui_settings_smoke_rejects_extra_or_duplicate_pages(
+    tmp_path: Path, field: str, extra_page: str
+) -> None:
+    from scripts.release import verify_packaged_gui
+
+    report = _complete_settings_report()
+    report[field] = [*_EXPECTED_SETTINGS_TABS, extra_page]
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps(report), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="packaged_gui_settings_smoke_failed"):
+        verify_packaged_gui._verify_settings_smoke_report(path)
 
 
 def test_packaged_gui_verifier_runs_settings_page_smoke(

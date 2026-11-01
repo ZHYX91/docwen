@@ -7,6 +7,7 @@ from pathlib import Path
 import openpyxl
 import pytest
 
+from ._markdown_table_oracle import markdown_table_values
 from ._xlsx_to_md_golden_support import _build_fake_context
 
 pytestmark = pytest.mark.contract
@@ -67,5 +68,4 @@ def test_numeric_looking_text_keeps_full_authored_precision(
 
     assert result.success, result.error
     markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
-    assert value in markdown
-    assert "0.123457" not in markdown
+    assert markdown_table_values(markdown) == [[["Value"], [value]]]

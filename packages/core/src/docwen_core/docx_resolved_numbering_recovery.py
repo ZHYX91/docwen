@@ -12,6 +12,7 @@ from typing import Any, cast
 from zipfile import ZipFile
 
 from docwen_core import _docx_semantics_v3_fenced as fenced
+from docwen_core._docx_resolved_recovery_blocks import prove_resolved_recovery_blocks_v4
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -56,8 +57,12 @@ from docwen_core.docx_citation_ooxml import (
     read_proven_resolved_citations,
 )
 from docwen_core.docx_numbering_import import (
+    DocxNumberingImportError,
     HeadingNumberingProofIndex,
     ProofOnlyHeadingImport,
+    _integer_attribute,
+    _parse_level,
+    _reject_unmodeled_numbering_topology,
     import_heading_without_source_mutation,
 )
 from docwen_core.docx_numbering_occurrence import (
@@ -214,6 +219,15 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 inline_tokens=inline_tokens,
             )
 
+        proven_nested_blocks, proven_machine_nodes, reserved_semantic_elements = prove_resolved_recovery_blocks_v4(
+            document.element.body,
+            targets=targets,
+            anchors=anchors,
+            occurrences=occurrences,
+            standalone_occurrences=standalone_occurrences,
+            inline_tags=frozenset(inline_tokens),
+            caption_styles=caption_styles,
+        )
         recovery = cast(
             ResolvedNumberingV4Recovery,
             cls._bind_document_evidence(
@@ -229,6 +243,9 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 caption_parser=parse_caption,
                 standalone_target_tags=frozenset(addressable_standalone_tags),
                 proven_table_role_nodes=role_nodes,
+                proven_nested_blocks=proven_nested_blocks,
+                proven_machine_nodes=proven_machine_nodes,
+                reserved_semantic_elements=reserved_semantic_elements,
             ),
         )
         recovery._resolved_v4_inline_tokens = inline_tokens
@@ -285,6 +302,24 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         )
         return text if semantic else None
 
+    def paragraph_reference_spans(
+        self, paragraph_element: Any, *, emit_references: bool = True
+    ) -> dict[Any, tuple[Any, str]]:
+        """Project proven references onto their original sibling XML ranges."""
+        spans: dict[Any, tuple[Any, str]] = {}
+        recover_paragraph_children(
+            list(paragraph_element),
+            target_ids_by_bookmark=self._target_ids_by_bookmark,
+            emit_references=emit_references,
+            soft_tokens_by_tag={
+                **(self._soft_tokens_by_tag if emit_references else {}),
+                **self._resolved_v4_inline_tokens,
+            },
+            occurrence_tokens_by_tag=self._occurrence_tokens_by_tag if emit_references else {},
+            reference_spans=spans,
+        )
+        return spans
+
     def _prove_target_headings(self, document: Any, targets: list[Any]) -> None:
         from docx.text.paragraph import Paragraph
 
@@ -314,15 +349,10 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         body = document.element.body
         physical = [
             item
-            for item in body
-            if item.tag == qn("w:sdt") and (sdt_tag(item) or "").startswith("docwen-numbering-occurrence-v1:")
-        ]
-        nested = [
-            item
             for item in body.iter(qn("w:sdt"))
             if (sdt_tag(item) or "").startswith("docwen-numbering-occurrence-v1:")
         ]
-        if physical != nested or [sdt_tag(item) for item in physical] != [item.tag for item in occurrences]:
+        if [sdt_tag(item) for item in physical] != [item.tag for item in occurrences]:
             raise DocxSemanticsV3Error("resolved-v4 occurrence physical order/cardinality differs from its map")
         if not occurrences:
             return
@@ -379,15 +409,10 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         addressable = [item for item in occurrences if item.target_id is not None]
         physical = [
             item
-            for item in body
-            if item.tag == qn("w:sdt") and (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
-        ]
-        nested = [
-            item
             for item in body.iter(qn("w:sdt"))
             if (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
         ]
-        if physical != nested or [sdt_tag(item) for item in physical] != [item.tag for item in idless]:
+        if [sdt_tag(item) for item in physical] != [item.tag for item in idless]:
             raise DocxSemanticsV3Error("resolved-v4 standalone-caption physical order/cardinality differs from its map")
         if not occurrences:
             return
@@ -491,13 +516,29 @@ def _has_explicit_resolved_v4_signal(
     # the same occurrence map and exact SDT inventory.
     target_by_tag = {item.tag: item for item in targets}
     caption_style_ids = {item.resolved_style_id for item in caption_styles}
+    ordinary_list_bindings = _ordinary_list_bindings(document)
     for paragraph in document.element.body.iter(qn("w:p")):
         owner = paragraph.getparent()
         wrapper = None if owner is None else owner.getparent()
         target = target_by_tag.get(sdt_tag(wrapper) or "") if wrapper is not None else None
         if target is not None and target.kind == "heading":
-            if paragraph.find(f"{qn('w:pPr')}/{qn('w:numPr')}") is not None:
-                return True
+            num_properties = paragraph.findall(f"{qn('w:pPr')}/{qn('w:numPr')}")
+            if num_properties:
+                # Source-native list children also carry numPr. Their list
+                # definition has no Heading-style ownership, so that shared
+                # Word feature is not an explicit resolved-v4 signal.
+                if len(num_properties) != 1:
+                    return True
+                [num_properties_node] = num_properties
+                num_ids = num_properties_node.findall(qn("w:numId"))
+                levels = num_properties_node.findall(qn("w:ilvl"))
+                if (
+                    len(num_ids) != 1
+                    or len(levels) != 1
+                    or len(num_properties_node) != 2
+                    or (num_ids[0].get(qn("w:val")), levels[0].get(qn("w:val"))) not in ordinary_list_bindings
+                ):
+                    return True
             continue
         style = paragraph.find(f"{qn('w:pPr')}/{qn('w:pStyle')}")
         if style is None or style.get(qn("w:val")) not in caption_style_ids:
@@ -514,6 +555,120 @@ def _has_explicit_resolved_v4_signal(
         except DocxSemanticsV3Error:
             return True
     return False
+
+
+def _ordinary_list_bindings(document: Any) -> frozenset[tuple[str, str]]:
+    """Index native container lists without treating their IDs as provenance.
+
+    The source writer emits hybrid lists with no level-to-Heading style link.
+    Resolved Heading definitions use multilevel plus explicit Heading pStyle
+    ownership. Missing, duplicate or ambiguous references do not gain this
+    ordinary-list exemption and still enter the strict resolved proof.
+    """
+    from docx.oxml.ns import qn
+
+    try:
+        numbering = document.part.numbering_part.element
+    except (AttributeError, KeyError, NotImplementedError):
+        return frozenset()
+    referenced_num_ids = {
+        node.get(qn("w:val"))
+        for paragraph in document.element.body.iter(qn("w:p"))
+        for node in paragraph.findall(f"{qn('w:pPr')}/{qn('w:numPr')}/{qn('w:numId')}")
+    }
+    instances: dict[str, list[Any]] = {}
+    for node in numbering.findall(qn("w:num")):
+        num_id = node.get(qn("w:numId"))
+        if num_id in referenced_num_ids:
+            instances.setdefault(num_id, []).append(node)
+    referenced_abstract_ids = {
+        reference.get(qn("w:val"))
+        for nodes in instances.values()
+        if len(nodes) == 1
+        for reference in nodes[0].findall(qn("w:abstractNumId"))
+    }
+    abstract_nodes: dict[str, list[Any]] = {}
+    for node in numbering.findall(qn("w:abstractNum")):
+        abstract_id = node.get(qn("w:abstractNumId"))
+        if abstract_id in referenced_abstract_ids:
+            abstract_nodes.setdefault(abstract_id, []).append(node)
+    ordinary_levels: dict[str, frozenset[str]] = {}
+    for abstract_id, nodes in abstract_nodes.items():
+        if len(nodes) != 1:
+            continue
+        [node] = nodes
+        try:
+            _integer_attribute(node, "abstractNumId", minimum=0)
+            # Keep the selected subtree attached: exact ancestry includes its
+            # real numbering parent. Unused definitions cannot revoke an
+            # otherwise valid ordinary-list binding.
+            _reject_unmodeled_numbering_topology(node)
+        except DocxNumberingImportError:
+            continue
+        kinds = node.findall(qn("w:multiLevelType"))
+        levels = node.findall(qn("w:lvl"))
+        level_ids = [level.get(qn("w:ilvl")) for level in levels]
+        try:
+            for level in levels:
+                # Reuse the strict format/text/suffix shape validator. Only
+                # ordinary authored lists additionally allow a zero start.
+                _parse_level(level, minimum_start=0)
+        except DocxNumberingImportError:
+            continue
+        if (
+            len(kinds) == 1
+            and kinds[0].get(qn("w:val")) == "hybridMultilevel"
+            and levels
+            and all(
+                isinstance(level_id, str) and len(level_id) == 1 and level_id in "012345678" for level_id in level_ids
+            )
+            and len(set(level_ids)) == len(level_ids)
+            and not any(level.find(qn("w:pStyle")) is not None for level in levels)
+            and node.find(qn("w:styleLink")) is None
+            and node.find(qn("w:numStyleLink")) is None
+        ):
+            ordinary_levels[abstract_id] = frozenset(level_ids)
+    bindings: set[tuple[str, str]] = set()
+    for num_id, nodes in instances.items():
+        if len(nodes) != 1:
+            continue
+        try:
+            _integer_attribute(nodes[0], "numId", minimum=1)
+            _reject_unmodeled_numbering_topology(nodes[0])
+        except DocxNumberingImportError:
+            continue
+        references = nodes[0].findall(qn("w:abstractNumId"))
+        if len(references) != 1:
+            continue
+        levels = ordinary_levels.get(references[0].get(qn("w:val")), frozenset())
+        overrides = [child for child in nodes[0] if child is not references[0]]
+        override_levels: set[str] = set()
+        for override in overrides:
+            level = override.get(qn("w:ilvl"))
+            if (
+                override.tag != qn("w:lvlOverride")
+                or level not in levels
+                or level in override_levels
+                or [child.tag for child in override] != [qn("w:startOverride")]
+            ):
+                break
+            try:
+                _integer_attribute(override[0], "val", minimum=1)
+            except DocxNumberingImportError:
+                break
+            override_levels.add(level)
+        else:
+            bindings.update((num_id, level) for level in levels)
+    return frozenset(bindings)
+
+
+def ordinary_container_list_bindings(document: Any) -> frozenset[tuple[str, str]]:
+    """Return strictly modeled native list bindings for one loaded package.
+
+    Consumers freeze this inventory for the request; IDs or style names alone
+    do not distinguish native container lists from Heading numbering.
+    """
+    return _ordinary_list_bindings(document)
 
 
 def _parse_resolved_v4_caption(
@@ -733,4 +888,5 @@ def _valid_sequence_instruction(instruction: str, counter: str) -> bool:
 
 __all__ = [
     "ResolvedNumberingV4Recovery",
+    "ordinary_container_list_bindings",
 ]

@@ -6,6 +6,7 @@ import argparse
 import sys
 from typing import Any
 
+from docwen_application.postprocessing import PROOFREAD_DOCUMENT_TARGETS
 from docwen_cli.exit_codes import ExitCode
 from docwen_cli.parser import get_common_parser
 from docwen_cli.presenters.json_presenter import JsonPresenter
@@ -39,7 +40,12 @@ def _parser_schema(parser: argparse.ArgumentParser, command: str) -> dict[str, A
             subcommands.extend(action.choices)
             continue
         arguments.append(_action_schema(action))
-    return {"command": command, "arguments": arguments, "subcommands": subcommands}
+    result: dict[str, Any] = {"command": command, "arguments": arguments, "subcommands": subcommands}
+    if any(argument["name"] == "proofread" for argument in arguments):
+        result["constraints"] = {
+            "proofread": {"source_workflow": "markdown", "target_formats": sorted(PROOFREAD_DOCUMENT_TARGETS)}
+        }
+    return result
 
 
 def _resolve_parser(root: argparse.ArgumentParser, path: list[str]) -> tuple[argparse.ArgumentParser, str]:

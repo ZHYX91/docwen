@@ -93,7 +93,7 @@ def test_packaged_cli_template_discovery_passes_returned_id_unchanged_to_convert
             )
         parent = Path(args[args.index("--output-dir") + 1])
         node = "canonical-template-id-smoke_20260907_180000_fromMd"
-        output = parent / node / f"{node}.docx"
+        output = parent / f"{node}.docx"
         output.parent.mkdir(parents=True)
         with zipfile.ZipFile(output, "w") as package:
             package.writestr(
@@ -118,7 +118,7 @@ def test_packaged_cli_template_discovery_passes_returned_id_unchanged_to_convert
 
     output = verify_packaged_cli._run_template_resource_smoke(tmp_path / "DocWenCLI.exe", work_dir=tmp_path)
 
-    assert output.parent.parent == tmp_path / "canonical-template-results"
+    assert output.parent == tmp_path / "canonical-template-results"
     assert output.name == "canonical-template-id-smoke_20260907_180000_fromMd.docx"
     assert calls[0] == ("resources", "list", "templates", "--json", "--quiet")
     assert calls[1] == ("resources", "show", "templates", template_id, "--json", "--quiet")

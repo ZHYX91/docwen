@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 from docx.oxml.ns import qn
 
-from docwen_core.docx_parsing.image_extraction import extract_images_from_element
+from docwen_core.docx_parsing.image_extraction import ImageExtractionNames, extract_images_from_element
 from docwen_core.docx_parsing.list_processing import ListCounterManager, format_list_marker
 from docwen_core.docx_parsing.textbox_extraction import (
     ExtractedParagraph,
@@ -35,6 +35,7 @@ from docwen_plugin_optimizer_gongwen.extraction.table_extraction import (
     extract_table_paragraphs,
 )
 from docwen_plugin_optimizer_gongwen.models import ParagraphFeature
+from docwen_plugin_optimizer_gongwen.utils import looks_like_combined_id, parse_combined_id
 
 _GONGWEN_NATIVE_HEADING_FORMATS = frozenset({"chinesecounting", "chinesecountingthousand", "ideographtraditional"})
 
@@ -123,6 +124,7 @@ def read_paragraphs(
     """
     features: list[ParagraphFeature] = []
     numbering_counters = ListCounterManager()
+    image_names = ImageExtractionNames(output_dir) if output_dir else None
 
     body_element = doc.element.body
     paragraphs = list(doc.paragraphs)
@@ -149,9 +151,17 @@ def read_paragraphs(
         tbl_ctx = detect_table_context(para)
 
         # ── Formula info ──
-        from docwen_plugin_optimizer_gongwen.formula_utils import extract_formula_info
+        from docwen_plugin_optimizer_gongwen.formula_utils import (
+            extract_formula_atoms,
+            formula_text,
+            strip_formula_prefix,
+            summarize_formula_atoms,
+        )
 
-        fml_detected, fml_type, fml_latex = extract_formula_info(para)
+        formula_atoms = extract_formula_atoms(para) if has_fml else ()
+        fml_detected, fml_type, fml_latex = summarize_formula_atoms(formula_atoms)
+        if has_fml:
+            text = formula_text(formula_atoms)
 
         # ── Heading detection ──
         cleaned_text, heading_lvl, heading_num, list_marker, list_level = _detect_paragraph_structure(
@@ -166,11 +176,16 @@ def read_paragraphs(
             neighboring_paragraphs=_neighboring_content_paragraphs(paragraphs, paragraph_index),
         )
 
+        # Store the detected textual heading prefix separately, as for plain
+        # headings. Native numbering has no matching source text to remove.
+        if heading_lvl > 0 and heading_num:
+            formula_atoms = strip_formula_prefix(formula_atoms, heading_num)
+
         # ── Heading clean-text: display text vs raw text ──
         raw_text = text.strip()
         display_text = cleaned_text if heading_lvl > 0 else raw_text
         heading_body_boundary, heading_body_boundary_source = _detect_mixed_heading_body_boundary(
-            para,
+            para if para.text == text else None,
             display_text,
             raw_text,
             heading_num,
@@ -189,6 +204,7 @@ def read_paragraphs(
                     para.part.related_parts,
                     output_dir,
                     name_prefix="gongwen-image",
+                    name_allocator=image_names,
                 )
             ]
 
@@ -206,6 +222,7 @@ def read_paragraphs(
             has_formula=has_fml or fml_detected,
             formula_type=fml_type,
             formula_latex=fml_latex,
+            formula_atoms=formula_atoms,
             has_page_break=has_pb,
             has_section_break=has_sb,
             heading_level=heading_lvl,
@@ -265,6 +282,13 @@ def _detect_paragraph_structure(
     Returns cleaned text, heading level/prefix, and ordinary list marker/level.
     Heading cleanup must not discard the structure of an ordinary list.
     """
+    # The source fields own their full line before heading cleanup can claim a
+    # leading copy ID as an Arabic-space Heading prefix. Incomplete candidates
+    # retain that same source for the precise preservation diagnostic; they do
+    # not become headings merely because a configured rule matches the ID.
+    if parse_combined_id(text) is not None or looks_like_combined_id(text):
+        return text, 0, "", "", 0
+
     # Pass 1: Shared heading numbering detection
     info = detect_heading_prefix(text, rules=cleanup_rules)
     # A prefix that consumes the whole paragraph (for example a pure numeric
@@ -346,7 +370,7 @@ def _resolve_word_numbering(para: Any, numbering_index: Any) -> tuple[str, int, 
     level_info = numbering_index.lookup_by_style_id(style_id)
     if level_info is None:
         return None
-    counter_key = f"abs_{level_info.abstract_num_id}"
+    counter_key = level_info.num_id
     return counter_key, int(level_info.ilvl), level_info
 
 

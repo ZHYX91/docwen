@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import (
+    AMOUNT_TOKEN_PATTERN,
     _compact_text,
     _normalize_ocr_amount,
     _normalize_ocr_date,
@@ -12,6 +14,25 @@ from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import (
     _normalize_ocr_tax_id,
     _regex_first,
 )
+from docwen_plugin_optimizer_invoice_cn.invoice_cn.span_fields import (
+    amount_metadata,
+    party_metadata,
+    report_metadata_issue,
+)
+
+if TYPE_CHECKING:
+    from docwen_core.protocols.execution_context import ProgressSink
+
+# Whitespace was removed by the compact-text adapter. Only the end of the
+# text or an explicit following field label can delimit this amount. Unknown
+# suffixes (including malformed grouping) remain unowned, not numeric prefixes.
+_MONEY_END = r"(?=$|价税合[计汁]|收款人|复核|开票人|备注|购买方|销售方|发票|开票日期|校验码|机器编号)"
+
+
+def _unique_compact_field(block: str, pattern: str) -> str:
+    """A role-labelled text block owns a field only when its value is unique."""
+    values = {match.group(1).strip() for match in re.finditer(pattern, block)}
+    return next(iter(values)) if len(values) == 1 else ""
 
 
 def parse_invoice_metadata_from_compact_text(
@@ -50,20 +71,16 @@ def parse_invoice_metadata_from_compact_text(
     amount_with_tax = _regex_first(
         compact,
         [
-            r"价税合[计汁].*?小写.*?[¥￥]?([0-9OolIZzsB]+(?:\.[0-9OolIZzsB]{1,2})?)",
-            r"价税合[计汁][:：]?[¥￥]?([0-9OolIZzsB]+(?:\.[0-9OolIZzsB]{1,2})?)",
+            rf"价税合[计汁](?:[（(]大写[）)][^()（）]*?)?[（(]?小写[）):：]*({AMOUNT_TOKEN_PATTERN}){_MONEY_END}",
+            rf"价税合[计汁][:：]?({AMOUNT_TOKEN_PATTERN}){_MONEY_END}",
         ],
     )
     amount_with_tax = _normalize_ocr_amount(amount_with_tax)
 
     total_amount_match = re.search(
-        r"合计[¥￥]?([0-9OolIZzsB]+(?:\.[0-9OolIZzsB]{1,2})?)[¥￥]?([0-9OolIZzsB]+(?:\.[0-9OolIZzsB]{1,2})?)",
+        rf"(?<!价税)合计[:：]?({AMOUNT_TOKEN_PATTERN})(?=[+\-−－＋]?[¥￥])({AMOUNT_TOKEN_PATTERN}){_MONEY_END}",
         compact,
     )
-
-    # ── Buyer / seller names ─────────────────────────────────────────
-    buyer_name = _regex_first(compact, [r"购买方信息名称[:：]?(.+?)(?=统一社会信用代码|销售方信息)"])
-    seller_name = _regex_first(compact, [r"销售方信息名称[:：]?(.+?)(?=统一社会信用代码|项目名称|货物或应税劳务)"])
 
     # ── Buyer / seller blocks for tax IDs and banks ──────────────────
     buyer_block = ""
@@ -74,7 +91,7 @@ def parse_invoice_metadata_from_compact_text(
         end = si if (si != -1 and si > bi) else len(compact)
         buyer_block = compact[bi:end]
     if si != -1:
-        end_candidates: list[int] = []
+        end_candidates: list[int] = [bi] if bi > si else []
         for m in ("项目名称", "货物或应税劳务"):
             idx = compact.find(m, si + 1)
             if idx != -1:
@@ -82,24 +99,12 @@ def parse_invoice_metadata_from_compact_text(
         end = min(end_candidates) if end_candidates else len(compact)
         seller_block = compact[si:end]
 
-    buyer_tax_id = _regex_first(
-        buyer_block,
-        [
-            r"统一社会信用代码/纳税人识别号[:：]?([0-9A-Z]{15,20})",
-            r"统一社会信用代码[:：]?([0-9A-Z]{15,20})",
-            r"纳税人识别号[:：]?([0-9A-Z]{15,20})",
-        ],
-    )
-    seller_tax_id = _regex_first(
-        seller_block,
-        [
-            r"统一社会信用代码/纳税人识别号[:：]?([0-9A-Z]{15,20})",
-            r"统一社会信用代码[:：]?([0-9A-Z]{15,20})",
-            r"纳税人识别号[:：]?([0-9A-Z]{15,20})",
-        ],
-    )
-    buyer_tax_id = _normalize_ocr_tax_id(buyer_tax_id)
-    seller_tax_id = _normalize_ocr_tax_id(seller_tax_id)
+    tax_pattern = r"(?:统一社会信用代码/纳税人识别号|统一社会信用代码|纳税人识别号)[:：]?([0-9A-Z]{15,20})"
+    name_pattern = r"名称[:：]?(.+?)(?=统一社会信用代码|纳税人识别号|开户行及账号|名称[:：]|$)"
+    buyer_name = _unique_compact_field(buyer_block, name_pattern)
+    seller_name = _unique_compact_field(seller_block, name_pattern)
+    buyer_tax_id = _normalize_ocr_tax_id(_unique_compact_field(buyer_block, tax_pattern))
+    seller_tax_id = _normalize_ocr_tax_id(_unique_compact_field(seller_block, tax_pattern))
 
     # ── Check code ───────────────────────────────────────────────────
     check_code_raw = _regex_first(compact, [r"校验码[:：]?([0-9OolIZzsB]{20})"])
@@ -232,6 +237,9 @@ def parse_invoice_metadata_from_compact_text(
 
 def parse_invoice_metadata_from_pdf_spans(
     spans: list[tuple[float, float, float, float, str]],
+    *,
+    diagnostic_sink: ProgressSink | None = None,
+    location: str = "",
 ) -> dict[str, str]:
     """Extract invoice metadata from PDF span positions.
 
@@ -303,176 +311,16 @@ def parse_invoice_metadata_from_pdf_spans(
     reviewer = find_right_text(label_contains="复核")
     payee = find_right_text(label_contains="收款人")
 
-    # Detect left/right split for buyer vs seller columns
-    name_labels = [(y, x0, x1) for (y, x0, x1, t) in items if _compact_text(t) in {"名称：", "名称:"}]
-    split_x: float | None = None
-    if len(name_labels) >= 2:
-        for i in range(len(name_labels) - 1):
-            y0, x0, _x1 = name_labels[i]
-            y1, x1, _x2 = name_labels[i + 1]
-            if abs(y0 - y1) <= 2.5:
-                split_x = (x0 + x1) / 2.0
-                break
-
-    if split_x is None:
-        tax_label_x = sorted(
-            {
-                x0
-                for _y, x0, _x1, t in items
-                if "统一社会信用代码" in _compact_text(t) or "纳税人识别号" in _compact_text(t)
-            }
-        )
-        if len(tax_label_x) >= 3:
-            gaps = [(tax_label_x[index + 1] - tax_label_x[index], index) for index in range(len(tax_label_x) - 1)]
-            largest_gap, gap_index = max(gaps)
-            if largest_gap >= 50.0:
-                split_x = (tax_label_x[gap_index] + tax_label_x[gap_index + 1]) / 2.0
-
-    def pick_name_after_label(label_y: float, label_x0: float, *, side_left: bool) -> str:
-        candidates: list[tuple[float, float, str]] = []
-        for y, x0, _x1, t in items:
-            if abs(y - label_y) <= 2.5 and x0 > label_x0 + 5:
-                if split_x is not None and (x0 < split_x) != side_left:
-                    continue
-                tc = _compact_text(t)
-                if re.fullmatch(r"[0-9A-Z]{15,20}", tc) or re.fullmatch(r"[0-9]{8,30}", tc):
-                    continue
-                if tc in {"名称：", "名称:"} or "统一社会信用代码" in tc or "纳税人识别号" in tc:
-                    continue
-                candidates.append((0.0, x0, t))
-        if candidates:
-            candidates.sort()
-            return candidates[0][2].strip()
-
-        for y, x0, _x1, t in items:
-            if not (label_y + 1.0 <= y <= label_y + 30.0):
-                continue
-            if split_x is not None and (x0 < split_x) != side_left:
-                continue
-            if x0 < label_x0 + 5:
-                continue
-            tc = _compact_text(t)
-            if re.fullmatch(r"[0-9A-Z]{15,20}", tc) or re.fullmatch(r"[0-9]{8,30}", tc):
-                continue
-            if tc in {"名称：", "名称:"} or "统一社会信用代码" in tc or "纳税人识别号" in tc:
-                continue
-            candidates.append((y - label_y, x0, t))
-        if candidates:
-            candidates.sort()
-            return candidates[0][2].strip()
-        return ""
-
-    buyer_name = ""
-    seller_name = ""
-    if split_x is not None:
-        for y, x0, _x1 in name_labels:
-            if x0 < split_x and not buyer_name:
-                buyer_name = pick_name_after_label(y, x0, side_left=True)
-            if x0 >= split_x and not seller_name:
-                seller_name = pick_name_after_label(y, x0, side_left=False)
-
-    def pick_tax_id(*, side_left: bool) -> str:
-        def is_requested_side(x0: float) -> bool:
-            return split_x is None or (x0 < split_x) == side_left
-
-        for y, x0, _x1, t in items:
-            tc = _compact_text(t)
-            if "统一社会信用代码" not in tc and "纳税人识别号" not in tc:
-                continue
-            if not is_requested_side(x0):
-                continue
-            tail = ""
-            if "：" in t or ":" in t:
-                tail = re.split(r"[:：]", t, maxsplit=1)[-1]
-            tail = _compact_text(tail).upper()
-            if re.fullmatch(r"[0-9A-Z]{15,20}", tail or ""):
-                return tail
-            for y2, _x02, _x12, t2 in items:
-                if abs(y2 - y) > 2.5:
-                    continue
-                if _x02 <= x0 + 5:
-                    continue
-                if not is_requested_side(_x02):
-                    continue
-                v = _compact_text(t2).upper()
-                if re.fullmatch(r"[0-9A-Z]{15,20}", v):
-                    return v
-            for y2, _x02, _x12, t2 in items:
-                if not (y + 1.0 <= y2 <= y + 25.0):
-                    continue
-                if not is_requested_side(_x02):
-                    continue
-                v = _compact_text(t2).upper()
-                if re.fullmatch(r"[0-9A-Z]{15,20}", v):
-                    return v
-        return ""
-
-    buyer_tax_id = pick_tax_id(side_left=True)
-    seller_tax_id = pick_tax_id(side_left=False)
-
-    # ── 价税合计 (total with tax) ────────────────────────────────────
-    amount_with_tax = ""
-    total_label = [t for t in items if "价税合计" in _compact_text(t[3])]
-    if total_label:
-        total_label.sort(key=lambda t: (t[0], t[1]))
-        y0, x0, _x1, _t = total_label[0]
-        money = []
-        for y, x, _x1, s in items:
-            compact_value = _compact_text(s)
-            if abs(y - y0) > 30 or x <= x0:
-                continue
-            if not re.fullmatch(r"[¥￥]?-?[0-9]+(?:\.[0-9]{1,2})?", compact_value):
-                continue
-            money.append((abs(y - y0), x, _normalize_ocr_amount(compact_value)))
-        if money:
-            money.sort()
-            amount_with_tax = money[0][2]
-
-    # ── Amount / tax (金额 / 税额) via y-clustering ───────────────────
-    money_2dec = [(y, x, s) for y, x, _x1, s in items if re.fullmatch(r"[0-9]+\.[0-9]{2}", _compact_text(s))]
-    amount = ""
-    tax = ""
-    if total_label:
-        y_total = total_label[0][0]
-        buckets: dict[float, list[str]] = {}
-        for y, _x, s in money_2dec:
-            if y >= y_total - 10:
-                continue
-            if y < y_total - 120:
-                continue
-            key = round(y, 1)
-            buckets.setdefault(key, []).append(s)
-        if buckets:
-            best_y = max(buckets.keys())
-            vals = buckets[best_y]
-            if len(vals) >= 2:
-                a = max(vals, key=lambda v: float(v))
-                b = min(vals, key=lambda v: float(v))
-                amount = a
-                tax = b
-            elif len(vals) == 1:
-                amount = vals[0]
-                tax = ""
+    parties = party_metadata(items, sink=diagnostic_sink, location=location)
+    amounts = amount_metadata(items, spans, sink=diagnostic_sink, location=location)
 
     out: dict[str, str] = {}
     if invoice_number:
         out["发票号码"] = invoice_number
     if issue_date:
         out["开票日期"] = issue_date
-    if buyer_name:
-        out["购买方名称"] = buyer_name
-    if seller_name:
-        out["销售方名称"] = seller_name
-    if buyer_tax_id:
-        out["购买方纳税人识别号"] = buyer_tax_id
-    if seller_tax_id:
-        out["销售方纳税人识别号"] = seller_tax_id
-    if amount:
-        out["金额"] = amount
-    if tax:
-        out["税额"] = tax
-    if amount_with_tax:
-        out["价税合计"] = amount_with_tax
+    out.update(parties)
+    out.update(amounts)
     if issuer:
         out["开票人"] = issuer
     if reviewer:
@@ -485,12 +333,16 @@ def parse_invoice_metadata_from_pdf_spans(
 def parse_invoice_metadata_from_text_and_spans(
     text: str,
     spans: list[tuple[float, float, float, float, str]],
+    *,
+    diagnostic_sink: ProgressSink | None = None,
+    location: str = "",
 ) -> tuple[dict[str, str | None], list[dict[str, str]]]:
     """Extract metadata from both compact text (regex) and PDF spans (positional).
 
     This is the main entry point for PDF invoice metadata extraction.
-    Span-based extraction overrides text-based extraction for fields
-    that both sources detect.
+    A complete role-labelled text value retains ownership. Positional
+    evidence fills missing values and reports disagreements without silently
+    replacing the stronger text fact. Callers provide one physical page.
 
     Args:
         text: Raw text from PDF page.
@@ -503,10 +355,20 @@ def parse_invoice_metadata_from_text_and_spans(
     compact = _compact_text(text)
     metadata = parse_invoice_metadata_from_compact_text(compact)
 
-    span_meta = parse_invoice_metadata_from_pdf_spans(spans)
-    for k, v in span_meta.items():
-        if v:
-            metadata[k] = v
+    span_meta = parse_invoice_metadata_from_pdf_spans(spans, diagnostic_sink=diagnostic_sink, location=location)
+    for key, value in span_meta.items():
+        if not value:
+            continue
+        previous = metadata.get(key)
+        if previous and previous != value:
+            report_metadata_issue(
+                diagnostic_sink,
+                code="INVOICE-METADATA-CONFLICT",
+                location=f"{location}:{key}",
+                message=f"Conflicting {key} text and position evidence within this page; kept the complete role-labelled text value.",
+            )
+        else:
+            metadata[key] = value
 
     from docwen_plugin_optimizer_invoice_cn.invoice_cn.rows import (
         parse_invoice_rows_from_pdf_spans,

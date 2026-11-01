@@ -20,7 +20,8 @@ if __package__ in {None, ""}:
         sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
 from tools import qa_reports, source_checks
-from tools.run_lease import lease_payload, transition
+from tools.run_lease import OwnedRunLease, lease_payload, transition
+from tools.source_imports import source_import_environment
 from tools.windows_short_path import ShortPathDriveError, drive_root, mount_short_drive, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
 from tools.workspace_root import WorkspaceRootError, resolve_workspace_root
@@ -48,7 +49,9 @@ PYTEST_SYSTEM_TEMP_NAME = "t"
 
 
 def _run(args: list[str], *, env: dict[str, str] | None = None) -> int:
-    proc = subprocess.run(args, cwd=Path(__file__).resolve().parents[1], env=env)
+    repo_root = Path(__file__).resolve().parents[1]
+    environment = source_import_environment(repo_root, os.environ if env is None else env)
+    proc = subprocess.run(args, cwd=repo_root, env=environment)
     return int(proc.returncode)
 
 
@@ -250,7 +253,7 @@ def _pytest_runtime_environment(
             raise ValueError(f"pytest runtime child must not traverse a link or reparse point: {path}")
     if owned:
         _write_runtime_lease(runtime_root, state="active")
-    environment = os.environ.copy()
+    environment = source_import_environment(repo_root, os.environ)
     environment.update(
         {
             PYTEST_RUNTIME_ROOT_ENV: str(runtime_root),
@@ -671,13 +674,40 @@ def main(argv: list[str]) -> int:
                 print(f"[qa] pytest runtime retained by request: {runtime_root}")
             else:
                 try:
-                    _cleanup_owned_runtime(runtime_root)
+                    cleanup_lease = OwnedRunLease.capture(runtime_root, owner="docwen.tools.qa", kind="pytest-runtime")
                 except (OSError, ValueError) as error:
-                    _patch_runtime_lease(
-                        runtime_root,
-                        state="retained-cleanup-failure",
-                        fields={"cleanupError": f"{type(error).__name__}:{error}"},
-                    )
+                    print(f"[qa] cannot establish pytest runtime cleanup identity: {error}", file=sys.stderr)
+                    return 2
+                root_pinned = False
+                cleanup_failure_recorded = False
+                try:
+                    with cleanup_lease.pin_root():
+                        root_pinned = True
+                        try:
+                            _cleanup_owned_runtime(runtime_root)
+                        except (OSError, ValueError) as error:
+                            cleanup_lease.lease["cleanupError"] = f"{type(error).__name__}:{error}"
+                            try:
+                                cleanup_lease.save("retained-cleanup-failure", restore_missing=True)
+                            except (OSError, ValueError) as secondary:
+                                cleanup_lease.report_secondary(error, secondary)
+                                cleanup_lease.record_recovery(
+                                    error,
+                                    "cleanup-recording",
+                                    outcome="completed-success",
+                                    recording_error=secondary,
+                                )
+                            cleanup_failure_recorded = True
+                            raise
+                except (OSError, ValueError) as error:
+                    if not cleanup_failure_recorded:
+                        cleanup_lease.lease["cleanupError"] = f"{type(error).__name__}:{error}"
+                        cleanup_lease.record_recovery(
+                            error,
+                            "cleanup-close" if root_pinned else "cleanup-identity",
+                            outcome="completed-success",
+                            recording_error=error,
+                        )
                     print(f"[qa] pytest runtime cleanup failed: {error}", file=sys.stderr)
                     return 2
     return exit_code

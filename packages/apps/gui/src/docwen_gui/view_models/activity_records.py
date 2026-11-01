@@ -45,6 +45,7 @@ class ActivityRecord:
     source_location_available: bool = True
     output_paths: tuple[str, ...] = ()
     diagnostic: DiagnosticSummary | None = None
+    warning_messages: tuple[str, ...] = ()
 
     @property
     def status_label(self) -> str:
@@ -110,7 +111,11 @@ class ActivityRecordsModel(QAbstractTableModel):
                 ]
                 warnings = outcome.warnings if outcome else ()
                 messages = list(
-                    dict.fromkeys(row.message for row in matching if not warnings or row.message_type != "warning")
+                    dict.fromkeys(
+                        (row.details_message or row.message)
+                        for row in matching
+                        if not warnings or row.message_type != "warning"
+                    )
                 )
                 has_warning = bool(warnings) or any(row.message_type == "warning" for row in matching)
                 input_display = source_label or display_path(path)
@@ -145,6 +150,11 @@ class ActivityRecordsModel(QAbstractTableModel):
                         source_location_available,
                         outputs,
                         outcome.diagnostic if outcome else DiagnosticSummary(status="pending"),
+                        tuple(
+                            dict.fromkeys(
+                                (*warnings, *(row.message for row in matching if row.message_type == "warning"))
+                            )
+                        ),
                     )
                 )
         for row in notices:
@@ -157,7 +167,7 @@ class ActivityRecordsModel(QAbstractTableModel):
             status = {"success": "completed", "danger": "failed", "warning": "warning"}.get(row.message_type, "info")
             if row.diagnostic is not None and row.diagnostic.status == "not_started":
                 status = "not_started"
-            details = row.message
+            details = row.details_message or row.message
             if row.repeat_count > 1:
                 details += "\n" + t("info_area.history_repeated", count=row.repeat_count)
             path = row.file_path or row.navigate_file_path
@@ -175,6 +185,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                     row.operation or t("activity.info"),
                     details,
                     diagnostic=row.diagnostic or DiagnosticSummary(status=status),
+                    warning_messages=(row.message,) if row.message_type == "warning" else (),
                 )
             )
         if records == self.records:

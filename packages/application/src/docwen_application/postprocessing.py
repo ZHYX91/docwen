@@ -13,7 +13,7 @@ from docwen_core.options import PROOFREAD_OPTIONS_SCHEMA
 
 _PROOFREAD_OPTION_KEYS = frozenset(PROOFREAD_OPTIONS_SCHEMA.get("properties", {}))
 _MARKDOWN_SOURCE_FORMATS = frozenset({"md", "markdown", "txt"})
-_PROOFREAD_DOCUMENT_TARGETS = frozenset({"docx", "doc", "odt", "rtf", "wps"})
+PROOFREAD_DOCUMENT_TARGETS = frozenset({"docx", "doc", "odt", "rtf", "wps"})
 
 
 def prepare_postprocess_options(
@@ -27,7 +27,7 @@ def prepare_postprocess_options(
     """Move canonical proofreading switches into the Application pipeline.
 
     Named actions such as ``validate`` keep their route-owned options. Ordinary
-    Markdown→DOCX conversion consumes proofreading switches as a second-stage
+    Markdown→DOCX/DOC/ODT/RTF/WPS conversion consumes proofreading switches as a second-stage
     Application intent. Other routes retain the keys so their normal route
     validation can reject unsupported combinations rather than silently
     accepting them.
@@ -37,14 +37,14 @@ def prepare_postprocess_options(
     source = source_format.strip().lower()
     target = target_format.strip().lower()
     if proofread_requested and (
-        action_name or source not in _MARKDOWN_SOURCE_FORMATS or target not in _PROOFREAD_DOCUMENT_TARGETS
+        action_name or source not in _MARKDOWN_SOURCE_FORMATS or target not in PROOFREAD_DOCUMENT_TARGETS
     ):
         raise ValueError("--proofread requires an ordinary Markdown-to-document conversion")
     if action_name:
         return prepared
     if source not in _MARKDOWN_SOURCE_FORMATS:
         return prepared
-    if target not in _PROOFREAD_DOCUMENT_TARGETS:
+    if target not in PROOFREAD_DOCUMENT_TARGETS:
         return prepared
 
     proofread: dict[str, bool] = {}
@@ -68,7 +68,7 @@ def postprocess_proofread_options(request: Any) -> dict[str, bool] | None:
         return None
     if (
         getattr(request, "action_name", "")
-        or str(getattr(request, "target_format", "")).lower() not in _PROOFREAD_DOCUMENT_TARGETS
+        or str(getattr(request, "target_format", "")).lower() not in PROOFREAD_DOCUMENT_TARGETS
     ):
         raise ValueError("Post-conversion proofreading is supported only for ordinary document conversion")
     source = next(
@@ -92,4 +92,4 @@ def postprocess_proofread_options(request: Any) -> dict[str, bool] | None:
     return normalized
 
 
-__all__ = ["postprocess_proofread_options", "prepare_postprocess_options"]
+__all__ = ["PROOFREAD_DOCUMENT_TARGETS", "postprocess_proofread_options", "prepare_postprocess_options"]

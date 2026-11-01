@@ -353,6 +353,7 @@ class TestGongwenGolden:
                     "recognition_review_signals": {
                         "missing_required": [],
                         "needs_review_reasons": [],
+                        "gongwen_warnings": [],
                         "recognition_summary": {"needs_review": False},
                     },
                 },

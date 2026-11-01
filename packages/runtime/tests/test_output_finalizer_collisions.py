@@ -281,15 +281,17 @@ def test_task_manager_keeps_partial_outputs_when_a_later_publication_retry_is_ca
             return ConversionResult(task_id=context.request.request_id, success=True, artifacts=artifacts)
 
     registry = PluginRegistry()
-    registry.register(ThreeArtifactPlugin("three_artifacts", "txt", "pdf"))
+    # Non-Markdown outputs retain individual-file publication. Markdown/TXT
+    # with multiple deliverables instead commits one atomic result directory.
+    registry.register(ThreeArtifactPlugin("three_artifacts", "docx", "pdf"))
     workspaces = WorkspaceManager(root_dir=str(tmp_path / "workspace"))
     manager = TaskManager(registry, RouteResolver(registry), workspaces, OutputFinalizer())
-    input_path = tmp_path / "source.txt"
+    input_path = tmp_path / "source.docx"
     input_path.write_text("source content", encoding="utf-8")
     output = tmp_path / "output"
     request = ConversionRequest(
         request_id="manager-partial-cancel",
-        input_refs=[FileRef(path=str(input_path), format="txt", category="text")],
+        input_refs=[FileRef(path=str(input_path), format="docx", category="document")],
         target_format="pdf",
         output_policy=OutputPolicy(output_dir=str(output), overwrite_mode="rename"),
     )
@@ -328,3 +330,46 @@ def test_task_manager_keeps_partial_outputs_when_a_later_publication_retry_is_ca
     assert (output / "first.pdf").read_bytes() == b"complete-0"
     assert (output / "second.pdf").read_bytes() == b"external authoritative output"
     assert input_path.read_text(encoding="utf-8") == "source content"
+
+
+def test_markdown_multiple_deliverables_cancel_during_copy_publishes_no_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source.md"
+    source.write_bytes(b"# original input\n")
+    artifacts = []
+    for index in range(3):
+        path = tmp_path / f"staging-{index}.pdf"
+        path.write_bytes(f"complete-{index}".encode())
+        artifact = _artifact(path, f"result-{index}.pdf")
+        artifact.artifact_id = f"artifact-{index}"
+        artifacts.append(artifact)
+    token = CancellationToken()
+    copied: list[bytes] = []
+    real_copy = OutputFinalizer._copy_to_temp
+
+    def cancel_after_second_copy(staging: str, destination: str, _cancellation: object) -> None:
+        real_copy(staging, destination, token.view())
+        copied.append(Path(destination).read_bytes())
+        if len(copied) == 2:
+            token.cancel("cancel grouped output before atomic publication")
+
+    monkeypatch.setattr(OutputFinalizer, "_copy_to_temp", staticmethod(cancel_after_second_copy))
+    output = tmp_path / "output"
+    with pytest.raises(CancellationRequested):
+        OutputFinalizer().finalize(
+            "cancel-grouped-output",
+            artifacts,
+            OutputPolicy(output_dir=str(output)),
+            input_path=str(source),
+            cancellation=token.view(),
+        )
+
+    assert copied == [b"complete-0", b"complete-1"], "cancellation fixture must run before the third copy"
+    assert not list(output.iterdir()), "cancelled directory and private staging must both be absent"
+    assert [Path(artifact.staging_path).read_bytes() for artifact in artifacts] == [
+        b"complete-0",
+        b"complete-1",
+        b"complete-2",
+    ]
+    assert source.read_bytes() == b"# original input\n"

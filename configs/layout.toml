@@ -15,3 +15,8 @@ to_md_optimization = "none"
 # 渲染选项默认设置
 # 渲染DPI: 150/300/600
 render_dpi = 300
+
+# Operation defaults; actual targets still require an available conversion route.
+split_mode = "every_page"
+document_format = "DOCX"
+render_format = "TIF"

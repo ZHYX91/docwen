@@ -52,6 +52,48 @@ def _parse_invoice_markdown(markdown: str) -> tuple[dict[str, str], list[str]]:
     return yaml_fields, table_rows
 
 
+def _parse_invoice_table_cells(markdown: str) -> list[list[str]]:
+    """Prove the canonical source grid and compare plain visible cells by position."""
+    from markdown_it import MarkdownIt
+
+    lines = [line.strip() for line in markdown.splitlines() if line.lstrip().startswith("|")]
+    assert len(lines) >= 2, "invoice table header and delimiter are required"
+    widths: list[int] = []
+    for line in lines:
+        boundaries: list[int] = []
+        backslashes = 0
+        for index, character in enumerate(line):
+            if character == "|" and backslashes % 2 == 0:
+                boundaries.append(index)
+            backslashes = backslashes + 1 if character == "\\" else 0
+        assert boundaries and boundaries[0] == 0 and boundaries[-1] == len(line) - 1
+        widths.append(len(boundaries) - 1)
+    assert widths[0] > 0 and all(width == widths[0] for width in widths), "invoice source row width differs"
+
+    rows: list[list[str]] = []
+    current: list[str] | None = None
+    for token in MarkdownIt().enable("table").parse(markdown):
+        if token.type == "tr_open":
+            current = []
+        elif token.type == "inline" and current is not None:
+            children = token.children or []
+            assert all(child.type == "text" for child in children), "invoice cell acquired formatting or active syntax"
+            current.append("".join(child.content for child in children))
+        elif token.type == "tr_close" and current is not None:
+            assert len(current) == widths[0]
+            rows.append(current)
+            current = None
+    assert len(rows) == len(lines) - 1, "invoice parser omitted a source row"
+    return rows
+
+
+def _expected_invoice_table_cells(lines: list[str]) -> list[list[str]]:
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.yaml_schema import TABLE_HEADERS
+
+    delimiter = "| " + " | ".join("---" for _ in TABLE_HEADERS) + " |"
+    return _parse_invoice_table_cells("\n".join([lines[0], delimiter, *lines[1:]]))
+
+
 def _build_fake_context(
     input_path: str,
     staging_dir: str,

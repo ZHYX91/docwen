@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import json
 import os
 import stat
@@ -280,6 +281,77 @@ def test_qa_marks_owned_runtime_when_success_cleanup_fails(
     assert lease["cleanupError"] == "OSError:locked"
 
 
+@pytest.mark.parametrize("fault", ["marker-removed", "record", "foreign-marker", "foreign-root", "recovery"])
+def test_qa_partial_cleanup_keeps_primary_failure_and_known_identity(tmp_path, monkeypatch, capsys, fault):
+    governed = _governance_root(tmp_path / "engineering")
+    monkeypatch.setenv(qa.WORKSPACE_ROOT_ENV, str(governed))
+    monkeypatch.delenv(qa.PYTEST_RUNTIME_ROOT_ENV, raising=False)
+    monkeypatch.setattr(qa, "_scan_private_symbol_usage", lambda _repo: 0)
+    monkeypatch.setattr(qa, "_run", lambda _command, *, env=None: 0)
+    observed = []
+    snapshots = []
+    original_open = Path.open
+
+    def cleanup(root):
+        observed.append(root)
+        marker = root / qa.PYTEST_RUNTIME_LEASE
+        snapshots.append((json.loads(marker.read_text()), root.stat().st_ino))
+        (root / "remaining-sample").write_bytes(b"original evidence")
+        marker.unlink()
+        if fault == "foreign-marker":
+            marker.write_bytes(b'{"owner":"foreign"}')
+        elif fault == "foreign-root":
+            root.rename(root.with_name(root.name + "-original"))
+            root.mkdir()
+            (root / "foreign").write_bytes(b"untouched")
+        elif fault in {"record", "recovery"}:
+
+            def fail_record(self, mode="r", *args, **kwargs):
+                if mode == "x" and (
+                    self.name == qa.PYTEST_RUNTIME_LEASE
+                    or (fault == "recovery" and self.name.endswith(".recovery.json"))
+                ):
+                    raise OSError("recording unavailable: " + self.name)
+                return original_open(self, mode, *args, **kwargs)
+
+            monkeypatch.setattr(Path, "open", fail_record)
+        raise OSError(errno.ENOTEMPTY, "injected partial cleanup", str(root))
+
+    monkeypatch.setattr(qa, "_cleanup_owned_runtime", cleanup)
+    assert qa.main(["--skip-ruff", "--skip-pyright"]) == 2
+    [root] = observed  # No second recursive deletion attempt.
+    [(before, inode)] = snapshots
+    error = capsys.readouterr().err
+    assert "injected partial cleanup" in error and "pytest runtime cleanup failed" in error
+    recovery = root.with_name(root.name + ".recovery.json")
+    if fault == "marker-removed":
+        after = json.loads((root / qa.PYTEST_RUNTIME_LEASE).read_text())
+        assert after["state"] == "retained-cleanup-failure"
+        assert after["outcome"] == "completed-success"
+        assert {key: after[key] for key in ("pid", "createdAt", "finishedAt", "root", "owner")} == {
+            key: before[key] for key in ("pid", "createdAt", "finishedAt", "root", "owner")
+        }
+        assert "injected partial cleanup" in after["cleanupError"]
+        assert (root / "remaining-sample").read_bytes() == b"original evidence"
+        assert not recovery.exists()
+    elif fault == "recovery":
+        assert "recording unavailable" in error
+        assert not recovery.exists()
+        assert not (root / qa.PYTEST_RUNTIME_LEASE).exists()
+    else:
+        record = json.loads(recovery.read_text())
+        assert record["knownOutcome"] == "completed-success"
+        assert record["rootIdentity"]["inode"] == inode
+        assert record["lease"]["createdAt"] == before["createdAt"]
+        assert "injected partial cleanup" in record["error"]
+        assert record["phase"] == "cleanup-recording"
+        if fault == "foreign-marker":
+            assert (root / qa.PYTEST_RUNTIME_LEASE).read_bytes() == b'{"owner":"foreign"}'
+        if fault == "foreign-root":
+            assert (root / "foreign").read_bytes() == b"untouched"
+            assert not (root / qa.PYTEST_RUNTIME_LEASE).exists()
+
+
 def test_qa_can_own_and_remove_a_new_explicit_short_root(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -467,3 +539,114 @@ def test_qa_platform_mark_expressions_exclude_linux_tests_off_linux(
     monkeypatch.setattr(qa.sys, "platform", "linux")
     assert "not linux_only" not in qa._platform_fast_mark_expr()
     assert "not linux_only" not in qa._platform_release_mark_expr()
+
+
+def test_qa_root_pin_failure_preserves_external_hold_before_any_recursive_cleanup(tmp_path, monkeypatch, capsys):
+    from tools import run_lease, workspace_cleanup
+
+    governed = _governance_root(tmp_path / "engineering")
+    monkeypatch.setenv(qa.WORKSPACE_ROOT_ENV, str(governed))
+    monkeypatch.delenv(qa.PYTEST_RUNTIME_ROOT_ENV, raising=False)
+    monkeypatch.setattr(qa, "_scan_private_symbol_usage", lambda _repo: 0)
+    monkeypatch.setattr(qa, "_run", lambda _command, *, env=None: 0)
+    observations = []
+
+    class UnavailablePin:
+        def __init__(self, lease):
+            self.lease = lease
+
+        def __enter__(self):
+            marker = self.lease.marker
+            (self.lease.root / "original-evidence").write_bytes(b"keep this failure evidence")
+            observations.append((self.lease.root, marker.read_bytes()))
+            raise OSError("directory object pin unavailable")
+
+        def __exit__(self, *args):
+            raise AssertionError("an unacquired pin must not exit")
+
+    def forbidden_cleanup(_root):
+        raise AssertionError("recursive cleanup must not run without root identity pin")
+
+    monkeypatch.setattr(run_lease.OwnedRunLease, "pin_root", lambda lease: UnavailablePin(lease))
+    monkeypatch.setattr(qa, "_cleanup_owned_runtime", forbidden_cleanup)
+    assert qa.main(["--skip-ruff", "--skip-pyright"]) == 2
+    [(runtime, marker_before)] = observations
+    assert (runtime / qa.PYTEST_RUNTIME_LEASE).read_bytes() == marker_before
+    assert (runtime / "original-evidence").read_bytes() == b"keep this failure evidence"
+    record = json.loads(runtime.with_name(runtime.name + ".recovery.json").read_text())
+    assert record["phase"] == "cleanup-identity"
+    assert record["knownOutcome"] == "completed-success"
+    assert record["lease"]["state"] == "completed-success"
+    assert "directory object pin unavailable" in record["error"]
+    assert "pytest runtime cleanup failed" in capsys.readouterr().err
+    with pytest.raises(ValueError, match="pending_run_recovery"):
+        workspace_cleanup._assert_no_pending_run_recovery(runtime)
+
+
+def test_qa_subprocess_environment_preserves_owned_runtime_and_caller_environment(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    repo = tmp_path / "current"
+    source = repo / "packages/apps/cli/src"
+    source.mkdir(parents=True)
+    monkeypatch.setattr(qa, "__file__", str(repo / "tools/qa.py"))
+    supplied = {
+        "PYTHONPATH": "previous-checkout",
+        "TEMP": "owned-temp",
+        "DOCWEN_RUNTIME_ROOT": "owned-runtime",
+        "COVERAGE_FILE": "owned-coverage",
+        "DOCWEN_PYTEST_REPORT_DIR": "owned-reports",
+    }
+    before = dict(supplied)
+    observed = []
+    monkeypatch.setattr(
+        qa.subprocess, "run", lambda *args, **kwargs: observed.append(kwargs) or SimpleNamespace(returncode=0)
+    )
+    assert qa._run(["python", "-V"], env=supplied) == 0
+    env = observed[0]["env"]
+    assert env["PYTHONPATH"].split(os.pathsep) == [str(source), "previous-checkout"]
+    assert {key: env[key] for key in before if key != "PYTHONPATH"} == {
+        key: value for key, value in before.items() if key != "PYTHONPATH"
+    }
+    assert supplied == before
+
+
+@pytest.mark.parametrize("entry", ["qa", "source"])
+def test_new_interpreter_imports_current_checkout_before_another_checkout(tmp_path, monkeypatch, entry):
+    import sys
+
+    from tools import run_source
+
+    current, other = tmp_path / "current", tmp_path / "other"
+    names = {"apps/cli": "checkout_cli_probe", "plugins/optimizers/gongwen": "checkout_optimizer_probe"}
+    expected = []
+    old_sources = []
+    for checkout in (current, other):
+        for package, name in names.items():
+            source = checkout / "packages" / package / "src"
+            module = source / name / "__init__.py"
+            module.parent.mkdir(parents=True)
+            module.write_text("IDENTITY = " + repr(checkout.name), encoding="utf-8")
+            if checkout == current:
+                expected.append(str(module.resolve()))
+            else:
+                old_sources.append(str(source))
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join(old_sources))
+    output = tmp_path / "selected-imports.json"
+    command = [
+        sys.executable,
+        "-c",
+        "import json,sys; from pathlib import Path; import checkout_cli_probe as c,checkout_optimizer_probe as o; Path(sys.argv[1]).write_text(json.dumps([str(Path(c.__file__).resolve()),str(Path(o.__file__).resolve())]))",
+        str(output),
+    ]
+    if entry == "qa":
+        monkeypatch.setattr(qa, "__file__", str(current / "tools/qa.py"))
+        assert qa._run(command) == 0
+    else:
+        import subprocess
+
+        completed = subprocess.run(
+            command, cwd=current, env=run_source.source_environment(current, tmp_path / "run"), check=False
+        )
+        assert completed.returncode == 0
+    assert json.loads(output.read_text()) == expected

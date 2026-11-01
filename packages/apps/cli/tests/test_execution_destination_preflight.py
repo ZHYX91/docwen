@@ -12,7 +12,7 @@ from docwen_cli.commands import execution_v3
 pytestmark = pytest.mark.integration
 
 
-@pytest.mark.parametrize(("source", "target"), [("source.md", "docx"), ("source.docx", "md")])
+@pytest.mark.parametrize(("source", "target"), [("source.docx", "md"), ("source.md", "md")])
 def test_grouped_overwrite_is_rejected_before_runtime_or_write_probe(tmp_path, monkeypatch, source, target):
     args = argparse.Namespace(
         command_path="convert",
@@ -199,3 +199,19 @@ def test_write_probe_avoids_temporaryfile_on_windows_acl_boundaries(
 
     assert execution_v3._preflight_destination(_args(output_dir=output_dir)) is None
     assert list(output_dir.iterdir()) == []
+
+
+@pytest.mark.parametrize("target", ["docx", "xlsx", "csv"])
+def test_markdown_source_exact_output_overwrite_is_not_rejected_by_input_format(tmp_path, target):
+    output = tmp_path / f"chosen.{target}"
+    output.write_bytes(b"old")
+    args = argparse.Namespace(
+        command_path="convert",
+        files=[str(tmp_path / "source.md")],
+        to=target,
+        overwrite=True,
+        output_path=str(output),
+        output_dir=None,
+    )
+    assert execution_v3._preflight_destination(args) is None
+    assert output.read_bytes() == b"old"

@@ -29,6 +29,18 @@ even when runtime discovery has already created the catalog state.
 内置和自定义模板可混排；新增导入排到末尾，副本排在原模板之后。同名导入默认保留两者，
 明确选择替换时保留既有自定义模板的 ID、顺序和启停状态。
 
+Template file-plus-state compensation uses the same durable `PREPARED` re-publication as configuration
+writes. If it cannot be made durable, no before-image is restored and later catalog operations must recover
+or fail closed. After `COMMITTED` is confirmed, a journal deletion or directory-sync failure is a cleanup
+warning: import/copy/rename/delete retain their committed result, identity and ordering. The management UI
+counts a committed import as successful and presents the warning separately, so cleanup retries through
+catalog refresh do not repeat the import. Mutation and prepare failures still fail the operation.
+
+模板文件与状态补偿复用配置写入的可靠 `PREPARED` 重申；无法持久化时不恢复任何前像，后续目录操作
+必须先恢复或失败关闭。确认 `COMMITTED` 后，日志删除或目录同步失败属于清理警告；导入、复制、
+重命名和删除仍保留已提交的结果、身份及顺序。管理界面将已提交导入计为成功并单独提示警告，刷新目录
+重试清理不会重复导入。变更或准备阶段失败仍将操作报告为失败。
+
 The main selector shows enabled templates in saved order and uses canonical IDs for selection and dispatch.
 Both lists show a leading source badge with a locale-consistent width. The main selector offers only management
 navigation; it has no package-location action. Removing or disabling the current template clears selection,
@@ -36,6 +48,14 @@ shows guidance, and disables template-dependent conversion until the user select
 preserves the current format tab. A missing or disabled default is cleared without selecting an alternative.
 
 ## Managed identity / 受管身份
+
+### XLSX image references and protected fills / XLSX 图片引用与保护格填充
+
+XLSX image markers resolve relative files beside the actual selected template (or the source Markdown for an ordinary table export). That neighbor takes priority over a same-named working-directory file, even when the neighbor is not a valid image. Only an absent neighbor permits the legacy CWD fallback; absolute paths keep their own identity. A protected cell consumes its input without overwriting its value or inserting a drawing. Its explanatory comment shows readable image basenames instead of internal transport markers or encoded paths and is limited to 500 characters.
+
+XLSX 图片标记中的相对文件首先在实际选中模板旁解析，普通表格导出则在源 Markdown 旁解析。同名工作目录文件不能覆盖该邻居，即使邻居不是有效图片；只有邻居缺席才使用既有 CWD 兼容查找，绝对路径保持自身身份。保护格仍消费输入，但不覆盖原值或插图；说明注释显示可读图片文件名，不输出内部传输标记或转义路径，最长 500 个字符。
+
+### DOCX style identity / DOCX 样式身份
 
 Every managed style has one identity chain:
 
@@ -46,12 +66,13 @@ semantic key -> stable OOXML styleId -> visible w:name
 - A built-in Word style uses its canonical English `styleId` and canonical English `w:name`; Word/WPS localize its
   presentation. If a Word/WPS template already represents the same built-in identity and type under a host-specific
   numeric or localized internal `styleId`, DocWen reuses that actual ID through the resolved map; it does not delete
-  and recreate the style merely to force the canonical ID. A newly injected built-in uses the canonical ID/name.
+  and recreate the style merely to force the canonical ID. A newly injected built-in uses the canonical ID/name when available; an occupied or ambiguous identity receives
+  a request-local collision-free ID while keeping its canonical name.
 - A DocWen style uses the stable `DocWen...` styleId below and a locale-specific `w:name` from the exact output
   locale. All eleven shipped locales are required.
 - `w:aliases` is never emitted. Import-time aliases are an internal recognition aid, not output identity.
 - An existing style with the same semantic identity and OOXML type is preserved, including user formatting. If a
-  stable DocWen `styleId` or visible name is occupied by a different identity or OOXML type, DocWen preserves the
+  managed `styleId` or visible name is occupied by a different identity or OOXML type, DocWen preserves the
   user's style and allocates a request-local collision-free `styleId` for the managed identity. The resolved
   semantic-key-to-styleId map is the only map used by renderers and is recorded with a stable conflict diagnostic.
   DocWen never deletes, renames, retypes, or rewrites the conflicting user style.
@@ -63,6 +84,19 @@ default. Final validation covers these foundation identities in both `styles.xml
 `Title` and `Subtitle` are optional template styles, not prerequisites or injected dependencies. The shipped blank
 template includes `Title` and therefore produces 47 physical styles after completion; this count is not a requirement
 for other templates. Source template bytes and compatible formatting remain unchanged.
+
+Final style validation is scoped to managed identities and newly written direct references. Missing or duplicate
+unused template style IDs and wrong-type visible-name collisions are preserved; an ambiguous ID is never reused for
+new managed output. Every generated `pStyle`, `rStyle` and `tblStyle` must target one definition of the correct type.
+Existing invalid direct references may survive only while the original physical reference element remains unchanged
+and attached to the same original paragraph, run or table in the same live request-owned part root. Moving the old
+reference into a new owner does not carry its exemption. Its current owner snapshot is used at final
+serialization, so filling YAML text on that owner does not reject an untouched bad style reference. Removed or copied
+references cannot donate an exemption, even when the replacement has identical XML. Blob-only generic parts retain
+allowances only while the same reachable part still owns its original bytes. This provenance is kept in memory,
+without persisted bypass attributes. Managed and foundation
+identities themselves remain unique and type-checked in both style registries. Note rendering consumes the resolved
+managed binding rather than the first visible-name match.
 
 ## Complete registry / 完整注册表
 
@@ -162,6 +196,18 @@ can introduce small differences between its calculated indent and rendered name 
 可能截获该制表符的较早模板制表位仅在生成段落中取消，较晚制表位与共享样式保留。空格方式点后固定一个普通半角空格，
 序号每增加一位，前置补位减少半字宽；复杂混排和两端对齐可能使实际名称起点与估算缩进略有差别。
 单附件不编号；字体、两端对齐及其他模板段落格式保持原样。
+
+`template_fill.gongwen_numbering_text` and `template_fill.gongwen_numbering_comments` both default to `true`.
+They belong to Gongwen → Markdown→Document and remain independent of field formatting. The text switch overrides
+only the render mode of heading numbers newly added by the Incoming Text scheme in this source conversion;
+it never enables `add_numbering`, changes the saved global render mode, or rewrites existing template numbering.
+New text-numbered headings locally suppress inherited native numbering with `ilvl=0,numId=0`. Turning text
+numbering off clears and disables comments; turning it back on does not select comments automatically.
+Config validation and runtime projection also force comments off for inconsistent external input.
+Comments cover only the exact newly inserted number, with the fixed review text; custom Markdown prefixes
+without an exact text anchor are preserved and reported as skipped comments. Existing comment attributes and
+resources remain untouched. ID reservation shares the note parser's XML integer identity, including XML
+whitespace and arbitrarily long leading zeros, while rejecting Python-only or Unicode digit spellings.
 
 The standalone `{{body}}` run may author direct font/character overrides
 separate from its paragraph style. Ordinary body text receives only these
@@ -290,13 +336,23 @@ to the conversion request and never rewrites the source Markdown or its authored
 The four built-in note styles (`FootnoteText`, `FootnoteReference`, `EndnoteText`, and `EndnoteReference`) are always
 completed, even when the source contains no new note. Their presence is not evidence that note content survived.
 
-Before adding a footnote or endnote, DocWen reads the complete existing note part, its relationships, and its content
-type. It validates every existing note ID, including Word's reserved separator IDs, rejects illegal or duplicate IDs,
-and allocates the lowest unused positive ID independently in the footnote and endnote domains. The body entry and the
-main-document reference run are written atomically with the same ID. A failure cannot leave only one side behind.
+Template notes are preserved without imposing a whole-template compliance gate. When no new note is materialized
+(including metadata-only templates), DocWen does not audit the template's existing note graph. When extending one note
+domain, it checks that domain's part ownership, content type, root and unambiguous integer IDs. Separator,
+continuation-separator and continuation-notice identity comes from `w:type`, independently of the numeric ID: positive
+special-note IDs are occupied IDs, not normal notes to overwrite. All existing IDs and numeric reference IDs across
+package stories are reserved; the lowest unused positive ID is allocated independently in each domain. OOXML note IDs
+use the signed 32-bit XML Schema integer lexical contract (XML whitespace is collapsed, ASCII signed digits are accepted);
+Python-only underscore or Unicode-digit spellings never join a new note's identity. Missing or
+noncanonical separators and unrelated broken template references/resources are preserved without repair. Ambiguous
+IDs or part ownership that prevent safe append still fail closed, without auditing the untouched opposite domain.
+The new normal body and its main-document native reference use the same ID and are checked again before atomic
+replacement. Repeated new references use the existing NOTEREF projection; final output must contain exactly one native
+reference per new body. A failure cannot publish only one side of a new note.
 
 Existing rich note bodies are preserved as OOXML, including blocks, runs, hyperlinks, drawings, and every reachable
-note-part relationship. DocWen neither flattens the body to text nor deletes, renumbers, or recreates existing notes.
+note-part relationship. Resources unreachable from the package relationship graph remain outside python-docx's save
+contract; preserving an existing defect does not promise to recover an already orphaned ZIP member. DocWen neither flattens the body to text nor deletes, renumbers, or recreates existing notes.
 Relationship IDs are allocated against the complete existing part, not only relationships created during the current
 request. Word, WPS, and LibreOffice must each open, save, reopen, and retain the note body, reference, relationship,
 and ID graph; a headless check that only sees the four styles is not a host-fidelity gate.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from docwen_core.text.numbering import (
@@ -22,7 +23,7 @@ class NumberingLevel:
     abstract_num_id: str
     ilvl: int
     num_fmt: str
-    lvl_text: str
+    lvl_text: str | None
     start: int = 1
     suff: str = "tab"
     p_style: str | None = None
@@ -36,6 +37,26 @@ class NumberingIndex:
         self._abstract_levels: dict[str, dict[int, dict]] = {}  # abstractNumId → {ilvl: lvl_elem_attrs}
         self._abstract_num_style_links: dict[str, str] = {}  # abstractNumId → numStyleLink pStyle
         self._num_level_overrides: dict[str, dict[int, dict]] = {}
+        self._style_numbering: dict[str, tuple[str | None, str | None, str | None]] = {}
+        self._style_lookup_cache: dict[str, NumberingLevel | None] = {}
+
+        namespace = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+        styles = getattr(getattr(doc, "styles", None), "element", None)
+        if styles is not None:
+            for style in styles.findall(f"{namespace}style"):
+                style_id = style.get(f"{namespace}styleId")
+                if not style_id:
+                    continue
+                properties = style.find(f"{namespace}pPr")
+                num_pr = properties.find(f"{namespace}numPr") if properties is not None else None
+                num_id = num_pr.find(f"{namespace}numId") if num_pr is not None else None
+                ilvl = num_pr.find(f"{namespace}ilvl") if num_pr is not None else None
+                based_on = style.find(f"{namespace}basedOn")
+                self._style_numbering[style_id] = (
+                    num_id.get(f"{namespace}val") if num_id is not None else None,
+                    ilvl.get(f"{namespace}val", "0") if ilvl is not None else None,
+                    based_on.get(f"{namespace}val") if based_on is not None else None,
+                )
 
         try:
             numbering_part = doc.part.numbering_part
@@ -93,7 +114,7 @@ class NumberingIndex:
                     continue
                 ilvl = int(ilvl_raw)
                 num_fmt = ""
-                lvl_text = ""
+                lvl_text = None
                 start = 1
                 suff = "tab"
                 p_style = ""
@@ -148,20 +169,64 @@ class NumberingIndex:
             abstract_num_id=abs_id,
             ilvl=ilvl,
             num_fmt=lvl.get("numFmt", ""),
-            lvl_text=lvl.get("lvlText", ""),
+            lvl_text=lvl.get("lvlText"),
             start=lvl.get("start", 1),
             suff=lvl.get("suff", "tab"),
             p_style=lvl.get("pStyle") or None,
         )
 
     def lookup_by_style_id(self, style_id: str) -> NumberingLevel | None:
-        for abs_id, levels in self._abstract_levels.items():
-            for ilvl, lvl in levels.items():
-                if lvl.get("pStyle") == style_id:
-                    # Find a numId that references this abstractNumId
-                    for num_id, aid in self._num_to_abstract.items():
-                        if aid == abs_id:
-                            return self.lookup(num_id, ilvl)
+        """Resolve once per style in this request-owned numbering snapshot."""
+        if style_id not in self._style_lookup_cache:
+            self._style_lookup_cache[style_id] = self._lookup_style_binding(style_id)
+        return self._style_lookup_cache[style_id]
+
+    def _lookup_style_binding(self, style_id: str) -> NumberingLevel | None:
+        """Resolve a concrete style binding, never guess the first instance."""
+        ancestors: set[str] = set()
+        style_chain: list[str] = []
+        current: str | None = style_id
+        bound_num_id: str | None = None
+        bound_level: int | None = None
+        while current is not None and current not in ancestors:
+            ancestors.add(current)
+            style_chain.append(current)
+            num_id, raw_ilvl, current = self._style_numbering.get(current, (None, None, None))
+            if bound_num_id is None and num_id is not None:
+                bound_num_id = num_id
+            if bound_level is None and raw_ilvl is not None:
+                try:
+                    bound_level = int(raw_ilvl)
+                except ValueError:
+                    # An invalid used style has no usable concrete binding;
+                    # an unrelated unused style never blocks this document.
+                    return None
+        if bound_num_id == "0":
+            return None
+        if bound_num_id is not None:
+            if bound_level is not None:
+                return self.lookup(bound_num_id, bound_level)
+            levels = self._abstract_levels.get(self._num_to_abstract.get(bound_num_id, ""), {})
+            for candidate_style in style_chain:
+                candidates = [
+                    effective
+                    for ilvl in levels
+                    if (effective := self.lookup(bound_num_id, ilvl)) is not None
+                    and effective.p_style == candidate_style
+                ]
+                if candidates:
+                    return candidates[0] if len(candidates) == 1 else None
+            return self.lookup(bound_num_id, 0)
+
+        for candidate_style in style_chain:
+            candidates = [
+                effective
+                for num_id, abs_id in self._num_to_abstract.items()
+                for ilvl in self._abstract_levels.get(abs_id, {})
+                if (effective := self.lookup(num_id, ilvl)) is not None and effective.p_style == candidate_style
+            ]
+            if candidates:
+                return candidates[0] if len(candidates) == 1 else None
         return None
 
     def lookup_by_num_id(self, num_id: str, ilvl: int) -> NumberingLevel | None:
@@ -169,20 +234,7 @@ class NumberingIndex:
         return self.lookup(num_id, ilvl)
 
     def preview_numbering_text(self, level: NumberingLevel, ordinal: int = 1) -> str:
-        fmt = level.num_fmt.lower() if level.num_fmt else "decimal"
-        if fmt == "chineseCountingThousand":
-            return number_to_chinese(ordinal)
-        elif fmt == "decimal":
-            return str(ordinal)
-        elif fmt in ("upperLetter", "lowerLetter"):
-            if fmt == "upperLetter":
-                return number_to_letter_upper(ordinal)
-            return number_to_letter_lower(ordinal)
-        elif fmt in ("upperRoman", "lowerRoman"):
-            if fmt == "upperRoman":
-                return number_to_roman_upper(ordinal)
-            return number_to_roman_lower(ordinal)
-        return str(ordinal)
+        return _format_counter(ordinal, level.num_fmt)
 
     def render_numbering_text(
         self,
@@ -192,8 +244,8 @@ class NumberingIndex:
     ) -> str:
         """Resolve ``lvlText`` placeholders against counter values.
 
-        Substitutes ``%1``..``%9`` placeholders with formatted sibling-level
-        counters, falling back to *counter_value* for the current level.
+        Substitutes applicable ``%1``..``%9`` placeholders using the same
+        concrete instance, with *counter_value* for the current level.
 
         Args:
             level: The ``NumberingLevel`` to render.
@@ -204,24 +256,32 @@ class NumberingIndex:
             The resolved numbering prefix text (e.g. ``"1.1 "``, ``"一、"``).
         """
         lvl_text = level.lvl_text
-        if not lvl_text:
+        if lvl_text is None:
             return _apply_numbering_suffix(self.preview_numbering_text(level, counter_value), level.suff)
 
         parents = parent_counters or {}
-        result = lvl_text
-        for placeholder_idx in range(1, 10):
-            ph = f"%{placeholder_idx}"
-            if ph not in result:
-                continue
-            sibling_ilvl = placeholder_idx - 1
-            val = counter_value if sibling_ilvl == level.ilvl else parents.get(sibling_ilvl, 0)
-            sibling = self.lookup_by_abstract(level.abstract_num_id, sibling_ilvl)
-            if val == 0:
-                val = sibling.start if sibling else 1
-            fmt = sibling.num_fmt if sibling else "decimal"
-            formatted = _format_counter(val, fmt)
-            result = result.replace(ph, formatted)
-        return _apply_numbering_suffix(result, level.suff)
+
+        def replace_placeholder(match: re.Match[str]) -> str:
+            ilvl = int(match.group(1)) - 1
+            if ilvl > level.ilvl:
+                # OOXML ignores a level reference higher than this level;
+                # literal punctuation in the template remains authored text.
+                return ""
+            effective = (
+                level
+                if ilvl == level.ilvl
+                else (
+                    self.lookup(level.num_id, ilvl)
+                    if level.num_id
+                    else self.lookup_by_abstract(level.abstract_num_id, ilvl)
+                )
+            )
+            value = counter_value if ilvl == level.ilvl else parents.get(ilvl)
+            if value is None:
+                value = effective.start if effective is not None else 1
+            return _format_counter(value, effective.num_fmt if effective is not None else "decimal")
+
+        return _apply_numbering_suffix(re.sub(r"%([1-9])", replace_placeholder, lvl_text), level.suff)
 
     def lookup_by_abstract(self, abstract_num_id: str, ilvl: int) -> NumberingLevel | None:
         """Look up a numbering level by abstractNumId and ilvl."""
@@ -229,17 +289,12 @@ class NumberingIndex:
         lvl = levels.get(ilvl)
         if lvl is None:
             return None
-        num_id = ""
-        for nid, aid in self._num_to_abstract.items():
-            if aid == abstract_num_id:
-                num_id = nid
-                break
         return NumberingLevel(
-            num_id=num_id,
+            num_id="",
             abstract_num_id=abstract_num_id,
             ilvl=ilvl,
             num_fmt=lvl.get("numFmt", ""),
-            lvl_text=lvl.get("lvlText", ""),
+            lvl_text=lvl.get("lvlText"),
             start=lvl.get("start", 1),
             suff=lvl.get("suff", "tab"),
             p_style=lvl.get("pStyle") or None,

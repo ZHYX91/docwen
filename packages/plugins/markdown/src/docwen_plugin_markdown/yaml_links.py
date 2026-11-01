@@ -69,7 +69,7 @@ class YamlLinkProjection:
         )
 
     def _link(self, label: str, target: str) -> str:
-        nodes = parse_markdown_text(label)
+        nodes = parse_markdown_text(label, consume_initial_bom=False)
         visible = "".join(extract_text_content(node.get("children", [])) for node in nodes)
         token = f"{self.prefix}N{len(self.links)}END"
         self.links[token] = (visible or label, target)

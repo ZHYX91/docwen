@@ -99,6 +99,13 @@ type `text/markdown` plus zero or more declared `linked_resource` image resource
 rejected. Resource lookup is limited to those typed inputs; the converter does not scan a consumer workspace or
 filesystem namespace to find a matching image.
 
+Input array order does not select the main document: the `source` role owns routing, source identity and
+resource-relative paths even when one or more `linked_resource` handles precede it. The declared role, kind,
+media type and cardinality checks still apply before execution; no source-first constraint is imposed.
+
+输入数组顺序不决定主文档：即使一个或多个 `linked_resource` 位于前面，路由、源身份和资源相对路径仍由
+`source` 角色确定。执行前继续校验声明的角色、kind、媒体类型和基数，不要求 source 排在第一项。
+
 This source-native capability owns authored-source interpretation. `markdown_extensions` follows the ordinary
 request/config override rules. Its closed option schema additionally exposes `remove_numbering`, `add_numbering`,
 `numbering_scheme`, and `heading_numbering_render_mode`. The selected numbering scheme is resolved from DocWen's
@@ -117,6 +124,13 @@ The v4 plan-aware Markdown→DOCX capability requires exactly two input resource
 |---|---|---:|---|
 | `neutral_document` | `application/vnd.docwen.resolved-document+json` | exactly 1 | `docwen.resolved_document.v1` / `urn:docwen:schema:resolved-document:v1` |
 | `numbering_export_plan` | `application/vnd.docwen.numbering-export-plan+json` | exactly 1 | `docwen.numbering_export_plan.v1` / `urn:docwen:schema:numbering-export-plan:v1` |
+
+These two handles may appear in either order. `neutral_document` identifies the document used for routing and
+source presentation; `numbering_export_plan` remains its required semantic resource. Reordering does not relax
+the exact-one or authenticated-pair requirements.
+
+这两个 handle 可以按任意顺序提供。`neutral_document` 决定路由及源文档显示身份，`numbering_export_plan`
+仍是必需的语义资源；顺序变化不放宽各自唯一及配对认证要求。
 
 The successful output contains one preferred DOCX `document` and one primary entry. It carries the final byte count, SHA-256 and relative logical path; its result directory includes no automatic node JSON. Capability cardinality and artifact kinds describe business outputs. No `.docwen` companion or original-source reconstruction payload is produced or consumed. See [result-directory output](document-node-output.md) for naming, explicit audit exports and consumer publication.
 

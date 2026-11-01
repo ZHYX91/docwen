@@ -7,8 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from docwen_core.models import ArtifactManifest, OutputPolicy
+from docwen_core.models import ArtifactOwnership, OutputPolicy
 from docwen_runtime.output.finalizer import OutputFinalizer
+
+from ._document_node_output_support import _artifact
 
 pytestmark = pytest.mark.integration
 
@@ -24,26 +26,6 @@ def frozen_node_clock(monkeypatch: pytest.MonkeyPatch) -> None:
             return value if tz is None else value.astimezone(tz)
 
     monkeypatch.setattr("docwen_core.models.document_node.datetime", FrozenDateTime)
-
-
-def _artifact(
-    path: Path,
-    *,
-    artifact_id: str,
-    suggested_name: str,
-    media_type: str,
-    primary: bool = False,
-    metadata: dict | None = None,
-) -> ArtifactManifest:
-    return ArtifactManifest(
-        artifact_id=artifact_id,
-        kind="primary" if primary else "auxiliary",
-        staging_path=str(path),
-        suggested_name=suggested_name,
-        media_type=media_type,
-        metadata=metadata or {},
-        is_primary=primary,
-    )
 
 
 def test_markdown_bundle_is_published_as_one_document_node(tmp_path: Path) -> None:
@@ -74,7 +56,7 @@ def test_markdown_bundle_is_published_as_one_document_node(tmp_path: Path) -> No
                 artifact_id="attachment",
                 suggested_name="公文_attachments.md",
                 media_type="text/markdown",
-                metadata={"source_kind": "gongwen_attachment"},
+                ownership=ArtifactOwnership("attachment_of", "main", "attachment", 0, "附件"),
             ),
             _artifact(
                 image,
@@ -106,205 +88,6 @@ def test_markdown_bundle_is_published_as_one_document_node(tmp_path: Path) -> No
     attachment_path = Path(attachment_artifact.staging_path)
     assert attachment_path.relative_to(root).as_posix() in main_text
     assert "../seal.png" in attachment_path.read_text(encoding="utf-8")
-
-
-def test_document_node_link_relocation_preserves_external_targets_and_integrity(tmp_path: Path) -> None:
-    source = tmp_path / "report.docx"
-    source.write_bytes(b"source")
-    staging = tmp_path / "staging-links"
-    staging.mkdir()
-    main = staging / "main.md"
-    child = staging / "child.md"
-    image = staging / "image.png"
-    hash_image = staging / "hash-image.png"
-    colon_image = staging / "colon-image.png"
-    spaced_image = staging / "space-image.png"
-    main_original = (
-        "[online](https://example.test/image.png#section)\n"
-        '[angle-online](<https://example.test/image.png#section> "title")\n'
-        '[angle-network](<//example.test/image.png#section> "title")\n'
-        '[angle-local](<assets/my image.png#part> "local title")\n'
-        '[angle-hash](<assets/image%23v1.png#part> "hash title")\n'
-        "[invalid](https://[broken/image.png)\n"
-        "[nfkc](https://／example.test/image.png)\n"
-        "[different](https://example.test/other.png#other)\n"
-        "[network](//example.test/image.png#network)\n"
-        "[unc](\\\\server\\image.png#unc)\n"
-        "[anchor](#section)\n"
-        "[local](assets/image.png#local)\n"
-        "[encoded-path](assets%2Fimage.png#encoded)\n"
-        "[encoded-fragment](assets/image.png#part%29tail)\n"
-        "![[assets/image.png#part%29wiki]]\n"
-        "[[https://example.test/image.png#wiki-online]]\n"
-        "[encoded-hash-name](assets/image%23v1.png#p)\n"
-        "[encoded-colon-name](part%3Aone.png)\n"
-        "[space-name](assets/my%20image.png#space)\n"
-        '<a href="https://example.test/image.png#html-online">online</a>\n'
-        '<a href="https://[broken/image.png">broken</a>\n'
-        '<a href="https&colon;//example.test/image.png#part">entity</a>\n'
-        '<a href="https&#58;//example.test/image.png#part">numeric</a>\n'
-        '<a href="part%3Aone.png#part&amp;tail">local colon</a>\n'
-        '<img src="assets/image.png#part%22tail">\n'
-    )
-    child_original = (
-        "[local](assets/image.png#child%29tail)\n"
-        '[angle-local](<assets/my image.png#part> "local title")\n'
-        '[angle-online](<https://example.test/image.png#part> "title")\n'
-        '<a href="https&colon;//example.test/image.png#part">entity</a>\n'
-        '<img src="assets/image.png#child%22tail">\n'
-        "![[assets/image.png#child%29wiki]]\n"
-        "[hash](assets/image%23v1.png#child)\n"
-    )
-    main.write_bytes(main_original.encode("utf-8"))
-    child.write_bytes(child_original.encode("utf-8"))
-    image.write_bytes(b"png")
-    hash_image.write_bytes(b"hash-png")
-    colon_image.write_bytes(b"colon-png")
-    spaced_image.write_bytes(b"space-png")
-    output = tmp_path / "output-links"
-
-    result = OutputFinalizer().finalize(
-        "task.node.links",
-        [
-            _artifact(
-                main,
-                artifact_id="main",
-                suggested_name="report.md",
-                media_type="text/markdown",
-                primary=True,
-            ),
-            _artifact(
-                child,
-                artifact_id="child",
-                suggested_name="child.md",
-                media_type="text/markdown",
-            ),
-            _artifact(
-                image,
-                artifact_id="image",
-                suggested_name="assets/image.png",
-                media_type="image/png",
-            ),
-            _artifact(
-                hash_image,
-                artifact_id="hash-image",
-                suggested_name="assets/image#v1.png",
-                media_type="image/png",
-            ),
-            _artifact(
-                colon_image,
-                artifact_id="colon-image",
-                suggested_name="part:one.png",
-                media_type="image/png",
-            ),
-            _artifact(
-                spaced_image,
-                artifact_id="space-image",
-                suggested_name="assets/my image.png",
-                media_type="image/png",
-            ),
-        ],
-        OutputPolicy(output_dir=str(output), overwrite_mode="error"),
-        input_path=str(source),
-    )
-
-    assert result.success is True, result.diagnostics
-    expected_main = (
-        "[online](https://example.test/image.png#section)\n"
-        '[angle-online](<https://example.test/image.png#section> "title")\n'
-        '[angle-network](<//example.test/image.png#section> "title")\n'
-        '[angle-local](<my%20image.png#part> "local title")\n'
-        '[angle-hash](<image%23v1.png#part> "hash title")\n'
-        "[invalid](https://[broken/image.png)\n"
-        "[nfkc](https://／example.test/image.png)\n"
-        "[different](https://example.test/other.png#other)\n"
-        "[network](//example.test/image.png#network)\n"
-        "[unc](\\\\server\\image.png#unc)\n"
-        "[anchor](#section)\n"
-        "[local](image.png#local)\n"
-        "[encoded-path](image.png#encoded)\n"
-        "[encoded-fragment](image.png#part%29tail)\n"
-        "![[image.png#part%29wiki]]\n"
-        "[[https://example.test/image.png#wiki-online]]\n"
-        "[encoded-hash-name](image%23v1.png#p)\n"
-        "[encoded-colon-name](part_one.png)\n"
-        "[space-name](my%20image.png#space)\n"
-        '<a href="https://example.test/image.png#html-online">online</a>\n'
-        '<a href="https://[broken/image.png">broken</a>\n'
-        '<a href="https&colon;//example.test/image.png#part">entity</a>\n'
-        '<a href="https&#58;//example.test/image.png#part">numeric</a>\n'
-        '<a href="part_one.png#part&amp;tail">local colon</a>\n'
-        '<img src="image.png#part%22tail">\n'
-    ).encode()
-    expected_child = (
-        b"[local](../image.png#child%29tail)\n"
-        b'[angle-local](<../my%20image.png#part> "local title")\n'
-        b'[angle-online](<https://example.test/image.png#part> "title")\n'
-        b'<a href="https&colon;//example.test/image.png#part">entity</a>\n'
-        b'<img src="../image.png#child%22tail">\n'
-        b"![[../image.png#child%29wiki]]\n"
-        b"[hash](../image%23v1.png#child)\n"
-    )
-    artifacts = {artifact.artifact_id: artifact for artifact in result.artifacts}
-    for artifact_id, expected in {"main": expected_main, "child": expected_child}.items():
-        artifact = artifacts[artifact_id]
-        published = Path(artifact.staging_path)
-        assert published.read_bytes() == expected
-        assert artifact.size_bytes == len(expected)
-        assert artifact.sha256 == hashlib.sha256(expected).hexdigest()
-    assert Path(artifacts["main"].staging_path).parent.parent == output
-    assert Path(artifacts["child"].staging_path).parent.parent.parent == output
-
-
-def test_document_node_link_relocation_keeps_code_samples_literal(tmp_path: Path) -> None:
-    source = tmp_path / "source.docx"
-    source.write_bytes(b"source")
-    staging = tmp_path / "staging-code-links"
-    staging.mkdir()
-    markdown = staging / "source.md"
-    image = staging / "image.png"
-    markdown.write_text(
-        "![real](assets/image.png)\n"
-        "`![inline](assets/image.png)`\n"
-        "```markdown\n"
-        "![fenced](assets/image.png)\n"
-        "![[assets/image.png]]\n"
-        '<img src="assets/image.png">\n'
-        "```\n",
-        encoding="utf-8",
-    )
-    image.write_bytes(b"png")
-    output = tmp_path / "output-code-links"
-
-    result = OutputFinalizer().finalize(
-        "task.node.code-links",
-        [
-            _artifact(
-                markdown,
-                artifact_id="main",
-                suggested_name="source.md",
-                media_type="text/markdown",
-                primary=True,
-            ),
-            _artifact(
-                image,
-                artifact_id="image",
-                suggested_name="assets/image.png",
-                media_type="image/png",
-            ),
-        ],
-        OutputPolicy(output_dir=str(output), overwrite_mode="error"),
-        input_path=str(source),
-    )
-
-    assert result.success is True, result.diagnostics
-    primary = next(item for item in result.artifacts if item.artifact_id == "main")
-    published = Path(primary.staging_path).read_text(encoding="utf-8")
-    assert "![real](image.png)" in published
-    assert "`![inline](assets/image.png)`" in published
-    assert "![fenced](assets/image.png)" in published
-    assert "![[assets/image.png]]" in published
-    assert '<img src="assets/image.png">' in published
 
 
 def test_document_node_failure_leaves_no_partial_root(tmp_path: Path) -> None:
@@ -577,3 +360,163 @@ def test_reused_output_survives_cleanup_failure_with_visible_warning(tmp_path, f
     assert result.success and result.metrics.output_bytes == 0
     assert Path(result.artifacts[0].staging_path).read_bytes() == b"body"
     assert any(item.code == "FINALIZER_CLEANUP_FAILED" and item.level == "warning" for item in result.diagnostics)
+
+
+def test_owner_scoped_resources_publish_with_each_document_and_bundle(tmp_path, frozen_node_clock):
+    from docwen_application.bundle_mapping import build_bundle_draft
+    from docwen_core.models import validate_artifact_bundle_draft
+
+    stage = tmp_path / "stage"
+    stage.mkdir()
+    main = stage / "main.md"
+    child = stage / "child.md"
+    image = stage / "shared.png"
+    original = stage / "data.csv"
+    original_md = stage / "sample.md"
+    main.write_text("[annex](annex.md)\n![main](shared.png#main)\n", encoding="utf-8")
+    child.write_text("![child](shared.png?size=2#child)\n[data](data.csv)\n[original](sample.md)\n", encoding="utf-8")
+    image.write_bytes(b"same original image bytes")
+    original.write_bytes(b"name,value\nA,2\n")
+    original_md.write_bytes(b"[original resource bytes](shared.png)\r\n")
+    artifacts = [
+        _artifact(main, artifact_id="main", suggested_name="main.md", media_type="text/markdown", primary=True),
+        _artifact(
+            child,
+            artifact_id="child",
+            suggested_name="annex.md",
+            media_type="text/markdown",
+            ownership=ArtifactOwnership("attachment_of", "main", "attachment", 0, "附件"),
+        ),
+        _artifact(
+            image,
+            artifact_id="main-image",
+            suggested_name="shared.png",
+            media_type="image/png",
+            ownership=ArtifactOwnership("resource_of", "main", "image", 0),
+        ),
+        _artifact(
+            image,
+            artifact_id="child-image",
+            suggested_name="shared.png",
+            media_type="image/png",
+            ownership=ArtifactOwnership("resource_of", "child", "image", 0),
+        ),
+        _artifact(
+            original,
+            artifact_id="original",
+            suggested_name="data.csv",
+            media_type="text/csv",
+            ownership=ArtifactOwnership("resource_of", "child", "original", 1),
+        ),
+        _artifact(
+            original_md,
+            artifact_id="original-md",
+            suggested_name="sample.md",
+            media_type="text/markdown",
+            ownership=ArtifactOwnership("resource_of", "child", "original", 2),
+        ),
+    ]
+    output = tmp_path / "out"
+    roots = []
+    for _ in range(2):
+        result = OutputFinalizer().finalize(
+            "owner-test",
+            list(reversed(artifacts)),
+            OutputPolicy(output_dir=str(output), overwrite_mode="rename"),
+            input_path=str(tmp_path / "notice.docx"),
+        )
+        assert result.success, result.error
+        by_id = {item.artifact_id: item for item in result.artifacts}
+        main_path = Path(by_id["main"].staging_path)
+        child_path = Path(by_id["child"].staging_path)
+        roots.append(main_path.parent)
+        assert child_path.parent.parent == main_path.parent
+        assert "../" not in child_path.read_text(encoding="utf-8")
+        assert "shared.png?size=2#child" in child_path.read_text(encoding="utf-8")
+        assert child_path.relative_to(main_path.parent).as_posix() in main_path.read_text(encoding="utf-8")
+        assert Path(by_id["main-image"].staging_path).parent == main_path.parent
+        for artifact_id in ("child-image", "original"):
+            assert Path(by_id[artifact_id].staging_path).parent == child_path.parent
+        assert Path(by_id["child-image"].staging_path).read_bytes() == image.read_bytes()
+        assert Path(by_id["main-image"].staging_path).read_bytes() == image.read_bytes()
+        assert Path(by_id["original"].staging_path).name == "data.csv"
+        assert Path(by_id["original-md"].staging_path).is_relative_to(child_path.parent)
+        assert Path(by_id["original-md"].staging_path).read_bytes() == original_md.read_bytes()
+        for item in result.artifacts:
+            assert item.sha256 == hashlib.sha256(Path(item.staging_path).read_bytes()).hexdigest()
+        draft = build_bundle_draft(
+            profile="document_with_resources", output_media_type="text/markdown", artifacts=result.artifacts
+        )
+        validate_artifact_bundle_draft(draft)
+        owners = {relation.source_artifact_id: relation.target_artifact_id for relation in draft.relations}
+        assert owners == {
+            "child": "main",
+            "main-image": "main",
+            "child-image": "child",
+            "original": "child",
+            "original-md": "child",
+        }
+    assert roots[0] != roots[1]
+    assert image.is_file(), "publishing duplicate byte sources must not consume the shared staging file"
+
+
+@pytest.mark.parametrize("case", ["attachment_under_fragment", "physical_page"])
+def test_invalid_declared_structure_is_rejected_before_publication(tmp_path, case):
+    artifacts = []
+    for artifact_id in ("main", "fragment", "child"):
+        path = tmp_path / f"{artifact_id}.md"
+        path.write_text(artifact_id, encoding="utf-8")
+        artifacts.append(
+            _artifact(
+                path,
+                artifact_id=artifact_id,
+                suggested_name=path.name,
+                media_type="text/markdown",
+                primary=artifact_id == "main",
+            )
+        )
+    artifacts[1].ownership = ArtifactOwnership("fragment_of", "main", "ocr_text", 0)
+    artifacts[2].ownership = (
+        ArtifactOwnership("attachment_of", "fragment", "attachment", 0)
+        if case == "attachment_under_fragment"
+        else ArtifactOwnership("fragment_of", "main", "ocr_page", 1)
+    )
+    output = tmp_path / "output"
+    with pytest.raises(ValueError):
+        OutputFinalizer().finalize(
+            "invalid-owner", artifacts, OutputPolicy(output_dir=str(output)), input_path=str(tmp_path / "source.docx")
+        )
+    assert not output.exists() or not list(output.iterdir())
+
+
+def test_root_collision_keeps_root_named_attachment_resource_in_its_owner_directory(tmp_path, frozen_node_clock):
+    from docwen_runtime.output.document_node import plan_document_node_layout
+
+    main = _artifact(
+        tmp_path / "main.md", artifact_id="main", suggested_name="main.md", media_type="text/markdown", primary=True
+    )
+    child = _artifact(
+        tmp_path / "child.md",
+        artifact_id="child",
+        suggested_name="child.md",
+        media_type="text/markdown",
+        ownership=ArtifactOwnership("attachment_of", "main", "attachment", 0, "Annex"),
+    )
+    image = _artifact(
+        tmp_path / "image.png",
+        artifact_id="image",
+        suggested_name="notice_20260820_120000_fromDocx.png",
+        media_type="image/png",
+        ownership=ArtifactOwnership("resource_of", "child", "image", 0),
+    )
+    plan = plan_document_node_layout(
+        task_id="rename-owner", artifacts=[main, child, image], input_path=str(tmp_path / "notice.docx")
+    )
+    rebased = plan.rebase_root("renamed-result")
+    by_id: dict[str, Path] = {}
+    for item in rebased.artifacts:
+        assert item.logical_path is not None
+        by_id[item.artifact_id] = Path(item.logical_path)
+    assert by_id["main"].as_posix() == "renamed-result/renamed-result.md"
+    assert by_id["image"].parent == by_id["child"].parent
+    assert by_id["image"].name == image.suggested_name

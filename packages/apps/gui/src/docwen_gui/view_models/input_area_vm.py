@@ -497,63 +497,53 @@ class InputAreaViewModel(QObject):
         if not raw:
             return []
 
-        candidates: list[str] = []
-        brace_pattern = re.compile(r"\{([^}]+)\}")
-        candidates.extend(brace_pattern.findall(raw))
-        remaining = brace_pattern.sub("\n", raw)
-        candidates.extend([line.strip() for line in remaining.splitlines() if line.strip()])
-
+        # Existing complete identities win over any payload separator. A path
+        # may itself contain whitespace or braces, even when its prefix exists.
+        candidates = [line.strip() for line in raw.splitlines() if line.strip()]
+        token_pattern = re.compile(r"\{([^}]+)\}|\"([^\"]+)\"|'([^']+)'|([^\s]+)")
         paths: list[str] = []
         seen: set[str] = set()
 
-        def _strip_quotes(value: str) -> str:
-            value = value.strip()
-            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
-                return value[1:-1].strip()
-            return value
-
-        def _maybe_add(value: str) -> None:
-            nonlocal paths
-            if len(paths) >= _TEXT_PAYLOAD_MAX_PATHS:
-                return
-            value = _strip_quotes(value)
+        def _maybe_add(value: str) -> bool:
             if not value:
-                return
+                return False
             if value.lower().startswith("file:"):
                 url = QUrl(value)
                 if url.isValid() and url.isLocalFile():
                     value = url.toLocalFile()
             candidate_path = Path(value)
             if not candidate_path.is_absolute():
-                return
+                return False
             try:
                 exists = candidate_path.exists()
             except OSError:
-                # A text payload may contain an oversized or otherwise invalid
-                # path-shaped token. Treat it as unusable input instead of
-                # letting the drag/drop event escape with an OS path error.
-                return
+                # Oversized or invalid path-shaped tokens are unusable input.
+                return False
             if not exists:
-                return
+                return False
             normalized = str(candidate_path)
             key = os.path.normcase(os.path.abspath(normalized))
-            if key in seen:
-                return
-            seen.add(key)
-            paths.append(normalized)
+            if key not in seen and len(paths) < _TEXT_PAYLOAD_MAX_PATHS:
+                seen.add(key)
+                paths.append(normalized)
+            # An existing duplicate still owns its complete spelling.
+            return True
 
         for candidate in candidates:
-            candidate = candidate.strip()
-            if not candidate:
-                continue
-            _maybe_add(candidate)
-            if len(paths) >= _TEXT_PAYLOAD_MAX_PATHS:
-                break
-            if (" " in candidate or "\t" in candidate) and len(candidate.split()) > 1:
-                for token in candidate.split():
-                    _maybe_add(token)
+            matched = _maybe_add(candidate)
+            if (
+                not matched
+                and len(candidate) >= 2
+                and (candidate[0], candidate[-1]) in {("{", "}"), ("'", "'"), ('"', '"')}
+            ):
+                matched = _maybe_add(candidate[1:-1])
+            if not matched:
+                for match in token_pattern.finditer(candidate):
+                    _maybe_add(next(value for value in match.groups() if value is not None))
                     if len(paths) >= _TEXT_PAYLOAD_MAX_PATHS:
                         break
+            if len(paths) >= _TEXT_PAYLOAD_MAX_PATHS:
+                break
 
         return paths
 

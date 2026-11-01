@@ -37,6 +37,7 @@ from docwen_core.models.semantic_document import (
     SemanticReference,
 )
 from docwen_core.text.heading_merge import HALFWIDTH_HEADING_MERGE_PUNCTUATION
+from docwen_plugin_markdown.callouts import add_callout_comment
 from docwen_plugin_markdown.html_text import project_html_block_text
 from docwen_plugin_markdown.renderer_inlines import (
     extract_text_content,
@@ -71,6 +72,7 @@ from docwen_plugin_markdown.to_docx.numbering import (
     DocxListNumbering,
     apply_list_to_paragraph,
 )
+from docwen_plugin_markdown.to_docx.numbering_comments import add_numbering_review
 
 if TYPE_CHECKING:
     from docwen_core.docx_resolved_numbering import ResolvedNumberingDocxSession
@@ -294,6 +296,8 @@ class MdToDocxRenderer:
         self._declared_resource_resolver = declared_resource_resolver
         self._semantic_v3_session = semantic_v3_session
         self._resolved_numbering_session = resolved_numbering_session
+        self._pending_resolved_captions: list[tuple[Any, tuple[Any, ...], ResolvedDocumentTarget, bool]] = []
+        self._resolved_caption_paragraphs: set[Any] = set()
         if semantic_v3_session is not None and resolved_numbering_session is not None:
             raise ValueError("v3 and resolved-v4 DOCX sessions are mutually exclusive")
         # Both routes share the already-frozen, profile-free ordinary-anchor
@@ -308,6 +312,11 @@ class MdToDocxRenderer:
         self._mermaid_work_dir = mermaid_work_dir
         self._mermaid_render = mermaid_render
         self._warnings: list[tuple[str, str]] = []
+        if note_ctx is not None and getattr(note_ctx, "callout_fallback_keys", ()):
+            keys = ", ".join(note_ctx.callout_fallback_keys)
+            self._warnings.append(
+                ("CALLOUT-NOTE-TEXT", f"Callouts in notes ({keys}) use readable type labels instead of Word comments.")
+            )
         self._content_extent = content_extent
         self._mermaid_images: list[tuple[Any, Any, int, int, int]] = []
         self._mermaid_occurrences = 0
@@ -373,7 +382,13 @@ class MdToDocxRenderer:
         """
         # Resolve note styles from the document once per render
         if self._note_ctx is not None:
-            self._note_ctx.resolve_note_styles(self._doc)
+            if self._managed_styles is not None:
+                self._note_ctx.footnote_text_style = self._managed_styles.style_id("footnote_text")
+                self._note_ctx.footnote_ref_style = self._managed_styles.style_id("footnote_reference")
+                self._note_ctx.endnote_text_style = self._managed_styles.style_id("endnote_text")
+                self._note_ctx.endnote_ref_style = self._managed_styles.style_id("endnote_reference")
+            else:
+                self._note_ctx.resolve_note_styles(self._doc)
 
         paragraphs: list = []
         skip_merged = False
@@ -411,6 +426,24 @@ class MdToDocxRenderer:
         if self._resolved_image_inventory is not None and any(self._resolved_image_inventory.values()):
             raise ValueError("not every authenticated resolved-v4 image occurrence was rendered")
         self._fit_mermaid_images()
+        # Snapshot objects only after all legitimate renderer-owned container
+        # decoration and image sizing. The session still freezes every bound
+        # object and rejects any subsequent mutation during package proof.
+        for caption, object_elements, target, has_resolved_inline in self._pending_resolved_captions:
+            assert self._resolved_numbering_session is not None
+            bind_caption = (
+                self._resolved_numbering_session.bind_rendered_caption
+                if has_resolved_inline
+                else self._resolved_numbering_session.bind_caption
+            )
+            bind_caption(
+                caption,
+                object_elements,
+                source_start=target.source_start,
+                source_end=target.source_end,
+                kind=target.kind,
+            )
+        self._pending_resolved_captions.clear()
         return paragraphs
 
     # ── Node dispatcher ─────────────────────────────────────────────────
@@ -471,7 +504,8 @@ class MdToDocxRenderer:
         if not isinstance(children, list):
             raise ValueError("resolved-v4 caption lost its range-bound inline children")
         caption = self._style_semantic_caption(self._doc.add_paragraph(), kind)
-        if _contains_request_semantics(children):
+        has_resolved_inline = _contains_request_semantics(children)
+        if has_resolved_inline:
             render_inlines(
                 caption,
                 children,
@@ -479,21 +513,10 @@ class MdToDocxRenderer:
                 code_bg_color=self._code_bg_color,
                 renderer_instance=self,
             )
-            self._resolved_numbering_session.bind_rendered_caption(
-                caption,
-                object_elements,
-                source_start=target.source_start,
-                source_end=target.source_end,
-                kind=kind,
-            )
         else:
-            self._resolved_numbering_session.bind_caption(
-                caption,
-                object_elements,
-                source_start=target.source_start,
-                source_end=target.source_end,
-                kind=kind,
-            )
+            caption.add_run(target.authored_text)
+        self._pending_resolved_captions.append((caption, object_elements, target, has_resolved_inline))
+        self._resolved_caption_paragraphs.add(caption._p)
         return caption
 
     # ═══════════════════════════════════════════════════════════════════
@@ -589,8 +612,23 @@ class MdToDocxRenderer:
         for lx in range(level, 9):
             self._h_counters[lx] = 0
 
-        heading = self._doc.add_heading(level=level)
+        if self._managed_styles is not None:
+            # A preserved user style may occupy Word's Heading N name with
+            # another type. Bind the resolved identity before rendering runs.
+            heading = self._doc.add_paragraph()
+            heading.style = self._managed_styles.get(f"heading_{level}")
+        else:
+            heading = self._doc.add_heading(level=level)
+        if node.get("_docwen_text_numbering"):
+            num_pr = heading._p.get_or_add_pPr().get_or_add_numPr()
+            num_pr.get_or_add_ilvl().val = 0
+            num_pr.get_or_add_numId().val = 0
         children = node.get("children", [])
+        if number := node.get("_docwen_added_number"):
+            number_run = heading.add_run(number)
+            add_numbering_review(self._doc, number_run)
+            children = [dict(child) for child in children]
+            children[0]["raw"] = children[0]["raw"][len(number) :]
 
         hmode = self._heading_formatting_mode
         if hmode == "remove":
@@ -756,6 +794,10 @@ class MdToDocxRenderer:
             self._mermaid_images.append((paragraph, shape, image.px_width, image.px_height, occurrence))
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         except Exception as exc:
+            from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
+
+            if isinstance(exc, (CancellationRequested, ExternalProcessCleanupUnconfirmed)):
+                raise
             if paragraph is not None and paragraph._p.getparent() is not None:
                 paragraph._p.getparent().remove(paragraph._p)
                 self._mermaid_images = [entry for entry in self._mermaid_images if entry[0] is not paragraph]
@@ -877,8 +919,10 @@ class MdToDocxRenderer:
                     style = self._quote_styles.get(style_level)
                     for item in items:
                         if hasattr(item, "_p"):
-                            if child.get("type") in {"paragraph", "block_text"} and not self._is_image_only_paragraph(
-                                child.get("children", [])
+                            if (
+                                item._p not in self._resolved_caption_paragraphs
+                                and child.get("type") in {"paragraph", "block_text"}
+                                and not self._is_image_only_paragraph(child.get("children", []))
                             ):
                                 apply_quote_style(item, style=style, level=style_level)
                             else:
@@ -888,6 +932,8 @@ class MdToDocxRenderer:
                 paragraphs.extend(items)
         finally:
             self._quote_depth -= 1
+        if node.get("_docwen_callout") is not None:
+            add_callout_comment(self._doc, paragraphs, node["_docwen_callout"])
         if (
             self._source_carrier_session is not None
             and node.get("_docwen_v3_ordinary_anchor") is not None
@@ -963,7 +1009,7 @@ class MdToDocxRenderer:
             level_types[depth] = "ordered"
 
         for item in node.get("children", []):
-            if item.get("type") == "list_item":
+            if item.get("type") in {"list_item", "task_list_item"}:
                 for child in item.get("children", []):
                     if child.get("type") == "list":
                         self._analyze_list_levels(child, level_types, depth + 1)
@@ -984,15 +1030,30 @@ class MdToDocxRenderer:
         paragraphs: list = []
         continuation_indent = self._list_numbering.continuation_indent(num_id, depth)
 
-        if ntype == "list_item":
+        if ntype in {"list_item", "task_list_item"}:
             children = node.get("children", [])
-            for child in children:
+            task_paragraph = None
+            if ntype == "task_list_item":
+                # The checkbox is a visible authored state, not an interactive
+                # Word form field. Create it before rendering/binding children.
+                task_paragraph = self._doc.add_paragraph(style=self._list_block_style)
+                checked = node.get("attrs", {}).get("checked") is True
+                task_paragraph.add_run("[x] " if checked else "[ ] ")
+                if num_id is not None:
+                    apply_list_to_paragraph(task_paragraph, num_id, depth)
+                paragraphs.append(task_paragraph)
+            for child_index, child in enumerate(children):
                 ctype = child.get("type", "")
                 if ctype in ("paragraph", "block_text"):
-                    p = self._doc.add_paragraph(style=self._list_block_style)
-                    if num_id is not None and not paragraphs:
+                    reuse_task_paragraph = False
+                    if child_index == 0 and task_paragraph is not None:
+                        p = task_paragraph
+                        reuse_task_paragraph = True
+                    else:
+                        p = self._doc.add_paragraph(style=self._list_block_style)
+                    if not reuse_task_paragraph and num_id is not None and not paragraphs:
                         apply_list_to_paragraph(p, num_id, depth)
-                    elif paragraphs:
+                    elif not reuse_task_paragraph and paragraphs:
                         apply_list_to_paragraph(p, "0", depth)
                         apply_list_indent(p, depth, left_twips=continuation_indent)
                     render_inlines(
@@ -1006,7 +1067,8 @@ class MdToDocxRenderer:
                         self._apply_body_font_to_runs(p)
                     if self._source_carrier_session is not None and child.get("_docwen_v3_ordinary_anchor") is not None:
                         self._bind_v3_ordinary_anchor((p._p,), child)
-                    paragraphs.append(p)
+                    if not reuse_task_paragraph:
+                        paragraphs.append(p)
                 elif ctype in ("list", "bullet_list", "ordered_list"):
                     nested_id = num_id
                     nested_type = "ordered" if child.get("attrs", {}).get("ordered", False) else "unordered"
@@ -1044,12 +1106,15 @@ class MdToDocxRenderer:
                                 set_table_left_indent(item, 360 * (depth + 1))
                         paragraphs.extend(items)
                 elif ctype == "table":
-                    table = self._handle_table(child)
-                    if table is not None:
-                        if depth > 0:
-                            indent_twips = 360 * (depth + 1)
-                            set_table_left_indent(table, indent_twips)
-                        paragraphs.append(table)
+                    rendered = self._handle_table(child)
+                    if rendered is not None:
+                        items = rendered if isinstance(rendered, list) else [rendered]
+                        for item in items:
+                            if hasattr(item, "_p"):
+                                apply_list_indent(item, depth, left_twips=continuation_indent)
+                            elif depth > 0:
+                                set_table_left_indent(item, 360 * (depth + 1))
+                        paragraphs.extend(items)
                 else:
                     prev_depth = self._list_depth
                     self._list_depth = depth + 1
@@ -1074,7 +1139,7 @@ class MdToDocxRenderer:
                 sub_items = self._render_list_item(child, depth, num_id=num_id)
                 paragraphs.extend(sub_items)
 
-        if ntype == "list_item":
+        if ntype in {"list_item", "task_list_item"}:
             if paragraphs and not hasattr(paragraphs[0], "_p"):
                 marker = self._doc.add_paragraph(style=self._list_block_style)
                 paragraphs[0]._element.addprevious(marker._p)
@@ -1207,7 +1272,10 @@ class MdToDocxRenderer:
 
     def _handle_block_latex(self, node: dict[str, Any]):
         """Render block LaTeX as OMML equation."""
-        render_formula(self._doc, node, block_style=self._formula_block_style)
+        if not render_formula(self._doc, node, block_style=self._formula_block_style):
+            self._warnings.append(
+                ("MD2DOCX-FORMULA-TEXT-FALLBACK", "An unsupported formula was preserved as its original LaTeX text.")
+            )
         # Return the last paragraph (created by render_formula)
         paragraph = self._doc.paragraphs[-1] if self._doc.paragraphs else None
         if paragraph is None:
@@ -1396,7 +1464,13 @@ class MdToDocxRenderer:
         from docwen_core.docx_table_roles import prepare_table_roles
 
         # Install physical identity before caption/ordinary-anchor snapshots.
-        prepare_table_roles(self._doc, tables=(table._tbl,))
+        prepare_table_roles(
+            self._doc,
+            tables=(table._tbl,),
+            bookmark_allocator=(
+                None if self._source_carrier_session is None else self._source_carrier_session.bookmark_allocator
+            ),
+        )
         resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             self._bind_v3_ordinary_anchor((table._element,), node)

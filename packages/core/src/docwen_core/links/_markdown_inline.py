@@ -9,6 +9,23 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from urllib.parse import quote
 
+_ANGLE_AUTOLINK_RE = re.compile(
+    r"<[A-Za-z][A-Za-z0-9.+-]{1,31}:[^<>\x00-\x20]*>"
+    r"|<[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9]"
+    r"(?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*>"
+)
+_INLINE_HTML_RE = re.compile(
+    r"<[A-Za-z][A-Za-z0-9-]*"
+    r"(?:\s+[A-Za-z_:][A-Za-z0-9_.:-]*"
+    r"(?:\s*=\s*(?:[^ !\"'=<>`]+|'[^']*?'|\"[^\"]*?\"))?)*\s*/?>"
+    r"|</[A-Za-z][A-Za-z0-9-]*\s*>"
+    r"|<!--(?!>|->)(?:(?!--)[\s\S])+?(?<!-)-->"
+    r"|<\?[\s\S]+?\?>"
+    r"|<![A-Z][\s\S]+?>"
+    r"|<!\[CDATA[\s\S]+?\]\]>"
+)
+
 _ASCII_PUNCTUATION = frozenset(string.punctuation)
 _ASCII_WHITESPACE = " \t\r\n"
 _TITLE_RE = re.compile(

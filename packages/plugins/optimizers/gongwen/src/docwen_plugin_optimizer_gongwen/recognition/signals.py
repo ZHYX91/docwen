@@ -159,6 +159,18 @@ def collect_structured_signals(
             }
         )
 
+    if result.preserved_source_indices:
+        signals["needs_review_reasons"].append("source_content_preserved")
+        gongwen_warnings.append(
+            {
+                "code": "GW005",
+                "severity": "warning",
+                "scope": "source_content",
+                "message": "元数据未能完整表示部分原段落，已将其保留在正文。请核对份号、文号和公式。",
+                "details": {"paragraph_reasons": dict(sorted(result.preserved_source_indices.items()))},
+            }
+        )
+
     # --- Build recognition_summary ---
     needs_review = bool(gongwen_warnings or signals["needs_review_reasons"] or result.missing_required)
     recognition_summary = {

@@ -91,7 +91,12 @@ class MarkdownPlugin:
           - markdown → doc/odt/rtf/wps/pdf/xls/ods (MarkdownOfficeBridgeConverter)
           - process_md_numbering (MdNumberingProcessor)
         """
-        input_ref = context.request.input_refs[0] if context.request.input_refs else None
+        # Typed inputs retain caller order. Resources and numbering plans may
+        # precede the document; only its declared role owns route selection.
+        input_ref = next(
+            (item for item in context.request.input_refs if item.input_role in {"source", "neutral_document"}),
+            None,
+        )
         source = input_ref.format if input_ref is not None else ""
         target = context.request.target_format
         action = context.request.action_name

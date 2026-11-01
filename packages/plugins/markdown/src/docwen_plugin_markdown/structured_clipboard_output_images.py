@@ -241,11 +241,9 @@ def add_xlsx_images(
             )
         )
 
-    for column, value in enumerate(headers, start=1):
-        semantics.cell(1, column, value)
-    for row_index, values in enumerate(rows, start=2):
-        for column, value in enumerate(values, start=1):
-            semantics.cell(row_index, column, value)
+    from docwen_plugin_markdown.structured_clipboard_xlsx import write_string_matrix
+
+    write_string_matrix(semantics, headers, rows)
     return rows
 
 

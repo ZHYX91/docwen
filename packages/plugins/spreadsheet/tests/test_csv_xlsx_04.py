@@ -247,6 +247,7 @@ class TestSmartSheetConverter:
     ) -> None:
         from docwen_plugin_spreadsheet.format_conversion import xlsx_ods_policy
         from docwen_plugin_spreadsheet.format_conversion.xlsx_ods_policy import (
+            CachedExternalCell,
             XlsxOdsPreparation,
             validate_prepared_ods,
         )
@@ -257,7 +258,7 @@ class TestSmartSheetConverter:
             output_path=str(output),
             external_links_flattened=True,
             protection_removed=False,
-            flattened_cached_values=("30",),
+            flattened_cells=(CachedExternalCell("Sheet", "A1", "n", "30"),),
         )
 
         def forbidden_whole_tree_parse(payload: bytes) -> Any:
@@ -269,6 +270,7 @@ class TestSmartSheetConverter:
 
     def test_policy02_final_ods_validator_rejects_lost_cached_value(self, tmp_path: Path) -> None:
         from docwen_plugin_spreadsheet.format_conversion.xlsx_ods_policy import (
+            CachedExternalCell,
             XlsxOdsPolicyError,
             XlsxOdsPreparation,
             validate_prepared_ods,
@@ -280,7 +282,7 @@ class TestSmartSheetConverter:
             output_path=str(output),
             external_links_flattened=True,
             protection_removed=False,
-            flattened_cached_values=("30",),
+            flattened_cells=(CachedExternalCell("Sheet", "A1", "n", "30"),),
         )
 
         with pytest.raises(XlsxOdsPolicyError) as caught:

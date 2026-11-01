@@ -105,10 +105,14 @@ def prepare_runtime_semantics_v3(
                 source,
                 input_id=input_id,
                 extensions=extensions,
-                consumer_profile="number_suite_direct",
+                consumer_profile=consumer_profile,
                 heading_number_provider=heading_number_provider,
             )
-            if consumer_profile == "number_suite_direct"
+            # An explicit dialect belongs to the production source adapter.
+            # Its block grammar must agree with the visible parser before any
+            # source marker is inserted. Unspecified legacy calls retain the
+            # frozen oracle, as does the separate v4 carrier-only entry point.
+            if extensions is not None or consumer_profile == "number_suite_direct"
             else analyze_markdown_semantics_v3(
                 source,
                 input_id=input_id,
@@ -117,6 +121,35 @@ def prepare_runtime_semantics_v3(
         )
     except ValueError as exc:
         raise RuntimeSemanticsV3Unsupported(str(exc)) from exc
+    return _prepare_analyzed_runtime_plan(source, analysis)
+
+
+def prepare_runtime_source_carriers_v3(source: str, *, input_id: str) -> RuntimeSemanticsV3Plan:
+    """Plan frozen physical carriers independently of legacy semantic policy.
+
+    The resolved port owns captions/references. Its carrier-only adapter must
+    project that authority before the frozen runtime's error short circuit,
+    otherwise an unrelated caption diagnostic discards anchors and fences.
+    The source oracle and the ordinary v3 entry point remain unchanged.
+    """
+
+    try:
+        full_analysis = analyze_markdown_semantics_v3(source, input_id=input_id)
+    except ValueError as exc:
+        raise RuntimeSemanticsV3Unsupported(str(exc)) from exc
+    analysis = MarkdownSemanticsV3Analysis(
+        projection={**full_analysis.projection, "targets": [], "references": [], "citations": []},
+        diagnostics=tuple(
+            item
+            for item in full_analysis.diagnostics
+            if not str(item["code"]).startswith(("docwen.markdown.caption.", "docwen.markdown.cross_reference."))
+        ),
+        literal_ranges=(),
+    )
+    return _prepare_analyzed_runtime_plan(source, analysis)
+
+
+def _prepare_analyzed_runtime_plan(source: str, analysis: MarkdownSemanticsV3Analysis) -> RuntimeSemanticsV3Plan:
     body_start = markdown_semantics_body_start_v3(source)
     if analysis.has_errors:
         return RuntimeSemanticsV3Plan(
@@ -352,16 +385,25 @@ def _ordinary_anchor_owner_path(anchor: dict[str, Any]) -> tuple[tuple[str, int,
     ]
     block_range = anchor["block_range"]
     segments.append((str(anchor["block_kind"]), int(block_range["start"]), int(block_range["end"])))
+    # The position in this source-generated path is the structural depth.
+    # Distinct quote ancestors can cover exactly the same source range; keep
+    # both positions so longest-prefix parent selection does not collapse them.
+    # A terminal container self remains invalid: supported inline item owners
+    # omit their own segment, and a nested post-block marker extends its real
+    # ancestor beyond the owned container's complete range.
+    terminal_depth = len(segments) - 1
     previous: tuple[str, int, int] | None = None
-    for segment in segments:
-        _kind, start, end = segment
+    for depth, segment in enumerate(segments):
+        kind, start, end = segment
+        if depth < terminal_depth and kind not in {"list", "list_item", "block_quote", "callout"}:
+            raise RuntimeSemanticsV3Unsupported("ordinary-anchor container path contains a non-container kind")
         if start < 0 or end <= start:
             raise RuntimeSemanticsV3Unsupported("ordinary-anchor source topology has an invalid range")
         if previous is not None:
             _previous_kind, previous_start, previous_end = previous
             if start < previous_start or end > previous_end:
                 raise RuntimeSemanticsV3Unsupported("ordinary-anchor source topology is not laminar")
-            if segment == previous:
+            if depth == terminal_depth and segment == previous:
                 raise RuntimeSemanticsV3Unsupported("ordinary-anchor container path contains its own block")
         previous = segment
     return tuple(segments)
@@ -690,11 +732,13 @@ def _bind_post_block_anchors(nodes: list[dict[str, Any]]) -> list[dict[str, Any]
     for node in nodes:
         anchor = node.get("_docwen_v3_ordinary_anchor")
         if (
-            node.get("type") in {"paragraph", "_docwen_v3_caption_declaration"}
+            node.get("type") in {"paragraph", "block_text", "_docwen_v3_caption_declaration"}
             and anchor is not None
             and anchor.get("placement") == "post_block"
         ):
-            is_marker_only = node.get("type") == "paragraph" and not _plain_children(node.get("children", []))
+            is_marker_only = node.get("type") in {"paragraph", "block_text"} and not _plain_children(
+                node.get("children", [])
+            )
             is_caption_boundary = node.get("type") == "_docwen_v3_caption_declaration"
             if not (is_marker_only or is_caption_boundary):
                 output.append(node)
@@ -720,17 +764,26 @@ def _lift_container_anchors(nodes: list[dict[str, Any]]) -> None:
         if not isinstance(children, list):
             continue
         _lift_container_anchors(children)
-        if node.get("type") not in {"block_quote", "list", "list_item"}:
-            continue
-        owners = list(_direct_anchor_owners(children))
-        if len(owners) != 1:
-            continue
-        anchor = owners[0]["_docwen_v3_ordinary_anchor"]
-        expected = {
+        owner_kind = {
             "block_quote": "block_quote",
             "list": "list",
             "list_item": "list_item",
-        }[str(node["type"])]
+            "task_list_item": "list_item",
+        }.get(str(node.get("type")))
+        if owner_kind is None:
+            continue
+        owners = list(_direct_anchor_owners(children))
+        if owner_kind == "list_item":
+            # A lead paragraph may identify the complete item while later
+            # paragraphs or objects retain their own ordinary IDs. Only the
+            # unique item owner is eligible to move onto this container.
+            owners = [owner for owner in owners if owner["_docwen_v3_ordinary_anchor"].get("block_kind") == "list_item"]
+            if len(owners) > 1:
+                raise RuntimeSemanticsV3Unsupported("a list item has multiple ordinary-anchor owners")
+        if len(owners) != 1:
+            continue
+        anchor = owners[0]["_docwen_v3_ordinary_anchor"]
+        expected = owner_kind
         if node.get("type") == "block_quote" and anchor.get("block_kind") == "callout":
             expected = "callout"
         if anchor.get("block_kind") != expected:
@@ -769,12 +822,15 @@ def _direct_anchor_owners(nodes: list[dict[str, Any]]):
     """Yield marker owners through transparent paragraph/block-text shells."""
 
     for node in nodes:
+        # A structured node already owns its complete block. Lifting it again
+        # would steal a nested container's ID or overwrite its parent's ID.
+        if node.get("type") not in {"paragraph", "block_text"}:
+            continue
         if node.get("_docwen_v3_ordinary_anchor") is not None:
             yield node
-        if node.get("type") in {"paragraph", "block_text"}:
-            children = node.get("children")
-            if isinstance(children, list):
-                yield from _direct_anchor_owners(children)
+        children = node.get("children")
+        if isinstance(children, list):
+            yield from _direct_anchor_owners(children)
 
 
 def _plain_children(children: list[dict[str, Any]]) -> str:

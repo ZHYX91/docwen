@@ -171,7 +171,7 @@ def test_literal_code_like_text_does_not_coalesce_with_a_styled_code_run():
     shading = OxmlElement("w:shd")
     shading.set(qn("w:fill"), "D9D9D9")
     run._r.get_or_add_rPr().append(shading)
-    assert render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig()) == "`literal``actual code`"
+    assert render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig()) == r"\`literal\``actual code`"
 
 
 def test_page_break_segments_preserve_formatting_inside_the_same_run():

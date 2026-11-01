@@ -240,6 +240,9 @@ class FormRow(_ResponsiveFrame):
         if self.label_suffix is not None:
             label_height = max(label_height, self.label_suffix.sizeHint().height())
         self.label_container.setFixedHeight(label_height)
+        self.content_layout.setAlignment(
+            self.label_container, Qt.AlignmentFlag.AlignVCenter if horizontal else Qt.AlignmentFlag.AlignTop
+        )
         control_width = (
             max(1, self.contentsRect().width() - label_width - suffix_width - dp(8))
             if horizontal
@@ -311,7 +314,12 @@ class ChoiceGroup(_ResponsiveFrame):
     """
 
     def __init__(
-        self, parent: QWidget | None = None, *, responsive: bool = False, spacing: int = Spacing.GROUP_GAP
+        self,
+        parent: QWidget | None = None,
+        *,
+        responsive: bool = False,
+        horizontal: bool = False,
+        spacing: int = Spacing.GROUP_GAP,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("panelChoiceGroup")
@@ -319,10 +327,10 @@ class ChoiceGroup(_ResponsiveFrame):
         self._horizontal_spacing = spacing
         if responsive:
             self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        direction = QBoxLayout.Direction.LeftToRight if responsive else QBoxLayout.Direction.TopToBottom
+        direction = QBoxLayout.Direction.LeftToRight if responsive or horizontal else QBoxLayout.Direction.TopToBottom
         self.content_layout = QBoxLayout(direction, self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        set_metric(self.content_layout, "setSpacing", spacing if responsive else Spacing.FORM_ROW_GAP)
+        set_metric(self.content_layout, "setSpacing", spacing if responsive or horizontal else Spacing.FORM_ROW_GAP)
         if responsive:
             self.content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 

@@ -28,7 +28,7 @@ square brackets. A rejected batch member contributes to the totals and nonzero e
 - `schema [COMMAND_PATH...]`: export the active parser contract.
 - `convert FILE --to FORMAT --output-dir DIR`: convert one file into the chosen parent; required for conversions from or to Markdown.
 - `convert FILE --to FORMAT --output PATH`: exact-file output for other single-file conversions.
-- `convert MARKDOWN --to docx --output-dir DIR --proofread [--check CHECK]...`: render DOCX privately, proofread the generated DOCX, then publish the final result. `--check` on `convert` requires `--proofread`; omitting `--check` uses the configured proofreading defaults. If all four checks are disabled, conversion still publishes the selected document with a skipped-proofreading diagnostic. Markdown sources support final DOCX/DOC/ODT/RTF/WPS targets; proofreading runs on the intermediate DOCX before any required bridge conversion. Availability of the selected target still depends on its bridge. Non-Markdown sources do not support conversion proofreading.
+- `convert MARKDOWN --to FORMAT --output-dir DIR --proofread [--check CHECK]...`: render DOCX privately, proofread the generated DOCX, then publish the final result. `--check` on `convert` requires `--proofread`; omitting `--check` uses the configured proofreading defaults. If all four checks are disabled, conversion still publishes the selected document with a skipped-proofreading diagnostic. Markdown sources support final DOCX/DOC/ODT/RTF/WPS targets; proofreading runs on the intermediate DOCX before any required bridge conversion. Availability of the selected target still depends on its bridge. Non-Markdown sources do not support conversion proofreading.
 - `validate FILE [--report PATH]`: validate DOCX, Markdown, or legacy Word-family content
   (`DOC`/`WPS`/`RTF`/`ODT` is pre-converted to DOCX by the Application layer); the default is read-only.
 - `number markdown FILE --operation add|remove [--scheme ID] (--output PATH | --in-place)`: explicitly add or remove Markdown heading numbering.
@@ -67,9 +67,9 @@ Markdown 明确写出的绝对路径或带目录段的相对路径属于精确�
 
 ## Output and safety / 输出与安全
 
-Conversions from or to Markdown publish a result folder inside the parent selected with `--output-dir DIR`, even when there is only one output. Names include the source name, timestamp and current input format. Use `--output PATH` only for other conversions that produce one exact file.
+Conversions to Markdown publish a result folder inside the parent selected with `--output-dir DIR`, even for one Markdown file. Markdown-to-document/spreadsheet conversions publish one final file directly in that parent; multiple files (such as worksheet CSVs) or an explicitly requested audit sidecar use a result folder. Names include the source name, timestamp and current input format. Use `--output PATH` for one exact final file, including a single file generated from Markdown; grouped results require `--output-dir`.
 
-传入或生成 Markdown 的转换统一在 `--output-dir DIR` 指定的父目录下创建结果文件夹，即使只有一个输出文件；名称包含原文件名、时间戳和本次传入格式。其他只生成单个文件的转换才使用 `--output PATH` 指定精确文件路径。
+生成 Markdown 时始终在 `--output-dir DIR` 指定的父目录下创建结果文件夹。Markdown 转文档或表格只生成一个最终文件时直接输出；多个文件（如多个工作表 CSV），或显式要求审计附带文件时保留结果文件夹。名称包含原文件名、时间戳和本次传入格式。单文件可用 `--output PATH` 指定精确路径，包括由 Markdown 生成的单文件；分组结果使用 `--output-dir`。
 
 - JSON mode emits exactly one protocol 3 envelope conforming to [the JSON schema](specs/json-contracts.schema.json).
 - Machine meaning comes from stable fields and typed error codes, not localized messages.
@@ -81,6 +81,33 @@ Conversions from or to Markdown publish a result folder inside the parent select
 - Single-file commands never silently rename a requested output.
 - On Windows, every public input and output path must use ordinary absolute syntax and be at most 259 UTF-16 code units. DocWen rejects `\\?\` / `\\.\` extended-length syntax before a backend starts because the supported conversion backends do not share one reliable extended-path contract. Runtime-generated artifact names may cross that boundary internally; DocWen keeps reported paths ordinary while adapting only its own filesystem calls.
 - Global options are limited to language, JSON/text verbosity and timing; batch, parallelism and confirmation flags belong to their commands.
+
+## Deadlines and proofreading / 截止与校对
+
+A batch deadline or Ctrl+C stops further submission and cancels outstanding Application request IDs before
+waiting for workers. JSON keeps one result per input, including successful publications and their paths.
+Already committed files remain successful when a later input times out. Work that never started is reported as
+`details.execution_state=not_started`; if a worker has not stopped within the bounded cooperative wait, its
+state is `cancellation_unconfirmed`. Such a worker retains its cancelled reservation until it exits. This is
+not a promise to forcibly terminate Python threads; a non-cooperative thread can still delay interpreter exit.
+The command reports timeout exit code 8 or interruption exit code 130 without rewriting prior commit facts.
+
+批处理达到总截止或收到 Ctrl+C 后，先停止续提并取消未完成的 Application 请求，再等待 worker 收束。
+JSON 保留每个输入的结果及已成功发布的路径；后续项目超时不会把先前提交的文件改成失败。
+尚未启动的输入以 `details.execution_state=not_started` 表示；有界协作等待后仍未退出的 worker 以
+`cancellation_unconfirmed` 表示，并保留其已取消的预约身份直到真正退出。这不承诺强杀 Python 线程；
+不合作的线程仍可能推迟解释器退出。命令以 8 表示超时、130 表示中断，同时保留各项已提交的事实。
+
+Conversion proofreading accepts Markdown workflow input with final `docx`, `doc`, `odt`, `rtf` or `wps` targets.
+The CLI validator, help and `schema convert` / `schema batch convert` target constraints share the Application
+support set. `--check none` explicitly disables all checks; omitting it keeps configured defaults. Legacy targets
+still require an available bridge. Generic text sniffed as `txt` remains `txt` in the inspection and source identity,
+while admission into the Markdown workflow permits the same Markdown proofreading route and report contract.
+
+转换后校对接受 Markdown 工作流输入以及上述五种最终文档格式；CLI 校验、帮助和 schema 的目标准入约束
+复用 Application 的同一支持集。`--check none` 显式关闭全部检查，未指定时使用配置默认值；旧文档目标仍须
+具备可用 bridge。嗅探为 `txt` 的普通文本保留其真实检测格式和源身份；被准入 Markdown 工作流后可使用
+同一 Markdown 校对路由及报告合同。
 
 ## Runtime discovery / 运行时发现
 

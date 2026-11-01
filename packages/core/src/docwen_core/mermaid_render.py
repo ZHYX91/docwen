@@ -5,8 +5,10 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 from collections.abc import Iterator
@@ -16,6 +18,7 @@ from typing import Any, cast
 
 from PIL import Image
 
+from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
 from docwen_core.mermaid_runtime import inspect_mermaid_runtime
 
 # Import the CLI only after Python attaches this process to its cleanup
@@ -119,6 +122,9 @@ def _run_renderer(command: list[str], job_dir: Path, cancellation: Any, timeout:
     environment.pop("NODE_OPTIONS", None)
     environment["TMPDIR"] = environment["TEMP"] = environment["TMP"] = str(job_dir)
     log_path = job_dir / "renderer.log"
+    if sys.platform == "linux":
+        _run_linux_renderer(command, job_dir, cancellation, timeout, environment, log_path)
+        return
     process = None
     job = None
     try:
@@ -157,39 +163,123 @@ def _run_renderer(command: list[str], job_dir: Path, cancellation: Any, timeout:
                     detail = " ".join(diagnostic.read(4800).decode("utf-8", errors="replace").split())[-1200:]
                 raise MermaidRenderError(f"Mermaid CLI exited with status {process.returncode}: {detail}")
     finally:
+        original_error = sys.exc_info()[1]
+        cleanup_error: BaseException | None = None
+        mac_unconfirmed = (
+            os.name != "nt"
+            and process is not None
+            and (
+                isinstance(original_error, (CancellationRequested, KeyboardInterrupt))
+                or process.poll() is None
+                or process.returncode != 0
+            )
+        )
         try:
             if job is not None:
                 _stop_windows_job(job)
             elif process is not None and os.name != "nt":
                 with contextlib.suppress(ProcessLookupError):
                     os.killpg(process.pid, signal.SIGKILL)
-        finally:
+        except BaseException as error:
+            cleanup_error = error
+        try:
             if process is not None:
                 if process.poll() is None:
                     process.kill()
                 process.wait(timeout=5)
                 if process.stdin is not None:
                     process.stdin.close()
+        except BaseException as error:
+            cleanup_error = cleanup_error or error
+        if cleanup_error is not None or mac_unconfirmed:
+            raise ExternalProcessCleanupUnconfirmed(
+                "Mermaid process cleanup could not be confirmed; workspace retained"
+            ) from cleanup_error
 
 
 @contextlib.contextmanager
 def _renderer_directory(root: Path) -> Iterator[Path]:
-    temporary = tempfile.TemporaryDirectory(prefix="docwen-mermaid-", dir=root)
+    directory = Path(tempfile.mkdtemp(prefix="docwen-mermaid-", dir=root))
+    preserve = False
+    interrupted: BaseException | None = None
     try:
-        yield Path(temporary.name)
+        yield directory
+    except ExternalProcessCleanupUnconfirmed:
+        preserve = True
+        raise
+    except (CancellationRequested, KeyboardInterrupt) as error:
+        interrupted = error
+        raise
     finally:
         # Windows may briefly retain a browser profile's file handles after
         # every process in the job has exited. Retry only sharing violations;
         # access-control failures and an exhausted deadline remain visible.
         deadline = time.monotonic() + 5
-        while True:
+        while not preserve:
             try:
-                temporary.cleanup()
+                shutil.rmtree(directory)
                 break
             except PermissionError as error:
                 if getattr(error, "winerror", None) not in (32, 33) or time.monotonic() >= deadline:
+                    if interrupted is not None:
+                        interrupted.add_note(f"Mermaid temporary cleanup failed: {type(error).__name__}")
+                        break
                     raise
                 time.sleep(0.05)
+            except OSError as error:
+                if interrupted is not None:
+                    interrupted.add_note(f"Mermaid temporary cleanup failed: {type(error).__name__}")
+                    break
+                raise
+
+
+def _run_linux_renderer(
+    command: list[str],
+    job_dir: Path,
+    cancellation: Any,
+    timeout: float,
+    environment: dict[str, str],
+    log_path: Path,
+) -> None:
+    from docwen_core.office_process import (
+        OfficeProcessCleanupUnconfirmed,
+        OwnedProcessLaunch,
+        run_owned_office,
+    )
+
+    def cancelled() -> bool:
+        if cancellation is not None:
+            cancellation.check()
+        return False
+
+    try:
+        result = run_owned_office(
+            command,
+            is_cancelled=cancelled,
+            timeout_s=timeout,
+            launch=OwnedProcessLaunch(
+                cwd=str(job_dir),
+                environment=tuple(environment.items()),
+                log_path=str(log_path),
+                stdin_bytes=b"go\n",
+                log_limit=1024 * 1024,
+                grace_signal=signal.SIGINT,
+                preserve_confirmed_interruption=True,
+            ),
+        )
+    except OfficeProcessCleanupUnconfirmed as error:
+        raise ExternalProcessCleanupUnconfirmed("Mermaid process cleanup could not be confirmed") from error
+    if not result.cleanup_confirmed:
+        raise ExternalProcessCleanupUnconfirmed("Mermaid process cleanup could not be confirmed: " + result.reason)
+    if cancellation is not None:
+        cancellation.check()
+    if not result.succeeded:
+        detail = result.reason
+        if not detail and log_path.exists():
+            with log_path.open("rb") as diagnostic:
+                diagnostic.seek(max(0, log_path.stat().st_size - 4800))
+                detail = " ".join(diagnostic.read(4800).decode("utf-8", errors="replace").split())[-1200:]
+        raise MermaidRenderError(f"Mermaid renderer failed (limit {timeout:g} seconds): {detail}")
 
 
 def render_mermaid_png(

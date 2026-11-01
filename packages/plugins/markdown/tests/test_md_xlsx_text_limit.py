@@ -101,3 +101,50 @@ def test_plain_csv_keeps_text_beyond_excel_cell_capacity() -> None:
     assert result.success, result.error
     with Path(result.artifacts[0].staging_path).open(encoding="utf-8-sig", newline="") as handle:
         assert list(csv.reader(handle)) == [["Value"], [value]]
+
+
+def test_sparse_template_fills_without_materializing_its_empty_rectangle(tmp_path: Path, monkeypatch) -> None:
+    from openpyxl.worksheet.worksheet import Worksheet
+
+    from docwen_plugin_markdown.to_spreadsheet.converter import MdToXlsxConverter
+
+    template = tmp_path / "sparse.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    assert sheet is not None
+    sheet["XFD1048576"] = "far sentinel"
+    sheet["Z101"] = "=1+2"
+    sheet["D3"] = "{{→Other}}"
+    sheet["A3"] = "{{↓Value}}"
+    sheet["A1"] = "{{title}}"
+    sheet["B2"] = "{{IMAGE:missing.png}}"
+    workbook.save(template)
+    workbook.close()
+
+    original_iter_rows = Worksheet.iter_rows
+
+    def bounded_rows(worksheet, *args, **kwargs):
+        if worksheet.max_row * worksheet.max_column > 1_000_000:
+            raise AssertionError("Sparse template scans must not expand the entire worksheet rectangle")
+        return original_iter_rows(worksheet, *args, **kwargs)
+
+    monkeypatch.setattr(Worksheet, "iter_rows", bounded_rows)
+    source = write_temp_md(
+        "---\ntitle: Workbook\n---\n\n| Value | Other |\n| --- | --- |\n| first | one |\n| second | two |\n"
+    )
+    context, _workspace = make_context(source, target_format="xlsx", options={"template_name": str(template)})
+    result = MdToXlsxConverter().convert(context)
+    assert result.success, result.error
+    output = load_workbook(result.artifacts[0].staging_path)
+    try:
+        sheet = output.active
+        assert sheet is not None
+        assert sheet["A1"].value == "Workbook"
+        assert [sheet["A3"].value, sheet["A4"].value] == ["first", "second"]
+        assert [sheet["D3"].value, sheet["E3"].value] == ["one", "two"]
+        assert sheet["B2"].value is None
+        assert sheet["Z101"].value == "=1+2" and sheet["Z101"].data_type == "f"
+        assert sheet["XFD1048576"].value == "far sentinel"
+        assert len(sheet._cells) <= 8
+    finally:
+        output.close()

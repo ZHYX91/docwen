@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,21 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 def _read(relative_path: str) -> str:
     return read_source_text(PROJECT_ROOT / relative_path)
+
+
+def _calls(tree: ast.AST, name: str) -> list[ast.Call]:
+    return [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == name
+    ]
+
+
+def _assert_explicit_rules(calls: list[ast.Call], variable: str) -> None:
+    assert calls, "the production consumer must remain present"
+    for call in calls:
+        [rules] = [keyword.value for keyword in call.keywords if keyword.arg == "rules"]
+        assert isinstance(rules, ast.Name) and rules.id == variable
 
 
 def test_runtime_builds_numbering_and_cleanup_from_the_same_request_snapshot() -> None:
@@ -69,10 +85,20 @@ def test_all_conversion_time_heading_consumers_receive_explicit_request_rules() 
     )
     gongwen_utils = _read("packages/plugins/optimizers/gongwen/src/docwen_plugin_optimizer_gongwen/utils.py")
 
-    assert "def remove_md_numbering(content: str, *, rules: Any = ())" in markdown_common
-    assert "strip_heading_prefix(heading_text, rules=rules)" in markdown_common
+    common_tree = ast.parse(markdown_common)
+    [remove_numbering] = [
+        node for node in common_tree.body if isinstance(node, ast.FunctionDef) and node.name == "remove_md_numbering"
+    ]
+    assert "rules" not in {arg.arg for arg in (*remove_numbering.args.posonlyargs, *remove_numbering.args.args)}
+    [rules_default] = [
+        default
+        for arg, default in zip(remove_numbering.args.kwonlyargs, remove_numbering.args.kw_defaults, strict=True)
+        if arg.arg == "rules"
+    ]
+    assert isinstance(rules_default, ast.Tuple) and not rules_default.elts
+    _assert_explicit_rules(_calls(remove_numbering, "strip_heading_prefix"), "rules")
     assert 'getattr(context, "heading_cleanup_rules", ()) or ()' in markdown_numbering
-    assert "content = remove_md_numbering(content, rules=cleanup_rules)" in markdown_docx
+    _assert_explicit_rules(_calls(ast.parse(markdown_docx), "remove_md_numbering"), "cleanup_rules")
     assert "heading_cleanup_rules=heading_cleanup_rules" in document
     assert "rules=heading_cleanup_rules" in document
 

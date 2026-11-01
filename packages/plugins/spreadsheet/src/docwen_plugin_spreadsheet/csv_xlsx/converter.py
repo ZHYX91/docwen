@@ -18,8 +18,15 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from docwen_core.detection import sniff_delimited_separator
 from docwen_core.errors import CancellationRequested
 from docwen_plugin_spreadsheet.delimited import decoded_samples
+from docwen_plugin_spreadsheet.sparse_projection import (
+    MAX_SPREADSHEET_PROJECTION_CELLS,
+    ProjectionBudget,
+    preflight_worksheet_allocations,
+)
+from docwen_plugin_spreadsheet.worksheets import ordinary_worksheets
 from docwen_plugin_spreadsheet.xlsx_text import XLSX_CELL_TEXT_LIMIT, xlsx_cell_text_length
 
 if TYPE_CHECKING:
@@ -128,6 +135,21 @@ def _find_unavailable_formula_caches(
     return count, locations
 
 
+def _stored_value_rows(worksheet: Any, *, cancel_check: Callable[[], None]):
+    """Stream the delimited coordinate rectangle without creating blank cells."""
+    max_row, max_column = worksheet.max_row, worksheet.max_column
+    for row in range(1, max_row + 1):
+        if row % _CANCEL_CHECK_ROW_INTERVAL == 0:
+            cancel_check()
+        values: list[Any] = []
+        for column in range(1, max_column + 1):
+            if column % 1000 == 0:
+                cancel_check()
+            cell = worksheet._cells.get((row, column))
+            values.append(None if cell is None else cell.value)
+        yield values
+
+
 def _formula_cache_warning_message(count: int, locations: list[str]) -> str:
     shown = ", ".join(locations)
     omitted = count - len(locations)
@@ -152,7 +174,7 @@ def _build_delimited_workbook(
     # workbook only after the entire input decodes; a retry starts with a fresh
     # sheet so rows from the rejected encoding can never survive.
     candidates = decoded_samples(input_path) or [("utf-8-sig", "")]
-    for candidate_index, (encoding, _) in enumerate(candidates):
+    for candidate_index, (encoding, sample) in enumerate(candidates):
         if cancel_check is not None:
             cancel_check()
         wb = openpyxl.Workbook()
@@ -163,7 +185,7 @@ def _build_delimited_workbook(
         row_count = 0
         try:
             with open(input_path, encoding=encoding, newline="") as f:
-                reader = csv.reader(f, delimiter=sep)
+                reader = csv.reader(f, delimiter=sniff_delimited_separator(sample) or sep, strict=True)
                 for r_idx, row in enumerate(reader, 1):
                     if cancel_check is not None and r_idx % _CANCEL_CHECK_ROW_INTERVAL == 0:
                         cancel_check()
@@ -379,7 +401,12 @@ class XlsxToCsvConverter:
         wb = None
         formula_wb = None
         try:
+            preflight_worksheet_allocations(
+                input_path, cancel_check=context.cancellation.check, limit=MAX_SPREADSHEET_PROJECTION_CELLS
+            )
             wb, formula_wb = _load_xlsx_views(input_path)
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"XLSX→CSV parse failed: {exc}")
             return ConversionResult(
@@ -388,35 +415,40 @@ class XlsxToCsvConverter:
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
                     message=str(exc),
-                    diagnostic_code="XLSX2CSV-PARSE-ERROR",
+                    diagnostic_code=getattr(exc, "diagnostic_code", "XLSX2CSV-PARSE-ERROR"),
                 ),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
                         message=f"Failed to parse XLSX workbook: {exc}",
-                        code="XLSX2CSV-PARSE-ERROR",
+                        code=getattr(exc, "diagnostic_code", "XLSX2CSV-PARSE-ERROR"),
                     ),
                 ],
             )
 
         # ── Phase 2: Write CSV per sheet ───────────────────────────────
         artifacts: list[ArtifactManifest] = []
-        total_sheets = len(wb.sheetnames)
+        total_sheets = 0
         total_rows = 0
 
         try:
+            worksheets = ordinary_worksheets(wb)
+            total_sheets = len(worksheets)
+            projection_budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
+            for worksheet in worksheets:
+                projection_budget.reserve(worksheet.max_row * worksheet.max_column, location=worksheet.title)
             formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
                 wb,
                 formula_wb,
                 cancel_check=context.cancellation.check,
                 input_path=input_path,
             )
-            for idx, sheet_name in enumerate(wb.sheetnames):
+            for idx, ws in enumerate(worksheets):
+                sheet_name = ws.title
                 context.cancellation.check()
                 progress = progress_start + (100.0 - progress_start) * (idx / max(total_sheets, 1))
                 context.progress.report_progress(progress, f"Converting sheet: {sheet_name}")
 
-                ws = wb[sheet_name]
                 clean_name = sheet_name.replace(" ", "_")
 
                 output_path = context.workspace.create_artifact_path("primary" if idx == 0 else "auxiliary", ".csv")
@@ -424,7 +456,7 @@ class XlsxToCsvConverter:
                 row_count = 0
                 with open(output_path, "w", encoding="utf-8-sig", newline="") as f:
                     writer = csv.writer(f)
-                    for row_index, row in enumerate(ws.iter_rows(values_only=True), 1):
+                    for row_index, row in enumerate(_stored_value_rows(ws, cancel_check=context.cancellation.check), 1):
                         if row_index % _CANCEL_CHECK_ROW_INTERVAL == 0:
                             context.cancellation.check()
                         output_row = []
@@ -466,13 +498,13 @@ class XlsxToCsvConverter:
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
                     message=str(exc),
-                    diagnostic_code="XLSX2CSV-WRITE-ERROR",
+                    diagnostic_code=getattr(exc, "diagnostic_code", "XLSX2CSV-WRITE-ERROR"),
                 ),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
                         message=f"Failed to write CSV output: {exc}",
-                        code="XLSX2CSV-WRITE-ERROR",
+                        code=getattr(exc, "diagnostic_code", "XLSX2CSV-WRITE-ERROR"),
                     ),
                 ],
             )
@@ -692,7 +724,12 @@ class XlsxToTsvConverter:
         wb = None
         formula_wb = None
         try:
+            preflight_worksheet_allocations(
+                input_path, cancel_check=context.cancellation.check, limit=MAX_SPREADSHEET_PROJECTION_CELLS
+            )
             wb, formula_wb = _load_xlsx_views(input_path)
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"XLSX→TSV parse failed: {exc}")
             return ConversionResult(
@@ -701,35 +738,40 @@ class XlsxToTsvConverter:
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
                     message=str(exc),
-                    diagnostic_code="XLSX2TSV-PARSE-ERROR",
+                    diagnostic_code=getattr(exc, "diagnostic_code", "XLSX2TSV-PARSE-ERROR"),
                 ),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
                         message=f"Failed to parse XLSX workbook: {exc}",
-                        code="XLSX2TSV-PARSE-ERROR",
+                        code=getattr(exc, "diagnostic_code", "XLSX2TSV-PARSE-ERROR"),
                     ),
                 ],
             )
 
         # ── Phase 2: Write TSV per sheet ───────────────────────────────
         artifacts: list[ArtifactManifest] = []
-        total_sheets = len(wb.sheetnames)
+        total_sheets = 0
         total_rows = 0
 
         try:
+            worksheets = ordinary_worksheets(wb)
+            total_sheets = len(worksheets)
+            projection_budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
+            for worksheet in worksheets:
+                projection_budget.reserve(worksheet.max_row * worksheet.max_column, location=worksheet.title)
             formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
                 wb,
                 formula_wb,
                 cancel_check=context.cancellation.check,
                 input_path=input_path,
             )
-            for idx, sheet_name in enumerate(wb.sheetnames):
+            for idx, ws in enumerate(worksheets):
+                sheet_name = ws.title
                 context.cancellation.check()
                 progress = 50.0 * (idx / max(total_sheets, 1))
                 context.progress.report_progress(progress, f"Converting sheet: {sheet_name}")
 
-                ws = wb[sheet_name]
                 clean_name = sheet_name.replace(" ", "_")
 
                 output_path = context.workspace.create_artifact_path("primary" if idx == 0 else "auxiliary", ".tsv")
@@ -737,7 +779,7 @@ class XlsxToTsvConverter:
                 row_count = 0
                 with open(output_path, "w", encoding="utf-8-sig", newline="") as f:
                     writer = csv.writer(f, delimiter="\t")
-                    for row_index, row in enumerate(ws.iter_rows(values_only=True), 1):
+                    for row_index, row in enumerate(_stored_value_rows(ws, cancel_check=context.cancellation.check), 1):
                         if row_index % _CANCEL_CHECK_ROW_INTERVAL == 0:
                             context.cancellation.check()
                         output_row = []
@@ -761,6 +803,7 @@ class XlsxToTsvConverter:
                         "sheet_name": sheet_name,
                         "row_count": row_count,
                         "sheet_index": idx,
+                        "sheet_count": total_sheets,
                     },
                     is_primary=(idx == 0),
                 )
@@ -777,13 +820,13 @@ class XlsxToTsvConverter:
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
                     message=str(exc),
-                    diagnostic_code="XLSX2TSV-WRITE-ERROR",
+                    diagnostic_code=getattr(exc, "diagnostic_code", "XLSX2TSV-WRITE-ERROR"),
                 ),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
                         message=f"Failed to write TSV output: {exc}",
-                        code="XLSX2TSV-WRITE-ERROR",
+                        code=getattr(exc, "diagnostic_code", "XLSX2TSV-WRITE-ERROR"),
                     ),
                 ],
             )

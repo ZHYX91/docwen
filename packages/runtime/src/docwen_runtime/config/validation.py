@@ -614,6 +614,10 @@ def _validate_ocr(data: dict[str, Any]) -> None:
 def _validate_template_fill(data: dict[str, Any]) -> None:
     _validate_optional_string(data, "list_separator", label="template_fill")
     _validate_optional_bool(data, "gongwen_fields_enabled", label="template_fill")
+    _validate_optional_bool(data, "gongwen_numbering_comments", label="template_fill")
+    _validate_optional_bool(data, "gongwen_numbering_text", label="template_fill")
+    if data.get("gongwen_numbering_text", True) is False:
+        data["gongwen_numbering_comments"] = False
     _canonical_choice(
         data,
         "attachment_alignment",
@@ -630,10 +634,17 @@ def _validate_to_md_optimization(data: dict[str, Any]) -> None:
         raise ConfigSemanticError("to_md_optimization must be 'none' or a non-empty exact resource ID")
 
 
+def _validate_layout(data: dict[str, Any]) -> None:
+    _validate_to_md_optimization(data)
+    _canonical_choice(data, "split_mode", frozenset({"every_page", "odd_even", "custom"}), label="layout.split_mode")
+    for key in ("document_format", "render_format"):
+        _validate_optional_string(data, key, label="layout")
+
+
 _EXPLICIT_VALIDATORS = {
     "document.toml": _validate_to_md_optimization,
     "image.toml": _validate_to_md_optimization,
-    "layout.toml": _validate_to_md_optimization,
+    "layout.toml": _validate_layout,
     "ocr.toml": _validate_ocr,
     "template_fill.toml": _validate_template_fill,
     "logger.toml": _validate_logger,

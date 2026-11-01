@@ -1,9 +1,13 @@
 # Join YAML list values when filling Word and spreadsheet templates.
 # Empty strings and whitespace are intentional and preserved exactly.
-list_separator = "、"
+list_separator = ", "
 
 # Format Chinese official-document fields in Word templates.
 gongwen_fields_enabled = true
+
+# Apply to this conversion's new heading numbers without enabling numbering.
+gongwen_numbering_text = true
+gongwen_numbering_comments = true
 
 # Attachment-name alignment: spaces or a tab stop, with a hanging indent.
 attachment_alignment = "tab"

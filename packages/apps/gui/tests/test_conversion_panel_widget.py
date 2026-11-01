@@ -595,6 +595,7 @@ class TestConversionRequests:
     ) -> None:
         vm.set_file_info("layout", "pdf", file_path="/test.pdf")
         vm.set_pdf_info(3, "test.pdf")
+        vm.split_mode = "custom"
         emitted: list[tuple[str, str, dict]] = []
         vm.named_action_requested.connect(lambda n, fp, o: emitted.append((n, fp, o)))
 
@@ -654,7 +655,7 @@ def test_layout_split_unknown_count_and_single_page_guard(widget, vm, tmp_path, 
         assert vm.pdf_total_pages == 0
     emitted = []
     vm.named_action_requested.connect(lambda name, path, options: emitted.append((name, path, options)))
-    widget._page_input_edit.setText(text)
+    vm.split_mode = mode
     button = widget._split_pdf_button
     if fmt == "pdf":
         assert not button.isEnabled()

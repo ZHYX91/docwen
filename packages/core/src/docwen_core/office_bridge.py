@@ -19,7 +19,7 @@ import zipfile
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, Protocol
+from typing import Any, BinaryIO, Literal, Protocol
 
 from docwen_core.detection import SUPPORTED_EXTENSION_FORMATS
 from docwen_core.office_macro_security import OfficeMacroPolicyError, ensure_excel_input_has_no_xlm
@@ -99,6 +99,11 @@ class BridgeResult:
 @dataclass(frozen=True, slots=True)
 class _OfficeSecurityFailure:
     error_code: str
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
+class _OfficeCleanupFailure:
     message: str
 
 
@@ -651,6 +656,7 @@ def _copy_private_office_input(
     destination: Path,
     *,
     cancel: object | None,
+    destination_stream: BinaryIO | None = None,
 ) -> None:
     """Copy one stable source observation without ever sharing its inode."""
 
@@ -662,16 +668,24 @@ def _copy_private_office_input(
         if opened_identity != path_identity or not stat.S_ISREG(os.fstat(source_stream.fileno()).st_mode):
             raise _OfficeSnapshotSourceChanged(f"Source identity changed before copy: {source}")
 
-        with destination.open("xb", buffering=0) as destination_stream:
+        destination_context = (
+            destination.open("xb", buffering=0)
+            if destination_stream is None
+            else contextlib.nullcontext(destination_stream)
+        )
+        with destination_context as writer:
+            destination_identity = _source_identity(os.fstat(writer.fileno()))
+            if _source_identity(destination.stat()) != destination_identity:
+                raise _OfficeSnapshotSourceChanged(f"Private destination identity changed: {destination}")
             while True:
                 if _is_cancel_requested(cancel):
                     raise _OfficeSnapshotCancelled
                 chunk = source_stream.read(_OFFICE_SNAPSHOT_CHUNK_SIZE)
                 if not chunk:
                     break
-                destination_stream.write(chunk)
-            destination_stream.flush()
-            os.fsync(destination_stream.fileno())
+                writer.write(chunk)
+            writer.flush()
+            os.fsync(writer.fileno())
 
         if _is_cancel_requested(cancel):
             raise _OfficeSnapshotCancelled
@@ -680,7 +694,10 @@ def _copy_private_office_input(
 
     if _source_identity(source.stat()) != path_identity:
         raise _OfficeSnapshotSourceChanged(f"Source path changed while copying: {source}")
-    if destination.stat().st_size != path_identity.size:
+    final_destination = _source_identity(destination.stat())
+    if (final_destination.device, final_destination.inode) != (destination_identity.device, destination_identity.inode):
+        raise _OfficeSnapshotSourceChanged(f"Private destination identity changed after copy: {destination}")
+    if final_destination.size != path_identity.size:
         raise _OfficeSnapshotSourceChanged(f"Private copy size does not match source: {source}")
 
 
@@ -710,7 +727,10 @@ class _OfficeConversionOwner:
             raise _OfficeOutputExtensionRequired("External Office output requires a concrete filename extension.")
 
         self.output.parent.mkdir(parents=True, exist_ok=True)
-        self.workspace = Path(tempfile.mkdtemp(prefix=_OFFICE_WORKSPACE_PREFIX, dir=self.output.parent))
+        # A task workspace can be cleaned by Runtime after a failed bridge.
+        # Linux process state must outlive that scope if native exit is unproven.
+        process_parent = None if sys.platform == "linux" else self.output.parent
+        self.workspace = Path(tempfile.mkdtemp(prefix=_OFFICE_WORKSPACE_PREFIX, dir=process_parent))
         self.input_snapshot = self.workspace / f"input{preferred_extension}"
         self.backend_output = self.workspace / f"output{self.output.suffix}"
         _copy_private_office_input(
@@ -730,8 +750,20 @@ class _OfficeConversionOwner:
             dir=self.output.parent,
         )
         self.publication_output = Path(publication_name)
-        os.close(descriptor)
-        os.replace(backend_output, self.publication_output)
+        if sys.platform == "linux":
+            # The independent process workspace may be on another filesystem.
+            # Copy into this already exclusively created same-volume publication
+            # file, preserving the existing bounded copy/freshness contract.
+            with os.fdopen(descriptor, "wb", buffering=0) as destination_stream:
+                _copy_private_office_input(
+                    backend_output,
+                    self.publication_output,
+                    cancel=self.cancel,
+                    destination_stream=destination_stream,
+                )
+        else:
+            os.close(descriptor)
+            os.replace(backend_output, self.publication_output)
         return self.publication_output
 
     def cleanup_workspace(self) -> tuple[bool, str]:
@@ -816,6 +848,25 @@ def _run_libreoffice_process(
     *,
     cancel: object | None = None,
     timeout_s: float = LIBREOFFICE_CONVERSION_TIMEOUT_S,
+) -> bool | _OfficeCleanupFailure:
+    if sys.platform != "linux":
+        return _run_libreoffice_process_legacy(cmd, cancel=cancel, timeout_s=timeout_s)
+    from docwen_core.office_process import OfficeProcessCleanupUnconfirmed, run_owned_office
+
+    try:
+        result = run_owned_office(cmd, is_cancelled=lambda: _is_cancel_requested(cancel), timeout_s=timeout_s)
+    except OfficeProcessCleanupUnconfirmed as error:
+        return _OfficeCleanupFailure(str(error))
+    if not result.cleanup_confirmed:
+        return _OfficeCleanupFailure(result.reason)
+    return result.succeeded
+
+
+def _run_libreoffice_process_legacy(
+    cmd: list[str],
+    *,
+    cancel: object | None = None,
+    timeout_s: float = LIBREOFFICE_CONVERSION_TIMEOUT_S,
 ) -> bool:
     proc: subprocess.Popen[str] | None = None
     try:
@@ -859,7 +910,7 @@ def _try_libreoffice_conversion(
     convert_to: str,
     cancel: object | None = None,
     timeout_s: float = LIBREOFFICE_CONVERSION_TIMEOUT_S,
-) -> str | _OfficeSecurityFailure | None:
+) -> str | _OfficeSecurityFailure | _OfficeCleanupFailure | None:
     if _is_cancel_requested(cancel):
         return None
 
@@ -873,6 +924,7 @@ def _try_libreoffice_conversion(
     staged_output: Path | None = None
     process_succeeded = False
     security_failure: _OfficeSecurityFailure | None = None
+    cleanup_failure: _OfficeCleanupFailure | None = None
     try:
         output.parent.mkdir(parents=True, exist_ok=True)
         # LibreOffice on Windows can terminate with 0xC0000409 when the
@@ -892,7 +944,7 @@ def _try_libreoffice_conversion(
                 "OFFICE_MACRO_PROFILE_UNAVAILABLE", f"Cannot prepare macro-disabled LibreOffice profile: {exc}"
             )
             raise
-        process_succeeded = _run_libreoffice_process(
+        process_result = _run_libreoffice_process(
             [
                 soffice,
                 f"-env:UserInstallation={profile_dir.resolve().as_uri()}",
@@ -906,6 +958,13 @@ def _try_libreoffice_conversion(
             cancel=cancel,
             timeout_s=timeout_s,
         )
+        if isinstance(process_result, _OfficeCleanupFailure):
+            cleanup_failure = _OfficeCleanupFailure(
+                f"{process_result.message}. Retained Office profile: {profile_dir}; "
+                f"input: {input_path}; private output: {conversion_dir}."
+            )
+            return cleanup_failure
+        process_succeeded = process_result
         output_extension = convert_to.partition(":")[0].strip().lstrip(".")
         generated = conversion_dir / f"{Path(input_path).stem}.{output_extension}"
         if process_succeeded and output_extension and generated.is_file() and not _is_cancel_requested(cancel):
@@ -922,8 +981,11 @@ def _try_libreoffice_conversion(
     except OSError:
         process_succeeded = False
     finally:
-        profile_removed = profile_dir is None or _remove_libreoffice_profile(profile_dir)
-        conversion_removed = conversion_dir is None or _remove_temp_tree(conversion_dir)
+        if cleanup_failure is None:
+            profile_removed = profile_dir is None or _remove_libreoffice_profile(profile_dir)
+            conversion_removed = conversion_dir is None or _remove_temp_tree(conversion_dir)
+        else:
+            profile_removed = conversion_removed = False
 
     if security_failure is not None:
         return security_failure
@@ -1000,6 +1062,16 @@ def _convert_with_fallback(
             cancel=cancel,
             timeout_s=libreoffice_timeout_s,
         )
+        if isinstance(result, _OfficeCleanupFailure):
+            return BridgeResult(
+                False,
+                backend="LibreOffice",
+                message=f"Office process cleanup could not be confirmed. {result.message}",
+                error_code="OFFICE_PROCESS_CLEANUP_UNCONFIRMED",
+                cleanup_failed=True,
+                cleanup_message=result.message,
+                cancelled=_is_cancel_requested(cancel),
+            )
         if isinstance(result, str):
             return BridgeResult(True, output_path=result, backend="LibreOffice")
         if isinstance(result, _OfficeSecurityFailure):
@@ -1114,7 +1186,7 @@ def _convert_with_backend_priority_canonical_input(
             result.attempted_backend_ids = tuple(attempted_backend_ids)
             result.available_backend_ids = tuple(available_backend_ids)
             return result
-        if result.cancelled:
+        if result.cancelled or result.cleanup_failed:
             result.attempted_backend_ids = tuple(attempted_backend_ids)
             result.available_backend_ids = tuple(available_backend_ids)
             return result
@@ -1155,10 +1227,11 @@ def convert_with_backend_priority(
     """Convert through one private, content-named snapshot and publish atomically.
 
     The external backend never receives ``input_path`` itself, including when
-    its suffix already agrees with ``source_format``.  Both the input snapshot
-    and backend output live in an owner-controlled workspace next to the
-    requested staging output.  The requested output is published only after
-    the workspace is proven clean.
+    its suffix already agrees with ``source_format``. Linux input snapshots and
+    backend output live in an independent process-owned temporary workspace;
+    other platforms retain their adjacent workspace. Final publication is
+    always staged beside the requested output, after process and workspace
+    cleanup have been confirmed.
     """
 
     normalized_format = str(source_format or "").strip().casefold()
@@ -1262,6 +1335,16 @@ def convert_with_backend_priority(
         if result.success:
             try:
                 owner.stage_backend_output()
+            except _OfficeSnapshotCancelled:
+                result = BridgeResult(
+                    False,
+                    backend=result.backend,
+                    message="cancelled",
+                    cancelled=True,
+                    attempted_backend_ids=result.attempted_backend_ids,
+                    available_backend_ids=result.available_backend_ids,
+                    error_code="OFFICE_CONVERSION_CANCELLED",
+                )
             except (OSError, RuntimeError) as exc:
                 result = BridgeResult(
                     False,
@@ -1271,6 +1354,13 @@ def convert_with_backend_priority(
                     available_backend_ids=result.available_backend_ids,
                     error_code="OFFICE_OUTPUT_STAGE_FAILED",
                 )
+
+    if result.cleanup_failed:
+        # A missing process-exit receipt is not permission to delete bytes that
+        # a native child may still use, nor to try another backend over them.
+        result.cleanup_message = f"{result.cleanup_message} Retained private Office workspace: {owner.workspace}."
+        result.message = result.cleanup_message
+        return result
 
     workspace_cleaned, workspace_message = owner.cleanup_workspace()
     if not workspace_cleaned:

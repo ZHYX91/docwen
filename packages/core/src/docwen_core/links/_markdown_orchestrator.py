@@ -28,7 +28,7 @@ from docwen_core.links._non_embed import (
     _map_visible_markdown,
     _process_non_embed_links,
     _split_fenced_code_blocks,
-    _split_inline_code_spans,
+    split_markdown_inline_segments,
 )
 from docwen_core.links._patterns import WIKI_EMBED_PATTERN
 
@@ -110,11 +110,11 @@ def _replace_markdown_images(
             continue
         original = segment[index : construct.end]
         in_table = table_safe and _is_table_context(segment, index)
-        alt = construct.label.strip()
+        alt = construct.label
         target = construct.target.strip(" \t\r\n")
         if normalized_mode is EmbeddedImageMode.EXTRACT_TEXT:
             image_target, _, _ = _parse_markdown_image_target(target)
-            replacement = alt or Path(unquote(image_target)).name
+            replacement = alt.strip() or Path(unquote(image_target)).name
             if target_format == "docx":
                 replacement = escape_markdown_source_literal(replacement)
         elif normalized_mode is EmbeddedImageMode.REMOVE:
@@ -262,16 +262,20 @@ def _visible_markdown_ranges(
     text: str,
     *,
     protect_bare_urls: bool,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
 ) -> list[tuple[int, int]]:
     """Return source-position ranges outside renderer-protected atoms."""
     ranges: list[tuple[int, int]] = []
     block_offset = 0
-    for block, block_protected in _split_fenced_code_blocks(text):
+    for block, block_protected in _split_fenced_code_blocks(text, extended_headings=extended_headings):
         if not block_protected:
             inline_offset = block_offset
-            for segment, inline_protected in _split_inline_code_spans(
+            for segment, inline_protected in split_markdown_inline_segments(
                 block,
                 protect_bare_urls=protect_bare_urls,
+                structural_tables=structural_tables,
+                extended_headings=extended_headings,
             ):
                 if segment and not inline_protected:
                     ranges.append((inline_offset, inline_offset + len(segment)))
@@ -296,12 +300,16 @@ def _cross_boundary_construct_spans(
     expansion_ranges: tuple[tuple[int, int], ...],
     *,
     auto_link_bare_url: bool,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
 ) -> list[tuple[int, int]]:
     """Find only newly composed constructs that cross an embed boundary."""
     spans: list[tuple[int, int]] = []
     for range_start, range_end in _visible_markdown_ranges(
         text,
         protect_bare_urls=not auto_link_bare_url,
+        structural_tables=structural_tables,
+        extended_headings=extended_headings,
     ):
         index = range_start
         while index < range_end:
@@ -341,6 +349,8 @@ def process_markdown_links(
     declared_image: Callable[[str, str], str] | None = None,
     declared_wiki_link: Callable[[str, str], str | None] | None = None,
     protect_source_comments: bool = False,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
     cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Process Markdown links using one immutable request policy."""
@@ -408,6 +418,8 @@ def process_markdown_links(
             declared_image=declared_image,
             declared_wiki_link=declared_wiki_link,
             protect_source_comments=protect_source_comments,
+            structural_tables=structural_tables,
+            extended_headings=extended_headings,
             cancellation_check=cancellation_check,
         )
         if kwargs.get("table_safe"):
@@ -459,6 +471,8 @@ def process_markdown_links(
                 image_scope=image_scope,
                 process_links=_process_child,
                 _table_context_scoped=True,
+                structural_tables=structural_tables,
+                extended_headings=extended_headings,
                 declared_image=declared_image,
                 literal_text=escape_markdown_source_literal if normalized_target == "docx" else None,
             )
@@ -478,6 +492,8 @@ def process_markdown_links(
             initial_text,
             lambda segment: _auto_link_bare_urls_in_segment(segment, cancellation_check),
             protect_bare_urls=False,
+            structural_tables=structural_tables,
+            extended_headings=extended_headings,
             protect_source_comments=protect_source_comments,
             cancellation_check=cancellation_check,
         )
@@ -485,6 +501,8 @@ def process_markdown_links(
     result = _map_visible_markdown(
         initial_text,
         _resolve_embeds,
+        structural_tables=structural_tables,
+        extended_headings=extended_headings,
         protect_source_comments=protect_source_comments,
         cancellation_check=cancellation_check,
     )
@@ -504,6 +522,8 @@ def process_markdown_links(
             cancellation_check=cancellation_check,
         ),
         protect_source_comments=protect_source_comments,
+        structural_tables=structural_tables,
+        extended_headings=extended_headings,
         cancellation_check=cancellation_check,
     )
     result = _process_non_embed_links(
@@ -518,6 +538,8 @@ def process_markdown_links(
         table_safe=table_safe,
         declared_wiki_link=declared_wiki_link,
         protect_source_comments=protect_source_comments,
+        structural_tables=structural_tables,
+        extended_headings=extended_headings,
         cancellation_check=cancellation_check,
     )
     if table_safe:
@@ -538,6 +560,8 @@ def process_markdown_links(
                 result,
                 boundary_ranges,
                 auto_link_bare_url=(resolved_auto_link and normalized_target == "docx"),
+                structural_tables=structural_tables,
+                extended_headings=extended_headings,
             )
             if not spans:
                 break
@@ -560,6 +584,8 @@ def process_markdown_links(
                 _depth=_depth,
                 _canonicalize_local_docx_targets=(_canonicalize_local_docx_targets),
                 _boundary_rescan_remaining=0,
+                structural_tables=structural_tables,
+                extended_headings=extended_headings,
                 declared_image=declared_image,
                 declared_wiki_link=declared_wiki_link,
                 protect_source_comments=protect_source_comments,

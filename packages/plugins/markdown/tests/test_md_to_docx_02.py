@@ -275,7 +275,9 @@ class TestMdToDocxGolden:
     @pytest.mark.parametrize(
         ("config_separator", "expected"),
         [
-            (None, "甲、乙、丙"),
+            (None, "甲, 乙, 丙"),
+            ("、", "甲、乙、丙"),
+            (" ", "甲 乙 丙"),
             (", ", "甲, 乙, 丙"),
             ("", "甲乙丙"),
             (" + ", "甲 + 乙 + 丙"),

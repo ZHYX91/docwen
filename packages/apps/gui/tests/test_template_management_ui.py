@@ -329,3 +329,97 @@ def test_arabic_initial_default_uses_shipped_english_template(qapp):
         assert model.defaults["docx"] == chosen.id
     finally:
         set_locale(previous)
+
+
+@pytest.mark.parametrize("include_invalid", [False, True])
+def test_committed_template_import_cleanup_warning_keeps_success_count_and_catalog(
+    qapp, template_vm, tmp_path, monkeypatch, include_invalid
+):
+    import hashlib
+    import zipfile
+    from xml.etree import ElementTree
+
+    from docx import Document
+    from PySide6.QtWidgets import QFileDialog
+    from tests.support.transaction_faults import fail_committed_journal_cleanup_once
+
+    from docwen_gui.dialogs import feedback
+    from docwen_gui.i18n import t
+    from docwen_gui.widgets.settings.templates_tab import TemplatesTab
+    from docwen_runtime.templates import TemplateManager, TemplateRegistry, TemplateStateStore
+
+    source = tmp_path / "incoming" / "Saved Report.docx"
+    source.parent.mkdir()
+    document = Document()
+    document.add_paragraph("This report was committed exactly once")
+    document.save(source)
+    assert [paragraph.text for paragraph in Document(source).paragraphs] == ["This report was committed exactly once"]
+    with zipfile.ZipFile(source) as package:
+        root = ElementTree.fromstring(package.read("word/document.xml"))
+    assert [node.text for node in root.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t")] == [
+        "This report was committed exactly once"
+    ]
+    source_bytes = source.read_bytes()
+    invalid = source.parent / "Invalid.docx"
+    invalid.write_bytes(b"This is not an Office package")
+    page = TemplatesTab(view_model=template_vm)
+    before_defaults = template_vm.manager.state_store.load()["defaults"]
+    before_order = template_vm.manager.state_store.load()["order"]["docx"]
+    selected = [str(source), str(invalid)] if include_invalid else [str(source)]
+    monkeypatch.setattr(QFileDialog, "getOpenFileNames", lambda *args: (selected, ""))
+    reports = []
+    errors = []
+    monkeypatch.setattr(feedback, "warn", lambda title, message, **kwargs: reports.append((message, kwargs)))
+    monkeypatch.setattr(feedback, "error", lambda title, message, **kwargs: errors.append((message, kwargs)))
+    store = template_vm.manager.state_store
+    fault = fail_committed_journal_cleanup_once(monkeypatch, store.path.parent / ".docwen-config.transaction.json")
+    page._import_button.click()
+    qapp.processEvents()
+    assert fault.injected and fault.removed
+    assert errors == []
+    assert len(reports) == 1
+    summary = t("settings.templates.import_summary", succeeded=1, failed=int(include_invalid), cancelled=0)
+    summary += "\n" + t("settings.templates.saved_cleanup_warning")
+    assert page._import_summary.text() == summary
+    assert not page._import_summary.isHidden()
+    assert reports[0][0] == summary
+    details = reports[0][1]["details"]
+    assert "Saved Report.docx" in details
+    assert "post-unlink directory barrier failure" in details
+    assert ("Invalid.docx" in details) is include_invalid
+    diagnostic = reports[0][1]["diagnostic"]
+    assert diagnostic.succeeded_count == 1
+    assert diagnostic.failed_count == int(include_invalid)
+    assert diagnostic.cancelled_count == 0
+    assert diagnostic.warning_count == 1
+    assert diagnostic.status == ("partial" if include_invalid else "warning")
+    assert "Saved Report" not in diagnostic.to_text()
+    imported = [item for item in template_vm.templates if item.name == "Saved Report"]
+    assert len(imported) == 1
+    saved = imported[0]
+    assert page._selected_id() == saved.id
+    assert hashlib.sha256(saved.path.read_bytes()).digest() == hashlib.sha256(source_bytes).digest()
+    assert store.load()["defaults"] == before_defaults
+    assert store.load()["order"]["docx"] == [*before_order, saved.id]
+    assert store.is_enabled(saved.id)
+    for _ in range(2):
+        page.refresh(select_id=saved.id)
+    assert len(reports) == 1
+    assert [item.id for item in template_vm.templates if item.name == "Saved Report"] == [saved.id]
+    assert [path.name for path in store.user_dir.iterdir()] == ["Saved Report.docx"]
+    reopened_store = TemplateStateStore(store.path, user_dir=store.user_dir)
+    reopened = TemplateManager(
+        TemplateRegistry(
+            tmp_path / "builtin",
+            extra_paths=[store.user_dir],
+            state_store=reopened_store,
+            managed_user_dir=store.user_dir,
+        ),
+        state_store=reopened_store,
+        user_dir=store.user_dir,
+    )
+    assert [item.id for item in reopened.list_templates() if item.name == "Saved Report"] == [saved.id]
+    assert reopened_store.load()["defaults"] == before_defaults
+    assert saved.path.read_bytes() == source_bytes
+    assert source.read_bytes() == source_bytes
+    page.deleteLater()

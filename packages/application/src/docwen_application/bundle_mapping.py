@@ -18,6 +18,7 @@ from docwen_core.models import (
     PageFragmentSemantics,
     PageOcrStatus,
     PageResourceSemantics,
+    validate_artifact_ownership,
 )
 
 MARKDOWN_MEDIA_TYPE = "text/markdown"
@@ -92,6 +93,18 @@ def build_bundle_draft(
 ) -> BundleDraft:
     """Apply one explicit route-family mapping without inferring product storage."""
     artifacts = tuple(artifacts)
+    if profile == "physical_page_ocr":
+        artifact_ids = [artifact.artifact_id for artifact in artifacts]
+        if len(artifact_ids) != len(set(artifact_ids)):
+            raise BundleMappingError(
+                "conversion_failed",
+                "duplicate_artifact_id",
+                "physical-page capability produced duplicate artifact_id values",
+            )
+    try:
+        validate_artifact_ownership(artifacts)
+    except ValueError as exc:
+        raise BundleMappingError("conversion_failed", "artifact_ownership_invalid", str(exc)) from exc
     grouped = bool(artifacts) and all(
         artifact.metadata.get("document_node_schema") == "docwen.document_node.v1" for artifact in artifacts
     )
@@ -99,6 +112,28 @@ def build_bundle_draft(
     artifacts = tuple(artifact for artifact in artifacts if artifact not in audits)
 
     def finish(draft: BundleDraft) -> BundleDraft:
+        mapped_ownership = {
+            (relation.source_artifact_id, relation.type, relation.target_artifact_id, relation.role, relation.ordinal)
+            for relation in draft.relations
+        }
+        for artifact in artifacts:
+            ownership = artifact.ownership
+            if (
+                ownership is not None
+                and (
+                    artifact.artifact_id,
+                    ownership.relation_type,
+                    ownership.owner_artifact_id,
+                    ownership.role,
+                    ownership.ordinal,
+                )
+                not in mapped_ownership
+            ):
+                raise BundleMappingError(
+                    "conversion_failed",
+                    "artifact_ownership_profile_mismatch",
+                    "capability mapping conflicts with producer-declared artifact ownership",
+                )
         if grouped:
             draft = replace(draft, layout_schema="docwen.document_node.v1")
         # Explicit audit exports are supplementary resources, never business
@@ -119,14 +154,6 @@ def build_bundle_draft(
             )
         return draft
 
-    if profile == "physical_page_ocr":
-        artifact_ids = [artifact.artifact_id for artifact in artifacts]
-        if len(artifact_ids) != len(set(artifact_ids)):
-            raise BundleMappingError(
-                "conversion_failed",
-                "duplicate_artifact_id",
-                "physical-page capability produced duplicate artifact_id values",
-            )
     if profile == "worksheet_resources":
         return finish(
             _build_ordered_entries(
@@ -452,11 +479,42 @@ def _build_document_with_resources(
 ) -> BundleDraft:
     draft_artifacts = [_draft_artifact(preferred, "document")]
     relations: list[BundleRelation] = []
-    attachment_ordinal = 0
-    fragment_ordinal = 0
-    resource_ordinal = 0
+    reserved_ordinals: dict[str, set[int]] = {}
+    for artifact in artifacts:
+        ownership = artifact.ownership
+        if (
+            ownership is not None
+            and ownership.owner_artifact_id == preferred.artifact_id
+            and ownership.ordinal is not None
+        ):
+            reserved_ordinals.setdefault(ownership.relation_type, set()).add(ownership.ordinal)
+    next_ordinals: dict[str, int] = {}
+
+    def next_ordinal(relation_type: str) -> int:
+        ordinal = next_ordinals.get(relation_type, 0)
+        while ordinal in reserved_ordinals.get(relation_type, set()):
+            ordinal += 1
+        next_ordinals[relation_type] = ordinal + 1
+        return ordinal
+
     for artifact in artifacts:
         if artifact is preferred:
+            continue
+        ownership = artifact.ownership
+        if ownership is not None:
+            kind = {"attachment_of": "document", "fragment_of": "fragment", "resource_of": "resource"}[
+                ownership.relation_type
+            ]
+            draft_artifacts.append(_draft_artifact(artifact, cast(Literal["document", "fragment", "resource"], kind)))
+            relations.append(
+                BundleRelation(
+                    type=ownership.relation_type,
+                    source_artifact_id=artifact.artifact_id,
+                    target_artifact_id=ownership.owner_artifact_id,
+                    role=ownership.role,
+                    ordinal=ownership.ordinal,
+                )
+            )
             continue
         if artifact.kind == "image" and artifact.media_type.startswith("image/"):
             draft_artifacts.append(_draft_artifact(artifact, "resource"))
@@ -466,29 +524,9 @@ def _build_document_with_resources(
                     source_artifact_id=artifact.artifact_id,
                     target_artifact_id=preferred.artifact_id,
                     role="image",
-                    ordinal=resource_ordinal,
+                    ordinal=next_ordinal("resource_of"),
                 )
             )
-            resource_ordinal += 1
-            continue
-        if (
-            artifact.kind == "auxiliary"
-            and artifact.media_type == MARKDOWN_MEDIA_TYPE
-            and artifact.metadata.get("source_kind") == "gongwen_attachment"
-        ):
-            raw_ordinal = artifact.metadata.get("attachment_ordinal")
-            ordinal = raw_ordinal - 1 if isinstance(raw_ordinal, int) and raw_ordinal > 0 else attachment_ordinal
-            draft_artifacts.append(_draft_artifact(artifact, "document"))
-            relations.append(
-                BundleRelation(
-                    type="attachment_of",
-                    source_artifact_id=artifact.artifact_id,
-                    target_artifact_id=preferred.artifact_id,
-                    role="attachment",
-                    ordinal=ordinal,
-                )
-            )
-            attachment_ordinal = max(attachment_ordinal, ordinal + 1)
             continue
         if (
             artifact.kind == "auxiliary"
@@ -502,10 +540,30 @@ def _build_document_with_resources(
                     source_artifact_id=artifact.artifact_id,
                     target_artifact_id=preferred.artifact_id,
                     role="ocr_text",
-                    ordinal=fragment_ordinal,
+                    ordinal=next_ordinal("fragment_of"),
                 )
             )
-            fragment_ordinal += 1
+            continue
+        if artifact.kind == "auxiliary" and (
+            artifact.metadata.get("source_kind") == "embedded_resource"
+            or (
+                artifact.metadata.get("source_format") == "pptx"
+                and artifact.metadata.get("payload") == "chart_workbook"
+                and artifact.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        ):
+            # These producers explicitly retain original embedded bytes. A
+            # filename or generic auxiliary kind is not a resource contract.
+            draft_artifacts.append(_draft_artifact(artifact, "resource"))
+            relations.append(
+                BundleRelation(
+                    type="resource_of",
+                    source_artifact_id=artifact.artifact_id,
+                    target_artifact_id=preferred.artifact_id,
+                    role="original",
+                    ordinal=next_ordinal("resource_of"),
+                )
+            )
             continue
         raise BundleMappingError(
             "conversion_failed",

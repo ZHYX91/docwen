@@ -81,8 +81,7 @@ from docwen_core._docx_semantics_v3_styles import (
 )
 from docwen_core._docx_semantics_v3_topology import anchor_topology_map_xml
 from docwen_core.docx_bookmarks import (
-    BOOKMARK_ID_MAX,
-    bookmark_id_key,
+    DocxBookmarkAllocator,
     build_docx_bookmark_inventory,
 )
 from docwen_core.docx_citation_ooxml import (
@@ -169,6 +168,8 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         heading_style_ids: dict[int, str],
         heading_style_names: dict[str, str],
         caption_style_bindings: tuple[CaptionStyleBindingV3, ...],
+        expected_ordinary_anchor_ids: tuple[str, ...] | None = None,
+        expected_fenced_source_tags: tuple[str, ...] | None = None,
     ) -> None:
         try:
             validate_document(port.document, port.source_sha256, "docwen.resolved_document.invalid")
@@ -211,6 +212,8 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._ordinary_anchors: list[ResolvedOrdinaryAnchorBindingV4] = []
         self._anchor_topology_edges: tuple[AnchorTopologyEdgeV3, ...] = ()
         self._fenced_sources: list[FencedSourceBindingV3] = []
+        self._expected_ordinary_anchor_ids = expected_ordinary_anchor_ids
+        self._expected_fenced_source_tags = expected_fenced_source_tags
         self._block_parent_by_tag: dict[str, str | None] = {}
         self._block_physical_tags: tuple[str, ...] = ()
         self._caption_target_keys: list[tuple[int, int, str]] = []
@@ -224,6 +227,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._soft_references: list[SoftReferenceIdentityV3] = []
         self._stable_reference_target_ids: list[str] = []
         self._claimed_ids: set[str] = set()
+        self._bookmark_allocator: DocxBookmarkAllocator | None = None
         self._finalized = False
 
     @property
@@ -557,6 +561,14 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
             raise ResolvedNumberingDocxError("not every resolved reference was bound exactly once")
         if self._bound_citations != set(self._citations):
             raise ResolvedNumberingDocxError("not every resolved Citation was bound exactly once")
+        if self._expected_ordinary_anchor_ids is not None and sorted(self._expected_ordinary_anchor_ids) != sorted(
+            item.identity.source_id for item in self._ordinary_anchors
+        ):
+            raise ResolvedNumberingDocxError("ordinary-anchor inventory differs from the authenticated source plan")
+        if self._expected_fenced_source_tags is not None and sorted(self._expected_fenced_source_tags) != sorted(
+            item.identity.tag for item in self._fenced_sources
+        ):
+            raise ResolvedNumberingDocxError("fenced-source inventory differs from the authenticated source plan")
         groups = [resolved_anchor_group_v4(item) for item in self._ordinary_anchors]
         for binding in self._target_bindings:
             target = self._document_target_for_identity(binding.identity)
@@ -864,16 +876,19 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
             raise ResolvedNumberingDocxError("resolved target/anchor source ID is duplicated")
         self._claimed_ids.add(source_id)
 
+    @property
+    def bookmark_allocator(self) -> DocxBookmarkAllocator:
+        """Share reservations with request-owned table-role writers."""
+
+        if self._bookmark_allocator is None:
+            self._bookmark_allocator = DocxBookmarkAllocator(build_docx_bookmark_inventory(self._document))
+        return self._bookmark_allocator
+
     def _reserve_bookmark(self, bookmark_name: str) -> str:
-        inventory = build_docx_bookmark_inventory(self._document)
-        if bookmark_name.casefold() in inventory.used_name_keys:
-            raise ResolvedNumberingDocxError("resolved target bookmark conflicts with the template")
-        used_ids = set(inventory.used_id_keys)
-        for candidate in range(BOOKMARK_ID_MAX + 1):
-            raw = str(candidate)
-            if bookmark_id_key(raw) not in used_ids:
-                return raw
-        raise ResolvedNumberingDocxError("no portable DOCX bookmark IDs remain")
+        try:
+            return self.bookmark_allocator.reserve(bookmark_name)
+        except ValueError as exc:
+            raise ResolvedNumberingDocxError(str(exc)) from exc
 
     def _direct_body_owner(self, element: Any) -> Any:
         body = self._document.element.body

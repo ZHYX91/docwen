@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from docwen_core.models.file_ref import FileRef
     from docwen_core.protocols.execution_context import ConverterContext
 
 
@@ -23,12 +24,15 @@ def file_size(path: str | Path) -> int:
         return 0
 
 
+def request_source_ref(context: ConverterContext) -> FileRef | None:
+    """Select the admitted source by role, independently of resource order."""
+    return next((ref for ref in context.request.input_refs if ref.input_role == "source"), None)
+
+
 def request_source_format(context: ConverterContext) -> str:
     """Return the concrete source format frozen at file admission."""
-    refs = context.request.input_refs
-    if not refs:
-        return "unknown"
-    return str(refs[0].format or "unknown").strip().lower()
+    source = request_source_ref(context)
+    return str(source.format or "unknown").strip().lower() if source is not None else "unknown"
 
 
 def resolve_proofread_options(

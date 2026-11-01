@@ -29,7 +29,9 @@ def _cached_marks(root):
 
 @pytest.mark.parametrize("kind,label", [("footnote", "n"), ("endnote", "endnote:n")])
 @pytest.mark.parametrize("new_notes", [False, True])
-def test_duplicate_native_template_notes_are_rejected(tmp_path, kind, label, new_notes):
+def test_duplicate_native_template_references_are_preserved_without_duplicating_new_notes(
+    tmp_path, kind, label, new_notes
+):
     source = tmp_path / "template-source.md"
     source.write_text(f"Existing[^{label}].\n\n[^{label}]: Existing body.\n", encoding="utf-8")
     initial = MdToDocxConverter().convert(_context(tmp_path, source, "docx", {"input": {"typed_endnotes": True}}))
@@ -40,16 +42,61 @@ def test_duplicate_native_template_notes_are_rejected(tmp_path, kind, label, new
     template.add_paragraph("{{body}}")
     template_path = tmp_path / "duplicate-template.docx"
     template.save(str(template_path))
+    template_bytes = template_path.read_bytes()
+    q = f"{{{NS['w']}}}"
+    existing_id = reference.get(q + "id")
+    part_name = f"word/{kind}s.xml"
+    with ZipFile(template_path) as archive:
+        original_notes = etree.fromstring(archive.read(part_name))
+        original_document = etree.fromstring(archive.read("word/document.xml"))
+    original_references = [
+        etree.tostring(node, method="c14n", exclusive=True)
+        for node in original_document.findall(f".//w:{kind}Reference", NS)
+    ]
+    original_ids = {note.get(q + "id") for note in original_notes}
+    original_bodies = [etree.tostring(note, method="c14n", exclusive=True) for note in original_notes]
     source = tmp_path / "new-source.md"
-    source.write_text("New[^new].\n\n[^new]: New body.\n" if new_notes else "Plain body.\n", encoding="utf-8")
+    new_label = "new" if kind == "footnote" else "endnote:new"
+    source.write_text(
+        f"New[^{new_label}].\n\n[^{new_label}]: New body.\n" if new_notes else "Plain body.\n", encoding="utf-8"
+    )
+    source_bytes = source.read_bytes()
     conversion_root = tmp_path / "conversion"
     conversion_root.mkdir()
-    context = _context(conversion_root, source, "docx", {})
+    context = _context(conversion_root, source, "docx", {"input": {"typed_endnotes": True}})
     context.request.options["template_name"] = str(template_path)
     result = MdToDocxConverter().convert(context)
-    assert not result.success
-    assert not result.artifacts
-    assert any(d.code == "MD2DOCX-NOTE-PART-INVALID" for d in result.diagnostics)
+    assert result.success, result.error
+    assert len(result.artifacts) == 1
+    output = result.artifacts[0].staging_path
+    reopened = tmp_path / "reopened.docx"
+    Document(output).save(str(reopened))
+    for path in (output, reopened):
+        with ZipFile(path) as archive:
+            document = etree.fromstring(archive.read("word/document.xml"))
+            notes = etree.fromstring(archive.read(part_name))
+        references = document.findall(f".//w:{kind}Reference", NS)
+        assert sum(node.get(q + "id") == existing_id for node in references) == 2
+        assert [
+            etree.tostring(node, method="c14n", exclusive=True)
+            for node in references
+            if node.get(q + "id") == existing_id
+        ] == original_references
+        assert [
+            etree.tostring(note, method="c14n", exclusive=True) for note in list(notes)[: len(original_notes)]
+        ] == original_bodies
+        assert len(notes) == len(original_notes) + int(new_notes)
+        assert len(references) == 2 + int(new_notes)
+        if new_notes:
+            new_note = notes[-1]
+            new_id = new_note.get(q + "id")
+            assert new_id not in original_ids and int(new_id) > 0
+            assert new_note.get(q + "type", "normal") == "normal"
+            assert len(new_note.findall(f".//w:{kind}Ref", NS)) == 1
+            assert "".join(new_note.itertext()) == " New body."
+            assert sum(node.get(q + "id") == new_id for node in references) == 1
+    assert source.read_bytes() == source_bytes
+    assert template_path.read_bytes() == template_bytes
 
 
 @pytest.mark.parametrize(

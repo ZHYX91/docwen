@@ -48,7 +48,6 @@ def test_csv_sheet_label_precedes_shared_timestamp_and_source(tmp_path):
         artifacts,
         OutputPolicy(output_dir=str(output)),
         input_path=str(tmp_path / "项目记录.md"),
-        group_outputs=True,
         identity=_identity(),
     )
     assert result.success
@@ -190,7 +189,6 @@ def test_csv_sanitized_names_do_not_lose_worksheets_or_steal_a_later_sheet_name(
         OutputPolicy(output_dir=str(tmp_path / "out")),
         input_path="项目记录.md",
         identity=_identity(),
-        group_outputs=True,
     )
     assert result.success
     csv_files = [Path(item.staging_path) for item in result.artifacts if item.media_type == "text/csv"]
@@ -246,3 +244,192 @@ def test_optional_audit_is_covered_by_the_same_directory_transaction(tmp_path, m
         json.loads(audit_path.read_text(encoding="utf-8"))["artifacts"][0]["name"]
         == "项目记录_20260907_180000_fromMd.md"
     )
+
+
+@pytest.mark.parametrize(
+    "suffix,media_type,sheet_name",
+    [
+        (".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", None),
+        (".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", None),
+        (".csv", "text/csv", "人员"),
+    ],
+)
+def test_single_markdown_conversion_is_a_named_file(tmp_path, suffix, media_type, sheet_name):
+    staged = tmp_path / f"generated{suffix}"
+    staged.write_bytes(b"single result")
+    output = tmp_path / "out"
+    artifact = ArtifactManifest(
+        "main",
+        "primary",
+        str(staged),
+        staged.name,
+        media_type,
+        is_primary=True,
+        metadata={"sheet_name": sheet_name} if sheet_name else {},
+    )
+    result = OutputFinalizer().finalize(
+        "single",
+        [artifact],
+        OutputPolicy(output_dir=str(output)),
+        input_path="项目记录.md",
+        identity=_identity(),
+    )
+    assert result.success
+    name = f"项目记录{'_人员' if sheet_name else ''}_20260907_180000_fromMd{suffix}"
+    assert [path.name for path in output.iterdir()] == [name]
+    assert (output / name).read_bytes() == b"single result"
+    assert result.artifacts[0].logical_path == name
+    assert "document_node_schema" not in result.artifacts[0].metadata
+
+
+def test_single_markdown_conversion_honors_exact_path_and_overwrite(tmp_path):
+    staged = tmp_path / "generated.docx"
+    staged.write_bytes(b"new")
+    output = tmp_path / "chosen.docx"
+    output.write_bytes(b"old")
+    result = OutputFinalizer().finalize(
+        "exact",
+        [ArtifactManifest("main", "primary", str(staged), staged.name, is_primary=True)],
+        OutputPolicy(output_path=str(output), overwrite_mode="overwrite"),
+        input_path="项目记录.md",
+        identity=_identity(),
+    )
+    assert result.success
+    assert result.artifacts[0].staging_path == str(output)
+    assert output.read_bytes() == b"new"
+
+
+def test_multiple_csv_requires_parent_not_exact_output(tmp_path):
+    artifacts = []
+    for index in range(2):
+        staged = tmp_path / f"sheet{index}.csv"
+        staged.write_bytes(b"cell")
+        artifacts.append(
+            ArtifactManifest(
+                str(index),
+                "primary" if index == 0 else "auxiliary",
+                str(staged),
+                staged.name,
+                "text/csv",
+                is_primary=index == 0,
+            )
+        )
+    with pytest.raises(ValueError, match="output parent directory"):
+        OutputFinalizer().finalize(
+            "many",
+            artifacts,
+            OutputPolicy(output_path=str(tmp_path / "exact.csv")),
+            input_path="项目记录.md",
+            identity=_identity(),
+        )
+    assert not (tmp_path / "exact.csv").exists()
+
+
+def test_retained_intermediate_does_not_turn_one_document_into_a_directory(tmp_path):
+    staged = tmp_path / "generated.docx"
+    staged.write_bytes(b"document")
+    intermediate = tmp_path / "hub.xlsx"
+    intermediate.write_bytes(b"private hub")
+    output = tmp_path / "out"
+    artifacts = [
+        ArtifactManifest("main", "primary", str(staged), staged.name, is_primary=True),
+        ArtifactManifest(
+            "hub", "auxiliary", str(intermediate), intermediate.name, metadata={"source": "preconversion"}
+        ),
+    ]
+    result = OutputFinalizer().finalize(
+        "single", artifacts, OutputPolicy(output_dir=str(output)), input_path="项目记录.md", identity=_identity()
+    )
+    assert result.success
+    assert {path.name for path in output.iterdir()} == {"项目记录_20260907_180000_fromMd.docx", "hub.xlsx"}
+    assert all(path.is_file() for path in output.iterdir())
+
+
+def test_markdown_validation_report_keeps_action_naming(tmp_path):
+    report = tmp_path / "review.json"
+    report.write_bytes(b"{}")
+    output = tmp_path / "out"
+    result = OutputFinalizer().finalize(
+        "review",
+        [ArtifactManifest("report", "primary", str(report), report.name, "application/json", is_primary=True)],
+        OutputPolicy(output_dir=str(output)),
+        input_path="项目记录.md",
+        identity=_identity(),
+        conversion_output=False,
+    )
+    assert result.success
+    assert (output / "review.json").is_file()
+
+
+@pytest.mark.parametrize("mode", ["rename", "error", "skip", "overwrite"])
+def test_single_conversion_uses_file_collision_policy(tmp_path, mode):
+    staged = tmp_path / "generated.docx"
+    staged.write_bytes(b"new")
+    output = tmp_path / "out"
+    output.mkdir()
+    original = output / "项目记录_20260907_180000_fromMd.docx"
+    original.write_bytes(b"old")
+    result = OutputFinalizer().finalize(
+        "collision",
+        [ArtifactManifest("main", "primary", str(staged), staged.name, is_primary=True)],
+        OutputPolicy(output_dir=str(output), overwrite_mode=mode),
+        input_path="项目记录.md",
+        identity=_identity(),
+    )
+    if mode == "error":
+        assert not result.success
+        assert original.read_bytes() == b"old"
+    elif mode == "overwrite":
+        assert result.success
+        assert original.read_bytes() == b"new"
+    elif mode == "rename":
+        assert result.success
+        assert original.read_bytes() == b"old"
+        assert Path(result.artifacts[0].staging_path).read_bytes() == b"new"
+        assert Path(result.artifacts[0].staging_path).parent == output
+    else:
+        assert result.success
+        assert original.read_bytes() == b"old"
+
+
+@pytest.mark.parametrize("fail_audit", [False, True])
+def test_explicit_audit_groups_single_document_for_atomic_publication(tmp_path, monkeypatch, fail_audit):
+    from docwen_core.models.result import ConversionResult
+    from docwen_runtime.output.manifest import OutputManifestWriter
+
+    source = tmp_path / "项目记录.md"
+    source.write_text("body", encoding="utf-8")
+    staged = tmp_path / "generated.docx"
+    staged.write_bytes(b"document")
+    artifacts = [ArtifactManifest("main", "primary", str(staged), staged.name, is_primary=True)]
+    request = ConversionRequest(
+        "audit",
+        [FileRef(str(source), "markdown", "text")],
+        "docx",
+        config_snapshot={"output": {"manifest": {"save_to_output": True}}},
+    )
+    audit = OutputManifestWriter.build_for_success(request, ConversionResult("audit", True, artifacts=artifacts))
+    assert audit is not None
+    if fail_audit:
+
+        def fail(*args, **kwargs):
+            raise OSError("audit preparation failed")
+
+        monkeypatch.setattr("docwen_runtime.output.finalizer.stage_node_audit", fail)
+    output = tmp_path / "out"
+    result = OutputFinalizer().finalize(
+        "audit",
+        artifacts,
+        OutputPolicy(output_dir=str(output)),
+        input_path=str(source),
+        identity=_identity(),
+        audit_document=audit,
+    )
+    root = output / "项目记录_20260907_180000_fromMd"
+    if fail_audit:
+        assert not result.success
+        assert not root.exists()
+    else:
+        assert result.success
+        assert {path.name for path in root.iterdir()} == {"项目记录_20260907_180000_fromMd.docx", "manifest.json"}
+        assert [item.kind for item in result.artifacts] == ["primary", "manifest"]

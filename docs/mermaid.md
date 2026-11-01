@@ -34,9 +34,30 @@ Browser downloads may require a working network/proxy. Run the browser-install c
 
 ## Rendering contract / 渲染边界
 
-- Images use a local browser, strict Mermaid settings and a 30-second limit per diagram. Cancellation terminates the owned process tree. No online rendering service is used. External/local-file images and unserved network resources are rejected; self-contained diagram data is supported.
+- Images use a local browser, strict Mermaid settings and a 30-second limit per diagram. Cancellation is never converted to a successful code fallback. Linux uses an isolated child owner and Windows uses an owned Job to confirm process-family shutdown. No online rendering service is used. External/local-file images and unserved network resources are rejected; self-contained diagram data is supported.
 - PNGs preserve aspect ratio and fit the template's body section, columns and paragraph indents. Large reductions produce `MD2DOCX-MERMAID-SCALED`; inspect text readability and split very large diagrams if needed. Chinese labels use installed Microsoft YaHei / Noto Sans CJK SC where available.
-- Invalid syntax, missing dependencies, browser failure and timeout retain the original visible code block, with an indexed `MD2DOCX-MERMAID-FALLBACK` warning. Other diagrams continue. Cancellation remains cancellation. The source Markdown is unchanged.
+- Invalid syntax, missing dependencies, browser failure and timeout, after confirmed process cleanup, retain the original visible code block, with an indexed `MD2DOCX-MERMAID-FALLBACK` warning. Other diagrams continue. Cancellation remains cancellation. The source Markdown is unchanged.
 - A rendered diagram is an ordinary DOCX image. DOCX → Markdown exports an image and does not reconstruct Mermaid source. The exact resolved-v4 input route continues to preserve fenced source.
 
-图片按模板正文节、分栏与段落缩进等比缩放，明显缩小会提示检查文字。每张图单独计时，失败时保留可见代码并报告图表序号和原因，其他图继续；取消不会伪装成成功回退。反向转换只处理普通图片，不还原 Mermaid 源码。
+图片按模板正文节、分栏与段落缩进等比缩放，明显缩小会提示检查文字。每张图单独计时，已确认进程清理的普通渲染失败会保留可见代码并报告图表序号和原因，其他图继续；取消及无法确认回收都不会伪装成成功回退。反向转换只处理普通图片，不还原 Mermaid 源码。
+
+Linux runs each renderer under a separate subreaper using the existing external-process owner. It waits for
+kernel child reaping (`ECHILD`), including Chromium descendants that create their own session; Node's exit alone
+is not completion. The owner retains the normal Office launch defaults. Windows keeps its Job ownership boundary.
+If shutdown cannot be confirmed, conversion fails with `EXTERNAL_PROCESS_CLEANUP_UNCONFIRMED` and retains that
+request's private workspace for inspection. Ordinary render failures fall back only after confirmed cleanup.
+Cleanup errors cannot replace a confirmed cancellation with a successful fallback.
+
+macOS currently has no equivalent process-family exit proof. Cancellation, timeout, or a nonzero renderer exit
+therefore fails conservatively and retains the private workspace; this is not a claim that detached browser
+processes were reaped. Normal successful rendering retains its existing behavior. Closing this macOS lifecycle
+limit requires separate native acceptance before the affected release channel can claim verified cleanup.
+
+Node's stdin token is only a startup gate, not a parent-liveness channel. A Machine consumer that forcibly kills
+Python must establish its own OS lifetime owner and verify descendant teardown independently. Source-process
+regressions do not replace same-candidate acceptance with actual configured mmdc/Puppeteer/Chromium.
+
+Linux 复用独立子进程 owner，通过内核 ECHILD 确认独立 session 的浏览器后代也已退出并回收；Windows 继续使用
+Job。无法确认回收时，转换明确失败并保留本请求工作目录，不回退成成功。已确认取消不会被目录清理异常覆盖。
+macOS 的取消、超时及渲染器非零退出仍缺少等价的进程族退出证明，采取保留目录的保守失败；正常成功渲染不变。
+这不是已完成 macOS 回收验收的声明，受影响渠道仍须独立收口。强制结束 Python 的消费者仍须提供自己的生命周期 owner。

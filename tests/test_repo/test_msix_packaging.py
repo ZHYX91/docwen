@@ -480,3 +480,122 @@ def test_pri_candidates_resolve_through_native_package_reader(tmp_path: Path) ->
             if obj:
                 invoke(obj, 2, [])
         ole.CoUninitialize()
+
+
+@pytest.mark.parametrize("fault", ["partial_copy", "hash_mismatch", "metadata_link", "foreign_output", "success"])
+def test_msix_publication_owns_partial_files_until_package_and_metadata_commit(tmp_path, monkeypatch, fault):
+    """Real files/lease/publication; the SDK build is explicitly not executed here."""
+    import hashlib
+    import shutil
+
+    output = tmp_path / "output" / "DocWen.msix"
+    metadata_path = tmp_path / "output" / "DocWen.json"
+    work = tmp_path / "work"
+    original_bytes = b"PK\x03\x04already-verified-msix-from-one-build"
+    digest = hashlib.sha256(original_bytes).hexdigest()
+    build_calls = []
+
+    def finished_build(**kwargs):
+        build_calls.append(kwargs["work"])
+        (kwargs["work"] / "built.msix").write_bytes(original_bytes)
+        return {"bytes": len(original_bytes), "sha256": digest, "assetName": output.name}
+
+    monkeypatch.setattr(build_msix, "_build_msix", finished_build)
+    copy_file = shutil.copyfileobj
+    link = os.link
+
+    def failing_copy(source, target):
+        if fault == "partial_copy":
+            target.write(source.read(7))
+            raise OSError("injected partial MSIX copy")
+        copy_file(source, target)
+        if fault == "hash_mismatch":
+            target.write(b"wrong trailing bytes")
+
+    def publication_link(source, target, **kwargs):
+        if Path(target) == metadata_path and fault == "metadata_link":
+            raise OSError("injected metadata commit failure")
+        if Path(target) == output and fault == "foreign_output":
+            output.write_bytes(b"foreign publication")
+        return link(source, target, **kwargs)
+
+    monkeypatch.setattr(shutil, "copyfileobj", failing_copy)
+    monkeypatch.setattr(os, "link", publication_link)
+    options = {
+        "payload_root": tmp_path / "payload",
+        "output": output,
+        "work_root": work,
+        "config": {},
+        "makeappx": tmp_path / "makeappx.exe",
+        "metadata_output": metadata_path,
+        "packaging_commit": "a" * 40,
+    }
+    if fault == "success":
+        metadata = build_msix.build_msix(**options)
+        assert output.read_bytes() == original_bytes
+        assert json.loads(metadata_path.read_text()) == metadata
+        assert metadata["packagingCommit"] == "a" * 40
+        assert not work.exists()
+        assert not list(output.parent.glob(".docwen-msix-publish-*"))
+    else:
+        with pytest.raises((OSError, build_msix.MsixBuildError)):
+            build_msix.build_msix(**options)
+        assert (work / "built.msix").read_bytes() == original_bytes
+        lease = json.loads((work / ".docwen-temp-lease.json").read_text())
+        assert lease["state"] == "retained-failure"
+        publications = list(output.parent.glob(".docwen-msix-publish-*"))
+        assert len(publications) == 1
+        publication = publications[0]
+        assert json.loads((publication / ".docwen-temp-lease.json").read_text())["state"] == "retained-failure"
+        recovery = json.loads((publication / "publication.json").read_text())
+        assert recovery["package"] == {"path": str(output), "bytes": len(original_bytes), "sha256": digest}
+        assert recovery["metadata"]["path"] == str(metadata_path)
+        assert recovery["metadata"]["content"]["packagingCommit"] == "a" * 40
+        assert not metadata_path.exists()
+        if fault == "metadata_link":
+            assert output.read_bytes() == original_bytes
+            assert hashlib.sha256(output.read_bytes()).hexdigest() == recovery["package"]["sha256"]
+        elif fault == "foreign_output":
+            assert output.read_bytes() == b"foreign publication"
+        else:
+            assert not output.exists()
+            staged = (publication / output.name).read_bytes()
+            assert staged == (
+                original_bytes[:7] if fault == "partial_copy" else original_bytes + b"wrong trailing bytes"
+            )
+    assert build_calls == [work]
+
+
+@pytest.mark.parametrize("existing", ["package", "metadata"])
+def test_msix_publication_refuses_unknown_preexisting_bytes(tmp_path, existing):
+    import hashlib
+
+    built = tmp_path / "built.msix"
+    built.write_bytes(b"verified package")
+    output = tmp_path / "final.msix"
+    metadata_path = tmp_path / "final.json"
+    foreign = output if existing == "package" else metadata_path
+    foreign.write_bytes(b"unknown owner bytes")
+    with pytest.raises(build_msix.MsixBuildError, match="must_be_new"):
+        build_msix._publish_msix(
+            built=built,
+            output=output,
+            metadata_output=metadata_path,
+            metadata={"bytes": len(built.read_bytes()), "sha256": hashlib.sha256(built.read_bytes()).hexdigest()},
+        )
+    assert foreign.read_bytes() == b"unknown owner bytes"
+    assert not list(tmp_path.glob(".docwen-msix-publish-*"))
+
+
+def test_msix_requested_metadata_cannot_be_discarded_with_build_work(tmp_path):
+    work = tmp_path / "work"
+    with pytest.raises(build_msix.MsixBuildError, match="metadata_must_be_outside_work"):
+        build_msix.build_msix(
+            payload_root=tmp_path / "payload",
+            output=tmp_path / "final.msix",
+            work_root=work,
+            config={},
+            makeappx=tmp_path / "makeappx.exe",
+            metadata_output=work / "receipt.json",
+        )
+    assert not work.exists()

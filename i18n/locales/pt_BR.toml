@@ -11,6 +11,10 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+numbering_comments_unanchored = "Alguns números adicionados não podem ser isolados como texto neste esquema. Seus comentários foram ignorados; os títulos foram preservados."
+conversion_failed_detail = "Falha na conversão."
+note_syntax_invalid = "A sintaxe das notas é inválida. Verifique as referências e definições."
+note_template_incompatible = "A estrutura de notas do modelo é incompatível com esta conversão. Verifique o modelo ou escolha outro."
 image_png_16bit_clipped = "PNG armazena valores inteiros de até 16 bits; os valores fora do intervalo 0–65535 foram limitados. Use TIFF para preservar o intervalo original."
 output_filesystem_unsupported = "Não é possível salvar com segurança nesta pasta: o sistema de arquivos não permite publicação atômica sem sobrescrever resultados existentes. Escolha outro local de saída; no WSL, use um sistema de arquivos nativo do Linux."
 ocr_quality_notice = "O OCR pode conter erros ou omissões; confira os resultados com o original."
@@ -216,6 +220,7 @@ optimizations = "Especializados"
 inputs = "Tipos de entrada"
 content = "Conteúdo"
 [settings.tabs]
+markdown_input = "Interpretar Markdown"
 general = "Geral"
 text = "Texto de entrada"
 proofread = "Revisão"
@@ -226,7 +231,7 @@ image = "Imagens de entrada"
 layout = "Arquivos de layout fixo de entrada"
 other = "Outros arquivos de entrada"
 link = "Link"
-formatting = "Sintaxe Markdown"
+formatting = "Gerar Markdown"
 output = "Salvamento de arquivos"
 logging = "Log"
 software = "Software de conversão"
@@ -352,10 +357,10 @@ add_numbering_tooltip = "Adicionar numeração hierárquica aos títulos do DOCX
 scheme_label = "Esquema:"
 scheme_tooltip = "Escolher o esquema de numeração dos títulos"
 render_mode_label = "Modo de saída da numeração dos títulos:"
-render_mode_tooltip = "Escolher se os números dos títulos serão gravados no texto ou gerados pela numeração nativa do Word"
+render_mode_tooltip = "Escolher se os números dos títulos serão gravados no texto ou gerados pela numeração nativa do DOCX"
 render_mode_text = "Texto"
-render_mode_word_native = "Nativa do Word"
-render_mode_hint = "Texto = gravar os números nos títulos; nativa do Word = usar listas de vários níveis do Word"
+render_mode_word_native = "Nativa do DOCX"
+render_mode_hint = "Texto = gravar os números nos títulos; nativa do DOCX = usar listas de vários níveis do DOCX"
 
 # 字段优化（字段处理器）
 
@@ -380,7 +385,7 @@ save_numbering_clean_rules_failed = "Não foi possível salvar as regras de limp
 # -----------------------------------------------------------------------------
 input_description = "Opções para Markdown de entrada: gerar documentos, preencher modelos e processar títulos."
 template_fill_section = "Preenchimento de modelos"
-template_fill_desc = "Separador para unir listas YAML em modelos do Word ou de planilhas. Espaços e separadores vazios são preservados."
+template_fill_desc = "Separador para unir listas YAML em modelos do DOCX ou de planilhas. Espaços e separadores vazios são preservados."
 [settings.proofread]
 validation_section = "Regras de revisão"
 enable_symbol_pairing = "Ativar verificação de pares de símbolos"
@@ -406,7 +411,7 @@ image_extraction_mode_tooltip = "Escolha como as imagens são incorporadas no Ma
 image_extraction_mode_file = "Arquivos de imagem"
 image_extraction_mode_base64 = "Base64 embutido"
 ocr_placement_mode_label = "Local do OCR:"
-ocr_placement_mode_tooltip = "Escolha onde guardar imagem + OCR. MD da imagem cria um Markdown por imagem; Documento principal grava imagem e OCR no Markdown principal. Base64 inline exige Documento principal: o controle é desativado e forçado até voltar ao modo de arquivo de imagem, quando a escolha anterior é restaurada."
+ocr_placement_mode_tooltip = "Escolha onde guardar imagem + OCR.\n\nMD da imagem cria um Markdown por imagem; Documento principal grava imagem e OCR no Markdown principal.\n\nBase64 inline exige Documento principal: o controle é desativado e forçado até voltar ao modo de arquivo de imagem, quando a escolha anterior é restaurada."
 ocr_placement_mode_image_md = "MD da imagem"
 ocr_placement_mode_main_md = "Documento principal"
 ocr_blockquote_title_enabled_label = "Linha de título do OCR (MD principal)"
@@ -435,7 +440,7 @@ section = "Exportação de células mescladas"
 desc = "Controla como células mescladas são representadas na saída Markdown."
 merge_strategy_label = "Estratégia de exportação de células mescladas:"
 
-merge_strategy_help = "Somente para Markdown comum: Preencher repete o texto da célula âncora (por exemplo, “Título | Título”); Vazio deixa as células cobertas vazias (“Título | ”). Com a saída Structural Tables ativada, são usados os marcadores < e ^."
+merge_strategy_help = "Somente para Markdown comum: Preencher repete o texto da célula âncora (por exemplo, “Título | Título”); Vazio deixa as células cobertas vazias (“Título | ”).\n\nCom a saída Structural Tables ativada, são usados os marcadores < e ^."
 [settings.table_export.strategies]
 fill = "Preencher"
 empty = "Deixar vazio"
@@ -486,7 +491,7 @@ ods_conversion_label = "Conversão ODS"
 spreadsheet_to_pdf_label = "Planilha para PDF"
 
 # 汇总模式选项
-merge_mode_help = "O alinhamento compara números salvos e texto exato; identificadores de texto não são convertidos em números. Linhas/colunas: ignorar registros iguais ou já contidos, substituir apenas quando o registro recebido contiver todos os valores da base e manter separados os registros complementares ou conflitantes. Células: ignorar vazios, somar números (inclusive texto numérico), manter uma cópia de texto igual e unir outros textos com vírgula. Resultados de fórmulas ausentes interrompem a combinação; os resultados salvos podem estar desatualizados."
+merge_mode_help = "O alinhamento compara números salvos e texto exato; identificadores de texto não são convertidos em números.\n\nLinhas/colunas: ignorar registros iguais ou já contidos, substituir apenas quando o registro recebido contiver todos os valores da base e manter separados os registros complementares ou conflitantes.\n\nCélulas: ignorar vazios, somar números (inclusive texto numérico), manter uma cópia de texto igual e unir outros textos com vírgula.\n\nResultados de fórmulas ausentes interrompem a combinação; os resultados salvos podem estar desatualizados."
 [settings.spreadsheet.merge_modes]
 by_row = "Por linha"
 by_column = "Por coluna"
@@ -528,6 +533,8 @@ tiff_no_alpha = "Remover transparência"
 # 版式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.layout]
+document_format = "Formato de documento"
+defaults_section = "Padrões de conversão"
 extraction_section = "Extração/OCR"
 keep_images = "Extrair imagens"
 enable_ocr = "Ativar OCR"
@@ -607,8 +614,8 @@ embed = "Inserir conteúdo"
 # -----------------------------------------------------------------------------
 [settings.formatting]
 each_line_paragraph = "Cada linha como um parágrafo"
-each_line_paragraph_help = "Cria um parágrafo do Word para cada linha de texto comum em Markdown. Títulos, listas, citações, tabelas, código e quebras explícitas não mudam."
-line_paragraph_section = "Markdown para Word"
+each_line_paragraph_help = "Cria um parágrafo do DOCX para cada linha de texto comum em Markdown. Títulos, listas, citações, tabelas, código e quebras explícitas não mudam."
+line_paragraph_section = "Tratamento de parágrafos"
 mermaid_auto = "Detecção automática"
 mermaid_browse = "Selecionar Mermaid CLI"
 mermaid_path = "Caminho da CLI:"
@@ -621,10 +628,10 @@ mermaid_browser_missing = "Navegador compatível ausente. Instale-o conforme as 
 mermaid_test_failed = "Falha no teste: {reason}"
 mermaid_test_passed = "Disponível: diagrama de teste renderizado."
 
-mermaid_title = "Diagramas Mermaid"
-mermaid_tooltip = "Escolha se blocos de código `mermaid` são renderizados como imagens ou mantidos como código-fonte. O modo imagem usa a CLI Mermaid local; se o render não estiver disponível ou falhar, o bloco é preservado e um aviso é informado."
+mermaid_title = "Mermaid"
+mermaid_tooltip = "Markdown → DOCX. Escolha se blocos de código `mermaid` são renderizados como imagens ou mantidos como código-fonte. O modo imagem usa a CLI Mermaid local; se o render não estiver disponível ou falhar, o bloco é preservado e um aviso é informado."
 mermaid_mode_label = "Saída:"
-mermaid_mode_tooltip = "Escolha como blocos de código `mermaid` são gravados nos documentos gerados."
+mermaid_mode_tooltip = "Markdown → DOCX. Escolha como blocos de código `mermaid` são gravados nos documentos gerados."
 mermaid_code = "Manter como código"
 mermaid_image = "Renderizar como imagem"
 mermaid_ready = "CLI {cli} / Mermaid {mermaid} detectados. O navegador será verificado durante a conversão."
@@ -641,18 +648,18 @@ table_header_format_label = "Cabeçalho de tabela:"
 table_header_format_tooltip = "Formatação em cabeçalhos de tabela."
 
 # 分隔符映射
-separator_mapping = "Mapeamento de separadores"
-separator_mapping_tooltip = "Mapeamento de quebras Word para Markdown."
+separator_mapping = "Conversão de separadores"
+separator_mapping_tooltip = "Mapeamento de quebras DOCX para Markdown."
 page_break_label = "Quebra de página:"
-page_break_tooltip = "Quebra de página Word."
+page_break_tooltip = "Quebra de página DOCX."
 section_break_label = "Quebra de seção:"
-section_break_tooltip = "Quebra de seção Word."
+section_break_tooltip = "Quebra de seção DOCX."
 horizontal_rule_label = "Linha divisória:"
-horizontal_rule_tooltip = "Borda inferior Word."
+horizontal_rule_tooltip = "Borda inferior DOCX."
 
 # 语法选择
 syntax_selection = "Escolha de sintaxe"
-syntax_selection_tooltip = "Estes estilos de saída se aplicam atualmente sobretudo à conversão comum de Word para Markdown. Planilhas, imagens, PDF/OFD e rotas especializadas ainda não implementam todas as opções. As escolhas não restringem a leitura de Markdown."
+syntax_selection_tooltip = "Estes estilos de saída se aplicam atualmente sobretudo à conversão comum de DOCX para Markdown. Planilhas, imagens, PDF/OFD e rotas especializadas ainda não implementam todas as opções. As escolhas não restringem a leitura de Markdown."
 bold_syntax_label = "Negrito:"
 bold_syntax_tooltip = "Sintaxe para Negrito."
 italic_syntax_label = "Itálico:"
@@ -686,8 +693,8 @@ heading_merge_punctuation_label = "Pontuação para fusão:"
 heading_merge_punctuation_tooltip = "Caracteres que acionam a fusão entre título e corpo no modo Pontuação obrigatória. Um valor vazio desativa a fusão por pontuação."
 
 # MD转文档分隔符映射
-md_separator_mapping = "Mapeamento de separadores"
-md_separator_mapping_tooltip = "Markdown para quebras Word."
+md_separator_mapping = "Conversão de separadores"
+md_separator_mapping_tooltip = "Markdown para quebras DOCX."
 dash_label = "--- (Traços):"
 dash_tooltip = "Mapeamento ---."
 asterisk_label = "*** (Asteriscos):"
@@ -708,8 +715,6 @@ list_separator_tooltip = "Separador usado ao concatenar valores de lista YAML em
 # 格式处理选项
 mermaid_output_group = "Método de saída"
 mermaid_renderer_group = "Renderizador local"
-output_section = "Gerar Markdown"
-word_mappings_title = "Mapeamento e geração específicos do Word"
 
 [settings.formatting.options]
 preserve_format = "Manter formato"
@@ -1182,6 +1187,13 @@ no_transparency = "Remover"
 
 # 版式转换区
 [conversion_panel.layout]
+split_page_count_unavailable = "O número de páginas do PDF está indisponível. Ele precisa ser lido para dividir o arquivo."
+split_mode = "Modo de divisão"
+split_custom = "Por números de página"
+split_odd_even = "Páginas pares / ímpares"
+split_every_page = "Cada página"
+to_image = "Converter em imagem"
+to_document = "Converter em documento"
 image_format = "Formato de imagem"
 resolution = "Resolução (DPI)"
 convert_to_other_formats = "Outros formatos"
@@ -1191,13 +1203,11 @@ merge_split_hint = "Mesclar/Dividir"
 merge_to_pdf = "Mesclar PDF"
 split_to_pdf = "Dividir PDF"
 split_page_range = "Intervalo:"
-page_range_placeholder = "1-3,5  *  #"
-page_range_help = "Os números separam as páginas selecionadas das demais. * divide cada página; # separa páginas ímpares e pares."
-split_all_pages_warning = "Todas as páginas estão selecionadas. Selecione algumas ou use * ou # para dividir o arquivo inteiro."
-split_invalid_range_warning = "Insira páginas deste arquivo, como 1-2 ou 1,3, ou use * ou #."
+page_range_placeholder = "1-5,7,9-12"
+page_range_help = "As páginas escolhidas formam um PDF e as demais outro. Cada grupo mantém a ordem original."
+split_all_pages_warning = "Todas as páginas foram escolhidas. Escolha algumas ou Cada página / Pares-ímpares."
+split_invalid_range_warning = "Digite algumas páginas do arquivo, como 1-2 ou 1,3."
 selected_split_file = "Arquivo atual: {pages} páginas"
-invalid_page_range = "Intervalo de páginas inválido: {part}"
-invalid_page = "Página inválida: {part}"
 split_mode_single_page_warning = "⚠️ Este arquivo tem apenas 1 página; não precisa dividir"
 
 # 表格转换区
@@ -1479,7 +1489,7 @@ merge = "Mesclar"
 search_placeholder = "Pesquisar chave, valor ou comentario"
 correct_word = "Grafia correta"
 misspellings = "Grafias incorretas"
-multi_value_hint = "Dica: use | para separar vários valores (por exemplo: valor1|valor2|valor3)"
+multi_value_hint = "Dica: separe valores com |; use \\| para uma barra e \\\\ para uma barra invertida. Os espaços são preservados."
 save_typos_failed = "Não foi possível salvar o dicionário de erros de digitação."
 save_symbol_correction_failed = "Não foi possível salvar as correções de símbolos."
 save_sensitive_words_failed = "Não foi possível salvar o dicionário de termos sinalizados."
@@ -1728,16 +1738,17 @@ title = "Título"
 subtitle = "Subtítulo"
 
 [settings.markdown_extensions]
-description = "Regras comuns para gerar e ler Markdown. As convenções de saída independem da origem, mas o suporte varia por conversão. Os mapeamentos específicos do Word aparecem separadamente abaixo. Os arquivos de origem não são alterados."
+description = "Configure o Markdown gerado. A conversão de separadores se aplica apenas a DOCX → Markdown; os estilos disponíveis variam conforme a rota."
 input = "Entrada Markdown: reconhecer extensões"
 output = "Saída Markdown: usar extensões"
 input_hint = "A sintaxe desativada é tratada como texto, tabelas ou notas de rodapé comuns."
-output_hint = "A exportação comum do Word oferece estas extensões; a exportação de planilhas oferece Structural Tables. Outras origens e otimizações especializadas ainda não estão totalmente integradas. Ativar uma extensão não acrescenta capacidade de reconhecimento."
+output_hint = "A exportação comum do DOCX oferece estas extensões; a exportação de planilhas oferece Structural Tables. Outras origens e otimizações especializadas ainda não estão totalmente integradas. Ativar uma extensão não acrescenta capacidade de reconhecimento."
 structural_tables = "Structural Tables: tabelas estruturadas"
 captions_references = "Number Suite: legendas e referências cruzadas"
 extended_headings = "Títulos de níveis 7–9"
 typed_endnotes = "Distinção entre notas de rodapé e de fim (endnote:)"
 obsidian_preset = "Usar extensões do Obsidian"
+input_description = "Configure o reconhecimento de Markdown e os separadores, parágrafos e Mermaid de Markdown → DOCX. Os arquivos de origem não são alterados."
 
 [activity]
 not_started = "Não iniciada"
@@ -1770,6 +1781,7 @@ multiple = "{count} arquivos"
 show_outputs = "Ver todos os arquivos de saída"
 
 [settings.templates]
+saved_cleanup_warning = "A alteração do modelo foi salva. Não foi possível confirmar a limpeza do diário. Não repita a alteração; atualize o catálogo para tentar novamente a limpeza pendente."
 import_summary = "Importados: {succeeded}. Falhas: {failed}. Cancelados: {cancelled}."
 load_failed = "Não foi possível carregar os modelos"
 operation_failed = "A operação do modelo falhou. Consulte os detalhes."
@@ -1839,14 +1851,18 @@ unavailable = "A otimização {name} não está disponível para esta categoria 
 
 
 [settings.gongwen]
+numbering_text_label = "Usar numeração de texto para documentos oficiais"
+numbering_text_help = "Usa texto para os números adicionados nesta conversão pelo esquema de Texto de entrada. Não ativa a numeração nem altera o modo salvo ou os números do modelo. Ativado por padrão, independente da formatação de campos."
+numbering_comments_label = "Comentar números adicionados automaticamente"
+numbering_comments_help = "Comenta apenas números de texto adicionados, nunca os existentes.\n\nAtivado por padrão.\n\nDesativar a numeração de texto desmarca e desabilita esta opção; ao reativá-la, você pode selecioná-la novamente.\n\nPrefixos Markdown não isoláveis são ignorados com aviso.\n\nIndependente da formatação de campos."
 description = "Configure separadamente o padrão para documentos oficiais e a formatação dos campos do modelo."
 to_markdown_title = "Documento → Markdown"
 to_markdown_description = "Use a otimização de documentos oficiais como seleção inicial para documentos compatíveis, sem classificar os arquivos automaticamente. DOCX é processado diretamente; DOC, WPS, RTF e ODT precisam de um conversor de documentos disponível."
 document_settings = "Extração, numeração e tabelas de documentos"
-from_markdown_title = "Markdown → Documento"
+from_markdown_title = "Markdown → DOCX"
 title = "Documentos oficiais"
 fields_label = "Formatar campos de documentos oficiais chineses"
-fields_help = "Formata anexos, destinatários de cópias, datas e notas em modelos do Word e remove os campos vazios previstos. O marcador de anexos deve ocupar um parágrafo próprio no corpo ou em uma célula. Cabeçalhos, rodapés, caixas de texto e marcadores no meio do texto não são aceitos. Quando desativado, aplicam-se o preenchimento normal e o separador geral de listas."
+fields_help = "Formata anexos, destinatários de cópias, datas e notas em modelos do DOCX e remove os campos vazios previstos.\n\nO marcador de anexos deve ocupar um parágrafo próprio no corpo ou em uma célula.\n\nCabeçalhos, rodapés, caixas de texto e marcadores no meio do texto não são aceitos.\n\nQuando desativado, aplicam-se o preenchimento normal e o separador geral de listas."
 
 attachment_alignment_label = "Alinhamento dos anexos"
 attachment_alignment_spaces = "Espaços + recuo"

@@ -524,13 +524,11 @@ class TestPageRangeParsing:
     def test_sorted_result(self) -> None:
         assert ConversionPanelViewModel.parse_page_ranges("3,1,2") == [1, 2, 3]
 
-    def test_page_zero_excluded(self) -> None:
-        result = ConversionPanelViewModel.parse_page_ranges("1,0,3")
-        assert 0 not in result
-        assert result == [1, 3]
-
-    def test_empty(self) -> None:
-        assert ConversionPanelViewModel.parse_page_ranges("") == []
+    @pytest.mark.parametrize("value", ["1,0,3", ""])
+    def test_invalid_complete_selection_is_rejected(self, value: str) -> None:
+        with pytest.raises(ValueError):
+            ConversionPanelViewModel.parse_page_ranges(value)
+        assert ConversionPanelViewModel.parse_page_ranges("1,3") == [1, 3]
 
     def test_invalid_raises(self) -> None:
         with pytest.raises(ValueError):

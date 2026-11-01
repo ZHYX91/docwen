@@ -20,6 +20,7 @@ def _context(
     *,
     options: dict[str, bool] | None = None,
     proofread_rules: Any = None,
+    config_values: dict[str, Any] | None = None,
 ) -> Any:
     from tests.support.config import FakeConfigView
     from tests.support.execution import FakeExecutionContext
@@ -42,7 +43,7 @@ def _context(
     return FakeExecutionContext(
         request,
         FakeWorkspaceHandle(str(source), str(staging)),
-        FakeConfigView(),
+        FakeConfigView(config_values),
         FakeProgressSink(),
         CancellationToken().view(),
         FakePluginLogger(),
@@ -244,3 +245,174 @@ def test_schema_file_freezes_report_and_fix_contract() -> None:
         "replacement": {"type": "string"},
         "applicable": {"const": True},
     }
+
+
+@pytest.mark.parametrize(
+    "literal",
+    [
+        "`１２３`",
+        "``１２３``",
+        "```１２３```",
+        "`` first ` １２３\nsecond ``",
+        "````text\n```\n１２３\n````",
+        "````text\n````invalid closer\n１２３\n````",
+        "~~~text\n１２３\n~~~",
+        "> ````text\n> ```\n> １２３\n> ````",
+        "- ````text\n  ```\n  １２３\n  ````",
+        "[visible ``１２３``](https://example.test/１２３)",
+        "- ```text\n  １２３\n",
+        "> This ``１２３\nstill code``",
+        "- This ``１２３\nstill code``",
+    ],
+)
+def test_code_literals_never_produce_fixes_and_prose_ranges_remain_authoritative(literal: str, tmp_path: Path) -> None:
+    from docwen_core.models.proofread import ProofreadRules
+    from docwen_plugin_proofread.md_validator import MarkdownValidator
+
+    prefix = "\ufeff# Probe\r\n\r\n" + literal + "\r\n\r\n😀 prose "
+    text = prefix + "１２３\r\n"
+    raw = text.encode("utf-8")
+    source = tmp_path / "protected.md"
+    source.write_bytes(raw)
+    result = MarkdownValidator().convert(
+        _context(
+            source,
+            tmp_path,
+            options={
+                "enable_symbol_pairing": False,
+                "enable_symbol_correction": True,
+                "enable_typos_rule": False,
+                "enable_sensitive_word": False,
+            },
+            proofread_rules=ProofreadRules(symbol_map={"1": ("１",), "2": ("２",), "3": ("３",)}),
+        )
+    )
+    assert result.success
+    report = _read_report(result)
+    assert report["source"]["content_sha256"] == sha256(raw).hexdigest()
+    assert len(report["issues"]) == 3
+    for index, issue in enumerate(sorted(report["issues"], key=lambda item: item["range"]["start"]["offset"])):
+        start = len(prefix) + index
+        assert issue["matched_text"] == "１２３"[index] == text[start : start + 1]
+        assert issue["range"]["start"] == {"offset": start, "line": prefix.count("\n"), "column": 8 + index}
+        assert issue["range"]["end"] == {"offset": start + 1, "line": prefix.count("\n"), "column": 9 + index}
+        assert issue["fix"] == {"kind": "replace_text", "replacement": str(index + 1), "applicable": True}
+    assert source.read_bytes() == raw
+
+
+@pytest.mark.parametrize(
+    "body", [r"\`１２３\`", "[１２３](https://example.test/１２３)", "![１２３](picture-１２３.png)"]
+)
+def test_literal_escapes_and_link_labels_remain_proofreadable_without_syntax_pairing_errors(
+    body: str, tmp_path: Path
+) -> None:
+    from docwen_core.models.proofread import ProofreadRules
+    from docwen_plugin_proofread.md_validator import MarkdownValidator
+
+    text = "# Probe\n\n" + body
+    source = tmp_path / "visible.md"
+    source.write_bytes(text.encode("utf-8"))
+    result = MarkdownValidator().convert(
+        _context(
+            source,
+            tmp_path,
+            options={
+                "enable_symbol_pairing": True,
+                "enable_symbol_correction": True,
+                "enable_typos_rule": False,
+                "enable_sensitive_word": False,
+            },
+            proofread_rules=ProofreadRules(
+                symbol_pairs=(("[", "]"),), symbol_map={"1": ("１",), "2": ("２",), "3": ("３",)}
+            ),
+        )
+    )
+    assert result.success
+    issues = _read_report(result)["issues"]
+    assert len(issues) == 3
+    assert {issue["rule_key"] for issue in issues} == {"symbol_correct"}
+    assert sorted(issue["range"]["start"]["offset"] for issue in issues) == [
+        text.index("１２３") + index for index in range(3)
+    ]
+
+
+@pytest.mark.parametrize("structural_tables", [False, True])
+def test_proofread_uses_the_frozen_table_dialect_for_code_ownership(structural_tables: bool, tmp_path: Path) -> None:
+    from docwen_core.models.proofread import ProofreadRules
+    from docwen_plugin_proofread.md_validator import MarkdownValidator
+
+    text = "# Probe\n\n| A | B |\n| --- | --- |\n| ` | １２３ ` |\n\n１２３ prose\n"
+    source = tmp_path / "dialect.md"
+    source.write_bytes(text.encode("utf-8"))
+    result = MarkdownValidator().convert(
+        _context(
+            source,
+            tmp_path,
+            options={
+                "enable_symbol_pairing": False,
+                "enable_symbol_correction": True,
+                "enable_typos_rule": False,
+                "enable_sensitive_word": False,
+            },
+            config_values={"conversion": {"markdown_extensions": {"input": {"structural_tables": structural_tables}}}},
+            proofread_rules=ProofreadRules(symbol_map={"1": ("１",), "2": ("２",), "3": ("３",)}),
+        )
+    )
+    assert result.success
+    report = _read_report(result)
+    positions = [text.rindex("１２３") + index for index in range(3)]
+    if not structural_tables:
+        positions = [text.index("１２３") + index for index in range(3)] + positions
+    assert sorted(issue["range"]["start"]["offset"] for issue in report["issues"]) == positions
+    assert report["source"]["content_sha256"] == sha256(source.read_bytes()).hexdigest()
+
+
+@pytest.mark.parametrize("extended_headings", [None, False, True])
+@pytest.mark.parametrize("level", [6, 7, 8, 9, 10])
+def test_proofread_uses_the_frozen_heading_dialect_for_code_ownership(
+    extended_headings: bool | None, level: int, tmp_path: Path
+) -> None:
+    from docwen_core.models.proofread import ProofreadRules
+    from docwen_plugin_proofread.md_validator import MarkdownValidator
+
+    text = f"`start\r\n{'#' * level} １２３ [link](https://example.test)\r\nend`\r\n\r\n１２３ prose\r\n"
+    raw = text.encode("utf-8")
+    source = tmp_path / "heading-dialect.md"
+    source.write_bytes(raw)
+    config_values = (
+        None
+        if extended_headings is None
+        else {"conversion": {"markdown_extensions": {"input": {"extended_headings": extended_headings}}}}
+    )
+    result = MarkdownValidator().convert(
+        _context(
+            source,
+            tmp_path,
+            options={
+                "enable_symbol_pairing": False,
+                "enable_symbol_correction": True,
+                "enable_typos_rule": False,
+                "enable_sensitive_word": False,
+            },
+            config_values=config_values,
+            proofread_rules=ProofreadRules(symbol_map={"1": ("１",), "2": ("２",), "3": ("３",)}),
+        )
+    )
+    assert result.success
+    report = _read_report(result)
+    positions = [(text.rindex("１２３") + index, 4, index) for index in range(3)]
+    if level == 6 or (extended_headings and level <= 9):
+        positions = [(text.index("１２３") + index, 1, level + 1 + index) for index in range(3)] + positions
+    issues = sorted(report["issues"], key=lambda item: item["range"]["start"]["offset"])
+    assert len(issues) == len(positions)
+    for issue, (offset, line, column) in zip(issues, positions, strict=True):
+        assert issue["range"]["start"] == {"offset": offset, "line": line, "column": column}
+        assert issue["range"]["end"] == {"offset": offset + 1, "line": line, "column": column + 1}
+        assert issue["matched_text"] == text[offset]
+        assert issue["fix"] == {
+            "kind": "replace_text",
+            "replacement": str("１２３".index(text[offset]) + 1),
+            "applicable": True,
+        }
+    assert report["source"]["content_sha256"] == sha256(raw).hexdigest()
+    assert source.read_bytes() == raw

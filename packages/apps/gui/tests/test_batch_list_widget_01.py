@@ -134,17 +134,53 @@ class TestConstruction:
         self,
         populated_widget: BatchList,
         qapp: QApplication,
+        qtbot,
     ) -> None:
+        expected_categories = ("text", "spreadsheet", "document", "image", "layout", "other")
+        plain_labels = tuple(_t(f"file_types.{category}", category) for category in expected_categories)
+        counted_labels = tuple(f"{label} · 1" for label in plain_labels)
         populated_widget.setFixedWidth(375)
         populated_widget.resize(375, 640)
         populated_widget.show()
         qapp.processEvents()
 
         pivot = populated_widget.category_pivot
-        items = list(populated_widget._pivot_items.values())
-        assert len(items) == 6
-        assert all("1" not in cast(_PivotText, item).text() for item in items)
-        assert max(item.geometry().right() for item in items) < pivot.width()
+        selector = populated_widget._category_selector
+        assert tuple(populated_widget._pivot_items) == expected_categories
+        assert [populated_widget.view_model.get_file_count(category) for category in expected_categories] == [1] * 6
+
+        def assert_complete_navigation() -> None:
+            if selector.isVisible():
+                assert selector.isEnabled() and not pivot.isVisible()
+                assert tuple(selector.itemData(index) for index in range(selector.count())) == expected_categories
+                assert tuple(selector.itemText(index) for index in range(selector.count())) == counted_labels
+                return
+            assert pivot.isVisible()
+            items = [populated_widget._pivot_items[category] for category in expected_categories]
+            labels = tuple(cast(_PivotText, item).text() for item in items)
+            # Counts are useful when the actual font leaves room for them.
+            assert labels in (plain_labels, counted_labels)
+            for item, label in zip(items, labels, strict=True):
+                assert item.isVisible() and item.isEnabled()
+                assert pivot.rect().contains(item.geometry())
+                assert item.fontMetrics().horizontalAdvance(label) <= item.contentsRect().width()
+
+        qtbot.waitUntil(assert_complete_navigation, timeout=500)
+        for category in expected_categories:
+            if selector.isVisible():
+                index = selector.findData(category)
+                assert index >= 0
+                selector.setCurrentIndex(index)
+            else:
+                qtbot.mouseClick(populated_widget._pivot_items[category], Qt.MouseButton.LeftButton)
+            qtbot.waitUntil(
+                lambda category=category: (
+                    populated_widget.view_model.current_category == category
+                    and populated_widget.category_stack.currentWidget() is populated_widget._tabs[category]
+                ),
+                timeout=500,
+            )
+            qtbot.waitUntil(assert_complete_navigation, timeout=500)
 
     def test_category_navigation_remains_accessible_after_counts_and_font_change(
         self, populated_widget: BatchList, qapp: QApplication

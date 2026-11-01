@@ -12,6 +12,7 @@ from docwen_core.docx_parsing.xml_ns import NS_W
 from docwen_plugin_document.shared.markdown_runs import (
     _run_is_hidden,
     append_formatted_run_text,
+    append_literal_run_text,
     resolve_run_style_type,
 )
 from docwen_plugin_document.shared.note_target_structure import NOTE_WRAPPERS, is_pure_note_target
@@ -116,6 +117,8 @@ def _extract_note_content(
         run_texts: list[str] = []
         separator_expected = False
         for run in child.iter(f"{{{w_ns}}}r"):
+            if _run_is_hidden(run):
+                continue
             if run.find(f"{{{w_ns}}}{ref_tag}") is not None:
                 separator_expected = True
                 continue
@@ -173,7 +176,7 @@ def _append_note_run(
                 run_style_type=resolve_run_style_type(run, style_parent, style_detector_config),
             )
         else:
-            rendered.append(segment)
+            append_literal_run_text(rendered, segment)
 
 
 def _is_reference_separator_run(run: Any, w_ns: str) -> bool:

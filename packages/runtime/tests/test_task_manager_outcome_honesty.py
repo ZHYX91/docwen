@@ -120,7 +120,7 @@ def test_output_preflight_failure_never_starts_conversion(tmp_path: Path, monkey
     def unsupported(source: str, destination: str) -> None:
         raise AtomicPublishUnavailable(errno.EINVAL, "Choose another output folder")
 
-    monkeypatch.setattr(OutputFinalizer, "_publish_directory_no_clobber", staticmethod(unsupported))
+    monkeypatch.setattr(OutputFinalizer, "_publish_no_clobber", staticmethod(unsupported))
     request = _request(tmp_path, "unsupported-output")
     original = Path(request.input_refs[0].path).read_bytes()
     events: list[TaskEvent] = []
@@ -611,3 +611,42 @@ def test_diagnostic_deduplication_keeps_distinct_artifact_bindings() -> None:
     merged = TaskManager._merge_diagnostics([first], [second], [first])
 
     assert [diagnostic.artifact_id for diagnostic in merged] == ["resource.one", "resource.two"]
+
+
+def test_audit_with_exact_output_is_rejected_before_conversion(tmp_path):
+    def unexpected(context):
+        pytest.fail("invalid exact output with audit must not start the plugin")
+
+    request = _request(tmp_path, "audit-exact")
+    request.output_policy = OutputPolicy(output_path=str(tmp_path / "chosen.docx"))
+    request.config_snapshot = {"output": {"manifest": {"save_to_output": True}}}
+    result = _build_manager(tmp_path, unexpected).execute_single(request)
+    assert not result.success
+    assert result.error is not None
+    assert "output parent directory" in result.error.message
+    assert not (tmp_path / "chosen.docx").exists()
+
+
+def test_unconfirmed_process_failure_retains_only_its_task_workspace(tmp_path):
+    from docwen_core.errors import ExternalProcessCleanupUnconfirmed
+
+    def uncertain(context):
+        Path(context.workspace.staging_dir, "owner-evidence").write_text("unconfirmed")
+        raise ExternalProcessCleanupUnconfirmed("Mermaid process cleanup could not be confirmed")
+
+    manager = _build_manager(tmp_path, uncertain)
+    request = _request(tmp_path, "unconfirmed")
+    events = []
+    result = manager.execute_single(request, on_event=events.append)
+    assert not result.success
+    assert result.error is not None
+    assert result.error.diagnostic_code == "EXTERNAL_PROCESS_CLEANUP_UNCONFIRMED"
+    assert not list((tmp_path / "output").glob("*.docx"))
+    evidence = list((tmp_path / "runtime").glob("*/staging/owner-evidence"))
+    assert len(evidence) == 1
+    other = manager._workspaces.create("other-task", str(tmp_path / "unconfirmed.md"))
+    other_directory = Path(other.staging_dir).parent
+    manager._workspaces.cleanup_all()
+    assert evidence[0].exists()
+    assert not other_directory.exists()
+    assert [event.event_type for event in _terminal_events(events)] == ["task_failed"]

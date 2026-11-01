@@ -17,7 +17,7 @@ from enum import StrEnum
 from pathlib import Path
 from urllib.parse import quote
 
-from docwen_core.links._markdown_inline import format_generated_link_text
+from docwen_core.links._markdown_inline import escape_markdown_source_literal, format_generated_link_text
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ def format_image_placeholder(
     height: int | None = None,
     *,
     image_scope: str | None = None,
+    alt_text: str | None = None,
 ) -> str:
     """Format an ``{{IMAGE:...}}`` placeholder for embedded images.
 
@@ -60,14 +61,20 @@ def format_image_placeholder(
 
         {{IMAGE:photo.png|200|150}}
         {{IMAGE:photo.png|200|}}          (width only)
+
+    Scoped request placeholders may also carry the occurrence's Markdown
+    label after the dimensions. Percent-encoding keeps pipes, braces and
+    line breaks out of the transport grammar; unscoped legacy markers retain
+    their established path/dimension representation.
     """
     marker = "IMAGE" if image_scope is None else f"IMAGE@{image_scope}"
     marker_path = image_path if image_scope is None else quote(image_path, safe="/:\\._-~")
-    if width is None and height is None:
+    if width is None and height is None and (image_scope is None or alt_text is None):
         return f"{{{{{marker}:{marker_path}}}}}"
     w = "" if width is None else str(width)
     h = "" if height is None else str(height)
-    return f"{{{{{marker}:{marker_path}|{w}|{h}}}}}"
+    alt = "" if image_scope is None or alt_text is None else f"|alt={quote(alt_text, safe='')}"
+    return f"{{{{{marker}:{marker_path}|{w}|{h}{alt}}}}}"
 
 
 def split_alt_text_and_size(
@@ -136,11 +143,17 @@ def process_embedded_image(
     logger.debug("Processing embedded image: mode=%s", mode.value)
 
     if mode == EmbeddedImageMode.EMBED:
+        # Markdown labels retain their own inline grammar. Wiki aliases are
+        # display text and must not create new Markdown constructs.
+        alt_text = display_text
+        if alt_text is not None and original_link.startswith("![["):
+            alt_text = escape_markdown_source_literal(alt_text)
         placeholder = format_image_placeholder(
             image_path,
             width=width,
             height=height,
             image_scope=image_scope,
+            alt_text=alt_text,
         )
         logger.info("Generated image placeholder")
         return placeholder

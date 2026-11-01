@@ -677,12 +677,27 @@ class ConfigLoader:
                 preimages.values(),
             )
         except Exception as exc:
+            self._config_state_trusted = False
             logger.error(
-                "Configuration transaction failed: operation=%s error=%s; restoring %d file preimage(s)",
+                "Configuration transaction failed: operation=%s error=%s; preparing rollback of %d file preimage(s)",
                 operation,
                 exc,
                 len(preimages),
             )
+            try:
+                config_transaction.prepare_transaction_rollback(
+                    self._user_dir,
+                    operation,
+                    preimages.values(),
+                )
+            except Exception as rollback_prepare_exc:
+                logger.error(
+                    "Configuration rollback journal could not be made durable: operation=%s error=%s; "
+                    "no preimages restored, evidence retained, effective state untrusted",
+                    operation,
+                    rollback_prepare_exc,
+                )
+                return False
             rollback_ok = True
             for preimage in reversed(preimages.values()):
                 try:
@@ -944,8 +959,9 @@ class ConfigLoader:
 
         This is equivalent to calling :meth:`set_value` for each key, except
         related keys are coalesced per TOML file. Handled write or reload
-        failures restore every target's byte-exact preimage before the loader
-        reconciles its effective configuration.
+        failures restore every target's byte-exact preimage only after rollback
+        is durably authoritative. If that cannot be established, the journal
+        and complete current generation are retained as untrusted evidence.
         """
         values = dict(values)
         freeze_output_locale = "gui.language.locale" in values and "conversion.output_locale" not in values

@@ -4,6 +4,22 @@ DocWen supports a documented Markdown subset for conversion to and from office f
 
 DocWen 为 Office 双向转换支持一组明确的 Markdown 子集。语法、链接、图片、编号和模板行为在每个请求开始前冻结。
 
+## Callout presentation / 提示块呈现
+
+In the main document story, a blockquote's initial `[!type]` header is rendered as ordinary quote content. The custom title remains a separate editable paragraph; the type and optional `+`/`-` source state move to a native Word comment on the title or first content paragraph. Unknown nonempty type identifiers are retained. Nested quotes, lists and tables keep their native content; Word always displays the expanded body. Escaped markers, inline/fenced code and markers elsewhere in prose remain literal. Footnote/endnote callouts use readable type labels instead of comments, with a `CALLOUT-NOTE-TEXT` diagnostic identifying the notes; this does not introduce comments in note stories.
+
+DOCX export back to Markdown does not infer callouts from comments or textboxes. Ordinary source block IDs remain recoverable, but a converted callout returns as a regular blockquote, without regenerating its type/folding marker. This is intentionally not a lossless callout round trip.
+
+Note-story fallback preserves code text and formula leaves as readable LaTeX (`$…$` / `$$…$$`), including formulas in ordinary note paragraphs. This is text preservation, not native OMML formula formatting in footnotes/endnotes.
+
+正文引用块首行的 `[!type]` 转为 Word 普通引用内容，自定义标题保留为可编辑段落，类型和可选 `+`／`-` 状态放入标题或首个内容段落的原生批注。未知非空类型保留；正文始终展开。转义、代码及普通文本中的标记不变；脚注／尾注中的提示块降级为可读的类型文字，并通过 `CALLOUT-NOTE-TEXT` 指明受影响的注释，不伪造批注。Word 回转不从批注或文本框推断 callout，普通块 ID 仍保留，但类型和折叠标记不再生成。
+
+## Spreadsheet image text / 表格图片与文本
+
+Markdown-to-XLSX treats template-declared images and images produced by the active link policy as drawings separate from the final cell text. Temporary scoped/quoted image markers remain outside openpyxl while YAML, row/column filling and merges are planned. Only surviving cell drafts are consumed, then the actual text is checked against Excel's 32,767 UTF-16-unit limit before assignment and again before save. Internal marker length does not reduce a user's text capacity. A genuine overflow still fails without replacing an earlier published workbook. Authored marker-like text does not acquire permission to read an image, and repeated trusted image occurrences retain separate drawings.
+
+Markdown→XLSX 将模板自身声明的图片及当前链接策略生成的图片作为独立 drawing 处理。YAML、纵横填充及合并阶段的临时图片标记保存在工作簿外；只处理最终仍存在的单元格草稿，再对实际文本执行赋值前和保存前的 32767 UTF-16 单元检查。内部标记长度不挤占正文容量，真实超限仍明确失败并保留既有产物。正文中的字面标记不获得读图权限，重复的受信任图片分别保留 drawing。
+
 ## Supported structures / 支持结构
 
 - headings, paragraphs, emphasis, code, quotes and horizontal rules;
@@ -17,9 +33,32 @@ DocWen 为 Office 双向转换支持一组明确的 Markdown 子集。语法、�
   structure-owned Heading and caption semantic targets;
 - one exclusive `{{ bibliography }}` template paragraph when an already-presented typed bibliography resource is supplied.
 
+Inline formatting containers, including highlight, underline, superscript and subscript, recursively retain their
+supported formulas, images, hyperlinks and note references. Image descriptions belong to each authored occurrence,
+including mixed Wiki/Markdown images, repeated resources and explicit empty Markdown alt text. Task-list items
+retain their visible `[ ]` / `[x]` state, child blocks and order using native lists; the state markers are text,
+not interactive Word controls.
+
+高亮、下划线与上下标等行内样式容器递归保留受支持的公式、图片、超链接及注释引用。图片描述按源码中的
+每次出现绑定，覆盖 Wiki/Markdown 混排、重复资源及显式空 alt。任务项使用原生列表保留可见的 `[ ]` / `[x]`
+状态、子块与顺序；状态标记为文本，不承诺 Word 交互控件。
+
 ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions that map one-to-one to Word
 `Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
 direct `outlineLvl=0..8` values and outline levels inherited through paragraph styles.
+
+When extended headings are enabled, the same H7–H9 grammar applies at the document root and inside quotes,
+list items and their supported nesting, with or without an authored ID. When disabled, those lines remain
+paragraph text in every container. Empty ATX headings still count as headings; adding a number retains the
+required separator after the opening hashes and preserves closing hashes, container prefixes and line endings.
+A single initial UTF-8 BOM remains part of authored-source identity and offsets; the AST projection consumes
+that encoding signature before interpreting the first block. A BOM inside document content remains literal text.
+
+扩展标题开启时，H7–H9 在文档顶层、引用、列表项及受支持的嵌套中使用同一语法，不以是否带作者 ID 区分。
+关闭时，这些行在各类容器中都保持普通段落。空 ATX 标题仍参与标题计数；添加编号保留开启井号后的必要
+分隔空格，以及关闭井号、容器前缀和原换行。
+单个起始 UTF-8 BOM 保留在源文件身份和坐标中；AST 投影先消费这个编码标记再识别首块，正文内部的 BOM
+仍保持字面文字。
 
 Setext headings use the parser's complete paragraph and underline grammar, including multiline titles. Code
 examples, lists and ATX headings cannot be reclassified by a text preprocessor. Heading/body merging applies only
@@ -48,6 +87,54 @@ DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标�
 - Unsupported constructs remain visible as text or emit a warning; they must not disappear silently.
 - Configuration and per-request options have one precedence chain and no process-global fallback after admission.
 
+Authored-source numbering, embedded heading/block selection and Markdown proofreading share full-source lexical
+ownership. YAML front matter, HTML blocks/comments and literal code examples cannot introduce headings or anchor IDs.
+Inline code pairs equal-length backtick runs within its inline block; a closing fence must use the same character,
+at least the opening length and only trailing whitespace. An unclosed fence inside a list or quote ends when that
+container ends, so later top-level links remain eligible for the requested policy. Numbering applies edits only to
+actual heading content ranges and preserves all other source characters, BOM and line endings. Proofreading keeps
+zero-based Unicode-code-point coordinates, including through CRLF and multiline literals; visible link labels remain
+eligible for text checks while their syntax and destinations do not.
+Inline scopes use the frozen input dialect. Standalone numbering and proofreading use their declared
+configuration surface; this does not add request options to either route. H7–H9 interrupt a paragraph only when
+extended headings are enabled; otherwise a legal multiline code span may include those literal lines. The source
+runtime adapter honors the same ownership before inserting semantic markers, while the frozen v3 oracle and
+resolved-v4 input contracts remain separate. Separate ordinary table cells cannot form a code span across
+their boundary; a table-like construct that the selected Structural Tables grammar leaves as a paragraph retains
+that paragraph's literal code span instead.
+
+Paragraph eligibility and container continuation are shared block facts. A nonempty ordered item starting at
+`1.` or `1)` can interrupt a paragraph; a different start remains paragraph text there, while genuine siblings
+inside an established list keep their separate blocks. Lazy paragraph continuation does not discard its list
+owner. Fenced and HTML literals retain that owner until the actual container boundary, without reopening a
+paragraph merely because their body contains ordinary-looking text. A thematic break is not paragraph content
+for a following Setext underline. A Setext heading owns all its eligible title lines, then closes the inline
+scope at its underline: backticks cannot pair with the next paragraph.
+
+Heading navigation compares visible inline text. URL and email autolinks contribute their visible address;
+valid HTML tags do not contribute tag spelling. Escaped angles and code spans retain their literal text. The
+existing first-actual-match rule applies only after this visible title has been determined.
+
+源文件编号、嵌入标题／块选择与 Markdown 校对共享完整源码的词法所有权。YAML 头部、HTML 块／注释与字面
+代码示例不产生标题或锚点 ID。行内代码在所属行内块中以等长反引号配对；关闭围栏须使用相同字符、长度不短于
+开启围栏且末尾仅有空白。列表或引用内未闭合的围栏在容器结束时结束保护，后续顶层链接仍执行请求中的策略。
+编号仅修改真实标题的内容范围，其余源码字符、BOM 与换行保持不变。校对在 CRLF 和跨行字面区域中仍保留
+零基 Unicode-code-point 坐标；可见链接标签参与文字检查，链接语法和目标不参与。
+行内作用域采用本次冻结的输入方言；独立编号和校对使用各自已声明的配置面，不因此新增请求选项。
+H7–H9 仅在扩展开启时中断段落，关闭时合法跨行代码可包含这些字面行。源文件运行时适配层在插入语义标记前
+遵守同一所有权；冻结 v3 oracle 与 resolved-v4 输入合同继续独立。
+普通表格的不同单元格不能跨界配对代码；所选 Structural Tables
+语法未识别为表格而保留成段落的内容，继续保留该段落中的字面代码区域。
+
+段落资格和容器续行由共享块状态决定。非空有序项只有以 `1.` 或 `1)` 开始时才能中断现有段落；其他起点
+在该位置仍是段落文字，已建立列表中的真实同级项则各自拥有块边界。段落的 lazy 续行不丢失列表所有者；
+围栏与 HTML 字面块保留所有者直到实际容器边界，正文看似普通文字也不重新开启段落。分隔线不能成为
+后续 Setext 下划线的标题正文。Setext 拥有完整的合法多行标题，并在下划线处关闭行内作用域，反引号不能
+跨到下一段落配对。
+
+标题导航比较可见行内文字。URL／邮箱自动链接贡献可见地址，合法 HTML 标签不贡献标签拼写；转义尖括号
+及代码区间保留字面文字。既有“首个真实匹配”规则在确定可见标题之后应用。
+
 ## Mermaid document rendering / Mermaid 文档渲染
 
 For the ordinary Markdown -> DOCX source route, `conversion.md_to_docx.mermaid_mode` controls how a
@@ -62,7 +149,7 @@ diagram images are rejected. PNGs fit the body section/columns and paragraph ind
 large reductions emit `MD2DOCX-MERMAID-SCALED` to prompt a readability check.
 
 Image rendering is best-effort per diagram. An unavailable CLI, invalid Mermaid source, timeout, or renderer failure
-produces `MD2DOCX-MERMAID-FALLBACK` and that occurrence remains a visible code block; other diagrams continue.
+produces `MD2DOCX-MERMAID-FALLBACK` only after confirmed process cleanup; that occurrence remains a visible code block and other diagrams continue. Cancellation is control flow, never a successful fallback. If process-family cleanup is unconfirmed, the task fails with `EXTERNAL_PROCESS_CLEANUP_UNCONFIRMED` and retains its registered workspace, including through `cleanup_all`. Linux uses an isolated subreaper/pidfd owner and kernel ECHILD proof; Windows retains Job ownership. macOS cancellation, timeout and nonzero renderer exit remain conservatively unconfirmed, with retained scratch and an explicit native-acceptance limitation. Normal macOS success is unchanged.
 A successfully rendered diagram is an ordinary document image and does not carry the fenced-source recovery
 carrier, so DOCX -> Markdown treats it as an image rather than reconstructing Mermaid source. The original Markdown
 file is never rewritten. The exact resolved-v4 input route remains source-preserving and does not opt into this
@@ -72,7 +159,7 @@ presentation transform.
 `code` 为兼容默认值，继续按代码块保留源码；`image` 使用本地 Mermaid CLI（`mmdc`）生成 PNG 并插入文档。
 DocWen 不会为此下载 Mermaid，也不会调用在线渲染服务；当 `mmdc` 不在 `PATH` 中时，可通过
 `DOCWEN_MERMAID_CLI` 指定可执行文件。单个图表渲染失败时会产生 `MD2DOCX-MERMAID-FALLBACK`，并将该图表
-回退为可见代码块，不影响其他图表继续转换。成功渲染的图表按普通文档图片处理，DOCX -> Markdown 不承诺
+在确认进程回收后回退为可见代码块，不影响其他图表继续转换；无法确认回收则明确失败并保留本请求工作目录，取消不伪装成成功。macOS 的取消、超时和非零退出尚无等价回收证明，按未确认处理。成功渲染的图表按普通文档图片处理，DOCX -> Markdown 不承诺
 还原 Mermaid 源码；原始 Markdown 文件始终不被改写。
 
 ## Obsidian extension interoperability / Obsidian 扩展互通
@@ -102,6 +189,13 @@ objects and overrides only explicitly supplied booleans. The four keys are `stru
 | Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
 | H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
 | Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
+
+Ordinary pipe tables inside quote and list containers remain available when Structural Tables input is disabled.
+The opt-in controls advanced table roles and merge syntax; it does not gate ordinary nested table recognition.
+Fenced examples remain literal under either setting.
+
+关闭 Structural Tables 输入时，仍识别引用和列表内的普通管道表格。该开关控制高级表头角色和合并语法，
+不限制普通嵌套表格的识别；两种设置下的围栏示例都保持字面代码。
 
 The neutral-document port is already resolved semantic input: its explicit heading/caption/reference records are
 authoritative, like Word's explicit structures, rather than inferred from Markdown spellings. Its untyped tables
@@ -305,6 +399,11 @@ containing `.`, `_`, or `/`, empty IDs, and IDs longer than 128 characters are i
 a user operation requires one. An external record, file, workspace, or node identity is never projected as a
 Markdown anchor merely because it exists.
 
+Ordinary heading embeds retain the first matching real heading when the same visible title occurs more than once;
+literal examples do not participate. The unique authored-title selector of semantic references is a separate contract.
+普通标题嵌入在多个真实可见标题同名时仍选择首个匹配，字面示例不参与；语义引用的唯一 authored-title 选择规则
+是独立合同，不套用于普通标题嵌入。
+
 Placement follows the [Obsidian block-link rules](https://obsidian.md/help/links). Only a simple paragraph or a
 paragraph containing exactly one Markdown image/Obsidian image embed uses one space plus `^id` at the end of its
 content line. An individual list item may likewise carry the ID on that item. A table, block quote, callout, whole
@@ -315,6 +414,23 @@ block. A non-empty intervening block or container/depth change breaks attachment
 diagnostic. An ID is never appended to the closing `$$` or closing code fence. The parser records the complete
 list/quote/callout container path. A caption declaration retains its own inline `^id`; an object's distinct ordinary
 anchor remains attached to the object.
+
+On the production source-native route, an ordinary paragraph that is a list item's first nonblank child may carry
+the inline ID for the complete item. After an earlier content block, an inline ID on a later ordinary paragraph
+owns only that paragraph and retains the enclosing list and item in its `container_path`. A preceding table, code
+block, formula, heading or paragraph must not expand that later paragraph's anchor to the complete item.
+The leading item's anchor and a later paragraph anchor may coexist with their distinct identities and parent-child
+relationship; the later anchor does not prevent the leading anchor from owning the complete item.
+This includes checked and unchecked task items: the visible task state and all child blocks remain inside the
+complete-item owner. Its DOCX carrier begins with a paragraph and may contain paragraph or table continuations;
+table-only, table-first and unauthenticated wrapper shapes remain invalid.
+
+生产原文路线中，列表项的首个非空子块若为普通段落，该段落可用行内 ID 标识完整列表项。已有正文块之后的
+普通段落，其行内 ID 仅标识该段落，`container_path` 仍保留外围列表与列表项。前置表格、代码、公式、标题或
+段落不能把后续段落的锚点扩大为完整列表项。
+首段的列表项锚点可与后续段落锚点共存，分别保留身份和父子关系；后续锚点不使首段丢失完整列表项所有权。
+该规则同样适用于已完成和未完成的任务项：可见任务状态及全部子块都属于完整列表项。其 DOCX 载体以段落
+开头，后续可含段落或表格；只有表格、以表格开头或含未认证包装节点的形状仍拒绝。
 
 An ordinary anchor identifies only its Markdown block:
 
@@ -327,6 +443,14 @@ It participates in ordinary Markdown navigation or embedding through `[[Page#^im
 caption counter or Word bookmark/`SEQ`/`REF` projection. The same rule applies to ordinary anchors on paragraphs,
 tables, equations, fenced-code blocks, lists, block quotes, and callouts. DocWen preserves this source navigation for
 Markdown round-trip; it does not manufacture a Word-native target where the source has no semantic owner.
+An authenticated paragraph ID inside a quote is retained on its prose when exporting to Markdown, independently
+of the caption/reference output switch. Native line breaks in that paragraph use the existing `<br>` form so the
+inline ID still identifies one paragraph; literal code text is not rewritten. Page or section separators remain
+outside the inline ID, while complete-container IDs keep their post-block placement.
+
+引用内已认证的段落 ID 在导出 Markdown 时仍附在正文上，不受题注／引用输出开关影响。该段落的原生行换行
+使用既有 `<br>` 形式，使行内 ID 继续标识一个段落；代码字面文字不被改写。分页或分节分隔符不接收该行内
+ID，完整容器的 ID 仍保持块后位置。
 
 Every object in the closed source-oracle `anchors` array additionally requires `container_path`. It is an ordered
 outermost-to-innermost array of closed source-only segments. A segment has exactly `block_kind` and `block_range`;
@@ -348,6 +472,12 @@ Source ranges along a path are laminar and may be strictly contained or equal; e
 structural levels. Crossing ranges, a self segment, an unknown segment kind, or a parent inferred only from range,
 block kind, or output order fails closed. This source-only path is how the neutral runtime derives nesting before any
 DOCX element exists.
+The ordered ancestor positions preserve depth, including consecutive quote ancestors with identical coordinates.
+The terminal owner is checked separately: repeating its own container coordinate as the final ancestor is invalid.
+Already-bound structural owners are not marker carriers to lift into another enclosing container.
+
+路径中祖先的位置保留结构深度，包括连续且坐标相同的不同引用层。终端 owner 单独检查：把它自身的容器坐标
+再写作最后一个祖先仍属非法。已经绑定的结构 owner 不再作为待提升的标记载体移到外层容器。
 
 DOCX recovery has one exact resource-less image carrier: `![image omitted]()`. The ASCII-lowercase alt text
 `image omitted` and empty destination are both fixed; no other empty-destination image is this carrier. When an
@@ -525,6 +655,16 @@ undeclared and rejected there.
 Provider-neutral authored Markdown Heading targets use ATX levels 1..9; levels 7..9 are DocWen extensions to
 CommonMark. Heading target materialization, caption restart binding, and chapter-number binding accept the same 1..9
 range and map to Word `Heading 1`..`Heading 9`.
+
+Source-native heading numbering and direct semantic reference caches consume the same ordered inventory of
+actual headings. Setext and empty headings advance the appropriate counters even when they do not introduce
+an addressable Heading target, and an empty formatting template does not remove a heading from that inventory.
+The configured visible prefix and the semantic cache therefore share the same preceding headings and hierarchy.
+This does not add Setext semantic targets or Word bookmarks for ordinary source anchors.
+
+原文路线的标题编号与 direct 语义引用缓存消费同一个有序真实标题库存。Setext 与空标题即使不产生可寻址
+Heading 目标，也推进对应计数；格式模板为空不意味着该标题从库存中消失。因此可见编号和引用缓存共享
+前置标题与层级状态。本规则不新增 Setext 语义目标，也不为普通源锚点新增 Word 书签。
 
 ### Fenced code serialization / 围栏代码序列化
 
@@ -1216,7 +1356,7 @@ Layout、presentation 与 markup 路由在 manifest 声明后使用共享的 Mar
 
 ## Authored Markdown template body placement
 
-Authored Markdown inserts body content only at a single, standalone main-document body placeholder (including the supported localized aliases and markers split across text runs). A custom template with no body marker is metadata-only: YAML fields and explicit bibliography placement remain available, but body links/resources, notes, numbering, semantic body sessions and rendering are not materialized. Existing template notes are still audited and preserved. An empty body leaves no visible marker.
+Authored Markdown inserts body content only at a single, standalone main-document body placeholder (including the supported localized aliases and markers split across text runs). A custom template with no body marker is metadata-only: YAML fields and explicit bibliography placement remain available, but body links/resources, notes, numbering, semantic body sessions and rendering are not materialized. Existing template notes are preserved; their unrelated defects do not trigger a note-compliance audit. An empty body leaves no visible marker.
 
 Inline markers, table-cell/textbox/header/footer markers and duplicate body markers fail with `MD2DOCX-TEMPLATE-BODY-PLACEMENT`, rather than being mistaken for a metadata-only template. The same rejection applies when XML scanning finds a marker hidden in an unsupported inline content control or split within its alias by a structural break: every accepted marker must also be recognizable by the body-placement finder. Invalid source semantic syntax remains invalid even when the body is omitted. Source and template bytes are never rewritten.
 
@@ -1235,3 +1375,66 @@ DOCX 的标题、副标题、别名以及发票元数据均按字符串字段输
 Authored Markdown-to-DOCX applies ordinary Wiki and Markdown link policies independently to string leaves used by template fields, before field-specific list/punctuation formatting. `keep` retains literal syntax, `extract_text` inserts display text, `remove` removes the link, and `hyperlink` produces a real DOCX relationship where the ordinary-link contract provides a navigable target. Numbers, booleans, dates, keys and container structure are preserved; embedded resources are not expanded from YAML.
 
 Only links explicitly selected by the policy are materialized. Existing template text is not reparsed as Markdown. Split text runs, run breaks and special attachment fields retain their surrounding structure and formatting. An inserted hyperlink inside an existing hyperlink is rejected rather than nesting invalid OOXML. Declared-input requests retain their no-local-lookup boundary; unused fields do not trigger resolution. DOCX metadata receives display text, never internal projection markers. Spreadsheet YAML behavior is unchanged by this DOCX change.
+
+
+## Native resource and table text export / 原生资源与表格文本导出
+
+Native resource extraction uses one request-owned collision-free name inventory. Generated image `wiki_link` output keeps target left and occurrence alias right, including explicit empty alt; Wiki delimiters are encoded. Existing `wiki_embed` spelling and embed semantics are unchanged. Image producers distinguish a raw resource path (literal percent signs are encoded once) from an already formed reference (existing percent escapes, query and fragment remain intact apart from Wiki syntax delimiters). The same serializer preserves each structured-clipboard occurrence alias, including the empty string. Native PPTX chart/table cells use one final literal-encoding boundary for pipes, backslashes, line breaks and inline syntax. Embedded workbooks retain their bytes.
+
+原生资源提取使用本请求的不冲突命名库存。生成图片的 `wiki_link` 输出中，目标在左、occurrence alias 在右，显式空 alt 保持为空，Wiki 分隔符编码；已有 `wiki_embed` 写法与嵌入语义保持不变。图片生产者明确区分原始资源路径（字面百分号只编码一次）与既成引用（除 Wiki 语法分隔符外，保留已有百分号转义、query 与 fragment）；结构化剪贴板使用同一序列化入口，逐 occurrence 保留 alias，包括空字符串。原生 PPTX 图表和表格在最终单元格边界统一编码 pipe、反斜线、换行与行内语法；内嵌 workbook 保留原字节。
+
+
+## Native DOCX content and numbering / 原生 DOCX 内容与编号
+
+Native DrawingML and VML textboxes retain their real paragraph occurrences in document order, including equal text at the same anchor or in different boxes. `mc:AlternateContent` contributes one supported Choice representation, or its Fallback when no supported Choice yields textbox text; equal paragraph text is not a deduplication key.
+
+原生 DrawingML 与 VML 文本框按实际 XML 顺序保留每次段落出现；同一锚点、同框或不同框中的相同文字均不是去重理由。`mc:AlternateContent` 只贡献一个受支持的 Choice 表示；没有受支持的 Choice 文本时再使用 Fallback。
+
+Native list and Heading prefixes use the effective level of the bound concrete `numId`, including level/start overrides and explicit paragraph-style `numPr`. Each concrete instance owns its counters, shared by its direct and style-bound paragraphs. A style association without a unique concrete binding is not permission to guess the first abstract-numbering instance. An explicit empty `lvlText` emits no number; an absent template may use the format's default number. A placeholder above the current level contributes no counter text, while literal punctuation and the level suffix remain. Supported parent placeholders use the same concrete instance's effective format and start. A proven ordinary-list marker owning a Heading precedes its Markdown hashes; it does not enter the Heading text, and that list counter advances once.
+
+原生列表与标题前缀读取所绑定 concrete `numId` 的有效层级，包括层级/start override 与段落样式的显式 `numPr`。每个 concrete 实例单独计数，同实例的直接绑定与样式绑定段落共享该计数；无法唯一确定实例的样式关联不得任取 abstract 的首实例。显式空 `lvlText` 不生成数字，缺失模板才可使用格式的缺省数字。高于当前层级的 placeholder 不贡献计数文字，模板字面标点与层级 suffix 保留；合法祖先 placeholder 从同一 concrete 实例读取有效格式及起始值。已证明的普通列表拥有 Heading 时，列表标记位于 Markdown 标题井号之前，不进入标题正文，同一项的列表计数只推进一次。
+
+The supported visible projection suppresses directly enabled `w:vanish` runs in body paragraphs and notes. An empty visible result stays empty; it must not revive raw hidden text. `w:vanish w:val="false"`/`"0"` remain visible. This does not promise all style-inherited visibility or revision semantics. Native code-style paragraph groups keep their literal body (with line-ending normalization) and choose one safe fence using the complete body, following the documented fence serialization policy; a following normal paragraph or page/section separator remains outside the code block.
+
+受支持的可见投影在正文段落和脚尾注中排除直接启用 `w:vanish` 的 run。可见结果为空即保持为空，不得回退原始隐藏文字；`w:vanish w:val="false"`/`"0"` 仍可见。此约定不扩张为全部样式继承可见性或修订语义。原生代码样式连续段落保留字面正文（换行统一），按照完整正文与既有围栏序列化规则选择一个安全围栏；其后普通段落及页/节分隔仍位于代码块之外。
+
+
+## Text and math source ownership / 文本与公式的源所有权
+
+MathML `mtext` retains literal text and whitespace, including units and conditions. DOCX output marks these as normal-text math runs and preserves their spacing. Native formula import keeps TeX control words lexically separate from following ASCII identifiers in ordinary groups, scripts and matrix cells. An unsupported MathML leaf on Markdown-to-DOCX export preserves the original LaTeX as visible text with `MD2DOCX-FORMULA-TEXT-FALLBACK`; a nonempty partial formula is not success. This defines a supported subset, not every LaTeX command.
+
+MathML `mtext` 保留字面文本及空白，包括单位与条件；DOCX 写出普通文本数学 run 并保留空格。原生公式导入在普通分组、上下标与矩阵单元格中保留 TeX 控制词和后续 ASCII 标识符的词法边界。Markdown→DOCX 导出遇到无法表示的 MathML 叶节点时，保留原 LaTeX 为可见文本并发出 `MD2DOCX-FORMULA-TEXT-FALLBACK`，不得以非空的残缺公式报告成功；此能力不覆盖全部 LaTeX 命令。
+
+Gongwen extraction owns text and math occurrences in XML order. Text before, between and after inline formulas survives regardless of paragraph length; an outer `oMathPara` owns its nested math once. Combined copy/document-number recognition and extraction share one full-line parse, before request heading cleanup can claim a leading copy ID. Consume the paragraph only after both fields represent its source completely; conflicting or uncertain combined fields and formula-bearing metadata remain visible with a precise source-preservation diagnostic. Existing missing-field warnings still apply. Copy IDs retain leading zeros as strings. These rules do not add rich formula extraction to Gongwen's existing plain-text table projection.
+
+公文提取按 XML 顺序拥有文本与公式 occurrence。行内公式前、中、后的正文不因段落字数消失；外层 `oMathPara` 只消费一次嵌套公式。合并份号／文号的识别与提取共用完整行解析，并先于请求中的标题编号清理确定原文归属，避免把前导份号当作标题前缀剥离；两个字段完整表示原文后才消费段落。字段冲突、不完整或含公式的元数据保留正文，并给出精确的源保留诊断；既有缺字段提示继续生效，份号的前导零保持字符串。此约定不把现有公文表格的纯文本投影扩张为富公式提取。
+
+Authenticated quote references project only their proven XML ranges into the shared run renderer. Actual `w:br`/`w:cr` inside an anchored paragraph use `<br>` with reference output enabled or disabled; literal text and code remain literal, and the shared renderer's default newline behavior is unchanged. Closing paragraph and container IDs precede trailing native page/section separators, so the recovered source remains a valid semantic input. This does not create heading IDs, ordinary-anchor Word bookmarks or table citation support.
+
+已认证 quote 引用只按证明过的 XML 范围交给共享 run renderer。带锚点段落中的真实 `w:br`／`w:cr` 在引用输出开关两态均使用 `<br>`；字面文本与代码不改写，共享 renderer 默认换行不变。收束的段落及容器 ID 位于尾部原生页／节分隔符之前，恢复源仍可合法进入语义计划；不补造标题 ID、不新增普通锚点 Word bookmark 或表内 citation。
+
+
+## Shared visible text and container boundaries / 共享可见文字与容器边界
+
+Supported semantic references preserve their authenticated reference spelling while surrounding paragraph text follows the same visible-run projection as ordinary prose. A directly hidden suffix must not return through reference recovery, including page-separated paragraphs and the existing legacy reference reader. Visibility-disabled (`<w:vanish w:val="0"/>`) runs remain visible.
+
+受支持的语义引用保留已认证的引用写法；引用周围的段落文字仍遵循普通正文使用的可见 run 投影。直接隐藏的后缀不得因恢复引用而重现，分页段落和已有旧版引用读取也遵守此规则。`<w:vanish w:val="0"/>` 的 run 仍可见。
+
+Native code-style paragraph groups treat visible characters as literal code: checkbox glyphs and hyperlink labels do not acquire Markdown checkbox/link decorations. Direct hidden-run filtering and native break handling still apply. Ordinary body paragraphs retain their existing checkbox projection. Fence selection uses the complete resulting literal body.
+
+原生代码样式段落组把可见字符视作字面代码：复选框字符和超链接的可见标签不新增 Markdown 复选框或链接装饰。直接隐藏 run 的过滤及原生换行处理仍生效；普通正文继续使用已有的复选框投影。安全围栏根据最终完整字面正文选择。
+
+Trailing native page/section separators follow closing source IDs at the depth of the containers that remain open. Closing an inner quote must not split an authenticated outer quote into separate Markdown blocks or narrow its recovered source range. When every enclosing container closes, the separator is emitted at the document root. An inline paragraph ID is not another list/quote layer.
+
+原生段落尾的分页/分节分隔跟随已收口的源码 ID，并处于仍未结束的容器深度。内层引用结束时，不得把已认证的外层引用拆成多个 Markdown 块或缩窄它恢复后的源码范围。全部外层容器结束后，分隔位于文档顶层。行内段落 ID 不是额外的列表或引用结构层。
+
+
+### Native reference and resource boundaries / 原生引用与资源边界
+
+Complex REF substitution owns the actual begin/end XML nodes, including when boundary markers share a run with visible text or real `w:br`/`w:cr` nodes. Content outside that field retains its order, formatting/link context and existing page/section projection. Authenticated reference proof requirements are unchanged. Literal/code content is not rewritten as a semantic reference.
+
+复杂 REF 替换只拥有实际 begin/end XML 节点，即使边界标记与可见文字或真实 `w:br`／`w:cr` 共 run，也保留字段外内容、顺序、格式／链接上下文及既有页／节投影。已认证引用 proof 要求不变，字面／代码内容不改成语义引用。
+
+Generated Markdown links encode raw resource filenames at the path-to-reference boundary. Literal percent signs, spaces and hash characters remain distinct filename identities; an already formed reference keeps its encoding, query and fragment. Wiki target/alias ordering and explicit empty descriptions retain their existing contract. A resource's existence or the total artifact count does not prove occurrence-to-resource identity.
+
+生成 Markdown 链接在“原始资源路径→引用”边界编码；字面百分号、空格与井号保持不同文件身份，已成形引用保留原编码、query 和 fragment。Wiki target／alias 顺序与显式空描述沿用既有合同。资源存在或总数量本身不足以证明 occurrence 对应正确资源。

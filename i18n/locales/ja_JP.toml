@@ -154,6 +154,7 @@ optimizations = "専用機能"
 inputs = "入力の種類"
 content = "コンテンツ"
 [settings.tabs]
+markdown_input = "Markdown を解析"
 general = "一般"
 text = "入力テキスト"
 proofread = "校正"
@@ -164,7 +165,7 @@ image = "入力画像"
 layout = "入力固定レイアウトファイル"
 other = "その他の入力ファイル"
 link = "リンク"
-formatting = "Markdown 構文"
+formatting = "Markdown を生成"
 output = "ファイル保存"
 logging = "ログ"
 software = "変換ソフト"
@@ -290,10 +291,10 @@ add_numbering_tooltip = "出力する DOCX の見出しに階層番号を追加�
 scheme_label = "デフォルトの番号付けスキーム："
 scheme_tooltip = "見出し番号に使用する番号体系を選択します"
 render_mode_label = "見出し番号の出力方式："
-render_mode_tooltip = "見出し番号をテキストに書き込むか、Word のネイティブ番号機能で生成するかを選択します"
+render_mode_tooltip = "見出し番号をテキストに書き込むか、DOCX のネイティブ番号機能で生成するかを選択します"
 render_mode_text = "テキスト"
-render_mode_word_native = "Word ネイティブ"
-render_mode_hint = "テキスト = 見出しに番号を書き込む；Word ネイティブ = Word のアウトライン番号を使用する"
+render_mode_word_native = "DOCX ネイティブ"
+render_mode_hint = "テキスト = 見出しに番号を書き込む；DOCX ネイティブ = DOCX のアウトライン番号を使用する"
 
 # 字段优化（字段处理器）
 
@@ -318,7 +319,7 @@ save_numbering_clean_rules_failed = "番号削除ルールを保存できませ�
 # -----------------------------------------------------------------------------
 input_description = "入力 Markdown の文書生成、テンプレートへの入力、見出し処理を設定します。"
 template_fill_section = "テンプレートへの入力"
-template_fill_desc = "Word・表計算テンプレートに YAML リストを入力する際の区切り文字です。空文字と空白はそのまま保持されます。"
+template_fill_desc = "DOCX・表計算テンプレートに YAML リストを入力する際の区切り文字です。空文字と空白はそのまま保持されます。"
 [settings.proofread]
 validation_section = "校正ルール"
 enable_symbol_pairing = "記号の対応チェックを有効にする"
@@ -344,7 +345,7 @@ image_extraction_mode_tooltip = "Markdown に画像を埋め込む方法を選�
 image_extraction_mode_file = "画像ファイル"
 image_extraction_mode_base64 = "Base64 埋め込み"
 ocr_placement_mode_label = "OCR 配置:"
-ocr_placement_mode_tooltip = "画像 + OCR の出力先を選びます。画像 Markdown は画像ごとに独立した Markdown を作成し、メイン文書は画像と OCR をメイン Markdown に書きます。Base64 インラインはメイン文書が必須のため、この項目を無効化して強制します。画像ファイルへ戻すと以前の選択を復元します。"
+ocr_placement_mode_tooltip = "画像 + OCR の出力先を選びます。\n\n画像 Markdown は画像ごとに独立した Markdown を作成し、メイン文書は画像と OCR をメイン Markdown に書きます。\n\nBase64 インラインはメイン文書が必須のため、この項目を無効化して強制します。\n\n画像ファイルへ戻すと以前の選択を復元します。"
 ocr_placement_mode_image_md = "画像MD"
 ocr_placement_mode_main_md = "メイン文書"
 ocr_blockquote_title_enabled_label = "OCR タイトル行（主MD）"
@@ -373,7 +374,7 @@ section = "結合セルのエクスポート"
 desc = "Markdown 出力で結合セルをどのように表現するかを設定します。"
 merge_strategy_label = "結合セルのエクスポート方式："
 
-merge_strategy_help = "通常の Markdown のみ：［埋める］は結合領域の左上セルの文字を繰り返します（例「見出し | 見出し」）。［空］は覆われるセルを空にします（「見出し | 」）。Structural Tables 出力が有効な場合は代わりに < と ^ の構造マーカーを使います。"
+merge_strategy_help = "通常の Markdown のみ：［埋める］は結合領域の左上セルの文字を繰り返します（例「見出し | 見出し」）。\n\n［空］は覆われるセルを空にします（「見出し | 」）。\n\nStructural Tables 出力が有効な場合は代わりに < と ^ の構造マーカーを使います。"
 [settings.table_export.strategies]
 fill = "埋める"
 empty = "空にする"
@@ -424,7 +425,7 @@ ods_conversion_label = "ODS形式変換"
 spreadsheet_to_pdf_label = "スプレッドシートからPDF"
 
 # 汇总模式选项
-merge_mode_help = "位置合わせは保存された数値と完全一致のテキストを使い、文字列の識別子を数値に変換しません。行・列単位：同一または既に含まれるレコードはスキップし、取り込み側が基準の全値を含む場合だけ置換します。相互補完・競合するレコードは別々に保持します。セル単位：空白は無視し、数値（数値文字列を含む）は加算、同じテキストは一つにし、他のテキストはコンマで連結します。数式結果がない場合は停止します。保存済み結果も古い可能性があります。"
+merge_mode_help = "位置合わせは保存された数値と完全一致のテキストを使い、文字列の識別子を数値に変換しません。\n\n行・列単位：同一または既に含まれるレコードはスキップし、取り込み側が基準の全値を含む場合だけ置換します。\n\n相互補完・競合するレコードは別々に保持します。\n\nセル単位：空白は無視し、数値（数値文字列を含む）は加算、同じテキストは一つにし、他のテキストはコンマで連結します。\n\n数式結果がない場合は停止します。\n\n保存済み結果も古い可能性があります。"
 [settings.spreadsheet.merge_modes]
 by_row = "行で結合"
 by_column = "列で結合"
@@ -466,6 +467,8 @@ tiff_no_alpha = "透明度なし"
 # 版式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.layout]
+document_format = "文書形式"
+defaults_section = "変換の既定値"
 extraction_section = "画像抽出/OCR設定"
 keep_images = "デフォルトで「画像を抽出」をチェック"
 enable_ocr = "デフォルトで「画像OCR」をチェック"
@@ -545,8 +548,8 @@ embed = "コンテンツ埋め込み"
 # -----------------------------------------------------------------------------
 [settings.formatting]
 each_line_paragraph = "1 行ずつ独立した段落にする"
-each_line_paragraph_help = "通常の Markdown 本文の各行を Word の独立した段落にします。見出し、リスト、引用、表、コード、明示的な改行は変更しません。"
-line_paragraph_section = "Markdown から Word"
+each_line_paragraph_help = "通常の Markdown 本文の各行を DOCX の独立した段落にします。見出し、リスト、引用、表、コード、明示的な改行は変更しません。"
+line_paragraph_section = "段落処理"
 mermaid_auto = "自動検出"
 mermaid_browse = "Mermaid CLI を選択"
 mermaid_path = "CLI のパス:"
@@ -559,10 +562,10 @@ mermaid_browser_missing = "対応ブラウザーがありません。手順に�
 mermaid_test_failed = "テスト描画に失敗しました: {reason}"
 mermaid_test_passed = "利用可能: テスト図を描画しました。"
 
-mermaid_title = "Mermaid 図"
-mermaid_tooltip = "`mermaid` コードブロックを画像化するか、ソースコードのまま保持するかを選びます。画像モードはローカル Mermaid CLI を使い、利用不可または失敗時はコードブロックを保持して警告します。"
+mermaid_title = "Mermaid"
+mermaid_tooltip = "Markdown → DOCX. `mermaid` コードブロックを画像化するか、ソースコードのまま保持するかを選びます。画像モードはローカル Mermaid CLI を使い、利用不可または失敗時はコードブロックを保持して警告します。"
 mermaid_mode_label = "出力:"
-mermaid_mode_tooltip = "生成文書へ `mermaid` コードブロックを書き込む方法を選びます。"
+mermaid_mode_tooltip = "Markdown → DOCX. 生成文書へ `mermaid` コードブロックを書き込む方法を選びます。"
 mermaid_code = "コードとして保持"
 mermaid_image = "画像として出力"
 mermaid_ready = "CLI {cli} / Mermaid {mermaid} を検出しました。ブラウザーは変換時に確認します。"
@@ -570,27 +573,27 @@ mermaid_unavailable = "画像化できません。CLI と Mermaid 11.16 以上�
 # 文档转为Markdown部分
 docx_to_md_section = "ドキュメントからMarkdown"
 format_processing = "フォーマット処理"
-format_processing_tooltip = "WordドキュメントをMarkdownに変換する際のフォーマット処理を構成します\n\n一部のオプションは「公文書最適化」ドキュメントからMarkdownへの変換では機能しません"
+format_processing_tooltip = "DOCXドキュメントをMarkdownに変換する際のフォーマット処理を構成します\n\n一部のオプションは「公文書最適化」ドキュメントからMarkdownへの変換では機能しません"
 body_format_label = "本文フォーマット処理："
 body_format_tooltip = "フォーマット保持：太字→**太字**、斜体→*斜体*、取り消し線→~~取り消し線~~など\nフォーマット破棄：プレーンテキストコンテンツのみ保持"
 heading_format_label = "見出しフォーマット処理："
-heading_format_tooltip = "フォーマット保持：見出し内の太字を**太字**に変換など\nフォーマット破棄：見出しはプレーンテキストのみ保持し、冗長なマークアップを回避\n注：Wordの見出しスタイルは通常固定のフォーマットを持っており、保持すると冗長なマークアップが発生する可能性があります"
+heading_format_tooltip = "フォーマット保持：見出し内の太字を**太字**に変換など\nフォーマット破棄：見出しはプレーンテキストのみ保持し、冗長なマークアップを回避\n注：DOCXの見出しスタイルは通常固定のフォーマットを持っており、保持すると冗長なマークアップが発生する可能性があります"
 table_header_format_label = "テーブルヘッダーフォーマット処理："
 table_header_format_tooltip = "フォーマット保持：ヘッダーセルの太字を**太字**に変換など\nフォーマット破棄：ヘッダーはプレーンテキストのみ保持し、冗長なマークアップを回避\n注：テーブルスタイルは通常ヘッダーの太字を定義しており、保持すると重複したマークアップが発生する可能性があります"
 
 # 分隔符映射
-separator_mapping = "セパレーターマッピング"
-separator_mapping_tooltip = "Wordの改ページ/セクション区切り/水平線をどのMarkdownセパレーターに変換するかを構成します\n\n改ページ：Wordの改ページ\nセクション区切り：すべてのタイプのセクション区切り（次のページ/連続/奇数ページ/偶数ページ）\n水平線：段落の下の境界線（ユーザーが---と入力してEnterを押すと生成される）"
+separator_mapping = "区切りの変換"
+separator_mapping_tooltip = "DOCXの改ページ/セクション区切り/水平線をどのMarkdownセパレーターに変換するかを構成します\n\n改ページ：DOCXの改ページ\nセクション区切り：すべてのタイプのセクション区切り（次のページ/連続/奇数ページ/偶数ページ）\n水平線：段落の下の境界線（ユーザーが---と入力してEnterを押すと生成される）"
 page_break_label = "改ページ："
-page_break_tooltip = "Wordの改ページをMarkdownセパレーターに変換します\n改ページは通常、特定の場所で改ページを強制するために使用されます"
+page_break_tooltip = "DOCXの改ページをMarkdownセパレーターに変換します\n改ページは通常、特定の場所で改ページを強制するために使用されます"
 section_break_label = "セクション区切り："
-section_break_tooltip = "Wordのセクション区切りをMarkdownセパレーターに変換します\nすべてのセクション区切りタイプ（次のページ/連続/奇数/偶数ページ）は一律に処理されます"
+section_break_tooltip = "DOCXのセクション区切りをMarkdownセパレーターに変換します\nすべてのセクション区切りタイプ（次のページ/連続/奇数/偶数ページ）は一律に処理されます"
 horizontal_rule_label = "水平線："
-horizontal_rule_tooltip = "Wordの水平線（水平線1/2/3スタイル）をMarkdownセパレーターに変換します"
+horizontal_rule_tooltip = "DOCXの水平線（水平線1/2/3スタイル）をMarkdownセパレーターに変換します"
 
 # 语法选择
 syntax_selection = "構文選択"
-syntax_selection_tooltip = "これらの出力形式は現在、主に通常の Word から Markdown への変換に適用されます。表計算、画像、PDF/OFD、専用機能では一部の選択肢に未対応です。この選択は Markdown の読み取りを制限しません。"
+syntax_selection_tooltip = "これらの出力形式は現在、主に通常の DOCX から Markdown への変換に適用されます。表計算、画像、PDF/OFD、専用機能では一部の選択肢に未対応です。この選択は Markdown の読み取りを制限しません。"
 bold_syntax_label = "太字構文："
 bold_syntax_tooltip = "太字テキストの出力構文形式を選択します"
 italic_syntax_label = "斜体構文："
@@ -611,11 +614,11 @@ indent_spaces_tooltip = "DOCX から Markdown へ出力する際の、リスト�
 # Markdown转为文档部分
 md_to_docx_section = "Markdownからドキュメント"
 md_format_processing = "フォーマット処理"
-md_format_processing_tooltip = "MarkdownをWordドキュメントに変換する際のフォーマットマークアップ処理を構成します"
+md_format_processing_tooltip = "MarkdownをDOCXドキュメントに変換する際のフォーマットマークアップ処理を構成します"
 md_body_format_label = "本文フォーマットマークアップ処理："
 md_body_format_tooltip = "フォーマット適用：**太字** を実際の太字書式に変換します。\nマークアップ保持：**太字** をそのまま表示します。\nマークアップ削除：Markdown 記号を除去し、テンプレートのスタイルを維持します。"
 md_heading_format_label = "見出しフォーマットマークアップ処理："
-md_heading_format_tooltip = "フォーマット適用：ソースの指定に応じて見出しスタイルの書式を上書きします。\nマークアップ保持：ソースの記号をそのまま表示します。\nマークアップ削除：Markdown 記号を除去し、Word の見出しスタイルを自然に適用します。\n注：見出しスタイル自体が太字でも、フォーマット適用で局所的な書式差を保持できます。"
+md_heading_format_tooltip = "フォーマット適用：ソースの指定に応じて見出しスタイルの書式を上書きします。\nマークアップ保持：ソースの記号をそのまま表示します。\nマークアップ削除：Markdown 記号を除去し、DOCX の見出しスタイルを自然に適用します。\n注：見出しスタイル自体が太字でも、フォーマット適用で局所的な書式差を保持できます。"
 md_table_header_format_label = "テーブルヘッダーフォーマットマークアップ処理："
 md_table_header_format_tooltip = "書式を適用：**太字**を実際の太字にします（表スタイルと重なる場合があります）。マークアップ保持：記号をそのまま表示。マークアップ削除：Markdown 記号を除き、表スタイルの先頭行書式を適用させます。表スタイルは先頭行を装飾することが多いため、通常はマークアップ削除が適します。"
 heading_merge_mode_label = "見出し+本文の結合モード:"
@@ -624,18 +627,18 @@ heading_merge_punctuation_label = "結合を判定する句読点:"
 heading_merge_punctuation_tooltip = "「句読点がある場合のみ結合」モードで見出しと本文の結合を開始する文字です。空欄にすると句読点による結合を無効にします。"
 
 # MD转文档分隔符映射
-md_separator_mapping = "セパレーターマッピング"
-md_separator_mapping_tooltip = "MarkdownセパレーターをどのWordの改ページ/セクション区切り/水平線に変換するかを構成します\n\n改ページ：Wordの改ページ\nセクション区切り：Wordのセクション区切り（次のページタイプ）\n水平線：段落の下の境界線（視覚的な区切り）"
+md_separator_mapping = "区切りの変換"
+md_separator_mapping_tooltip = "MarkdownセパレーターをどのDOCXの改ページ/セクション区切り/水平線に変換するかを構成します\n\n改ページ：DOCXの改ページ\nセクション区切り：DOCXのセクション区切り（次のページタイプ）\n水平線：段落の下の境界線（視覚的な区切り）"
 dash_label = "--- (3つのダッシュ):"
-dash_tooltip = "Markdownの --- セパレーターをWordの改ページ/セクション区切りに変換します"
+dash_tooltip = "Markdownの --- セパレーターをDOCXの改ページ/セクション区切りに変換します"
 asterisk_label = "*** (3つのアスタリスク):"
-asterisk_tooltip = "Markdownの *** セパレーターをWordの改ページ/セクション区切りに変換します"
+asterisk_tooltip = "Markdownの *** セパレーターをDOCXの改ページ/セクション区切りに変換します"
 underscore_label = "___ (3つのアンダースコア):"
-underscore_tooltip = "Markdownの ___ セパレーターをWordの改ページ/セクション区切りに変換します\n注：セクション区切り（ページ）は実際にはセクション区切り（次のページ）として生成されます"
+underscore_tooltip = "Markdownの ___ セパレーターをDOCXの改ページ/セクション区切りに変換します\n注：セクション区切り（ページ）は実際にはセクション区切り（次のページ）として生成されます"
 
 # 表格样式
 table_style = "テーブルスタイル"
-table_style_tooltip = "MarkdownテーブルをWordテーブルに変換する際に使用するスタイルを構成します\n\n【組み込みスタイル】\n三線表/グリッド表：テンプレートが存在するか自動検出し、存在しない場合はスタイル定義を注入します\n\n【カスタムスタイル】\nテンプレートにこのスタイルがあるか検出し、ない場合は同じ名前のグリッド表形式スタイルを作成します"
+table_style_tooltip = "MarkdownテーブルをDOCXテーブルに変換する際に使用するスタイルを構成します\n\n【組み込みスタイル】\n三線表/グリッド表：テンプレートが存在するか自動検出し、存在しない場合はスタイル定義を注入します\n\n【カスタムスタイル】\nテンプレートにこのスタイルがあるか検出し、ない場合は同じ名前のグリッド表形式スタイルを作成します"
 builtin_style_radio = "組み込みスタイルを使用"
 custom_style_radio = "カスタムスタイル名を使用"
 
@@ -646,8 +649,6 @@ list_separator_tooltip = "YAMLリスト値を文字列に結合する際に使�
 # 格式处理选项
 mermaid_output_group = "出力方法"
 mermaid_renderer_group = "ローカルレンダラー"
-output_section = "Markdown を生成"
-word_mappings_title = "Word 専用の対応付けと生成"
 
 [settings.formatting.options]
 preserve_format = "フォーマット保持"
@@ -1122,6 +1123,13 @@ no_transparency = "透明度なし"
 
 # 版式转换区
 [conversion_panel.layout]
+split_page_count_unavailable = "PDF のページ数を取得できません。分割するにはページ数を読み取る必要があります。"
+split_mode = "分割方式"
+split_custom = "ページ番号で分割"
+split_odd_even = "奇数・偶数ページ"
+split_every_page = "ページごと"
+to_image = "画像に変換"
+to_document = "文書に変換"
 image_format = "画像形式"
 resolution = "解像度（DPI）"
 convert_to_other_formats = "他のレイアウト形式に変換"
@@ -1131,13 +1139,11 @@ merge_split_hint = "レイアウトファイルを結合または分割"
 merge_to_pdf = "PDFに結合"
 split_to_pdf = "PDFに分割"
 split_page_range = "分割ページ範囲："
-page_range_placeholder = "1-3,5  *  #"
-page_range_help = "指定したページと残りのページに分割します。* は1ページずつ、# は奇数・偶数ページに分割します。"
-split_all_pages_warning = "すべてのページが選択されています。一部のページを選ぶか、* または # でファイル全体を分割してください。"
-split_invalid_range_warning = "このファイル内のページ番号（例：1-2、1,3）、または *、# を入力してください。"
+page_range_placeholder = "1-5,7,9-12"
+page_range_help = "選択ページを1つの PDF、残りを別の PDF にします。各グループの元のページ順を保ちます。"
+split_all_pages_warning = "すべてのページが選択されています。一部を選ぶか、ページごと／奇数・偶数を選んでください。"
+split_invalid_range_warning = "ファイル内の一部のページ番号を入力してください。例：1-2 または 1,3。"
 selected_split_file = "現在のファイル：{pages} ページ"
-invalid_page_range = "無効なページ範囲: {part}"
-invalid_page = "無効なページ: {part}"
 split_mode_single_page_warning = "⚠️ このファイルは1ページのみのため、分割は不要です"
 
 # 表格转换区
@@ -1425,7 +1431,7 @@ merge = "マージ"
 search_placeholder = "キー、値、コメントを検索"
 correct_word = "正しい表記"
 misspellings = "誤表記一覧"
-multi_value_hint = "ヒント：複数の値は | で区切ります（例：値1|値2|値3）"
+multi_value_hint = "ヒント：値は | で区切ります。文字の | は \\|、バックスラッシュは \\\\ と入力します。空白は保持されます。"
 save_typos_failed = "誤字辞書を保存できませんでした。"
 save_symbol_correction_failed = "記号補正の項目を保存できませんでした。"
 save_sensitive_words_failed = "要注意語辞書を保存できませんでした。"
@@ -1673,6 +1679,10 @@ subtitle = "サブタイトル"
 
 
 [main_window]
+numbering_comments_unanchored = "この方式では一部の追加番号を独立した文字として特定できません。該当するコメントを省略し、見出しの内容を保持しました。"
+conversion_failed_detail = "変換に失敗しました。"
+note_syntax_invalid = "脚注または文末脚注の構文が正しくありません。参照と定義を確認してください。"
+note_template_incompatible = "テンプレートの脚注または文末脚注の構造は、この変換と互換性がありません。テンプレートを確認するか、別のものを選択してください。"
 image_png_16bit_clipped = "PNG が保存できる整数画素値は最大16ビットです。0–65535の範囲外の値は切り詰められました。元の値の範囲を保持するにはTIFFを使用してください。"
 output_filesystem_unsupported = "このフォルダーには安全に保存できません。既存の結果を上書きせずにアトミックに保存できないファイルシステムです。別の出力先を選択してください。WSL では Linux ネイティブのファイルシステムを使用してください。"
 ocr_quality_notice = "OCR 結果には誤りや抜けが含まれる場合があります。原文と照合してください。"
@@ -1733,16 +1743,17 @@ merge_result_summary = "{source} / {sheet} · {mode}：追加 {added}、置換 {
 merge_formula_cache_missing = "数式の保存済み結果がないため、集約を停止しました。表計算ソフトでブックを再計算して保存し、再試行してください。ファイル名とセル位置はエラー詳細を確認してください。"
 
 [settings.markdown_extensions]
-description = "Markdown の生成と読み取りの共通ルールです。出力規則は入力元に依存しませんが、対応範囲は変換経路によって異なります。Word 専用の対応付けは下に分けて表示します。元のファイルは書き換えません。"
+description = "生成する Markdown を設定します。区切りの変換は DOCX → Markdown 専用です。出力スタイルの対応範囲は変換経路によって異なります。"
 input = "Markdown 入力：拡張構文を認識"
 output = "Markdown 出力：拡張構文を使用"
 input_hint = "無効な拡張構文は通常のテキスト、表、脚注として処理します。"
-output_hint = "通常の Word 出力はこれらの拡張に、表計算の出力は Structural Tables に対応しています。ほかの入力元や専用機能はまだ完全には対応していません。拡張を有効にしても認識能力は追加されません。"
+output_hint = "通常の DOCX 出力はこれらの拡張に、表計算の出力は Structural Tables に対応しています。ほかの入力元や専用機能はまだ完全には対応していません。拡張を有効にしても認識能力は追加されません。"
 structural_tables = "Structural Tables の構造化テーブル"
 captions_references = "Number Suite のキャプションと相互参照"
 extended_headings = "レベル 7～9 の見出し"
 typed_endnotes = "脚注と文末脚注を区別（endnote:）"
 obsidian_preset = "Obsidian 拡張を使用"
+input_description = "Markdown の入力認識と、Markdown → DOCX の区切り、段落処理、Mermaid を設定します。元のファイルは変更しません。"
 
 [activity]
 not_started = "未開始"
@@ -1775,6 +1786,7 @@ multiple = "計 {count} 件"
 show_outputs = "すべての出力ファイルを表示"
 
 [settings.templates]
+saved_cleanup_warning = "テンプレートの変更は保存されました。ジャーナルの削除完了を確認できませんでした。同じ操作は繰り返さず、一覧を更新して残りのクリーンアップを再試行してください。"
 import_summary = "インポート成功：{succeeded}。失敗：{failed}。キャンセル：{cancelled}。"
 load_failed = "テンプレートを読み込めません"
 operation_failed = "テンプレートの操作に失敗しました。詳細を確認してください。"
@@ -1844,14 +1856,18 @@ unavailable = "現在の環境では、この入力カテゴリで{name}の最�
 
 
 [settings.gongwen]
+numbering_text_label = "公文番号にテキスト番号を使用する"
+numbering_text_help = "「入力テキスト」の方式で今回追加する見出し番号を文字として出力します。番号付けを有効にせず、保存済みの方式やテンプレートの既存番号を変更しません。既定でオン。公文フィールドの書式とは独立しています。"
+numbering_comments_label = "自動追加した公文番号にコメントを付ける"
+numbering_comments_help = "実際に追加した文字番号だけにコメントし、既存の手書き番号は対象外です。\n\n既定でオン。\n\nテキスト番号をオフにするとチェックを外して無効になり、再度オンにした後は自由に選択できます。\n\n正確に特定できない独自 Markdown 番号は警告して省略します。\n\nフィールド書式とは独立しています。"
 description = "公文書認識の既定選択とテンプレートフィールドの書式を個別に設定します。"
 to_markdown_title = "文書 → Markdown"
 to_markdown_description = "対応する文書で公文書最適化を初期選択にします。ファイルが公文書かどうかを自動判定する機能ではありません。DOCX は直接処理し、DOC、WPS、RTF、ODT には利用可能な文書コンバーターが必要です。"
 document_settings = "文書の抽出・番号付け・表の設定"
-from_markdown_title = "Markdown → 文書"
+from_markdown_title = "Markdown → DOCX"
 title = "公文書"
 fields_label = "中国公文書のフィールドを整形"
-fields_help = "Word テンプレートの添付資料、写しの送付先、文書日付、発行日、注記を整形し、規則に該当する空欄を削除します。添付資料のプレースホルダーは本文または表のセル内で独立した段落に置いてください。ヘッダー、フッター、テキストボックス、文中への配置には対応していません。オフの場合は通常の入力規則と共通のリスト区切り文字を使用します。"
+fields_help = "DOCX テンプレートの添付資料、写しの送付先、文書日付、発行日、注記を整形し、規則に該当する空欄を削除します。\n\n添付資料のプレースホルダーは本文または表のセル内で独立した段落に置いてください。\n\nヘッダー、フッター、テキストボックス、文中への配置には対応していません。\n\nオフの場合は通常の入力規則と共通のリスト区切り文字を使用します。"
 
 attachment_alignment_label = "添付資料名の配置"
 attachment_alignment_spaces = "空白＋ぶら下げ"

@@ -122,6 +122,7 @@ class WorkspaceManager:
             raise ValueError("workspace root must not be a filesystem root")
         self._root = os.fspath(selected)
         self._workspaces: dict[str, WorkspaceHandle] = {}
+        self._retained_unconfirmed: set[str] = set()
         self._lock = threading.RLock()
 
     @property
@@ -249,12 +250,24 @@ class WorkspaceManager:
         with self._lock:
             return self._workspaces.get(task_id)
 
+    def retain_unconfirmed(self, task_id: str) -> None:
+        """Retain only a currently registered task whose process exit is unknown.
+
+        This grants no success or renewed lease. The existing owned-runtime
+        recovery policy remains responsible for later inspection and recovery.
+        """
+        with self._lock:
+            if task_id in self._workspaces:
+                self._retained_unconfirmed.add(task_id)
+
     def cleanup(self, task_id: str) -> None:
         """Remove the workspace directory for *task_id*.
 
         No-op if the task has no workspace or the directory is already gone.
         """
         with self._lock:
+            if task_id in self._retained_unconfirmed:
+                return
             handle = self._workspaces.pop(task_id, None)
         if handle is None:
             return

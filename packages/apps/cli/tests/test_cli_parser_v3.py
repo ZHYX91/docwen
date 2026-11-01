@@ -5,10 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 from packages.apps.cli.tests.capability_fixtures import bundled_available_runtime_projection
+from tests.support.cli import make_controller_mock_with_cancellation
 
 pytestmark = pytest.mark.contract
 
@@ -64,7 +64,7 @@ def test_convert_projects_exact_output_policy(tmp_path: Path, capsys: pytest.Cap
     source.write_text("# Title", encoding="utf-8")
     output = tmp_path / "chosen.docx"
 
-    controller = MagicMock()
+    controller = make_controller_mock_with_cancellation()
     controller.has_runtime = True
     controller.describe_runtime_capabilities.return_value = bundled_available_runtime_projection()
     controller.execute_single.return_value = ConversionResult(

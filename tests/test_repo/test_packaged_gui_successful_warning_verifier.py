@@ -31,6 +31,7 @@ def _write_valid_report(
     screenshot_path.write_bytes(b"\x89PNG\r\n\x1a\npackaged-gui-warning")
     row_screenshot_path = screenshot_path.with_name(f"{screenshot_path.stem}_warning_details{screenshot_path.suffix}")
     row_screenshot_path.write_bytes(b"\x89PNG\r\n\x1a\npackaged-gui-warning-row")
+    details = f"Input: {input_path}\n\nOutput: {output_path}\n\nRequest summary\n\nLocal details\n\n{WARNING}"
     report_path.write_text(
         json.dumps(
             {
@@ -44,12 +45,30 @@ def _write_valid_report(
                 "actionName": "gongwen",
                 "expectedWarningMessage": WARNING,
                 "historyRows": [
-                    {"message": "Completed", "messageType": "warning", "filePath": str(output_path)},
-                    {"message": WARNING, "messageType": "warning", "filePath": str(output_path)},
+                    {
+                        "message": "Completed",
+                        "messageType": "warning",
+                        "filePath": str(output_path),
+                        "operationId": "current",
+                    },
+                    {
+                        "message": WARNING,
+                        "messageType": "warning",
+                        "filePath": str(output_path),
+                        "operationId": "current",
+                    },
                 ],
                 "warningHistoryIndex": 1,
                 "warningRecordStatus": "warning",
-                "warningDetailsText": WARNING,
+                "operationId": "current",
+                "warningRecord": {
+                    "operationId": "current",
+                    "sourcePath": input_path.as_posix(),
+                    "outputPath": str(output_path),
+                    "warnings": [WARNING],
+                    "details": details,
+                },
+                "warningDetailsText": details,
                 "warningDetailsVisible": True,
                 "warningDetailsScreenshotPath": str(row_screenshot_path),
                 "warningDetailsScreenshotSaved": True,
@@ -420,3 +439,33 @@ def test_main_wires_successful_warning_smoke_without_notification_overclaim(
     assert observed["probe_action"] == "gongwen"
     assert observed["probe_code"] == "GONGWEN-NEEDS-REVIEW"
     assert observed["golden_message"] == WARNING
+
+
+@pytest.mark.parametrize(
+    "corruption", ["other_history", "other_record", "missing_warning", "display_mismatch", "other_source"]
+)
+def test_successful_warning_verifier_binds_complete_details_to_the_owned_operation(tmp_path, corruption):
+    from scripts.release import verify_packaged_gui
+
+    source = tmp_path / "rules.docx"
+    report = tmp_path / "report.json"
+    screenshot = tmp_path / "info.png"
+    output = _document_node_output(tmp_path / "out")
+    _write_valid_report(report, input_path=source, output_path=output, screenshot_path=screenshot)
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    if corruption == "other_history":
+        for row in payload["historyRows"]:
+            row["operationId"] = "other"
+    elif corruption == "other_record":
+        payload["warningRecord"]["operationId"] = "other"
+    elif corruption == "missing_warning":
+        payload["warningRecord"]["warnings"] = []
+    elif corruption == "display_mismatch":
+        payload["warningDetailsText"] = WARNING
+    else:
+        payload["warningRecord"]["sourcePath"] = str(tmp_path / "other.docx")
+    report.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="packaged_gui_successful_warning_"):
+        verify_packaged_gui._verify_successful_warning_smoke_report(
+            report, screenshot_path=screenshot, input_path=source, expected_message=WARNING
+        )

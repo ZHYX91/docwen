@@ -113,6 +113,8 @@ class TestLayoutGuiExecution:
         main_window_with_controller,
         tmp_path: Path,
     ) -> None:
+        import hashlib
+
         import fitz
         from PySide6.QtWidgets import QApplication
 
@@ -125,6 +127,7 @@ class TestLayoutGuiExecution:
             page.insert_text((48, 80), label)
         doc.save(source)
         doc.close()
+        source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
 
         window = main_window_with_controller
         normalized = normalize_path(str(source))
@@ -145,6 +148,10 @@ class TestLayoutGuiExecution:
         )
         assert window._conversion_panel._page_input_edit is not None
         assert window._conversion_panel._split_pdf_button is not None
+        split_mode = window._conversion_panel._split_mode_combo
+        assert split_mode is not None
+        split_mode.setCurrentIndex(split_mode.findData("custom"))
+        assert window._conversion_panel_vm.split_mode == "custom"
         window._conversion_panel._page_input_edit.setText("1")
 
         if app is not None:
@@ -177,6 +184,10 @@ class TestLayoutGuiExecution:
         try:
             assert part1_doc.page_count == 1
             assert part2_doc.page_count == 2
+            assert [page.get_text("text") for page in part1_doc] == ["page 1\n"]
+            assert [page.get_text("text") for page in part2_doc] == ["page 2\n", "page 3\n"]
         finally:
             part1_doc.close()
             part2_doc.close()
+
+        assert hashlib.sha256(source.read_bytes()).hexdigest() == source_hash

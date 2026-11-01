@@ -57,9 +57,9 @@ A missing placeholder in an intentionally metadata-only template should not requ
 
 ## Implementation and validation boundaries
 
-The converter determines body placement before body rendering. It independently validates existing template notes, and only creates the body renderer, semantic session, new notes and numbering when a valid body marker exists. An omitted body must not launch a Mermaid renderer solely for content that will not be output. YAML field filling remains independent of that decision.
+The converter determines body placement before body rendering. It inventories the template note domain only when adding notes to that domain, and only creates the body renderer, semantic session, new notes and numbering when a valid body marker exists. An omitted body must not launch a Mermaid renderer solely for content that will not be output. YAML field filling remains independent of that decision.
 
-`test_md_to_docx_01.py` and `test_docx_notes_v4.py` cover metadata-only output, valid split-run markers, invalid/duplicate placement, default body behavior, existing note graph preservation and invalid note graph rejection. These exercise conversion and saved packages rather than source-text projections alone.
+`test_md_to_docx_01.py` and `test_docx_notes_v4.py` cover metadata-only output, valid split-run markers, invalid/duplicate placement, default body behavior, existing note graph preservation and refusal of ambiguous IDs when extending the affected domain. These exercise conversion and saved packages rather than source-text projections alone.
 
 Body markers are supported only as a unique standalone paragraph in the main document. Table, textbox, header/footer and inline placements fail explicitly; so do markers hidden inside unsupported inline content controls or split within the alias by structural breaks. A marker found by XML scanning must also be recognizable by the body-placement finder, preventing silent metadata-only output. Expanding placement support is not part of this restoration. The separate resolved-v4 route keeps its own documented placement contract.
 

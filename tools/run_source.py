@@ -12,14 +12,13 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tools.run_lease import managed_run
+from tools.source_imports import source_import_environment
 from tools.workspace_root import resolve_workspace_root
 
 
 def source_environment(repo: Path, run: Path) -> dict[str, str]:
-    environment = os.environ.copy()
-    sources = sorted(path for path in (repo / "packages").rglob("src") if path.is_dir())
+    environment = source_import_environment(repo, os.environ)
     environment.update(
-        PYTHONPATH=os.pathsep.join(map(str, sources)),
         PYTHONDONTWRITEBYTECODE="1",
         DOCWEN_RUNTIME_ROOT=str(run / "runtime"),
         TEMP=str(run / "temp"),

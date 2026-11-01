@@ -401,7 +401,7 @@ def test_formula_paragraph_preserves_character_code_and_text_around_run_breaks()
     )
     assert output == "before `<br>`\n`after-break`\t`after-tab`$x$** end**"
     plain = converter._build_paragraph_text_with_formulas(para._element, para, preserve_formatting=False)
-    assert plain == "before <br>\nafter-break\tafter-tab$x$ end"
+    assert plain == "before \\<br\\>\nafter-break\tafter-tab$x$ end"
 
 
 def test_alternate_content_formula_prefers_choice_without_duplicate_fallback():

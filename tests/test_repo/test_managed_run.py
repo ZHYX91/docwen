@@ -101,6 +101,25 @@ def test_cleanup_does_not_overwrite_replaced_marker_and_leaves_external_recovery
     assert record["phase"] == "cleanup-recording"
 
 
+def test_terminal_recording_rechecks_foreign_marker_after_preparing_replacement(tmp_path, monkeypatch):
+    original_dump = run_lease.json.dump
+    with pytest.raises(ValueError, match="marker_changed"), _managed(tmp_path) as run:
+
+        def replace_marker_during_dump(payload, stream, *args, **kwargs):
+            result = original_dump(payload, stream, *args, **kwargs)
+            if Path(stream.name).name == ".docwen-temp-lease.next":
+                marker = run.root / ".docwen-temp-lease.json"
+                marker.rename(run.root / "original-marker")
+                marker.write_bytes(b'{"owner":"foreign-during-save"}')
+            return result
+
+        monkeypatch.setattr(run_lease.json, "dump", replace_marker_during_dump)
+    assert (run.root / ".docwen-temp-lease.json").read_bytes() == b'{"owner":"foreign-during-save"}'
+    recovery = json.loads((tmp_path / f"{run.root.name}.recovery.json").read_text())
+    assert recovery["phase"] == "terminal-recording"
+    assert recovery["knownOutcome"] == "completed-success"
+
+
 def test_success_terminal_write_failure_keeps_active_lease_and_external_outcome(tmp_path, monkeypatch):
     original_replace = Path.replace
 
@@ -219,3 +238,56 @@ def test_render_initialization_and_evidence_failures_remain_leased(tmp_path, mon
     if phase == "evidence":
         assert "original render failure" in str(caught.value)
         assert "evidence disk full" in str(caught.value.__notes__)
+
+
+def test_root_pin_allows_real_cleanup_and_closes_before_success_returns(tmp_path):
+    with _managed(tmp_path) as run:
+        (run.root / "owned-sample").write_bytes(b"finished sample")
+    # On Windows RemoveDirectory can be pending until the directory pin closes.
+    assert not run.root.exists()
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX unlink/recreate identity boundary; native Windows is separate")
+def test_cleanup_root_pin_rejects_deleted_and_recreated_root_without_adopting_it(tmp_path, monkeypatch):
+    original_identity = []
+
+    def replace_root_then_fail(root, *args, **kwargs):
+        original_identity.append((root.stat().st_dev, root.stat().st_ino))
+        for child in root.iterdir():
+            child.unlink()
+        root.rmdir()
+        root.mkdir()
+        (root / "foreign-owner").write_bytes(b"must remain untouched")
+        assert (root.stat().st_dev, root.stat().st_ino) != original_identity[0]
+        raise OSError("partial cleanup removed and recreated the root")
+
+    monkeypatch.setattr(run_lease.shutil, "rmtree", replace_root_then_fail)
+    with pytest.raises(OSError, match="partial cleanup removed and recreated"), _managed(tmp_path) as run:
+        (run.root / "owned-sample").write_bytes(b"original sample")
+    assert (run.root / "foreign-owner").read_bytes() == b"must remain untouched"
+    assert not (run.root / ".docwen-temp-lease.json").exists()
+    record = json.loads((tmp_path / f"{run.root.name}.recovery.json").read_text())
+    assert record["rootIdentity"] == {"device": original_identity[0][0], "inode": original_identity[0][1]}
+    assert record["phase"] == "cleanup-recording"
+    assert record["knownOutcome"] == "completed-success"
+    assert "managed_run_identity_changed" in record["recordingError"]["message"]
+
+
+def test_source_environment_preserves_parent_values_and_prioritizes_all_checkout_packages(tmp_path, monkeypatch):
+    repo = tmp_path / "current"
+    cli = repo / "packages/apps/cli/src"
+    optimizer = repo / "packages/plugins/optimizers/gongwen/src"
+    for path in (cli, optimizer):
+        path.mkdir(parents=True)
+    old = str(tmp_path / "other-checkout/src")
+    monkeypatch.setenv("PYTHONPATH", old)
+    monkeypatch.setenv("UNRELATED_CALLER_VALUE", "preserve")
+    before = dict(os.environ)
+    run = tmp_path / "owned-run"
+    env = run_source.source_environment(repo, run)
+    assert env["PYTHONPATH"].split(os.pathsep) == [str(cli), str(optimizer), old]
+    assert env["UNRELATED_CALLER_VALUE"] == "preserve"
+    assert env["DOCWEN_RUNTIME_ROOT"] == str(run / "runtime")
+    assert env["TEMP"] == env["TMP"] == env["TMPDIR"] == str(run / "temp")
+    assert dict(os.environ) == before

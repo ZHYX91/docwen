@@ -119,7 +119,7 @@ MARKDOWN_OPTIONS_SCHEMA: dict[str, Any] = {
         },
         "list_separator": {
             "type": "string",
-            "default": "、",
+            "default": ", ",
             "description": "Separator for YAML list values in template placeholders",
         },
     },

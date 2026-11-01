@@ -29,7 +29,7 @@ DocWen processes files on your computer rather than uploading them to a conversi
 
 ## 📸 Screenshots
 
-Select a template and generation options for Markdown documents.
+Search templates without changing the current selection, then choose generation options.
 
 ![Markdown to document](docs/assets/screenshots/markdown-generation-en.png)
 

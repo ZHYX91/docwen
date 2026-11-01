@@ -100,6 +100,7 @@ REQUIRED_ASSET_FILES = (
     "icons/layout.svg",
     "icons/link.svg",
     "icons/logging.svg",
+    "icons/markdown_input.svg",
     "icons/move_down.svg",
     "icons/move_up.svg",
     "icons/open_folder.svg",

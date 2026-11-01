@@ -98,17 +98,5 @@ def build_conversion_panel_stylesheet(theme_name: str, font_size_preset: str | N
             "QWidget#conversionPanelRoot QPushButton#conversionSecondaryButton:focus {",
             "    border-color: palette(highlight);",
             "}",
-            "QWidget#generalTransparencyValueRow {",
-            "    background: transparent;",
-            "}",
-            "QDoubleSpinBox#generalTransparencySpinBox {",
-            "    min-width: 92px;",
-            "    max-width: 92px;",
-            "}",
-            "QLabel#generalTransparencyPercentLabel {",
-            "    color: palette(mid);",
-            f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
-            "    font-weight: 600;",
-            "}",
         ]
     )

@@ -4,13 +4,11 @@ These tests validate widget construction, property defaults, and
 ViewModel wiring.  They require a QApplication instance.
 """
 
-from collections.abc import Generator
 from itertools import pairwise
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QCoreApplication, QEvent, QMimeData, QPoint, QPointF, Qt, QUrl
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -24,7 +22,7 @@ from PySide6.QtWidgets import (
 from shiboken6 import isValid
 
 from docwen_gui.styles.panel import build_panel_stylesheet
-from docwen_gui.view_models.input_area_vm import _BATCH_SCAN_LIMIT, InputAreaViewModel
+from docwen_gui.view_models.input_area_vm import InputAreaViewModel
 from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 from docwen_gui.widgets.input_area import (
     _COMPACT_WIDTH_THRESHOLD,
@@ -32,28 +30,17 @@ from docwen_gui.widgets.input_area import (
     InputArea,
 )
 
+from ._input_area_widget_support import (
+    input_vm as input_vm,
+)
+from ._input_area_widget_support import (
+    main_vm as main_vm,
+)
+from ._input_area_widget_support import (
+    widget as widget,
+)
+
 pytestmark = pytest.mark.gui
-
-
-@pytest.fixture
-def main_vm(qtbot) -> Generator[MainWindowViewModel, None, None]:
-    vm = MainWindowViewModel(controller=None)
-    yield vm
-    vm.cancel_inspection()
-    qtbot.waitUntil(lambda: not vm.inspection_busy)
-
-
-@pytest.fixture
-def input_vm(main_vm: MainWindowViewModel) -> InputAreaViewModel:
-    return InputAreaViewModel(main_vm=main_vm)
-
-
-@pytest.fixture
-def widget(qapp: QApplication, input_vm: InputAreaViewModel) -> "Generator[InputArea, None, None]":
-    w = InputArea(view_model=input_vm)
-    yield w
-    if isValid(w):
-        w.deleteLater()
 
 
 # ── Construction ──────────────────────────────────────────────────────
@@ -364,135 +351,6 @@ class TestModeSwitch:
 
 
 # ── Drag-and-drop MIME acceptance ─────────────────────────────────────
-
-
-class TestDragDropMime:
-    def test_accepts_url_mime(self, widget: InputArea) -> None:
-        mime = QMimeData()
-        mime.setUrls([QUrl.fromLocalFile("/tmp/test.docx")])
-        assert mime.hasUrls()
-
-    def test_accepts_text_mime(self) -> None:
-        mime = QMimeData()
-        mime.setText("/tmp/test.docx")
-        assert mime.hasText()
-
-    def test_drag_enter_previews_batch_folder_scan(self, widget: InputArea, tmp_path) -> None:
-        folder = tmp_path / "input"
-        nested = folder / "nested"
-        nested.mkdir(parents=True)
-        supported = folder / "keep.txt"
-        unsupported = nested / "ignore.bin"
-        supported.write_text("1")
-        unsupported.write_text("2")
-        widget.view_model.file_filter = lambda path: Path(path).suffix.lower() == ".txt"
-        widget.view_model.set_mode("batch")
-
-        mime = QMimeData()
-        mime.setText(str(folder))
-        event = QDragEnterEvent(
-            QPoint(0, 0),
-            Qt.DropAction.CopyAction,
-            mime,
-            Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.NoModifier,
-        )
-
-        widget.dragEnterEvent(event)
-
-        assert event.isAccepted()
-        assert "1" in widget._selection_label.text()
-        assert "ignore.bin" in widget._selection_label.toolTip()
-        assert widget._feedback_frame.property("feedbackTone") == "info"
-
-    def test_drop_batch_folder_reports_partial_skips(self, widget: InputArea, tmp_path, qtbot) -> None:
-        folder = tmp_path / "mixed"
-        nested = folder / "nested"
-        nested.mkdir(parents=True)
-        supported = folder / "keep.txt"
-        unsupported = nested / "ignore.bin"
-        supported.write_text("1")
-        unsupported.write_text("2")
-        widget.view_model.file_filter = lambda path: Path(path).suffix.lower() == ".txt"
-        widget.view_model.set_mode("batch")
-        added: list[list[str]] = []
-        widget.view_model.files_added.connect(lambda paths: added.append(list(paths)))
-
-        mime = QMimeData()
-        mime.setText(str(folder))
-        event = QDropEvent(
-            QPointF(0, 0),
-            Qt.DropAction.CopyAction,
-            mime,
-            Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.NoModifier,
-        )
-
-        widget.dropEvent(event)
-        qtbot.waitUntil(lambda: bool(added))
-
-        assert event.isAccepted()
-        assert added == [[str(supported)]]
-        assert "1" in widget._selection_label.text()
-        assert widget._feedback_frame.property("feedbackTone") == "warning"
-
-    def test_url_drop_large_folder_summarizes_preview_but_adds_all_supported_files(
-        self,
-        widget: InputArea,
-        tmp_path,
-        qtbot,
-    ) -> None:
-        folder = tmp_path / "large-url-drop"
-        nested = folder / "nested"
-        nested.mkdir(parents=True)
-        total_supported = _BATCH_SCAN_LIMIT + 7
-        supported_files = []
-        for index in range(total_supported):
-            target_dir = nested if index % 3 == 0 else folder
-            file_path = target_dir / f"doc-{index:03}.txt"
-            file_path.write_text("content")
-            supported_files.append(str(file_path))
-        (nested / "ignore.bin").write_text("unsupported")
-        widget.view_model.file_filter = lambda path: Path(path).suffix.lower() == ".txt"
-        widget.view_model.set_mode("batch")
-        added: list[list[str]] = []
-        widget.view_model.files_added.connect(lambda paths: added.append(list(paths)))
-
-        mime = QMimeData()
-        mime.setUrls([QUrl.fromLocalFile(str(folder))])
-        preview = widget.view_model.build_drag_preview([str(folder)])
-        enter_event = QDragEnterEvent(
-            QPoint(0, 0),
-            Qt.DropAction.CopyAction,
-            mime,
-            Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.NoModifier,
-        )
-
-        widget.dragEnterEvent(enter_event)
-
-        assert enter_event.isAccepted()
-        assert preview.has_degraded_preview is True
-        assert widget._selection_label.text() == preview.message
-        assert widget._feedback_frame.property("feedbackTone") == "info"
-
-        drop_event = QDropEvent(
-            QPointF(0, 0),
-            Qt.DropAction.CopyAction,
-            mime,
-            Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.NoModifier,
-        )
-
-        widget.dropEvent(drop_event)
-        qtbot.waitUntil(lambda: bool(added), timeout=10000)
-
-        assert drop_event.isAccepted()
-        assert len(added) == 1
-        assert set(added[0]) == set(supported_files)
-        assert len(added[0]) == total_supported
-        assert "ignore.bin" not in "\n".join(added[0])
-        assert widget._feedback_frame.property("feedbackTone") == "warning"
 
 
 # ── Compact layout ───────────────────────────────────────────────────

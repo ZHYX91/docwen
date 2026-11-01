@@ -227,6 +227,7 @@ def test_save_during_queued_normal_restore_uses_the_paired_normal_rect(
 def test_one_pixel_native_normal_rect_difference_does_not_strand_panel_anchor(
     qapp,
     monkeypatch: pytest.MonkeyPatch,
+    qtbot,
 ) -> None:
     from docwen_gui.window_geometry import WindowRect
 
@@ -264,6 +265,14 @@ def test_one_pixel_native_normal_rect_difference_does_not_strand_panel_anchor(
         qapp.processEvents()
         qapp.processEvents()
 
+        # Restoration is queued and may include the bounded quiet period.
+        # Two event-pump calls do not establish an elapsed-time boundary.
+        qtbot.waitUntil(
+            lambda: (
+                center_column.mapToGlobal(QPoint(0, 0)).x() == 300 and window._pending_normal_center_anchor is None  # pyright: ignore[reportPrivateUsage]
+            ),
+            timeout=500,
+        )
         assert center_column.mapToGlobal(QPoint(0, 0)).x() == 300
         assert window._pending_normal_center_anchor is None  # pyright: ignore[reportPrivateUsage]
     finally:

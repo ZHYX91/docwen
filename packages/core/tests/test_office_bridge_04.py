@@ -257,7 +257,7 @@ def test_convert_with_backend_priority_shares_one_com_timeout_budget(
     from docwen_core import office_bridge
 
     observed_timeouts: list[float] = []
-    monotonic_values = iter([100.0, 110.0, 110.0, 115.0, 115.0])
+    clock = [100.0]
     source = tmp_path / "input.doc"
     source.write_bytes(b"legacy document")
 
@@ -273,10 +273,13 @@ def test_convert_with_backend_priority_shares_one_com_timeout_budget(
     ) -> office_bridge.BridgeResult:
         del input_path, output_path, com_candidates, libreoffice_format, cancel, libreoffice_timeout_s
         observed_timeouts.append(com_timeout_s)
+        # Time advances in the backend, independently of logging and the
+        # number of clock observations made around the call.
+        clock[0] += 10.0 if len(observed_timeouts) == 1 else 5.0
         return office_bridge.BridgeResult(False, message="COM failed")
 
     monkeypatch.setattr(office_bridge, "_convert_with_fallback", fake_fallback)
-    monkeypatch.setattr(office_bridge.time, "monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(office_bridge.time, "monotonic", lambda: clock[0])
 
     result = office_bridge.convert_with_backend_priority(
         str(source),
@@ -415,6 +418,9 @@ def test_libreoffice_timeout_removes_partial_without_deleting_existing_output(
     monotonic_values = iter([0.0, 2.0])
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
     monkeypatch.setattr(office_bridge.subprocess, "Popen", _FakeProcess)
+    # This direct-child test double owns the unchanged Windows/macOS runner.
+    # Linux family ownership is exercised by native launcher/child fixtures.
+    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", office_bridge._run_libreoffice_process_legacy)
     monkeypatch.setattr(office_bridge.time, "monotonic", lambda: next(monotonic_values, 2.0))
 
     result = office_bridge._try_libreoffice_conversion(
@@ -479,6 +485,9 @@ def test_libreoffice_conversion_terminates_process_when_cancelled(
 
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
     monkeypatch.setattr(office_bridge.subprocess, "Popen", _FakeProcess)
+    # This direct-child test double owns the unchanged Windows/macOS runner.
+    # Linux family ownership is exercised by native launcher/child fixtures.
+    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", office_bridge._run_libreoffice_process_legacy)
     monkeypatch.setattr(office_bridge.time, "sleep", fake_sleep)
 
     result = office_bridge._try_libreoffice_conversion(

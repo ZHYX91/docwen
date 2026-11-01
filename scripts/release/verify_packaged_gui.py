@@ -93,14 +93,17 @@ _REQUIRED_SETTINGS_TAB_KEYS: tuple[str, ...] = (
     "layout",
     "other",
     "formatting",
+    "markdown_input",
     "link",
     "export",
     "proofread",
     "gongwen",
     "invoice",
 )
+# Both Markdown directions are separate required pages implemented by the same module.
 _REQUIRED_SETTINGS_PAGE_MODULES: frozenset[str] = frozenset(
-    f"docwen_gui.widgets.settings.{key}_tab" for key in _REQUIRED_SETTINGS_TAB_KEYS
+    f"docwen_gui.widgets.settings.{'formatting' if key == 'markdown_input' else key}_tab"
+    for key in _REQUIRED_SETTINGS_TAB_KEYS
 )
 _FILE_ATTRIBUTE_REPARSE_POINT = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
 _VERIFICATION_LEASE = ".docwen-temp-lease.json"
@@ -531,8 +534,10 @@ def _verify_settings_smoke_report(report_path: Path) -> dict[str, Any]:
     if (
         report.get("success") is not True
         or not isinstance(actual_expected, list)
+        or len(actual_expected) != len(expected_tabs)
         or set(actual_expected) != set(expected_tabs)
         or not isinstance(loaded_tabs, list)
+        or len(loaded_tabs) != len(expected_tabs)
         or set(loaded_tabs) != set(expected_tabs)
         or report.get("failedTabs") != []
         or report.get("missingTabs") != []
@@ -2006,15 +2011,34 @@ def _verify_successful_warning_smoke_report(
         raise RuntimeError(f"packaged_gui_successful_warning_route_unexpected: {report}")
     if report.get("expectedWarningMessage") != expected_message:
         raise RuntimeError(f"packaged_gui_successful_warning_message_unexpected: {report}")
+    operation_id = report.get("operationId")
+    warning_record = report.get("warningRecord")
+    if not isinstance(operation_id, str) or not operation_id or not isinstance(warning_record, dict):
+        raise RuntimeError(f"packaged_gui_successful_warning_record_identity_missing: {report}")
+    if (
+        warning_record.get("operationId") != operation_id
+        or warning_record.get("sourcePath") != input_path.as_posix()
+        or warning_record.get("outputPath") != str(output_path)
+        or report.get("inputPath") != str(input_path)
+    ):
+        raise RuntimeError(f"packaged_gui_successful_warning_record_identity_unexpected: {report}")
     history_rows = report.get("historyRows")
     if not isinstance(history_rows, list) or not any(
-        isinstance(row, dict) and row.get("message") == expected_message and row.get("messageType") == "warning"
+        isinstance(row, dict)
+        and row.get("message") == expected_message
+        and row.get("messageType") == "warning"
+        and row.get("operationId") == operation_id
+        and row.get("filePath") in {input_path.as_posix(), str(output_path)}
         for row in history_rows
     ):
         raise RuntimeError(f"packaged_gui_successful_warning_history_missing: {report}")
+    warning_messages = warning_record.get("warnings")
     if (
         report.get("warningRecordStatus") != "warning"
-        or expected_message not in str(report.get("warningDetailsText") or "")
+        or not isinstance(warning_messages, list)
+        or expected_message not in warning_messages
+        or report.get("warningDetailsText") != warning_record.get("details")
+        or not report.get("warningDetailsText")
         or report.get("warningDetailsVisible") is not True
     ):
         raise RuntimeError(f"packaged_gui_successful_warning_details_unexpected: {report}")

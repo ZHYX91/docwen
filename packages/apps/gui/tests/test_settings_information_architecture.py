@@ -13,7 +13,7 @@ from docwen_gui.view_models.settings_vm import SettingsViewModel
 from docwen_gui.widgets.settings import dialog as settings_dialog
 from docwen_gui.widgets.settings.dialog import NAVIGATION_GROUPS, TAB_KEYS, SettingsDialog
 from docwen_gui.widgets.settings.export_tab import ExportTab
-from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+from docwen_gui.widgets.settings.formatting_tab import FormattingTab, MarkdownInputTab
 
 pytestmark = pytest.mark.gui
 
@@ -22,10 +22,10 @@ def test_groups_have_unique_pages_without_creating_more_settings() -> None:
     assert [(group.key, len(group.page_keys)) for group in NAVIGATION_GROUPS] == [
         ("general", 5),
         ("inputs", 6),
-        ("content", 4),
+        ("content", 5),
         ("optimizations", 2),
     ]
-    assert len(TAB_KEYS) == len(set(TAB_KEYS)) == 17
+    assert len(TAB_KEYS) == len(set(TAB_KEYS)) == 18
     assert set(TAB_KEYS) == {
         "general",
         "output",
@@ -39,6 +39,7 @@ def test_groups_have_unique_pages_without_creating_more_settings() -> None:
         "layout",
         "other",
         "formatting",
+        "markdown_input",
         "link",
         "export",
         "proofread",
@@ -51,6 +52,7 @@ def test_markdown_output_and_input_precede_word_specific_mappings(qapp) -> None:
     vm = SettingsViewModel()
     before = deepcopy(vm.config)
     page = FormattingTab(vm)
+    input_page = MarkdownInputTab(vm)
     try:
         container = page.findChild(QWidget, "settingsTabScrollContainer")
         assert container is not None
@@ -65,14 +67,12 @@ def test_markdown_output_and_input_precede_word_specific_mappings(qapp) -> None:
         expected = [
             "markdownExtensionsOutputCard",
             "formattingOutputSyntaxCard",
-            "markdownExtensionsInputCard",
-            "formattingWordMappingsTitle",
             "formattingDocxSeparatorsCard",
-            "formattingMdSeparatorsCard",
-            "formattingLineParagraphCard",
-            "formattingMdMermaidCard",
         ]
         assert [name for name in names if name in expected] == expected
+        assert page.findChild(QWidget, "markdownExtensionsInputCard") is None
+        assert input_page.findChild(QWidget, "markdownExtensionsOutputCard") is None
+        assert input_page.findChild(QWidget, "formattingMdMermaidCard") is not None
         syntax = page.findChild(QWidget, "formattingOutputSyntaxCard")
         assert syntax is not None
         help_label = syntax.findChild(QLabel, "settingsCardDescription")
@@ -81,16 +81,18 @@ def test_markdown_output_and_input_precede_word_specific_mappings(qapp) -> None:
         assert vm.config == before
     finally:
         page.close()
+        input_page.close()
 
 
 def test_extension_directions_remain_independent_after_card_reordering(qapp) -> None:
     vm = SettingsViewModel()
     page = FormattingTab(vm)
+    input_page = MarkdownInputTab(vm)
     try:
         original_input = deepcopy(vm.config.formatting.markdown_extensions["input"])
         original_other = deepcopy(vm.config.conversion_defaults)
         output_control = page.findChild(QCheckBox, "markdownExtensionOutputStructuralTables")
-        input_control = page.findChild(QCheckBox, "markdownExtensionInputStructuralTables")
+        input_control = input_page.findChild(QCheckBox, "markdownExtensionInputStructuralTables")
         assert output_control is not None and input_control is not None
         output_control.setChecked(not output_control.isChecked())
         assert vm.config.formatting.markdown_extensions["output"]["structural_tables"] == output_control.isChecked()
@@ -101,6 +103,7 @@ def test_extension_directions_remain_independent_after_card_reordering(qapp) -> 
         assert vm.config.conversion_defaults == original_other
     finally:
         page.close()
+        input_page.close()
 
 
 def test_ocr_page_explains_shared_scope_without_duplicating_input_defaults(qapp) -> None:

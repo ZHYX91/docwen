@@ -155,6 +155,7 @@ def test_settings_dialog_tab_order_follows_functional_groups(qapp) -> None:
         "layout",
         "other",
         "formatting",
+        "markdown_input",
         "link",
         "export",
         "proofread",

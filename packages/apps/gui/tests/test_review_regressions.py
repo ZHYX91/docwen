@@ -165,6 +165,10 @@ def test_pdf_workflow_fits_default_columns_with_large_typography(main_window_wit
         window.show()
         qtbot.waitUntil(lambda: window._conversion_panel._pdf_info_label is not None)
         qtbot.wait(200)
+        mode = window._conversion_panel._split_mode_combo
+        assert mode is not None
+        mode.setCurrentIndex(mode.findData("custom"))
+        qtbot.wait(100)
         page_input = window._conversion_panel._page_input_edit
         assert page_input.height() >= page_input.fontMetrics().height() + 10
         assert page_input.parentWidget().rect().contains(page_input.geometry())
@@ -173,11 +177,14 @@ def test_pdf_workflow_fits_default_columns_with_large_typography(main_window_wit
         page_input.setText("1-3,5")
         assert page_input.text() == "1-3,5"
         qtbot.waitUntil(lambda: window._conversion_panel_vm.pdf_total_pages == 1)
-        page_input.setText("*")
+        mode.setCurrentIndex(mode.findData("every_page"))
         assert not window._conversion_panel._page_warning_label.isHidden()
         assert window._conversion_panel._page_warning_label.text()
-        page_input.clear()
+        page_input.clear()  # Hidden custom text cannot dismiss the active mode's single-page warning.
+        assert not window._conversion_panel._page_warning_label.isHidden()
+        mode.setCurrentIndex(mode.findData("custom"))
         assert window._conversion_panel._page_warning_label.isHidden()
+        assert not window._conversion_panel._split_pdf_button.isEnabled()
         export_button = window._conversion_panel._layout_export_button
         render_format = window._conversion_panel._layout_render_format_combo
         assert (
@@ -199,6 +206,10 @@ def test_pdf_workflow_fits_default_columns_with_large_typography(main_window_wit
         window._input_area_vm.set_mode("single")
         qtbot.wait(100)
         panel = window._conversion_panel
+        mode = panel._split_mode_combo
+        assert mode is not None
+        mode.setCurrentIndex(mode.findData("custom"))
+        qtbot.wait(100)
         button = panel._split_pdf_button
         field = panel._page_input_edit.parentWidget()
         assert button.mapTo(window, QPoint()).y() >= field.mapTo(window, QPoint()).y() + field.height()

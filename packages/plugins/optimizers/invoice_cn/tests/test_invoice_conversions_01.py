@@ -7,8 +7,10 @@ from ._invoice_conversions_support import (
     _build_fake_context,
     _convert_invoice_fixture,
     _execute_invoice_runtime_fixture,
+    _expected_invoice_table_cells,
     _load_invoice_cn_old_system_fixture,
     _parse_invoice_markdown,
+    _parse_invoice_table_cells,
     os,
     pytest,
     tempfile,
@@ -53,7 +55,7 @@ class TestPdfInvoiceToMarkdown:
         }
         for case_name, (path, source_format) in cases.items():
             result, markdown = _convert_invoice_fixture(path, source_format)
-            yaml_fields, table_rows = _parse_invoice_markdown(markdown)
+            yaml_fields, _table_rows = _parse_invoice_markdown(markdown)
             expected = fixture["expected_semantics"][case_name]
             artifact = result.artifacts[0]
 
@@ -68,7 +70,9 @@ class TestPdfInvoiceToMarkdown:
             for token in expected["required_markdown_tokens"]:
                 assert token in markdown
             if case_name == "ofd":
-                assert table_rows == expected["table_row_lines"]
+                assert _parse_invoice_table_cells(markdown) == _expected_invoice_table_cells(
+                    expected["table_row_lines"]
+                )
 
         for project_name in ("docwen-ref-tk", "docwen-ref-pyside6", "docwen-current"):
             project = fixture["projects"][project_name]
@@ -174,10 +178,10 @@ class TestPdfInvoiceToMarkdown:
         assert any(d.code == "INVOICE-OK" for d in result.diagnostics)
         assert any(d.code == "FINALIZER_DONE" for d in result.diagnostics)
         markdown = md_path.read_text(encoding="utf-8")
-        yaml_fields, table_rows = _parse_invoice_markdown(markdown)
+        yaml_fields, _table_rows = _parse_invoice_markdown(markdown)
         for key, value in expected["yaml_subset"].items():
             assert yaml_fields[key] == value
-        assert table_rows == expected["table_row_lines"]
+        assert _parse_invoice_table_cells(markdown) == _expected_invoice_table_cells(expected["table_row_lines"])
         assert str(workspace_root) not in markdown
 
     def test_basic_pdf_invoice_conversion(self, sample_invoice_pdf_path: Path) -> None:

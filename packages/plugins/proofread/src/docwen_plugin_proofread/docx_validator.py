@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from docwen_core.docx_comments import append_docx_comment
+
 if TYPE_CHECKING:
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import ProofreadConverterContext
@@ -218,7 +220,8 @@ class DocxValidator:
                         runs = runs_for_range(para, err.start_pos, err.end_pos)
                         if not runs:
                             raise ValueError(f"No exact run span for proofread range [{err.start_pos}, {err.end_pos})")
-                        doc.add_comment(
+                        append_docx_comment(
+                            doc,
                             runs,
                             text=comment_text,
                             author="DocWen",

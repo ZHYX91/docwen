@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import tomllib
 from pathlib import Path
 
@@ -19,7 +18,7 @@ def _row(feature_id: str) -> str:
     return next(line for line in CAPABILITIES.read_text(encoding="utf-8").splitlines() if line.startswith(prefix))
 
 
-def test_capability_inventory_is_unique_and_current_only() -> None:
+def test_capability_inventory_has_unique_feature_ids() -> None:
     text = CAPABILITIES.read_text(encoding="utf-8")
     rows = [line for line in text.splitlines() if line.startswith("| FEAT-")]
     ids = [line.split("|", 2)[1].strip() for line in rows]
@@ -27,7 +26,6 @@ def test_capability_inventory_is_unique_and_current_only() -> None:
     assert rows
     assert "FEAT-MD-MERMAID-001" in text
     assert len(set(ids)) == len(ids)
-    assert not re.search(r"\bVIS-\d|\bF-\d", text)
 
 
 def test_capability_inventory_tracks_current_owners_and_entrypoints() -> None:

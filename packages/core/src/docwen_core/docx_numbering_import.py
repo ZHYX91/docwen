@@ -267,6 +267,8 @@ def _reject_unmodeled_numbering_topology(root: Any) -> None:
         f"{{{WML_NS}}}pStyle": f"{{{WML_NS}}}lvl",
     }
     for element in root.iter():
+        if element.tag in {f"{{{WML_NS}}}styleLink", f"{{{WML_NS}}}numStyleLink"}:
+            raise DocxNumberingImportError("numbering.xml contains unmodeled style-linked numbering")
         if isinstance(element.tag, str) and element.tag.startswith(f"{{{_MC_NS}}}"):
             raise DocxNumberingImportError("numbering.xml contains unmodeled markup-compatibility topology")
         expected_parent = expected_parents.get(element.tag)
@@ -277,7 +279,7 @@ def _reject_unmodeled_numbering_topology(root: Any) -> None:
             raise DocxNumberingImportError("numbering.xml contains a modeled node outside its exact ancestry")
 
 
-def _parse_level(node: Any) -> _Level:
+def _parse_level(node: Any, *, minimum_start: int = 1) -> _Level:
     starts = node.findall(f"{{{WML_NS}}}start")
     formats = node.findall(f"{{{WML_NS}}}numFmt")
     texts = node.findall(f"{{{WML_NS}}}lvlText")
@@ -289,7 +291,7 @@ def _parse_level(node: Any) -> _Level:
     level_text = texts[0].get(f"{{{WML_NS}}}val")
     if not number_format or level_text is None:
         raise DocxNumberingImportError("numbering level has an empty format or level text")
-    start = _integer_attribute(starts[0], "val", minimum=1) if starts else 1
+    start = _integer_attribute(starts[0], "val", minimum=minimum_start) if starts else 1
     suffix = suffixes[0].get(f"{{{WML_NS}}}val") if suffixes else "tab"
     if suffix not in {"nothing", "space", "tab"}:
         raise DocxNumberingImportError("numbering level suffix is invalid")

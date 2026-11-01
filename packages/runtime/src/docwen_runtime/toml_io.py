@@ -84,7 +84,9 @@ def atomic_write_bytes(path: str | Path, content: bytes) -> None:
     The temporary file is flushed and synced before ``os.replace``.  Keeping
     it beside the destination prevents a handled temp-write failure from
     truncating the target and avoids cross-filesystem replacement; it does not
-    promise multi-file crash atomicity or power-loss durability.
+    promise multi-file crash atomicity or power-loss durability.  An exception
+    from the directory barrier can occur after replacement; callers must not
+    infer that the old entry remains from an exception alone.
     """
     file_path = Path(path)
     if file_path.is_symlink():

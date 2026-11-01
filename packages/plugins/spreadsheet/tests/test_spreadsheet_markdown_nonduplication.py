@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
 
 import openpyxl
 import pytest
 
+from ._markdown_table_oracle import markdown_table_values
 from ._spreadsheet_image_extraction_support import _make_xlsx_with_images
 from ._xlsx_to_md_golden_support import _build_fake_context
 
@@ -54,10 +56,11 @@ def test_disconnected_island_within_table_rectangle_is_emitted_once(
     )
     assert result.success, result.error
     content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
-    for row in rows:
-        for value in row:
-            if value:
-                assert content.count(value) == 1, value
+    actual_tables = markdown_table_values(content)
+    assert len(actual_tables) == 2
+    actual_values = Counter(value for table in actual_tables for row in table for value in row if value)
+    expected_values = Counter(value for row in rows for value in row if value)
+    assert actual_values == expected_values
 
 
 @pytest.mark.parametrize("image_counts", [[1, 1], [2, 0, 2]])

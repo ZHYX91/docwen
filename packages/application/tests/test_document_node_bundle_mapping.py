@@ -5,9 +5,64 @@ from pathlib import Path
 import pytest
 
 from docwen_application.bundle_mapping import BundleMappingError, build_bundle_draft
-from docwen_core.models import ArtifactManifest, validate_artifact_bundle_draft
+from docwen_core.models import ArtifactManifest, ArtifactOwnership, validate_artifact_bundle_draft
 
 pytestmark = pytest.mark.contract
+
+
+def test_explicit_and_legacy_resource_and_fragment_ordinals_coexist():
+    main = ArtifactManifest("main", "primary", "main.md", "main.md", "text/markdown", is_primary=True)
+    artifacts = [main]
+    for index, declared in enumerate((False, True)):
+        artifacts.append(
+            ArtifactManifest(
+                f"image-{index}",
+                "image",
+                f"image-{index}.png",
+                f"image-{index}.png",
+                "image/png",
+                ownership=ArtifactOwnership("resource_of", "main", "image", 0) if declared else None,
+            )
+        )
+        artifacts.append(
+            ArtifactManifest(
+                f"ocr-{index}",
+                "auxiliary",
+                f"ocr-{index}.md",
+                f"ocr-{index}.md",
+                "text/markdown",
+                metadata={"ocr": True},
+                ownership=ArtifactOwnership("fragment_of", "main", "ocr_text", 0) if declared else None,
+            )
+        )
+    draft = build_bundle_draft(
+        profile="document_with_resources", output_media_type="text/markdown", artifacts=artifacts
+    )
+    validate_artifact_bundle_draft(draft)
+    assert {relation.source_artifact_id: relation.ordinal for relation in draft.relations} == {
+        "image-0": 1,
+        "image-1": 0,
+        "ocr-0": 1,
+        "ocr-1": 0,
+    }
+
+
+def test_other_route_profiles_cannot_silently_discard_declared_ownership(tmp_path):
+    main = ArtifactManifest("main", "primary", "main.md", "main.md", "text/markdown", is_primary=True)
+    fragment = ArtifactManifest("ocr", "auxiliary", "ocr.md", "ocr.md", "text/markdown", metadata={"ocr": True})
+    image = ArtifactManifest(
+        "image",
+        "image",
+        "image.png",
+        "image.png",
+        "image/png",
+        ownership=ArtifactOwnership("resource_of", "ocr", "original", 0),
+    )
+    with pytest.raises(BundleMappingError) as caught:
+        build_bundle_draft(
+            profile="image_to_markdown", output_media_type="text/markdown", artifacts=(main, fragment, image)
+        )
+    assert caught.value.code == "artifact_ownership_profile_mismatch"
 
 
 @pytest.mark.parametrize(
@@ -87,6 +142,7 @@ def test_gongwen_document_node_maps_attachment_without_node_json(tmp_path: Path)
             "document_node_schema": "docwen.document_node.v1",
         },
         logical_path=f"{root_name}/{child_name}/{attachment_path.name}",
+        ownership=ArtifactOwnership("attachment_of", "document.main", "attachment", 0, "附件"),
     )
     draft = build_bundle_draft(
         profile="document_with_resources",
@@ -124,3 +180,48 @@ def test_obsolete_node_manifest_is_not_mapped_as_a_resource(tmp_path: Path, prof
     with pytest.raises(BundleMappingError) as caught:
         build_bundle_draft(profile=profile, output_media_type="text/markdown", artifacts=(primary, obsolete))
     assert caught.value.code == code
+
+
+@pytest.mark.parametrize(
+    "metadata,media_type,accepted",
+    [
+        ({"source_kind": "embedded_resource"}, "application/octet-stream", True),
+        ({"source_kind": "embedded_resource"}, "text/markdown", True),
+        (
+            {"source_format": "pptx", "payload": "chart_workbook"},
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            True,
+        ),
+        ({}, "application/octet-stream", False),
+        ({"source_key": "photo.bin"}, "application/octet-stream", False),
+        ({"source_format": "pptx", "payload": "unknown"}, "application/octet-stream", False),
+        ({"source_format": "pptx", "payload": "chart_workbook"}, "text/markdown", False),
+    ],
+)
+def test_only_declared_original_resources_receive_existing_bundle_semantics(
+    tmp_path: Path, metadata, media_type: str, accepted: bool
+) -> None:
+    primary = ArtifactManifest(
+        "main", "primary", str(tmp_path / "main.md"), "main.md", "text/markdown", is_primary=True
+    )
+    resource = ArtifactManifest(
+        "original", "auxiliary", str(tmp_path / "original.bin"), "original.bin", media_type, metadata=metadata
+    )
+    if not accepted:
+        with pytest.raises(BundleMappingError) as caught:
+            build_bundle_draft(
+                profile="document_with_resources", output_media_type="text/markdown", artifacts=(primary, resource)
+            )
+        assert caught.value.code == "artifact_semantics_unknown"
+        return
+    draft = build_bundle_draft(
+        profile="document_with_resources", output_media_type="text/markdown", artifacts=(primary, resource)
+    )
+    validate_artifact_bundle_draft(draft)
+    assert [(item.artifact_id, item.kind) for item in draft.artifacts] == [
+        ("main", "document"),
+        ("original", "resource"),
+    ]
+    assert [(item.source_artifact_id, item.target_artifact_id, item.type, item.role) for item in draft.relations] == [
+        ("original", "main", "resource_of", "original")
+    ]

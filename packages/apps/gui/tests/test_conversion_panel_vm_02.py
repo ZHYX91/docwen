@@ -190,3 +190,34 @@ class TestFormatConstants:
             "typos_rule",
             "sensitive_word",
         }
+
+
+def test_layout_saved_defaults_and_explicit_choices_follow_operation_context():
+    from tests.support.config import FakeConfigView
+
+    main = FakeMainWindowViewModel(
+        {"layout.document_format": "ODT", "layout.render_format": "PNG", "layout.split_mode": "odd_even"}
+    )
+    vm = ConversionPanelViewModel(main)  # type: ignore[arg-type]
+    vm.set_file_info("layout", "pdf", file_path="/first.pdf")
+    assert (vm.document_format, vm.render_format, vm.split_mode, vm.render_dpi) == ("ODT", "PNG", "odd_even", 300)
+    vm.render_format = "JPG"
+    vm.render_format = "PNG"  # An explicit choice back to the original still belongs to the operation.
+    vm.page_input = "2,4"
+    main.controller.config_port = FakeConfigView(
+        {
+            "layout.document_format": "DOCX",
+            "layout.render_format": "TIF",
+            "layout.split_mode": "custom",
+            "layout.render_dpi": 600,
+        }
+    )
+    vm.refresh_layout_defaults()
+    assert (vm.document_format, vm.render_format, vm.split_mode, vm.render_dpi) == ("DOCX", "PNG", "custom", 600)
+    assert vm.page_input == "2,4"
+    vm.set_file_info("layout", "pdf", file_path="/second.pdf")
+    assert (vm.document_format, vm.render_format, vm.split_mode, vm.render_dpi) == ("DOCX", "TIF", "custom", 600)
+    assert vm.page_input == ""
+    vm.split_mode = "every_page"
+    vm.reset()
+    assert vm.split_mode == "custom" and vm.page_input == ""

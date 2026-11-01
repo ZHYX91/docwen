@@ -24,12 +24,12 @@ def _latex_to_omml(latex: str) -> Any | None:
     return etree.fromstring(omml.encode("utf-8"))
 
 
-def render_block_formula(document, latex: str, *, block_style=None) -> None:
+def render_block_formula(document, latex: str, *, block_style=None) -> bool:
     """Insert a centered paragraph with an OMML block equation."""
     omml = _latex_to_omml(latex)
     if omml is None:
         document.add_paragraph(latex, style=block_style)
-        return
+        return False
     p = document.add_paragraph(style=block_style)
     if block_style is None:
         try:
@@ -39,6 +39,7 @@ def render_block_formula(document, latex: str, *, block_style=None) -> None:
         except ImportError:
             p.alignment = 1  # CENTER
     p._p.append(omml)
+    return True
 
 
 def _apply_character_style(omml: Any, style_reference: str | None) -> None:
@@ -63,13 +64,14 @@ def _apply_character_style(omml: Any, style_reference: str | None) -> None:
         r_style.set(qn("w:val"), style_reference)
 
 
-def render_inline_formula(paragraph, latex: str, style_reference: str | None = None) -> None:
+def render_inline_formula(paragraph, latex: str, style_reference: str | None = None) -> bool:
     """Append an OMML inline equation to an existing paragraph."""
     omml = _latex_to_omml(latex)
     if omml is None:
         run = paragraph.add_run(latex)
         if style_reference:
             run.style = style_reference
-        return
+        return False
     _apply_character_style(omml, style_reference)
     paragraph._p.append(omml)
+    return True

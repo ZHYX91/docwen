@@ -24,7 +24,7 @@ from tools.recycle_payload import require_payload_identity, snapshot_payload
 from tools.run_lease import manual_retention_observation
 from tools.windows_short_path import ShortPathDriveError, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
-from tools.workspace_root import registered_repositories, resolve_workspace_root
+from tools.workspace_root import is_governed_workspace_root, registered_repositories, resolve_workspace_root
 
 LEASE_NAME = ".docwen-temp-lease.json"
 PLAN_SCHEMA = "docwen.housekeeping-plan.v1"
@@ -162,7 +162,9 @@ def _lease_markers(temp_root: Path, *, errors: list[dict[str, str]] | None = Non
         safe_directories: list[str] = []
         for name in sorted(directories):
             child = current_path / name
-            if name.casefold() == ".workspace":
+            if name.casefold() == ".workspace" or (
+                name.casefold() == "runtime" and (child / "workspace.json").exists()
+            ):
                 if errors is not None:
                     errors.append({"path": str(child), "reason": "nested_workspace_boundary"})
                 continue
@@ -1022,7 +1024,7 @@ def plan_published_candidate(directory: Path, receipt: Path) -> Path | None:
     target, receipt = _absolute(directory), _absolute(receipt)
     workspace = target.parent.parent
     # Hosted CI artifacts are owned by the runner, not this workspace lifecycle.
-    if target.parent.name != "artifacts" or workspace.name != ".workspace":
+    if target.parent.name != "artifacts" or not is_governed_workspace_root(workspace):
         return None
     boundary = _published_candidate_boundary(target, workspace=workspace, receipt=receipt)
     print(f"[housekeeping] scan: {target}", file=sys.stderr)

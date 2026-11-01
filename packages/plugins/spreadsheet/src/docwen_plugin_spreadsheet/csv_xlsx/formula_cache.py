@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import posixpath
 from collections.abc import Callable, Sequence
 from zipfile import ZipFile
 
 from lxml import etree
 from openpyxl.utils.cell import coordinate_to_tuple, get_column_letter
 
+from docwen_plugin_spreadsheet.worksheets import ordinary_worksheet_parts
+
 _MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
-_REL = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
-_PACKAGE = "{http://schemas.openxmlformats.org/package/2006/relationships}"
 
 
 def visit_formula_caches(
@@ -29,24 +28,11 @@ def visit_formula_caches(
     """
     selected = None if sheet_names is None else set(sheet_names)
     with ZipFile(path) as package:
-        parser = etree.XMLParser(resolve_entities=False, no_network=True)
-        workbook = etree.fromstring(package.read("xl/workbook.xml"), parser)
-        relationships = etree.fromstring(package.read("xl/_rels/workbook.xml.rels"), parser)
-        targets = {
-            relation.get("Id"): relation.get("Target", "")
-            for relation in relationships.findall(f"{_PACKAGE}Relationship")
-            if str(relation.get("Type", "")).endswith("/worksheet") and relation.get("TargetMode") != "External"
-        }
-        for sheet in workbook.findall(f"{_MAIN}sheets/{_MAIN}sheet"):
+        for name, part in ordinary_worksheet_parts(package):
             if cancel_check:
                 cancel_check()
-            name = str(sheet.get("name", ""))
             if selected is not None and name not in selected:
                 continue
-            target = str(targets.get(sheet.get(f"{_REL}id"), "")).replace("\\", "/")
-            if not target:
-                continue
-            part = posixpath.normpath(target.lstrip("/") if target.startswith("/") else f"xl/{target}")
             with package.open(part) as stream:
                 iterator = etree.iterparse(
                     stream,

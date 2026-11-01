@@ -190,3 +190,23 @@ def test_document_layout_spreadsheet_dynamic_schema_values(qapp, request: pytest
     assert collected["to_md_remove_numbering"] is False
     assert collected["to_md_add_numbering"] is True
     assert collected["to_md_default_scheme"] == "legal_standard"
+
+
+def test_layout_default_formats_follow_discovered_category_routes(qapp, monkeypatch):
+    from tests.support.gui_vm_fakes import FakeController
+
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.layout_tab import LayoutTab
+
+    vm = SettingsViewModel()
+    monkeypatch.setattr(vm, "_controller", FakeController())
+    tab = LayoutTab(vm)
+    try:
+        document = _control(tab.widgets, "document_format", QComboBox)
+        image = _control(tab.widgets, "render_format", QComboBox)
+        assert set(_combo_values(document)) == {"DOCX", "DOC", "ODT", "RTF"}
+        assert set(_combo_values(image)) == {"PNG", "JPG", "TIF"}
+        monkeypatch.setattr(vm, "_controller", None)
+        assert vm.layout_format_choices("document") == []
+    finally:
+        tab.deleteLater()

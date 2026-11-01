@@ -290,8 +290,19 @@ class TestPolicy03PreservedPayloads:
         assert result.success is True
         markdown_artifact = next(artifact for artifact in result.artifacts if artifact.is_primary)
         markdown = Path(markdown_artifact.staging_path).read_text(encoding="utf-8")
-        for token in ("Quarterly Sales", "Sales", "1st Qtr", "2nd Qtr", "3rd Qtr", "4th Qtr", "8.2"):
+        for token in ("Quarterly Sales", "Sales", "1st Qtr", "2nd Qtr", "3rd Qtr", "4th Qtr"):
             assert token in markdown
+        import mistune
+
+        ast = mistune.create_markdown(renderer="ast", plugins=["table"])(markdown)
+        assert isinstance(ast, list)
+        tables = [node for node in ast if node["type"] == "table"]
+        assert len(tables) == 1
+        header, body = tables[0]["children"]
+        rows = [header, *body["children"]]
+        assert [
+            ["".join(child.get("raw", "") for child in cell["children"]) for cell in row["children"]] for row in rows
+        ] == [["Category", "Sales"], ["1st Qtr", "8.2"], ["2nd Qtr", "3.2"], ["3rd Qtr", "1.4"], ["4th Qtr", "1.2"]]
         workbook = next(
             artifact
             for artifact in result.artifacts

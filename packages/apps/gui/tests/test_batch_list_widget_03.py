@@ -378,3 +378,63 @@ def test_batch_list_importable() -> None:
     from docwen_gui.view_models.batch_list_vm import BatchListViewModel as BLVM
 
     assert BLVM is not None
+
+
+@pytest.mark.parametrize("operation", ["move", "sort"])
+def test_reorder_retains_real_cards_after_deferred_delete_and_materialization(qapp, qtbot, monkeypatch, operation):
+    from PySide6.QtCore import QCoreApplication
+    from shiboken6 import isValid
+
+    from docwen_gui.widgets import batch_list as module
+
+    monkeypatch.setattr(module, "_BATCH_ENTRY_WIDGET_ATTACH_CHUNK_SIZE", 1)
+    vm = BatchListViewModel()
+    paths = ["/test/c.docx", "/test/a.docx", "/test/b.docx"]
+    _add_synthetic(vm, paths)
+    widget = BatchList(view_model=vm)
+    qtbot.addWidget(widget)
+    widget.show()
+    vm.activate_tab("document")
+    listing = widget._tabs["document"]
+    first_item = listing.item(0)
+    first_card = listing.itemWidget(first_item)
+    assert isinstance(first_card, BatchEntryItemWidget)
+    assert listing.itemWidget(listing.item(1)) is None
+    assert widget._pending_entry_widget_attachments
+    listing.setCurrentItem(first_item)
+    listing.setFocus()
+    if operation == "move":
+        assert widget._move_current_item_down()
+        expected = [paths[1], paths[0], paths[2]]
+    else:
+        vm.set_sort_state("name", True)
+        expected = [paths[1], paths[2], paths[0]]
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    qapp.processEvents()
+    qtbot.waitUntil(lambda: not widget._pending_entry_widget_attachments)
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    qapp.processEvents()
+    assert isValid(first_card)
+    assert listing.currentItem() is first_item
+    assert listing.itemWidget(first_item) is first_card
+    assert [listing.item(index).data(Qt.ItemDataRole.UserRole) for index in range(3)] == expected
+    for index, path in enumerate(expected):
+        card = listing.itemWidget(listing.item(index))
+        assert isinstance(card, BatchEntryItemWidget) and isValid(card)
+        assert card._entry.file_path == path
+        assert card.status_button.text() == str(index + 1)
+    assert listing.hasFocus()
+    vm.set_file_status(paths[0], "failed", error_message="retry me")
+    assert first_card._entry.status == "failed"
+    first_card.retry_button.click()
+    retried_entry = vm.get_file_entry(paths[0])
+    assert retried_entry is not None and retried_entry.status == "pending"
+    vm.set_file_status(paths[0], "completed", output_path="/output/c.md")
+    assert first_card._entry.output_path == "/output/c.md"
+    first_card.remove_button.click()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    qapp.processEvents()
+    assert vm.get_file_entry(paths[0]) is None
+    assert [listing.item(index).data(Qt.ItemDataRole.UserRole) for index in range(listing.count())] == [
+        path for path in expected if path != paths[0]
+    ]

@@ -456,8 +456,12 @@ def _decode_text_bytes(data: bytes, *, final: bool) -> tuple[str, str] | None:
     return None
 
 
-def _detect_delimited_format(text: str) -> str | None:
-    """Recognize bounded CSV/TSV content using logical, quote-aware records."""
+def sniff_delimited_separator(text: str) -> str | None:
+    """Return the content-proven separator shared by admission and conversion.
+
+    Single neutral records have no generic delimiter fact; callers retain the
+    separately validated declared comma/tab contract for those records.
+    """
     sample = text[:_DELIMITED_SNIFF_SIZE]
     try:
         dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
@@ -481,7 +485,14 @@ def _detect_delimited_format(text: str) -> str | None:
         return None
     if len(set(widths)) > 2 and max(widths) - min(widths) > 3:
         return None
-    return "tsv" if dialect.delimiter == "\t" else "csv"
+    return dialect.delimiter
+
+
+def _detect_delimited_format(text: str) -> str | None:
+    delimiter = sniff_delimited_separator(text)
+    if delimiter is None:
+        return None
+    return "tsv" if delimiter == "\t" else "csv"
 
 
 def delimited_text_encodings(file_path: str) -> tuple[str, ...]:

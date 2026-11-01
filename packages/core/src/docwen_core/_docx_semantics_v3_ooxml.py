@@ -224,6 +224,7 @@ def recover_paragraph_children(
     occurrence_tokens_by_tag: dict[str, str] | None = None,
     stable_reference_target_ids: list[str] | None = None,
     emit_references: bool = True,
+    reference_spans: dict[Any, tuple[Any, str]] | None = None,
 ) -> tuple[str, bool]:
     from docx.oxml.ns import qn
 
@@ -236,9 +237,13 @@ def recover_paragraph_children(
             tag = sdt_tag(child)
             if tag in soft_tokens_by_tag:
                 output.append(soft_tokens_by_tag[tag])
+                if reference_spans is not None:
+                    reference_spans[child] = (child, output[-1])
                 semantic = True
             elif occurrence_tokens_by_tag is not None and tag in occurrence_tokens_by_tag:
                 output.append(occurrence_tokens_by_tag[tag])
+                if reference_spans is not None:
+                    reference_spans[child] = (child, output[-1])
                 semantic = True
                 if stable_reference_target_ids is not None:
                     content = child.find(qn("w:sdtContent"))
@@ -282,6 +287,8 @@ def recover_paragraph_children(
                     raise DocxSemanticsV3Error("owned REF field has no authenticated semantic target")
                 target_id = target_ids_by_bookmark[bookmark_name]
                 output.append(f"@[[#^{target_id}]]")
+                if reference_spans is not None:
+                    reference_spans[child] = (children[end_index], output[-1])
                 semantic = True
                 if stable_reference_target_ids is not None:
                     stable_reference_target_ids.append(target_id)

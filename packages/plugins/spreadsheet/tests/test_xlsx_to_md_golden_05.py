@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ._markdown_table_oracle import delimited_source_blocks, markdown_table_values
 from ._xlsx_to_md_golden_support import (
     Any,
     Generator,
@@ -123,8 +124,6 @@ class TestSpreadsheetToMdPipeline:
                 sum(1 for line in content.splitlines() if line.startswith("|:"))
                 == scope["current_projection"]["csv_separator_line_count"]
             )
-            for token in scope["required_csv_tokens"]:
-                assert token in content
         else:
             for key, value in scope["current_projection"]["tsv_artifact_metadata"].items():
                 assert artifact.metadata[key] == value
@@ -136,8 +135,8 @@ class TestSpreadsheetToMdPipeline:
                 sum(1 for line in content.splitlines() if line.startswith("|:"))
                 == scope["current_projection"]["tsv_separator_line_count"]
             )
-            for token in scope["required_tsv_tokens"]:
-                assert token in content
+        delimiter = "\t" if case["actual_format"] == "tsv" else ";" if case_name == "semicolon_simple.csv" else ","
+        assert markdown_table_values(content) == delimited_source_blocks(case["text"], delimiter)
 
 
 @pytest.mark.contract

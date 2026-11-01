@@ -195,13 +195,13 @@ class TestWordNativeRoundTrip:
     garbled prefixes, and body text intact.
     """
 
-    def test_headings_come_back_with_numbering(self, round_trip_runtime, tmp_path: Path) -> None:
+    def test_headings_come_back_with_numbering(self, native_round_trip_runtime, tmp_path: Path) -> None:
         """word_native: reverse leg reconstructs numbering; h1 carries 一、."""
         md_input = _write_md(tmp_path, "plain.md", _PLAIN_MD)
         work = tmp_path / "work"
 
         _docx, md_text = round_trip_md(
-            round_trip_runtime,
+            native_round_trip_runtime,
             md_input,
             work,
             forward_options={
@@ -223,13 +223,13 @@ class TestWordNativeRoundTrip:
         assert any("引言" in h for h in headings), f"heading word '引言' lost. Headings: {headings}"
         assert any("背景" in h for h in headings), f"heading word '背景' lost. Headings: {headings}"
 
-    def test_no_double_numbering_in_output(self, round_trip_runtime, tmp_path: Path) -> None:
+    def test_no_double_numbering_in_output(self, native_round_trip_runtime, tmp_path: Path) -> None:
         """word_native: no heading text is doubled or garbled by the round-trip."""
         md_input = _write_md(tmp_path, "plain.md", _PLAIN_MD)
         work = tmp_path / "work"
 
         _docx, md_text = round_trip_md(
-            round_trip_runtime,
+            native_round_trip_runtime,
             md_input,
             work,
             forward_options={
@@ -246,13 +246,13 @@ class TestWordNativeRoundTrip:
             assert "引言引言" not in h, f"doubled heading text: {h!r}"
             assert "背景背景" not in h, f"doubled heading text: {h!r}"
 
-    def test_body_text_survives(self, round_trip_runtime, tmp_path: Path) -> None:
+    def test_body_text_survives(self, native_round_trip_runtime, tmp_path: Path) -> None:
         """word_native: body paragraphs survive the structural-numbering round-trip."""
         md_input = _write_md(tmp_path, "plain.md", _PLAIN_MD)
         work = tmp_path / "work"
 
         _docx, md_text = round_trip_md(
-            round_trip_runtime,
+            native_round_trip_runtime,
             md_input,
             work,
             forward_options={

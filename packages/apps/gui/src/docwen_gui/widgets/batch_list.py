@@ -23,6 +23,7 @@ from typing import cast as _cast
 
 from PySide6.QtCore import (
     QEvent,
+    QModelIndex,
     QPoint,
     QRect,
     QSignalBlocker,
@@ -196,15 +197,12 @@ class ReorderableListWidget(QListWidget):
 
         current_row = self.row(current_item)
         target_row = self.row(visible_items[target_index])
-        item_widget = self.itemWidget(current_item)
-        if item_widget is not None:
-            self.removeItemWidget(current_item)
-            item_widget.setParent(None)
-        item = self.takeItem(current_row)
-        self.insertItem(target_row, item)
-        if item_widget is not None:
-            self.setItemWidget(item, item_widget)
-        self.setCurrentItem(item)
+        # Moving model rows preserves persistent indexes and their owned
+        # widgets. removeItemWidget schedules deletion, even after reparenting.
+        destination = target_row + (1 if target_row > current_row else 0)
+        if not self.model().moveRow(QModelIndex(), current_row, QModelIndex(), destination):
+            return False
+        self.setCurrentItem(current_item)
         self.item_reordered.emit()
         return True
 
@@ -1814,42 +1812,23 @@ class BatchList(QWidget):
         if not ordered:
             return
 
-        # Collect items and widgets
-        items_by_path: dict[str, QListWidgetItem] = {}
-        widgets_by_path: dict[str, QWidget | None] = {}
+        items_by_path = {
+            item.data(Qt.ItemDataRole.UserRole): item
+            for index in range(list_widget.count())
+            if (item := list_widget.item(index)) is not None
+        }
         current_item = list_widget.currentItem()
-        current_path = ""
-        if current_item is not None:
-            fp = current_item.data(Qt.ItemDataRole.UserRole)
-            if isinstance(fp, str):
-                current_path = fp
-
-        for index in range(list_widget.count()):
-            item = list_widget.item(index)
-            fp = item.data(Qt.ItemDataRole.UserRole)
-            if not isinstance(fp, str):
-                continue
-            items_by_path[fp] = item
-            widget = list_widget.itemWidget(item)
-            if widget is not None:
-                list_widget.removeItemWidget(item)
-                widget.setParent(None)
-            widgets_by_path[fp] = widget
-
-        for _ in range(list_widget.count()):
-            list_widget.takeItem(0)
-
-        for idx, file_path in enumerate(ordered):
+        for target_row, file_path in enumerate(ordered):
             item = items_by_path.get(file_path)
             if item is None:
                 continue
-            list_widget.insertItem(idx, item)
-            widget = widgets_by_path.get(file_path)
-            if widget is not None:
-                list_widget.setItemWidget(item, widget)
-
-        if current_path and current_path in items_by_path:
-            list_widget.setCurrentItem(items_by_path[current_path])
+            current_row = list_widget.row(item)
+            if current_row == target_row:
+                continue
+            destination = target_row + (1 if target_row > current_row else 0)
+            list_widget.model().moveRow(QModelIndex(), current_row, QModelIndex(), destination)
+        if current_item is not None:
+            list_widget.setCurrentItem(current_item)
         self._refresh_sequence_numbers(list_widget)
 
     # ── Move / reorder ─────────────────────────────────────────────────

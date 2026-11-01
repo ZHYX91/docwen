@@ -333,6 +333,7 @@ class TemplatesTab(BaseSettingsTab):
             return
         last_id: str | None = None
         errors: list[str] = []
+        warnings: list[str] = []
         succeeded = 0
         cancelled = 0
         for path in paths:
@@ -367,6 +368,8 @@ class TemplatesTab(BaseSettingsTab):
                 self._tabs.setCurrentIndex(1 if imported.target == "xlsx" else 0)
             except Exception as exc:
                 errors.append(f"{Path(path).name}: {exc}")
+            finally:
+                warnings.extend(f"{Path(path).name}: {warning}" for warning in self._manager.take_cleanup_warnings())
         self.refresh(select_id=last_id)
         summary = t(
             "settings.templates.import_summary",
@@ -375,25 +378,48 @@ class TemplatesTab(BaseSettingsTab):
             failed=len(errors),
             cancelled=cancelled,
         )
+        if warnings:
+            summary += "\n" + t("settings.templates.saved_cleanup_warning")
         self._import_summary.setText(summary)
         self._import_summary.show()
-        if errors:
+        if errors or warnings:
             from docwen_gui.diagnostics import DiagnosticSummary
 
             report = feedback.warn if succeeded else feedback.error
             report(
                 t("settings.templates.import"),
                 summary,
-                details="\n".join(errors),
+                details="\n".join([*errors, *warnings]),
                 parent=self,
                 copyable=True,
                 diagnostic=DiagnosticSummary(
-                    status="partial" if succeeded else "failed",
+                    status=("partial" if succeeded else "failed") if errors else "warning",
+                    warning_count=len(warnings),
                     succeeded_count=succeeded,
                     failed_count=len(errors),
                     cancelled_count=cancelled,
                 ),
             )
+
+    def _show_cleanup_warnings(self) -> None:
+        warnings = self._manager.take_cleanup_warnings()
+        if not warnings:
+            return
+        from docwen_gui.diagnostics import DiagnosticSummary
+
+        feedback.warn(
+            t("settings.templates.title"),
+            t("settings.templates.saved_cleanup_warning"),
+            details="\n".join(warnings),
+            parent=self,
+            copyable=True,
+            diagnostic=DiagnosticSummary(
+                status="warning",
+                warning_count=len(warnings),
+                succeeded_count=1,
+                failed_count=0,
+            ),
+        )
 
     def _copy_and_edit(self) -> None:
         template_id = self._selected_id()
@@ -413,6 +439,7 @@ class TemplatesTab(BaseSettingsTab):
             self._show_error(exc)
             return
         self.refresh(select_id=copied.id)
+        self._show_cleanup_warnings()
         try:
             self._open_file(copied.path)
         except Exception as exc:
@@ -466,6 +493,7 @@ class TemplatesTab(BaseSettingsTab):
             self._show_error(exc)
             return
         self.refresh(select_id=renamed.id)
+        self._show_cleanup_warnings()
 
     def _export_selected(self) -> None:
         template = self._selected_template()
@@ -507,6 +535,7 @@ class TemplatesTab(BaseSettingsTab):
             self._show_error(exc)
             return
         self.refresh(select_id=next_id)
+        self._show_cleanup_warnings()
 
     def _move_selected(self, offset: int) -> None:
         template_id = self._selected_id()

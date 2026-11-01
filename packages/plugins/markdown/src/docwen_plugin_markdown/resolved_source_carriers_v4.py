@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from docwen_plugin_markdown.document_semantics_v3 import MarkdownSemanticsV3Analysis
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     fenced_source_info_insertion_offset_v3,
 )
@@ -27,7 +26,7 @@ from docwen_plugin_markdown.runtime_semantics_v3 import (
     RuntimeSemanticsV3Plan,
     RuntimeSemanticsV3Unsupported,
     apply_runtime_semantics_v3,
-    prepare_runtime_semantics_v3,
+    prepare_runtime_source_carriers_v3,
 )
 
 
@@ -71,37 +70,21 @@ def prepare_resolved_source_carriers_v4(
     and must not become a second semantic gate at this carrier-only boundary.
     """
 
-    full_plan = prepare_runtime_semantics_v3(source, input_id=input_id)
+    full_plan = prepare_runtime_source_carriers_v3(source, input_id=input_id)
     if full_plan.source_sha256 != expected_source_sha256:
         raise RuntimeSemanticsV3Unsupported("source-carrier projection belongs to a different authenticated source")
-    carrier_diagnostics = [
-        item
-        for item in full_plan.analysis.diagnostics
-        if not str(item["code"]).startswith(("docwen.markdown.caption.", "docwen.markdown.cross_reference."))
-    ]
+    carrier_diagnostics = full_plan.analysis.diagnostics
     if any(item["severity"] == "error" for item in carrier_diagnostics):
         codes = ", ".join(sorted({str(item["code"]) for item in carrier_diagnostics}))
         raise RuntimeSemanticsV3Unsupported(f"authored Markdown has source-carrier diagnostics: {codes or 'unknown'}")
 
-    carrier_markers = tuple(
-        marker for marker in full_plan.markers if marker.role in {"ordinary_anchor", "fenced_source"}
-    )
+    carrier_markers = full_plan.markers
     edits = tuple(_carrier_edit(source, marker) for marker in carrier_markers)
     _prove_edit_family(source, edits)
     shielded_source = _apply_edits(source, edits)
-    carrier_analysis = MarkdownSemanticsV3Analysis(
-        projection=full_plan.analysis.projection,
-        diagnostics=tuple(carrier_diagnostics),
-        literal_ranges=full_plan.analysis.literal_ranges,
-    )
-    carrier_plan = RuntimeSemanticsV3Plan(
-        analysis=carrier_analysis,
-        shielded_source=shielded_source,
-        markers=carrier_markers,
-        body_start=full_plan.body_start,
-        ordinary_anchor_parents=full_plan.ordinary_anchor_parents,
-    )
-    return ResolvedSourceCarrierPlanV4(runtime_plan=carrier_plan, marker_edits=edits)
+    if shielded_source != full_plan.shielded_source:
+        raise RuntimeSemanticsV3Unsupported("source-carrier edits differ from their runtime plan")
+    return ResolvedSourceCarrierPlanV4(runtime_plan=full_plan, marker_edits=edits)
 
 
 def apply_resolved_source_carriers_v4(

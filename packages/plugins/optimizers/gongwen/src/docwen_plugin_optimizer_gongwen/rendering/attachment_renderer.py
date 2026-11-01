@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from docwen_core.yaml_tools import format_yaml_scalar
+
 if TYPE_CHECKING:
     from docwen_plugin_optimizer_gongwen.models import GongwenMetadata
 
@@ -14,13 +16,16 @@ def render_attachment(
     metadata: GongwenMetadata,
     attachment_lines: list[str],
     input_path: str = "",
+    *,
+    source_name: str | None = None,
 ) -> str:
     """Render attachment content as Markdown with YAML frontmatter header.
 
     Args:
         metadata: Gongwen metadata with attachment field.
         attachment_lines: Text lines of attachment paragraphs.
-        input_path: Path of the source DOCX file (for YAML header).
+        input_path: Physical DOCX path, used only as a display fallback.
+        source_name: Public filename serialized as a safe YAML scalar.
 
     Returns:
         Markdown string for the attachment section, or empty string if no content.
@@ -31,10 +36,11 @@ def render_attachment(
     parts: list[str] = []
 
     # ── YAML frontmatter header ──
-    source_name = Path(input_path).name if input_path else "unknown.docx"
+    if source_name is None:
+        source_name = Path(input_path).name if input_path else "unknown.docx"
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S")
     parts.append("---")
-    parts.append(f"来源文件: {source_name}")
+    parts.append(f"来源文件: {format_yaml_scalar(source_name)}")
     parts.append(f"提取时间: {timestamp}")
     parts.append("类型: 附件内容")
     parts.append("---")

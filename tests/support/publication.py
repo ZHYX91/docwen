@@ -100,7 +100,7 @@ class FakeGitHub(GitHub):
             "source-checks",
             "Tests on windows-latest",
             "Tests on ubuntu-24.04",
-            "Tests on macos-14",
+            "Tests on macos-15",
             "Required checks",
             "Source identity",
             "Build Windows packages",

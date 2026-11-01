@@ -167,3 +167,81 @@ Shared checkboxes preserve Qt keyboard/accessibility behavior and draw their ind
 ## Regression / 回归
 
 Widget/view-model and Runtime integration tests cover deterministic clipboard, ownership, routing and publication behavior. GUI smoke, screenshots and physical desktop interaction remain the authority for final host-dependent layout and clipboard interaction. In particular, minimum-width, Large text, 150% application scale, long translations, Light/Dark themes, Tab order and physical clipboard conversion require Computer Use or equivalent desktop acceptance; automated Qt tests do not claim that pass. Current reference screenshots are stored under `docs/assets/screenshots/`.
+
+### Spreadsheet text capacity
+
+Structured clipboard XLSX output checks each final composed string before assigning it to openpyxl, including table cells and the Document Order, Table Semantics and Image Semantics worksheets. The limit is 32767 UTF-16 code units per cell, including paragraph separators and generated projection text. An overflow reports the worksheet and cell without including authored content, returns failure and publishes no partial workbook. A final save-time check also includes retained template and copied-sheet text, iterating only instantiated cells without expanding sparse ranges. Formulas retain their type and are not treated as literal text. Exact boundary values remain intact after save/reopen. This is an XLSX output constraint; it does not reduce the clipboard model's admission budget or constrain Markdown/CSV output.
+
+An output-settings read failure displays an immediate notice that the request did not start. A previously completed task retains its identity, result and actions; the notice appears separately and remains in history after its brief display expires.
+
+
+## Strict PDF split selection / 严格 PDF 页码选择
+
+CLI, GUI feedback/submission and Runtime use one bounded page-selection contract. The complete expression is validated before any range expansion: every token and endpoint must be valid, source page count must be a positive integer at execution, and custom selection must be nonempty and smaller than the entire document. Chinese separators, reversed ranges, deduplication, `*` (each page) and `#` (odd/even) remain supported. The limits are 4096 input characters, 1024 tokens and 100000 source/selected pages. Runtime accepts integer page arrays without bool/float coercion or silently filtering out-of-range members. Invalid requests publish no split output. GUI error feedback reuses the bounded result instead of performing an unbounded second parse; refusal does not prevent a later valid selection. Page metadata itself retains the actual nonnegative count for unrelated routes.
+
+CLI、GUI 反馈／提交及 Runtime 共用有界页码合同。展开任何范围前先验证完整表达式、每个 token 和端点；执行时页数须为正整数，自定义选择非空且不能等于全文。保留中文分隔符、反向范围、去重、`*` 逐页和 `#` 奇偶拆分。上限为输入 4096 字符、1024 tokens、源／选择 100000 页。Runtime 只接收整数数组，不强转 bool/float，不静默过滤越界成员。非法请求不发布拆分产物。GUI 错误反馈复用有界结果，不再二次无界展开；拒绝后可正常提交合法选择。页面 metadata 对其它路线继续保留实际非负页数。
+
+Native PDF split controls and their submission handler require a readable positive page count;
+unknown/unreadable PDF metadata disables every split mode and clears stale metadata when switching files.
+OFD/XPS bridge inputs can retain an unknown count until PDF conversion; execution still validates
+against the actual converted PDF. A later readable metadata result restores the appropriate controls.
+
+原生 PDF 拆分控件和提交处理均要求已读取的正页数；页数未知或无法读取时，所有拆分模式均不可执行。
+换文件时清除旧页数，后续读到有效页数可恢复操作。OFD/XPS 桥接输入仍可在转为 PDF 前保留未知页数，
+执行时继续按实际 PDF 页数严格验证。
+
+## Clipboard projected-area admission / 剪贴板投影面积准入
+
+HTML table anchors and projected grid coverage have separate cumulative budgets. Each table reserves its full projected rows×columns before parsing the new cell's nested blocks or expanding coverage. The document-wide grid limit is 65536 positions, independent of the anchor limit. `rowspan=0` is resolved within its actual row group before reservation. Nested tables consume the same remaining grid budget. Rejection retains the complete frozen plain fallback; invalid HTML-only input creates no replacement. Legal merges, nested block order and explicit header associations retain the existing representability rules: native Word header prefixes where expressible, otherwise readable custom XML rather than invented prefixes.
+
+HTML 表格 anchor 与网格覆盖分别累计预算。解析新格内的子结构或展开 coverage 前，先预留整个表当前的“行数×列数”投影面积；全文网格上限为 65536 个位置，与 anchor 上限独立。`rowspan=0` 先按真实行组解析，嵌套表共用剩余预算。拒绝时保留完整冻结 plain fallback；仅 HTML 的非法输入不替换现有输入。合法 merge、嵌套块顺序、明确表头关联继续沿用可表达性规则：可表达者生成 Word 表头前缀，其余保存在可读 custom XML 中，不捏造原生前缀。
+
+
+### Exact text-drag identities and persistent cards / 文本拖入身份与卡片生命周期
+
+For file drag MIME text, an existing complete absolute path takes precedence over whitespace tokenization, including balanced braces or quotes. A shorter existing prefix never becomes an additional input. Explicit multiple paths remain multiple inputs in source order; native local-file URLs retain precedence over a text fallback. Batch ordering moves model rows without removing and reattaching their owned card widgets. Selection, file identity, pending card materialization and subsequent retry/status actions survive deferred deletion processing.
+
+文件拖入的 MIME 文本优先按完整存在的绝对路径识别，包括成对花括号或引号包装；不会因较短前缀也存在而额外添加输入。显式多路径仍按原顺序形成多项，原生本地文件 URL 优先于文本后备。批量排序移动模型行，不移除并重挂已由列表拥有的卡片；延迟删除事件处理后，选择、文件身份、待分块创建的卡片及后续重试／状态操作仍保持一致。
+
+### Proofread array editor grammar / 校对数组编辑语法
+
+The three array editors (typos, symbol variants and sensitive-word exceptions) use `|` between elements, `\|` for a literal pipe and `\\` for a literal backslash. Loading, accepting without changes, editing another row and duplicate-key merging use this same reversible grammar. Leading/trailing element whitespace remains data. An empty cell denotes an empty array; empty elements in a nonempty expression remain invalid under the existing configuration schema rather than being silently removed.
+
+错别字、符号变体及敏感词例外三个数组编辑器用 `|` 分隔元素、`\|` 表示字面竖线、`\\` 表示字面反斜杠。加载、直接确认、修改其它行和重复键合并共用同一可逆语法；元素首尾空白保留为数据。空单元格表示空数组，非空表达式中的空元素继续由现有配置 schema 拒绝，不静默删除。
+
+### Conversion preferences and directional Markdown pages / 转换偏好与 Markdown 双页
+
+PDF splitting offers Every page, Odd/even and By page numbers. Only the custom mode
+shows a page-range input. Custom selection produces one PDF for selected pages and
+one for the remainder, each in source order; the bounded parser and all rejection
+rules above still apply. The GUI maps the two whole-file modes internally and does
+not require users to enter protocol symbols. Page expressions stay with the input
+file and are never persisted as global preferences.
+
+Incoming fixed-layout settings own `layout.split_mode` (every_page),
+`layout.document_format` (DOCX), `layout.render_format` (TIF) and existing render DPI
+(300). Format selectors are populated from discovered routes. A dormant or unavailable
+preference never invents a route: the operation selects an available target. Current
+explicit choices survive committed-default refresh, including a choice back to the
+initial value; a new file/operation context or panel reset reads saved defaults again.
+Document and image conversion use separate cards. Image-size values and their compact
+unit selectors remain on one line; narrow rows move only the field label above them.
+
+Generate Markdown (`formatting`) owns output extensions, output syntax/list indentation
+and DOCX → Markdown separators. Parse Markdown (`markdown_input`) owns input extensions,
+Markdown → DOCX separators, ordinary-line paragraphs and Mermaid. Presets and current-page
+reset affect only that direction, including persisted values and unsaved drafts. Apply,
+reload and Cancel retain their existing transaction semantics. Shared link/OCR settings
+and Incoming text's template filling and DOCX table styles retain their original owners.
+
+The template-list separator defaults and resets to comma plus space (`, `). Existing
+values, including the Chinese list separator, empty strings and spaces, are preserved
+exactly and do not change with interface language. This joins values for template output;
+it never rewrites input YAML. Dedicated official-document fields retain their existing
+list punctuation, comments, attachment-per-item layout and other special formatting.
+
+Settings help keeps the shared keyboard-operable, scroll-bounded plain-text popup.
+Descriptions remain plain text and use paragraphs for long explanations. Spin-box outer
+frames own padding/height; their internal text editors add neither. Both numeric types
+retain native keyboard behavior and visible arrows in Light/Dark, disabled and RTL states.
+Source Qt checks do not certify native desktop or final packaged appearance.

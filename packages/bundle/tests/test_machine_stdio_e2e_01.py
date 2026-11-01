@@ -309,7 +309,7 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path, r
     _assert_bundle_files(bundle, staging)
     [artifact] = bundle["artifacts"]
     assert artifact["kind"] == "document"
-    assert bundle["layout_schema"] == "docwen.document_node.v1"
+    assert bundle["layout_schema"] == "docwen.artifact_layout.v1"
     assert bundle["entries"] == [
         {
             "artifact_id": artifact["artifact_id"],
@@ -320,7 +320,9 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path, r
     ]
     assert bundle["relations"] == []
     output = staging / Path(artifact["locator"])
-    assert output.parent.name == output.stem
+    assert output.parent == staging
+    assert Path(artifact["locator"]).parts == (output.name,)
+    assert output.suffix == ".docx"
     assert output.is_file()
     assert output.stat().st_size == artifact["size_bytes"]
     assert hashlib.sha256(output.read_bytes()).hexdigest() == artifact["sha256"]

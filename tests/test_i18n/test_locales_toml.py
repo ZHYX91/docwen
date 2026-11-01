@@ -186,6 +186,8 @@ def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
         "settings.formatting.separators.asterisk",
         "settings.formatting.separators.underscore",
         "settings.invoice.layout_title",  # File-format identifiers and a direction arrow, not prose.
+        "settings.gongwen.from_markdown_title",  # Markdown → DOCX: format identifiers, not prose.
+        "settings.formatting.mermaid_title",  # Mermaid is the diagram language's name.
         "settings.output.date_formats.iso",
         "settings.output.date_formats.compact",
         "settings.output.date_formats.chinese",
@@ -229,6 +231,14 @@ def test_specialized_optimization_settings_are_localized() -> None:
         "settings.optimization.set_default",
         "settings.optimization.clear_default",
         "settings.gongwen.description",
+        "settings.gongwen.numbering_comments_label",
+        "settings.gongwen.numbering_comments_help",
+        "settings.gongwen.numbering_text_label",
+        "settings.gongwen.numbering_text_help",
+        "main_window.numbering_comments_unanchored",
+        "main_window.conversion_failed_detail",
+        "main_window.note_syntax_invalid",
+        "main_window.note_template_incompatible",
         "settings.invoice.description",
     )
     english = _read_toml_file(LOCALES_DIR / "en_US.toml")
@@ -349,8 +359,9 @@ def test_key_groups_order_and_styles_key_order() -> None:
 @pytest.mark.parametrize(
     "key",
     [
-        "conversion_panel.layout.invalid_page_range",
-        "conversion_panel.layout.invalid_page",
+        "conversion_panel.layout.split_invalid_range_warning",
+        "conversion_panel.layout.split_all_pages_warning",
+        "conversion_panel.layout.split_mode_single_page_warning",
     ],
 )
 def test_gui_layout_page_errors_are_not_left_as_en_us_placeholders(key: str) -> None:
@@ -363,7 +374,18 @@ def test_gui_layout_page_errors_are_not_left_as_en_us_placeholders(key: str) -> 
             continue
         locale_data = _read_toml_file(toml_path)
         locale_value = _get_nested_value(locale_data, key)
+        assert locale_value.strip(), f"{toml_path.name} has an empty page warning for {key}"
         assert locale_value != en_value, f"{toml_path.name} still uses en_US placeholder for {key}"
+
+
+def test_retired_gui_page_parser_keys_are_absent_from_shipped_locales() -> None:
+    retired = {
+        "conversion_panel.layout.invalid_page",
+        "conversion_panel.layout.invalid_page_range",
+    }
+    for toml_path in sorted(LOCALES_DIR.glob("*.toml")):
+        keys = set(_flatten_string_values(_read_toml_file(toml_path)))
+        assert retired.isdisjoint(keys), f"{toml_path.name} retains retired page-parser keys"
 
 
 def test_key_settings_and_editors_do_not_copy_english_prose() -> None:

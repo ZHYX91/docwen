@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 from contextlib import contextmanager
@@ -18,14 +19,23 @@ def exclusive_apply(path: Path):
             stream.write(b"\0")
             stream.flush()
         stream.seek(0)
-        if os.name == "nt":
-            import msvcrt
+        try:
+            if os.name == "nt":
+                import msvcrt
 
-            msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
 
-            fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as error:
+            if error.errno not in {errno.EACCES, errno.EAGAIN}:
+                raise
+            raise type(error)(
+                error.errno,
+                "housekeeping_apply_lock_unavailable: cleanup lock is busy or temporarily unavailable",
+                os.fspath(path),
+            ) from error
         try:
             yield
         finally:

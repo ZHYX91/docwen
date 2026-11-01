@@ -15,6 +15,10 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+numbering_comments_unanchored = "Algunos números añadidos no se pueden aislar como texto con este esquema. Se omitieron sus comentarios y se conservaron los títulos."
+conversion_failed_detail = "Error de conversión."
+note_syntax_invalid = "La sintaxis de las notas no es válida. Revise las referencias y definiciones."
+note_template_incompatible = "La estructura de notas de la plantilla es incompatible con esta conversión. Revise la plantilla o elija otra."
 image_png_16bit_clipped = "PNG admite valores enteros de hasta 16 bits; los valores fuera del intervalo 0–65535 se han limitado. Use TIFF para conservar el intervalo original."
 output_filesystem_unsupported = "No se puede guardar de forma segura en esta carpeta: el sistema de archivos no permite una publicación atómica sin sobrescritura. Elija otra ubicación de salida; en WSL, use un sistema de archivos nativo de Linux."
 ocr_quality_notice = "Los resultados OCR pueden contener errores u omisiones; compárelos con el original."
@@ -217,6 +221,7 @@ optimizations = "Especializados"
 inputs = "Tipos de entrada"
 content = "Contenido"
 [settings.tabs]
+markdown_input = "Analizar Markdown"
 general = "General"
 text = "Texto de entrada"
 proofread = "Revisión"
@@ -227,7 +232,7 @@ image = "Imágenes de entrada"
 layout = "Archivos de diseño fijo de entrada"
 other = "Otros archivos de entrada"
 link = "Enlaces"
-formatting = "Sintaxis Markdown"
+formatting = "Generar Markdown"
 output = "Guardado de archivos"
 logging = "Registro"
 software = "Software de conversión"
@@ -353,10 +358,10 @@ add_numbering_tooltip = "Añadir numeración jerárquica a los títulos del DOCX
 scheme_label = "Esquema de numeración predeterminado:"
 scheme_tooltip = "Elegir el esquema de numeración de los títulos"
 render_mode_label = "Modo de salida de la numeración de títulos:"
-render_mode_tooltip = "Elegir si los números de título se escriben en el texto o se generan mediante la numeración nativa de Word"
+render_mode_tooltip = "Elegir si los números de título se escriben en el texto o se generan mediante la numeración nativa de DOCX"
 render_mode_text = "Texto"
-render_mode_word_native = "Nativa de Word"
-render_mode_hint = "Texto = escribir los números en los títulos; nativa de Word = usar listas multinivel de Word"
+render_mode_word_native = "Nativa de DOCX"
+render_mode_hint = "Texto = escribir los números en los títulos; nativa de DOCX = usar listas multinivel de DOCX"
 
 # 字段优化（字段处理器）
 
@@ -381,7 +386,7 @@ save_numbering_clean_rules_failed = "No se pudieron guardar las reglas de limpie
 # -----------------------------------------------------------------------------
 input_description = "Opciones para Markdown de entrada: generar documentos, rellenar plantillas y procesar encabezados."
 template_fill_section = "Rellenar plantillas"
-template_fill_desc = "Separador para unir listas YAML en plantillas de Word u hojas de cálculo. Se conservan los espacios y el separador vacío."
+template_fill_desc = "Separador para unir listas YAML en plantillas de DOCX u hojas de cálculo. Se conservan los espacios y el separador vacío."
 [settings.proofread]
 validation_section = "Reglas de revisión"
 enable_symbol_pairing = "Activar comprobación de pares de símbolos"
@@ -407,7 +412,7 @@ image_extraction_mode_tooltip = "Elige cómo se insertan las imágenes en Markdo
 image_extraction_mode_file = "Archivos de imagen"
 image_extraction_mode_base64 = "Base64 en línea"
 ocr_placement_mode_label = "Ubicación de OCR:"
-ocr_placement_mode_tooltip = "Elige dónde guardar imagen + OCR. MD de imagen crea un Markdown por imagen; Documento principal escribe imagen y OCR en el Markdown principal. Base64 en línea exige Documento principal: el control se desactiva y se fuerza ese valor hasta volver a archivos de imagen, momento en que se restaura la elección anterior."
+ocr_placement_mode_tooltip = "Elige dónde guardar imagen + OCR.\n\nMD de imagen crea un Markdown por imagen; Documento principal escribe imagen y OCR en el Markdown principal.\n\nBase64 en línea exige Documento principal: el control se desactiva y se fuerza ese valor hasta volver a archivos de imagen, momento en que se restaura la elección anterior."
 ocr_placement_mode_image_md = "MD de imagen"
 ocr_placement_mode_main_md = "Documento principal"
 ocr_blockquote_title_enabled_label = "Título OCR en MD principal"
@@ -436,7 +441,7 @@ section = "Exportación de celdas combinadas"
 desc = "Controla cómo se representan las celdas combinadas en la salida Markdown."
 merge_strategy_label = "Estrategia de exportación de celdas combinadas:"
 
-merge_strategy_help = "Solo para Markdown normal: Rellenar repite el texto de la celda ancla (p. ej., «Título | Título»); Vacío deja en blanco las celdas cubiertas («Título | »). Con la salida Structural Tables activada se usan en su lugar los marcadores < y ^."
+merge_strategy_help = "Solo para Markdown normal: Rellenar repite el texto de la celda ancla (p. ej., «Título | Título»); Vacío deja en blanco las celdas cubiertas («Título | »).\n\nCon la salida Structural Tables activada se usan en su lugar los marcadores < y ^."
 [settings.table_export.strategies]
 fill = "Rellenar"
 empty = "Dejar vacío"
@@ -487,7 +492,7 @@ ods_conversion_label = "Conversión de formato ODS"
 spreadsheet_to_pdf_label = "Hoja de cálculo a PDF"
 
 # 汇总模式选项
-merge_mode_help = "La alineación compara números guardados y texto exacto; no interpreta los identificadores de texto como números. Filas/columnas: omitir registros iguales o ya contenidos, sustituir solo si el registro entrante contiene todos los valores base y conservar por separado los registros complementarios o en conflicto. Celdas: ignorar vacíos, sumar números (incluido el texto numérico), conservar una copia del texto igual y unir los demás textos con una coma. Si falta el resultado de una fórmula, se detiene la combinación; los resultados guardados pueden estar desactualizados."
+merge_mode_help = "La alineación compara números guardados y texto exacto; no interpreta los identificadores de texto como números.\n\nFilas/columnas: omitir registros iguales o ya contenidos, sustituir solo si el registro entrante contiene todos los valores base y conservar por separado los registros complementarios o en conflicto.\n\nCeldas: ignorar vacíos, sumar números (incluido el texto numérico), conservar una copia del texto igual y unir los demás textos con una coma.\n\nSi falta el resultado de una fórmula, se detiene la combinación; los resultados guardados pueden estar desactualizados."
 [settings.spreadsheet.merge_modes]
 by_row = "Combinar por filas"
 by_column = "Combinar por columnas"
@@ -529,6 +534,8 @@ tiff_no_alpha = "Sin transparencia"
 # 版式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.layout]
+document_format = "Formato de documento"
+defaults_section = "Valores de conversión"
 extraction_section = "Ajustes de extracción de imágenes/OCR"
 keep_images = "Marcar \"Extraer imágenes\" por defecto"
 enable_ocr = "Marcar \"OCR de imagen\" por defecto"
@@ -608,8 +615,8 @@ embed = "Incrustar contenido"
 # -----------------------------------------------------------------------------
 [settings.formatting]
 each_line_paragraph = "Cada línea en un párrafo"
-each_line_paragraph_help = "Crear un párrafo de Word por cada línea de texto normal de Markdown. No se modifican títulos, listas, citas, tablas, código ni saltos explícitos."
-line_paragraph_section = "Markdown a Word"
+each_line_paragraph_help = "Crear un párrafo de DOCX por cada línea de texto normal de Markdown. No se modifican títulos, listas, citas, tablas, código ni saltos explícitos."
+line_paragraph_section = "Tratamiento de párrafos"
 mermaid_auto = "Detección automática"
 mermaid_browse = "Seleccionar Mermaid CLI"
 mermaid_path = "Ruta de CLI:"
@@ -622,10 +629,10 @@ mermaid_browser_missing = "Falta el navegador compatible. Instálelo según las 
 mermaid_test_failed = "Error de renderizado: {reason}"
 mermaid_test_passed = "Disponible: diagrama de prueba renderizado."
 
-mermaid_title = "Diagramas Mermaid"
-mermaid_tooltip = "Elige si los bloques de código `mermaid` se renderizan como imágenes o se conservan como código fuente. El modo imagen usa la CLI local de Mermaid; si no está disponible o falla, se conserva el bloque y se informa de una advertencia."
+mermaid_title = "Mermaid"
+mermaid_tooltip = "Markdown → DOCX. Elige si los bloques de código `mermaid` se renderizan como imágenes o se conservan como código fuente. El modo imagen usa la CLI local de Mermaid; si no está disponible o falla, se conserva el bloque y se informa de una advertencia."
 mermaid_mode_label = "Salida:"
-mermaid_mode_tooltip = "Elige cómo se escriben los bloques de código `mermaid` en los documentos generados."
+mermaid_mode_tooltip = "Markdown → DOCX. Elige cómo se escriben los bloques de código `mermaid` en los documentos generados."
 mermaid_code = "Conservar como código"
 mermaid_image = "Renderizar como imagen"
 mermaid_ready = "Detectado: CLI {cli} / Mermaid {mermaid}. El navegador se comprueba al convertir."
@@ -633,27 +640,27 @@ mermaid_unavailable = "Imágenes no disponibles: instale la CLI local y Mermaid 
 # 文档转为Markdown部分
 docx_to_md_section = "Documento → Markdown"
 format_processing = "Procesamiento de formato"
-format_processing_tooltip = "Configura el manejo de formato al convertir documentos Word a Markdown\n\nAlgunas opciones no funcionan en la conversión 'Documento oficial optimizado'"
+format_processing_tooltip = "Configura el manejo de formato al convertir documentos DOCX a Markdown\n\nAlgunas opciones no funcionan en la conversión 'Documento oficial optimizado'"
 body_format_label = "Manejo de formato del cuerpo:"
 body_format_tooltip = "Conservar formato: Negrita→**Bold**, Cursiva→*Italic*, Tachado→~~Strikethrough~~, etc.\nDescartar formato: conservar solo texto sin formato"
 heading_format_label = "Manejo de formato de encabezados:"
-heading_format_tooltip = "Conservar formato: la negrita en encabezados se convierte a **Bold**, etc.\nDescartar formato: encabezados solo con texto, evitando markup redundante\nNota: los estilos de encabezado de Word suelen tener formato fijo; conservar puede generar markup redundante"
+heading_format_tooltip = "Conservar formato: la negrita en encabezados se convierte a **Bold**, etc.\nDescartar formato: encabezados solo con texto, evitando markup redundante\nNota: los estilos de encabezado de DOCX suelen tener formato fijo; conservar puede generar markup redundante"
 table_header_format_label = "Manejo de formato de cabecera de tabla:"
 table_header_format_tooltip = "Conservar formato: negrita en celdas de cabecera se convierte a **Bold**, etc.\nDescartar formato: cabeceras solo con texto, evitando markup redundante\nNota: los estilos de tabla suelen definir la cabecera en negrita; conservar puede duplicar markup"
 
 # 分隔符映射
-separator_mapping = "Asignación de separadores"
-separator_mapping_tooltip = "Configura qué separador Markdown usar para saltos de página/sección/líneas horizontales de Word\n\nSalto de página: page breaks en Word\nSalto de sección: todo tipo de section breaks (página siguiente/continuo/página impar/página par)\nLínea horizontal: borde inferior de párrafo (al escribir --- y pulsar Enter)"
+separator_mapping = "Conversión de separadores"
+separator_mapping_tooltip = "Configura qué separador Markdown usar para saltos de página/sección/líneas horizontales de DOCX\n\nSalto de página: page breaks en DOCX\nSalto de sección: todo tipo de section breaks (página siguiente/continuo/página impar/página par)\nLínea horizontal: borde inferior de párrafo (al escribir --- y pulsar Enter)"
 page_break_label = "Salto de página:"
-page_break_tooltip = "Convierte saltos de página de Word a separadores Markdown\nLos saltos de página se usan para forzar cambio de página en ubicaciones concretas"
+page_break_tooltip = "Convierte saltos de página de DOCX a separadores Markdown\nLos saltos de página se usan para forzar cambio de página en ubicaciones concretas"
 section_break_label = "Salto de sección:"
-section_break_tooltip = "Convierte saltos de sección de Word a separadores Markdown\nTodos los tipos de salto de sección se manejan de forma uniforme"
+section_break_tooltip = "Convierte saltos de sección de DOCX a separadores Markdown\nTodos los tipos de salto de sección se manejan de forma uniforme"
 horizontal_rule_label = "Línea horizontal:"
-horizontal_rule_tooltip = "Convierte líneas horizontales de Word (estilos Horizontal Rule 1/2/3) a separadores Markdown"
+horizontal_rule_tooltip = "Convierte líneas horizontales de DOCX (estilos Horizontal Rule 1/2/3) a separadores Markdown"
 
 # 语法选择
 syntax_selection = "Selección de sintaxis"
-syntax_selection_tooltip = "Estos estilos de salida se aplican principalmente a la conversión normal de Word a Markdown. Hojas de cálculo, imágenes, PDF/OFD y rutas especializadas aún no admiten todas las opciones. Esta selección no limita la lectura de Markdown."
+syntax_selection_tooltip = "Estos estilos de salida se aplican principalmente a la conversión normal de DOCX a Markdown. Hojas de cálculo, imágenes, PDF/OFD y rutas especializadas aún no admiten todas las opciones. Esta selección no limita la lectura de Markdown."
 bold_syntax_label = "Sintaxis de negrita:"
 bold_syntax_tooltip = "Selecciona la sintaxis de salida para texto en negrita"
 italic_syntax_label = "Sintaxis de cursiva:"
@@ -674,11 +681,11 @@ indent_spaces_tooltip = "Controla el número de espacios por nivel de lista al e
 # Markdown转为文档部分
 md_to_docx_section = "Markdown → Documento"
 md_format_processing = "Procesamiento de formato"
-md_format_processing_tooltip = "Configura el manejo de markup al convertir Markdown a documentos Word"
+md_format_processing_tooltip = "Configura el manejo de markup al convertir Markdown a documentos DOCX"
 md_body_format_label = "Manejo de markup del cuerpo:"
 md_body_format_tooltip = "Aplicar formato: **Bold** se convierte en negrita real\nMantener markup: se muestra **Bold** tal cual\nLimpiar markup: se muestra solo \"Bold\", sin formato"
 md_heading_format_label = "Manejo de markup de encabezados:"
-md_heading_format_tooltip = "Aplicar formato: anula el estilo predeterminado, permitiendo negrita parcial\nMantener markup: se muestra el markup tal cual\nLimpiar markup: deja que el estilo de encabezado de Word se aplique de forma natural\nNota: cuando el estilo del encabezado es negrita, \"Aplicar formato\" permite negrita parcial"
+md_heading_format_tooltip = "Aplicar formato: anula el estilo predeterminado, permitiendo negrita parcial\nMantener markup: se muestra el markup tal cual\nLimpiar markup: deja que el estilo de encabezado de DOCX se aplique de forma natural\nNota: cuando el estilo del encabezado es negrita, \"Aplicar formato\" permite negrita parcial"
 md_table_header_format_label = "Manejo de markup de cabecera de tabla:"
 md_table_header_format_tooltip = "Aplicar formato: convierte **negrita** en negrita real (puede solaparse con el estilo de tabla). Mantener marcado: muestra el marcado literalmente. Limpiar marcado: quita los marcadores Markdown y deja actuar al formato de la primera fila del estilo de tabla. Los estilos suelen formatear la primera fila, por lo que Limpiar marcado suele ser preferible."
 heading_merge_mode_label = "Modo de fusion de titulo y cuerpo:"
@@ -687,18 +694,18 @@ heading_merge_punctuation_label = "Puntuación para fusionar:"
 heading_merge_punctuation_tooltip = "Caracteres que activan la fusión de título y cuerpo en el modo Requiere puntuación. Un valor vacío desactiva la fusión por puntuación."
 
 # MD转文档分隔符映射
-md_separator_mapping = "Asignación de separadores"
-md_separator_mapping_tooltip = "Configura a qué salto de página/sección/línea horizontal de Word se convierten los separadores Markdown\n\nSalto de página: page breaks en Word\nSalto de sección: section breaks en Word (página siguiente)\nLínea horizontal: borde inferior de párrafo (separador visual)"
+md_separator_mapping = "Conversión de separadores"
+md_separator_mapping_tooltip = "Configura a qué salto de página/sección/línea horizontal de DOCX se convierten los separadores Markdown\n\nSalto de página: page breaks en DOCX\nSalto de sección: section breaks en DOCX (página siguiente)\nLínea horizontal: borde inferior de párrafo (separador visual)"
 dash_label = "--- (tres guiones):"
-dash_tooltip = "Convierte el separador Markdown --- a salto de página/salto de sección en Word"
+dash_tooltip = "Convierte el separador Markdown --- a salto de página/salto de sección en DOCX"
 asterisk_label = "*** (tres asteriscos):"
-asterisk_tooltip = "Convierte el separador Markdown *** a salto de página/salto de sección en Word"
+asterisk_tooltip = "Convierte el separador Markdown *** a salto de página/salto de sección en DOCX"
 underscore_label = "___ (tres guiones bajos):"
-underscore_tooltip = "Convierte el separador Markdown ___ a salto de página/salto de sección en Word\nNota: el salto de sección (página) se genera como Section break (next page)"
+underscore_tooltip = "Convierte el separador Markdown ___ a salto de página/salto de sección en DOCX\nNota: el salto de sección (página) se genera como Section break (next page)"
 
 # 表格样式
 table_style = "Estilo de tabla"
-table_style_tooltip = "Configura el estilo usado al convertir tablas Markdown a tablas Word\n\n【Estilos integrados】\nTabla de tres líneas/tabla de cuadrícula: se detecta automáticamente si existe en la plantilla; si no, se inserta la definición\n\n【Estilo personalizado】\nSi la plantilla no tiene este estilo, se crea un estilo de tabla de cuadrícula con el mismo nombre"
+table_style_tooltip = "Configura el estilo usado al convertir tablas Markdown a tablas DOCX\n\n【Estilos integrados】\nTabla de tres líneas/tabla de cuadrícula: se detecta automáticamente si existe en la plantilla; si no, se inserta la definición\n\n【Estilo personalizado】\nSi la plantilla no tiene este estilo, se crea un estilo de tabla de cuadrícula con el mismo nombre"
 builtin_style_radio = "Usar estilo integrado"
 custom_style_radio = "Usar nombre de estilo personalizado"
 
@@ -709,8 +716,6 @@ list_separator_tooltip = "Separador utilizado al unir valores de listas YAML en 
 # 格式处理选项
 mermaid_output_group = "Método de salida"
 mermaid_renderer_group = "Renderizador local"
-output_section = "Generar Markdown"
-word_mappings_title = "Correspondencias y generación de Word"
 
 [settings.formatting.options]
 preserve_format = "Conservar formato"
@@ -1188,6 +1193,13 @@ no_transparency = "Sin transparencia"
 
 # 版式转换区
 [conversion_panel.layout]
+split_page_count_unavailable = "El número de páginas del PDF no está disponible. Debe poder leerse para dividirlo."
+split_mode = "Modo de división"
+split_custom = "Por números de página"
+split_odd_even = "Páginas pares / impares"
+split_every_page = "Cada página"
+to_image = "Convertir a imagen"
+to_document = "Convertir a documento"
 image_format = "Formato de imagen"
 resolution = "Resolución (DPI)"
 convert_to_other_formats = "Convertir a otros formatos de maquetación"
@@ -1197,13 +1209,11 @@ merge_split_hint = "Combina o divide archivos de maquetación"
 merge_to_pdf = "Combinar a PDF"
 split_to_pdf = "Dividir a PDF"
 split_page_range = "Rango de páginas a dividir:"
-page_range_placeholder = "1-3,5  *  #"
-page_range_help = "Los números separan las páginas seleccionadas del resto. * divide cada página; # separa las impares de las pares."
-split_all_pages_warning = "Todas las páginas están seleccionadas. Seleccione algunas o use * o # para dividir todo el archivo."
-split_invalid_range_warning = "Introduzca páginas de este archivo, como 1-2 o 1,3, o use * o #."
+page_range_placeholder = "1-5,7,9-12"
+page_range_help = "Las páginas elegidas forman un PDF y las restantes otro. Ambos conservan el orden original."
+split_all_pages_warning = "Se han elegido todas las páginas. Elija algunas o use Cada página / Pares-impares."
+split_invalid_range_warning = "Introduzca algunas páginas del archivo, como 1-2 o 1,3."
 selected_split_file = "Archivo actual: {pages} páginas"
-invalid_page_range = "Rango de páginas no válido: {part}"
-invalid_page = "Página no válida: {part}"
 split_mode_single_page_warning = "⚠️ Este archivo solo tiene 1 página; no es necesario dividir"
 
 # 表格转换区
@@ -1490,7 +1500,7 @@ merge = "Combinar"
 search_placeholder = "Buscar clave, valor o comentario"
 correct_word = "Forma correcta"
 misspellings = "Formas incorrectas"
-multi_value_hint = "Consejo: use | para separar varios valores (por ejemplo: valor1|valor2|valor3)"
+multi_value_hint = "Consejo: separe valores con |; escriba \\| para una barra y \\\\ para una barra inversa. Se conservan los espacios."
 save_typos_failed = "No se pudo guardar el diccionario de erratas."
 save_symbol_correction_failed = "No se pudieron guardar las correcciones de símbolos."
 save_sensitive_words_failed = "No se pudo guardar el diccionario de términos marcados."
@@ -1739,16 +1749,17 @@ title = "título"
 subtitle = "subtítulo"
 
 [settings.markdown_extensions]
-description = "Reglas comunes para generar y leer Markdown. Las convenciones de salida no dependen del origen, pero la compatibilidad varía según la conversión. Las correspondencias específicas de Word se muestran aparte. No se modifican los archivos de origen."
+description = "Configure el Markdown generado. La conversión de separadores solo se aplica a DOCX → Markdown; los estilos admitidos varían según la ruta."
 input = "Entrada Markdown: reconocer extensiones"
 output = "Salida Markdown: usar extensiones"
 input_hint = "La sintaxis desactivada se trata como texto, tablas o notas al pie normales."
-output_hint = "La exportación normal de Word admite estas extensiones; las hojas de cálculo admiten Structural Tables. Otros orígenes y optimizadores especializados aún no están totalmente integrados. Activar una extensión no añade capacidades de reconocimiento."
+output_hint = "La exportación normal de DOCX admite estas extensiones; las hojas de cálculo admiten Structural Tables. Otros orígenes y optimizadores especializados aún no están totalmente integrados. Activar una extensión no añade capacidades de reconocimiento."
 structural_tables = "Structural Tables: tablas estructuradas"
 captions_references = "Number Suite: leyendas y referencias cruzadas"
 extended_headings = "Encabezados de niveles 7–9"
 typed_endnotes = "Distinción entre notas al pie y finales (endnote:)"
 obsidian_preset = "Usar extensiones de Obsidian"
+input_description = "Configure el reconocimiento de Markdown y los separadores, párrafos y Mermaid de Markdown → DOCX. Los archivos de origen no cambian."
 
 [activity]
 not_started = "No iniciada"
@@ -1781,6 +1792,7 @@ multiple = "{count} archivos"
 show_outputs = "Ver todos los archivos de salida"
 
 [settings.templates]
+saved_cleanup_warning = "El cambio de plantilla se guardó. No se pudo confirmar la limpieza del diario. No repita el cambio; actualice el catálogo para reintentar la limpieza pendiente."
 import_summary = "Importadas: {succeeded}. Fallidas: {failed}. Canceladas: {cancelled}."
 load_failed = "No se pudieron cargar las plantillas"
 operation_failed = "La operación de plantilla falló. Consulta los detalles."
@@ -1850,14 +1862,18 @@ unavailable = "La optimización {name} no está disponible para esta categoría 
 
 
 [settings.gongwen]
+numbering_text_label = "Usar numeración de texto para documentos oficiales"
+numbering_text_help = "Usa texto para los números añadidos en esta conversión con el esquema de Texto entrante. No activa la numeración ni cambia el modo guardado o los números de la plantilla. Activado por defecto e independiente del formato de campos."
+numbering_comments_label = "Comentar los números añadidos automáticamente"
+numbering_comments_help = "Comenta solo los números de texto añadidos, nunca los existentes.\n\nActivado por defecto.\n\nDesactivar la numeración de texto desmarca e inhabilita esta opción; al reactivarla puede elegirla de nuevo.\n\nLos prefijos Markdown no aislables se omiten con aviso.\n\nIndependiente del formato de campos."
 description = "Configure por separado la opción predeterminada para documentos oficiales y el formato de los campos de plantilla."
 to_markdown_title = "Documento → Markdown"
 to_markdown_description = "Use la optimización de documentos oficiales como selección inicial para documentos compatibles, sin clasificar los archivos automáticamente. DOCX se procesa directamente; DOC, WPS, RTF y ODT necesitan un conversor de documentos disponible."
 document_settings = "Extracción, numeración y tablas de documentos"
-from_markdown_title = "Markdown → Documento"
+from_markdown_title = "Markdown → DOCX"
 title = "Documentos oficiales"
 fields_label = "Dar formato a campos de documentos oficiales chinos"
-fields_help = "Da formato a anexos, destinatarios de copias, fechas y notas en plantillas de Word, y elimina los campos vacíos previstos. El marcador de anexos debe ocupar un párrafo propio en el cuerpo o en una celda. No se admiten encabezados, pies, cuadros de texto ni marcadores entre texto. Al desactivarlo, se aplican el relleno normal y el separador general de listas."
+fields_help = "Da formato a anexos, destinatarios de copias, fechas y notas en plantillas de DOCX, y elimina los campos vacíos previstos.\n\nEl marcador de anexos debe ocupar un párrafo propio en el cuerpo o en una celda.\n\nNo se admiten encabezados, pies, cuadros de texto ni marcadores entre texto.\n\nAl desactivarlo, se aplican el relleno normal y el separador general de listas."
 
 attachment_alignment_label = "Alineación de los anexos"
 attachment_alignment_spaces = "Espacios + sangría"

@@ -33,8 +33,9 @@ if str(_REPO_ROOT) not in sys.path:
 
 from scripts.icon_pixels import unpremultiply_rgba  # noqa: E402 - standalone script bootstrap
 from scripts.release.msix_candidate import extract_candidate  # noqa: E402
-from scripts.release.publication_contract import PublicationError  # noqa: E402
-from tools.run_lease import lease_payload, transition  # noqa: E402
+from scripts.release.publication_contract import PublicationError, canonical_json, file_identity  # noqa: E402
+from scripts.release.publication_download import atomic_record  # noqa: E402
+from tools.run_lease import lease_payload, managed_run, transition  # noqa: E402
 from tools.workspace_root import WorkspaceRootError, resolve_workspace_root  # noqa: E402
 
 _SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
@@ -585,9 +586,16 @@ def build_msix(
     makeappx: Path,
     portable_zip: Path | None = None,
     candidate_receipt: Path | None = None,
+    metadata_output: Path | None = None,
+    packaging_commit: str | None = None,
 ) -> dict[str, object]:
     _require((payload_root is not None) != (portable_zip is not None), "msix_requires_one_payload_source")
     _require((portable_zip is None) == (candidate_receipt is None), "msix_candidate_receipt_required_with_archive")
+    if metadata_output is not None:
+        _require(
+            not metadata_output.resolve().is_relative_to(work_root.resolve()),
+            "msix_metadata_must_be_outside_work",
+        )
     safe_work_root = _create_work_root(work_root)
     try:
         result = _build_msix(
@@ -598,6 +606,15 @@ def build_msix(
             makeappx=makeappx,
             portable_zip=portable_zip,
             candidate_receipt=candidate_receipt,
+        )
+        if packaging_commit is not None:
+            _require(re.fullmatch(r"[0-9a-f]{40}", packaging_commit) is not None, "msix_packaging_commit_invalid")
+            result["packagingCommit"] = packaging_commit
+        _publish_msix(
+            built=safe_work_root / "built.msix",
+            output=output.resolve(),
+            metadata=result,
+            metadata_output=metadata_output.resolve() if metadata_output is not None else None,
         )
     except BaseException as error:
         try:
@@ -657,10 +674,6 @@ def _build_msix(
 
     verified_staged_files = verify_layout(built, staging_root)
     entry_count, content_sha256 = package_content_identity(built)
-    with built.open("rb") as source, output.open("xb") as target:
-        shutil.copyfileobj(source, target)
-    _require(_sha256(output) == _sha256(built), "msix_output_copy_mismatch")
-
     return {
         "schemaVersion": 1,
         "storeId": config["storeId"],
@@ -668,8 +681,8 @@ def _build_msix(
         "sourceVersion": config["sourceVersion"],
         "packageVersion": config["packageVersion"],
         "assetName": output.name,
-        "bytes": output.stat().st_size,
-        "sha256": _sha256(output),
+        "bytes": built.stat().st_size,
+        "sha256": _sha256(built),
         "entryCount": entry_count,
         "contentSha256": content_sha256,
         "verifiedStagedFiles": verified_staged_files,
@@ -678,10 +691,51 @@ def _build_msix(
     }
 
 
+def _publish_msix(
+    *,
+    built: Path,
+    output: Path,
+    metadata: Mapping[str, object],
+    metadata_output: Path | None,
+) -> None:
+    """Publish verified bytes and requested metadata under one owned lease.
+
+    The same-filesystem staging copy is never a final package. A failed optional
+    receipt keeps the complete package together with exact recovery identities.
+    """
+    _require(not output.exists() and not output.is_symlink(), "msix_output_must_be_new_outside_work")
+    if metadata_output is not None:
+        _require(metadata_output != output, "msix_metadata_output_conflicts_with_package")
+        _require(not metadata_output.exists() and not metadata_output.is_symlink(), "msix_metadata_output_must_be_new")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    identity = file_identity(built)
+    _require(identity == {"bytes": metadata["bytes"], "sha256": metadata["sha256"]}, "msix_built_identity_changed")
+    with managed_run(
+        output.parent, prefix=".docwen-msix-publish-", owner="docwen.release.msix", kind="msix-publication"
+    ) as publication:
+        staged = publication.root / output.name
+        recovery = {
+            "package": {"path": str(output), **identity},
+            "metadata": {"path": str(metadata_output), "content": dict(metadata)} if metadata_output else None,
+            "source": str(built),
+        }
+        atomic_record(publication.root / "publication.json", canonical_json(recovery))
+        with built.open("rb") as source, staged.open("xb") as target:
+            shutil.copyfileobj(source, target)
+            target.flush()
+            os.fsync(target.fileno())
+        _require(file_identity(staged) == identity, "msix_output_copy_mismatch")
+        # Exclusive linking exposes all verified bytes at once and cannot
+        # overwrite a destination created after the initial admission check.
+        os.link(staged, output)
+        if metadata_output is not None:
+            _write_metadata(metadata_output, metadata)
+        _require(file_identity(output) == identity, "msix_published_identity_changed")
+
+
 def _write_metadata(path: Path, metadata: Mapping[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("x", encoding="utf-8", newline="\n") as stream:
-        stream.write(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
+    atomic_record(path, canonical_json(metadata))
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -719,11 +773,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             makeappx=makeappx,
             portable_zip=args.portable_zip,
             candidate_receipt=args.candidate_receipt,
+            metadata_output=args.metadata_output,
+            packaging_commit=args.packaging_commit,
         )
-        if args.packaging_commit is not None:
-            metadata["packagingCommit"] = args.packaging_commit
-        if args.metadata_output is not None:
-            _write_metadata(args.metadata_output.resolve(), metadata)
     except (MsixBuildError, PublicationError, OSError, ValueError, subprocess.SubprocessError) as exc:
         print(str(exc), file=sys.stderr)
         return 1

@@ -489,7 +489,7 @@ def test_parallel_style_registry_uses_its_own_legacy_ids_and_rewrites_graph(tmp_
     assert derived_based_on.get(qn("w:val")) == "Heading1"
 
 
-def test_parallel_builtin_style_conflict_fails_closed_without_caller_mutation() -> None:
+def test_parallel_builtin_style_conflict_is_preserved_with_shared_private_managed_id() -> None:
     def break_effects(root: etree._Element) -> None:
         heading = next(element for element in root.findall(qn("w:style")) if element.get(qn("w:styleId")) == "Heading1")
         heading.set(qn("w:type"), "character")
@@ -497,13 +497,15 @@ def test_parallel_builtin_style_conflict_fails_closed_without_caller_mutation() 
     source_blob = _rewrite_xml_member(_document_bytes(Document()), "word/stylesWithEffects.xml", break_effects)
     document = Document(BytesIO(source_blob))
     before = _package_snapshot(document)
-
-    with pytest.raises(ManagedStyleCompletionError) as raised:
-        complete_managed_styles(document, _catalog("en_US"))
-
+    completed, bindings = complete_managed_styles(document, _catalog("en_US"))
     assert _package_snapshot(document) == before
-    assert raised.value.diagnostic_code == "MD2DOCX-STYLE-CONFLICT"
-    assert raised.value.error_type == "invalid_input"
+    assert bindings.style_id("heading_1") == "Heading1DocWen1"
+    with ZipFile(BytesIO(_document_bytes(completed))) as archive:
+        effects = etree.fromstring(archive.read("word/stylesWithEffects.xml"))
+    original = effects.find(qn("w:style") + "[@" + qn("w:styleId") + "='Heading1']")
+    assert original is not None and original.get(qn("w:type")) == "character"
+    new = effects.find(qn("w:style") + "[@" + qn("w:styleId") + "='Heading1DocWen1']")
+    assert new is not None and new.get(qn("w:type")) == "paragraph"
 
 
 @pytest.mark.parametrize("conflict_kind", ("wrong_type", "split_identity"))

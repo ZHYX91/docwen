@@ -18,11 +18,23 @@ import os
 import re
 import uuid
 from collections import deque
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from docwen_core.detection import sniff_delimited_separator
+from docwen_core.errors import CancellationRequested
 from docwen_core.markdown_extensions import resolve_markdown_extensions
+from docwen_core.markdown_utils import encode_markdown_table_cell
 from docwen_core.text.ocr import report_ocr_outcome
 from docwen_plugin_spreadsheet.delimited import decoded_samples
+from docwen_plugin_spreadsheet.sparse_projection import (
+    MAX_SPREADSHEET_PROJECTION_CELLS,
+    ProjectionBudget,
+    SpreadsheetProjectionLimitError,
+    preflight_worksheet_allocations,
+    worksheet_blocks,
+)
+from docwen_plugin_spreadsheet.worksheets import ordinary_worksheets
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -46,7 +58,9 @@ def _cell_has_value(value: Any) -> bool:
         return bool(value)
 
 
-def _find_blocks(df: Any) -> list[Any]:
+def _find_blocks(
+    df: Any, *, cancel_check: Callable[[], None] | None = None, copy_budget: ProjectionBudget | None = None
+) -> list[Any]:
     """Find all disconnected data blocks in a DataFrame using BFS.
 
     A "block" is a contiguous region of non-empty cells separated
@@ -58,11 +72,18 @@ def _find_blocks(df: Any) -> list[Any]:
         return []
 
     rows, cols = df.shape
+    if rows * cols > MAX_SPREADSHEET_PROJECTION_CELLS:
+        raise SpreadsheetProjectionLimitError("DataFrame area exceeds the projection budget.")
+    if copy_budget is None:
+        copy_budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
     visited: set[tuple[int, int]] = set()
     blocks: list[pd.DataFrame] = []
+    visits = 0
 
     for r in range(rows):
         for c in range(cols):
+            if cancel_check is not None and (r * cols + c) % 1000 == 0:
+                cancel_check()
             cell_value = df.iat[r, c]
             if (r, c) not in visited and _cell_has_value(cell_value):
                 min_r, max_r, min_c, max_c = r, r, c, c
@@ -72,6 +93,9 @@ def _find_blocks(df: Any) -> list[Any]:
                 visited.add((r, c))
 
                 while q:
+                    if cancel_check is not None and visits % 1000 == 0:
+                        cancel_check()
+                    visits += 1
                     curr_r, curr_c = q.popleft()
                     for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                         nr, nc = curr_r + dr, curr_c + dc
@@ -89,37 +113,37 @@ def _find_blocks(df: Any) -> list[Any]:
                             min_c = min(min_c, nc)
                             max_c = max(max_c, nc)
 
+                copy_budget.reserve((max_r - min_r + 1) * (max_c - min_c + 1), location="Markdown block")
                 block: pd.DataFrame = df.iloc[min_r : max_r + 1, min_c : max_c + 1].copy()  # type: ignore[assignment]
                 # Another disconnected component can sit inside this bounding
                 # rectangle (for example an L-shaped table around one cell).
                 # Do not emit that cell in both blocks.
                 for row_index in range(min_r, max_r + 1):
                     for column_index in range(min_c, max_c + 1):
+                        if (
+                            cancel_check is not None
+                            and ((row_index - min_r) * (max_c - min_c + 1) + column_index - min_c) % 1000 == 0
+                        ):
+                            cancel_check()
                         if (row_index, column_index) not in component:
                             block.iat[row_index - min_r, column_index - min_c] = None
                 block.dropna(axis="index", how="all", inplace=True)
                 block.dropna(axis="columns", how="all", inplace=True)
-                blocks.append(block)
+                blocks.append(block.fillna(""))
 
     return blocks
 
 
 def _process_cell_newlines(df: Any) -> Any:
-    """Replace newlines in cells with <br> and escape pipe characters."""
+    """Encode raw native cells once, before generated Markdown is added."""
     import pandas as pd
 
-    df_copy = df.copy()
-
-    for col in df_copy.columns:
-        df_copy[col] = df_copy[col].apply(
-            lambda x: (
-                str(x).replace("\r\n", "<br>").replace("\n", "<br>").replace("\r", "<br>").replace("|", "\\|")
-                if pd.notna(x) and x != ""
-                else x
-            )
+    result = df.copy()
+    for column in result.columns:
+        result[column] = result[column].apply(
+            lambda cell: encode_markdown_table_cell(str(cell)) if pd.notna(cell) and cell != "" else cell
         )
-
-    return df_copy
+    return result
 
 
 _NUMERIC_TEXT_RE = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$")
@@ -166,12 +190,18 @@ def _dataframe_to_markdown(data: Any, headers: list[str]) -> str:
     return data.to_markdown(index=False, headers=headers)
 
 
-def _worksheet_merge_marker_positions(ws: Any) -> set[tuple[int, int]]:
+def _worksheet_merge_marker_positions(
+    ws: Any, *, cancel_check: Callable[[], None] | None = None
+) -> set[tuple[int, int]]:
     positions: set[tuple[int, int]] = set()
+    visits = 0
     for merged_range in list(ws.merged_cells.ranges):
         anchor = (merged_range.min_row - 1, merged_range.min_col - 1)
         for row in range(merged_range.min_row - 1, merged_range.max_row):
             for column in range(merged_range.min_col - 1, merged_range.max_col):
+                if cancel_check is not None and visits % 1000 == 0:
+                    cancel_check()
+                visits += 1
                 if (row, column) != anchor:
                     positions.add((row, column))
     return positions
@@ -240,137 +270,91 @@ def _worksheet_to_dataframe(
     ws: Any,
     table_merge_strategy: str = "fill",
 ) -> Any:
-    """Convert an openpyxl worksheet to a pandas DataFrame.
+    """Bounded dense helper; production export uses sparse worksheet blocks.
 
-    Handles merged cells according to the specified strategy, delegating
-    grid construction and rendering to the shared
-    ``docwen_core.export_semantics`` module.
-
-    F-H3b-027, F-H3b-029
+    Only stored values are read. Original coordinate labels are retained, so a
+    distant scalar does not allocate or mutate the origin rectangle.
     """
     import pandas as pd
 
-    from docwen_core.export_semantics import (
-        TableMergeRegion,
-        build_table_semantic_grid,
-        normalize_table_merge_export_strategy,
-        render_table_semantic_grid,
-    )
+    from docwen_core.export_semantics import TableMergeRegion, build_table_semantic_grid, render_table_semantic_grid
 
-    strategy = normalize_table_merge_export_strategy(table_merge_strategy)
-
-    cell_text_by_position: dict[tuple[int, int], str] = {}
-    max_row = 0
-    max_col = 0
-
-    # Determine dimensions from populated cells.
-    if getattr(ws, "_cells", None):
-        for cell in ws._cells.values():
-            if cell.value is None:
-                continue
-            if isinstance(cell.value, str) and cell.value.strip() == "":
-                continue
-            max_row = max(max_row, cell.row)
-            max_col = max(max_col, cell.column)
-
-    # Collect merged cell regions and ensure anchor values are recorded.
-    merge_regions: list[TableMergeRegion] = []
-    for merged_range in list(ws.merged_cells.ranges):
-        range_min_row = merged_range.min_row
-        range_min_col = merged_range.min_col
-        range_max_row = merged_range.max_row
-        range_max_col = merged_range.max_col
-        max_row = max(max_row, range_max_row)
-        max_col = max(max_col, range_max_col)
-        merge_regions.append(
-            TableMergeRegion(
-                start_row=range_min_row - 1,
-                start_col=range_min_col - 1,
-                end_row=range_max_row - 1,
-                end_col=range_max_col - 1,
-            )
-        )
-        anchor_value = ws.cell(row=range_min_row, column=range_min_col).value
-        anchor_text = "" if anchor_value is None else str(anchor_value)
-        cell_text_by_position.setdefault((range_min_row - 1, range_min_col - 1), anchor_text)
-
-    if max_row <= 0 or max_col <= 0:
+    values = {
+        (cell.row - 1, cell.column - 1): str(cell.value)
+        for cell in ws._cells.values()
+        if cell.value is not None and (not isinstance(cell.value, str) or cell.value.strip())
+    }
+    merges = [
+        TableMergeRegion(native.min_row - 1, native.min_col - 1, native.max_row - 1, native.max_col - 1)
+        for native in ws.merged_cells.ranges
+    ]
+    positions = set(values)
+    for region in merges:
+        positions.update(((region.start_row, region.start_col), (region.end_row, region.end_col)))
+    if not positions:
         return pd.DataFrame()
-
-    # Populate cell_text_by_position for every (row, col) so that
-    # build_table_semantic_grid has a complete sparse-text map.
-    for row_idx in range(max_row):
-        for col_idx in range(max_col):
-            pos = (row_idx, col_idx)
-            if pos in cell_text_by_position:
-                continue
-            value = ws.cell(row=row_idx + 1, column=col_idx + 1).value
-            if value is None:
-                continue
-            if isinstance(value, str) and value.strip() == "":
-                continue
-            cell_text_by_position[pos] = str(value)
-
-    # Build and render the semantic grid.
-    grid = build_table_semantic_grid(
-        row_count=max_row,
-        col_count=max_col,
-        cell_text_by_position=cell_text_by_position,
-        merge_regions=merge_regions,
+    top, left = min(row for row, _ in positions), min(column for _, column in positions)
+    bottom, right = max(row for row, _ in positions), max(column for _, column in positions)
+    ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS).reserve(
+        (bottom - top + 1) * (right - left + 1), location=ws.title
     )
-    rendered = render_table_semantic_grid(grid, strategy=strategy)
+    grid = build_table_semantic_grid(
+        row_count=bottom - top + 1,
+        col_count=right - left + 1,
+        cell_text_by_position={(row - top, column - left): text for (row, column), text in values.items()},
+        merge_regions=[
+            TableMergeRegion(
+                region.start_row - top, region.start_col - left, region.end_row - top, region.end_col - left
+            )
+            for region in merges
+        ],
+        max_cells=MAX_SPREADSHEET_PROJECTION_CELLS,
+    )
+    return pd.DataFrame(
+        render_table_semantic_grid(grid, strategy=table_merge_strategy),
+        index=range(top, bottom + 1),
+        columns=range(left, right + 1),
+    )
 
-    return pd.DataFrame(rendered)
 
-
-def _read_csv_flexible(file_path: str, source_format: str) -> Any:
-    """Read a CSV file with flexible encoding and delimiter detection."""
+def _read_csv_flexible(file_path: str, source_format: str, *, cancel_check: Callable[[], None] | None = None) -> Any:
+    """Read literal records using the same delimiter fact as admission/hub."""
     import pandas as pd
 
-    delimiters = ",;\t|"
-    is_tsv = source_format == "tsv"
-
-    def should_skip_blank_lines(sep: str | None = None) -> bool:
-        return not (is_tsv or sep == "\t")
-
-    for encoding, sample_text in decoded_samples(file_path):
-        sep = None
+    candidates = decoded_samples(file_path) or [("utf-8-sig", "")]
+    for index, (encoding, sample) in enumerate(candidates):
+        delimiter = sniff_delimited_separator(sample) or ("\t" if source_format == "tsv" else ",")
+        rows: list[list[str]] = []
+        cell_count = 0
+        widest = 0
         try:
-            sep = csv.Sniffer().sniff(sample_text, delimiters=delimiters).delimiter
-        except Exception:
-            sep = None
-
-        try:
-            if sep:
-                return pd.read_csv(
-                    file_path,
-                    header=None,
-                    dtype=str,
-                    keep_default_na=False,
-                    encoding=encoding,
-                    sep=sep,
-                    skip_blank_lines=should_skip_blank_lines(sep),
-                )
-            fallback_sep = "\t" if is_tsv else ","
-            return pd.read_csv(
-                file_path,
-                header=None,
-                dtype=str,
-                keep_default_na=False,
-                encoding=encoding,
-                sep=fallback_sep,
-                skip_blank_lines=should_skip_blank_lines(fallback_sep),
-            )
-        except Exception:
-            continue
-
-    return pd.read_csv(
-        file_path,
-        header=None,
-        dtype=str,
-        keep_default_na=False,
-        skip_blank_lines=should_skip_blank_lines(),
-    )
+            with open(file_path, encoding=encoding, errors="strict", newline="") as stream:
+                for row_index, row in enumerate(csv.reader(stream, delimiter=delimiter, strict=True)):
+                    if cancel_check is not None and row_index % 1000 == 0:
+                        cancel_check()
+                    # Preserve the existing TSV blank-row contract; CSV skips
+                    # physically blank records, not empty fields in a record.
+                    if not row and source_format != "tsv" and delimiter != "\t":
+                        continue
+                    cell_count += len(row)
+                    widest = max(widest, len(row))
+                    if (
+                        cell_count > MAX_SPREADSHEET_PROJECTION_CELLS
+                        or (len(rows) + 1) * widest > MAX_SPREADSHEET_PROJECTION_CELLS
+                    ):
+                        raise SpreadsheetProjectionLimitError("Delimited Markdown projection exceeds its cell budget.")
+                    for _column in range(0, len(row), 1000):
+                        if cancel_check is not None:
+                            cancel_check()
+                    rows.append(row)
+        except UnicodeError:
+            if index == len(candidates) - 1:
+                raise
+        else:
+            if cancel_check is not None:
+                cancel_check()
+            return pd.DataFrame(rows, dtype=object).fillna("")
+    raise AssertionError("Delimited decoding produced no records")
 
 
 def _extract_sheet_images(
@@ -405,8 +389,10 @@ def _extract_sheet_images(
     image_counter = image_counter_start
 
     for img in ws._images:
+        context.cancellation.check()
         try:
             image_data = img._data()
+            context.cancellation.check()
 
             # Detect image format
             ext = "png"
@@ -471,6 +457,8 @@ def _extract_sheet_images(
 
             image_counter += 1
 
+        except CancellationRequested:
+            raise
         except Exception as exc:
             extraction_loss_count += 1
             context.logger.warning(
@@ -540,6 +528,8 @@ class SpreadsheetToMarkdownConverter:
                 context=context,
                 options=options,
             )
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"Sheet→MD conversion failed: {exc}")
             return ConversionResult(
@@ -548,13 +538,13 @@ class SpreadsheetToMarkdownConverter:
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
                     message=str(exc),
-                    diagnostic_code="SHEET2MD-PARSE-ERROR",
+                    diagnostic_code=getattr(exc, "diagnostic_code", "SHEET2MD-PARSE-ERROR"),
                 ),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
                         message=f"Failed to parse spreadsheet: {exc}",
-                        code="SHEET2MD-PARSE-ERROR",
+                        code=getattr(exc, "diagnostic_code", "SHEET2MD-PARSE-ERROR"),
                     ),
                 ],
             )
@@ -735,12 +725,12 @@ class SpreadsheetToMarkdownConverter:
 
         md_content += f"# {file_stem}\n\n"
 
-        df = _read_csv_flexible(input_path, source_format)
+        df = _read_csv_flexible(input_path, source_format, cancel_check=context.cancellation.check)
         stats["sheets"] = 1
         stats["rows"] = df.shape[0]
         stats["cols"] = df.shape[1]
 
-        blocks = _find_blocks(df)
+        blocks = _find_blocks(df, cancel_check=context.cancellation.check)
         stats["blocks"] = len(blocks)
         stats["images"] = 0
 
@@ -789,262 +779,273 @@ class SpreadsheetToMarkdownConverter:
 
         context.progress.report_progress(20.0, "Opening workbook...")
 
+        preflight_worksheet_allocations(
+            input_path, cancel_check=context.cancellation.check, limit=MAX_SPREADSHEET_PROJECTION_CELLS
+        )
         wb, formula_wb = _load_xlsx_views(input_path)
         try:
+            worksheets = ordinary_worksheets(wb)
+            budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
+            copy_budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
             unavailable_formula_count, unavailable_formula_locations = _find_unavailable_formula_caches(
                 wb,
                 formula_wb,
                 input_path=input_path,
+                sheet_names=[worksheet.title for worksheet in worksheets],
                 cancel_check=context.cancellation.check,
             )
-        finally:
-            formula_wb.close()
-        if unavailable_formula_count:
-            stats["formula_cache_unavailable_count"] = unavailable_formula_count
-            stats["formula_cache_warning_message"] = _formula_cache_warning_message(
-                unavailable_formula_count,
-                unavailable_formula_locations,
-            )
-        stats["sheets"] = len(wb.sheetnames)
-
-        total_images_extracted = 0
-        total_image_extraction_losses = 0
-
-        total_sheets = len(wb.sheetnames)
-        for sheet_idx, sheet_name in enumerate(wb.sheetnames):
-            context.cancellation.check()
-            progress = 20.0 + 60.0 * (sheet_idx / max(total_sheets, 1))
-            context.progress.report_progress(progress, f"Processing sheet: {sheet_name}")
-
-            md_content += f"# {sheet_name}\n\n"
-            ws = wb[sheet_name]
-
-            # ── Image extraction with position injection (H6) and OCR support (M8) ──
-            enable_ocr = options.get("to_md_enable_ocr", False)
-            extract_images = keep_images or enable_ocr
-            image_positions: dict[tuple[int, int], list[str]] = {}
-            sheet_images: list[dict[str, Any]] = []
-
-            if extract_images:
-                from docwen_core.export_semantics import (
-                    get_markdown_export_modes,
-                    resolve_markdown_request_policy,
+            if unavailable_formula_count:
+                stats["formula_cache_unavailable_count"] = unavailable_formula_count
+                stats["formula_cache_warning_message"] = _formula_cache_warning_message(
+                    unavailable_formula_count,
+                    unavailable_formula_locations,
                 )
+            stats["sheets"] = len(worksheets)
 
-                request_policy = resolve_markdown_request_policy(context)
-                export_semantics = request_policy.export
+            total_images_extracted = 0
+            total_image_extraction_losses = 0
 
-                export_modes = get_markdown_export_modes(
-                    "xlsx",
-                    extraction_mode=options.get("image_mode"),
-                    ocr_placement_mode=options.get("ocr_placement"),
-                    semantics=export_semantics,
-                )
-                image_mode = export_modes["image_extraction_mode"]
-                if image_mode not in {"file", "base64", "embed", "omit"}:
-                    image_mode = "file"
-                ocr_placement = export_modes["ocr_placement_mode"]
-                if ocr_placement not in {"image_md", "main_md"}:
-                    ocr_placement = "main_md"
-                ocr_language = str(options.get("ocr_language") or "auto")
-                current_locale = str(options.get("locale") or "zh_CN")
+            total_sheets = len(worksheets)
+            for sheet_idx, ws in enumerate(worksheets):
+                sheet_name = ws.title
+                context.cancellation.check()
+                progress = 20.0 + 60.0 * (sheet_idx / max(total_sheets, 1))
+                context.progress.report_progress(progress, f"Processing sheet: {sheet_name}")
 
-                sheet_images, sheet_image_extraction_losses = _extract_sheet_images(
-                    ws,
-                    sheet_name,
-                    context,
-                    image_counter_start=total_images_extracted + 1,
-                    register_artifacts=keep_images and image_mode in {"file", "embed"},
-                )
-                total_image_extraction_losses += sheet_image_extraction_losses
+                md_content += f"# {sheet_name}\n\n"
 
-                if sheet_images:
-                    from docwen_core.text.image_markdown import generate_image_markdown
+                # ── Image extraction with position injection (H6) and OCR support (M8) ──
+                enable_ocr = options.get("to_md_enable_ocr", False)
+                extract_images = keep_images or enable_ocr
+                image_positions: dict[tuple[int, int], list[str]] = {}
+                sheet_images: list[dict[str, Any]] = []
 
-                    image_link_style = options.get("image_link_style", export_semantics.image_link_style)
-                    md_link_style: str = export_semantics.md_file_link_style
+                if extract_images:
+                    from docwen_core.export_semantics import (
+                        get_markdown_export_modes,
+                        resolve_markdown_request_policy,
+                    )
 
-                    # Sidecar names must be unique across the entire workbook,
-                    # not just within one sheet.  Relocation maps old references
-                    # by name; duplicate names would make later links point at
-                    # the first sheet's sidecar.
-                    img_seq = total_images_extracted
-                    main_stem = os.path.splitext(os.path.basename(str(input_path)))[0]
+                    request_policy = resolve_markdown_request_policy(context)
+                    export_semantics = request_policy.export
 
-                    for img_info in sheet_images:
-                        # Build image markdown link
-                        img_path = img_info["staging_path"] if image_mode == "base64" else img_info["suggested_name"]
-                        img_md = ""
-                        if keep_images:
-                            img_md = generate_image_markdown(
-                                image_path=img_path,
-                                image_mode=image_mode,
-                                image_link_style=image_link_style,
-                                alt_text=img_info.get("suggested_name", ""),
-                                export_semantics=export_semantics,
+                    export_modes = get_markdown_export_modes(
+                        "xlsx",
+                        extraction_mode=options.get("image_mode"),
+                        ocr_placement_mode=options.get("ocr_placement"),
+                        semantics=export_semantics,
+                    )
+                    image_mode = export_modes["image_extraction_mode"]
+                    if image_mode not in {"file", "base64", "embed", "omit"}:
+                        image_mode = "file"
+                    ocr_placement = export_modes["ocr_placement_mode"]
+                    if ocr_placement not in {"image_md", "main_md"}:
+                        ocr_placement = "main_md"
+                    ocr_language = str(options.get("ocr_language") or "auto")
+                    current_locale = str(options.get("locale") or "zh_CN")
+
+                    if total_images_extracted + len(ws._images) > MAX_SPREADSHEET_PROJECTION_CELLS:
+                        raise SpreadsheetProjectionLimitError("Image occurrences exceed the projection budget.")
+                    sheet_images, sheet_image_extraction_losses = _extract_sheet_images(
+                        ws,
+                        sheet_name,
+                        context,
+                        image_counter_start=total_images_extracted + 1,
+                        register_artifacts=keep_images and image_mode in {"file", "embed"},
+                    )
+                    total_image_extraction_losses += sheet_image_extraction_losses
+
+                    if sheet_images:
+                        from docwen_core.text.image_markdown import generate_image_markdown
+
+                        image_link_style = options.get("image_link_style", export_semantics.image_link_style)
+                        md_link_style: str = export_semantics.md_file_link_style
+
+                        # Sidecar names must be unique across the entire workbook,
+                        # not just within one sheet.  Relocation maps old references
+                        # by name; duplicate names would make later links point at
+                        # the first sheet's sidecar.
+                        img_seq = total_images_extracted
+                        main_stem = os.path.splitext(os.path.basename(str(input_path)))[0]
+
+                        for img_info in sheet_images:
+                            # Build image markdown link
+                            img_path = (
+                                img_info["staging_path"] if image_mode == "base64" else img_info["suggested_name"]
                             )
+                            img_md = ""
+                            if keep_images:
+                                img_md = generate_image_markdown(
+                                    image_path=img_path,
+                                    image_mode=image_mode,
+                                    image_link_style=image_link_style,
+                                    alt_text=img_info.get("suggested_name", ""),
+                                    export_semantics=export_semantics,
+                                )
 
-                        # M8: OCR always runs when enabled, regardless of keep_images
-                        if enable_ocr:
-                            from docwen_core.detection import detect_content_format
-                            from docwen_core.text.ocr import run_ocr_outcome
-                            from docwen_core.text.table_recognition import (
-                                enrich_ocr_table_structure,
-                            )
+                            # M8: OCR always runs when enabled, regardless of keep_images
+                            if enable_ocr:
+                                from docwen_core.detection import detect_content_format
+                                from docwen_core.text.ocr import run_ocr_outcome
+                                from docwen_core.text.table_recognition import (
+                                    enrich_ocr_table_structure,
+                                )
 
-                            outcome = run_ocr_outcome(
-                                img_info["staging_path"],
-                                source_format=detect_content_format(img_info["staging_path"]).format,
-                                ocr_language=ocr_language,
-                                current_locale=current_locale,
-                            )
-                            outcome, table_outcome = enrich_ocr_table_structure(
-                                img_info["staging_path"], outcome, context=context
-                            )
-                            if table_outcome.fallback_required:
-                                context.progress.report_diagnostic(
-                                    "warning",
-                                    "Table structure recognition failed; plain OCR text was retained.",
-                                    code=table_outcome.diagnostic_code,
+                                outcome = run_ocr_outcome(
+                                    img_info["staging_path"],
+                                    source_format=detect_content_format(img_info["staging_path"]).format,
+                                    ocr_language=ocr_language,
+                                    current_locale=current_locale,
+                                )
+                                outcome, table_outcome = enrich_ocr_table_structure(
+                                    img_info["staging_path"], outcome, context=context
+                                )
+                                if table_outcome.fallback_required:
+                                    context.progress.report_diagnostic(
+                                        "warning",
+                                        "Table structure recognition failed; plain OCR text was retained.",
+                                        code=table_outcome.diagnostic_code,
+                                        location=(
+                                            f"{sheet_name}:{img_info.get('suggested_name', img_info['staging_path'])}"
+                                        ),
+                                    )
+                                _report_ocr_best_effort(
+                                    context.progress,
+                                    outcome.status,
                                     location=(
                                         f"{sheet_name}:{img_info.get('suggested_name', img_info['staging_path'])}"
                                     ),
                                 )
-                            _report_ocr_best_effort(
-                                context.progress,
-                                outcome.status,
-                                location=(f"{sheet_name}:{img_info.get('suggested_name', img_info['staging_path'])}"),
-                            )
-                            ocr_text = outcome.recognized_text
-                            ocr_markdown = outcome.structured_markdown
-                            if ocr_text or ocr_markdown:
-                                if ocr_placement == "image_md":
-                                    img_seq += 1
-                                    sidecar_stem = f"{main_stem}__img_{img_seq:03d}_ocr"
-                                    from docwen_core.text.image_markdown import build_image_ocr_sidecar
+                                ocr_text = outcome.recognized_text
+                                ocr_markdown = outcome.structured_markdown
+                                if ocr_text or ocr_markdown:
+                                    if ocr_placement == "image_md":
+                                        img_seq += 1
+                                        sidecar_stem = f"{main_stem}__img_{img_seq:03d}_ocr"
+                                        from docwen_core.text.image_markdown import build_image_ocr_sidecar
 
-                                    sidecar_text, repl_link = build_image_ocr_sidecar(
-                                        sidecar_stem=sidecar_stem,
-                                        source_format="xlsx",
-                                        image_markdown=img_md,
-                                        ocr_text=ocr_text,
-                                        md_link_style=md_link_style,
-                                        ocr_markdown=ocr_markdown or None,
-                                        ocr_blockquote_title=request_policy.ocr_blockquote_title,
-                                    )
-                                    from pathlib import Path as _Path
+                                        sidecar_text, repl_link = build_image_ocr_sidecar(
+                                            sidecar_stem=sidecar_stem,
+                                            source_format="xlsx",
+                                            image_markdown=img_md,
+                                            ocr_text=ocr_text,
+                                            md_link_style=md_link_style,
+                                            ocr_markdown=ocr_markdown or None,
+                                            ocr_blockquote_title=request_policy.ocr_blockquote_title,
+                                        )
+                                        from pathlib import Path as _Path
 
-                                    sidecar_path = context.workspace.create_artifact_path("auxiliary", ".md")
-                                    _Path(sidecar_path).write_text(sidecar_text, encoding="utf-8")
-                                    import uuid
+                                        sidecar_path = context.workspace.create_artifact_path("auxiliary", ".md")
+                                        _Path(sidecar_path).write_text(sidecar_text, encoding="utf-8")
+                                        import uuid
 
-                                    from docwen_core.markdown_utils import sanitize_filename
-                                    from docwen_core.models.artifact import ArtifactManifest
+                                        from docwen_core.markdown_utils import sanitize_filename
+                                        from docwen_core.models.artifact import ArtifactManifest
 
-                                    ocr_md_name = sanitize_filename(f"{sidecar_stem}.md")
-                                    sidecar_artifact = ArtifactManifest(
-                                        artifact_id=str(uuid.uuid4()),
-                                        kind="auxiliary",
-                                        staging_path=sidecar_path,
-                                        suggested_name=ocr_md_name,
-                                        media_type="text/markdown",
-                                        metadata={"source_format": "xlsx", "ocr": True},
-                                        is_primary=False,
-                                    )
-                                    context.workspace.add_artifact(sidecar_artifact)
-                                    img_md = repl_link
-                                else:
-                                    if ocr_markdown:
-                                        structured = f"\n\n{ocr_markdown}\n"
-                                        img_md += structured if img_md else structured.lstrip()
+                                        ocr_md_name = sanitize_filename(f"{sidecar_stem}.md")
+                                        sidecar_artifact = ArtifactManifest(
+                                            artifact_id=str(uuid.uuid4()),
+                                            kind="auxiliary",
+                                            staging_path=sidecar_path,
+                                            suggested_name=ocr_md_name,
+                                            media_type="text/markdown",
+                                            metadata={"source_format": "xlsx", "ocr": True},
+                                            is_primary=False,
+                                        )
+                                        context.workspace.add_artifact(sidecar_artifact)
+                                        img_md = repl_link
                                     else:
-                                        ocr_block = f"\n> {request_policy.ocr_blockquote_title}\n> "
-                                        ocr_block += "\n> ".join(ocr_text.splitlines()) + "\n"
-                                        img_md += "\n" + ocr_block if img_md else ocr_block
+                                        if ocr_markdown:
+                                            structured = f"\n\n{ocr_markdown}\n"
+                                            img_md += structured if img_md else structured.lstrip()
+                                        else:
+                                            ocr_block = f"\n> {encode_markdown_table_cell(request_policy.ocr_blockquote_title)}\n> "
+                                            ocr_block += (
+                                                "\n> ".join(
+                                                    encode_markdown_table_cell(line) for line in ocr_text.splitlines()
+                                                )
+                                                + "\n"
+                                            )
+                                            img_md += "\n" + ocr_block if img_md else ocr_block
 
-                        # Record position for H6 cell injection (0-indexed)
-                        r = img_info.get("row")
-                        c = img_info.get("col")
-                        if r is not None and c is not None:
-                            key = (r - 1, c - 1)
-                            image_positions.setdefault(key, []).append(img_md)
+                            # Record position for H6 cell injection (0-indexed)
+                            r = img_info.get("row")
+                            c = img_info.get("col")
+                            if r is not None and c is not None:
+                                key = (r - 1, c - 1)
+                                image_positions.setdefault(key, []).append(img_md)
 
-                        # Clean up temp file if not keeping images
-                        if not keep_images:
-                            import contextlib
+                            # Clean up temp file if not keeping images
+                            if not keep_images:
+                                import contextlib
 
-                            with contextlib.suppress(OSError):
-                                os.unlink(img_info["staging_path"])
+                                with contextlib.suppress(OSError):
+                                    os.unlink(img_info["staging_path"])
 
-            total_images_extracted += len(sheet_images)
+                total_images_extracted += len(sheet_images)
 
-            structural_tables = resolve_markdown_extensions(
-                options,
-                context.config,
-                direction="output",
-            ).structural_tables
-            if ws.merged_cells.ranges and not structural_tables:
-                context.progress.report_diagnostic(
-                    "warning",
-                    "Merged cells were flattened to a standard Markdown table.",
-                    code="docwen.conversion.markdown_extension.structural_tables.flattened",
-                    location=ws.title,
+                structural_tables = resolve_markdown_extensions(
+                    options,
+                    context.config,
+                    direction="output",
+                ).structural_tables
+                if ws.merged_cells.ranges and not structural_tables:
+                    context.progress.report_diagnostic(
+                        "warning",
+                        "Merged cells were flattened to a standard Markdown table.",
+                        code="docwen.conversion.markdown_extension.structural_tables.flattened",
+                        location=ws.title,
+                    )
+                blocks = worksheet_blocks(
+                    ws,
+                    strategy=merge_strategy,
+                    generated=image_positions,
+                    budget=budget,
+                    copy_budget=copy_budget,
+                    cancel_check=context.cancellation.check,
+                    split_rendered=_find_blocks,
                 )
-            df = _worksheet_to_dataframe(ws, table_merge_strategy=merge_strategy)
+                # Retain metadata's source-coordinate extent without using it
+                # as a dense allocation shape. Image anchors also contributed
+                # to this extent before sparse projection was introduced.
+                row_extent, column_extent = ws.max_row, ws.max_column
+                for row, column in image_positions:
+                    row_extent = max(row_extent, row + 1)
+                    column_extent = max(column_extent, column + 1)
+                stats["rows"] += row_extent
+                stats["cols"] = max(stats["cols"], column_extent)
 
-            # H6: Inject image/OCR content into the correct cell positions
-            if image_positions:
-                # Extend dataframe to accommodate images outside data range
-                max_img_row = max(r for (r, _c) in image_positions)
-                max_img_col = max(c for (_r, c) in image_positions)
-                need_rows = max(df.shape[0], max_img_row + 1)
-                need_cols = max(df.shape[1], max_img_col + 1)
-                if need_rows > df.shape[0] or need_cols > df.shape[1]:
-                    df = df.reindex(index=range(need_rows), columns=range(need_cols), fill_value="")
-                    df = df.fillna("")
+                stats["blocks"] += len(blocks)
 
-                for (r, c), cell_contents in image_positions.items():
-                    if r < df.shape[0] and c < df.shape[1]:
-                        cell_val = df.iat[r, c]
-                        inject_text = " ".join(cell_contents)
-                        if cell_val and str(cell_val).strip():
-                            df.iat[r, c] = f"{cell_val}<br>{inject_text}"
+                if not blocks:
+                    md_content += " (this sheet is empty)\n\n"
+                else:
+                    structural_positions = _worksheet_merge_marker_positions(
+                        ws, cancel_check=context.cancellation.check
+                    )
+                    for block in blocks:
+                        if block.shape[0] > 0 and structural_tables:
+                            block = _escape_literal_structural_markers(block, structural_positions)
+                            block_md = _render_structural_table_block(
+                                block,
+                                header_rows=_structural_header_rows_for_block(ws, block),
+                            )
+                        elif block.shape[0] > 0:
+                            headers = [
+                                str(h) if h is not None and str(h).strip() != "" else f"Col{j}"
+                                for j, h in enumerate(block.iloc[0].tolist())
+                            ]
+                            data = block.iloc[1:]
+                            block_md = _dataframe_to_markdown(data, headers)
                         else:
-                            df.iat[r, c] = inject_text
+                            block_md = ""
 
-            stats["rows"] += df.shape[0]
-            stats["cols"] = max(stats["cols"], df.shape[1])
+                        md_content += (block_md or "") + "\n\n"
 
-            blocks = _find_blocks(df)
-            stats["blocks"] += len(blocks)
-
-            if not blocks:
-                md_content += " (this sheet is empty)\n\n"
-            else:
-                structural_positions = _worksheet_merge_marker_positions(ws)
-                for block in blocks:
-                    block = _process_cell_newlines(block)
-
-                    if block.shape[0] > 0 and structural_tables:
-                        block = _escape_literal_structural_markers(block, structural_positions)
-                        block_md = _render_structural_table_block(
-                            block,
-                            header_rows=_structural_header_rows_for_block(ws, block),
-                        )
-                    elif block.shape[0] > 0:
-                        headers = [
-                            str(h) if h is not None and str(h).strip() != "" else f"Col{j}"
-                            for j, h in enumerate(block.iloc[0].tolist())
-                        ]
-                        data = block.iloc[1:]
-                        block_md = _dataframe_to_markdown(data, headers)
-                    else:
-                        block_md = ""
-
-                    md_content += (block_md or "") + "\n\n"
-
-        wb.close()
-        stats["images"] = total_images_extracted
-        if total_image_extraction_losses:
-            stats["image_extraction_loss_count"] = total_image_extraction_losses
-        return md_content.strip() + "\n", stats
+            stats["images"] = total_images_extracted
+            if total_image_extraction_losses:
+                stats["image_extraction_loss_count"] = total_image_extraction_losses
+            return md_content.strip() + "\n", stats
+        finally:
+            wb.close()
+            formula_wb.close()

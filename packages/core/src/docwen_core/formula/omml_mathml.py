@@ -33,9 +33,14 @@ def _convert_omml_to_mathml_node(omml_node, mathml_parent) -> None:
         t_elem = _get_child_by_tag(omml_node, "t")
 
         if t_elem is not None and t_elem.text:
-            text = t_elem.text.strip()
-            # Determine MathML element type based on content
-            if text in SYMBOL_MAP or text in NARY_OP_MAP or not text.isalnum():
+            text = t_elem.text
+            run_properties = _get_child_by_tag(omml_node, "rPr")
+            normal_text = _get_child_by_tag(run_properties, "nor") if run_properties is not None else None
+            # Explicit normal-text math runs retain literal spacing and are
+            # not reclassified as identifiers or mathematical operators.
+            if normal_text is not None and normal_text.get(f"{{{M_NS}}}val", "1") not in {"0", "false", "off"}:
+                elem = etree.SubElement(mathml_parent, "mtext")
+            elif text in SYMBOL_MAP or text in NARY_OP_MAP or not text.isalnum():
                 elem = etree.SubElement(mathml_parent, "mo")
             elif text.isdigit():
                 elem = etree.SubElement(mathml_parent, "mn")

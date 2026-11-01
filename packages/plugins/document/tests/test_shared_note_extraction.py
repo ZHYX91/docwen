@@ -95,7 +95,7 @@ def test_note_codespan_reparses_with_exact_literal_value(ref_tag, value):
     markdown = _extract_note_content(note, WML_NS, ref_tag)
     ast = mistune.create_markdown(renderer="ast")(markdown)
     assert ast == [{"type": "paragraph", "children": [{"type": "codespan", "raw": value}]}]
-    assert _extract_note_content(note, WML_NS, ref_tag, preserve_formatting=False) == value
+    assert _extract_note_content(note, WML_NS, ref_tag, preserve_formatting=False) == value.replace("`", r"\`")
 
 
 @pytest.mark.parametrize("ref_tag", ["footnoteRef", "endnoteRef"])
@@ -146,7 +146,7 @@ def test_note_character_style_from_real_document_uses_body_policy(tmp_path, note
         style_detector_config=StyleDetectorConfig(code_character_style_names=frozenset({"LiteralSnippet"})),
     )
     notes = extractor.footnotes if note_tag == "footnote" else extractor.endnotes
-    assert notes == {1: "`` `value` ``" if preserve else "`value`"}
+    assert notes == {1: "`` `value` ``" if preserve else r"\`value\`"}
 
 
 def test_build_note_definitions_formats_multiline_content():
@@ -199,3 +199,19 @@ def test_note_extractor_numbers_each_domain_by_first_reference():
     block = extractor.build_definitions_block()
     assert block.index("[^1]: later Word ID") < block.index("[^2]: earlier Word ID")
     assert block.index("[^endnote:1]: later Word ID") < block.index("[^endnote:2]: earlier Word ID")
+
+
+@pytest.mark.parametrize("split_runs", [False, True])
+def test_release_review_unformatted_note_text_is_literal(split_runs: bool) -> None:
+    from markdown_it import MarkdownIt
+
+    source = "*literal* [link](target) &amp; <b>raw</b>"
+    note = etree.Element(f"{{{WML_NS}}}note")
+    paragraph = etree.SubElement(note, f"{{{WML_NS}}}p")
+    for fragment in source if split_runs else [source]:
+        run = etree.SubElement(paragraph, f"{{{WML_NS}}}r")
+        etree.SubElement(run, f"{{{WML_NS}}}t").text = fragment
+    markdown = _extract_note_content(note, WML_NS, "footnoteRef", preserve_formatting=False)
+    children = [child for token in MarkdownIt().parse(markdown) for child in token.children or []]
+    assert {child.type for child in children} == {"text"}
+    assert "".join(child.content for child in children) == source

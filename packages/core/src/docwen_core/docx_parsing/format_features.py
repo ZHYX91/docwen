@@ -901,8 +901,15 @@ class CodeBlockAccumulator:
             self._lines = []
             return None
         indent = " " * self._indent_spaces * self._list_level
-        fence = f"{indent}```"
         physical_lines = [physical_line for line in self._lines for physical_line in re.split(r"\r\n?|\n", line)]
+        lengths = {"`": 3, "~": 3}
+        for line in physical_lines:
+            closing = re.fullmatch(r" {0,3}(`{3,}|~{3,})[ \t]*", line)
+            if closing is not None:
+                run = closing.group(1)
+                lengths[run[0]] = max(lengths[run[0]], len(run) + 1)
+        character = min(lengths, key=lambda value: (lengths[value], value != "`"))
+        fence = f"{indent}{character * lengths[character]}"
         body = "\n".join(f"{indent}{line}" for line in physical_lines)
         result = f"{fence}\n{body}\n{fence}"
         self.in_code_block = False

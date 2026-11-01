@@ -22,6 +22,8 @@ _GOVERNANCE_DIRECTORIES = (
 )
 _README_HEADING = "# DocWen 本地工作区"
 REGISTRY_NAME = "workspace.json"
+RUNTIME_SCHEMA = "docwen.workspace.v2"
+LEGACY_SCHEMA = "docwen.workspace.v1"
 
 
 class WorkspaceRootError(ValueError):
@@ -50,12 +52,17 @@ def is_governed_workspace_root(path: Path) -> bool:
     root = _absolute(path)
     if not _is_plain_directory(root):
         return False
+    # A runtime root is registered, never inferred from a directory name or README.
+    if any(not _is_plain_directory(parent) for parent in root.parents):
+        return False
     if (root / REGISTRY_NAME).exists() or (root / REGISTRY_NAME).is_symlink():
         try:
             registered_repositories(root)
         except (OSError, ValueError):
             return False
         return all(_is_plain_directory(root / name) for name in _GOVERNANCE_DIRECTORIES)
+    if root.name != ".workspace":
+        return False
     readme = root / "README.md"
     try:
         metadata = readme.lstat()
@@ -109,10 +116,16 @@ def resolve_workspace_root(
             raise WorkspaceRootError(f"unsupported_repository_layout:{repository}")
         repository = common.parent
     engineering_root = repository.parent.parent
-    candidate = engineering_root / ".workspace"
-    if not is_governed_workspace_root(candidate):
-        raise WorkspaceRootError(f"governed_workspace_root_not_found:{repository}")
-    return candidate
+    candidate = engineering_root / "runtime"
+    # A present invalid modern root must not silently fall back to an old owner.
+    if candidate.exists() or candidate.is_symlink():
+        if not is_governed_workspace_root(candidate):
+            raise WorkspaceRootError(f"invalid_governed_workspace_root:{candidate}")
+        return candidate
+    legacy = engineering_root / ".workspace"
+    if is_governed_workspace_root(legacy):
+        return legacy
+    raise WorkspaceRootError(f"governed_workspace_root_not_found:{repository}")
 
 
 def registered_repositories(workspace: Path) -> tuple[Path, ...]:
@@ -124,8 +137,11 @@ def registered_repositories(workspace: Path) -> tuple[Path, ...]:
     if not stat.S_ISREG(metadata.st_mode) or _is_reparse(metadata):
         raise WorkspaceRootError("unsafe_workspace_registry")
     payload = json.loads(marker.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict) or payload.get("schema") != "docwen.workspace.v1":
+    if not isinstance(payload, dict) or payload.get("schema") not in {LEGACY_SCHEMA, RUNTIME_SCHEMA}:
         raise WorkspaceRootError("invalid_workspace_registry")
+    expected_name = "runtime" if payload["schema"] == RUNTIME_SCHEMA else ".workspace"
+    if workspace.name != expected_name:
+        raise WorkspaceRootError("workspace_schema_directory_mismatch")
     entries = payload.get("repositories")
     if not isinstance(entries, list) or any(not isinstance(item, str) for item in entries):
         raise WorkspaceRootError("invalid_registered_repositories")
@@ -151,7 +167,7 @@ def registered_repositories(workspace: Path) -> tuple[Path, ...]:
 def initialize_workspace(root: Path, repositories: list[Path]) -> Path:
     """Initialize only an explicitly selected new root or existing legacy root."""
     root = _absolute(root)
-    if root.name != ".workspace" or not root.parent.is_dir():
+    if root.name not in {"runtime", ".workspace"} or not root.parent.is_dir():
         raise WorkspaceRootError("explicit_workspace_directory_required")
     if any(not _is_plain_directory(parent) for parent in (root.parent, *root.parent.parents)):
         raise WorkspaceRootError("unsafe_workspace_parent")
@@ -185,7 +201,8 @@ def initialize_workspace(root: Path, repositories: list[Path]) -> Path:
     for name in _GOVERNANCE_DIRECTORIES:
         (root / name).mkdir(exist_ok=True)
     with (root / REGISTRY_NAME).open("x", encoding="utf-8", newline="\n") as stream:
-        json.dump({"schema": "docwen.workspace.v1", "repositories": relatives}, stream, indent=2)
+        schema = RUNTIME_SCHEMA if root.name == "runtime" else LEGACY_SCHEMA
+        json.dump({"schema": schema, "repositories": relatives}, stream, indent=2)
         stream.write("\n")
     return root
 

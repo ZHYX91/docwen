@@ -312,8 +312,9 @@ def convert_html_to_markdown_text(
     md_body = markdownify(pre["html"])
 
     # ── Replace tokens with Markdown image links ──────────────────────
-    for token, link in pre["token_map"].items():  # pyright: ignore[reportAttributeAccessIssue]
-        md_body = md_body.replace(token, link)
+    from docwen_core.text.placeholders import restore_placeholders
+
+    md_body = restore_placeholders(md_body, pre["token_map"])
 
     # ── Prefix with title heading when available ──────────────────────
     if title:

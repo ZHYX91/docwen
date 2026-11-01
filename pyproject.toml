@@ -62,7 +62,7 @@ docwen-bundle = { workspace = true }
 
 [project]
 name = "docwen"
-version = "0.21.1"
+version = "0.21.2"
 description = "DocWen - 支持 Word/Markdown/Excel 互转"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -87,7 +87,11 @@ dependencies = [
     # Source-tree console scripts delegate to the bundle composition root.
     "docwen-bundle",
     # 图形界面
-    "pyside6>=6.8.0",
+    "pyside6>=6.8.0; sys_platform != 'darwin'",
+    # Newer macOS wheels include Python bindings requiring macOS 15 despite
+    # their lower wheel tags. 6.8.3 Essentials + Shiboken Mach-O targets are
+    # verified at 12.0; the final package still must pass our unchanged 14.0 gate.
+    "pyside6==6.8.3; sys_platform == 'darwin'",
     "Pillow>=13.0.0,<14.0.0",
     # 文档处理
     "python-docx>=1.2.0",
