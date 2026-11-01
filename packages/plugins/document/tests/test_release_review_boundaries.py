@@ -138,4 +138,6 @@ def test_release_review_unformatted_heading_is_literal() -> None:
     tokens = MarkdownIt().parse("\n".join(lines))
     assert tokens[0].type == "heading_open"
     assert {child.type for child in tokens[1].children or []} == {"text"}
-    assert tokens[1].children[0].content == "*literal* <br>"
+    children = tokens[1].children
+    assert children is not None
+    assert children[0].content == "*literal* <br>"
