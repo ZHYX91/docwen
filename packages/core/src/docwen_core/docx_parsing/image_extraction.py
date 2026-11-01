@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from docwen_core.docx_parsing.xml_ns import NS_A, NS_R, NS_V, NS_WP
 
@@ -15,6 +16,7 @@ class ImageInfo:
     rel_id: str
     content_type: str
     source_name: str = ""
+    source_element: Any = field(default=None, compare=False, repr=False)
 
 
 class ImageExtractionNames:
@@ -160,6 +162,7 @@ def extract_images_from_element(
                 rel_id=rel_id,
                 content_type=content_type,
                 source_name=source_name,
+                source_element=image_element,
             )
         )
 

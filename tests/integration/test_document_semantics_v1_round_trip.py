@@ -115,7 +115,7 @@ def test_legacy_caption_reference_source_is_not_reinterpreted_by_v3(round_trip_r
         request_id="semantics-caption-reverse",
     )
 
-    assert "Figure: Blue square {#fig-blue-square}" in returned
+    assert r"Figure: Blue square \{\#fig-blue-square\}" in returned
     assert "As shown in @fig-blue-square" in returned
     [returned_image] = list(reverse_dir.rglob("*.png"))
     assert returned_image.name in returned
@@ -191,7 +191,7 @@ def test_legacy_citation_is_literal_without_v1_processor_warning(round_trip_runt
         reverse_dir,
         request_id="semantics-citation-reverse",
     )
-    assert "[@smith2025; @wang2024]" in returned
+    assert r"\[@smith2025; @wang2024\]" in returned
 
 
 def test_shorthand_caption_source_form_survives(round_trip_runtime, tmp_path: Path) -> None:
@@ -216,7 +216,7 @@ def test_shorthand_caption_source_form_survives(round_trip_runtime, tmp_path: Pa
         request_id="semantics-shorthand-reverse",
     )
     _metadata, returned_body = extract_yaml_front_matter(returned)
-    assert returned_body.lstrip().startswith(": Sales channels {#tbl-sales}")
+    assert returned_body.lstrip().startswith(r": Sales channels \{\#tbl-sales\}")
     assert "See @tbl-sales for the synthetic totals." in returned_body
 
 

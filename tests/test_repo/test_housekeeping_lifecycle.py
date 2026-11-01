@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from scripts.release.publication_contract import CHECKSUM_NAME, package_names
 from tools import qa, recycle, run_lease, workspace_cleanup
+from tools.workspace_root import initialize_workspace
 
 pytestmark = pytest.mark.unit
 
@@ -62,11 +63,11 @@ def test_recycle_failure_does_not_fall_back_to_delete(tmp_path: Path, monkeypatc
 
 
 def test_publication_retirement_requires_verified_receipt_and_exact_bytes(tmp_path: Path) -> None:
-    workspace = tmp_path / ".workspace"
+    workspace = initialize_workspace(tmp_path / "runtime", [])
     candidate = workspace / "artifacts" / "candidate"
     candidate.mkdir(parents=True)
-    (workspace / "diagnostics").mkdir()
-    (workspace / "acceptance").mkdir()
+    (workspace / "diagnostics").mkdir(exist_ok=True)
+    (workspace / "acceptance").mkdir(exist_ok=True)
     receipt = workspace / "acceptance" / "published.json"
     content = b"payload"
     digest = hashlib.sha256(content).hexdigest()
@@ -107,10 +108,10 @@ def test_publication_retirement_requires_verified_receipt_and_exact_bytes(tmp_pa
 
 @pytest.mark.parametrize("damage", ["missing-mac", "extra", "missing-version"])
 def test_publication_retirement_rejects_incomplete_or_foreign_assets(tmp_path: Path, damage: str) -> None:
-    workspace = tmp_path / ".workspace"
+    workspace = initialize_workspace(tmp_path / "runtime", [])
     candidate = workspace / "artifacts" / "candidate"
     candidate.mkdir(parents=True)
-    (workspace / "acceptance").mkdir()
+    (workspace / "acceptance").mkdir(exist_ok=True)
     receipt = workspace / "acceptance" / "published.json"
     names = [*package_names("0.20.0"), CHECKSUM_NAME]
     state = {

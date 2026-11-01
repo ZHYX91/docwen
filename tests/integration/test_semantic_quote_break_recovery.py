@@ -191,4 +191,4 @@ def test_shared_break_projection_does_not_rewrite_literal_text_or_code(break_tag
     code_run._r.get_or_add_rPr().append(shading)
     assert render_paragraph_runs_split_on_page_breaks(
         paragraph, syntax_config=DocxMarkdownSyntaxConfig(), line_break_text=projection
-    ) == [f"literal <br>\nuntouched{projection}`code <br>`"]
+    ) == [f"literal \\<br\\>\nuntouched{projection}`code <br>`"]

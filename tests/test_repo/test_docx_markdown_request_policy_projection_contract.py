@@ -147,7 +147,8 @@ def test_converter_applies_one_policy_before_parsing_and_propagates_it() -> None
     assert "get_ocr_blockquote_title" not in ocr
     assert "ocr_blockquote_title=" not in ocr
     assert "_format_main_ocr_blockquote(" in ocr
-    assert "Merge exactly once after OCR" in parse
+    assert "info.source_element: self._inline_image_reference(reference)" in parse
+    assert "zip(infos, img_refs, strict=True)" in parse
 
 
 def test_shared_run_and_base64_helpers_accept_explicit_request_policy() -> None:

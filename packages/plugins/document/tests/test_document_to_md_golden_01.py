@@ -435,7 +435,7 @@ class TestDocxToMdGolden:
         assert result.success, result.error.message if result.error else "conversion failed"
         content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
         assert "| Header \\| value |" in content
-        assert r"| Path C:\Temp \| ready; existing \| token<br>Second paragraph |" in content
+        assert r"| Path C:\\Temp \| ready; existing \\\| token<br>Second paragraph |" in content
 
     def test_drawingml_textbox_paragraph_is_counted_through_finalizer(self, pipeline, tmp_path) -> None:
         """Exported textbox paragraphs contribute to artifact observability."""

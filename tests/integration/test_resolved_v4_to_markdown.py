@@ -315,7 +315,7 @@ def test_representative_proves_four_kinds_refs_citation_and_preserves_tokens_wit
     assert "Equation: 1" not in markdown
     assert "Code: 1" not in markdown
     assert "Stable: @[[#^h-7f3a]] and @[[#^system-overview|System overview]]." in markdown
-    assert "Ordinary: [[#^system-overview]] and ![[Guide#^h-7f3a]]." in markdown
+    assert r"Ordinary: \[\[\#\^system-overview\]\] and \!\[\[Guide\#\^h-7f3a\]\]." in markdown
     assert "Citation: @cite-one." in markdown
 
     reopened = Document(str(source))

@@ -155,6 +155,7 @@ class DocxToMarkdownConverter:
         self._pending_primary_path: str | None = None
         self._conversion_lock = RLock()
         self._image_names: ImageExtractionNames | None = None
+        self._inline_image_refs: dict[Any, str] = {}
 
     def _syntax_for_rendering(self) -> DocxMarkdownSyntaxConfig:
         """Return the request syntax, or the deterministic constructor default."""
@@ -181,6 +182,8 @@ class DocxToMarkdownConverter:
         with self._conversion_lock:
             self._discard_pending_artifacts()
             self._image_names = ImageExtractionNames(str(context.workspace.staging_dir))
+            self._inline_image_refs = {}
+            self._inline_image_refs = {}
             return self._convert_once(context)
 
     def _convert_once(self, context: PluginExecutionContext) -> Any:
@@ -782,27 +785,11 @@ class DocxToMarkdownConverter:
                     and group.index == len(group.elements) - 1
                     for group in anchor_groups
                 )
-                trailing_separators: list[str] = []
-                para_lines, para_stats = self._process_paragraph(
-                    child,
-                    para_by_element,
-                    remove_numbering=remove_numbering,
-                    heading_cleanup_rules=heading_cleanup_rules,
-                    heading_formatter=heading_formatter,
-                    numbering_index=numbering_index,
-                    list_counter=list_counter,
-                    border_tracker=border_tracker,
-                    code_block_acc=code_block_acc,
-                    style_detector_config=style_detector_config,
-                    continuation_list_level=continuation_list_level,
-                    diagnostic_sink=context.progress,
-                    diagnostic_location=f"document.xml body element {idx}",
-                    post_anchor_separators=trailing_separators if closes_container else None,
-                )
                 anchor_group = anchor_groups[0] if anchor_groups else None
                 preserve_image_owner = (v3_caption is not None and v3_caption.kind == "figure") or (
                     anchor_group is not None and anchor_group.anchor.block_kind == "image"
                 )
+                self._inline_image_refs = {}
                 img_refs: list[str] = []
                 # Recognition and resource preservation are independent. OCR
                 # may use request-owned temporary image bytes without exporting
@@ -840,10 +827,28 @@ class DocxToMarkdownConverter:
                     finally:
                         if not preserve_resources:
                             self._discard_unpreserved_images(infos)
-                    # Merge exactly once after OCR has either preserved or
-                    # replaced each request-owned image reference.
-                    para_lines = self._merge_img_refs_into_lines(para_lines, img_refs)
+                    self._inline_image_refs = {
+                        info.source_element: self._inline_image_reference(reference)
+                        for info, reference in zip(infos, img_refs, strict=True)
+                    }
                     stats["images"] += img_count
+                trailing_separators: list[str] = []
+                para_lines, para_stats = self._process_paragraph(
+                    child,
+                    para_by_element,
+                    remove_numbering=remove_numbering,
+                    heading_cleanup_rules=heading_cleanup_rules,
+                    heading_formatter=heading_formatter,
+                    numbering_index=numbering_index,
+                    list_counter=list_counter,
+                    border_tracker=border_tracker,
+                    code_block_acc=code_block_acc,
+                    style_detector_config=style_detector_config,
+                    continuation_list_level=continuation_list_level,
+                    diagnostic_sink=context.progress,
+                    diagnostic_location=f"document.xml body element {idx}",
+                    post_anchor_separators=trailing_separators if closes_container else None,
+                )
                 if anchor_group is not None and anchor_group.anchor.block_kind == "image":
                     if not img_refs:
                         raise ValueError(
@@ -854,6 +859,7 @@ class DocxToMarkdownConverter:
                         anchor_group.anchor.source_id,
                     )
                 lines.extend(para_lines)
+                self._inline_image_refs = {}
                 for group_position, group in enumerate(anchor_groups):
                     if (
                         group.anchor.block_kind not in {"paragraph", "image", "list_item"}
@@ -972,21 +978,7 @@ class DocxToMarkdownConverter:
                     active_list_context_level = None
             elif tag == "sdt":
                 active_list_context_level = None
-                # Structured document tag — process inner paragraphs
-                sdt_lines, sdt_stats = self._process_sdt(
-                    child,
-                    para_by_element,
-                    remove_numbering=remove_numbering,
-                    heading_cleanup_rules=heading_cleanup_rules,
-                    numbering_index=numbering_index,
-                    list_counter=list_counter,
-                    border_tracker=border_tracker,
-                    code_block_acc=code_block_acc,
-                    style_detector_config=style_detector_config,
-                    heading_formatter=heading_formatter,
-                    table_merge_strategy=table_merge_strategy,
-                    diagnostic_sink=context.progress,
-                )
+                self._inline_image_refs = {}
                 if process_images:
                     img_refs, infos = self._process_images_for_output(
                         child,
@@ -1011,10 +1003,28 @@ class DocxToMarkdownConverter:
                     finally:
                         if not preserve_resources:
                             self._discard_unpreserved_images(infos)
-                    # Merge image refs into SDT output
-                    sdt_lines = self._merge_img_refs_into_lines(sdt_lines, img_refs)
+                    self._inline_image_refs = {
+                        info.source_element: self._inline_image_reference(reference)
+                        for info, reference in zip(infos, img_refs, strict=True)
+                    }
                     stats["images"] += img_count
+                # Structured document tag — process inner paragraphs
+                sdt_lines, sdt_stats = self._process_sdt(
+                    child,
+                    para_by_element,
+                    remove_numbering=remove_numbering,
+                    heading_cleanup_rules=heading_cleanup_rules,
+                    numbering_index=numbering_index,
+                    list_counter=list_counter,
+                    border_tracker=border_tracker,
+                    code_block_acc=code_block_acc,
+                    style_detector_config=style_detector_config,
+                    heading_formatter=heading_formatter,
+                    table_merge_strategy=table_merge_strategy,
+                    diagnostic_sink=context.progress,
+                )
                 lines.extend(sdt_lines)
+                self._inline_image_refs = {}
                 stats["paragraphs"] += sdt_stats.get("paragraphs", 0)
                 stats["headings"] += sdt_stats.get("headings", 0)
                 stats["tables"] += sdt_stats.get("tables", 0)
@@ -1254,6 +1264,7 @@ class DocxToMarkdownConverter:
             para if para is not None else para_element,
             preserve_formatting=False,
             style_detector_config=style_detector_config,
+            escape_literal_text=False,
         )
         paragraph_text = visible_paragraph_text.strip()
         semantic_bookmark_inventory = self._semantic_bookmark_inventory
@@ -1632,7 +1643,12 @@ class DocxToMarkdownConverter:
                     style_detector_config=style_detector_config,
                 )
             else:
-                display_text = text
+                display_text = self._extract_paragraph_text_formatted(
+                    para if para is not None else para_element,
+                    preserve_formatting=False,
+                    style_detector_config=style_detector_config,
+                    reference_spans=self._paragraph_reference_spans(para_element),
+                )
 
             heading_parts: list[tuple[str, str]] | None = None
             heading_text_index: int | None = None
@@ -1814,6 +1830,14 @@ class DocxToMarkdownConverter:
                     style_detector_config=style_detector_config,
                 )
                 display = formatted_text
+            # A native Word list owns its visible checkbox state. Plain prose
+            # with the same characters remains literal; only the list prefix
+            # is emitted as generated task syntax before its item marker.
+            task = re.match(r"^\[([ xX])\](?=\s)", paragraph_text) if list_type else None
+            if task is not None:
+                encoded_prefix = f"\\[{task[1]}\\]"
+                if display.startswith(encoded_prefix):
+                    display = task[0] + display[len(encoded_prefix) :]
             if source_anchor is not None:
                 if source_anchor.owner_kind == "semantic_target" and source_anchor.block_kind in {
                     "figure",
@@ -1983,6 +2007,7 @@ class DocxToMarkdownConverter:
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
             math_renderer=_render_formula,
+            image_renderer=self._render_inline_images,
             line_break_text=line_break_text,
             reference_spans=(self._paragraph_reference_spans(para._p) if recover_semantic_references else None),
             literal_text=literal_text,
@@ -2087,6 +2112,7 @@ class DocxToMarkdownConverter:
             para if para is not None else para_element,
             preserve_formatting=False,
             style_detector_config=style_detector_config,
+            escape_literal_text=False,
         )
         paragraph_text = visible_paragraph_text.strip()
         standalone_formula = not paragraph_text
@@ -2102,6 +2128,7 @@ class DocxToMarkdownConverter:
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
             math_renderer=render_formula,
+            image_renderer=self._render_inline_images,
             reference_spans=self._paragraph_reference_spans(para_element),
         )
 
@@ -2136,6 +2163,7 @@ class DocxToMarkdownConverter:
         style_detector_config: Any = None,
         reference_spans: dict[Any, tuple[Any, str]] | None = None,
         literal_text: bool = False,
+        escape_literal_text: bool = True,
     ) -> str:
         """Extract text with inline formatting markers.
 
@@ -2152,7 +2180,20 @@ class DocxToMarkdownConverter:
             style_detector_config=style_detector_config,
             reference_spans=reference_spans,
             literal_text=literal_text,
+            escape_literal_text=escape_literal_text,
+            image_renderer=self._render_inline_images,
         )
+
+    @staticmethod
+    def _inline_image_reference(reference: str) -> str:
+        text = reference.rstrip("\n")
+        # OCR blockquotes and multiline sidecar projections need a block
+        # boundary before following prose, while a plain image stays inline.
+        return f"{text}\n\n" if "\n" in text else text
+
+    def _render_inline_images(self, element: Any) -> str:
+        """Render only successfully extracted occurrences at their XML positions."""
+        return "".join(self._inline_image_refs.get(node, "") for node in element.iter())
 
     def _image_names_for_output(self, output_dir: str) -> ImageExtractionNames:
         if self._image_names is None or str(self._image_names.directory) != output_dir:
@@ -2652,6 +2693,7 @@ class DocxToMarkdownConverter:
                         preserve_formatting=preserve_formatting,
                         syntax_config=self._syntax_for_rendering(),
                         style_detector_config=self._request_policy.style_detector,
+                        image_renderer=self._render_inline_images,
                     )
                 if formatted.strip():
                     cell_text_parts.append(formatted.strip())

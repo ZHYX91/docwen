@@ -325,9 +325,17 @@ class EnexToMarkdownConverter:
         if not notes:
             notes.append("# (empty ENEX file)\n\n*No notes found in this ENEX file.*")
 
+        from docwen_core.models.file_ref import source_presentation_name
         from docwen_core.yaml_tools import generate_basic_yaml_frontmatter
 
-        frontmatter_title = note_titles[0] if len(note_titles) == 1 else Path(input_path).stem
+        identity = context.request.conversion_identity
+        presentation_stem = Path(
+            source_presentation_name(
+                context.request.input_refs[0],
+                fallback_path=identity.source_name if identity is not None else input_path,
+            )
+        ).stem
+        frontmatter_title = note_titles[0] if len(note_titles) == 1 else presentation_stem
         yaml_frontmatter = generate_basic_yaml_frontmatter(
             frontmatter_title,
             yaml_key_labels=yaml_key_labels,

@@ -194,7 +194,7 @@ def test_quote_renders_inline_code_and_rich_text_with_the_shared_policy(page_bre
             para_by_element={id(para._element): para},
             style_detector_config=StyleDetectorConfig(code_character_style_names=frozenset({character_style})),
         )
-    first = ">> Quoted **bold** and `**literal**`" if preserve_formatting else ">> Quoted bold and **literal**"
+    first = ">> Quoted **bold** and `**literal**`" if preserve_formatting else r">> Quoted bold and \*\*literal\*\*"
     assert lines == ([first, "", "---", "", ">> after", ""] if page_break else [first + " after", ""])
 
 

@@ -1,4 +1,5 @@
 """Registered runtime roots retain repository and cleanup ownership boundaries."""
+
 from __future__ import annotations
 
 import json
@@ -6,7 +7,6 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
 from tools import workspace_cleanup, workspace_root
 
 pytestmark = pytest.mark.unit
@@ -66,8 +66,10 @@ def test_nested_registered_runtime_does_not_become_parent_cleanup_authority(tmp_
 def test_linked_worktree_uses_primary_registered_runtime(tmp_path: Path) -> None:
     repo = tmp_path / "repos" / "docwen"
     repo.mkdir(parents=True)
+
     def git(*args: str) -> None:
         subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
+
     git("init")
     git("-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "--allow-empty", "-m", "initial")
     runtime = workspace_root.initialize_workspace(tmp_path / "runtime", [repo])

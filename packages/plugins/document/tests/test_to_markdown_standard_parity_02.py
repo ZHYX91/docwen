@@ -196,7 +196,12 @@ def test_docx_to_md_convert_uses_every_bundled_locale_template_style(tmp_path):
         )
         content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
         assert f"```\n{code_text}\n```" in content, (locale_path.name, code_name, content)
-        assert f">>> {quote_text}" in content, (locale_path.name, styles["quote_3"], content)
+        escaped_quote = quote_text.replace("_", "\\_")
+        assert f">>> {escaped_quote}" in content, (
+            locale_path.name,
+            styles["quote_3"],
+            content,
+        )
 
 
 def test_docx_to_md_convert_indents_extra_indent_list_continuation(tmp_path):

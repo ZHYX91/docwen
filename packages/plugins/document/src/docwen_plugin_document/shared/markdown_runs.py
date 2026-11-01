@@ -16,6 +16,7 @@ from docwen_core.docx_parsing.format_features import (
     detect_run_style_type,
 )
 from docwen_core.docx_parsing.xml_ns import NS_W
+from docwen_core.text.markdown_literal import escape_markdown_literal
 from docwen_plugin_document.shared.word_metadata import run_metadata_is_valid
 
 # Gray fill colours treated as inline code shading.
@@ -70,7 +71,7 @@ class _RenderedRunPart(str):
     inline_code: bool
 
     def __new__(cls, raw_text: str, wrappers: list[tuple[str, str]], *, inline_code: bool = False):
-        body = _render_inline_code_span(raw_text) if inline_code else raw_text
+        body = _render_inline_code_span(raw_text) if inline_code else escape_markdown_literal(raw_text)
         part = super().__new__(cls, _apply_wrappers(body, wrappers))
         part.raw_text = raw_text
         part.wrappers = tuple(wrappers)
@@ -79,12 +80,12 @@ class _RenderedRunPart(str):
 
 
 def _append_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, str]]) -> None:
-    if wrappers and parts:
+    if parts:
         previous = parts[-1]
         if isinstance(previous, _RenderedRunPart) and not previous.inline_code and previous.wrappers == tuple(wrappers):
             parts[-1] = _RenderedRunPart(previous.raw_text + raw_text, wrappers)
             return
-    parts.append(_RenderedRunPart(raw_text, wrappers) if wrappers else raw_text)
+    parts.append(_RenderedRunPart(raw_text, wrappers))
 
 
 def _longest_backtick_run(text: str) -> int:
@@ -413,10 +414,12 @@ def _render_paragraph_run_segments(
     style_detector_config: StyleDetectorConfig | None = None,
     split_page_breaks: bool,
     math_renderer: Callable[[Any], str | None] | None = None,
+    image_renderer: Callable[[Any], str] | None = None,
     root_element: Any | None = None,
     line_break_text: str = "\n",
     reference_spans: dict[Any, tuple[Any, str]] | None = None,
     literal_text: bool = False,
+    escape_literal_text: bool = True,
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
@@ -577,7 +580,10 @@ def _render_paragraph_run_segments(
                         return
 
         if not preserve_formatting:
-            _append(text)
+            if not escape_literal_text:
+                _append(text)
+                return
+            _append_wrapped(_parts(), text, [])
             return
 
         append_formatted_run_text(
@@ -610,6 +616,12 @@ def _render_paragraph_run_segments(
             tag = child.tag.split("}")[-1] if child.tag and "}" in child.tag else (child.tag or "")
             if tag == "t" and child.text is not None:
                 text_parts.append(child.text)
+            elif tag in ("drawing", "pict", "AlternateContent") and image_renderer is not None and not literal_text:
+                _flush_text()
+                image = image_renderer(child)
+                if "\n" in image and _parts():
+                    _append("\n\n")
+                _append(image)
             elif tag == "tab":
                 _flush_text()
                 _parts().append("\t")
@@ -645,8 +657,10 @@ def render_paragraph_runs(
     syntax_config: DocxMarkdownSyntaxConfig,
     style_detector_config: StyleDetectorConfig | None = None,
     math_renderer: Callable[[Any], str | None] | None = None,
+    image_renderer: Callable[[Any], str] | None = None,
     reference_spans: dict[Any, tuple[Any, str]] | None = None,
     literal_text: bool = False,
+    escape_literal_text: bool = True,
 ) -> str:
     """Render paragraph XML children in order, producing Markdown text.
 
@@ -672,8 +686,10 @@ def render_paragraph_runs(
         style_detector_config=style_detector_config,
         split_page_breaks=False,
         math_renderer=math_renderer,
+        image_renderer=image_renderer,
         reference_spans=reference_spans,
         literal_text=literal_text,
+        escape_literal_text=escape_literal_text,
     )[0]
 
 
@@ -685,9 +701,11 @@ def render_paragraph_runs_split_on_page_breaks(
     syntax_config: DocxMarkdownSyntaxConfig,
     style_detector_config: StyleDetectorConfig | None = None,
     math_renderer: Callable[[Any], str | None] | None = None,
+    image_renderer: Callable[[Any], str] | None = None,
     line_break_text: str = "\n",
     reference_spans: dict[Any, tuple[Any, str]] | None = None,
     literal_text: bool = False,
+    escape_literal_text: bool = True,
 ) -> list[str]:
     """Render rich Markdown segments separated at accepted page breaks.
 
@@ -705,7 +723,9 @@ def render_paragraph_runs_split_on_page_breaks(
         style_detector_config=style_detector_config,
         split_page_breaks=True,
         math_renderer=math_renderer,
+        image_renderer=image_renderer,
         line_break_text=line_break_text,
         reference_spans=reference_spans,
         literal_text=literal_text,
+        escape_literal_text=escape_literal_text,
     )

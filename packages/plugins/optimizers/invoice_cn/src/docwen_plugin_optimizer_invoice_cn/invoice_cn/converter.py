@@ -71,13 +71,13 @@ class InvoiceCnConverter:
             ARTIFACT_KIND_PRIMARY,
             ArtifactManifest,
         )
+        from docwen_core.models.file_ref import source_presentation_name
         from docwen_core.models.result import (
             ConversionDiagnostic,
             ConversionErrorInfo,
             ConversionMetrics,
             ConversionResult,
         )
-        from docwen_core.paths import input_stem
         from docwen_plugin_optimizer_invoice_cn._common import (
             file_size,
             new_artifact_id,
@@ -95,7 +95,14 @@ class InvoiceCnConverter:
         task_id = context.request.request_id
         input_path = context.workspace.input_path
         options = context.request.options
-        input_stem_val = input_stem(input_path)
+        input_stem_val = context.request.source_stem
+        identity = context.request.conversion_identity
+        presentation_stem = Path(
+            source_presentation_name(
+                context.request.input_refs[0],
+                fallback_path=identity.source_name if identity is not None else input_path,
+            )
+        ).stem
         source_format = request_source_format(context)
 
         context.cancellation.check()
@@ -257,7 +264,7 @@ class InvoiceCnConverter:
                 metadata_yaml[k] = str(v).strip() if v is not None else ""
 
             yaml_frontmatter = _build_yaml_frontmatter(
-                file_stem=input_stem_val,
+                file_stem=presentation_stem,
                 metadata=metadata_yaml,
                 include_empty=True,
                 yaml_key_labels=options.get("yaml_key_labels"),

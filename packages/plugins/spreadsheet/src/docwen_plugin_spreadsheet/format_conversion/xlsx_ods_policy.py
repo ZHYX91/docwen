@@ -642,7 +642,6 @@ def validate_prepared_ods(path: str | Path, preparation: XlsxOdsPreparation) -> 
     verifier = OdsCachedCellVerifier(preparation.flattened_cells)
     has_table_source = False
     has_external_formula = False
-    has_ref_error = False
     retained_protection = False
     removed_elements = set(preparation.removed_protection_elements)
     try:
@@ -665,15 +664,6 @@ def validate_prepared_ods(path: str | Path, preparation: XlsxOdsPreparation) -> 
                         formula = str(element.get(f"{{{_ODF_TABLE_NS}}}formula", ""))
                         if "file:///" in formula or "#[" in formula:
                             has_external_formula = True
-                    if any(
-                        "#REF!" in str(value)
-                        for value in (
-                            *element.attrib.values(),
-                            element.text or "",
-                            element.tail or "",
-                        )
-                    ):
-                        has_ref_error = True
 
                 if preparation.protection_removed:
                     if (
@@ -705,12 +695,7 @@ def validate_prepared_ods(path: str | Path, preparation: XlsxOdsPreparation) -> 
             "The backend reported success but did not produce an inspectable ODS package.",
         ) from exc
 
-    if preparation.external_links_flattened and (
-        has_table_source
-        or has_external_formula
-        or not verifier.complete
-        or (preparation.flattened_cells and has_ref_error)
-    ):
+    if preparation.external_links_flattened and (has_table_source or has_external_formula or not verifier.complete):
         raise XlsxOdsPolicyError(
             "EXTERNAL_LINK_FLATTENING_NOT_DELIVERED",
             "The ODS artifact did not preserve the cached external value without a live link.",

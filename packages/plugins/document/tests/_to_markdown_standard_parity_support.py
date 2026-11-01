@@ -56,7 +56,9 @@ def _inject_numpr(para: Any, *, num_id: str = "9", ilvl: int = 0) -> None:
     pPr.append(numPr)
 
 
-def _convert_document_fixture_to_markdown(tmp_path: Path, document: Any, *, request_id: str) -> str:
+def _convert_document_fixture_to_markdown(
+    tmp_path: Path, document: Any, *, request_id: str, options: dict[str, Any] | None = None
+) -> str:
     from tests.support.config import FakeConfigView
     from tests.support.execution import FakeExecutionContext
     from tests.support.logging import FakePluginLogger
@@ -76,7 +78,10 @@ def _convert_document_fixture_to_markdown(tmp_path: Path, document: Any, *, requ
             request_id=request_id,
             input_refs=[FileRef(path=str(source), format="docx", category="document")],
             target_format="md",
-            options={"markdown_extensions": {"output": {"structural_tables": True, "extended_headings": True}}},
+            options={
+                "markdown_extensions": {"output": {"structural_tables": True, "extended_headings": True}},
+                **(options or {}),
+            },
             output_policy=OutputPolicy(),
         ),
         workspace=FakeWorkspaceHandle(str(source), str(staging)),

@@ -21,6 +21,11 @@ from scripts.release.verify_packaged_cli import (
 pytestmark = pytest.mark.unit
 
 _AUTH_MARKDOWN = MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT["document"]["authored_markdown"]
+# Ordinary Word prose must retain these characters without creating Wiki links.
+_RETURNED_MARKDOWN = _AUTH_MARKDOWN.replace(
+    "Ordinary: [[#^system-overview]] and ![[Guide#^h-7f3a]].",
+    r"Ordinary: \[\[\#\^system-overview\]\] and \!\[\[Guide\#\^h-7f3a\]\].",
+)
 
 _DOCUMENT_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -105,7 +110,7 @@ def test_packaged_machine_semantic_oracles_accept_the_complete_probe(tmp_path: P
     _write_probe(docx_path)
 
     verify_machine_document_semantics_docx(docx_path)
-    verify_machine_document_semantics_markdown(_AUTH_MARKDOWN)
+    verify_machine_document_semantics_markdown(_RETURNED_MARKDOWN)
     assert [item["code"] for item in MACHINE_RESOLVED_DOCUMENT_LIMITATIONS] == [
         "resolved_document.provider_owned_semantics",
     ]
@@ -217,17 +222,17 @@ def test_packaged_machine_docx_oracle_rejects_a_disabled_occurrence(tmp_path: Pa
         "Equation: ^energy-main",
         "Code: Entry point ^entry-main",
         "Stable: @[[#^h-7f3a]] and @[[#^system-overview|System overview]].",
-        "Ordinary: [[#^system-overview]] and ![[Guide#^h-7f3a]].",
+        r"Ordinary: \[\[\#\^system-overview\]\] and \!\[\[Guide\#\^h-7f3a\]\].",
         "Citation: @cite-one.",
     ],
 )
 def test_packaged_machine_markdown_oracle_rejects_each_semantic_regression(token: str) -> None:
     with pytest.raises(RuntimeError, match="markdown_missing"):
-        verify_machine_document_semantics_markdown(_AUTH_MARKDOWN.replace(token, "missing", 1))
+        verify_machine_document_semantics_markdown(_RETURNED_MARKDOWN.replace(token, "missing", 1))
 
 
 def test_packaged_machine_markdown_oracle_rejects_a_missing_image() -> None:
-    markdown = _AUTH_MARKDOWN.replace("![[system.png]]", "image missing")
+    markdown = _RETURNED_MARKDOWN.replace("![[system.png]]", "image missing")
 
     with pytest.raises(RuntimeError, match="markdown_image_missing"):
         verify_machine_document_semantics_markdown(markdown)

@@ -256,7 +256,7 @@ def test_task_items_keep_states_children_and_order(round_trip_runtime: Any, tmp_
     returned = docx_to_md(round_trip_runtime, output, tmp_path / "reverse", options={"markdown_extensions": {}})
     assert all(
         value in returned
-        for value in ["[ ] TODO_ALPHA", "[x] NESTED_DONE", "[x] DONE_BETA", "Continuation.", "Task data"]
+        for value in [r"[ ] TODO\_ALPHA", r"[x] NESTED\_DONE", r"[x] DONE\_BETA", "Continuation.", "Task data"]
     )
 
 

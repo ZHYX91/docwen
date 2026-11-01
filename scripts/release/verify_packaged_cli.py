@@ -2506,7 +2506,7 @@ def verify_machine_document_semantics_markdown(markdown: str) -> None:
         "Equation: ^energy-main",
         "Code: Entry point ^entry-main",
         "Stable: @[[#^h-7f3a]] and @[[#^system-overview|System overview]].",
-        "Ordinary: [[#^system-overview]] and ![[Guide#^h-7f3a]].",
+        r"Ordinary: \[\[\#\^system-overview\]\] and \!\[\[Guide\#\^h-7f3a\]\].",
         "Citation: @cite-one.",
     )
     missing = [token for token in required_tokens if token not in markdown]

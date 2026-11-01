@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from docwen_core.text.markdown_literal import escape_markdown_literal
 from docwen_core.yaml_tools import format_yaml_scalar
 
 
@@ -61,7 +62,7 @@ def _build_yaml_frontmatter(
 
 def _escape_table_cell(value: str) -> str:
     """Escape pipe and newline characters in a Markdown table cell."""
-    return str(value).replace("|", "\\|").replace("\n", " ").strip()
+    return escape_markdown_literal(str(value).replace("\r\n", " ").replace("\r", " ").replace("\n", " ").strip())
 
 
 def _render_markdown_table(*, headers: list[str], rows: list[dict[str, str]]) -> str:
@@ -82,7 +83,7 @@ def _render_markdown_table(*, headers: list[str], rows: list[dict[str, str]]) ->
         normalized_rows = [[_escape_table_cell("（未识别）")] + [""] * (len(headers) - 1)]
 
     out: list[str] = []
-    out.append("| " + " | ".join(headers) + " |")
+    out.append("| " + " | ".join(_escape_table_cell(header) for header in headers) + " |")
     out.append("| " + " | ".join(["---"] * len(headers)) + " |")
     for r in normalized_rows:
         out.append("| " + " | ".join(r) + " |")

@@ -199,7 +199,7 @@ def test_setext_end_ends_the_inline_owner_before_a_later_link(tmp_path: Path) ->
     assert root.find(".//w:hyperlink", _NS) is None
     assert "close`" in _text(root)
     returned = _read(runtime, output, tmp_path)
-    assert "literal" not in returned and "close`" in returned
+    assert "literal" not in returned and r"close\`" in returned
 
 
 def test_multiline_setext_keeps_its_valid_internal_code_owner(tmp_path: Path) -> None:
@@ -239,7 +239,7 @@ def test_noninterrupting_list_spelling_participates_in_a_multiline_setext_headin
     output = _write(runtime, tmp_path, "foo\n2. bar\n===\n\n# Real\n", numbering=True)
     assert _heading_texts(output) == [(1, "1 foo\n2. bar"), (1, "2 Real")]
     returned = _read(runtime, output, tmp_path)
-    assert "foo<br>2. bar" in returned and "# 2 Real" in returned
+    assert r"foo<br>2\. bar" in returned and "# 2 Real" in returned
 
 
 def test_empty_atx_numbering_keeps_native_heading_structure(tmp_path: Path) -> None:

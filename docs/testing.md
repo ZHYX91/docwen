@@ -605,3 +605,20 @@ ownership checks, separate from native process termination.
 随后以同一 controller、request ID 和源文件重新发布真实 XLSX，证明旧取消 scope 已释放该身份。Application 合同
 对照覆盖先交付句柄后挂 alias、部分 alias 回滚、拒绝接管既有 owner，以及旧句柄不得取消或释放同 ID 新 scope；
 这些属于进程内所有权检查，与原生进程终止证据分开。
+
+
+Release review regressions cover source-order inline DOCX images (body and SDT),
+resource SHA-256, and independent Markdown ASTs for literal prose and invoice
+cells. Generated formatting, native list task prefixes, note-only paragraphs,
+code and authenticated references have separate positive controls. ODS cached
+facts are checked by type and owned coordinate; literal `#REF!` is valid text,
+while wrong values/types, error cells, formulas and live external sources fail.
+The anchor ownership sweep retains crossing/missing-parent/duplicate controls
+and exercises disjoint and equal-range nested inventories. These source tests
+and offscreen Qt checks do not certify native Office or packaged GUI acceptance.
+
+macOS resolves PySide6 6.8.3 to retain the public macOS 14 minimum. The official
+6.8.3 Essentials and Shiboken wheel Mach-O slices were inspected at minimum 12.0;
+newer wheel filename tags alone were insufficient (6.10.3 binding binaries still
+required 15.0). The final package's unchanged all-Mach-O compatibility gate and
+native macOS smoke checks remain required for every release candidate.

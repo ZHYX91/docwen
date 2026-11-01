@@ -76,7 +76,9 @@ def _text_content(element: etree._Element) -> str:
 
 def _matches(element: etree._Element, expected: CachedExternalCell) -> bool:
     value_type = element.get(_OFFICE + "value-type")
-    if element.tag == _TABLE + "covered-table-cell":
+    if element.get("{urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0}value-type") == "error":
+        return False
+    if element.tag == _TABLE + "covered-table-cell" or element.get(_TABLE + "formula") is not None:
         return False
     if expected.cell_type == "str":
         if value_type not in {None, "string"}:

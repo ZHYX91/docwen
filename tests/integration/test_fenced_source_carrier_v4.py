@@ -450,7 +450,7 @@ def test_invalid_backtick_info_is_not_a_carrier_and_never_leaks_a_core_error(
     # CommonMark treats the invalid first line as paragraph text and the later
     # bare backticks as an independent omitted-EOF opener.  Only the latter is
     # carrier-owned; surrounding generic block whitespace is not source proof.
-    assert "```rust`invalid\nbody" in returned
+    assert "\\`\\`\\`rust\\`invalid\nbody" in returned
     [record] = analyze_markdown_semantics_v3(
         returned,
         input_id="invalid-backtick-info-returned.md",

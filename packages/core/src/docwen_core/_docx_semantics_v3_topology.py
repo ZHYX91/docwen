@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from itertools import combinations, pairwise
+from itertools import pairwise
 from typing import Any
 
 from docwen_core._docx_semantics_v3_model import (
@@ -23,17 +23,20 @@ def order_ordinary_anchor_bindings(
     """Prove caller-authenticated topology and order bindings child-first."""
 
     rows: list[tuple[Any, int, int]] = []
+    body_positions = {id(element): index for index, element in enumerate(body)}
     for binding in bindings:
         elements = binding.elements
         if not elements or len({id(item) for item in elements}) != len(elements):
             raise DocxSemanticsV3Error("ordinary-anchor group must contain distinct elements")
         if any(item.getparent() is not body for item in elements):
             raise DocxSemanticsV3Error("ordinary-anchor group requires direct main-body elements")
-        positions = [body.index(item) for item in elements]
+        positions = [body_positions[id(item)] for item in elements]
         if positions != list(range(positions[0], positions[0] + len(positions))):
             raise DocxSemanticsV3Error("ordinary-anchor group must be contiguous and ordered")
         rows.append((binding, positions[0], positions[-1]))
     by_source_id = {row[0].identity.source_id: row for row in rows}
+    if len(by_source_id) != len(rows) or len({row[0].identity.tag for row in rows}) != len(rows):
+        raise DocxSemanticsV3Error("ordinary-anchor groups have duplicate source identity")
     parent_by_tag: dict[str, str] = {}
     edges: list[AnchorTopologyEdgeV3] = []
     for binding, _start, _end in rows:
@@ -47,10 +50,42 @@ def order_ordinary_anchor_bindings(
         parent_by_tag[edge.child_tag] = edge.parent_tag
         edges.append(edge)
     _prove_topology_forest(edges, {row[0].identity.tag for row in rows})
-    for left, right in combinations(rows, 2):
-        _prove_binding_pair(left, right, parent_by_tag)
+    depths: dict[str, int] = {}
+    for binding, _start, _end in rows:
+        path: list[str] = []
+        tag = binding.identity.tag
+        while tag not in depths:
+            path.append(tag)
+            if tag not in parent_by_tag:
+                break
+            tag = parent_by_tag[tag]
+        depth = depths.get(tag, -1)
+        for tag in reversed(path):
+            depth += 1
+            depths[tag] = depth
 
-    depths = {row[0].identity.tag: _topology_depth(row[0].identity.tag, parent_by_tag) for row in rows}
+    # Sorted intervals form a stack exactly when ranges are laminar. Its top
+    # is the nearest physical owner, including equal ranges ordered by the
+    # already-proven source forest. Compare one parent per group, not all pairs.
+    active: list[tuple[Any, int, int]] = []
+    for row in sorted(rows, key=lambda item: (item[1], -item[2], depths[item[0].identity.tag])):
+        binding, start, end = row
+        while active and active[-1][2] < start:
+            active.pop()
+        parent_tag = parent_by_tag.get(binding.identity.tag)
+        if active:
+            owner, _owner_start, owner_end = active[-1]
+            if end > owner_end:
+                raise DocxSemanticsV3Error("ordinary-anchor groups partially overlap")
+            if parent_tag != owner.identity.tag:
+                if start == _owner_start and end == owner_end:
+                    raise DocxSemanticsV3Error(
+                        "ordinary-anchor groups have duplicate ownership without source topology"
+                    )
+                raise DocxSemanticsV3Error("ordinary-anchor nested range lacks its authenticated source parent")
+        elif parent_tag is not None:
+            raise DocxSemanticsV3Error("ordinary-anchor topology parent does not contain its child")
+        active.append(row)
     ordered = [
         row[0]
         for row in sorted(
@@ -163,34 +198,6 @@ def prove_anchor_topology_document(
         _prove_flattened_child_range(logical_by_tag[edge.child_tag], logical_by_tag[edge.parent_tag])
 
 
-def _prove_binding_pair(
-    left: tuple[Any, int, int],
-    right: tuple[Any, int, int],
-    parent_by_tag: dict[str, str],
-) -> None:
-    left_binding, left_start, left_end = left
-    right_binding, right_start, right_end = right
-    left_tag = left_binding.identity.tag
-    right_tag = right_binding.identity.tag
-    if left_end < right_start or right_end < left_start:
-        if _is_topology_ancestor(left_tag, right_tag, parent_by_tag) or _is_topology_ancestor(
-            right_tag, left_tag, parent_by_tag
-        ):
-            raise DocxSemanticsV3Error("ordinary-anchor topology parent does not contain its child")
-        return
-    left_contains = left_start <= right_start and right_end <= left_end
-    right_contains = right_start <= left_start and left_end <= right_end
-    if not left_contains and not right_contains:
-        raise DocxSemanticsV3Error("ordinary-anchor groups partially overlap")
-    left_ancestor = _is_topology_ancestor(left_tag, right_tag, parent_by_tag)
-    right_ancestor = _is_topology_ancestor(right_tag, left_tag, parent_by_tag)
-    if left_start == right_start and left_end == right_end:
-        if left_ancestor == right_ancestor:
-            raise DocxSemanticsV3Error("ordinary-anchor groups have duplicate ownership without source topology")
-    elif (left_contains and not left_ancestor) or (right_contains and not right_ancestor):
-        raise DocxSemanticsV3Error("ordinary-anchor nested range lacks its authenticated source parent")
-
-
 def _prove_topology_forest(
     records: list[AnchorTopologyEdgeV3],
     endpoint_tags: set[str] | None = None,
@@ -202,30 +209,16 @@ def _prove_topology_forest(
         if item.child_tag in parent_by_tag:
             raise DocxSemanticsV3Error("anchor-topology child has more than one parent")
         parent_by_tag[item.child_tag] = item.parent_tag
+    proven: set[str] = set()
     for child in parent_by_tag:
         seen: set[str] = set()
         current = child
-        while current in parent_by_tag:
+        while current in parent_by_tag and current not in proven:
             if current in seen:
                 raise DocxSemanticsV3Error("anchor-topology graph contains a cycle")
             seen.add(current)
             current = parent_by_tag[current]
-
-
-def _topology_depth(tag: str, parent_by_tag: dict[str, str]) -> int:
-    depth = 0
-    while tag in parent_by_tag:
-        depth += 1
-        tag = parent_by_tag[tag]
-    return depth
-
-
-def _is_topology_ancestor(ancestor: str, child: str, parent_by_tag: dict[str, str]) -> bool:
-    while child in parent_by_tag:
-        child = parent_by_tag[child]
-        if child == ancestor:
-            return True
-    return False
+        proven.update(seen)
 
 
 def _prove_flattened_child_range(child: tuple[Any, ...], parent: tuple[Any, ...]) -> None:

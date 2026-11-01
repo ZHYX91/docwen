@@ -162,7 +162,9 @@ def _lease_markers(temp_root: Path, *, errors: list[dict[str, str]] | None = Non
         safe_directories: list[str] = []
         for name in sorted(directories):
             child = current_path / name
-            if name.casefold() == ".workspace" or name.casefold() == "runtime" and (child / "workspace.json").exists():
+            if name.casefold() == ".workspace" or (
+                name.casefold() == "runtime" and (child / "workspace.json").exists()
+            ):
                 if errors is not None:
                     errors.append({"path": str(child), "reason": "nested_workspace_boundary"})
                 continue
