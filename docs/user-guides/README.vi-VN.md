@@ -105,7 +105,7 @@ không mở rộng cam kết sang bản phân phối hoặc kiến trúc khác.
     - Nhấn "Tạo DOCX".
 
 3.  **Nhận kết quả**:
-    - Tài liệu Word được lưu trong thư mục kết quả tại vị trí đầu ra đã chọn. Có thể mở vị trí này từ thanh trạng thái.
+    - Nếu chỉ có một tài liệu Word, tệp được lưu trực tiếp tại vị trí đầu ra đã chọn. Có thể mở vị trí này từ thanh trạng thái.
 
 **Mẹo**: Có thể dùng các file mẫu trong thư mục `samples/` để trải nghiệm nhanh.
 
@@ -165,7 +165,7 @@ Panel thao tác tự điều chỉnh chức năng theo loại file:
 
 Mở cài đặt bằng biểu tượng ở cuối cửa sổ hoặc **Ctrl+,**. Thanh điều hướng bên trái được chia thành **Cơ bản**, **Loại đầu vào**, **Nội dung** và **Chuyên biệt**. Khi cửa sổ thấp có thể cuộn thanh bên; chỉ khi không đủ chiều rộng mới chuyển sang danh sách chọn trang.
 
-Trang **OCR và hình ảnh** quản lý nhận dạng chung và xuất hình ảnh trong Markdown. OCR mặc định theo từng loại tệp nằm ở trang đầu vào tương ứng; chuyển đổi định dạng và nén ảnh ở **Hình ảnh đầu vào**. **Cú pháp Markdown** tách quy tắc xuất chung, quy tắc đọc đầu vào và ánh xạ dành riêng cho Word. Không phải mọi nguồn hay tối ưu chuyên biệt đều áp dụng mọi tùy chọn cú pháp.
+Trang **OCR và hình ảnh** quản lý nhận dạng chung và xuất hình ảnh trong Markdown. OCR mặc định theo từng loại tệp nằm ở trang đầu vào tương ứng; chuyển đổi định dạng và nén ảnh ở **Hình ảnh đầu vào**. **Tạo Markdown** điều khiển cú pháp và phần mở rộng đầu ra; **Phân tích Markdown** điều khiển nhận dạng, phần mở rộng đầu vào và ánh xạ Markdown sang Word. Không phải mọi nguồn hay tối ưu chuyên biệt đều áp dụng mọi tùy chọn cú pháp. Bật phần mở rộng không bổ sung khả năng nhận dạng.
 
 **Công văn** và **Hóa đơn** có trang riêng. **Tài liệu → Markdown** đặt lựa chọn nhận dạng ban đầu cho công văn; **Markdown → Tài liệu** cấu hình định dạng trường mẫu, kèm trợ giúp về phần đính kèm, nơi nhận bản sao, ngày và ghi chú. Hóa đơn có lựa chọn riêng cho **PDF / OFD → Markdown** và **Ảnh → Markdown**. Các giá trị mặc định chỉ thay đổi lựa chọn ban đầu cho tệp tương thích, không tự phân loại tệp. **Áp dụng / OK** để lưu, **Hủy** để bỏ thay đổi chưa áp dụng.
 
@@ -199,7 +199,7 @@ Với script tự động hóa cục bộ, có thể kiểm tra và thực hiệ
 
 ### Ví dụ thường dùng
 
-Chuyển đổi từ hoặc sang Markdown tạo thư mục kết quả bên trong `--output-dir DIR`, kể cả khi chỉ có một tệp. Tên gồm tên nguồn, dấu thời gian và định dạng đầu vào hiện tại. Chỉ dùng `--output PATH` cho các chuyển đổi khác tạo đúng một tệp đích.
+Chuyển đổi sang Markdown luôn tạo thư mục kết quả bên trong thư mục cha được chọn bằng `--output-dir DIR`. Chuyển đổi từ Markdown tạo một tài liệu hoặc bảng tính cuối cùng sẽ lưu tệp trực tiếp trong thư mục cha đó; nhiều tệp hoặc tệp kiểm toán đi kèm được yêu cầu rõ ràng sẽ dùng thư mục kết quả. Tên tự động gồm tên nguồn, dấu thời gian và định dạng đầu vào hiện tại. Dùng `--output PATH` để chỉ định đường dẫn chính xác của một tệp cuối cùng, kể cả tệp tạo từ Markdown; kết quả theo nhóm cần `--output-dir`.
 
 ```bash
 # Bản đóng gói Windows
@@ -281,8 +281,8 @@ DocWenCLI.exe validate input.md --check typo --report report.json
 
 **Bạn dùng phần mở rộng Markdown của Obsidian?** Bốn phần mở rộng tùy chọn **mặc định tắt khi cài DocWen mới**: `structural_tables` (ô gộp và tiêu đề bảng nhiều hàng), `captions_references` (chú thích và tham chiếu Number Suite), `extended_headings` (H7–H9) và `typed_endnotes` (chú thích cuối có kiểu).
 
-- **Markdown → Word:** vào **Cài đặt → Cú pháp Markdown → Đầu vào**, bật các phần mở rộng cần thiết hoặc chọn cấu hình **Phần mở rộng Obsidian** cho đầu vào. Nếu tắt, một số dấu đặc biệt có thể giữ nguyên thành văn bản.
-- **Word → Markdown:** bật riêng **phần mở rộng đầu ra** tương ứng hoặc cấu hình đầu ra. Nếu không, một số cấu trúc có thể bị đơn giản hóa hay chuẩn hóa kèm cảnh báo.
+- **Markdown → Word:** vào **Cài đặt → Phân tích Markdown**, bật các phần mở rộng cần thiết hoặc chọn cấu hình **Dùng phần mở rộng Obsidian** cho đầu vào. Nếu tắt, một số dấu đặc biệt có thể giữ nguyên thành văn bản.
+- **Word → Markdown:** bật phần mở rộng đầu ra tương ứng tại **Cài đặt → Tạo Markdown** hoặc dùng cấu hình của trang đó. Nếu không, một số cấu trúc có thể bị đơn giản hóa hay chuẩn hóa kèm cảnh báo.
 
 Hãy giữ Markdown gốc và kiểm tra DOCX tạo ra. Đánh số trong Word do các tùy chọn chuyển đổi DocWen quyết định; không đảm bảo phục hồi đúng từng dấu hay khoảng trắng ban đầu. Xem [tài liệu tương thích Markdown](../specs/markdown-compatibility.md).
 
@@ -298,7 +298,7 @@ Hãy giữ Markdown gốc và kiểm tra DOCX tạo ra. Đánh số trong Word d
 
 ### Xuống dòng và đoạn văn
 
-**Quy tắc cơ bản**: Xuống dòng mềm trong Markdown thông thường mặc định **không** tạo đoạn Word riêng. Bật **Mỗi dòng là một đoạn** tại **Cài đặt → Cú pháp Markdown** nếu muốn tách các dòng văn bản thường. Danh sách, trích dẫn, khối mã và ngắt dòng rõ ràng vẫn theo quy tắc riêng.
+**Quy tắc cơ bản**: Xuống dòng mềm trong Markdown thông thường mặc định **không** tạo đoạn Word riêng. Bật **Mỗi dòng thành một đoạn** tại **Cài đặt → Phân tích Markdown** nếu muốn tách các dòng văn bản thường. Danh sách, trích dẫn, khối mã và ngắt dòng rõ ràng vẫn theo quy tắc riêng.
 
 **Đoạn trộn**: Khi một tiêu đề phụ cần trộn với nội dung trong cùng một đoạn (mặc định: chế độ "Cần dấu kết câu"), phải thỏa các điều kiện:
 1.  Tiêu đề phụ kết thúc bằng dấu kết câu (hỗ trợ dấu kết câu đa ngôn ngữ).

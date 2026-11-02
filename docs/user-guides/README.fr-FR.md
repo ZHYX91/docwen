@@ -105,7 +105,7 @@ Les paquets utilisent leur propre moteur d’images. Vérifiez la version instal
     - Cliquez sur "Générer DOCX".
 
 3.  **Obtenir les résultats** :
-    - Le document Word est enregistré dans un dossier de résultats à l’emplacement de sortie choisi. Ouvrez cet emplacement depuis la barre d’état.
+    - Un document Word unique est enregistré directement à l’emplacement de sortie choisi. Ouvrez cet emplacement depuis la barre d’état.
 
 **Conseil** : Vous pouvez utiliser les fichiers exemples dans le répertoire `samples/` pour essayer rapidement les fonctionnalités du logiciel.
 
@@ -165,7 +165,7 @@ Le panneau d'opération ajuste automatiquement les options disponibles en foncti
 
 Ouvrez les paramètres avec l’icône en bas de la fenêtre ou **Ctrl+,**. La navigation latérale regroupe **Général**, **Types d’entrée**, **Contenu** et **Spécialisations**. Elle défile si la fenêtre est basse et devient une liste déroulante seulement si la largeur est insuffisante.
 
-La page **OCR et images** regroupe la reconnaissance et la sortie des images dans Markdown. Les valeurs OCR propres à chaque type de fichier restent dans sa page d’entrée ; la conversion et la compression d’images restent dans **Images en entrée**. **Syntaxe Markdown** distingue les règles de sortie, les règles de lecture et les correspondances Word. Tous les chemins d’entrée et toutes les optimisations ne prennent pas encore en charge chaque option de syntaxe.
+La page **OCR et images** regroupe la reconnaissance et la sortie des images dans Markdown. Les valeurs OCR propres à chaque type de fichier restent dans sa page d’entrée ; la conversion et la compression d’images restent dans **Images en entrée**. **Générer Markdown** contrôle la syntaxe et les extensions de sortie ; **Analyser Markdown** contrôle la reconnaissance, les extensions d’entrée et les correspondances Markdown vers Word. Tous les chemins d’entrée et toutes les optimisations ne prennent pas encore en charge chaque option de syntaxe. Activer une extension n’ajoute pas de capacité de reconnaissance.
 
 Les **Documents officiels** et les **Factures** ont chacun leur page. Pour les documents officiels, **Document → Markdown** règle la reconnaissance initiale et **Markdown → Document** les champs de modèle, avec une aide sur les annexes, les destinataires en copie, les dates et les notes. Les factures ont des valeurs distinctes pour **PDF / OFD → Markdown** et **Image → Markdown**. Ces valeurs ne fixent que le choix initial des fichiers compatibles, sans détecter automatiquement leur type. **Appliquer / OK** enregistre et **Annuler** écarte les changements non appliqués.
 
@@ -199,7 +199,7 @@ Les applications et les plugins se connectent via `serve --stdio` avec Machine P
 
 ### Exemples courants
 
-Les conversions depuis ou vers Markdown créent un dossier de résultats dans `--output-dir DIR`, même pour un seul fichier. Les noms comprennent le nom source, l’horodatage et le format d’entrée. `--output PATH` reste réservé aux autres conversions produisant un fichier cible précis.
+Les conversions vers Markdown créent toujours un dossier de résultats dans le dossier parent choisi avec `--output-dir DIR`. Une conversion depuis Markdown produisant un seul document ou classeur final l’enregistre directement dans ce dossier parent ; plusieurs fichiers ou un fichier d’audit annexe explicitement demandé utilisent un dossier de résultats. Les noms générés comprennent le nom source, l’horodatage et le format d’entrée. Utilisez `--output PATH` pour le chemin exact d’un seul fichier final, y compris depuis Markdown ; les résultats groupés nécessitent `--output-dir`.
 
 ```bash
 # Paquet Windows
@@ -281,8 +281,8 @@ DocWenCLI.exe validate input.md --check typo --report report.json
 
 **Vous utilisez des extensions Markdown d’Obsidian ?** Quatre extensions facultatives sont **désactivées après une nouvelle installation** de DocWen : `structural_tables` (cellules fusionnées et en-têtes multiples), `captions_references` (légendes et renvois Number Suite), `extended_headings` (H7–H9) et `typed_endnotes` (notes de fin typées).
 
-- **Markdown → Word :** dans **Paramètres → Syntaxe Markdown → Entrée**, activez les extensions nécessaires ou le préréglage **Extensions Obsidian** pour l’entrée. Sinon, certains marqueurs restent du texte ordinaire.
-- **Word → Markdown :** activez séparément les **extensions de sortie** correspondantes (ou leur préréglage). Sinon, les structures peuvent être simplifiées ou normalisées avec des avertissements.
+- **Markdown → Word :** dans **Paramètres → Analyser Markdown**, activez les extensions nécessaires ou le préréglage **Utiliser les extensions Obsidian** pour l’entrée. Sinon, certains marqueurs restent du texte ordinaire.
+- **Word → Markdown :** activez les extensions de sortie correspondantes dans **Paramètres → Générer Markdown** (ou le préréglage de cette page). Sinon, les structures peuvent être simplifiées ou normalisées avec des avertissements.
 
 Conservez le Markdown d’origine et vérifiez le DOCX obtenu. La numérotation Word dépend des options de conversion de DocWen ; la reconversion ne garantit pas une restitution identique des marqueurs et espaces. Voir la [référence de compatibilité](../specs/markdown-compatibility.md).
 
@@ -298,7 +298,7 @@ Pour faciliter la mémorisation pour les collègues sans connaissances de base, 
 
 ### Sauts de ligne et paragraphes
 
-**Règle de base** : Les simples retours à la ligne Markdown ne créent **pas** de paragraphes Word distincts par défaut. Activez **Chaque ligne comme paragraphe** sous **Paramètres → Syntaxe Markdown** pour séparer les lignes de prose. Listes, citations, code et sauts explicites conservent leurs propres règles.
+**Règle de base** : Les simples retours à la ligne Markdown ne créent **pas** de paragraphes Word distincts par défaut. Activez **Une ligne par paragraphe** sous **Paramètres → Analyser Markdown** pour séparer les lignes de prose. Listes, citations, code et sauts explicites conservent leurs propres règles.
 
 **Paragraphes mixtes** : Lorsqu'un sous-titre doit être mélangé avec le corps du texte dans le même paragraphe (mode par défaut : « Ponctuation requise »), les conditions suivantes doivent être remplies :
 1.  Le sous-titre se termine par un signe de ponctuation de fin (prend en charge la ponctuation multilingue, y compris les points, les points d'interrogation, les points d'exclamation et autres signes de ponctuation de fin courants).

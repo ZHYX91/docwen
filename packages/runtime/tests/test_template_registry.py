@@ -73,6 +73,14 @@ def _write_ooxml_template(path: Path, target: str) -> None:
 
 
 class TestExactMatch:
+    def test_descriptions_keep_authored_names_without_hardcoded_display_language(self, tmp_path: Path) -> None:
+        registry = _make_registry(["English General Template.docx", "我的预算.xlsx"], tmp_path)
+        descriptions = {item.name: item.description for item in registry.list_templates()}
+        assert descriptions == {
+            "English General Template": "English General Template (DOCX)",
+            "我的预算": "我的预算 (XLSX)",
+        }
+
     def test_custom_only_root_is_not_mislabeled_as_builtin(self, tmp_path: Path) -> None:
         registry = _make_registry(["Report.docx"], tmp_path)
 

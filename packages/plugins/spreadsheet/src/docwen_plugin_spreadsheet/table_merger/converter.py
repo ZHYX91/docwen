@@ -8,6 +8,7 @@ Core algorithm adapted from old ``converter/table_merger/core.py``.
 
 from __future__ import annotations
 
+import math
 import os
 import uuid
 from collections.abc import Callable
@@ -780,34 +781,54 @@ class TableMergerConverter:
         summary: MergeSummary | None = None,
         cancel_check: Callable[[], None] | None = None,
     ) -> None:
-        for row in collect_ws.iter_rows():
+        # Normal worksheets keep only instantiated cells in this mapping.
+        # iter_rows() would create every blank cell in a sparse bounding box.
+        cells = collect_ws._cells
+        max_row, max_col = collect_ws.max_row, collect_ws.max_column
+        if summary is not None:
+            missing = max_row * max_col - len(cells) if cells else 0
+            summary.counts["skipped"] += missing
+            # Preserve bounded location evidence without visiting the rectangle.
+            if missing:
+                from openpyxl.utils.cell import get_column_letter
+
+                samples = summary.locations.setdefault("skipped", [])
+                next_position = 0
+                for row_index, col_index in sorted(cells):
+                    position = (row_index - 1) * max_col + col_index - 1
+                    while next_position < position and len(samples) < 20:
+                        row_number, column_number = divmod(next_position, max_col)
+                        samples.append(f"{get_column_letter(column_number + 1)}{row_number + 1}")
+                        next_position += 1
+                    next_position = position + 1
+                    if len(samples) == 20:
+                        break
+        for coordinate in sorted(cells):
+            cell = cells[coordinate]
             if cancel_check is not None:
                 cancel_check()
-            for cell in row:
-                if cell.value is None or str(cell.value).strip() == "":
-                    if summary is not None:
-                        summary.record("skipped", cell.coordinate)
-                    continue
-                base_row = cell.row + row_offset
-                base_col = cell.column + col_offset
-                if base_row < 1 or base_col < 1:
-                    continue
-                base_cell = base_ws.cell(base_row, base_col)
-                if type(base_cell).__name__ != "MergedCell":
-                    original = base_cell.value
-                    value, source_type = self._merge_cell_values(
-                        original, cell.value, base_cell.data_type, cell.data_type
+            if cell.value is None or str(cell.value).strip() == "":
+                if summary is not None:
+                    summary.record("skipped", cell.coordinate)
+                continue
+            base_row = cell.row + row_offset
+            base_col = cell.column + col_offset
+            if base_row < 1 or base_col < 1:
+                continue
+            base_cell = base_ws.cell(base_row, base_col)
+            if type(base_cell).__name__ != "MergedCell":
+                original = base_cell.value
+                value, source_type = self._merge_cell_values(original, cell.value, base_cell.data_type, cell.data_type)
+                _write_scalar(base_cell, value, source_type)
+                if summary is not None:
+                    decision = (
+                        "added"
+                        if value_identity(original) is None
+                        else "skipped"
+                        if value_identity(original) == value_identity(base_cell.value)
+                        else "combined"
                     )
-                    _write_scalar(base_cell, value, source_type)
-                    if summary is not None:
-                        decision = (
-                            "added"
-                            if value_identity(original) is None
-                            else "skipped"
-                            if value_identity(original) == value_identity(base_cell.value)
-                            else "combined"
-                        )
-                        summary.record(decision, cell.coordinate)
+                    summary.record(decision, cell.coordinate)
 
     @staticmethod
     def _merge_cell_values(
@@ -826,7 +847,14 @@ class TableMergerConverter:
         base_num = TableMergerConverter._try_number(base_value)
         col_num = TableMergerConverter._try_number(collect_value)
         if base_num is not None and col_num is not None:
-            return base_num + col_num, None
+            total = base_num + col_num
+            try:
+                finite = math.isfinite(total)
+            except OverflowError:
+                finite = False
+            if not finite:
+                raise ValueError("Cell merge sum exceeds the finite numeric range supported by XLSX.")
+            return total, None
 
         if str(base_value).strip() == str(collect_value).strip():
             return base_value, base_type
@@ -834,10 +862,14 @@ class TableMergerConverter:
 
     @staticmethod
     def _try_number(value: Any) -> float | int | None:
-        if isinstance(value, (int, float)):
+        if isinstance(value, int):
             return value
+        if isinstance(value, float):
+            return value if math.isfinite(value) else None
         try:
             num = float(str(value).strip())
+            if not math.isfinite(num):
+                return None
             if num.is_integer():
                 return int(num)
             return num

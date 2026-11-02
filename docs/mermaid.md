@@ -1,8 +1,8 @@
 # Mermaid images / Mermaid 图片
 
-DocWen keeps Mermaid code blocks by default. To export them as images, install an optional local rendering environment and choose **Settings → Markdown syntax → Mermaid → Render as image**. The main installer does not include Node.js, Mermaid CLI or Chrome, and DocWen does not download them automatically.
+DocWen keeps Mermaid code blocks by default. To export them as images, install an optional local rendering environment and choose **Settings → Parse Markdown → Mermaid → Render as image**. The main installer does not include Node.js, Mermaid CLI or Chrome, and DocWen does not download them automatically.
 
-DocWen 默认保留 Mermaid 代码块。需要图片时，请自行安装本地渲染环境，在**设置 → Markdown 语法 → Mermaid → 渲染为图片**中选择图片模式。主安装包不内置 Node.js、Mermaid CLI 或浏览器，应用也不会自动安装。
+DocWen 默认保留 Mermaid 代码块。需要图片时，请自行安装本地渲染环境，在**设置 → 解析 Markdown → Mermaid → 渲染为图片**中选择图片模式。主安装包不内置 Node.js、Mermaid CLI 或浏览器，应用也不会自动安装。
 
 ## Local installation / 本地安装
 

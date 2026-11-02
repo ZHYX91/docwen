@@ -110,7 +110,7 @@ These prerequisites do not extend that support claim to another Linux distributi
     - Click "Generate DOCX".
 
 3.  **Get Results**:
-    - DocWen saves the Word document in a result folder at the configured output location. Use **Open Output** to find it.
+    - DocWen saves the single Word document directly at the configured output location. Use **Open Output** to find it.
 
 **Tip**: You can use the sample files in the `samples/` directory to quickly try out the software's features.
 
@@ -182,9 +182,9 @@ Invoices have separate defaults for **PDF / OFD → Markdown** and **Image → M
 
 **Interface language** controls application text and layout. **Task output language** independently controls generated labels, document styles and proofreading comments; it does not translate body text. Changing the interface keeps saved template choices and output language. OCR **Auto** follows the task output language; choose an OCR language explicitly when needed. See [language settings](docs/specs/task-language.md).
 
-**Markdown syntax** separates shared output conventions from input recognition, with Word-specific mappings listed below. The visible help describes current support: output extensions and preferred syntax are not yet implemented uniformly across all source formats or specialized optimizers. Enabling an extension does not add recognition capabilities.
+**Generate Markdown** controls output syntax and extensions; **Parse Markdown** controls input recognition, extensions and Markdown-to-Word mappings. The visible help describes current support: output extensions and preferred syntax are not yet implemented uniformly across all source formats or specialized optimizers. Enabling an extension does not add recognition capabilities.
 
-Under **Markdown syntax**, **Each line as a paragraph** optionally turns ordinary prose lines into separate Word paragraphs. It is off by default; lists, quotes, code, semantic structures and explicit Markdown hard breaks retain their own boundaries.
+Under **Parse Markdown**, **Each line as a paragraph** optionally turns ordinary prose lines into separate Word paragraphs. It is off by default; lists, quotes, code, semantic structures and explicit Markdown hard breaks retain their own boundaries.
 
 **Scope:** The specialized field formatter targets Chinese official-document conventions, and the invoice extraction optimization targets Chinese invoice formats. Other documents can still use the regular conversion paths.
 
@@ -216,7 +216,7 @@ Apps and plugins connect through `serve --stdio` using Machine Protocol v2 to di
 
 ### Common Examples
 
-Conversions from or to Markdown publish a result folder inside the parent selected with `--output-dir DIR`, even when there is only one output. Names include the source name, timestamp and current input format. Use `--output PATH` only for other conversions that produce one exact file.
+Conversions to Markdown always publish a result folder inside the parent selected with `--output-dir DIR`. Conversions from Markdown that produce one final document or spreadsheet save it directly in that parent; multiple output files or an explicitly requested audit sidecar use a result folder. Generated names include the source name, timestamp and current input format. Use `--output PATH` for one exact final file, including one generated from Markdown; grouped results require `--output-dir`.
 
 ```bash
 # Packaged release (Windows)
@@ -271,7 +271,7 @@ The table below lists common commands only. For the full command surface, use `d
 
 | Command / Option | Description |
 | --- | --- |
-| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | Convert one file. Conversions from or to Markdown require `--output-dir`; other one-file conversions use exact `--output`. Existing targets require explicit `--overwrite`. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | Convert one file. Markdown output and grouped results require `--output-dir`; one final file, including from Markdown, may use exact `--output`. Existing targets require explicit `--overwrite`. |
 | `convert <file> --to <fmt> ... --dry-run --json` | Check the detected format, conversion method and options without writing files. |
 | `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Generate DOCX, proofread it, then save the result. `--check` without `--proofread` is rejected; omitting `--check` uses configured proofreading defaults. |
 | `convert <file> --to <fmt> ... --optimization <id>` | Select an optimization by the public resource ID returned by `resources list optimizations`. |
@@ -302,8 +302,8 @@ The table below lists common commands only. For the full command surface, use `d
 
 **Using Obsidian Markdown extensions?** Four extensions are optional and **disabled on a new DocWen installation**: `structural_tables` (merged cells and multi-row/row headers), `captions_references` (Number Suite captions and references), `extended_headings` (H7–H9), and `typed_endnotes` (typed endnotes).
 
-- **Markdown → Word:** Open **Settings → Markdown syntax → Input** and enable the extensions your notes need, or click **Use Obsidian extensions** for the input direction. Otherwise special markers may remain literal text.
-- **Word → Markdown:** Enable the corresponding **Output** extensions separately (or use the output preset). With them off, structures may be flattened or normalized and a warning reported.
+- **Markdown → Word:** Open **Settings → Parse Markdown** and enable the extensions your notes need, or click **Use Obsidian extensions** for the input direction. Otherwise special markers may remain literal text.
+- **Word → Markdown:** Enable the corresponding output extensions in **Settings → Generate Markdown** (or use the preset there). With them off, structures may be flattened or normalized and a warning reported.
 
 Keep the original Markdown and inspect the produced DOCX. Word numbering follows DocWen's conversion settings; the round trip does not promise identical source spelling or whitespace. See the [Markdown compatibility reference](https://github.com/ZHYX91/docwen/blob/main/docs/specs/markdown-compatibility.md) for exact boundaries.
 
@@ -319,7 +319,7 @@ Markdown headings map directly to Word heading levels:
 
 ### Line Breaks and Paragraphs
 
-**Basic Rule**: Ordinary Markdown soft line breaks do not create separate Word paragraphs by default. Enable **Each line as a paragraph** under **Settings → Markdown syntax** to split ordinary prose lines. Lists, quotes, code, other semantic structures and explicit hard breaks retain their own rules.
+**Basic Rule**: Ordinary Markdown soft line breaks do not create separate Word paragraphs by default. Enable **Each line as a paragraph** under **Settings → Parse Markdown** to split ordinary prose lines. Lists, quotes, code, other semantic structures and explicit hard breaks retain their own rules.
 
 **Mixed Paragraphs**: When a subheading needs to be mixed with the body text in the same paragraph (default mode: "Punctuation required"), the following conditions must be met:
 1.  The subheading ends with one of the configured trigger characters. The exact default is `。：！？.:!?` (full-width or half-width period, colon, question mark, or exclamation mark).

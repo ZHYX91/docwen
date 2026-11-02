@@ -177,8 +177,8 @@ BOM、换行、空白和等价语法可以规范化，不承诺逐字节还原�
 
 ### Optional dialect policy / 可选扩展策略
 
-New installations disable all four optional dialects. Settings → Markdown syntax exposes independent input and
-output controls and an Obsidian preset for each direction. Persisted values live under
+New installations disable all four optional dialects. Settings → Parse Markdown controls input recognition; Settings → Generate Markdown controls
+output syntax. Each page has an independent Obsidian preset. Persisted values live under
 `conversion.markdown_extensions.input` and `.output`; request option `markdown_extensions` uses the same two
 objects and overrides only explicitly supplied booleans. The four keys are `structural_tables`,
 `captions_references`, `extended_headings`, and `typed_endnotes`.

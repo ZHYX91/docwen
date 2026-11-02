@@ -1104,6 +1104,7 @@ cancel_hint = "Une tâche est en cours. Appuyez sur Échap pour l’annuler."
 
 # 模板选择器
 [components.template_selector]
+format_description = "Modèle {format}"
 manage_templates = "Gérer les modèles"
 selected_name = "Modèle sélectionné : {name}"
 no_templates = "Aucun disponible"

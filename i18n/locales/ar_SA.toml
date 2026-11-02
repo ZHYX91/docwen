@@ -1105,6 +1105,7 @@ cancel_hint = "هناك مهمة قيد التنفيذ. اضغط Esc لإلغا�
 
 # 模板选择器
 [components.template_selector]
+format_description = "قالب {format}"
 manage_templates = "إدارة القوالب"
 selected_name = "القالب المحدد: {name}"
 no_templates = "لا توجد قوالب متاحة"

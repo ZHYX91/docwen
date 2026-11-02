@@ -1110,6 +1110,7 @@ cancel_hint = "Hay una tarea en ejecución. Pulse Esc para cancelarla."
 
 # 模板选择器
 [components.template_selector]
+format_description = "Plantilla {format}"
 manage_templates = "Administrar plantillas"
 selected_name = "Plantilla seleccionada: {name}"
 no_templates = "No hay plantillas disponibles"

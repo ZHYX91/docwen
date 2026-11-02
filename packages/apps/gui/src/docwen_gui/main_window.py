@@ -1363,7 +1363,7 @@ class MainWindow(QWidget):
             details[info.target][info.id] = TemplateItemDetails(
                 display_name=info.name,
                 resource_id=info.id,
-                usage_hint=info.description,
+                usage_hint=_t("components.template_selector.format_description", format=info.target.upper()),
                 source_label=(_t("settings.templates.custom") if custom else _t("settings.templates.builtin")),
                 source_path=str(info.path),
                 updated_label=_format_template_modified_label(info.modified_ns),

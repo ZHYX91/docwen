@@ -1105,6 +1105,7 @@ cancel_hint = "Task running. Press Esc to cancel the current task."
 
 # 模板选择器
 [components.template_selector]
+format_description = "{format} template"
 manage_templates = "Manage templates"
 selected_name = "Selected template: {name}"
 no_templates = "No templates available"

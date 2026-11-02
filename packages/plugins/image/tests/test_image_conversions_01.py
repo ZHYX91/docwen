@@ -216,11 +216,18 @@ class TestImageFormatConversion:
                         assert converted.mode == expected["mode"]
                         assert list(converted.size) == fixture["input_size"]
                         assert getattr(converted, "n_frames", 1) == fixture["shared_n_frames"]
-                        assert json.loads(json.dumps(converted.getextrema())) == expected["extrema"]
+                        if target != "webp":
+                            assert json.loads(json.dumps(converted.getextrema())) == expected["extrema"]
                         rgba = converted.convert("RGBA")
                         try:
-                            if target != "webp":
-                                assert hashlib.sha256(rgba.tobytes()).hexdigest() == expected["rgba_sha256"]
+                            # Preserve the historical lossy snapshot as evidence.
+                            # Current WebP lossless must match the source pixels.
+                            digest = (
+                                fixture["inputs"][input_name]["rgba_sha256"]
+                                if target == "webp"
+                                else expected["rgba_sha256"]
+                            )
+                            assert hashlib.sha256(rgba.tobytes()).hexdigest() == digest
                         finally:
                             rgba.close()
 

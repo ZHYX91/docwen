@@ -3,7 +3,20 @@
 - 本文档只记录版本演进和对外可见变更，不作为当前功能边界、架构约束或规范条款的事实源。
 - 长期有效的项目说明以 README 体系为准，设计与维护边界以 `docs/architecture.md` 为准，强约束规则以 `docs/specs/` 为准。
 
-## Unreleased / 未发布
+## 0.21.3 (2026-11-02)
+
+- Update the OFD dependency pyasn1 to 0.6.5 for four upstream ASN.1 decoding CPU denial-of-service fixes, including paths used to extract OFD seal images.
+- OFD 依赖 pyasn1 更新为 0.6.5，纳入上游四项 ASN.1 解码 CPU 拒绝服务修复，覆盖 OFD 签章图像提取所用的解码路径。
+- Deliver complete Machine outcomes with more than 64 diagnostics; check the transport byte limit before completion and report an oversized response explicitly without suggesting an automatic retry.
+- Machine 接口完整交付超过 64 条诊断的任务结果；完成通知前检查传输字节上限，超限时明确说明结果无法交付及输出可能已存在。
+- Preserve non-finite-looking spreadsheet text during cell merges, reject numeric overflow, and avoid expanding sparse worksheets into blank rectangles.
+- 表格按单元格汇总保留 `NaN`、`Infinity` 等文字，明确拒绝数值溢出，不再为稀疏工作表创建整片空单元格。
+- Preserve every input image page and mixed-source transparency when merging TIFF files; bound decoded pages and pixels with an actionable failure. Use actual lossless WebP encoding when lossless is selected.
+- 合并 TIFF 保留所有输入页及混合来源的透明度，页数或解码像素超限时明确提示分批处理；WebP 的无损选项使用真正的无损编码。
+- Escape literal presentation text in Markdown and emit each title placeholder once while retaining separate shapes with the same text.
+- 演示文稿转换保留字面文本，标题占位符只输出一次，内容相同的独立文本框继续保留。
+- Localize template format hints without translating user names, and update twelve guides to the current output rules and parsing/generation settings.
+- 模板格式提示跟随界面语言，用户名称保持原样；十二种语言指南同步当前输出规则及解析、生成设置入口。
 
 ## 0.21.2
 

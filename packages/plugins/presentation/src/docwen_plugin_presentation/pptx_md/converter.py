@@ -26,6 +26,7 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.markdown_utils import encode_markdown_table_cell
+from docwen_core.text.markdown_literal import escape_markdown_literal
 from docwen_core.text.ocr import report_ocr_outcome
 from docwen_plugin_presentation.pptx_md.request_policy import (
     PresentationMarkdownRequestPolicy,
@@ -364,7 +365,7 @@ class PptxToMarkdownConverter:
                 sec_name = section_map[slide_id]
                 if sec_name != current_section:
                     current_section = sec_name
-                    sections.append(f"# {sec_name}")
+                    sections.append(f"# {escape_markdown_literal(sec_name)}")
                     sections.append("")
 
             slide_lines, img_cnt, tbl_cnt, smartart_cnt = self._process_slide(
@@ -388,7 +389,7 @@ class PptxToMarkdownConverter:
             title,
             yaml_key_labels=opts.get("yaml_key_labels"),
         )
-        body = yaml_block + f"# {title}\n\n" + "\n\n".join(s for s in sections if s.strip())
+        body = yaml_block + f"# {escape_markdown_literal(title)}\n\n" + "\n\n".join(s for s in sections if s.strip())
         body = body.strip() + "\n"
 
         stats = {
@@ -595,14 +596,23 @@ class PptxToMarkdownConverter:
         image_shape_index = 0
 
         # Determine slide title
-        slide_title = self._extract_slide_title(slide)
+        title_shape = self._extract_slide_title_shape(slide)
+        title_shape_id = getattr(title_shape, "shape_id", None)
+        slide_title = (title_shape.text_frame.text or "").strip() if title_shape is not None else ""
         if slide_title:
-            lines.append(f"## {slide_title}")
+            lines.append(f"## {escape_markdown_literal(slide_title)}")
         else:
             lines.append(f"## Slide {slide_index}")
         lines.append("")
 
         for shape in shapes:
+            # python-pptx can return new wrappers when the shapes are enumerated
+            # again. Use the source shape ID, never text equality, to omit only
+            # the title already emitted above.
+            if shape is title_shape or (
+                title_shape_id is not None and getattr(shape, "shape_id", None) == title_shape_id
+            ):
+                continue
             # Process tables
             if getattr(shape, "has_table", False):
                 table_shape_index += 1
@@ -828,7 +838,7 @@ class PptxToMarkdownConverter:
                                         for ocr_line in ocr_text.split("\n"):
                                             stripped = ocr_line.strip()
                                             if stripped:
-                                                ocr_lines.append(f"> {stripped}")
+                                                ocr_lines.append(f"> {escape_markdown_literal(stripped)}")
                                             else:
                                                 ocr_lines.append(">")
                                         if ocr_lines:
@@ -853,7 +863,7 @@ class PptxToMarkdownConverter:
                     error="diagram relationship or XML is unavailable",
                 )
             if smartart_texts:
-                lines.extend(f"- {text}" for text in smartart_texts)
+                lines.extend(f"- {escape_markdown_literal(text)}" for text in smartart_texts)
                 lines.append("")
                 smartart_text_count += len(smartart_texts)
                 continue
@@ -864,7 +874,7 @@ class PptxToMarkdownConverter:
             if getattr(shape, "has_text_frame", False):
                 text = (shape.text_frame.text or "").strip()
                 if text:
-                    lines.append(text)
+                    lines.append(escape_markdown_literal(text))
                     lines.append("")
 
         # H4 — Speaker notes
@@ -875,7 +885,7 @@ class PptxToMarkdownConverter:
                 if notes_text:
                     lines.append("\n> Notes:")
                     for note_line in notes_text.split("\n"):
-                        lines.append(f"> {note_line}")
+                        lines.append(f"> {escape_markdown_literal(note_line)}")
                     lines.append("")
             except Exception as exc:
                 context.logger.warning(f"Unable to read notes for slide {slide_index}: {exc}")
@@ -985,7 +995,7 @@ class PptxToMarkdownConverter:
         categories = [str(category.label) for category in plots[0].categories]
         values = [list(getattr(item, "values", ())) for item in series]
 
-        lines = [f"### Chart: {display_title}"]
+        lines = [f"### Chart: {escape_markdown_literal(display_title)}"]
         headers = ["Category", *[name or f"Series {index}" for index, name in enumerate(series_names, 1)]]
         table_lines = [
             "| " + " | ".join(encode_markdown_table_cell(value) for value in headers) + " |",
@@ -1126,8 +1136,8 @@ class PptxToMarkdownConverter:
         return lines
 
     @staticmethod
-    def _extract_slide_title(slide: Any) -> str:
-        """Extract the slide title from title/centertitle placeholder shapes."""
+    def _extract_slide_title_shape(slide: Any) -> Any:
+        """Return the nonempty title placeholder and retain its source identity."""
         for shape in getattr(slide, "shapes", []):
             if not getattr(shape, "has_text_frame", False):
                 continue
@@ -1140,10 +1150,10 @@ class PptxToMarkdownConverter:
                 if ph_type in {1, 3}:
                     text = (shape.text_frame.text or "").strip()
                     if text:
-                        return text
+                        return shape
             except Exception:
                 continue
-        return ""
+        return None
 
     @staticmethod
     def _table_to_markdown(table: Any) -> str:
