@@ -91,7 +91,7 @@ NETWORK_GUARD_EXTERNAL_PROCESS_MARKERS = {
     "README.zh-TW.md": "不受這項限制",
 }
 
-SCREENSHOTS = {"markdown-generation-en.png", "official-documents-en.png", "template-management-en.png"}
+SCREENSHOTS = {"markdown-generation-en.png", "document-extraction-en.png", "template-management-en.png"}
 
 BANNED_CURRENT_TOKENS = (
     "gui-ui-ux-acceptance",
@@ -410,9 +410,9 @@ def test_public_guides_explain_supported_proofreading_and_release_selection() ->
         assert "Assistant 3.3" not in guide, path.name
         assert "Plugin 3.0" not in guide, path.name
         screenshot = (
-            "docs/assets/screenshots/official-documents-en.png"
+            "docs/assets/screenshots/document-extraction-en.png"
             if path.parent == ROOT
-            else "../assets/screenshots/official-documents-en.png"
+            else "../assets/screenshots/document-extraction-en.png"
         )
         assert screenshot in guide, path.name
         assert "--optimization gongwen" in guide, path.name

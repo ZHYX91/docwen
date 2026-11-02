@@ -299,6 +299,23 @@ def test_bundled_optimizer_manifests_do_not_gate_capabilities_by_ui_locale() -> 
     assert all("locales" not in manifest.extra for manifest in manifests)
 
 
+def test_gui_applicability_is_separate_from_unchanged_public_resource_contract(monkeypatch: pytest.MonkeyPatch) -> None:
+    from docwen_plugin_optimizer_gongwen.manifest import build_manifest as build_gongwen_manifest
+    from docwen_plugin_optimizer_invoice_cn.manifest import build_manifest as build_invoice_manifest
+
+    monkeypatch.setattr(capabilities, "_gate_status", lambda gate_id: _status(gate_id, available=True))
+    manifests = [build_gongwen_manifest(), build_invoice_manifest()]
+    public = capabilities.build_runtime_capability_projection(manifests, platform_id="windows")
+    desktop = capabilities.build_runtime_capability_projection(manifests, platform_id="windows", include_internal=True)
+    assert desktop.pop("optimization_applicable_locales") == {"gongwen": ["zh_CN"], "invoice_cn": ["zh_CN"]}
+    assert desktop == public
+    assert public["optimizations"]["contract"] == {"id": "docwen.optimizations", "version": 1}
+    assert all(
+        set(resource) == {"id", "name", "action_name", "scopes", "available", "state", "bindings"}
+        for resource in public["optimizations"]["resources"]
+    )
+
+
 def test_pymupdf_layout_resource_probe_rejects_unrelated_yaml_and_onnx(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,

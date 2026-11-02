@@ -23,8 +23,9 @@ def test_settings_smoke_constructs_every_page_without_placeholders(qapp, tmp_pat
 
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["success"] is True
-    assert report["expectedTabs"] == TAB_KEYS
-    assert report["loadedTabs"] == TAB_KEYS
+    expected = [key for key in TAB_KEYS if key not in {"gongwen", "invoice"}]
+    assert report["expectedTabs"] == expected
+    assert report["loadedTabs"] == expected
     assert report["failedTabs"] == []
     assert report["missingTabs"] == []
     assert report["unexpectedTabs"] == []

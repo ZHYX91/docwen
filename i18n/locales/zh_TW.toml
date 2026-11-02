@@ -280,6 +280,10 @@ batch_mode = "批量模式"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+numbering_text_label = "新增標題編號使用文字編號"
+numbering_text_help = "將本次依所選方案新增的標題編號寫為文字，優先於上方的標題編號輸出方式。不會啟用自動編號、修改已儲存的輸出方式或範本原有編號。預設開啟。"
+numbering_comments_label = "為新增的文字標題編號加入註解"
+numbering_comments_help = "僅為本次實際新增的文字標題編號加入核對註解，不標記原有手寫編號。預設開啟。關閉文字編號時會取消並停用此選項；重新開啟後可自行勾選。無法精確定位的自訂 Markdown 編號會提示略過註解。"
 output_format = "優先範本類型"
 output_format_hint = "傳入 Markdown 時優先顯示此類型的範本；此設定本身不會改變轉換輸出格式。"
 # MD转文档序号设置
@@ -1856,10 +1860,6 @@ unavailable = "目前環境未提供適用於此輸入類別的{name}最佳化�
 
 
 [settings.gongwen]
-numbering_text_label = "公文編號使用文字編號"
-numbering_text_help = "僅對本次依「傳入文字」所選方案自動新增的標題編號使用文字，不啟用編號、不修改已儲存的編號方式或範本原有編號。預設開啟，獨立於公文字段格式化。"
-numbering_comments_label = "為自動新增的公文序號加入註解"
-numbering_comments_help = "僅為實際自動新增的文字標題編號加入核對註解，不標記原有手寫編號。\n\n預設開啟；關閉文字編號時自動取消並停用，重新開啟後可自行勾選。\n\n無法精確定位的自訂標記編號會提示略過註解。\n\n獨立於公文字段格式化。"
 description = "分別設定公文辨識的預設選擇與範本欄位格式。"
 to_markdown_title = "文件 → Markdown"
 to_markdown_description = "將公文最佳化設為相容文件的初始選擇，不會自動判斷檔案是否為公文。DOCX 可直接處理；DOC、WPS、RTF、ODT 需要可用的文件轉換能力。"

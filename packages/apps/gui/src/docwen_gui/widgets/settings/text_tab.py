@@ -41,6 +41,8 @@ class TextTab(BaseSettingsTab):
         self._scheme_combo: QComboBox = _cast(QComboBox, None)
         super().__init__()
         self._load_values()
+        self._vm.config_changed.connect(self._on_numbering_review_changed)
+        self._vm.config_reloaded.connect(self._load_values)
 
     def _create_interface(self) -> None:
         self.set_tab_description(
@@ -115,6 +117,25 @@ class TextTab(BaseSettingsTab):
         help_label.setProperty("class", "secondary")
         form1.addRow(help_label)
 
+        row, self._numbering_text = self._create_toggle_with_info(
+            t("settings.text.numbering_text_label"),
+            t("settings.text.numbering_text_help"),
+        )
+        self._numbering_text.setObjectName("textNumberingText")
+        form1.addRow(row)
+        self._numbering_text.toggled.connect(
+            lambda enabled: self._vm.set_field(SECTION_TEXT, "gongwen_numbering_text", enabled)
+        )
+        row, self._numbering_comments = self._create_toggle_with_info(
+            t("settings.text.numbering_comments_label"),
+            t("settings.text.numbering_comments_help"),
+        )
+        self._numbering_comments.setObjectName("textNumberingComments")
+        form1.addRow(row)
+        self._numbering_comments.toggled.connect(
+            lambda enabled: self._vm.set_field(SECTION_TEXT, "gongwen_numbering_comments", enabled)
+        )
+
         self._numbering_editors = NumberingEditors(self, self._vm, self._refresh_scheme_combo_items)
 
     # ── Value loading ───────────────────────────────────────────────────────
@@ -139,6 +160,19 @@ class TextTab(BaseSettingsTab):
             with QSignalBlocker(self._render_mode_combo):
                 self._render_mode_combo.setEnabled(text.add_numbering)
                 self.set_combo_data(self._render_mode_combo, text.heading_numbering_render_mode)
+        self._load_numbering_review_values()
+
+    def _load_numbering_review_values(self) -> None:
+        text = self._vm.config.text
+        with QSignalBlocker(self._numbering_text):
+            self._numbering_text.setChecked(text.gongwen_numbering_text)
+        with QSignalBlocker(self._numbering_comments):
+            self._numbering_comments.setChecked(text.gongwen_numbering_comments)
+        self._numbering_comments.setEnabled(text.gongwen_numbering_text)
+
+    def _on_numbering_review_changed(self, section: str, key: str, _value: object) -> None:
+        if section == SECTION_TEXT and key in {"gongwen_numbering_text", "gongwen_numbering_comments"}:
+            self._load_numbering_review_values()
 
     def reload_from_config(self) -> None:
         self._load_values()

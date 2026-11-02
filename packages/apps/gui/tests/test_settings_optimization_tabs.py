@@ -11,7 +11,6 @@ from tests.support.gui_vm_fakes import FakeController, optimization_capability_p
 
 from docwen_gui.view_models.settings_vm import SettingsViewModel
 from docwen_gui.widgets.settings.dialog import SettingsDialog
-from docwen_gui.widgets.settings.gongwen_tab import GongwenTab
 
 pytestmark = pytest.mark.gui
 
@@ -24,6 +23,7 @@ def _vm(controller: object | None) -> SettingsViewModel:
 
 def _empty_projection() -> dict[str, object]:
     projection = deepcopy(optimization_capability_projection())
+    projection["optimization_applicable_locales"] = {}
     optimizations = projection["optimizations"]
     assert isinstance(optimizations, dict)
     optimizations["resources"] = []
@@ -91,10 +91,10 @@ class TestOptimizationDiscovery:
         assert list(choices) == ["invoice_cn"]
         assert "ghost" not in choices
 
-    def test_locale_does_not_hide_runtime_capabilities(self) -> None:
+    def test_locale_selects_declared_resources_without_changing_runtime_capabilities(self) -> None:
         vm = _vm(FakeController())
 
-        assert list(vm.get_optimization_choices_result(locale="en_US").items) == ["gongwen", "invoice_cn"]
+        assert list(vm.get_optimization_choices_result(locale="en_US").items) == []
         assert list(vm.get_optimization_choices_result(locale="zh_CN").items) == ["gongwen", "invoice_cn"]
 
 
@@ -168,26 +168,20 @@ class TestSpecializedOptimizationPages:
         vm.load_full_config(config)
         assert image_button.text() == t("settings.optimization.clear_default")
 
-    def test_ready_empty_has_localized_reason_without_discovery_failure(self, qapp) -> None:
-        from docwen_gui.i18n import t
-
+    def test_ready_empty_has_no_specialized_pages(self, qapp) -> None:
         controller = FakeController()
         controller.describe_runtime_capabilities = _empty_projection  # type: ignore[method-assign]
         dialog = SettingsDialog(view_model=_vm(controller))
         try:
-            reason = dialog.findChild(QLabel, "documentOptimizationAvailability")
-            assert reason is not None
-            assert reason.text() == t("settings.optimization.unavailable", name=t("settings.gongwen.title"))
-            assert reason.text() != t("settings.optimization.discovery_failed")
-            assert not _default_button(dialog, "document").isEnabled()
+            assert not dialog.activate_section("gongwen")
+            assert not dialog.activate_section("invoice")
+            assert dialog.findChild(QLabel, "documentOptimizationAvailability") is None
         finally:
             dialog.close()
             dialog.deleteLater()
 
     @pytest.mark.parametrize("failed", [False, True])
-    def test_saved_unavailable_default_remains_clearable(self, qapp, failed) -> None:
-        from docwen_gui.i18n import t
-
+    def test_saved_unavailable_default_is_preserved_without_an_inapplicable_page(self, qapp, failed) -> None:
         controller = FakeController()
         controller.describe_runtime_capabilities = (  # type: ignore[method-assign]
             (lambda: {"broken": True}) if failed else _empty_projection
@@ -196,20 +190,12 @@ class TestSpecializedOptimizationPages:
         vm.set_conversion_default("layout", "to_md_optimization", "invoice_cn")
         dialog = SettingsDialog(view_model=vm)
         try:
-            button = _default_button(dialog, "layout")
-            reason = dialog.findChild(QLabel, "layoutOptimizationAvailability")
-            assert reason is not None and reason.text()
-            if failed:
-                assert reason.text() == t("settings.optimization.discovery_failed")
-            assert button.text() == t("settings.optimization.clear_default")
-            assert button.isEnabled()
-            button.click()
-            assert vm.get_default_optimization("layout") == "none"
-            assert not button.isEnabled()
-            assert dialog._tabs["invoice"].objectName() != "settingsTabLoadErrorPage"
-            gongwen_tab = dialog._tabs["gongwen"]
-            assert isinstance(gongwen_tab, GongwenTab)
-            assert gongwen_tab._gongwen_fields.isEnabled()
+            assert not dialog.activate_section("invoice")
+            assert not dialog.activate_section("gongwen")
+            assert vm.get_default_optimization("layout") == "invoice_cn"
+            result = vm.get_optimization_choices_result(source_category="layout")
+            assert result.status == ("failed" if failed else "ready")
+            assert result.choices == ()
         finally:
             vm.cancel()
             dialog.close()

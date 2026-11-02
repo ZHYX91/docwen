@@ -29,13 +29,13 @@ DocWen processes files on your computer rather than uploading them to a conversi
 
 ## 📸 Screenshots
 
-Search templates without changing the current selection, then choose generation options.
+Import a Word document and choose Markdown export options.
 
-![Markdown to document](docs/assets/screenshots/markdown-generation-en.png)
+![Import a Word document and choose Markdown export options.](docs/assets/screenshots/document-extraction-en.png)
 
-Choose attachment alignment in Official documents settings:
+Import Markdown and choose a template to generate a Word document.
 
-![Official document field formatting](docs/assets/screenshots/official-documents-en.png)
+![Import Markdown and choose a template to generate a Word document.](docs/assets/screenshots/markdown-generation-en.png)
 
 
 Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
@@ -176,7 +176,11 @@ Under **General → Appearance**, choose **Small / Standard / Large** text and *
 
 Settings are organized into **Basics**, **Input types**, **Content** and **Specialized**. The **OCR and images** page controls shared recognition and Markdown image output; per-input OCR defaults stay on the corresponding input pages. Image format conversion and compression remain on Incoming images.
 
-The **Specialized** group has dedicated **Official documents** and **Invoices** pages. Official document settings separate **Document → Markdown** recognition defaults from **Markdown → Document** template field formatting. The field toggle has an information button describing attachment notes, copied recipients, dates, annotations and supported placeholder positions.
+Optimization choices appear only when an available optimization supports both the current interface language and the detected input format, including any required conversion software. Settings show the corresponding pages only for applicable optimizations. The built-in official-document and Chinese-invoice optimizations currently support only the Simplified Chinese interface (`zh_CN`). In other interface languages, their choices and pages are hidden and saved defaults are not applied; the saved preferences are kept for switching back. This controls GUI discovery and defaults, not an explicitly selected CLI or Machine task.
+
+For all interface languages, **Incoming text → Heading Numbering (Markdown to Document)** contains the controls for using text for newly added heading numbers and adding review comments to those numbers. These controls do not enable heading numbering by themselves.
+
+When available, the **Specialized** group has dedicated **Official documents** and **Invoices** pages. Official document settings separate **Document → Markdown** recognition defaults from **Markdown → Document** template field formatting. The field toggle has an information button describing attachment notes, copied recipients, dates, annotations and supported placeholder positions.
 
 Invoices have separate defaults for **PDF / OFD → Markdown** and **Image → Markdown**. A default only sets the initial choice for compatible files; it does not classify a file as an official document or invoice. Each input category has one default: **Set as default** replaces its previous choice, while **Clear default** removes the current page's choice. Apply or OK saves these changes; Cancel discards the draft. Shared extraction and OCR settings remain on their own pages, with links from the optimization pages. Invoice images always use OCR; scanned PDFs require OCR enabled in the incoming fixed-layout settings, and OFD reads existing text and structure without OCR for scanned content.
 
@@ -407,6 +411,7 @@ Supports clickable links in Markdown -> DOCX:
 -   `.docx` - Standard Word document.
 -   `.doc` - Automatically converted to DOCX for processing.
 -   `.wps` - WPS document automatically converted.
+- `.rtf`, `.odt` - Converted to DOCX before processing. These formats, `.doc` and `.wps` require a compatible local Office conversion program.
 
 **Export Options**:
 

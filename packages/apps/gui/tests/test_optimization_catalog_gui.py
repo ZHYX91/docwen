@@ -117,6 +117,7 @@ def _projection(*, include_resources: bool = True, bridge_state: str = "availabl
     binding_count = sum(len(resource["bindings"]) for resource in resources)
     return {
         "resource": "formats",
+        "optimization_applicable_locales": {resource["id"]: ["en_US", "zh_CN"] for resource in resources},
         "contract": {"id": "docwen.runtime-capabilities", "version": 1},
         "runtime": {"state": "available", "platform": "test"},
         "security": {"dependency_egress_guard": {}},
@@ -153,6 +154,7 @@ def _controller(
 ) -> MagicMock:
     controller = MagicMock()
     controller.describe_runtime_capabilities.return_value = projection or _projection()
+    controller.describe_gui_runtime_capabilities.return_value = projection or _projection()
     controller.config_port.get.side_effect = lambda key, default=None: policy if key == "optimize" else default
     return controller
 

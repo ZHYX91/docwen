@@ -12,6 +12,7 @@ from docwen_application.optimization_catalog import (
     inspect_optimization_catalog,
     parse_optimization_catalog,
 )
+from docwen_application.optimization_selection import select_optimizations
 
 pytestmark = pytest.mark.unit
 
@@ -146,4 +147,41 @@ def test_catalog_rejects_success_payload_with_inconsistent_counts() -> None:
     projection["optimizations"]["counts"]["bindings"] = 0
 
     with pytest.raises(CapabilityUnavailableError, match="inconsistent counts"):
+        parse_optimization_catalog(projection)
+
+
+def test_explicit_gui_locales_select_future_resources_without_changing_public_serialization() -> None:
+    projection = _projection()
+    projection["optimization_applicable_locales"] = {"public-resource": ["en_US", "ja_JP"]}
+    catalog = parse_optimization_catalog(projection)
+    assert catalog.to_dict() == projection["optimizations"]
+    for locale in ("en_US", "ja_JP"):
+        assert [choice.resource.id for choice in select_optimizations(catalog, interface_locale=locale)] == [
+            "public-resource"
+        ]
+    assert select_optimizations(catalog, interface_locale="zh_CN") == ()
+    assert select_optimizations(catalog, interface_locale="en_GB") == ()
+
+
+def test_legacy_public_catalog_remains_explicitly_executable_but_has_no_gui_applicability() -> None:
+    catalog = parse_optimization_catalog(_projection())
+    assert len(select_optimizations(catalog)) == 1
+    assert select_optimizations(catalog, interface_locale="zh_CN") == ()
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        None,
+        [],
+        {"ghost": ["en_US"]},
+        {"public-resource": "en_US"},
+        {"public-resource": ["en-US"]},
+        {"public-resource": ["en_US", "en_US"]},
+    ],
+)
+def test_gui_applicability_rejects_malformed_or_unknown_declarations(metadata: object) -> None:
+    projection = _projection()
+    projection["optimization_applicable_locales"] = metadata
+    with pytest.raises(CapabilityUnavailableError):
         parse_optimization_catalog(projection)

@@ -346,6 +346,10 @@ batch_mode = "Lote"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+numbering_text_label = "Usar texto para os novos números de títulos"
+numbering_text_help = "Escreve como texto os números de títulos adicionados pelo esquema selecionado, substituindo o modo de saída acima nesta conversão. Não ativa a numeração nem altera o modo salvo ou os números existentes do modelo. Ativado por padrão."
+numbering_comments_label = "Comentar os novos números de títulos em texto"
+numbering_comments_help = "Comenta apenas os números de títulos em texto realmente adicionados, nunca os já digitados manualmente. Ativado por padrão. Desativar a numeração de texto desmarca e desabilita esta opção; após reativá-la, você pode selecioná-la novamente. Números Markdown personalizados que não possam ser localizados com precisão são ignorados com um aviso."
 output_format = "Tipo de modelo preferido"
 output_format_hint = "Ao adicionar Markdown, os modelos desse tipo são priorizados. Esta configuração, sozinha, não altera o formato de saída da conversão."
 # MD转文档序号设置
@@ -1852,10 +1856,6 @@ unavailable = "A otimização {name} não está disponível para esta categoria 
 
 
 [settings.gongwen]
-numbering_text_label = "Usar numeração de texto para documentos oficiais"
-numbering_text_help = "Usa texto para os números adicionados nesta conversão pelo esquema de Texto de entrada. Não ativa a numeração nem altera o modo salvo ou os números do modelo. Ativado por padrão, independente da formatação de campos."
-numbering_comments_label = "Comentar números adicionados automaticamente"
-numbering_comments_help = "Comenta apenas números de texto adicionados, nunca os existentes.\n\nAtivado por padrão.\n\nDesativar a numeração de texto desmarca e desabilita esta opção; ao reativá-la, você pode selecioná-la novamente.\n\nPrefixos Markdown não isoláveis são ignorados com aviso.\n\nIndependente da formatação de campos."
 description = "Configure separadamente o padrão para documentos oficiais e a formatação dos campos do modelo."
 to_markdown_title = "Documento → Markdown"
 to_markdown_description = "Use a otimização de documentos oficiais como seleção inicial para documentos compatíveis, sem classificar os arquivos automaticamente. DOCX é processado diretamente; DOC, WPS, RTF e ODT precisam de um conversor de documentos disponível."

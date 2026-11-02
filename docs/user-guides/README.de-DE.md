@@ -29,13 +29,13 @@ Konvertieren Sie lokal Word- und Markdown-Dateien, bereiten Sie Tabellen und PDF
 
 ## 📸 Screenshots
 
-Vorlage und Erstellungsoptionen für Markdown-Dokumente auswählen.
+Word-Dokument importieren und Optionen für den Markdown-Export auswählen (englische Oberfläche).
 
-![Markdown in Dokumente umwandeln](../assets/screenshots/markdown-generation-en.png)
+![Word-Dokument importieren und Optionen für den Markdown-Export auswählen (englische Oberfläche).](../assets/screenshots/document-extraction-en.png)
 
-Ausrichtung von Anlagenangaben in den Einstellungen für amtliche Dokumente (englische Oberfläche):
+Markdown importieren und eine Vorlage für das Word-Dokument auswählen (englische Oberfläche).
 
-![Ausrichtung von Anlagenangaben in amtlichen Dokumenten](../assets/screenshots/official-documents-en.png)
+![Markdown importieren und eine Vorlage für das Word-Dokument auswählen (englische Oberfläche).](../assets/screenshots/markdown-generation-en.png)
 
 
 Changelog: siehe [CHANGELOG.md](../CHANGELOG.md)
@@ -167,7 +167,11 @@ Das Bedienfeld passt die verfügbaren Optionen automatisch basierend auf dem Dat
 
 **OCR und Bilder** enthält gemeinsame Optionen für Erkennung und Markdown-Bildausgabe. Die OCR-Vorgabe eines Dateityps bleibt auf dessen Eingabeseite; Bildkonvertierung und Komprimierung stehen unter **Bildeingabe**. **Markdown erzeugen** steuert Ausgabesyntax und Erweiterungen; **Markdown einlesen** steuert Eingabeerkennung, Erweiterungen und Markdown-zu-Word-Zuordnungen. Nicht jeder Eingabeweg oder jede Spezialoptimierung berücksichtigt schon alle Syntaxoptionen. Das Aktivieren einer Erweiterung fügt keine Erkennungsfunktion hinzu.
 
-**Amtliche Dokumente** und **Rechnungen** haben eigene Seiten. Bei amtlichen Dokumenten regelt **Dokument → Markdown** die Erkennungsvorgabe und **Markdown → Dokument** die Formatierung von Vorlagenfeldern mit Hinweisen zu Anlagen, Verteiler, Datum und Vermerken. Rechnungen bieten getrennte Vorgaben für **PDF / OFD → Markdown** und **Bild → Markdown**. Diese Optionen bestimmen nur die anfängliche Auswahl geeigneter Dateien und klassifizieren sie nicht automatisch. **Übernehmen / OK** speichert, **Abbrechen** verwirft ungespeicherte Änderungen.
+Eine Optimierung wird nur angeboten, wenn sie für die aktuelle Oberflächensprache und das erkannte Eingabeformat geeignet ist und die benötigte Konvertierungssoftware verfügbar ist. Auch die zugehörige Einstellungsseite erscheint nur für eine geeignete Optimierung. Die integrierten Optimierungen für chinesische amtliche Dokumente und Rechnungen gelten derzeit nur für die vereinfachte chinesische Oberfläche (`zh_CN`). In anderen Sprachen bleiben diese Optionen und Seiten verborgen; gespeicherte Vorgaben werden nicht angewendet, bleiben aber für einen späteren Sprachwechsel erhalten. Diese Regel betrifft die GUI-Auswahl, nicht explizit angegebene CLI- oder Machine-Aufträge.
+
+In allen Oberflächensprachen stehen die Optionen für Textnummern bei neu hinzugefügten Überschriftennummern und zugehörige Prüfkommentare unter **Texteingabe → Nummerierung (MD zu DOCX)**. Diese Schalter aktivieren die Überschriftennummerierung nicht selbst.
+
+Für geeignete Optimierungen erscheinen eigene Seiten für **Amtliche Dokumente** und **Rechnungen**. Bei amtlichen Dokumenten regelt **Dokument → Markdown** die Erkennungsvorgabe und **Markdown → Dokument** die Formatierung von Vorlagenfeldern mit Hinweisen zu Anlagen, Verteiler, Datum und Vermerken. Rechnungen bieten getrennte Vorgaben für **PDF / OFD → Markdown** und **Bild → Markdown**. Diese Optionen bestimmen nur die anfängliche Auswahl geeigneter Dateien und klassifizieren sie nicht automatisch. **Übernehmen / OK** speichert, **Abbrechen** verwirft ungespeicherte Änderungen.
 
 **Geltungsbereich:** Die spezielle Feldformatierung ist für chinesische Amtsdokumente ausgelegt; die Rechnungsoptimierung zielt auf chinesische Rechnungsformate. Andere Dateien können weiterhin die normalen Konvertierungswege verwenden.
 
@@ -385,6 +389,7 @@ Unterstützt klickbare Links bei Markdown -> DOCX:
 -   `.docx` - Standard Word-Dokument.
 -   `.doc` - Automatisch in DOCX zur Verarbeitung konvertiert.
 -   `.wps` - WPS-Dokument automatisch konvertiert.
+- `.rtf`, `.odt` - Werden vor der Verarbeitung in DOCX konvertiert. Wie `.doc` und `.wps` benötigen sie ein kompatibles lokales Office-Konvertierungsprogramm.
 
 **Exportoptionen**:
 

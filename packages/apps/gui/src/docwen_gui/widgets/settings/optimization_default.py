@@ -11,6 +11,8 @@ from docwen_gui.styles.ui_scale import set_metric
 from docwen_gui.view_models.settings_vm import SECTION_CONVERSION_DEFAULTS, SettingsViewModel
 from docwen_gui.widgets.panel_card import WrappingLabel
 
+from .base_tab import BaseSettingsTab
+
 
 class DefaultOptimizationControl(QWidget):
     """Show the shared choice and explicitly select or clear this page's resource."""
@@ -90,3 +92,39 @@ class DefaultOptimizationControl(QWidget):
         else:
             self._vm.set_default_optimization(self._category, self._resource_id)
         self.reload_from_config()
+
+
+class OptimizationDefaultsTab(BaseSettingsTab):
+    """Use existing per-input default controls for a resource without a custom page."""
+
+    def __init__(
+        self, view_model: SettingsViewModel, *, resource_id: str, resource_label: str, categories: tuple[str, ...]
+    ) -> None:
+        self._vm = view_model
+        self._resource_id = resource_id
+        self._resource_label = resource_label
+        self._categories = categories
+        self._defaults: list[DefaultOptimizationControl] = []
+        super().__init__()
+
+    def _create_interface(self) -> None:
+        titles = {
+            "document": t("settings.tabs.document"),
+            "image": t("settings.tabs.image"),
+            "layout": t("settings.tabs.layout"),
+        }
+        for category in self._categories:
+            _card, form = self.add_settings_card(titles[category])
+            control = DefaultOptimizationControl(
+                self._vm,
+                category=category,
+                resource_id=self._resource_id,
+                resource_label=self._resource_label,
+                parent=self._scroll_container,
+            )
+            form.addRow(control)
+            self._defaults.append(control)
+
+    def reload_from_config(self) -> None:
+        for control in self._defaults:
+            control.reload_from_config()

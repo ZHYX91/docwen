@@ -147,6 +147,7 @@ class ActionAreaViewModel(QObject):
         self._optimize_for_type: str | None = None
         self._optimization_choices_result = OptimizationChoicesResult(status="ready", choices=())
         self._optimization_sources: tuple[OptimizationSource, ...] = ()
+        self._optimization_locale: str | None = None
         # File→MD (docx→md) numbering options
         self._doc_remove_numbering: bool = True
         self._doc_add_numbering: bool = False
@@ -271,12 +272,13 @@ class ActionAreaViewModel(QObject):
     @property
     def optimize_for_type(self) -> str | None:
         """Selected optimization type, or None."""
+        self._ensure_optimization_locale()
         return self._optimize_for_type
 
     @optimize_for_type.setter
     def optimize_for_type(self, value: str | None) -> None:
         normalized = str(value).strip() if value else None
-        if normalized is not None and self._optimization_choices_result.get(normalized) is None:
+        if normalized is not None and self.optimization_choices_result.get(normalized) is None:
             normalized = None
         if self._optimize_for_type != normalized:
             self._optimize_for_type = normalized
@@ -286,14 +288,16 @@ class ActionAreaViewModel(QObject):
     def optimization_choices_result(self) -> OptimizationChoicesResult:
         """Runtime-backed choices and their explicit ready/failed state."""
 
+        self._ensure_optimization_locale()
         return self._optimization_choices_result
 
     @property
     def optimization_choices(self) -> tuple[OptimizationChoice, ...]:
-        return self._optimization_choices_result.choices
+        return self.optimization_choices_result.choices
 
     @property
     def optimization_route_options(self) -> tuple[str, ...]:
+        self._ensure_optimization_locale()
         choice = self._optimization_choices_result.get(self._optimize_for_type)
         return choice.route_options if choice is not None else ()
 
@@ -390,6 +394,7 @@ class ActionAreaViewModel(QObject):
     @property
     def show_optimize(self) -> bool:
         """Whether optimization options are visible."""
+        self._ensure_optimization_locale()
         return self._show_optimize
 
     @property
@@ -399,8 +404,39 @@ class ActionAreaViewModel(QObject):
         The combobox stores a public resource ID.  Runtime owns the separate
         internal action name used by the request.
         """
+        self._ensure_optimization_locale()
         choice = self._optimization_choices_result.get(self._optimize_for_type)
         return choice.action_name if choice is not None else ""
+
+    def _ensure_optimization_locale(self) -> None:
+        from docwen_gui.i18n import get_locale
+
+        if self._optimization_sources and self._optimization_locale != get_locale():
+            self._refresh_optimization_choices()
+
+    def _refresh_optimization_choices(self) -> None:
+        from docwen_gui.i18n import get_locale
+
+        if not self._optimization_sources:
+            return
+        main_vm = self._main_vm
+        controller = getattr(main_vm, "controller", None) if main_vm is not None else None
+        self._optimization_locale = get_locale()
+        self._optimization_choices_result = discover_optimization_choices(
+            controller, locale=self._optimization_locale, sources=self._optimization_sources
+        )
+        self._show_optimize = self._optimization_choices_result.status == "failed" or bool(
+            self._optimization_choices_result.choices
+        )
+        if self._optimization_choices_result.get(self._optimize_for_type) is None:
+            self._optimize_for_type = None
+        if self._optimization_choices_result.status == "failed":
+            logger.warning("Optimization discovery unavailable: %s", self._optimization_choices_result.error)
+
+    def refresh_optimization_choices(self) -> None:
+        """Refresh an open input after settings changes without replacing a manual choice."""
+        self._refresh_optimization_choices()
+        self.state_changed.emit()
 
     # ── MD→Document/Spreadsheet properties ───────────────────────────────
 
@@ -739,24 +775,7 @@ class ActionAreaViewModel(QObject):
         self._show_proofread = False
         self._show_numbering = show_numbering
         self._optimization_sources = source_inputs
-        main_vm = self._main_vm
-        controller = getattr(main_vm, "controller", None) if main_vm is not None else None
-        from docwen_gui.i18n import get_locale
-
-        self._optimization_choices_result = discover_optimization_choices(
-            controller,
-            locale=get_locale(),
-            sources=source_inputs,
-        )
-        self._show_optimize = self._optimization_choices_result.status == "failed" or bool(
-            self._optimization_choices_result.choices
-        )
-        if self._optimization_choices_result.status == "failed":
-            logger.warning(
-                "Optimization discovery unavailable for %s: %s",
-                source_inputs,
-                self._optimization_choices_result.error,
-            )
+        self._refresh_optimization_choices()
         section = file_type if file_type in {MODE_DOCUMENT, MODE_SPREADSHEET, MODE_IMAGE, MODE_LAYOUT} else "other"
         self._extract_image = bool(self._read_file_to_md_default(section, "to_md_keep_images", True))
         self._extract_ocr = bool(self._read_file_to_md_default(section, "to_md_enable_ocr", extract_ocr))

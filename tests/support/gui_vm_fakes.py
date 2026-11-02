@@ -125,6 +125,7 @@ def optimization_capability_projection() -> dict[str, object]:
     ]
     return {
         "resource": "formats",
+        "optimization_applicable_locales": {"gongwen": ["zh_CN"], "invoice_cn": ["zh_CN"]},
         "contract": {"id": "docwen.runtime-capabilities", "version": 1},
         "runtime": {"state": "available", "platform": "test"},
         "security": {"dependency_egress_guard": {}},
@@ -163,6 +164,9 @@ class FakeController:
 
     def describe_runtime_capabilities(self) -> dict[str, object]:
         return optimization_capability_projection()
+
+    def describe_gui_runtime_capabilities(self) -> dict[str, object]:
+        return self.describe_runtime_capabilities()
 
     def stop(self) -> None:
         pass

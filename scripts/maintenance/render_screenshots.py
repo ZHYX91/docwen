@@ -21,8 +21,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("theme", choices=("light", "dark"))
     parser.add_argument("--scale", type=int, choices=(90, 100, 110, 125, 150), default=100)
     parser.add_argument("--font", choices=("small", "default", "large"), default="default")
-    parser.add_argument("--section", choices=("templates", "general", "gongwen"), default="templates")
-    parser.add_argument("--input", choices=("file", "clipboard", "empty"), default="file")
+    parser.add_argument("--section", choices=("none", "templates", "general", "gongwen"), default="templates")
+    parser.add_argument("--input", choices=("file", "document", "clipboard", "empty"), default="file")
     parser.add_argument("--width", type=int, default=1040)
     parser.add_argument("--height", type=int, default=820)
     parser.add_argument("--settings-width", type=int, default=960)
@@ -97,6 +97,26 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
         else "# Project report\n\n## Progress\n\nDocument review and data checks are complete.\n\n| Task | Status |\n| --- | --- |\n| Document review | Complete |\n",
         encoding="utf-8",
     )
+    if args.input == "document":
+        from docx import Document
+
+        document = Document()
+        document.add_heading("项目周报" if locale == "zh_CN" else "Project report", 0)
+        document.add_heading("工作进展" if locale == "zh_CN" else "Progress", 1)
+        document.add_paragraph(
+            "本周完成文档整理与数据核对。" if locale == "zh_CN" else "Document review and data checks are complete."
+        )
+        table = document.add_table(rows=2, cols=2)
+        values = (
+            (("任务", "状态"), ("文档整理", "已完成"))
+            if locale == "zh_CN"
+            else (("Task", "Status"), ("Document review", "Complete"))
+        )
+        for row, texts in zip(table.rows, values, strict=True):
+            for cell, value in zip(row.cells, texts, strict=True):
+                cell.text = value
+        sample = sample.with_suffix(".docx")
+        document.save(sample)
     for k in ("DOCWEN_CONFIG_DIR", "DOCWEN_LOG_DIR", "DOCWEN_LOG_TO_TEMP", "QT_SCREEN_SCALE_FACTORS"):
         os.environ.pop(k, None)
     os.environ.update(
@@ -117,6 +137,7 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
     from docwen_gui import app as gui_app
 
     original = gui_app.create_main_window
+    main_label = "document" if args.input == "document" else "markdown"
     record = {
         "sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
         "locale": locale,
@@ -127,8 +148,12 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
         "devicePixelRatio": args.device_pixel_ratio,
         "showRecentTemplate": args.show_recent_template,
         "requestedSizes": {
-            "markdown": {"width": args.width, "height": args.height},
-            args.section: {"width": args.settings_width, "height": args.settings_height},
+            main_label: {"width": args.width, "height": args.height},
+            **(
+                {args.section: {"width": args.settings_width, "height": args.settings_height}}
+                if args.section != "none"
+                else {}
+            ),
         },
         "runtimeRoot": str(root),
         "sourceWorkingFiles": {},
@@ -189,12 +214,16 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
 
         def settings():
             try:
-                capture(window, "markdown")
+                capture(window, main_label)
+                if args.section == "none":
+                    window.close()
+                    return
                 assert window.open_settings(None)["accepted"]
                 assert window._settings_dialog.activate_section(args.section)
                 if args.section == "templates":
                     selected = window._template_selector.get_selected_template_resource()
-                    window._settings_dialog.focus_template("docx", selected[1])
+                    if selected is not None:
+                        window._settings_dialog.focus_template("docx", selected[1])
                 window._settings_dialog.resize(args.settings_width, args.settings_height)
                 QTimer.singleShot(1200, finish)
             except Exception as e:
@@ -217,8 +246,10 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
                         projection = window._view_model.ui_projection
                         ready = not window._view_model.inspection_busy and (
                             args.input == "empty"
+                            or (args.input == "document" and projection.right_panel_visible)
                             or (
-                                projection.right_panel_visible
+                                args.input != "document"
+                                and projection.right_panel_visible
                                 and window._template_selector.get_selected_template_resource() is not None
                             )
                         )
@@ -254,8 +285,9 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
     state = "retained-failure"
     primary: BaseException | None = None
     try:
-        code = gui_entry.main(["DocWen", str(sample)] if args.input == "file" else ["DocWen"])
-        assert code == 0 and len(record["images"]) == 2 and not failed, (code, failed)
+        code = gui_entry.main(["DocWen", str(sample)] if args.input in {"file", "document"} else ["DocWen"])
+        expected_count = 1 if args.section == "none" else 2
+        assert code == 0 and len(record["images"]) == expected_count and not failed, (code, failed)
         state = "completed-success"
     except BaseException as exc:
         primary = exc

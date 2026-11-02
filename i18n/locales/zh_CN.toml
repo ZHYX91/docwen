@@ -347,6 +347,10 @@ batch_mode = "批量模式"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+numbering_text_label = "新增标题序号使用文本编号"
+numbering_text_help = "将本次按所选方案新增的标题序号写为文本，优先于上方的标题序号输出方式。不会启用自动编号、修改已保存的输出方式或模板原有编号。默认开启。"
+numbering_comments_label = "为新增的文本标题序号添加批注"
+numbering_comments_help = "仅为本次实际新增的文本标题序号添加核对批注，不标记原有手写序号。默认开启。关闭文本编号时会取消并禁用此选项；重新开启后可自行勾选。无法精确定位的自定义 Markdown 序号会提示跳过批注。"
 output_format = "优先模板类型"
 output_format_hint = "传入 Markdown 时优先显示此类型的模板；此设置本身不会改变转换输出格式。"
 # MD转文档序号设置
@@ -1851,10 +1855,6 @@ unavailable = "当前环境未提供适用于此输入类别的{name}优化。"
 
 
 [settings.gongwen]
-numbering_text_label = "公文序号使用文本编号"
-numbering_text_help = "仅对本次按“传入文本”所选方案自动添加的标题序号使用文字编号，不启用自动编号、不修改已保存的编号方式或模板原有编号。默认开启，独立于“格式化公文字段”。"
-numbering_comments_label = "为自动添加的公文序号添加批注"
-numbering_comments_help = "仅为实际自动添加的文字标题序号添加核对批注，不标记原有手写序号。\n\n默认开启；关闭“公文序号使用文本编号”时自动取消并禁用，重新开启后可自行勾选。\n\n无法精确定位的自定义标记序号会提示跳过批注。\n\n独立于“格式化公文字段”。"
 description = "分别设置公文识别默认选择与模板字段格式化。"
 to_markdown_title = "文档 → Markdown"
 to_markdown_description = "将公文优化设为兼容文档的初始选择，不会自动判断文件是否为公文。DOCX 可直接处理；DOC、WPS、RTF、ODT 需有可用的文档转换能力。"

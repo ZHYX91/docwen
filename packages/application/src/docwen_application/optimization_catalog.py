@@ -12,6 +12,7 @@ from docwen_application.runtime_capability_catalog import (
     RuntimeCapabilityCatalog,
     parse_runtime_capability_catalog,
 )
+from docwen_core.models.manifest import validate_optimization_locales
 
 OptimizationState = Literal["available", "available_with_limits", "unavailable"]
 CatalogStatus = Literal["ready", "failed"]
@@ -76,6 +77,7 @@ class OptimizationResource:
     available: bool
     state: OptimizationState
     bindings: tuple[OptimizationBinding, ...]
+    applicable_locales: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -239,6 +241,20 @@ def parse_optimization_catalog(capability_projection: Mapping[str, object]) -> O
     if not isinstance(raw_resources, list) or not isinstance(raw_counts, dict):
         _fail("Runtime optimization discovery returned an incomplete projection.")
 
+    # Only the in-process GUI projection supplies this metadata. The public
+    # docwen.optimizations v1 resource shape and CLI/Machine output stay intact.
+    raw_locales = capability_projection.get("optimization_applicable_locales", {})
+    if not isinstance(raw_locales, dict):
+        _fail("Runtime optimization discovery returned invalid locale applicability.")
+    applicable_locales: dict[str, tuple[str, ...]] = {}
+    for resource_id, locales in raw_locales.items():
+        if not isinstance(resource_id, str):
+            _fail("Runtime optimization discovery returned an invalid locale resource id.")
+        try:
+            applicable_locales[resource_id] = validate_optimization_locales(locales)
+        except ValueError as error:
+            raise CapabilityUnavailableError(str(error)) from error
+
     seen_resource_ids: set[str] = set()
     seen_route_ids: set[str] = set()
     route_options: dict[str, tuple[str, ...]] = {}
@@ -293,9 +309,12 @@ def parse_optimization_catalog(capability_projection: Mapping[str, object]) -> O
                 available=available,
                 state=state,
                 bindings=bindings,
+                applicable_locales=applicable_locales.get(resource_id, ()),
             )
         )
 
+    if set(applicable_locales) - seen_resource_ids:
+        _fail("Runtime optimization locale applicability references an unknown resource.")
     bindings = tuple(binding for resource in resources for binding in resource.bindings)
     counts = OptimizationCounts(
         resources=len(resources),

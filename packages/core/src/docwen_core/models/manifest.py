@@ -7,6 +7,18 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 _RESOURCE_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+_LOCALE_PATTERN = re.compile(r"^[a-z]{2,3}(?:_[A-Z][a-z]{3})?(?:_(?:[A-Z]{2}|[0-9]{3}))?$")
+
+
+def validate_optimization_locales(locales: object) -> tuple[str, ...]:
+    """Validate explicit resource applicability, without inferring translation coverage."""
+    if not isinstance(locales, (list, tuple)) or any(
+        not isinstance(locale, str) or not _LOCALE_PATTERN.fullmatch(locale) for locale in locales
+    ):
+        raise ValueError("Optimization applicable_locales must contain canonical locale identifiers.")
+    if len(locales) != len(set(locales)):
+        raise ValueError("Optimization applicable_locales must not contain duplicates.")
+    return tuple(locales)
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +34,7 @@ class OptimizationResourceSpec:
     id: str
     name: str
     action_name: str
+    applicable_locales: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         values: dict[str, object] = {"id": self.id, "name": self.name, "action_name": self.action_name}
@@ -32,17 +45,19 @@ class OptimizationResourceSpec:
             raise ValueError(f"Invalid optimization resource id: {self.id}")
         if not _RESOURCE_ID_PATTERN.fullmatch(self.action_name):
             raise ValueError(f"Invalid optimization action name: {self.action_name}")
+        object.__setattr__(self, "applicable_locales", validate_optimization_locales(self.applicable_locales))
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
             "action_name": self.action_name,
+            "applicable_locales": list(self.applicable_locales),
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> OptimizationResourceSpec:
-        expected_keys = {"id", "name", "action_name"}
+        expected_keys = {"id", "name", "action_name", "applicable_locales"}
         unexpected = sorted(set(data) - expected_keys)
         if unexpected:
             raise ValueError(f"Optimization resource contains unsupported field(s): {', '.join(unexpected)}")
@@ -50,6 +65,7 @@ class OptimizationResourceSpec:
             id=data["id"],
             name=data["name"],
             action_name=data["action_name"],
+            applicable_locales=validate_optimization_locales(data.get("applicable_locales", [])),
         )
 
 

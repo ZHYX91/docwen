@@ -29,13 +29,13 @@ Converta Word e Markdown localmente, prepare planilhas e PDFs ou revise textos s
 
 ## 📸 Capturas de tela
 
-Selecione um modelo e as opções de geração de documentos Markdown.
+Importe um documento Word e escolha as opções de exportação para Markdown (interface em inglês).
 
-![Markdown para documento](../assets/screenshots/markdown-generation-en.png)
+![Importe um documento Word e escolha as opções de exportação para Markdown (interface em inglês).](../assets/screenshots/document-extraction-en.png)
 
-Alinhamento das informações de anexos em documentos oficiais (tela em inglês):
+Importe Markdown e escolha um modelo para gerar um documento Word (interface em inglês).
 
-![Configuração de alinhamento dos anexos em documentos oficiais](../assets/screenshots/official-documents-en.png)
+![Importe Markdown e escolha um modelo para gerar um documento Word (interface em inglês).](../assets/screenshots/markdown-generation-en.png)
 
 
 Registro de alterações: veja [CHANGELOG.md](../CHANGELOG.md)
@@ -167,7 +167,11 @@ Abra as configurações pelo ícone na parte inferior da janela ou com **Ctrl+,*
 
 **OCR e imagens** reúne opções comuns de reconhecimento e saída de imagens no Markdown. O OCR padrão de cada arquivo permanece na respectiva página de entrada; conversão e compactação de imagens ficam em **Imagens de entrada**. **Gerar Markdown** controla a sintaxe e as extensões de saída; **Interpretar Markdown** controla o reconhecimento, as extensões de entrada e os mapeamentos de Markdown para Word. Nem todas as origens e otimizações seguem todas as opções de sintaxe. Ativar uma extensão não acrescenta capacidade de reconhecimento.
 
-**Documentos oficiais** e **Faturas** têm páginas próprias. Para documentos oficiais, **Documento → Markdown** define a escolha inicial de reconhecimento e **Markdown → Documento** a formatação de campos do modelo, com ajuda sobre anexos, destinatários em cópia, datas e notas. Faturas têm padrões separados para **PDF / OFD → Markdown** e **Imagem → Markdown**. Eles apenas definem a escolha inicial de arquivos compatíveis, sem identificá-los automaticamente. **Aplicar / OK** salva; **Cancelar** descarta alterações não aplicadas.
+Uma otimização só aparece quando está disponível para o idioma atual da interface e o formato de entrada detectado, com o software de conversão necessário. Sua página de configurações também aparece apenas quando ela é aplicável. As otimizações integradas para documentos oficiais chineses e faturas chinesas atualmente só se aplicam à interface em chinês simplificado (`zh_CN`). Nos outros idiomas, suas opções e páginas ficam ocultas e os padrões salvos não são aplicados; essas preferências são mantidas para quando você voltar ao idioma compatível. Essa regra controla as escolhas da GUI, sem alterar tarefas definidas explicitamente pela CLI ou pelo Machine.
+
+Em todos os idiomas, **Texto de entrada → Numeração (MD para DOCX)** permite usar texto nos novos números de títulos e adicionar comentários de revisão a eles. Essas opções não ativam a numeração de títulos por si mesmas.
+
+Quando a otimização é aplicável, **Documentos oficiais** e **Faturas** têm páginas próprias. Para documentos oficiais, **Documento → Markdown** define a escolha inicial de reconhecimento e **Markdown → Documento** a formatação de campos do modelo, com ajuda sobre anexos, destinatários em cópia, datas e notas. Faturas têm padrões separados para **PDF / OFD → Markdown** e **Imagem → Markdown**. Eles apenas definem a escolha inicial de arquivos compatíveis, sem identificá-los automaticamente. **Aplicar / OK** salva; **Cancelar** descarta alterações não aplicadas.
 
 **Escopo:** A formatação especializada de campos é voltada a documentos oficiais chineses, e a otimização da extração de faturas é voltada a formatos de faturas chinesas. Outros arquivos continuam podendo usar as conversões normais.
 
@@ -383,6 +387,7 @@ Suporta links clicáveis em Markdown -> DOCX:
 -   `.docx` - Documento Word Padrão.
 -   `.doc` - Convertido automaticamente para DOCX para processamento.
 -   `.wps` - Documento WPS convertido automaticamente.
+- `.rtf`, `.odt` - Convertidos para DOCX antes do processamento. Assim como `.doc` e `.wps`, exigem um programa Office local compatível para a conversão.
 
 **Opções de Exportação**:
 

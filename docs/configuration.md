@@ -99,9 +99,9 @@ When disabled, these fields use ordinary template filling, including `template_f
 
 ## Optimization defaults / 专项优化默认选择
 
-The Official documents and Invoices pages form a separate navigation group. Defaults use one resource ID per input category, with `"none"` as the shipped value. A default initializes the operation panel when an input is selected; it does not classify file contents or modify the ordinary conversion route. Changing the selection for a task does not save it as a new default.
+Applicable optimizations form a separate navigation group. A settings page requires a resource that declares the current interface language and has an available input route; it does not require a file to be open. File-specific choices also require a complete route for the detected format. The built-in Official documents and Invoices pages currently apply only to `zh_CN`. Defaults use one resource ID per input category, with `"none"` as the shipped value. An applicable default initializes the operation panel when an input is selected; it does not classify file contents or modify the ordinary conversion route. Changing the selection for a task does not save it as a new default. Inapplicable saved defaults are retained without being selected or executed. Explicit CLI/Machine tasks remain independent of GUI language.
 
-“公文”和“发票”位于独立的导航分组。每类输入仅保存一个资源 ID，出厂值均为 `"none"`。默认值用于传入文件后初始化操作面板，不自动判断文件内容，也不改变普通转换入口。单次任务中的选择不会回写为设置默认值。
+适用的优化位于独立导航分组。设置页要求资源声明支持当前界面语言且至少有一条可用输入路线，不要求先打开文件；文件操作中的选项还要求实际检测格式有完整的转换路线。目前内置“公文”和“发票”页仅适用于 `zh_CN`。每类输入仅保存一个资源 ID，出厂值均为 `"none"`。适用的默认值用于传入文件后初始化操作面板，不自动判断文件内容，也不改变普通转换入口。单次任务中的选择不会回写为设置默认值。不适用的已存默认保留，但不选中或执行；CLI/Machine 显式任务不受 GUI 语言限制。
 
 | Input / 输入类别 | Persisted key / 持久化键 | Built-in resource / 内置资源 | Settings page / 设置页 |
 | --- | --- | --- | --- |
@@ -109,9 +109,9 @@ The Official documents and Invoices pages form a separate navigation group. Defa
 | PDF and OFD / 版式文件 | `layout.to_md_optimization` | `invoice_cn` | Invoices / 发票 |
 | Images / 图片 | `image.to_md_optimization` | `invoice_cn` | Invoices / 发票 |
 
-The value is an exact, nonempty resource ID or `"none"`. Availability comes from the existing capability catalog and may differ by format or installed conversion software. Unavailable choices remain saved but are not selected for execution; users can still clear their page's saved default. Resource IDs and internal action names remain separate. The removed enable/type pair has no alias, dual write or automatic migration.
+The value is an exact, nonempty resource ID or `"none"`. Availability comes from the existing capability catalog and may differ by format or installed conversion software. Unavailable choices remain saved but are not selected for execution. A saved default can be cleared while its settings page is available; return to an applicable language or restore a supported route to manage a hidden page's default. Resource IDs and internal action names remain separate. The removed enable/type pair has no alias, dual write or automatic migration.
 
-取值为精确的非空资源 ID 或 `"none"`。可用性由现有能力目录决定，可能随文件格式和已安装的转换软件变化。不可用选择继续保留，但不会用于执行；用户仍可取消该页已保存的默认。资源 ID 与内部动作名称分开管理。已移除的 enable/type 配置对没有别名、双写或自动迁移。
+取值为精确的非空资源 ID 或 `"none"`。可用性由现有能力目录决定，可能随文件格式和已安装的转换软件变化。不可用选择继续保留，但不会用于执行。设置页可见时可取消已存默认；页面隐藏时，切回适用语言或恢复可用路线后即可管理。资源 ID 与内部动作名称分开管理。已移除的 enable/type 配置对没有别名、双写或自动迁移。
 
 Resetting Official documents restores field formatting and clears the document default only while its persisted choice is `gongwen`. Resetting Invoices independently clears layout and image defaults only while they are `invoice_cn`. These comparisons read persisted values inside the same configuration transaction and process lock as the reset. Other optimization choices, common input settings, and unrelated unsaved drafts are preserved. Concurrent external writes refresh the Cancel baseline without overwriting another page's draft. GUI and `docwen config reset gongwen --yes` / `docwen config reset invoice --yes` share the same reset plan.
 
@@ -119,6 +119,6 @@ Resetting Official documents restores field formatting and clears the document d
 
 ## Settings navigation and Markdown scope
 
-Settings are grouped into Basics, Input types, Content and Specialized. The OCR and images page owns shared recognition and Markdown image output; input pages still own per-category OCR defaults. Markdown output rules remain source-independent, with separate input recognition and explicitly scoped Word mappings. Current conversion coverage is described in the page help and the [settings architecture review](maintenance/proposals/settings-information-architecture.md). Page identities, config keys and reset ownership are unchanged.
+Settings are grouped into Basics, Input types, Content and applicable Specialized pages. The OCR and images page owns shared recognition and Markdown image output; input pages still own per-category OCR defaults. Markdown output rules remain source-independent, with separate input recognition and explicitly scoped Word mappings. Current conversion coverage is described in the page help and the [settings architecture review](maintenance/proposals/settings-information-architecture.md). Incoming text owns the controls and reset for `template_fill.gongwen_numbering_text` and `template_fill.gongwen_numbering_comments`; these apply to newly added heading numbers for any selected scheme, so they remain available in every interface language. Their persisted keys, default values and conversion behavior are unchanged.
 
-设置按基本设置、输入类型、内容处理、专项优化分组。“OCR 与图片”管理共享识别与 Markdown 图文输出，各输入页仍管理本类文件的 OCR 默认开关。Markdown 输出规则不按来源拆成重复配置；读取规则独立，Word 专用映射另行标注。当前覆盖范围见页面说明与上述设计复查，页面标识、配置键和重置归属不变。
+设置按基本设置、输入类型、内容处理以及适用的专项优化分组。“OCR 与图片”管理共享识别与 Markdown 图文输出，各输入页仍管理本类文件的 OCR 默认开关。Markdown 输出规则不按来源拆成重复配置；读取规则独立，Word 专用映射另行标注。当前覆盖范围见页面说明与上述设计复查。“传入文本”管理 `template_fill.gongwen_numbering_text` 和 `template_fill.gongwen_numbering_comments` 的控件及恢复默认；它们作用于所选方案的新增标题序号，因此在所有界面语言下均可设置。持久化键、默认值和转换行为保持不变。

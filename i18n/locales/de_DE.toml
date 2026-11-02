@@ -280,6 +280,10 @@ batch_mode = "Stapelverarbeitung"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+numbering_text_label = "Neue Überschriftennummern als Text ausgeben"
+numbering_text_help = "Gibt die nach dem gewählten Schema hinzugefügten Überschriftennummern als Text aus und übersteuert für diese Konvertierung den oben gewählten Ausgabemodus. Aktiviert keine Nummerierung und ändert weder den gespeicherten Modus noch vorhandene Vorlagennummern. Standardmäßig aktiviert."
+numbering_comments_label = "Neue textuelle Überschriftennummern kommentieren"
+numbering_comments_help = "Kommentiert nur tatsächlich neu hinzugefügte Textnummern, keine vorhandenen manuell eingegebenen Nummern. Standardmäßig aktiviert. Das Ausschalten der Textnummerierung löscht und deaktiviert diese Auswahl; nach dem Einschalten kann sie erneut gewählt werden. Nicht exakt abgrenzbare benutzerdefinierte Markdown-Nummern werden mit einer Warnung übersprungen."
 output_format = "Bevorzugter Vorlagentyp"
 output_format_hint = "Beim Hinzufügen von Markdown werden Vorlagen dieses Typs bevorzugt. Das ändert nicht selbst das Konvertierungsausgabeformat."
 # MD转文档序号设置
@@ -1857,10 +1861,6 @@ unavailable = "Die Optimierung {name} ist in der aktuellen Umgebung für diese E
 
 
 [settings.gongwen]
-numbering_text_label = "Textnummerierung für Amtsdokumente verwenden"
-numbering_text_help = "Verwendet Text für in dieser Konvertierung nach dem Eingangstext-Schema hinzugefügte Nummern. Aktiviert keine Nummerierung und ändert weder gespeicherten Modus noch Vorlagennummerierung. Standardmäßig an; unabhängig von der Feldformatierung."
-numbering_comments_label = "Automatisch hinzugefügte Nummern kommentieren"
-numbering_comments_help = "Kommentiert nur hinzugefügte Textnummern, keine vorhandenen Nummern.\n\nStandardmäßig an.\n\nAusschalten der Textnummerierung löscht und deaktiviert diese Option; danach kann sie erneut gewählt werden.\n\nNicht isolierbare Markdown-Nummern werden mit Warnung übersprungen.\n\nUnabhängig von der Feldformatierung."
 description = "Standardauswahl für amtliche Dokumente und Formatierung von Vorlagenfeldern getrennt einstellen."
 to_markdown_title = "Dokument → Markdown"
 to_markdown_description = "Die Optimierung amtlicher Dokumente als Vorauswahl für kompatible Dokumente verwenden. Dateien werden dabei nicht als amtliche Dokumente klassifiziert. DOCX wird direkt verarbeitet; DOC, WPS, RTF und ODT benötigen einen verfügbaren Dokumentkonverter."

@@ -65,7 +65,9 @@ def _failed(message: str, error: Exception | None = None) -> OptimizationChoices
 def _load_catalog(controller: Any) -> tuple[OptimizationCatalog | None, CapabilityUnavailableError | None]:
     if controller is None:
         return None, CapabilityUnavailableError("Runtime optimization discovery is unavailable.")
-    describe = getattr(controller, "describe_runtime_capabilities", None)
+    describe = getattr(controller, "describe_gui_runtime_capabilities", None)
+    if not callable(describe):
+        describe = getattr(controller, "describe_runtime_capabilities", None)
     if not callable(describe):
         return None, CapabilityUnavailableError("Runtime optimization discovery is unavailable.")
     try:
@@ -106,8 +108,7 @@ def _optimization_policy(controller: Any) -> tuple[tuple[str, ...], frozenset[st
     return order, frozenset(disabled)
 
 
-def _display_name(resource: OptimizationResource, locale: str) -> str:
-    del locale  # Locale selects translated text; it never hides a capability.
+def _display_name(resource: OptimizationResource) -> str:
     try:
         from docwen_gui.i18n import t
 
@@ -144,11 +145,12 @@ def discover_optimization_choices(
         target=target,
         configured_order=configured_order,
         disabled=disabled,
+        interface_locale=locale,
     )
     choices = tuple(
         OptimizationChoice(
             id=selection.resource.id,
-            label=_display_name(selection.resource, locale),
+            label=_display_name(selection.resource),
             action_name=selection.resource.action_name,
             bindings=selection.bindings,
             route_options=selection.route_options,
