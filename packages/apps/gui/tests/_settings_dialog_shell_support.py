@@ -24,9 +24,23 @@ def synthetic_navigation_resources(monkeypatch):
 
     def projection():
         value = optimization_capability_projection()
+        locales = [
+            "zh_CN",
+            "zh_TW",
+            "en_US",
+            "de_DE",
+            "fr_FR",
+            "es_ES",
+            "pt_BR",
+            "ru_RU",
+            "ja_JP",
+            "ko_KR",
+            "vi_VN",
+            "ar_SA",
+        ]
         value["optimization_applicable_locales"] = {
-            "gongwen": ["zh_CN", "en_US", "de_DE", "ar_SA"],
-            "invoice_cn": ["zh_CN", "en_US", "de_DE", "ar_SA"],
+            "gongwen": locales,
+            "invoice_cn": locales,
         }
         return value
 

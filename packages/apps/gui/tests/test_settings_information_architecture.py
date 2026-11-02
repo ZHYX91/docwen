@@ -15,6 +15,8 @@ from docwen_gui.widgets.settings.dialog import NAVIGATION_GROUPS, TAB_KEYS, Sett
 from docwen_gui.widgets.settings.export_tab import ExportTab
 from docwen_gui.widgets.settings.formatting_tab import FormattingTab, MarkdownInputTab
 
+from ._settings_dialog_shell_support import synthetic_navigation_resources as synthetic_navigation_resources
+
 pytestmark = pytest.mark.gui
 
 
