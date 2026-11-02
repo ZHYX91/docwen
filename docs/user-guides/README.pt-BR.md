@@ -105,7 +105,7 @@ Os pacotes usam o próprio backend de imagens. Verifique a versão instalada com
     - Clique em "Gerar DOCX".
 
 3.  **Obter Resultados**:
-    - O documento Word é salvo em uma pasta de resultados no local de saída configurado. Abra esse local pela barra de status.
+    - Um único documento Word é salvo diretamente no local de saída configurado. Abra esse local pela barra de status.
 
 **Dica**: Você pode usar os arquivos de exemplo no diretório `samples/` para experimentar rapidamente as funcionalidades do software.
 
@@ -165,7 +165,7 @@ O painel de operação ajusta automaticamente as opções disponíveis com base 
 
 Abra as configurações pelo ícone na parte inferior da janela ou com **Ctrl+,**. A navegação lateral é agrupada em **Geral**, **Tipos de entrada**, **Conteúdo** e **Especializados**. Ela rola em janelas baixas e só vira um seletor suspenso quando não há largura suficiente.
 
-**OCR e imagens** reúne opções comuns de reconhecimento e saída de imagens no Markdown. O OCR padrão de cada arquivo permanece na respectiva página de entrada; conversão e compactação de imagens ficam em **Imagens de entrada**. **Sintaxe Markdown** separa convenções de saída, regras de leitura e mapeamentos do Word. Nem todas as origens e otimizações seguem todas as opções de sintaxe.
+**OCR e imagens** reúne opções comuns de reconhecimento e saída de imagens no Markdown. O OCR padrão de cada arquivo permanece na respectiva página de entrada; conversão e compactação de imagens ficam em **Imagens de entrada**. **Gerar Markdown** controla a sintaxe e as extensões de saída; **Interpretar Markdown** controla o reconhecimento, as extensões de entrada e os mapeamentos de Markdown para Word. Nem todas as origens e otimizações seguem todas as opções de sintaxe. Ativar uma extensão não acrescenta capacidade de reconhecimento.
 
 **Documentos oficiais** e **Faturas** têm páginas próprias. Para documentos oficiais, **Documento → Markdown** define a escolha inicial de reconhecimento e **Markdown → Documento** a formatação de campos do modelo, com ajuda sobre anexos, destinatários em cópia, datas e notas. Faturas têm padrões separados para **PDF / OFD → Markdown** e **Imagem → Markdown**. Eles apenas definem a escolha inicial de arquivos compatíveis, sem identificá-los automaticamente. **Aplicar / OK** salva; **Cancelar** descarta alterações não aplicadas.
 
@@ -199,7 +199,7 @@ Aplicativos e plugins se conectam por `serve --stdio` com Machine Protocol v2 pa
 
 ### Exemplos comuns
 
-Conversões de ou para Markdown criam uma pasta de resultados em `--output-dir DIR`, mesmo com um único arquivo. Os nomes incluem o nome original, data e hora e o formato de entrada atual. Use `--output PATH` apenas para outras conversões com um arquivo de destino exato.
+Conversões para Markdown sempre criam uma pasta de resultados dentro da pasta principal escolhida com `--output-dir DIR`. Quando uma conversão de Markdown gera um único documento ou planilha final, ele é salvo diretamente nessa pasta principal; vários arquivos ou um arquivo de auditoria adicional solicitado explicitamente usam uma pasta de resultados. Os nomes gerados incluem o nome original, data e hora e o formato de entrada atual. Use `--output PATH` para o caminho exato de um único arquivo final, inclusive a partir de Markdown; resultados agrupados exigem `--output-dir`.
 
 ```bash
 # Pacote do Windows
@@ -279,8 +279,8 @@ DocWenCLI.exe validate input.md --check typo --report report.json
 
 **Usa extensões Markdown do Obsidian?** Quatro extensões opcionais vêm **desativadas em novas instalações** do DocWen: `structural_tables` (células mescladas e cabeçalhos em várias linhas), `captions_references` (legendas e referências do Number Suite), `extended_headings` (H7–H9) e `typed_endnotes` (notas finais tipadas).
 
-- **Markdown → Word:** em **Configurações → Sintaxe Markdown → Entrada**, ative as extensões necessárias ou o perfil **Extensões do Obsidian** para entrada. Sem isso, alguns marcadores permanecem como texto literal.
-- **Word → Markdown:** ative separadamente as **extensões de saída** correspondentes (ou o perfil de saída). Caso contrário, estruturas podem ser simplificadas ou normalizadas com avisos.
+- **Markdown → Word:** em **Configurações → Interpretar Markdown**, ative as extensões necessárias ou o perfil **Usar extensões do Obsidian** para entrada. Sem isso, alguns marcadores permanecem como texto literal.
+- **Word → Markdown:** ative as extensões de saída correspondentes em **Configurações → Gerar Markdown** (ou o perfil dessa página). Caso contrário, estruturas podem ser simplificadas ou normalizadas com avisos.
 
 Guarde o Markdown original e confira o DOCX. A numeração do Word segue as opções de conversão do DocWen; não há garantia de recuperar exatamente a mesma sintaxe ou os espaços originais. Consulte a [referência de compatibilidade](../specs/markdown-compatibility.md).
 
@@ -296,7 +296,7 @@ Para facilitar a memorização por colegas sem conhecimento prévio, os cabeçal
 
 ### Quebras de Linha e Parágrafos
 
-**Regra básica**: Quebras suaves de linha em Markdown **não** criam parágrafos separados no Word por padrão. Ative **Cada linha como parágrafo** em **Configurações → Sintaxe Markdown** para separar linhas de texto. Listas, citações, código e quebras explícitas mantêm suas regras.
+**Regra básica**: Quebras suaves de linha em Markdown **não** criam parágrafos separados no Word por padrão. Ative **Cada linha como um parágrafo** em **Configurações → Interpretar Markdown** para separar linhas de texto. Listas, citações, código e quebras explícitas mantêm suas regras.
 
 **Parágrafos Mistos**: Quando um subtítulo precisa ser misturado com o corpo do texto no mesmo parágrafo (modo padrão: "Pontuação obrigatória"), as seguintes condições devem ser atendidas:
 1.  O subtítulo termina com um sinal de pontuação de fim (suporta pontuação multilíngue, incluindo pontos, pontos de interrogação, pontos de exclamação e outros sinais de pontuação de fim comuns).

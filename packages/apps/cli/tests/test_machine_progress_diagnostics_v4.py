@@ -322,6 +322,74 @@ def test_completed_source_warning_carries_complete_evidence() -> None:
     MachineContractValidator().validate_message(completed)
 
 
+@pytest.mark.parametrize("state", ["completed", "failed", "cancelled"])
+def test_many_diagnostics_preserve_terminal_state_and_evidence(state: str) -> None:
+    diagnostics = (
+        tuple(
+            ConversionDiagnostic(level="info", code="MERGE-SUMMARY", message=f"Merged input {index}")
+            for index in range(64)
+        )
+        + _failed_semantic_outcome("task.test").diagnostics
+    )
+
+    def outcome(task_id: str) -> ConversionTaskOutcome:
+        base = _completed_outcome(task_id) if state == "completed" else _failed_semantic_outcome(task_id)
+        if state == "cancelled":
+            return replace(base, state="cancelled", diagnostics=diagnostics)
+        return replace(base, diagnostics=diagnostics)
+
+    responses, active = _run(_Service(outcome_factory=outcome))
+    terminals = [message for message in _lifecycle(responses) if message["method"] != "task/progress"]
+    assert len(terminals) == 1
+    terminal = terminals[0]
+    assert terminal["method"] == f"task/{state}"
+    assert len(terminal["params"]["diagnostics"]) == 65
+    assert terminal["params"]["diagnostics"][0]["message"] == "Merged input 0"
+    assert terminal["params"]["diagnostics"][-1]["source"]["input_id"] == "input.1"
+    assert terminal["params"]["diagnostics"][-1]["range"] == {"start": 6, "end": 14}
+    if state == "completed":
+        expected_bundle = _completed_outcome("task.test").bundle
+        assert expected_bundle is not None
+        assert terminal["params"]["bundle"] == expected_bundle.to_dict()
+    elif state == "failed":
+        assert terminal["params"]["error"]["code"] == "invalid_document_semantics"
+    assert active == {}
+    MachineContractValidator().validate_message(terminal)
+
+
+@pytest.mark.parametrize("state", ["completed", "failed", "cancelled"])
+def test_oversized_utf8_outcome_reports_delivery_failure_before_completion(state: str, monkeypatch) -> None:
+    from docwen_cli.machine import framing
+
+    monkeypatch.setattr(framing, "MAX_MESSAGE_BYTES", 4096)
+
+    def outcome(task_id: str) -> ConversionTaskOutcome:
+        base = _completed_outcome(task_id) if state == "completed" else _failed_semantic_outcome(task_id)
+        return replace(
+            base,
+            state=state,
+            diagnostics=(ConversionDiagnostic(level="info", code="MERGE-SUMMARY", message="汉" * 2000),),
+        )
+
+    responses, active = _run(_Service(outcome_factory=outcome))
+    lifecycle = _lifecycle(responses)
+    terminals = [message for message in lifecycle if message["method"] != "task/progress"]
+    assert len(terminals) == 1
+    terminal = terminals[0]
+    assert terminal["method"] == "task/failed"
+    error = terminal["params"]["error"]
+    assert error["category"] == "resource_exhausted"
+    assert error["code"] == "response_too_large"
+    assert error["retryable"] is False
+    assert "Output files may already exist" in error["message"]
+    assert not any(
+        message["method"] == "task/progress" and message["params"]["completed"] == 100 for message in lifecycle
+    )
+    assert lifecycle[-1] == terminal
+    assert active == {}
+    MachineContractValidator().validate_message(terminal)
+
+
 def test_failed_semantic_diagnostic_carries_complete_source_evidence() -> None:
     responses, active = _run(_Service(outcome_factory=_failed_semantic_outcome))
 

@@ -8,7 +8,7 @@
 
 DocWen 在本机转换办公文件。它能把 Word 转成 Markdown、把 Markdown 导出为 Word、从 PDF 中提取文字和表格，也能处理电子表格、图片和常见的文件整理任务。日常操作用图形界面；需要批量自动化时用命令行。
 
-界面语言仅控制应用文案和布局；通用设置中的“任务输出语言”独立控制生成标签、文档样式及校对批注，不翻译正文。切换界面不会更改已保存的输出语言或模板。OCR“自动”跟随任务输出语言。Markdown 语法中的“每行独立成段”默认关闭，可为普通正文逐行生成 Word 段落。
+界面语言仅控制应用文案和布局；通用设置中的“任务输出语言”独立控制生成标签、文档样式及校对批注，不翻译正文。切换界面不会更改已保存的输出语言或模板。OCR“自动”跟随任务输出语言。“解析 Markdown”中的“每行独立成段”默认关闭，可为普通正文逐行生成 Word 段落。
 
 ## 适合做什么
 
@@ -101,7 +101,7 @@ Mac 包保留 ad-hoc 签名，未使用 Developer ID 签名或 Apple 公证。�
    - 选择模板
    - 点击"生成 DOCX"
 3. **获取结果**：
-   - Word 文档会保存在输出位置的结果文件夹中；点击“打开输出”即可找到。输出位置可在“设置 → 文件保存”中更改。
+   - 只生成一个 Word 文档时，直接保存在配置的输出位置；点击“打开输出”即可找到。输出位置可在“设置 → 文件保存”中更改。
 
 **提示**：新手可以使用 `samples/` 目录中的示例文件快速体验软件功能。
 
@@ -169,7 +169,7 @@ Mac 包保留 ad-hoc 签名，未使用 Developer ID 签名或 Apple 公证。�
 
 设置按 **基本设置、输入类型、内容处理、专项优化** 分组。“OCR 与图片”管理共享识别和 Markdown 图文输出；各输入页仍决定本类文件是否默认使用 OCR。图片格式转换和压缩仍在“传入图片”中。
 
-“Markdown 语法”依次展示统一的输出约定、独立的读取规则，以及 Word 专用映射。页面说明标明当前支持范围：各来源与专项优化尚未完整采用所有语法偏好和扩展开关，开启扩展也不会新增识别能力。
+“生成 Markdown”设置输出语法和扩展；“解析 Markdown”设置输入识别、扩展及 Markdown 转 Word 的映射。页面说明标明当前支持范围：各来源与专项优化尚未完整采用所有语法偏好和扩展开关，开启扩展也不会新增识别能力。
 
 **专项优化** 分组提供独立的 **公文** 和 **发票** 页面。公文页分为 **文档 → Markdown** 的公文识别默认选择，以及 **Markdown → 文档** 的模板字段格式化；字段开关旁的信息按钮说明附件说明、抄送机关、日期、附注的处理规则与支持的占位符位置。
 
@@ -205,7 +205,7 @@ Mac 包保留 ad-hoc 签名，未使用 Developer ID 签名或 Apple 公证。�
 
 ### 常用示例
 
-传入或生成 Markdown 的转换统一在 `--output-dir DIR` 指定的父目录下创建结果文件夹，即使只有一个输出文件；名称包含原文件名、时间戳和本次传入格式。其他只生成单个文件的转换才使用 `--output PATH` 指定精确文件路径。
+生成 Markdown 时始终在 `--output-dir DIR` 指定的父目录下创建结果文件夹。Markdown 转文档或表格只生成一个最终文件时直接保存到该父目录；生成多个文件或显式要求审计附带文件时使用结果文件夹。自动生成的名称包含原文件名、时间戳和本次传入格式。单文件可用 `--output PATH` 指定精确路径，包括由 Markdown 生成的单文件；分组结果使用 `--output-dir`。
 
 ```bash
 # Windows 打包版
@@ -251,7 +251,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | 命令/选项 | 说明 |
 | --- | --- |
-| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | 转换一个文件。涉及 Markdown 时使用 `--output-dir` 保存结果文件夹；其他单文件转换使用 `--output` 指定文件路径。 |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | 转换一个文件。生成 Markdown 或分组结果时使用 `--output-dir`；单个最终文件（含 Markdown 转出）可用 `--output` 指定精确路径。 |
 | `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 转换后校对；`--check` 必须与 `--proofread` 同时使用，省略 `--check` 时使用已配置的校对默认值。 |
 | `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>) --dry-run --json` | 检查文件格式、转换方法和参数，不生成文件。 |
 | `validate` / `number markdown` / `merge` / `split` | 分别用于校对文字、添加或移除标题编号、合并文件和拆分 PDF。 |
@@ -286,8 +286,8 @@ DocWenCLI.exe validate input.md --check typo --report report.json
 
 **需要识别 Obsidian 扩展语法吗？** 新安装的 DocWen 默认**关闭**四类可选扩展：`structural_tables`（合并单元格、多行表头）、`captions_references`（Number Suite 题注和交叉引用）、`extended_headings`（七至九级标题）、`typed_endnotes`（带类型的尾注）。
 
-- **Markdown → Word**：进入 **设置 → Markdown 语法 → 输入**，勾选笔记用到的扩展，或点击输入方向的**使用 Obsidian 扩展**。未启用时，部分特殊记号会保留为普通文字。
-- **Word → Markdown**：还需要在**输出**方向分别开启对应扩展（或使用输出方向的预设）；否则部分结构会降级、规范化或给出警告。
+- **Markdown → Word**：进入 **设置 → 解析 Markdown**，勾选笔记用到的扩展，或点击输入方向的**使用 Obsidian 扩展预设**。未启用时，部分特殊记号会保留为普通文字。
+- **Word → Markdown**：在 **设置 → 生成 Markdown** 开启对应的输出扩展（或使用该页预设）；否则部分结构会降级、规范化或给出警告。
 
 请保留原始 Markdown 并检查生成的 DOCX。Word 编号由 DocWen 的转换选项决定，往返转换不保证原文标记与空白逐字一致。具体见 [Markdown 兼容规范](../specs/markdown-compatibility.md)。
 
@@ -304,7 +304,7 @@ Markdown 标题与 Word 标题级别直接对应：
 
 ### 换行与分段
 
-**基本规则**：普通 Markdown 正文中的软换行默认不会生成独立的 Word 段落。需要逐行分段时，可在 **设置 → Markdown 语法** 开启 **每行独立成段**。列表、引用、代码等结构与显式硬换行仍按各自规则处理。
+**基本规则**：普通 Markdown 正文中的软换行默认不会生成独立的 Word 段落。需要逐行分段时，可在 **设置 → 解析 Markdown** 开启 **每行独立成段**。列表、引用、代码等结构与显式硬换行仍按各自规则处理。
 
 **混合段落**：当小标题需要与正文混合在同一段时（默认“有标点才合并”模式），需满足以下条件：
 

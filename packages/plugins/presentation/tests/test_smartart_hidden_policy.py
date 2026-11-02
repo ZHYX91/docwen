@@ -23,7 +23,11 @@ def _context() -> Any:
     )
 
 
-def test_process_slide_extracts_smartart_nodes_in_relationship_order() -> None:
+@pytest.mark.parametrize(
+    ("parent_xml", "parent_markdown"),
+    [(b"Parent", "Parent"), (b"&lt;b&gt;Parent&lt;/b&gt; *literal*", r"\<b\>Parent\</b\> \*literal\*")],
+)
+def test_process_slide_extracts_smartart_nodes_in_relationship_order(parent_xml, parent_markdown) -> None:
     shape_xml = etree.fromstring(
         b"""
         <p:graphicFrame
@@ -56,6 +60,7 @@ def test_process_slide_extracts_smartart_nodes_in_relationship_order() -> None:
           </dgm:cxnLst>
         </dgm:dataModel>
     """
+    diagram_xml = diagram_xml.replace(b">Parent<", b">" + parent_xml + b"<")
     relationship = SimpleNamespace(
         reltype="http://schemas.openxmlformats.org/officeDocument/2006/relationships/diagramData",
         target_part=SimpleNamespace(blob=diagram_xml),
@@ -76,7 +81,7 @@ def test_process_slide_extracts_smartart_nodes_in_relationship_order() -> None:
         _context(),
     )
 
-    assert lines == ["## Slide 1", "", "- Parent", "- Child", "- Sibling", ""]
+    assert lines == ["## Slide 1", "", f"- {parent_markdown}", "- Child", "- Sibling", ""]
     assert image_count == 0
     assert table_count == 0
     assert smartart_text_count == 3

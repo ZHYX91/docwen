@@ -3656,6 +3656,11 @@ def main(argv: list[str]) -> int:
         help="Verify real Markdown-to-DOCX Gongwen fields in body and tables, including the on/off config contract.",
     )
     parser.add_argument(
+        "--conversion-fidelity-smoke",
+        action="store_true",
+        help="Also verify diagnostic cardinality, XLSX values, TIFF pages/alpha, WebP pixels and PPTX literal text.",
+    )
+    parser.add_argument(
         "--successful-warning-smoke",
         metavar="INPUT",
         help="Also verify a successful conversion warning in packaged JSON and text modes.",
@@ -3748,6 +3753,13 @@ def main(argv: list[str]) -> int:
             if args.gongwen_fields_smoke
             else ()
         )
+        fidelity_report = None
+        if args.conversion_fidelity_smoke:
+            try:
+                from scripts.release.conversion_fidelity_smoke import run_smoke
+            except ModuleNotFoundError:
+                from conversion_fidelity_smoke import run_smoke
+            fidelity_report = run_smoke(binary_path, Path(temp_dir) / "conversion-fidelity")
         warning_output_file = None
         if args.successful_warning_smoke:
             warning_input = Path(args.successful_warning_smoke).resolve()
@@ -3782,6 +3794,8 @@ def main(argv: list[str]) -> int:
             message += f"; proofread-report -> {proofread_report_files[0].name} / {proofread_report_files[1].name}"
         if gongwen_fields_outputs:
             message += f"; gongwen-fields on/off -> {len(gongwen_fields_outputs)} verified DOCX outputs"
+        if fidelity_report is not None:
+            message += f"; conversion-fidelity -> {len(fidelity_report['cases'])} verified cases"
         if warning_output_file is not None:
             message += f"; warning {args.successful_warning_code} -> {warning_output_file.name}"
         print(message)

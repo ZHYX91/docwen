@@ -105,7 +105,7 @@ x64. Estos requisitos no amplían ese compromiso a otras distribuciones o arquit
     - Haz clic en "Generar DOCX".
 
 3.  **Obtén el resultado**:
-    - El documento Word se guarda en una carpeta de resultados dentro de la ubicación de salida configurada. Puedes abrirla desde la barra de estado.
+    - Un documento Word único se guarda directamente en la ubicación de salida configurada. Puedes abrirla desde la barra de estado.
 
 **Consejo**: Puedes usar los archivos de ejemplo del directorio `samples/` para probar rápidamente las funciones.
 
@@ -165,7 +165,7 @@ El panel ajusta automáticamente las operaciones disponibles según el tipo de a
 
 Abre la configuración con el icono de la parte inferior de la ventana o **Ctrl+,**. La navegación lateral se agrupa en **General**, **Tipos de entrada**, **Contenido** y **Especializados**. Se puede desplazar en ventanas bajas y solo pasa a un selector desplegable si falta anchura.
 
-**OCR e imágenes** reúne la configuración compartida de reconocimiento y salida de imágenes en Markdown. El OCR inicial de cada tipo de archivo sigue en su página de entrada; la conversión y compresión se encuentran en **Imágenes de entrada**. **Sintaxis Markdown** separa reglas de salida, lectura y correspondencias de Word. No todas las fuentes u optimizaciones aplican todavía todas las opciones de sintaxis.
+**OCR e imágenes** reúne la configuración compartida de reconocimiento y salida de imágenes en Markdown. El OCR inicial de cada tipo de archivo sigue en su página de entrada; la conversión y compresión se encuentran en **Imágenes de entrada**. **Generar Markdown** controla la sintaxis y las extensiones de salida; **Analizar Markdown** controla el reconocimiento, las extensiones de entrada y las correspondencias de Markdown a Word. No todas las fuentes u optimizaciones aplican todavía todas las opciones de sintaxis. Activar una extensión no añade capacidades de reconocimiento.
 
 **Documentos oficiales** y **Facturas** tienen páginas independientes. En documentos oficiales, **Documento → Markdown** controla la selección inicial de reconocimiento y **Markdown → Documento** el formato de campos de plantilla, con ayuda sobre anexos, destinatarios en copia, fechas y notas. Las facturas separan **PDF / OFD → Markdown** e **Imagen → Markdown**. Estas preferencias solo establecen la elección inicial para archivos compatibles; no clasifican automáticamente el archivo. **Aplicar / Aceptar** guarda y **Cancelar** descarta los cambios no aplicados.
 
@@ -198,7 +198,7 @@ Las aplicaciones y los complementos se conectan mediante `serve --stdio` con Mac
 
 ### Ejemplos comunes
 
-Las conversiones desde o hacia Markdown crean una carpeta de resultados dentro de `--output-dir DIR`, incluso con un solo archivo. Los nombres incluyen el nombre original, la fecha y hora y el formato de entrada. Usa `--output PATH` solo para otras conversiones con un archivo de destino exacto.
+Las conversiones a Markdown siempre crean una carpeta de resultados dentro de la carpeta principal elegida con `--output-dir DIR`. Si una conversión desde Markdown produce un único documento u hoja de cálculo final, se guarda directamente en esa carpeta principal; varios archivos o un archivo de auditoría adicional solicitado explícitamente usan una carpeta de resultados. Los nombres generados incluyen el nombre original, la fecha y hora y el formato de entrada. Usa `--output PATH` para la ruta exacta de un único archivo final, incluso desde Markdown; los resultados agrupados requieren `--output-dir`.
 
 ```bash
 # Paquete de Windows
@@ -280,8 +280,8 @@ DocWenCLI.exe validate input.md --check typo --report report.json
 
 **¿Utilizas extensiones Markdown de Obsidian?** Cuatro extensiones opcionales están **desactivadas en una instalación nueva** de DocWen: `structural_tables` (celdas combinadas y encabezados de varias filas), `captions_references` (leyendas y referencias de Number Suite), `extended_headings` (H7–H9) y `typed_endnotes` (notas finales tipadas).
 
-- **Markdown → Word:** en **Configuración → Sintaxis Markdown → Entrada**, activa las extensiones necesarias o el ajuste preestablecido **Extensiones de Obsidian** para entrada. Sin ellas, algunos marcadores permanecen como texto literal.
-- **Word → Markdown:** activa por separado las **extensiones de salida** correspondientes (o su ajuste preestablecido); de lo contrario, algunas estructuras se simplifican o normalizan con avisos.
+- **Markdown → Word:** en **Configuración → Analizar Markdown**, activa las extensiones necesarias o el ajuste preestablecido **Usar extensiones de Obsidian** para entrada. Sin ellas, algunos marcadores permanecen como texto literal.
+- **Word → Markdown:** activa las extensiones de salida correspondientes en **Configuración → Generar Markdown** (o el ajuste preestablecido de esa página); de lo contrario, algunas estructuras se simplifican o normalizan con avisos.
 
 Conserva el Markdown original y comprueba el DOCX. La numeración de Word depende de las opciones de conversión de DocWen; no se garantiza recuperar exactamente los marcadores o espacios originales. Consulta la [referencia de compatibilidad](../specs/markdown-compatibility.md).
 
@@ -297,7 +297,7 @@ Para facilitar el uso a compañeros sin conocimientos técnicos, los encabezados
 
 ### Saltos de línea y párrafos
 
-**Regla básica**: Los saltos de línea suaves de Markdown **no** crean párrafos Word independientes de forma predeterminada. Activa **Cada línea como párrafo** en **Configuración → Sintaxis Markdown** para separar las líneas de prosa. Las listas, citas, código y saltos explícitos conservan sus propias reglas.
+**Regla básica**: Los saltos de línea suaves de Markdown **no** crean párrafos Word independientes de forma predeterminada. Activa **Cada línea en un párrafo** en **Configuración → Analizar Markdown** para separar las líneas de prosa. Las listas, citas, código y saltos explícitos conservan sus propias reglas.
 
 **Párrafos mixtos**: Cuando un subencabezado debe mezclarse con el texto del cuerpo en el mismo párrafo (modo predeterminado: "Se requiere puntuación"), deben cumplirse estas condiciones:
 1.  El subencabezado termina con un signo de puntuación final (admite puntuación multilingüe).

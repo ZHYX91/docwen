@@ -1106,6 +1106,7 @@ cancel_hint = "任务处理中，可按 Esc 取消当前任务。"
 
 # 模板选择器
 [components.template_selector]
+format_description = "{format} 模板"
 manage_templates = "管理模板"
 selected_name = "当前模板：{name}"
 no_templates = "无可用模板"

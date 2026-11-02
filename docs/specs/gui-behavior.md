@@ -91,12 +91,12 @@ The navigation groups follow `NAVIGATION_GROUPS` in `widgets/settings/dialog.py`
 | --- | --- |
 | Basics / 基础 | General, File saving, Templates, Conversion software, Logging / 常规、文件保存、模板、转换软件、日志 |
 | Input types / 输入类型 | Incoming text, documents, spreadsheets, images, fixed-layout files, other files / 传入文本、文档、表格、图片、版式文件、其他文件 |
-| Content / 内容 | Markdown syntax, Link, OCR and images, Proofread / Markdown 语法、链接、OCR 与图片、校对 |
+| Content / 内容 | Generate Markdown, Parse Markdown, Link, OCR and images, Proofread / 生成 Markdown、解析 Markdown、链接、OCR 与图片、校对 |
 | Specialized / 专项 | Official documents, Invoices / 公文、发票 |
 
-Incoming text owns Markdown content formatting, heading merging, table styling and generic template filling; incoming documents own DOCX content retention. Markdown syntax owns syntax and extension policies. Global OCR language and Markdown image output belong to **OCR and images**. All eight converter priority lists belong to Conversion software. Official documents owns its field-formatting switch. Numbering editor changes refresh incoming text and document pages without resetting unrelated drafts.
+Incoming text owns Markdown content formatting, heading merging, table styling and generic template filling; incoming documents own DOCX content retention. Generate Markdown owns output syntax and extensions; Parse Markdown owns input syntax and extension recognition. Global OCR language and Markdown image output belong to **OCR and images**. All eight converter priority lists belong to Conversion software. Official documents owns its field-formatting switch. Numbering editor changes refresh incoming text and document pages without resetting unrelated drafts.
 
-传入文本负责 Markdown 内容格式、标题合并、表格样式及通用模板填充；传入文档负责 DOCX 内容保留。Markdown 语法管理语法与扩展策略。全局 OCR 语言及 Markdown 图片输出归属“OCR 与图片”，八组转换器优先级归属“转换软件”，公文字段开关归属“公文”。编号编辑器改动同步刷新传入文本和文档页，并保留其他草稿。
+传入文本负责 Markdown 内容格式、标题合并、表格样式及通用模板填充；传入文档负责 DOCX 内容保留。生成 Markdown 管理输出语法与扩展；解析 Markdown 管理输入语法与扩展识别。全局 OCR 语言及 Markdown 图片输出归属“OCR 与图片”，八组转换器优先级归属“转换软件”，公文字段开关归属“公文”。编号编辑器改动同步刷新传入文本和文档页，并保留其他草稿。
 
 The four proofreading rule sets expose edit, import and export together. The paired punctuation editor names opening and closing symbols. Imports validate TOML and preview additions, conflicts and retained entries before the user chooses merge or replacement. Invalid merges are unavailable; cancellation or a changed source preserves existing data. Saves compare preview source inside the configuration transaction. Exports use the complete effective editable source, including comments, independently of editor filters.
 

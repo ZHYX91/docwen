@@ -60,6 +60,14 @@ def _read_exact(stream: BinaryIO, length: int) -> bytes:
     return bytes(chunks)
 
 
+def encode_frame(payload: dict[str, Any]) -> bytes:
+    """Validate the exact UTF-8 byte budget without writing to the transport."""
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if len(body) > MAX_MESSAGE_BYTES:
+        raise FramingError("frame_too_large", f"frame exceeds {MAX_MESSAGE_BYTES} bytes")
+    return f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body
+
+
 class FrameWriter:
     """Serialize complete JSON frames atomically across task worker threads."""
 
@@ -68,13 +76,10 @@ class FrameWriter:
         self._lock = threading.Lock()
 
     def write(self, payload: dict[str, Any]) -> None:
-        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        if len(body) > MAX_MESSAGE_BYTES:
-            raise FramingError("frame_too_large", f"frame exceeds {MAX_MESSAGE_BYTES} bytes")
-        frame = f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body
+        frame = encode_frame(payload)
         with self._lock:
             self._stream.write(frame)
             self._stream.flush()
 
 
-__all__ = ["MAX_MESSAGE_BYTES", "FrameWriter", "FramingError", "read_frame"]
+__all__ = ["MAX_MESSAGE_BYTES", "FrameWriter", "FramingError", "encode_frame", "read_frame"]

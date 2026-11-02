@@ -123,6 +123,57 @@ def test_numeric_identity_does_not_round_integers_before_comparison():
     assert value_identity(7) == value_identity(7.0)
 
 
+@pytest.mark.parametrize("text", ["NaN", "nan", "Infinity", "-Infinity", "1e309"])
+@pytest.mark.parametrize("text_in_base", [True, False])
+def test_cell_merge_preserves_nonfinite_numeric_text_after_save(tmp_path, text, text_in_base):
+    base, collect = (text, 1) if text_in_base else (1, text)
+    _write(tmp_path / "base.xlsx", [[base]])
+    _write(tmp_path / "collect.xlsx", [[collect]])
+    result = _run(tmp_path, "cell")
+    assert result.success
+    assert _records(result.artifacts[0].staging_path, "row") == [(f"{base},{collect}",)]
+
+
+def test_cell_merge_refuses_numeric_overflow_before_saving(tmp_path):
+    for name in ("base", "collect"):
+        _write(tmp_path / f"{name}.xlsx", [[1e308]])
+    result = _run(tmp_path, "cell")
+    assert not result.success
+    assert "finite numeric range" in result.error.message
+    assert result.artifacts == []
+    assert not list((tmp_path / "staging").iterdir())
+
+
+def test_cell_merge_keeps_sparse_inputs_sparse_and_counts_implicit_blanks(tmp_path, monkeypatch):
+    for name in ("base", "collect"):
+        book = openpyxl.Workbook()
+        assert isinstance(book.active, Worksheet)
+        book.active["A1"] = 1
+        book.active.cell(3200, 3200, 2)
+        book.save(tmp_path / f"{name}.xlsx")
+        book.close()
+
+    def refuse_rectangle(*_args, **_kwargs):
+        raise AssertionError("Cell merge must not materialize a sparse rectangle")
+
+    monkeypatch.setattr(Worksheet, "iter_rows", refuse_rectangle)
+    result = _run(tmp_path, "cell")
+    assert result.success, result.error
+    book = openpyxl.load_workbook(result.artifacts[0].staging_path)
+    try:
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        assert len(sheet._cells) == 2
+        assert sheet["A1"].value == 2
+        assert sheet.cell(3200, 3200).value == 4
+    finally:
+        book.close()
+    summary = result.metrics.extra["merge_summaries"][0]
+    assert summary["counts"]["skipped"] == 3200 * 3200 - 2
+    assert summary["counts"]["combined"] == 2
+    assert len(summary["locations"]["skipped"]) == 20
+
+
 @pytest.mark.parametrize("mode", ["row", "col", "cell"])
 @pytest.mark.parametrize("formula_source", ["base", "collect"])
 def test_missing_formula_cache_stops_before_creating_output(tmp_path, mode, formula_source):

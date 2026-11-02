@@ -1041,6 +1041,7 @@ cancel_hint = "Задача выполняется. Нажмите Esc, чтоб
 
 # 模板选择器
 [components.template_selector]
+format_description = "Шаблон {format}"
 manage_templates = "Управление шаблонами"
 selected_name = "Выбранный шаблон: {name}"
 no_templates = "Нет доступных"

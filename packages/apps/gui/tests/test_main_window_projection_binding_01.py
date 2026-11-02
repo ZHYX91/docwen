@@ -284,6 +284,42 @@ class TestConversionPanelPdfInfoBinding:
 
 
 class TestTemplateCatalogBinding:
+    @pytest.mark.parametrize(("locale", "expected"), [("en_US", "DOCX template"), ("zh_CN", "DOCX 模板")])
+    def test_template_usage_follows_display_language_without_renaming(
+        self, window, monkeypatch, tmp_path, locale, expected
+    ):
+        from docwen_gui.i18n import get_locale, set_locale
+        from docwen_runtime.templates import TemplateInfo
+
+        template = TemplateInfo(
+            id=f"template.docx.{'a' * 64}",
+            name="我的 Custom Template",
+            target="docx",
+            description="我的 Custom Template (DOCX)",
+            origin="builtin",
+            is_default=True,
+            path=tmp_path / "template.docx",
+            size_bytes=1,
+            modified_ns=0,
+        )
+        vm = window._template_vm
+        vm.templates = (template,)
+        vm.enabled = {template.id: True}
+        vm.defaults = {"docx": template.id, "xlsx": None}
+        vm.error = None
+        monkeypatch.setattr(vm.manager, "is_custom", lambda _info: False)
+        previous_locale = get_locale()
+        try:
+            set_locale(locale)
+            window._render_template_catalog()
+            page = window._template_selector.get_selector("docx")
+            details = page._template_details[template.id]
+            assert details.display_name == "我的 Custom Template"
+            assert details.usage_hint == expected
+            assert expected in page._list.item(0).toolTip()
+        finally:
+            set_locale(previous_locale)
+
     def test_template_refresh_does_not_project_inactive_default(self, window):
         window._view_model.set_selected_file(FileRef(path="C:/test/source.md", format="markdown", category="markdown"))
         selector = window._template_selector

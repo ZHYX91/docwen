@@ -264,6 +264,6 @@ def is_canonical_template_id(value: str) -> bool:
 
 
 def _template_description(name: str, target: str) -> str:
-    if target == "xlsx":
-        return f"{name} Excel 模板"
-    return f"{name} DOCX 模板"
+    # Resource metadata is display-language independent. UI consumers localize
+    # their own format labels without translating the user's template name.
+    return f"{name} ({target.upper()})"

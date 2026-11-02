@@ -105,7 +105,7 @@ Voraussetzungen erweitern die Zusage nicht auf andere Distributionen oder Archit
     - Klicken Sie auf "Generieren DOCX".
 
 3.  **Ergebnis erhalten**:
-    - Das Word-Dokument wird in einem Ergebnisordner am eingestellten Ausgabeort gespeichert. Öffnen Sie den Ausgabeort über die Statusleiste.
+    - Ein einzelnes Word-Dokument wird direkt am eingestellten Ausgabeort gespeichert. Öffnen Sie den Ausgabeort über die Statusleiste.
 
 **Tipp**: Sie können die Beispieldateien im Verzeichnis `samples/` verwenden, um die Funktionen der Software schnell auszuprobieren.
 
@@ -165,7 +165,7 @@ Das Bedienfeld passt die verfügbaren Optionen automatisch basierend auf dem Dat
 
 Öffnen Sie die Einstellungen über das Symbol am unteren Fensterrand oder mit **Strg+,**. Die Navigation ist in **Allgemein**, **Eingabetypen**, **Inhalte** und **Spezialfunktionen** gegliedert. In niedrigen Fenstern ist die Seitenleiste scrollbar; bei zu geringer Breite erscheint eine Seitenauswahl.
 
-**OCR und Bilder** enthält gemeinsame Optionen für Erkennung und Markdown-Bildausgabe. Die OCR-Vorgabe eines Dateityps bleibt auf dessen Eingabeseite; Bildkonvertierung und Komprimierung stehen unter **Bildeingabe**. **Markdown-Syntax** trennt allgemeine Ausgaberegeln, Eingaberegeln und Word-Zuordnungen. Nicht jeder Eingabeweg oder jede Spezialoptimierung berücksichtigt schon alle Syntaxoptionen.
+**OCR und Bilder** enthält gemeinsame Optionen für Erkennung und Markdown-Bildausgabe. Die OCR-Vorgabe eines Dateityps bleibt auf dessen Eingabeseite; Bildkonvertierung und Komprimierung stehen unter **Bildeingabe**. **Markdown erzeugen** steuert Ausgabesyntax und Erweiterungen; **Markdown einlesen** steuert Eingabeerkennung, Erweiterungen und Markdown-zu-Word-Zuordnungen. Nicht jeder Eingabeweg oder jede Spezialoptimierung berücksichtigt schon alle Syntaxoptionen. Das Aktivieren einer Erweiterung fügt keine Erkennungsfunktion hinzu.
 
 **Amtliche Dokumente** und **Rechnungen** haben eigene Seiten. Bei amtlichen Dokumenten regelt **Dokument → Markdown** die Erkennungsvorgabe und **Markdown → Dokument** die Formatierung von Vorlagenfeldern mit Hinweisen zu Anlagen, Verteiler, Datum und Vermerken. Rechnungen bieten getrennte Vorgaben für **PDF / OFD → Markdown** und **Bild → Markdown**. Diese Optionen bestimmen nur die anfängliche Auswahl geeigneter Dateien und klassifizieren sie nicht automatisch. **Übernehmen / OK** speichert, **Abbrechen** verwirft ungespeicherte Änderungen.
 
@@ -199,7 +199,7 @@ Apps und Plugins verbinden sich über `serve --stdio` mit Machine Protocol v2, u
 
 ### Häufige Beispiele
 
-Konvertierungen von oder nach Markdown erstellen auch bei nur einer Ausgabedatei einen Ergebnisordner unter `--output-dir DIR`. Namen enthalten Quellname, Zeitstempel und aktuelles Eingabeformat. `--output PATH` ist anderen Konvertierungen mit genau einer Zieldatei vorbehalten.
+Konvertierungen nach Markdown erstellen immer einen Ergebnisordner unter dem mit `--output-dir DIR` gewählten übergeordneten Ordner. Erzeugt eine Konvertierung aus Markdown genau ein fertiges Dokument oder eine Tabelle, wird diese Datei direkt dort gespeichert; mehrere Dateien oder eine ausdrücklich angeforderte Audit-Begleitdatei verwenden einen Ergebnisordner. Generierte Namen enthalten Quellname, Zeitstempel und aktuelles Eingabeformat. Mit `--output PATH` legen Sie den genauen Pfad einer einzelnen Zieldatei fest, auch bei Markdown-Eingaben; gruppierte Ergebnisse benötigen `--output-dir`.
 
 ```bash
 # Windows-Paket
@@ -281,8 +281,8 @@ DocWenCLI.exe validate input.md --check typo --report report.json
 
 **Obsidian-Markdown-Erweiterungen verwenden?** Bei einer neuen DocWen-Installation sind vier optionale Erweiterungen **ausgeschaltet**: `structural_tables` (verbundene Zellen und mehrzeilige Tabellenköpfe), `captions_references` (Number-Suite-Beschriftungen und Querverweise), `extended_headings` (H7–H9) und `typed_endnotes` (typisierte Endnoten).
 
-- **Markdown → Word:** Aktivieren Sie unter **Einstellungen → Markdown-Syntax → Eingabe** die benötigten Erweiterungen oder wählen Sie für die Eingabe **Obsidian-Erweiterungen verwenden**. Sonst können Marker als gewöhnlicher Text erhalten bleiben.
-- **Word → Markdown:** Aktivieren Sie die entsprechenden **Ausgabe**-Erweiterungen gesondert oder nutzen Sie die Ausgabe-Voreinstellung; ansonsten können Strukturen vereinfacht oder normalisiert werden, mit Warnhinweisen.
+- **Markdown → Word:** Aktivieren Sie unter **Einstellungen → Markdown einlesen** die benötigten Erweiterungen oder wählen Sie für die Eingabe **Obsidian-Erweiterungen verwenden**. Sonst können Marker als gewöhnlicher Text erhalten bleiben.
+- **Word → Markdown:** Aktivieren Sie die entsprechenden Ausgabe-Erweiterungen unter **Einstellungen → Markdown erzeugen** oder nutzen Sie die dortige Voreinstellung. Ansonsten können Strukturen vereinfacht oder normalisiert werden, mit Warnhinweisen.
 
 Bewahren Sie das ursprüngliche Markdown auf und prüfen Sie die DOCX-Ausgabe. Word-Nummern folgen den DocWen-Konvertierungsoptionen; identische Schreibweisen und Leerzeichen werden bei der Rückkonvertierung nicht garantiert. Details: [Markdown-Kompatibilität](../specs/markdown-compatibility.md).
 
@@ -298,7 +298,7 @@ Um es Kollegen ohne Hintergrundwissen leichter zu machen, entsprechen die Markdo
 
 ### Zeilenumbrüche und Absätze
 
-**Grundregel**: Normale weiche Markdown-Zeilenumbrüche erzeugen standardmäßig **keine** getrennten Word-Absätze. Aktivieren Sie **Jede Zeile als Absatz** unter **Einstellungen → Markdown-Syntax**, um gewöhnliche Textzeilen zu trennen. Listen, Zitate, Code und ausdrückliche harte Umbrüche behalten eigene Regeln.
+**Grundregel**: Normale weiche Markdown-Zeilenumbrüche erzeugen standardmäßig **keine** getrennten Word-Absätze. Aktivieren Sie **Jede Zeile als eigener Absatz** unter **Einstellungen → Markdown einlesen**, um gewöhnliche Textzeilen zu trennen. Listen, Zitate, Code und ausdrückliche harte Umbrüche behalten eigene Regeln.
 
 **Gemischte Absätze**: Wenn ein Untertitel mit dem Fließtext im selben Absatz gemischt werden muss (Standardmodus: „Satzzeichen erforderlich“), müssen folgende Bedingungen erfüllt sein:
 1.  Der Untertitel endet mit einem Satzzeichen (unterstützt mehrsprachige Satzzeichen, einschließlich Punkte, Fragezeichen, Ausrufezeichen und andere gängige Schlusssatzzeichen).

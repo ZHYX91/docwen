@@ -2,7 +2,7 @@
 
 Implemented contract. Automated regression coverage and native host acceptance are separate; the tests below do not establish packaged or native-host behavior.
 
-The optional setting **每行独立成段 / Each line as a paragraph** belongs to Settings → Markdown syntax. It is **off by default** and is not a legacy mode.
+The optional setting **每行独立成段 / Each line as a paragraph** belongs to Settings → Parse Markdown / 设置 → 解析 Markdown. It is **off by default** and is not a legacy mode.
 
 Source-native Markdown→DOCX interprets ordinary top-level prose soft line breaks as separate Word paragraphs when enabled. The same intermediate DOCX is used by DOC/RTF/ODT/PDF bridge targets. Explicit Markdown hard breaks remain inside a paragraph. Lists, blockquotes, headings, code, tables, captions and authenticated semantic-owned paragraphs keep their own structure.
 

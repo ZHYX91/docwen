@@ -1041,6 +1041,7 @@ cancel_hint = "작업이 실행 중입니다. Esc 키를 누르면 현재 작업
 
 # 模板选择器
 [components.template_selector]
+format_description = "{format} 템플릿"
 manage_templates = "템플릿 관리"
 selected_name = "선택한 템플릿: {name}"
 no_templates = "사용 가능한 템플릿이 없습니다"

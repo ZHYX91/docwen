@@ -24,7 +24,7 @@ from docwen_application.conversion_service import (
     ConversionService,
 )
 from docwen_cli.machine.contracts import MachineContractValidator
-from docwen_cli.machine.framing import FrameWriter, FramingError, read_frame
+from docwen_cli.machine.framing import FrameWriter, FramingError, encode_frame, read_frame
 from docwen_cli.machine.query_service import MachineQueryError, MachineQueryService
 from docwen_core.models import ConversionDiagnostic, ConversionErrorInfo
 from docwen_core.models.task import TaskEvent
@@ -50,7 +50,6 @@ _PROGRESS_PHASE = "conversion"
 _PROGRESS_TOTAL = 100
 _MAX_RUNTIME_PROGRESS = 95
 _MAX_PENDING_PLANS = 256
-_MAX_DIAGNOSTICS = 64
 _MAX_RELATED_RANGES = 16
 _MAX_DIAGNOSTIC_FIXES = 8
 _MAX_FIX_EDITS = 16
@@ -373,12 +372,32 @@ class MachineProtocolServer:
             return
         try:
             self._write_outcome(outcome)
+        except FramingError as exc:
+            if exc.code != "frame_too_large":
+                self._write_internal_failure(task_id)
+                return
+            self._write_terminal(
+                "task/failed",
+                task_id,
+                {
+                    "error": {
+                        "category": "resource_exhausted",
+                        "code": "response_too_large",
+                        "message": (
+                            "The result response exceeds the Machine message limit and cannot be delivered. "
+                            "Output files may already exist; inspect the staging output before starting another task."
+                        ),
+                        "retryable": False,
+                    },
+                    "diagnostics": [],
+                },
+            )
         except Exception:
             self._write_internal_failure(task_id)
 
     def _write_outcome(self, outcome: ConversionTaskOutcome) -> None:
-        if len(outcome.diagnostics) > _MAX_DIAGNOSTICS:
-            raise RuntimeError("runtime diagnostic count exceeds Machine v2 bound")
+        # Machine v2 bounds each diagnostic and the complete frame, not the
+        # number of diagnostics. Preserve the result and all source evidence.
         with self._progress_lock:
             state = self._task_progress.get(outcome.task_id)
             accepted_inputs = set() if state is None else state.accepted_inputs
@@ -431,13 +450,15 @@ class MachineProtocolServer:
             if state is None:
                 raise RuntimeError("terminal notification has no accepted task state")
             terminal_sequence = state.sequence + (2 if success_progress and state.completed < 100 else 1)
-        self._validator.validate_message(
-            {
-                "jsonrpc": "2.0",
-                "method": method,
-                "params": {"task_id": task_id, "sequence": terminal_sequence, **payload},
-            }
-        )
+        message = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": {"task_id": task_id, "sequence": terminal_sequence, **payload},
+        }
+        self._validator.validate_message(message)
+        # Check the same byte representation as FrameWriter before announcing
+        # 100% or releasing the task state needed to send a failure terminal.
+        encode_frame(message)
 
     def _write_internal_failure(self, task_id: str) -> None:
         payload = {

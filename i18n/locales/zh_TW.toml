@@ -1040,6 +1040,7 @@ cancel_hint = "任務處理中，可按 Esc 取消目前任務。"
 
 # 模板选择器
 [components.template_selector]
+format_description = "{format} 範本"
 manage_templates = "管理範本"
 selected_name = "目前範本：{name}"
 no_templates = "無可用範本"

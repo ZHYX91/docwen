@@ -26,8 +26,8 @@ square brackets. A rejected batch member contributes to the totals and nonzero e
 - `inspect FILE`: inspect one input's actual format and supported routes.
 - `resources list|show TYPE`: discover formats, optimizations, templates and numbering schemes.
 - `schema [COMMAND_PATH...]`: export the active parser contract.
-- `convert FILE --to FORMAT --output-dir DIR`: convert one file into the chosen parent; required for conversions from or to Markdown.
-- `convert FILE --to FORMAT --output PATH`: exact-file output for other single-file conversions.
+- `convert FILE --to FORMAT --output-dir DIR`: convert into the chosen parent; required for Markdown output and grouped results. A single final file generated from Markdown is saved directly in this parent.
+- `convert FILE --to FORMAT --output PATH`: exact-file output for conversions with one final file, including a single file generated from Markdown.
 - `convert MARKDOWN --to FORMAT --output-dir DIR --proofread [--check CHECK]...`: render DOCX privately, proofread the generated DOCX, then publish the final result. `--check` on `convert` requires `--proofread`; omitting `--check` uses the configured proofreading defaults. If all four checks are disabled, conversion still publishes the selected document with a skipped-proofreading diagnostic. Markdown sources support final DOCX/DOC/ODT/RTF/WPS targets; proofreading runs on the intermediate DOCX before any required bridge conversion. Availability of the selected target still depends on its bridge. Non-Markdown sources do not support conversion proofreading.
 - `validate FILE [--report PATH]`: validate DOCX, Markdown, or legacy Word-family content
   (`DOC`/`WPS`/`RTF`/`ODT` is pre-converted to DOCX by the Application layer); the default is read-only.

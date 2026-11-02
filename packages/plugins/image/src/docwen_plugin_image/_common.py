@@ -304,7 +304,12 @@ def save_image_with_options(
             return
         if compress_mode != "lossless":
             raise ValueError(f"Unknown compress_mode: {compress_mode}")
-        converted.save(output_path, **save_params(target), **metadata)
+        parameters = save_params(target)
+        if target == "webp":
+            # The public option predates the GUI's "Highest Quality" label.
+            # WebP supports true lossless encoding; quality=100 alone does not.
+            parameters.update(lossless=True, exact=True)
+        converted.save(output_path, **parameters, **metadata)
     finally:
         converted.close()
 

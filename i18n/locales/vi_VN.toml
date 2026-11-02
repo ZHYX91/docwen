@@ -1106,6 +1106,7 @@ cancel_hint = "Tác vụ đang chạy. Nhấn Esc để hủy tác vụ hiện t
 
 # 模板选择器
 [components.template_selector]
+format_description = "Mẫu {format}"
 manage_templates = "Quản lý mẫu"
 selected_name = "Mẫu đã chọn: {name}"
 no_templates = "Không có mẫu khả dụng"
