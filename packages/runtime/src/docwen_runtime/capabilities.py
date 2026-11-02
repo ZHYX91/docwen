@@ -462,7 +462,7 @@ def build_runtime_capability_projection(
             }
         )
 
-    return {
+    projection = {
         "resource": "formats",
         "contract": {"id": CAPABILITY_CONTRACT_ID, "version": CAPABILITY_CONTRACT_VERSION},
         "runtime": {"state": "available", "platform": platform_value},
@@ -482,6 +482,15 @@ def build_runtime_capability_projection(
             projected_routes=projected_routes,
         ),
     }
+    if include_internal:
+        # Resource applicability is a desktop selection policy. Do not add it
+        # to the public optimization resource contract or restrict CLI routes.
+        projection["optimization_applicable_locales"] = {
+            resource.id: list(resource.applicable_locales)
+            for manifest in sorted(manifests, key=lambda item: item.plugin_id)
+            for resource in sorted(manifest.optimization_resources, key=lambda item: item.id)
+        }
+    return projection
 
 
 __all__ = [

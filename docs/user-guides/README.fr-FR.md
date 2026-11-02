@@ -29,13 +29,13 @@ Convertissez localement Word et Markdown, préparez des tableaux et des PDF ou v
 
 ## 📸 Captures d’écran
 
-Choisissez un modèle et les options de génération des documents Markdown.
+Importez un document Word et choisissez les options d’export Markdown (interface en anglais).
 
-![De Markdown au document](../assets/screenshots/markdown-generation-en.png)
+![Importez un document Word et choisissez les options d’export Markdown (interface en anglais).](../assets/screenshots/document-extraction-en.png)
 
-Alignement des mentions de pièces jointes pour les documents officiels (interface en anglais) :
+Importez du Markdown et choisissez un modèle pour créer un document Word (interface en anglais).
 
-![Réglage de l’alignement des pièces jointes dans les documents officiels](../assets/screenshots/official-documents-en.png)
+![Importez du Markdown et choisissez un modèle pour créer un document Word (interface en anglais).](../assets/screenshots/markdown-generation-en.png)
 
 
 Journal des modifications : voir [CHANGELOG.md](../CHANGELOG.md)
@@ -167,7 +167,11 @@ Ouvrez les paramètres avec l’icône en bas de la fenêtre ou **Ctrl+,**. La n
 
 La page **OCR et images** regroupe la reconnaissance et la sortie des images dans Markdown. Les valeurs OCR propres à chaque type de fichier restent dans sa page d’entrée ; la conversion et la compression d’images restent dans **Images en entrée**. **Générer Markdown** contrôle la syntaxe et les extensions de sortie ; **Analyser Markdown** contrôle la reconnaissance, les extensions d’entrée et les correspondances Markdown vers Word. Tous les chemins d’entrée et toutes les optimisations ne prennent pas encore en charge chaque option de syntaxe. Activer une extension n’ajoute pas de capacité de reconnaissance.
 
-Les **Documents officiels** et les **Factures** ont chacun leur page. Pour les documents officiels, **Document → Markdown** règle la reconnaissance initiale et **Markdown → Document** les champs de modèle, avec une aide sur les annexes, les destinataires en copie, les dates et les notes. Les factures ont des valeurs distinctes pour **PDF / OFD → Markdown** et **Image → Markdown**. Ces valeurs ne fixent que le choix initial des fichiers compatibles, sans détecter automatiquement leur type. **Appliquer / OK** enregistre et **Annuler** écarte les changements non appliqués.
+Une optimisation n’apparaît que si elle est disponible pour la langue actuelle de l’interface et le format d’entrée détecté, avec les logiciels de conversion nécessaires. Sa page de paramètres n’apparaît également que si elle est applicable. Les optimisations intégrées pour les documents officiels chinois et les factures chinoises ne prennent actuellement en charge que l’interface en chinois simplifié (`zh_CN`). Dans les autres langues, leurs options et pages sont masquées et leurs valeurs par défaut enregistrées ne sont pas appliquées ; ces préférences sont conservées pour un retour à la langue compatible. Cette règle concerne les choix de l’interface graphique, pas les tâches explicitement définies par CLI ou Machine.
+
+Dans toutes les langues, **Texte entrant → Numérotation (MD vers DOCX)** permet d’utiliser du texte pour les nouveaux numéros de titres et d’y ajouter des commentaires de révision. Ces réglages n’activent pas à eux seuls la numérotation des titres.
+
+Lorsque l’optimisation est applicable, les **Documents officiels** et les **Factures** ont chacun leur page. Pour les documents officiels, **Document → Markdown** règle la reconnaissance initiale et **Markdown → Document** les champs de modèle, avec une aide sur les annexes, les destinataires en copie, les dates et les notes. Les factures ont des valeurs distinctes pour **PDF / OFD → Markdown** et **Image → Markdown**. Ces valeurs ne fixent que le choix initial des fichiers compatibles, sans détecter automatiquement leur type. **Appliquer / OK** enregistre et **Annuler** écarte les changements non appliqués.
 
 **Portée :** Le formatage spécialisé des champs vise les documents officiels chinois et l’optimisation de l’extraction vise les factures chinoises. Les autres fichiers peuvent toujours utiliser les conversions ordinaires.
 
@@ -385,6 +389,7 @@ Prend en charge les liens cliquables en Markdown -> DOCX :
 -   `.docx` - Document Word standard.
 -   `.doc` - Automatiquement converti en DOCX pour le traitement.
 -   `.wps` - Document WPS automatiquement converti.
+- `.rtf`, `.odt` - Convertis en DOCX avant traitement. Comme `.doc` et `.wps`, ils nécessitent un logiciel Office local compatible pour la conversion.
 
 **Options d'exportation** :
 

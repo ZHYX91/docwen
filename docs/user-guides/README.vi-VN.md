@@ -29,13 +29,13 @@ Chuyển đổi Word và Markdown trên máy tính, xử lý bảng tính hoặc
 
 ## 📸 Ảnh chụp màn hình
 
-Chọn mẫu và các tùy chọn tạo tài liệu từ Markdown.
+Nhập tài liệu Word và chọn tùy chọn xuất Markdown (giao diện tiếng Anh).
 
-![Tạo tài liệu từ Markdown](../assets/screenshots/markdown-generation-en.png)
+![Nhập tài liệu Word và chọn tùy chọn xuất Markdown (giao diện tiếng Anh).](../assets/screenshots/document-extraction-en.png)
 
-Tùy chọn căn lề thông tin phụ lục công văn (giao diện tiếng Anh):
+Nhập Markdown và chọn mẫu để tạo tài liệu Word (giao diện tiếng Anh).
 
-![Thiết lập căn lề phụ lục công văn](../assets/screenshots/official-documents-en.png)
+![Nhập Markdown và chọn mẫu để tạo tài liệu Word (giao diện tiếng Anh).](../assets/screenshots/markdown-generation-en.png)
 
 
 Nhật ký thay đổi: xem [CHANGELOG.md](../CHANGELOG.md)
@@ -167,7 +167,11 @@ Mở cài đặt bằng biểu tượng ở cuối cửa sổ hoặc **Ctrl+,**.
 
 Trang **OCR và hình ảnh** quản lý nhận dạng chung và xuất hình ảnh trong Markdown. OCR mặc định theo từng loại tệp nằm ở trang đầu vào tương ứng; chuyển đổi định dạng và nén ảnh ở **Hình ảnh đầu vào**. **Tạo Markdown** điều khiển cú pháp và phần mở rộng đầu ra; **Phân tích Markdown** điều khiển nhận dạng, phần mở rộng đầu vào và ánh xạ Markdown sang Word. Không phải mọi nguồn hay tối ưu chuyên biệt đều áp dụng mọi tùy chọn cú pháp. Bật phần mở rộng không bổ sung khả năng nhận dạng.
 
-**Công văn** và **Hóa đơn** có trang riêng. **Tài liệu → Markdown** đặt lựa chọn nhận dạng ban đầu cho công văn; **Markdown → Tài liệu** cấu hình định dạng trường mẫu, kèm trợ giúp về phần đính kèm, nơi nhận bản sao, ngày và ghi chú. Hóa đơn có lựa chọn riêng cho **PDF / OFD → Markdown** và **Ảnh → Markdown**. Các giá trị mặc định chỉ thay đổi lựa chọn ban đầu cho tệp tương thích, không tự phân loại tệp. **Áp dụng / OK** để lưu, **Hủy** để bỏ thay đổi chưa áp dụng.
+Tùy chọn tối ưu chỉ xuất hiện khi có tính năng phù hợp với cả ngôn ngữ giao diện hiện tại và định dạng đầu vào đã nhận dạng, đồng thời có đủ phần mềm chuyển đổi cần thiết. Trang cài đặt tương ứng cũng chỉ hiện khi có tối ưu phù hợp. Hiện tại, tối ưu tích hợp cho công văn Trung Quốc và hóa đơn Trung Quốc chỉ áp dụng cho giao diện tiếng Trung giản thể (`zh_CN`). Với ngôn ngữ khác, các tùy chọn và trang này bị ẩn, giá trị mặc định đã lưu không được áp dụng nhưng vẫn được giữ để dùng lại khi chuyển về ngôn ngữ phù hợp. Quy tắc này điều khiển lựa chọn trong GUI, không thay đổi tác vụ được chỉ định rõ qua CLI hoặc Machine.
+
+Với mọi ngôn ngữ giao diện, **Văn bản đầu vào → Đánh số tiêu đề (Markdown → Tài liệu)** cho phép dùng văn bản cho số tiêu đề mới thêm và thêm nhận xét rà soát cho chúng. Hai tùy chọn này không tự bật tính năng đánh số tiêu đề.
+
+Khi có tối ưu phù hợp, **Công văn** và **Hóa đơn** có trang cài đặt riêng. **Tài liệu → Markdown** đặt lựa chọn nhận dạng ban đầu cho công văn; **Markdown → Tài liệu** cấu hình định dạng trường mẫu, kèm trợ giúp về phần đính kèm, nơi nhận bản sao, ngày và ghi chú. Hóa đơn có lựa chọn riêng cho **PDF / OFD → Markdown** và **Ảnh → Markdown**. Các giá trị mặc định chỉ thay đổi lựa chọn ban đầu cho tệp tương thích, không tự phân loại tệp. **Áp dụng / OK** để lưu, **Hủy** để bỏ thay đổi chưa áp dụng.
 
 **Phạm vi áp dụng:** Tính năng định dạng trường chuyên biệt hướng đến công văn Trung Quốc, còn tối ưu trích xuất hóa đơn hướng đến các mẫu hóa đơn Trung Quốc. Các tệp khác vẫn dùng được các đường chuyển đổi thông thường.
 
@@ -385,6 +389,7 @@ Hỗ trợ liên kết có thể bấm trong Markdown -> DOCX:
 -   `.docx` - Tài liệu Word chuẩn.
 -   `.doc` - Tự chuyển sang DOCX để xử lý.
 -   `.wps` - Tự chuyển tài liệu WPS để xử lý.
+- `.rtf`, `.odt` - Được chuyển sang DOCX trước khi xử lý. Cũng như `.doc` và `.wps`, cần phần mềm Office cục bộ tương thích để chuyển đổi.
 
 **Tuỳ chọn xuất**:
 

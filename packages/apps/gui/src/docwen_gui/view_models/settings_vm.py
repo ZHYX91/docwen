@@ -115,6 +115,8 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("text", "default_scheme"),
         ("text", "numbering_schemes", "settings", "default_scheme"),
         ("text", "heading_numbering_render_mode"),
+        ("text", "gongwen_numbering_comments"),
+        ("text", "gongwen_numbering_text"),
         ("gui", "md_default_template"),
     ),
     "proofread": (
@@ -159,8 +161,6 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
     ),
     "gongwen": (
         ("text", "gongwen_fields_enabled"),
-        ("text", "gongwen_numbering_comments"),
-        ("text", "gongwen_numbering_text"),
         ("text", "attachment_alignment"),
     ),
     "invoice": (),

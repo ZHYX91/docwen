@@ -22,6 +22,7 @@ def composition(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     port = ConfigPortAdapter(loader)
     controller = ApplicationController(config_port=port)
     monkeypatch.setattr(controller, "describe_runtime_capabilities", optimization_capability_projection)
+    monkeypatch.setattr(controller, "describe_gui_runtime_capabilities", optimization_capability_projection)
     vm = SettingsViewModel(controller=controller)
     vm.begin_session()
     return vm, port, controller
@@ -40,8 +41,9 @@ def test_numbering_comments_persist_cancel_and_reset_independently(composition) 
     vm.set_field(SECTION_TEXT, "gongwen_numbering_comments", True)
     vm.cancel()
     assert vm.config.text.gongwen_numbering_comments is False
-    assert vm.reset_group("gongwen")
+    assert vm.reset_group("text")
     assert vm.config.text.gongwen_numbering_comments is True
+    assert vm.config.text.gongwen_fields_enabled is False
 
 
 def test_numbering_text_dependency_persists_and_does_not_recheck_comments(composition) -> None:
@@ -57,7 +59,7 @@ def test_numbering_text_dependency_persists_and_does_not_recheck_comments(compos
     assert reopened.config.text.gongwen_numbering_comments is False
     vm.set_field(SECTION_TEXT, "gongwen_numbering_text", True)
     assert vm.config.text.gongwen_numbering_comments is False
-    assert vm.reset_group("gongwen")
+    assert vm.reset_group("text")
     assert vm.config.text.gongwen_numbering_text is True
     assert vm.config.text.gongwen_numbering_comments is True
     assert port.get("template_fill.gongwen_numbering_text") is True

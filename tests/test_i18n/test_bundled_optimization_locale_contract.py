@@ -19,9 +19,12 @@ class _BundledController:
     def describe_runtime_capabilities(self) -> dict[str, Any]:
         return self._projection
 
+    def describe_gui_runtime_capabilities(self) -> dict[str, Any]:
+        return _bundled_projection(include_internal=True)
+
 
 @cache
-def _bundled_projection() -> dict[str, Any]:
+def _bundled_projection(*, include_internal: bool = False) -> dict[str, Any]:
     from docwen_bundle.runtime_factory import _DEFAULT_PLUGIN_IMPORTS
     from docwen_runtime.capabilities import build_runtime_capability_projection
 
@@ -29,6 +32,7 @@ def _bundled_projection() -> dict[str, Any]:
     return build_runtime_capability_projection(
         manifests,
         platform_id="windows",
+        include_internal=include_internal,
         egress_guard_status={
             "state": "enforced",
             "installed": True,
@@ -86,16 +90,33 @@ def test_bundled_cli_optimization_inventory_is_locale_invariant(
     assert sum(len(item[2]) for item in identities["en_US"]) == 4
 
 
-def test_bundled_gui_choices_localize_labels_without_changing_identity() -> None:
+def test_bundled_gui_choices_follow_declared_locales_without_changing_identity() -> None:
     from docwen_gui.i18n import get_locale, set_locale, t
     from docwen_gui.view_models._optimization_filter import discover_optimization_choices
 
     controller = _BundledController(_bundled_projection())
+    assert controller.describe_gui_runtime_capabilities()["optimization_applicable_locales"] == {
+        "gongwen": ["zh_CN"],
+        "invoice_cn": ["zh_CN"],
+    }
     previous = get_locale()
     identities: dict[str, tuple[tuple[object, ...], ...]] = {}
     labels: dict[str, dict[str, str]] = {}
     try:
-        for locale in ("en_US", "zh_CN"):
+        for locale in (
+            "zh_CN",
+            "zh_TW",
+            "en_US",
+            "de_DE",
+            "fr_FR",
+            "es_ES",
+            "pt_BR",
+            "ru_RU",
+            "ja_JP",
+            "ko_KR",
+            "vi_VN",
+            "ar_SA",
+        ):
             set_locale(locale)
             result = discover_optimization_choices(controller, locale=locale)
             assert result.status == "ready"
@@ -111,12 +132,14 @@ def test_bundled_gui_choices_localize_labels_without_changing_identity() -> None
                 for choice in result.choices
             )
             labels[locale] = {choice.id: choice.label for choice in result.choices}
+            applicable_ids = ("gongwen", "invoice_cn") if locale == "zh_CN" else ()
             assert labels[locale] == {
                 resource_id: t(f"cli.interactive.optimization_types.{resource_id}", "")
-                for resource_id in ("gongwen", "invoice_cn")
+                for resource_id in applicable_ids
             }
     finally:
         set_locale(previous)
 
-    assert identities["en_US"] == identities["zh_CN"]
-    assert labels["en_US"] != labels["zh_CN"]
+    assert all(not identity for locale, identity in identities.items() if locale != "zh_CN")
+    public_resources = controller.describe_runtime_capabilities()["optimizations"]["resources"]
+    assert identities["zh_CN"] == _optimization_identity(public_resources)

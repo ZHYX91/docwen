@@ -14,6 +14,8 @@ from docwen_gui.view_models.settings_vm import SettingsViewModel
 from docwen_gui.widgets.settings import dialog as settings_dialog
 from docwen_gui.widgets.settings.dialog import TAB_KEYS, TAB_NAMES, SettingsDialog, SettingsNavigationGroup
 
+from ._settings_dialog_shell_support import synthetic_navigation_resources as synthetic_navigation_resources
+
 pytestmark = pytest.mark.gui
 
 
@@ -229,6 +231,13 @@ def test_group_headings_do_not_add_pages_or_keyboard_stops(qapp, qtbot, monkeypa
 
 
 def test_empty_optimization_group_adds_neither_heading_nor_placeholder(qapp, monkeypatch) -> None:
+    from docwen_gui.view_models._optimization_filter import OptimizationChoicesResult
+
+    monkeypatch.setattr(
+        SettingsViewModel,
+        "get_optimization_choices_result",
+        lambda *_args, **_kwargs: OptimizationChoicesResult(status="ready", choices=()),
+    )
     general_keys = tuple(key for key in TAB_KEYS if key not in {"gongwen", "invoice"})
     monkeypatch.setattr(
         settings_dialog,

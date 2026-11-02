@@ -105,6 +105,7 @@ def build_manifest() -> PluginManifest:
         optimization_resources=[
             OptimizationResourceSpec(
                 id="gongwen",
+                applicable_locales=("zh_CN",),
                 name="Chinese official-document optimization",
                 action_name="gongwen",
             )

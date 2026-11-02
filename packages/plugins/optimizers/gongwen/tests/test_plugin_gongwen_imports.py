@@ -30,6 +30,7 @@ def test_gongwen_manifest_declares_route_and_ocr_options() -> None:
             "id": "gongwen",
             "name": "Chinese official-document optimization",
             "action_name": "gongwen",
+            "applicable_locales": ["zh_CN"],
         }
     ]
     assert "supported_actions" not in manifest.extra

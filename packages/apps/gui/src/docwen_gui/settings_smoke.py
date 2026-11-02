@@ -40,14 +40,14 @@ def _schedule_test_settings_report(app: QApplication, window: MainWindow) -> Non
         }
         try:
             from .view_models.settings_vm import SettingsViewModel
-            from .widgets.settings.dialog import TAB_KEYS, SettingsDialog
+            from .widgets.settings.dialog import SettingsDialog
 
             controller = getattr(getattr(window, "view_model", None), "controller", None)
             dialog = SettingsDialog(parent=window, view_model=SettingsViewModel(controller=controller))
             pages = dict(dialog._tabs)  # pyright: ignore[reportPrivateUsage]
-            expected_tabs = list(TAB_KEYS)
+            expected_tabs = list(dialog.available_page_keys)
             missing_tabs = [key for key in expected_tabs if key not in pages]
-            unexpected_tabs = [key for key in pages if key not in TAB_KEYS]
+            unexpected_tabs = [key for key in pages if key not in expected_tabs]
             object_names = {key: page.objectName() for key, page in pages.items()}
             failed_tabs = [key for key in expected_tabs if object_names.get(key) == "settingsTabLoadErrorPage"]
             loaded_tabs = [key for key in expected_tabs if key in pages and key not in failed_tabs]

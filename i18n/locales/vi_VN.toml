@@ -347,6 +347,10 @@ batch_mode = "Chế độ hàng loạt"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+numbering_text_label = "Dùng văn bản cho số tiêu đề mới thêm"
+numbering_text_help = "Ghi số tiêu đề được thêm theo sơ đồ đã chọn dưới dạng văn bản, ưu tiên hơn chế độ xuất số ở trên trong lần chuyển đổi này. Không bật đánh số, đổi chế độ đã lưu hoặc số có sẵn trong mẫu. Mặc định bật."
+numbering_comments_label = "Thêm nhận xét cho số tiêu đề dạng văn bản mới thêm"
+numbering_comments_help = "Chỉ nhận xét số tiêu đề dạng văn bản thực sự được thêm, không đánh dấu số đã nhập thủ công. Mặc định bật. Tắt số dạng văn bản sẽ bỏ chọn và vô hiệu hóa tùy chọn này; sau khi bật lại, bạn có thể chọn nếu cần. Số Markdown tùy chỉnh không thể xác định chính xác sẽ được bỏ qua kèm cảnh báo."
 output_format = "Loại mẫu ưu tiên"
 output_format_hint = "Khi thêm Markdown, ưu tiên mẫu thuộc loại này. Thiết lập này tự nó không đổi định dạng đầu ra chuyển đổi."
 # MD转文档序号设置
@@ -1854,10 +1858,6 @@ unavailable = "Tối ưu {name} không khả dụng cho loại đầu vào này 
 
 
 [settings.gongwen]
-numbering_text_label = "Dùng số dạng văn bản cho công văn"
-numbering_text_help = "Dùng văn bản cho số tiêu đề được thêm trong lần chuyển đổi này theo sơ đồ Văn bản đầu vào. Không bật đánh số, đổi chế độ đã lưu hoặc số có sẵn trong mẫu. Mặc định bật, độc lập với định dạng trường."
-numbering_comments_label = "Thêm nhận xét cho số được thêm tự động"
-numbering_comments_help = "Chỉ nhận xét số văn bản thực sự được thêm, không đánh dấu số có sẵn.\n\nMặc định bật.\n\nTắt số dạng văn bản sẽ bỏ chọn và vô hiệu hóa tùy chọn này; khi bật lại bạn có thể tự chọn.\n\nSố Markdown không có vị trí chính xác sẽ được bỏ qua kèm cảnh báo. Độc lập với định dạng trường."
 description = "Thiết lập riêng lựa chọn mặc định cho công văn và định dạng trường trong mẫu."
 to_markdown_title = "Tài liệu → Markdown"
 to_markdown_description = "Dùng tối ưu công văn làm lựa chọn ban đầu cho tài liệu tương thích, không tự phân loại tệp là công văn. DOCX được xử lý trực tiếp; DOC, WPS, RTF và ODT cần bộ chuyển đổi tài liệu khả dụng."

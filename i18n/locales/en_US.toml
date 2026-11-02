@@ -347,6 +347,10 @@ batch_mode = "Batch Mode"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+numbering_text_label = "Use text for newly added heading numbers"
+numbering_text_help = "Writes heading numbers added with the selected scheme as text, overriding the heading numbering output mode above for this conversion. Does not enable numbering, change the saved output mode, or alter existing template numbering. On by default."
+numbering_comments_label = "Add review comments to newly added text heading numbers"
+numbering_comments_help = "Comments only on text heading numbers actually added in this conversion, never existing handwritten numbers. On by default. Turning text numbering off clears and disables this option; after turning it back on, select comments again if wanted. Custom Markdown numbers without an exact text anchor are skipped with a warning."
 output_format = "Preferred template type"
 output_format_hint = "When Markdown is added, prefer templates of this type. This does not change the conversion output format by itself."
 # MD转文档序号设置
@@ -1851,10 +1855,6 @@ unavailable = "{name} optimization is unavailable for this input category in the
 
 
 [settings.gongwen]
-numbering_text_label = "Use text numbering for official-document numbers"
-numbering_text_help = "Use text for heading numbers added in this conversion using the Incoming Text scheme. Does not enable numbering, change the saved render mode, or alter existing template numbering. On by default; independent of field formatting."
-numbering_comments_label = "Add review comments to automatically added official-document numbers"
-numbering_comments_help = "Review only the text heading numbers actually added, never existing handwritten numbers.\n\nOn by default.\n\nTurning text numbering off clears and disables this option; turning it back on leaves you free to select it.\n\nCustom Markdown numbers without an exact text anchor are skipped with a warning.\n\nIndependent of field formatting."
 description = "Set defaults for recognizing official documents and formatting template fields separately."
 to_markdown_title = "Document → Markdown"
 to_markdown_description = "Use official document optimization as the initial choice for compatible documents; this does not classify files as official documents. DOCX is handled directly; DOC, WPS, RTF and ODT need an available document converter."

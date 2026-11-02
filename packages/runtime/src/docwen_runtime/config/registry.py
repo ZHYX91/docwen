@@ -121,6 +121,8 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "conversion.md_to_docx.heading_merge_mode",
         "conversion.md_to_docx.heading_merge_punctuation",
         "template_fill.list_separator",
+        "template_fill.gongwen_numbering_comments",
+        "template_fill.gongwen_numbering_text",
         "document.style.table.md_to_docx.table_style_mode",
         "document.style.table.md_to_docx.builtin_style_key",
         "document.style.table.md_to_docx.custom_style_name",
@@ -212,8 +214,6 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
     ),
     "gongwen": (
         "template_fill.gongwen_fields_enabled",
-        "template_fill.gongwen_numbering_comments",
-        "template_fill.gongwen_numbering_text",
         "template_fill.attachment_alignment",
     ),
     "link": (

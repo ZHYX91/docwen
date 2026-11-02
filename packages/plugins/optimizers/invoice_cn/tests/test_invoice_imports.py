@@ -40,6 +40,7 @@ def test_invoice_plugin_manifest_declares_routes() -> None:
             "id": "invoice_cn",
             "name": "Chinese invoice optimization",
             "action_name": "invoice_cn",
+            "applicable_locales": ["zh_CN"],
         }
     ]
     assert "supported_actions" not in manifest.extra

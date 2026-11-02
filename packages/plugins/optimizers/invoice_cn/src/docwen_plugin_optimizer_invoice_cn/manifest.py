@@ -109,6 +109,7 @@ def build_manifest() -> PluginManifest:
         optimization_resources=[
             OptimizationResourceSpec(
                 id="invoice_cn",
+                applicable_locales=("zh_CN",),
                 name="Chinese invoice optimization",
                 action_name="invoice_cn",
             )

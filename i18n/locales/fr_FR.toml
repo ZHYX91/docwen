@@ -343,6 +343,10 @@ batch_mode = "Par lots"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+numbering_text_label = "Écrire les nouveaux numéros de titre en texte"
+numbering_text_help = "Écrit en texte les numéros de titre ajoutés selon le schéma choisi, en remplaçant pour cette conversion le mode de sortie indiqué ci-dessus. Ne déclenche pas la numérotation et ne modifie ni le mode enregistré ni les numéros existants du modèle. Activé par défaut."
+numbering_comments_label = "Commenter les nouveaux numéros de titre textuels"
+numbering_comments_help = "Commente uniquement les numéros textuels réellement ajoutés, jamais ceux déjà saisis manuellement. Activé par défaut. Désactiver la numérotation textuelle décoche et désactive cette option ; après réactivation, vous pouvez la sélectionner à nouveau. Les numéros Markdown personnalisés impossibles à localiser précisément sont ignorés avec un avertissement."
 output_format = "Type de modèle préféré"
 output_format_hint = "Lors de l’ajout de Markdown, les modèles de ce type sont privilégiés. Ce réglage ne change pas à lui seul le format de sortie de conversion."
 # MD转文档序号设置
@@ -1853,10 +1857,6 @@ unavailable = "L’optimisation {name} n’est pas disponible pour cette catégo
 
 
 [settings.gongwen]
-numbering_text_label = "Utiliser des numéros textuels pour les documents officiels"
-numbering_text_help = "Utilise du texte pour les numéros ajoutés dans cette conversion selon le schéma Texte entrant. Ne déclenche pas la numérotation et ne modifie ni le mode enregistré ni les numéros du modèle. Activé par défaut, indépendant du formatage des champs."
-numbering_comments_label = "Commenter les numéros ajoutés automatiquement"
-numbering_comments_help = "Commente uniquement les numéros textuels ajoutés, jamais ceux déjà saisis.\n\nActivé par défaut.\n\nDésactiver les numéros textuels décoche et désactive cette option ; leur réactivation permet de la choisir à nouveau.\n\nLes préfixes Markdown non isolables sont ignorés avec un avertissement.\n\nIndépendant du formatage des champs."
 description = "Réglez séparément le choix par défaut pour les documents officiels et le formatage des champs du modèle."
 to_markdown_title = "Document → Markdown"
 to_markdown_description = "Présélectionnez l’optimisation des documents officiels pour les documents compatibles, sans classer automatiquement les fichiers. DOCX est traité directement ; DOC, WPS, RTF et ODT nécessitent un convertisseur de documents disponible."

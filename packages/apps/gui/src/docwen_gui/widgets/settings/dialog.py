@@ -44,6 +44,7 @@ from docwen_gui.styles.ui_scale import dp, set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from ...styles.theme_semantics import apply_theme_class
+from ...view_models._optimization_filter import OptimizationChoice
 from ...view_models.settings_vm import SettingsViewModel
 from ...view_models.template_vm import TemplateViewModel
 from .base_tab import BaseSettingsTab
@@ -234,6 +235,7 @@ class _TabSpec(NamedTuple):
     module_name: str
     class_name: str
     factory: _TabFactory
+    optimization_resource: str | None = None
 
 
 # Keep each import inside a small factory: imports remain lazy, PyInstaller can
@@ -356,8 +358,8 @@ _TAB_SPECS: dict[str, _TabSpec] = {
     "export": _TabSpec("export_tab", "ExportTab", _build_export_tab),
     "logging": _TabSpec("logging_tab", "LoggingTab", _build_logging_tab),
     "other": _TabSpec("other_tab", "OtherTab", _build_other_tab),
-    "gongwen": _TabSpec("gongwen_tab", "GongwenTab", _build_gongwen_tab),
-    "invoice": _TabSpec("invoice_tab", "InvoiceTab", _build_invoice_tab),
+    "gongwen": _TabSpec("gongwen_tab", "GongwenTab", _build_gongwen_tab, "gongwen"),
+    "invoice": _TabSpec("invoice_tab", "InvoiceTab", _build_invoice_tab, "invoice_cn"),
 }
 
 # ── Reset group mapping (registry group to reset per tab) ──────────────────
@@ -439,6 +441,16 @@ class SettingsDialog(QDialog):
         self._initial_scale = appearance.get_ui_scale()
         self._initial_opacity = _read_initial_opacity(parent)
         self._tabs: dict[str, QWidget] = {}
+        custom_optimization_pages = {
+            spec.optimization_resource: key
+            for key, spec in _TAB_SPECS.items()
+            if spec.optimization_resource is not None
+        }
+        self._optimization_pages: dict[str, OptimizationChoice] = {
+            custom_optimization_pages.get(choice.id, f"optimization:{choice.id}"): choice
+            for choice in self._vm.get_optimization_choices_result().choices
+            if any(binding.source_category in {"document", "image", "layout"} for binding in choice.bindings)
+        }
         self._tab_widget: QTabWidget = _cast(QTabWidget, None)
         self._navigation: SettingsSidebar | None = None
         self._navigation_keyboard: SettingsNavigationKeyboard | None = None
@@ -505,10 +517,8 @@ class SettingsDialog(QDialog):
         set_metric(reset_tab_btn, "setMinimumWidth", RESET_TAB_BUTTON_MIN_WIDTH)
         apply_theme_class(reset_tab_btn, "secondary")
         reset_tab_btn.clicked.connect(self._on_reset_tab)
-        self._tab_widget.currentChanged.connect(
-            lambda _: reset_tab_btn.setEnabled(self.current_section() != "templates")
-        )
-        reset_tab_btn.setEnabled(self.current_section() != "templates")
+        self._tab_widget.currentChanged.connect(lambda _: reset_tab_btn.setEnabled(self._can_reset_current_page()))
+        reset_tab_btn.setEnabled(self._can_reset_current_page())
 
         reset_all_btn = QPushButton(t("settings.reset.all_button"), self)
         reset_all_btn.setObjectName("settingsResetAllButton")
@@ -692,12 +702,14 @@ class SettingsDialog(QDialog):
         assert self._navigation is not None
         with QSignalBlocker(self._compact_navigation):
             for group in NAVIGATION_GROUPS:
-                if not group.page_keys:
+                page_keys = tuple(self._optimization_pages) if group.key == "optimizations" else group.page_keys
+                if not page_keys:
                     continue
                 group_title = _navigation_group_title(group.key)
                 self._navigation.add_group(group.key, group_title)
-                for key in group.page_keys:
-                    title = TAB_NAMES.get(key, key)
+                for key in page_keys:
+                    choice = self._optimization_pages.get(key)
+                    title = TAB_NAMES.get(key, choice.label if choice is not None else key)
                     try:
                         tab = self._build_tab(key)
                     except Exception as error:
@@ -724,6 +736,20 @@ class SettingsDialog(QDialog):
             from .templates_tab import TemplatesTab
 
             return TemplatesTab(view_model=self._template_vm)
+        if key.startswith("optimization:"):
+            from .optimization_default import OptimizationDefaultsTab
+
+            choice = self._optimization_pages[key]
+            categories = tuple(
+                dict.fromkeys(
+                    binding.source_category
+                    for binding in choice.bindings
+                    if binding.source_category in {"document", "image", "layout"}
+                )
+            )
+            return OptimizationDefaultsTab(
+                self._vm, resource_id=choice.id, resource_label=choice.label, categories=categories
+            )
         spec = _TAB_SPECS.get(key)
         if spec is None:
             raise KeyError(f"Unknown Settings tab: {key!r}")
@@ -990,12 +1016,27 @@ class SettingsDialog(QDialog):
             return
         super().closeEvent(event)
 
+    @property
+    def available_page_keys(self) -> tuple[str, ...]:
+        """Expected navigation, before considering individual page construction failures."""
+        return tuple(
+            key
+            for group in NAVIGATION_GROUPS
+            for key in (tuple(self._optimization_pages) if group.key == "optimizations" else group.page_keys)
+        )
+
+    def _can_reset_current_page(self) -> bool:
+        key = self.current_section()
+        # Generic pages use explicit Set/Clear default controls; they do not
+        # invent a Runtime reset group for an independently supplied resource.
+        return key is not None and key != "templates" and not key.startswith("optimization:")
+
     def _on_reset_tab(self) -> None:
         """Reset the current tab to defaults."""
         tab_key = self.current_section()
         if tab_key is None:
             return
-        if tab_key == "templates":
+        if not self._can_reset_current_page():
             return
         tab_name = TAB_NAMES.get(tab_key, tab_key)
 

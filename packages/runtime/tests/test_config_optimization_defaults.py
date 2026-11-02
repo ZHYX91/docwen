@@ -49,8 +49,8 @@ def test_gongwen_reset_owns_field_switch_and_only_its_selected_default(tmp_path:
     snapshot = loader.config.as_dict()
     expected_template_fill = {
         "gongwen_fields_enabled": True,
-        "gongwen_numbering_text": True,
-        "gongwen_numbering_comments": True,
+        "gongwen_numbering_text": False,
+        "gongwen_numbering_comments": False,
         "attachment_alignment": "tab",
         "list_separator": " / ",
     }
@@ -139,7 +139,7 @@ def test_general_input_reset_preserves_domain_default(tmp_path: Path, category: 
     assert snapshot[category]["to_md_optimization"] == "other_optimizer"
 
 
-def test_text_reset_preserves_gongwen_field_switch(tmp_path: Path) -> None:
+def test_text_reset_owns_numbering_review_and_preserves_gongwen_field_switch(tmp_path: Path) -> None:
     from docwen_runtime.config.loader import ConfigLoader
 
     loader = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=tmp_path / "user")
@@ -158,8 +158,8 @@ def test_text_reset_preserves_gongwen_field_switch(tmp_path: Path) -> None:
     expected_template_fill = {
         "list_separator": ", ",
         "gongwen_fields_enabled": False,
-        "gongwen_numbering_text": False,
-        "gongwen_numbering_comments": False,
+        "gongwen_numbering_text": True,
+        "gongwen_numbering_comments": True,
         "attachment_alignment": "tab",
     }
     assert loader.config.as_dict()["template_fill"] == expected_template_fill

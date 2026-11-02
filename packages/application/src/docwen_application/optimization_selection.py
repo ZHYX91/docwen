@@ -60,6 +60,7 @@ def select_optimizations(
     target: str = "md",
     configured_order: tuple[str, ...] = (),
     disabled: frozenset[str] = frozenset(),
+    interface_locale: str | None = None,
 ) -> tuple[OptimizationSelection, ...]:
     """Require a usable plan for every input; intersect actual route options.
 
@@ -74,6 +75,8 @@ def select_optimizations(
     for resource_id in ordered_ids:
         resource = by_id.get(resource_id)
         if resource is None or resource_id in disabled or not resource.available:
+            continue
+        if interface_locale is not None and interface_locale not in resource.applicable_locales:
             continue
         if sources:
             matched = tuple(_binding_for_source(catalog, resource, source, target) for source in sources)

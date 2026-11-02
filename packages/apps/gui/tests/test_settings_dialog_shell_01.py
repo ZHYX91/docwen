@@ -5,6 +5,7 @@ from __future__ import annotations
 from ._settings_dialog_shell_support import (
     pytest,
 )
+from ._settings_dialog_shell_support import synthetic_navigation_resources as synthetic_navigation_resources
 
 pytestmark = pytest.mark.gui
 

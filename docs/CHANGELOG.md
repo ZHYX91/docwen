@@ -17,6 +17,10 @@
 - 演示文稿转换保留字面文本，标题占位符只输出一次，内容相同的独立文本框继续保留。
 - Localize template format hints without translating user names, and update twelve guides to the current output rules and parsing/generation settings.
 - 模板格式提示跟随界面语言，用户名称保持原样；十二种语言指南同步当前输出规则及解析、生成设置入口。
+- Show specialized GUI optimizations and settings only for their declared interface languages and available input routes. The built-in Chinese official-document and invoice optimizations apply only to Simplified Chinese; other interfaces retain saved defaults without applying them. Explicit CLI and Machine requests remain available.
+- GUI 专项优化及设置页按声明的界面语言和可用输入路线显示；现有公文、中文发票优化仅适用于简体中文，其他界面保留已存默认但不应用。CLI 与 Machine 显式请求不受此界面筛选限制。
+- Move the general heading-number text and review-comment controls to Incoming text, preserve their saved settings, and refresh twelve READMEs with matching document/Markdown screenshots and supported Word input formats.
+- 将通用标题序号文本及批注开关移到“传入文本”，保留已有设置；十二种语言 README 更新同尺寸的文档／Markdown 截图及 Word 输入格式说明。
 
 ## 0.21.2
 
