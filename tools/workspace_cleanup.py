@@ -302,6 +302,57 @@ def _resolve_reparse_target(path: Path) -> Path:
         raise HousekeepingError(f"unresolved_reparse_target:{path}:{error}") from error
 
 
+def _owned_dangling_link(path: Path, metadata: os.stat_result, lease: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Recognize a missing internal Windows link target without resolving it.
+
+    Only known symlink/junction tags in a dead, terminal owned run qualify.
+    Existing targets and other reparse chains retain the ordinary strict policy.
+    """
+    tag = getattr(metadata, "st_reparse_tag", 0)
+    if os.name != "nt" or tag not in {0xA000000C, 0xA0000003} or lease is None:
+        return None
+    if lease.get("state") not in SUCCESS_STATES | FAILURE_STATES | {"retained-manual"}:
+        return None
+    if _lease_process_alive(lease):
+        raise HousekeepingError(f"lease_process_alive:{path}:{lease.get('pid')}")
+    raw = os.readlink(_windows_extended_path(path))
+    target_path = _logical_path(raw)
+    if raw.startswith("\\\\?\\") and (not target_path.is_absolute() or len(target_path.drive) != 2):
+        return None
+    if ".." in target_path.parts or (target_path.drive and not target_path.is_absolute()):
+        return None
+    target_parts = target_path.parts[1:] if target_path.anchor else target_path.parts
+    if any(":" in part for part in target_parts):
+        return None
+    target = _absolute(path.parent / target_path)
+    owned_root = _absolute(Path(str(lease["root"])))
+    if not _is_within(target, owned_root):
+        return None
+    # Inspect lexical components with lstat only. Never follow a missing target,
+    # another junction/symlink, or an unknown device/guest namespace.
+    current = owned_root
+    missing = False
+    for part in target.relative_to(owned_root).parts:
+        current /= part
+        try:
+            info = os.lstat(_windows_extended_path(current))
+        except FileNotFoundError:
+            missing = True
+            break
+        if _is_link_or_reparse(info) or not stat.S_ISDIR(info.st_mode):
+            return None
+    if not missing:
+        return None
+    after = os.lstat(_windows_extended_path(path))
+    fields = ("st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns", "st_reparse_tag")
+    if (
+        any(getattr(metadata, field) != getattr(after, field) for field in fields)
+        or os.readlink(_windows_extended_path(path)) != raw
+    ):
+        raise HousekeepingError(f"target_changed_during_snapshot:{path}")
+    return {"target": str(target), "rawTarget": raw, "tag": tag, "dangling": True}
+
+
 def _snapshot_tree(root: Path) -> dict[str, Any]:
     absolute_root = _absolute(root)
     root_metadata = os.lstat(_windows_extended_path(absolute_root))
@@ -313,9 +364,10 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
     file_count = 0
     directory_count = 1
     latest_mtime_ns = root_metadata.st_mtime_ns
-    reparse_points: list[dict[str, str]] = []
+    reparse_points: list[dict[str, Any]] = []
     lease_marker_paths: list[Path] = []
     lease_roots: list[Path] = []
+    owned_runs: dict[Path, dict[str, Any]] = {}
 
     def record(kind: str, relative: str, metadata: os.stat_result, extra: str = "") -> None:
         nonlocal latest_mtime_ns
@@ -346,6 +398,9 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
         onerror=_raise_walk_error,
     ):
         current_path = _logical_path(current)
+        owned_run = next(
+            (lease for lease_root, lease in owned_runs.items() if _is_within(current_path, lease_root)), None
+        )
         inside_owned_run = any(
             lease_root == current_path or lease_root in current_path.parents for lease_root in lease_roots
         )
@@ -354,7 +409,8 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
             marker_metadata = os.lstat(_windows_extended_path(marker))
             if _is_link_or_reparse(marker_metadata) or not stat.S_ISREG(marker_metadata.st_mode):
                 raise HousekeepingError(f"unsafe_lease_marker:{marker}")
-            _snapshot_lease(marker, root=absolute_root)
+            owned_run = _snapshot_lease(marker, root=absolute_root)
+            owned_runs[current_path] = owned_run
             inside_owned_run = True
         if not inside_owned_run:
             # A grouping directory can contain recovery evidence even when a
@@ -369,11 +425,13 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
             metadata = os.lstat(_windows_extended_path(child))
             relative = str(child.relative_to(absolute_root))
             if _is_link_or_reparse(metadata):
-                target = _resolve_reparse_target(child)
+                dangling = _owned_dangling_link(child, metadata, owned_run)
+                target = Path(dangling["target"]) if dangling else _resolve_reparse_target(child)
                 if not _is_within(target, absolute_root):
                     raise HousekeepingError(f"reparse_target_outside_target:{child}:{target}")
-                reparse_points.append({"path": relative, "target": str(target)})
-                record("reparse-directory", relative, metadata, str(target))
+                reparse_points.append({"path": relative, "target": str(target), **(dangling or {})})
+                extra = _canonical_json(dangling).decode("utf-8") if dangling else str(target)
+                record("reparse-directory", relative, metadata, extra)
                 continue
             if not stat.S_ISDIR(metadata.st_mode):
                 raise HousekeepingError(f"unexpected_directory_entry:{child}")
@@ -386,11 +444,13 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
             metadata = os.lstat(_windows_extended_path(child))
             relative = str(child.relative_to(absolute_root))
             if _is_link_or_reparse(metadata):
-                target = _resolve_reparse_target(child)
+                dangling = _owned_dangling_link(child, metadata, owned_run)
+                target = Path(dangling["target"]) if dangling else _resolve_reparse_target(child)
                 if not _is_within(target, absolute_root):
                     raise HousekeepingError(f"reparse_target_outside_target:{child}:{target}")
-                reparse_points.append({"path": relative, "target": str(target)})
-                record("reparse-file", relative, metadata, str(target))
+                reparse_points.append({"path": relative, "target": str(target), **(dangling or {})})
+                extra = _canonical_json(dangling).decode("utf-8") if dangling else str(target)
+                record("reparse-file", relative, metadata, extra)
                 continue
             if not stat.S_ISREG(metadata.st_mode):
                 raise HousekeepingError(f"unsupported_special_file:{child}")
