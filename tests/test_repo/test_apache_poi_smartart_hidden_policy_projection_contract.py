@@ -80,7 +80,8 @@ def test_current_enhancement_is_exact_and_preserves_prior_artifacts() -> None:
     regression = (ROOT / current["regression"]).read_text(encoding="utf-8")
     assert "def _extract_smartart_texts(" in production
     assert 'value in {"0", "false", "off", "no"}' in production
-    assert 'lines.extend(f"- {text}" for text in smartart_texts)' in production
+    # The linked behavioral regression checks bullet order and literal escaping;
+    # this historical evidence contract does not pin the emission expression.
     assert "test_process_slide_extracts_smartart_nodes_in_relationship_order" in regression
     assert "test_parse_pptx_includes_hidden_slide_content_and_counts_policy" in regression
 

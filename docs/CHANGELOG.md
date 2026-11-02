@@ -5,6 +5,8 @@
 
 ## 0.21.3 (2026-11-02)
 
+- Update the OFD dependency pyasn1 to 0.6.5 for four upstream ASN.1 decoding CPU denial-of-service fixes, including paths used to extract OFD seal images.
+- OFD 依赖 pyasn1 更新为 0.6.5，纳入上游四项 ASN.1 解码 CPU 拒绝服务修复，覆盖 OFD 签章图像提取所用的解码路径。
 - Deliver complete Machine outcomes with more than 64 diagnostics; check the transport byte limit before completion and report an oversized response explicitly without suggesting an automatic retry.
 - Machine 接口完整交付超过 64 条诊断的任务结果；完成通知前检查传输字节上限，超限时明确说明结果无法交付及输出可能已存在。
 - Preserve non-finite-looking spreadsheet text during cell merges, reject numeric overflow, and avoid expanding sparse worksheets into blank rectangles.
