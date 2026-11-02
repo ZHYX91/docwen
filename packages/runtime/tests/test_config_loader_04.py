@@ -37,6 +37,8 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "conversion.md_to_docx.heading_merge_mode",
         "conversion.md_to_docx.heading_merge_punctuation",
         "template_fill.list_separator",
+        "template_fill.gongwen_numbering_text",
+        "template_fill.gongwen_numbering_comments",
         "document.style.table.md_to_docx.table_style_mode",
         "document.style.table.md_to_docx.builtin_style_key",
         "document.style.table.md_to_docx.custom_style_name",
@@ -158,8 +160,6 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
     assert gongwen_plan.files == ()
     assert gongwen_plan.dotted_keys == (
         "template_fill.gongwen_fields_enabled",
-        "template_fill.gongwen_numbering_comments",
-        "template_fill.gongwen_numbering_text",
         "template_fill.attachment_alignment",
     )
     assert gongwen_plan.conditional_dotted_keys == (("document.to_md_optimization", "gongwen"),)
