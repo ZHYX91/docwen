@@ -8,17 +8,38 @@ from docx.oxml.ns import qn
 
 from docwen_core.docx_parsing.numbering_index import NumberingIndex
 
+# Legacy left/right and newer start/end describe the same logical edges:
+# left/start is the leading edge even in RTL (ECMA-376 Part 4, 2.3.1.12).
+# Keep these aliases together; do not swap them based on paragraph bidi.
+_INDENT_DIMENSIONS = (
+    frozenset(qn(f"w:{name}") for name in ("left", "leftChars", "start", "startChars")),
+    frozenset(qn(f"w:{name}") for name in ("right", "rightChars", "end", "endChars")),
+    frozenset(qn(f"w:{name}") for name in ("firstLine", "firstLineChars", "hanging", "hangingChars")),
+)
+
+
+def _inherit_indent(target: dict[str, str], source: Any) -> None:
+    """Fill missing dimensions without mixing mutually exclusive representations.
+
+    Keep all attributes from the winning layer together, so Word can apply its
+    character/twip and first-line/hanging precedence within that layer.
+    """
+    occupied = set(target)
+    for key, value in source.items():
+        dimension = next((group for group in _INDENT_DIMENSIONS if key in group), {key})
+        if not occupied.intersection(dimension):
+            target[key] = value
+
 
 def _style_indent(style: Any) -> dict[str, str]:
-    """Collect indentation declared by a style chain, nearest style first."""
+    """Collect indentation dimensions from the nearest style declaring each one."""
     collected: dict[str, str] = {}
     seen: set[str] = set()
     while style is not None and style.style_id not in seen:
         seen.add(style.style_id)
         indent = style.element.find(f"{qn('w:pPr')}/{qn('w:ind')}")
         if indent is not None:
-            for key, value in indent.attrib.items():
-                collected.setdefault(key, value)
+            _inherit_indent(collected, indent.attrib)
         style = style.base_style
     return collected
 
@@ -26,11 +47,9 @@ def _style_indent(style: Any) -> dict[str, str]:
 def suppress_heading_numbering(document: Any, paragraph: Any) -> None:
     """Disable duplicate labels without dropping inherited indentation.
 
-    A numPr paragraph takes its indentation from the numbering level and stops
-    using the style's own indent. Materialize the effective indentation on the
-    new paragraph, never on a shared template style: first from the resolved
-    numbering level, otherwise from the style chain. Explicit paragraph
-    indentation wins.
+    Materialize each indentation dimension on the new paragraph, never on a
+    shared template style. Explicit paragraph values win, followed by the nearest
+    style declaration, then the resolved numbering level for missing dimensions.
     """
     style = paragraph.style
     try:
@@ -38,7 +57,10 @@ def suppress_heading_numbering(document: Any, paragraph: Any) -> None:
     except (ValueError, TypeError):
         # A malformed unused template definition must not block conversion.
         level = None
-    applied_from_numbering = False
+    properties = paragraph._p.get_or_add_pPr()
+    direct = properties.find(qn("w:ind"))
+    effective = dict(direct.attrib) if direct is not None else {}
+    _inherit_indent(effective, _style_indent(style))
     if level is not None:
         root = document.part.numbering_part.element
         definitions = root.findall(qn("w:abstractNum"))
@@ -58,38 +80,11 @@ def suppress_heading_numbering(document: Any, paragraph: Any) -> None:
                     break
         indent = native_level.find(f"{qn('w:pPr')}/{qn('w:ind')}") if native_level is not None else None
         if indent is not None:
-            inherited: set[str] = set()
-            seen: set[str] = set()
-            while style is not None and style.style_id not in seen:
-                seen.add(style.style_id)
-                style_indent = style.element.find(f"{qn('w:pPr')}/{qn('w:ind')}")
-                if style_indent is not None:
-                    inherited.update(style_indent.attrib)
-                style = style.base_style
-            direct = paragraph._p.get_or_add_pPr().get_or_add_ind()
-            inherited.update(direct.attrib)
-            # The alternative OOXML representations of an indentation dimension
-            # must not override an explicit value from a template style.
-            groups = (
-                {qn(f"w:{name}") for name in ("left", "leftChars", "start", "startChars")},
-                {qn(f"w:{name}") for name in ("right", "rightChars", "end", "endChars")},
-                {qn(f"w:{name}") for name in ("firstLine", "firstLineChars", "hanging", "hangingChars")},
-            )
-            for key, value in indent.attrib.items():
-                group = next((group for group in groups if key in group), {key})
-                if not inherited.intersection(group):
-                    direct.set(key, value)
-                    applied_from_numbering = True
-    if not applied_from_numbering:
-        # No numbering definition supplies the indent (the shipped template has no
-        # numbering part at all). Copy the style indent onto the paragraph so the
-        # numPr below cannot drop it in Word.
-        style_indent = _style_indent(style)
-        if style_indent:
-            direct = paragraph._p.get_or_add_pPr().get_or_add_ind()
-            for key, value in style_indent.items():
-                if key not in direct.attrib:
-                    direct.set(key, value)
+            _inherit_indent(effective, indent.attrib)
+    if effective:
+        direct = properties.get_or_add_ind()
+        for key, value in effective.items():
+            direct.set(key, value)
     properties = paragraph._p.get_or_add_pPr().get_or_add_numPr()
     properties.get_or_add_ilvl().val = 0
     properties.get_or_add_numId().val = 0

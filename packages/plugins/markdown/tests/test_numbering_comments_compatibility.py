@@ -100,7 +100,7 @@ def test_numbering_indent_override_and_explicit_style_indent_are_preserved():
     suppress_heading_numbering(document, paragraph)
     actual = paragraph._p.find(f"{qn('w:pPr')}/{qn('w:ind')}")
     assert actual is not None
-    assert actual.get(qn("w:left")) is None  # continues inheriting explicit style value
+    assert actual.get(qn("w:left")) == "1440"  # materializes the explicit style value
     assert actual.get(qn("w:hangingChars")) == "200"
     assert _paragraph_num_id(paragraph) == "0"
 
