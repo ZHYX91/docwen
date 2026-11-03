@@ -3,6 +3,17 @@
 - 本文档只记录版本演进和对外可见变更，不作为当前功能边界、架构约束或规范条款的事实源。
 - 长期有效的项目说明以 README 体系为准，设计与维护边界以 `docs/architecture.md` 为准，强约束规则以 `docs/specs/` 为准。
 
+## Unreleased / 未发布
+
+- Hide start and completion lifecycle events from activity details, keep actionable notices, and label warnings consistently in the interface language; each activity record now selects its own primary output instead of inheriting the previous selection.
+- 活动详情不再显示开始、完成类生命周期事件，保留可操作提示，警告标签统一跟随界面语言；每条活动记录默认选中自己的主产物，不再沿用上一条的选择。
+- Make the heading output mode the single authority: explain it in the info tooltip, remove the redundant text override checkbox, and migrate conflicting saved preferences once without changing the historical actual output.
+- 标题输出方式成为唯一开关：说明移入信息提示，移除重复的文本覆盖选项；冲突的已存设置只迁移一次，历史实际输出保持不变。
+- Keep inherited numbering indentation when duplicate Word labels are suppressed in text mode, anchor review comments to the generated number or the first visible heading character, and control comments with an independent setting without touching template numbering or styles.
+- 文本模式抑制重复 Word 序号时保留继承的缩进；审查批注锚定新序号（文本模式）或首个可见标题字符（原生模式），由独立开关控制，不改动模板编号与样式。
+- Add the default-off `document.export_numbering_markers` setting (request option `export_numbering_markers`) to wrap newly generated DOCX-to-Markdown heading numbers in paired U+2060 markers that Number Suite can recognize, while protecting incomplete markers and never repeating existing numbering.
+- 新增默认关闭的 `document.export_numbering_markers` 设置（请求选项 `export_numbering_markers`），为 DOCX 转 Markdown 新生成的标题序号加上成对的 U+2060 标记供 Number Suite 识别；不完整标记保持保护，既有编号不重复添加。
+
 ## 0.21.3 (2026-11-02)
 
 - Update the OFD dependency pyasn1 to 0.6.5 for four upstream ASN.1 decoding CPU denial-of-service fixes, including paths used to extract OFD seal images.
