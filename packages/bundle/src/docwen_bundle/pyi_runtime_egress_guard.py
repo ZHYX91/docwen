@@ -7,9 +7,22 @@ then import only the Runtime-owned guard implementation.
 
 from __future__ import annotations
 
+import os
 import sys
 
+# Native dependencies must never precede this hook, even in frozen helpers.
+_early_native_imports = sorted(name for name in sys.modules if name.startswith(("onnxruntime", "rapidocr_onnxruntime")))
+if _early_native_imports:
+    raise RuntimeError(f"dependency_egress_guard_started_too_late:{_early_native_imports}")
+
+# Run before every other hook, including in frozen multiprocessing helpers.
+# This native opt-out is independent of the Python dependency egress guard.
+if sys.platform == "linux":
+    os.environ["ORT_DISABLE_TELEMETRY"] = "1"
+
 _FORBIDDEN_EARLY_IMPORT_PREFIXES = (
+    "onnxruntime",
+    "rapidocr_onnxruntime",
     "PySide6",
     "qfluentwidgets",
     "docwen_application",

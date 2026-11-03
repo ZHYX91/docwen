@@ -11,7 +11,12 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import onnxruntime
+
+from docwen_core._telemetry import ensure_onnxruntime_telemetry_disabled
+
+ensure_onnxruntime_telemetry_disabled()
+# Keep the native import below the opt-out, not in the sorted import block.
+import onnxruntime  # noqa: E402
 
 _HEIGHT, _WIDTH = 800, 608
 _LOCK = threading.Lock()

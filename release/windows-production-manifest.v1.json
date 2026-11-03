@@ -244,7 +244,7 @@
     },
     "lock": {
       "path": "uv.lock",
-      "sha256": "2fc24cdcdc9d1ea7588f6ad6c73fe6e32ac406f3287c9fe549cb806029b24fe2"
+      "sha256": "93b92f1f2e50663f823cf5103f823030eda36960b17c42b6767baf58be403157"
     },
     "pyinstallerVersion": "6.16.0"
   },

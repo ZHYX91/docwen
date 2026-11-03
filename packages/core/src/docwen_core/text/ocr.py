@@ -14,6 +14,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from docwen_core._telemetry import ensure_onnxruntime_telemetry_disabled
 from docwen_core.formats.categories import CATEGORY_IMAGE, get_category
 from docwen_core.text import OCR_LANGUAGE_AUTO, OCR_LANGUAGE_CHINESE, OCR_LANGUAGE_MODELS, resolve_ocr_language
 
@@ -147,6 +148,7 @@ _ocr_lock = threading.Lock()
 
 def _configure_onnxruntime_logging() -> None:
     """Keep native inference diagnostics off protocol stderr unless they are errors."""
+    ensure_onnxruntime_telemetry_disabled()
     try:
         import onnxruntime
     except ImportError:
@@ -191,6 +193,9 @@ def _get_ocr_slot(
             return _ocr_instances[cache_key]
 
         try:
+            # Reassert before the lazy native import if an embedding caller
+            # changed the environment after importing docwen_core.
+            ensure_onnxruntime_telemetry_disabled()
             from rapidocr_onnxruntime import RapidOCR
 
             _configure_onnxruntime_logging()
