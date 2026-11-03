@@ -5,8 +5,10 @@ list_separator = ", "
 # Format Chinese official-document fields in Word templates.
 gongwen_fields_enabled = true
 
-# Apply to this conversion's new heading numbers without enabling numbering.
+# Legacy compatibility input for one-time heading-renderer migration only.
+# New conversions use text.heading_numbering_render_mode as the sole authority.
 gongwen_numbering_text = true
+# Review newly generated numbers in either text or native mode, without enabling numbering.
 gongwen_numbering_comments = true
 
 # Attachment-name alignment: spaces or a tab stop, with a hanging indent.

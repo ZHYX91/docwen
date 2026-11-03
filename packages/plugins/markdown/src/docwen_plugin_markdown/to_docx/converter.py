@@ -115,7 +115,11 @@ from docwen_plugin_markdown.to_docx.notes import (
     prepare_note_context_for_document,
     write_notes_to_docx,
 )
-from docwen_plugin_markdown.to_docx.numbering_comments import NumberingProvenance, annotate_numbering_prefixes
+from docwen_plugin_markdown.to_docx.numbering_comments import (
+    NumberingProvenance,
+    annotate_native_numbering,
+    annotate_numbering_prefixes,
+)
 from docwen_plugin_markdown.yaml_links import YamlLinkProjection
 from docwen_plugin_markdown.yaml_processor import (
     TITLE_PLACEHOLDER_ALIASES,
@@ -658,12 +662,8 @@ class MdToDocxConverter:
             scheme_config: dict[str, dict[str, str]] | None = None
             supported_heading_levels: set[int] | None = None
 
-            numbering_text = bool(_config_value(context.config, "template_fill.gongwen_numbering_text", True))
-            numbering_comments = numbering_text and bool(
-                _config_value(context.config, "template_fill.gongwen_numbering_comments", True)
-            )
-            if numbering_text:
-                render_mode = "text"
+            numbering_text = render_mode == "text"
+            numbering_comments = bool(_config_value(context.config, "template_fill.gongwen_numbering_comments", True))
             numbering_provenance = NumberingProvenance(content) if numbering_text else None
             added_prefixes: list[str] = []
             unanchored_number_comments = 0
@@ -884,10 +884,12 @@ class MdToDocxConverter:
                 raw_ast = parse_markdown_text(
                     md_body, auto_link_bare_url=False, extensions=extensions, consume_initial_bom=False
                 )
-                if added_prefixes:
+                if numbering_text:
                     unanchored_number_comments += annotate_numbering_prefixes(
-                        raw_ast, added_prefixes, comments=numbering_comments, text_numbering=numbering_text
+                        raw_ast, added_prefixes, comments=numbering_comments, text_numbering=add_num
                     )
+                if numbering_comments and word_native_translation is not None:
+                    annotate_native_numbering(raw_ast, supported_heading_levels or set())
                 cancellable.check()
                 try:
                     raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)

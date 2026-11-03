@@ -4,10 +4,17 @@ from __future__ import annotations
 
 import re
 import secrets
+import unicodedata
+from copy import deepcopy
 from typing import Any
+
+from docx.oxml.ns import qn
+from docx.text.run import Run
 
 from docwen_core.docx_comments import append_docx_comment
 from docwen_core.links import markdown_heading_ranges
+from docwen_core.text.heading_numbering import marked_heading_prefix
+from docwen_plugin_markdown.renderer_inlines import serialize_inlines_to_markdown
 
 NUMBERING_REVIEW_TEXT = "此序号由软件自动添加，请核对标题级别及编号是否正确。"
 
@@ -94,6 +101,13 @@ def annotate_numbering_prefixes(
                 continue
             if item.get("type") == "heading":
                 headings.append(item)
+                # A preserved provenance label is literal numbering too, but
+                # it is not newly inserted and must not receive a review.
+                if (
+                    text_numbering
+                    and marked_heading_prefix(serialize_inlines_to_markdown(item.get("children", []))) is not None
+                ):
+                    item["_docwen_text_numbering"] = True
             else:
                 visit(item.get("children", []))
 
@@ -116,3 +130,75 @@ def annotate_numbering_prefixes(
             continue
         node["_docwen_added_number"] = number
     return skipped
+
+
+def annotate_native_numbering(nodes: list[dict[str, Any]], supported_levels: set[int]) -> None:
+    """Mark rendered headings receiving this request's native numbering."""
+    for node in nodes:
+        if node.get("type") == "footnotes":
+            continue
+        if node.get("type") == "heading":
+            if node.get("attrs", {}).get("level", 1) in supported_levels:
+                node["_docwen_native_number_review"] = True
+        else:
+            annotate_native_numbering(node.get("children", []), supported_levels)
+
+
+def add_native_numbering_review(document: Any, paragraph: Any) -> bool:
+    """Anchor native-number reviews to the first visible title character.
+
+    Word-generated labels are not runs. Split only the selected text node,
+    retaining hyperlinks, run formatting and other run children unchanged.
+    Call before merging body text so an empty heading cannot borrow its anchor.
+    """
+    for text in paragraph._p.iter(qn("w:t")):
+        value = text.text or ""
+        index = next(
+            (i for i, char in enumerate(value) if not char.isspace() and unicodedata.category(char) != "Cf"), None
+        )
+        if index is None:
+            continue
+        run = text.getparent()
+        if run is None or run.tag != qn("w:r"):
+            continue
+        if _run_is_hidden(Run(run, paragraph), paragraph):
+            continue
+        suffix = deepcopy(run)
+        anchor = deepcopy(run)
+        position = list(run).index(text)
+        for child in list(anchor):
+            if child.tag != qn("w:rPr"):
+                anchor.remove(child)
+        anchor_text = deepcopy(text)
+        anchor_text.text = value[index]
+        anchor.append(anchor_text)
+        for child in list(suffix)[:position]:
+            if child.tag != qn("w:rPr"):
+                suffix.remove(child)
+        suffix_text = suffix.find(qn("w:t"))
+        assert suffix_text is not None
+        suffix_text.text = value[index + 1 :]
+        suffix_text.set(qn("xml:space"), "preserve")
+        for child in list(run)[position + 1 :]:
+            run.remove(child)
+        text.text = value[:index]
+        text.set(qn("xml:space"), "preserve")
+        run.addnext(anchor)
+        anchor.addnext(suffix)
+        add_numbering_review(document, Run(anchor, paragraph))
+        return True
+    return False
+
+
+def _run_is_hidden(run: Any, paragraph: Any) -> bool:
+    """Honor explicit visibility and inherited character/paragraph formatting."""
+    if run.font.hidden is not None:
+        return bool(run.font.hidden)
+    for style in (run.style, paragraph.style):
+        seen: set[str] = set()
+        while style is not None and style.style_id not in seen:
+            seen.add(style.style_id)
+            if style.font.hidden is not None:
+                return bool(style.font.hidden)
+            style = style.base_style
+    return False

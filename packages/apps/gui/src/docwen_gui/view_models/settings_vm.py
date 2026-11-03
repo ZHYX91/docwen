@@ -134,6 +134,7 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("conversion_defaults", "document", "to_md_table_merge_export_strategy"),
         ("conversion_defaults", "document", "to_md_remove_numbering"),
         ("conversion_defaults", "document", "to_md_add_numbering"),
+        ("conversion_defaults", "document", "export_numbering_markers"),
         ("conversion_defaults", "document", "to_md_default_scheme"),
     ),
     "spreadsheet": (
@@ -242,8 +243,6 @@ def _normalize_priority(values: object, allowed_backends: tuple[str, ...]) -> li
 
 
 def _normalize_settings_config(config: SettingsConfig) -> SettingsConfig:
-    if not config.text.gongwen_numbering_text:
-        config.text.gongwen_numbering_comments = False
     for key, allowed_backends in _SPECIAL_CONVERSION_ALLOWED_BACKENDS.items():
         setattr(
             config.software_priority,
@@ -465,13 +464,6 @@ class SettingsViewModel(QObject):
             if not hasattr(section_obj, key):
                 return
             value = _normalize_field_value(section, key, value)
-            comments_cleared = False
-            if section == SECTION_TEXT:
-                if key == "gongwen_numbering_comments" and not self._config.text.gongwen_numbering_text:
-                    value = False
-                elif key == "gongwen_numbering_text" and value is False:
-                    comments_cleared = self._config.text.gongwen_numbering_comments
-                    self._config.text.gongwen_numbering_comments = False
             old = getattr(section_obj, key)
             if old == value:
                 return
@@ -479,8 +471,6 @@ class SettingsViewModel(QObject):
             self._config.mark_dirty(section)
             dirty = self._recompute_dirty()
         self.config_changed.emit(section, key, value)
-        if comments_cleared:
-            self.config_changed.emit(section, "gongwen_numbering_comments", False)
         if dirty != self._is_dirty:
             self._is_dirty = dirty
             self.dirty_state_changed.emit(dirty)
@@ -1561,6 +1551,7 @@ class SettingsViewModel(QObject):
                 "to_md_enable_ocr",
                 "to_md_remove_numbering",
                 "to_md_add_numbering",
+                "export_numbering_markers",
                 "to_md_default_scheme",
                 "to_md_optimization",
                 "to_md_table_merge_export_strategy",

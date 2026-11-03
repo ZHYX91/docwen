@@ -616,8 +616,6 @@ def _validate_template_fill(data: dict[str, Any]) -> None:
     _validate_optional_bool(data, "gongwen_fields_enabled", label="template_fill")
     _validate_optional_bool(data, "gongwen_numbering_comments", label="template_fill")
     _validate_optional_bool(data, "gongwen_numbering_text", label="template_fill")
-    if data.get("gongwen_numbering_text", True) is False:
-        data["gongwen_numbering_comments"] = False
     _canonical_choice(
         data,
         "attachment_alignment",
@@ -634,6 +632,24 @@ def _validate_to_md_optimization(data: dict[str, Any]) -> None:
         raise ConfigSemanticError("to_md_optimization must be 'none' or a non-empty exact resource ID")
 
 
+def _validate_document(data: dict[str, Any]) -> None:
+    _validate_to_md_optimization(data)
+    _validate_optional_bool(data, "export_numbering_markers", label="document")
+
+
+def _validate_text(data: dict[str, Any]) -> None:
+    _canonical_choice(
+        data,
+        "heading_numbering_render_mode",
+        frozenset({"text", "word_native"}),
+        label="text.heading_numbering_render_mode",
+    )
+    if "heading_numbering_migration_version" in data:
+        value = data["heading_numbering_migration_version"]
+        if type(value) is not int or value != 1:
+            raise ConfigSemanticError("text.heading_numbering_migration_version must be 1")
+
+
 def _validate_layout(data: dict[str, Any]) -> None:
     _validate_to_md_optimization(data)
     _canonical_choice(data, "split_mode", frozenset({"every_page", "odd_even", "custom"}), label="layout.split_mode")
@@ -642,7 +658,8 @@ def _validate_layout(data: dict[str, Any]) -> None:
 
 
 _EXPLICIT_VALIDATORS = {
-    "document.toml": _validate_to_md_optimization,
+    "document.toml": _validate_document,
+    "text.toml": _validate_text,
     "image.toml": _validate_to_md_optimization,
     "layout.toml": _validate_layout,
     "ocr.toml": _validate_ocr,

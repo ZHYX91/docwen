@@ -346,10 +346,8 @@ batch_mode = "Lote"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "Usar texto para os novos números de títulos"
-numbering_text_help = "Escreve como texto os números de títulos adicionados pelo esquema selecionado, substituindo o modo de saída acima nesta conversão. Não ativa a numeração nem altera o modo salvo ou os números existentes do modelo. Ativado por padrão."
-numbering_comments_label = "Comentar os novos números de títulos em texto"
-numbering_comments_help = "Comenta apenas os números de títulos em texto realmente adicionados, nunca os já digitados manualmente. Ativado por padrão. Desativar a numeração de texto desmarca e desabilita esta opção; após reativá-la, você pode selecioná-la novamente. Números Markdown personalizados que não possam ser localizados com precisão são ignorados com um aviso."
+numbering_comments_label = "Comentar novos números de títulos"
+numbering_comments_help = "Aplica-se apenas aos números recém-gerados. O modo texto marca o número; o modo nativo DOCX marca o primeiro caractere visível do título. Números manuais existentes não são marcados."
 output_format = "Tipo de modelo preferido"
 output_format_hint = "Ao adicionar Markdown, os modelos desse tipo são priorizados. Esta configuração, sozinha, não altera o formato de saída da conversão."
 # MD转文档序号设置
@@ -361,7 +359,6 @@ add_numbering_tooltip = "Adicionar numeração hierárquica aos títulos do DOCX
 scheme_label = "Esquema:"
 scheme_tooltip = "Escolher o esquema de numeração dos títulos"
 render_mode_label = "Modo de saída da numeração dos títulos:"
-render_mode_tooltip = "Escolher se os números dos títulos serão gravados no texto ou gerados pela numeração nativa do DOCX"
 render_mode_text = "Texto"
 render_mode_word_native = "Nativa do DOCX"
 render_mode_hint = "Texto = gravar os números nos títulos; nativa do DOCX = usar listas de vários níveis do DOCX"
@@ -472,6 +469,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "Marcar novos números com caracteres de largura zero"
+markers_tooltip = "Envolve os novos números em pares U+2060 compatíveis com Number Suite. Desativado por padrão; não altera números existentes nem a recuperação resolved-v4."
 section = "Numeração (DOCX para MD)"
 remove = "Remover numeração antiga"
 remove_tooltip = "Remove numeração existente."

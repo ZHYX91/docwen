@@ -113,6 +113,7 @@ def test_current_documentation_inventory_is_complete() -> None:
     assert {path.name for path in (DOCS / "user-guides").glob("*.md")} == set(LOCALIZED_READMES) | {
         "macos.md",
         "table-merge.md",
+        "heading-numbering.md",
     }
     assert {path.name for path in (DOCS / "assets" / "screenshots").glob("*.png")} == SCREENSHOTS
 

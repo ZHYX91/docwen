@@ -201,6 +201,7 @@ class ExecutionPresenter(QObject):
             self._info_area_vm.add_message(
                 _t("info_area.history_completed", name=context.get("display_name", Path(file_path).name)),
                 completion_tone,
+                event_kind="completed",
                 show_location=bool(output_path),
                 file_path=output_path or file_path,
                 navigate_file_path=output_path or "",
@@ -493,6 +494,7 @@ class ExecutionPresenter(QObject):
                 cancelled=cancelled_count,
             ),
             tone,
+            event_kind="completed",
             show_location=bool(guide_output_path),
             file_path=guide_output_path,
             navigate_file_path=guide_output_path,

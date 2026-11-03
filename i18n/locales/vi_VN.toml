@@ -347,10 +347,8 @@ batch_mode = "Chế độ hàng loạt"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "Dùng văn bản cho số tiêu đề mới thêm"
-numbering_text_help = "Ghi số tiêu đề được thêm theo sơ đồ đã chọn dưới dạng văn bản, ưu tiên hơn chế độ xuất số ở trên trong lần chuyển đổi này. Không bật đánh số, đổi chế độ đã lưu hoặc số có sẵn trong mẫu. Mặc định bật."
-numbering_comments_label = "Thêm nhận xét cho số tiêu đề dạng văn bản mới thêm"
-numbering_comments_help = "Chỉ nhận xét số tiêu đề dạng văn bản thực sự được thêm, không đánh dấu số đã nhập thủ công. Mặc định bật. Tắt số dạng văn bản sẽ bỏ chọn và vô hiệu hóa tùy chọn này; sau khi bật lại, bạn có thể chọn nếu cần. Số Markdown tùy chỉnh không thể xác định chính xác sẽ được bỏ qua kèm cảnh báo."
+numbering_comments_label = "Thêm chú thích cho số tiêu đề mới"
+numbering_comments_help = "Chỉ áp dụng cho số mới tạo. Chế độ văn bản đánh dấu số; chế độ DOCX gốc đánh dấu ký tự hiển thị đầu tiên của tiêu đề. Không đánh dấu số đã nhập thủ công."
 output_format = "Loại mẫu ưu tiên"
 output_format_hint = "Khi thêm Markdown, ưu tiên mẫu thuộc loại này. Thiết lập này tự nó không đổi định dạng đầu ra chuyển đổi."
 # MD转文档序号设置
@@ -362,7 +360,6 @@ add_numbering_tooltip = "Thêm đánh số phân cấp cho tiêu đề trong DOC
 scheme_label = "Sơ đồ đánh số mặc định:"
 scheme_tooltip = "Chọn lược đồ đánh số cho tiêu đề"
 render_mode_label = "Chế độ xuất số tiêu đề:"
-render_mode_tooltip = "Chọn ghi số trực tiếp vào tiêu đề hay tạo bằng tính năng đánh số gốc của DOCX"
 render_mode_text = "Văn bản"
 render_mode_word_native = "Gốc của DOCX"
 render_mode_hint = "Văn bản = ghi số vào tiêu đề; gốc của DOCX = dùng danh sách đa cấp của DOCX"
@@ -473,6 +470,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "Đánh dấu số mới bằng ký tự không độ rộng"
+markers_tooltip = "Bao số tiêu đề mới bằng cặp U+2060 tương thích Number Suite. Mặc định tắt; không thay đổi số hiện có hay khôi phục resolved-v4."
 section = "Đánh số tiêu đề (Tài liệu → Markdown)"
 remove = "Mặc định xóa đánh số tiêu đề trong tài liệu"
 remove_tooltip = "Xóa đánh số tiêu đề hiện có trong tài liệu khi chuyển DOCX → MD"

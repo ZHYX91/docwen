@@ -182,10 +182,10 @@ def test_switch_off_or_numbering_off_never_comments_existing_numbers(tmp_path, e
 
 @pytest.mark.parametrize("text_enabled", [None, True, False])
 @pytest.mark.parametrize("comments_enabled", [True, False])
-def test_text_policy_overrides_only_new_native_numbers_and_enforces_comment_dependency(
+def test_render_mode_controls_native_numbers_independently_of_legacy_text_switch(
     tmp_path, text_enabled, comments_enabled
 ):
-    result, original_path, output_path = _convert(
+    result, _original_path, output_path = _convert(
         tmp_path,
         mode="word_native",
         source="# Title\n",
@@ -196,21 +196,13 @@ def test_text_policy_overrides_only_new_native_numbers_and_enforces_comment_depe
     document = Document(str(output_path))
     reviews = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]
     assert not any(item.code == "MD2DOCX-NUMBERING-COMMENTS-NATIVE" for item in result.diagnostics)
-    if text_enabled is not False:
-        assert len(reviews) == int(comments_enabled)
-        if comments_enabled:
-            assert _anchors(document)[str(reviews[0].comment_id)] == "一、"
-        heading = next(p for p in document.paragraphs if p.text == "一、Title")
-        assert _paragraph_num_id(heading) == "0"
-        original = Document(str(original_path))
-        assert _style_bytes(document, "Heading 1") == _style_bytes(original, "Heading 1")
-        with ZipFile(original_path) as before, ZipFile(output_path) as after:
-            assert before.read("word/numbering.xml") == after.read("word/numbering.xml")
-    else:
-        assert not reviews  # external inconsistent comments=true is ignored
-        assert any(p.text == "Title" for p in document.paragraphs)
-        with ZipFile(output_path) as package:
-            assert b"20000" in package.read("word/numbering.xml")
+    assert len(reviews) == int(comments_enabled)
+    if comments_enabled:
+        assert _anchors(document)[str(reviews[0].comment_id)] == "T"
+    heading = next(p for p in document.paragraphs if p.text == "Title")
+    assert _paragraph_num_id(heading) is None
+    with ZipFile(output_path) as package:
+        assert b"20000" in package.read("word/numbering.xml")
 
 
 def test_missing_old_comment_key_now_defaults_on_without_enabling_numbering(tmp_path):
@@ -245,7 +237,7 @@ def test_embedded_headings_cannot_consume_original_numbering_provenance(tmp_path
     (tmp_path / "sample.md").write_bytes(fixture_bytes)
     (tmp_path / "same.md").write_text("# 一、Main\n", encoding="utf-8")
     result, original_path, output_path = _convert(
-        tmp_path, source=source, mode="word_native", template_native=True, captions=captions
+        tmp_path, source=source, mode="text", template_native=True, captions=captions
     )
     document = Document(str(output_path))
     reviews = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]

@@ -108,6 +108,7 @@ class ActivityRecordsDialog(QDialog):
         set_metric(self, "setMinimumSize", 420, 360)
         self._model = model
         self._selected_key = ""
+        self._output_record_key = ""
         self._resetting = False
         self._proxy = _ActivityFilter(self)
         self._proxy.setSourceModel(model)
@@ -265,6 +266,7 @@ class ActivityRecordsDialog(QDialog):
         self.details.setPlaceholderText(
             t("activity.record_unavailable") if targeted and not target_exists else t("activity.select_record")
         )
+        same_record = bool(record and record.key == self._output_record_key)
         if record:
             self._selected_key = record.key
         text = record.details if record else ""
@@ -273,7 +275,8 @@ class ActivityRecordsDialog(QDialog):
         self.copy.setEnabled(bool(self.diagnostic_view.preview.toPlainText()))
         self.open_source.setEnabled(bool(record and record.source_path and record.source_location_available))
         self.open_output.setEnabled(bool(record and record.output_path))
-        selected_output = self.outputs.currentData()
+        selected_output = self.outputs.currentData() if same_record else record.output_path if record else None
+        self._output_record_key = record.key if record else ""
         self.outputs.blockSignals(True)
         self.outputs.clear()
         if record:
