@@ -9,12 +9,28 @@ from docx.oxml.ns import qn
 from docwen_core.docx_parsing.numbering_index import NumberingIndex
 
 
-def suppress_heading_numbering(document: Any, paragraph: Any) -> None:
-    """Disable duplicate labels without dropping the numbering-level indent.
+def _style_indent(style: Any) -> dict[str, str]:
+    """Collect indentation declared by a style chain, nearest style first."""
+    collected: dict[str, str] = {}
+    seen: set[str] = set()
+    while style is not None and style.style_id not in seen:
+        seen.add(style.style_id)
+        indent = style.element.find(f"{qn('w:pPr')}/{qn('w:ind')}")
+        if indent is not None:
+            for key, value in indent.attrib.items():
+                collected.setdefault(key, value)
+        style = style.base_style
+    return collected
 
-    A numId=0 paragraph no longer inherits its numbering definition's pPr.
-    Materialize missing indentation only on the new paragraph, never on a
-    shared template style. Explicit paragraph/style indentation wins.
+
+def suppress_heading_numbering(document: Any, paragraph: Any) -> None:
+    """Disable duplicate labels without dropping inherited indentation.
+
+    A numPr paragraph takes its indentation from the numbering level and stops
+    using the style's own indent. Materialize the effective indentation on the
+    new paragraph, never on a shared template style: first from the resolved
+    numbering level, otherwise from the style chain. Explicit paragraph
+    indentation wins.
     """
     style = paragraph.style
     try:
@@ -22,6 +38,7 @@ def suppress_heading_numbering(document: Any, paragraph: Any) -> None:
     except (ValueError, TypeError):
         # A malformed unused template definition must not block conversion.
         level = None
+    applied_from_numbering = False
     if level is not None:
         root = document.part.numbering_part.element
         definitions = root.findall(qn("w:abstractNum"))
@@ -61,6 +78,17 @@ def suppress_heading_numbering(document: Any, paragraph: Any) -> None:
             for key, value in indent.attrib.items():
                 group = next((group for group in groups if key in group), {key})
                 if not inherited.intersection(group):
+                    direct.set(key, value)
+                    applied_from_numbering = True
+    if not applied_from_numbering:
+        # No numbering definition supplies the indent (the shipped template has no
+        # numbering part at all). Copy the style indent onto the paragraph so the
+        # numPr below cannot drop it in Word.
+        style_indent = _style_indent(style)
+        if style_indent:
+            direct = paragraph._p.get_or_add_pPr().get_or_add_ind()
+            for key, value in style_indent.items():
+                if key not in direct.attrib:
                     direct.set(key, value)
     properties = paragraph._p.get_or_add_pPr().get_or_add_numPr()
     properties.get_or_add_ilvl().val = 0

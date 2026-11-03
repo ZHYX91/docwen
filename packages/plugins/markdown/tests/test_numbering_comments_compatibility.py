@@ -153,3 +153,33 @@ def test_preserved_marker_suppresses_template_number_without_new_review(tmp_path
         if comments_enabled:
             assert _anchors(output)[str(reviews[0].comment_id)] == "二、"
     assert _style_bytes(output, "Heading 1") == _style_bytes(Document(str(original_path)), "Heading 1")
+
+
+def test_text_numbering_materializes_style_indent_when_template_has_no_numbering_level(tmp_path):
+    """The shipped template keeps heading indentation on the style, not numbering."""
+    _result, _original, output_path = _convert(tmp_path, mode="text", source="# Title\n", style_indent=True)
+    output = Document(str(output_path))
+    heading = next(p for p in output.paragraphs if p.text.startswith("一、Title"))
+    indent = heading._p.find(f"{qn('w:pPr')}/{qn('w:ind')}")
+    assert indent is not None
+    assert indent.get(qn("w:firstLine")) == "632"
+    assert indent.get(qn("w:firstLineChars")) == "200"
+    assert _paragraph_num_id(heading) == "0"
+
+
+def test_merged_heading_body_keeps_style_indent_and_body_formatting(tmp_path):
+    """A merged small heading and body must keep the indent and body run format."""
+    _result, _original, output_path = _convert(
+        tmp_path,
+        mode="text",
+        source="## 子标题：\n合并正文。\n",
+        style_indent=True,
+    )
+    output = Document(str(output_path))
+    merged = next(p for p in output.paragraphs if "子标题" in p.text and "合并正文" in p.text)
+    indent = merged._p.find(f"{qn('w:pPr')}/{qn('w:ind')}")
+    assert indent is not None
+    assert indent.get(qn("w:firstLineChars")) == "200"
+    assert _paragraph_num_id(merged) == "0"
+    body = next(run for run in merged.runs if "合并正文" in run.text)
+    assert body.bold is False

@@ -43,6 +43,7 @@ def _convert(
     template_native=False,
     captions=False,
     auto_link=False,
+    style_indent=False,
 ):
     template = Document()
     template.styles.add_style("CommentReference", WD_STYLE_TYPE.CHARACTER)
@@ -83,6 +84,13 @@ def _convert(
         style = template.styles["Heading 1"]._element
         assert style is not None
         style.get_or_add_pPr().get_or_add_numPr().get_or_add_numId().val = 1
+    if style_indent:
+        for name in ("Heading 1", "Heading 2"):
+            style = template.styles[name]._element
+            assert style is not None
+            indent = style.get_or_add_pPr().get_or_add_ind()
+            indent.set(qn("w:firstLine"), "632")
+            indent.set(qn("w:firstLineChars"), "200")
     template.add_paragraph("{{正文}}")
     template_path = tmp_path / "template.docx"
     template.save(template_path)
