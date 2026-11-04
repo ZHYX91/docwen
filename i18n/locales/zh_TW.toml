@@ -72,6 +72,7 @@ example = "範例"
 
 # CLI帮助文本
 [cli.help]
+lang = "選擇已提供翻譯的命令列提示及支援此選項之任務的輸出語言；不會翻譯文件本文。OCR 設為 auto 時，也依此語言選擇辨識模型。"
 settings = "設定管理"
 settings_reset = "將設定還原為預設值"
 files = "輸入文件路徑（支持通配符，如 *.docx）"
