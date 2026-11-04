@@ -404,7 +404,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "새 번호에 너비 없는 문자 표시 추가"
-markers_tooltip = "새 제목 번호를 Number Suite 호환 U+2060 쌍으로 감쌉니다. 기본값은 꺼짐이며 기존 번호와 resolved-v4 복원은 변경하지 않습니다."
+markers_tooltip = "새 제목 번호를 보이지 않는 마커 쌍으로 감싸 Number Suite가 인식할 수 있게 합니다. 기본값은 꺼짐입니다. 기존 번호는 바꾸지 않습니다."
 section = "제목 번호(문서 → 마크다운)"
 remove = "기본으로 문서 제목 번호 제거"
 remove_tooltip = "DOCX → MD 변환 시 문서의 기존 제목 번호를 제거합니다"

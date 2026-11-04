@@ -404,7 +404,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "新しい番号にゼロ幅文字マーカーを追加"
-markers_tooltip = "新しい見出し番号を Number Suite 互換の U+2060 のペアで囲みます。既定ではオフ。既存の番号や resolved-v4 の復元は変更しません。"
+markers_tooltip = "新しい見出し番号を目に見えないマーカーのペアで囲み、Number Suite が識別できるようにします。既定ではオフです。既存の番号は変更しません。"
 section = "見出し番号付け (ドキュメントからMarkdown)"
 remove = "デフォルトで元のドキュメント見出し番号を削除"
 remove_tooltip = "DOCXをMDに変換する際、既存の見出し番号を削除します"

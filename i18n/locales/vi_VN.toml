@@ -471,7 +471,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "Đánh dấu số mới bằng ký tự không độ rộng"
-markers_tooltip = "Bao số tiêu đề mới bằng cặp U+2060 tương thích Number Suite. Mặc định tắt; không thay đổi số hiện có hay khôi phục resolved-v4."
+markers_tooltip = "Bao số tiêu đề mới bằng các cặp dấu không hiển thị để Number Suite nhận biết. Mặc định tắt. Không thay đổi số hiện có."
 section = "Đánh số tiêu đề (Tài liệu → Markdown)"
 remove = "Mặc định xóa đánh số tiêu đề trong tài liệu"
 remove_tooltip = "Xóa đánh số tiêu đề hiện có trong tài liệu khi chuyển DOCX → MD"

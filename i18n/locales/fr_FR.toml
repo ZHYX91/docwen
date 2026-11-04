@@ -467,7 +467,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "Marquer les nouveaux numéros avec des caractères sans largeur"
-markers_tooltip = "Entoure les nouveaux numéros de paires U+2060 compatibles avec Number Suite. Désactivé par défaut ; les numéros existants et la récupération resolved-v4 restent inchangés."
+markers_tooltip = "Entoure les nouveaux numéros de titres de paires de marqueurs invisibles pour que Number Suite puisse les reconnaître. Désactivé par défaut. Les numéros existants restent inchangés."
 section = "Numérotation (DOCX vers MD)"
 remove = "Supprimer l'ancienne numérotation"
 remove_tooltip = "Supprime la numérotation existante."

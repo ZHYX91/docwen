@@ -404,7 +404,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "為新增序號新增零寬字元標記"
-markers_tooltip = "以成對 U+2060 標記包裹新產生的標題序號，相容 Number Suite。預設關閉，不修改原有序號或 resolved-v4 復原行為。"
+markers_tooltip = "為新產生的標題序號加上看不見的成對標記，方便 Number Suite 識別。預設關閉，不變更既有序號。"
 section = "小標題序號設定（文件轉為Markdown）"
 remove = "默認清除原有文件小標題序號"
 remove_tooltip = "DOCX轉MD時默認清除文件中已有的標題序號"

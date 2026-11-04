@@ -471,7 +471,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "Mark new numbers with zero-width characters"
-markers_tooltip = "Wrap newly generated heading numbers in paired U+2060 markers compatible with Number Suite. Off by default. Existing numbers and resolved-v4 recovery remain unchanged."
+markers_tooltip = "Wrap newly generated heading numbers in invisible paired markers so Number Suite can recognize them. Off by default. Existing numbers are not changed."
 section = "Heading Numbering (Document to Markdown)"
 remove = "Remove original document heading numbering by default"
 remove_tooltip = "Remove existing heading numbering in document when converting DOCX to MD"

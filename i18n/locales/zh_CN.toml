@@ -471,7 +471,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "为新增序号添加零宽字符标记"
-markers_tooltip = "用成对 U+2060 标记包裹新生成的标题序号，兼容 Number Suite。默认关闭，不修改原有序号或 resolved-v4 恢复行为。"
+markers_tooltip = "为新生成的标题序号加上看不见的成对标记，便于 Number Suite 识别。默认关闭，不改变已有序号。"
 section = "小标题序号设置（文档转为Markdown）"
 remove = "默认清除原有文档小标题序号"
 remove_tooltip = "DOCX转MD时默认清除文档中已有的标题序号"

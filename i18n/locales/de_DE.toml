@@ -404,7 +404,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "Neue Nummern mit Zeichen ohne Breite markieren"
-markers_tooltip = "Neue Überschriftennummern mit U+2060-Paaren für Number Suite markieren. Standardmäßig aus; vorhandene Nummern und die resolved-v4-Wiederherstellung bleiben unverändert."
+markers_tooltip = "Neue Überschriftennummern mit unsichtbaren Markierungspaaren umgeben, damit Number Suite sie erkennen kann. Standardmäßig ausgeschaltet. Vorhandene Nummern bleiben unverändert."
 section = "Nummerierung (DOCX zu MD)"
 remove = "Alte Nummerierung entfernen"
 remove_tooltip = "Entfernt vorhandene Nummerierung."

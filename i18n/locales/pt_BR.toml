@@ -470,7 +470,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "Marcar novos números com caracteres de largura zero"
-markers_tooltip = "Envolve os novos números em pares U+2060 compatíveis com Number Suite. Desativado por padrão; não altera números existentes nem a recuperação resolved-v4."
+markers_tooltip = "Envolve os novos números de títulos em pares de marcadores invisíveis para que o Number Suite possa reconhecê-los. Desativado por padrão. Os números existentes não são alterados."
 section = "Numeração (DOCX para MD)"
 remove = "Remover numeração antiga"
 remove_tooltip = "Remove numeração existente."

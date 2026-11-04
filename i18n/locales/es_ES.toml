@@ -471,7 +471,7 @@ libreoffice = "LibreOffice"
 # 序号设置
 [settings.document.numbering]
 markers = "Marcar números nuevos con caracteres de ancho cero"
-markers_tooltip = "Rodea los nuevos números con pares U+2060 compatibles con Number Suite. Desactivado por defecto; no modifica números existentes ni la recuperación resolved-v4."
+markers_tooltip = "Rodea los nuevos números de títulos con pares de marcadores invisibles para que Number Suite pueda reconocerlos. Desactivado por defecto. No cambia los números existentes."
 section = "Numeración de encabezados (Documento → Markdown)"
 remove = "Eliminar por defecto la numeración de encabezados del documento"
 remove_tooltip = "Elimina la numeración existente al convertir DOCX → MD"

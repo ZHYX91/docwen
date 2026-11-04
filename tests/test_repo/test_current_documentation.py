@@ -463,3 +463,38 @@ def test_current_documentation_local_links_resolve() -> None:
                     unresolved.append(f"{path.relative_to(ROOT)} -> {target}")
 
     assert not unresolved, "\n".join(unresolved)
+
+
+@pytest.mark.parametrize(
+    ("readme_name", "locale"),
+    (
+        ("README.md", "en_US"),
+        ("README.zh-CN.md", "zh_CN"),
+        ("README.zh-TW.md", "zh_TW"),
+        ("README.de-DE.md", "de_DE"),
+        ("README.fr-FR.md", "fr_FR"),
+        ("README.es-ES.md", "es_ES"),
+        ("README.pt-BR.md", "pt_BR"),
+        ("README.ru-RU.md", "ru_RU"),
+        ("README.ja-JP.md", "ja_JP"),
+        ("README.ko-KR.md", "ko_KR"),
+        ("README.vi-VN.md", "vi_VN"),
+        ("README.ar.md", "ar_SA"),
+    ),
+)
+def test_heading_guide_uses_current_controls_and_plain_marker_help(readme_name: str, locale: str) -> None:
+    import tomllib
+
+    readme = ROOT / "README.md" if readme_name == "README.md" else DOCS / "user-guides" / readme_name
+    catalog = tomllib.loads((ROOT / "i18n" / "locales" / f"{locale}.toml").read_text(encoding="utf-8"))
+    text = catalog["settings"]["text"]
+    # Both renderer choices and the independent comment control belong in one
+    # explanation, rather than describing the retired text-override checkbox.
+    labels = (text["render_mode_text"], text["render_mode_word_native"], text["numbering_comments_label"])
+    paragraphs = readme.read_text(encoding="utf-8").split("\n\n")
+    assert any(all(f"**{label}**" in paragraph for label in labels) for paragraph in paragraphs), readme_name
+
+    marker_help = catalog["settings"]["document"]["numbering"]["markers_tooltip"]
+    assert "Number Suite" in marker_help
+    assert "resolved-v4" not in marker_help
+    assert "U+2060" not in marker_help
