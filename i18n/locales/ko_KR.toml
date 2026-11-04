@@ -72,6 +72,7 @@ example = "예시"
 
 # CLI帮助文本
 [cli.help]
+lang = "번역이 제공되는 CLI 메시지와 지원되는 작업 출력의 언어를 선택합니다. 문서 본문은 번역하지 않습니다. OCR이 auto 모드이면 이 언어를 기준으로 인식 모델도 선택합니다."
 settings = "설정 관리"
 settings_reset = "설정을 기본값으로 재설정"
 files = "입력 파일 경로(와일드카드 *.docx 지원)"

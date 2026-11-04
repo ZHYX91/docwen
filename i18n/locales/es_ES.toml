@@ -139,6 +139,7 @@ example = "Ejemplo"
 
 # CLI帮助文本
 [cli.help]
+lang = "Elige el idioma de los mensajes traducidos de la CLI y de la salida de las tareas compatibles. No traduce el texto del documento. El OCR en modo auto también usa esta elección para seleccionar el modelo de reconocimiento."
 settings = "Gestionar la configuración"
 settings_reset = "Restablecer la configuración predeterminada"
 files = "Ruta(s) de archivo de entrada (admite comodines como *.docx)"
