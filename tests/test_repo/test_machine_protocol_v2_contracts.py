@@ -85,7 +85,7 @@ def test_machine_protocol_v2_contract_set_is_conformant() -> None:
     summary = validator.validate_contract_set(contracts_root)
 
     assert summary.schemas == 9
-    assert summary.valid_fixtures == 20
+    assert summary.valid_fixtures == 21
     assert summary.invalid_fixtures == 73
     manifest = validator_json(contracts_root / "conformance-manifest.json")
     assert {(record["name"], record["id"], record["path"]) for record in manifest["schemas"]} == {
