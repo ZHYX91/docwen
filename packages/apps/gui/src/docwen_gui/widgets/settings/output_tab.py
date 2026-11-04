@@ -99,7 +99,7 @@ class OutputTab(BaseSettingsTab):
                 (t("settings.output.date_formats.compact", "Compact (YYYYMMDD)"), "%Y%m%d"),
                 (t("settings.output.date_formats.chinese", "Chinese (YYYY-MM-DD)"), "%Y年%m月%d日"),
             ],
-            t("settings.output.date_folder.format_label", "Date format for subfolder naming"),
+            t("settings.output.date_folder.format_tooltip", "Date format for subfolder naming"),
         )
         self.add_form_row(f3, t("settings.output.date_folder.format_label", "Date Format:"), self._date_format)
         self._date_format.currentIndexChanged.connect(
