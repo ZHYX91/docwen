@@ -378,7 +378,7 @@ section = "병합 셀 내보내기"
 desc = "Markdown 출력에서 병합 셀을 표현하는 방식을 설정합니다."
 merge_strategy_label = "병합 셀 내보내기 방식:"
 
-merge_strategy_help = "일반 Markdown에만 적용:\n채우기: 병합 기준 셀의 텍스트를 반복합니다(제목 | 제목).\n비우기: 병합으로 덮인 셀을 비웁니다(제목 | ).\n\nMarkdown 생성의 Structural Tables를 켜면 일반 문서/스프레드시트 내보내기에서 이 전략 대신 <와 ^를 사용합니다. 저장된 선택은 유지됩니다.\n공문 최적화는 독립된 표 렌더링을 사용하므로 예외입니다."
+merge_strategy_help = "일반 Markdown용:\n채우기: 병합 영역의 왼쪽 위 셀 텍스트를 반복합니다(제목 | 제목).\n비우기: 병합으로 덮인 셀을 비웁니다(제목 | ).\n\n“Markdown 생성”에서 Structural Tables를 켜면 대신 <와 ^를 사용합니다. 여기서 선택한 값은 유지됩니다.\n예외: “공문서” 최적화는 표를 별도로 처리합니다."
 structural_active = "일반 문서/스프레드시트 내보내기: Structural Tables 켜짐. 채우기/비우기는 저장되지만 적용되지 않습니다."
 ordinary_active = "일반 문서/스프레드시트 내보내기: Structural Tables 꺼짐. 각 입력 탭의 채우기/비우기를 적용합니다."
 [settings.table_export.strategies]
@@ -1847,7 +1847,7 @@ extended_headings = "H7–H9를 인식합니다. 끄면 앞의 # 7~9개를 보�
 typed_endnotes = "endnote: 같은 주석 레이블로 미주와 각주를 구분합니다. 끄면 해당 레이블을 일반 각주로 처리합니다."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "여러 머리글 행, 행 머리글, 머리글 행이 없는 표와 병합 셀을 지원합니다.\n필요할 때 Structural Tables (<, ^) 표시와 확장 구조를 출력합니다.\n끄면 일반 Markdown 표로 평탄화하고 구조 손실을 알립니다.\n\n켜면 일반 문서/스프레드시트 내보내기에서 입력 탭의 채우기/비우기보다 우선하며 저장된 선택은 바꾸지 않습니다.\n끄면 일반 Markdown에 각 입력 탭의 선택을 적용합니다.\n공문 최적화는 독립된 표 렌더링을 사용하므로 예외입니다."
+structural_tables = "병합 셀, 여러 머리글 행, 행 머리글, 머리글이 없는 표를 유지합니다.\n켜짐: 일반 문서·스프레드시트 내보내기에서 채우기/비우기 대신 <와 ^를 사용합니다. 저장된 선택은 바꾸지 않습니다.\n꺼짐: 각 입력 탭의 선택을 적용하고 손실된 표 구조를 알립니다.\n\n예외: “공문서” 최적화는 표를 별도로 처리합니다."
 
 captions_references = "해당 의미 정보가 있으면 Number Suite 캡션과 상호 참조를 출력합니다. 끄면 일반 텍스트를 출력하고 참조 손실을 알립니다."
 extended_headings = "H7–H9를 출력합니다. 끄면 해당 제목을 H6로 낮추고 손실을 알립니다."

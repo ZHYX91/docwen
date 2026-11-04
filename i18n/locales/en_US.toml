@@ -445,7 +445,7 @@ section = "Merge Cell Export"
 desc = "Controls how merged cells are represented in Markdown output."
 merge_strategy_label = "Merge Cell Export Strategy:"
 
-merge_strategy_help = "Ordinary Markdown only:\nFill: repeat the merged anchor text (Title | Title).\nEmpty: leave covered cells blank (Title | ).\n\nGenerate Markdown > Structural Tables overrides this strategy for standard document/spreadsheet exports, using < and ^ markers. Your saved choice is retained.\nGongwen optimization uses an independent table renderer and is not covered by this override."
+merge_strategy_help = "For ordinary Markdown:\nFill: repeat the top-left cell’s text (Title | Title).\nEmpty: leave covered cells blank (Title | ).\n\nWhen enabled in “Generate Markdown”, Structural Tables uses < and ^ instead. Your choice here stays saved.\nException: “Official documents” optimization handles tables separately."
 structural_active = "Standard document/spreadsheet export: Structural Tables is on; Fill/Empty is retained but not used."
 ordinary_active = "Standard document/spreadsheet export: Structural Tables is off; each input tab’s Fill/Empty choice applies."
 [settings.table_export.strategies]
@@ -1841,7 +1841,7 @@ extended_headings = "Recognize H7–H9 syntax. When disabled, seven to nine lead
 typed_endnotes = "Use note labels such as endnote: to distinguish endnotes from footnotes. When disabled, those labels are treated as ordinary footnotes."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Supports multiple header rows, row-header columns, tables without a header row, and merged cells.\nWrite Structural Tables (<, ^) markers and extended structure when needed.\nWhen disabled, flatten to ordinary Markdown tables and report lost structure.\n\nFor standard document/spreadsheet exports, enabling this overrides Fill/Empty in the incoming Document and Spreadsheet tabs, without changing their saved choices.\nWhen disabled, those choices apply to ordinary Markdown.\nGongwen optimization uses an independent table renderer and is not covered by this override."
+structural_tables = "Preserves merged cells, multiple header rows, row headers and tables without headers.\nOn: use < and ^ instead of Fill/Empty for standard document and spreadsheet exports. Saved choices stay unchanged.\nOff: use each input tab’s Fill/Empty choice and report lost table structure.\n\nException: “Official documents” optimization handles tables separately."
 
 captions_references = "Generate Number Suite captions and cross-references when available. When disabled, emit ordinary text and report lost references."
 extended_headings = "Generate H7–H9 headings. When disabled, those headings become H6 and the loss is reported."

@@ -84,13 +84,10 @@ _EXTENSION_HELP_FALLBACKS: dict[tuple[str, str], str] = {
         "Recognize Structural Tables markers such as < and ^ and preserve extended table structure. "
         "When disabled, treat them as ordinary Markdown table content."
     ),
-    ("output", "structural_tables"): (
-        "Write Structural Tables markers (< and ^) and extended structure when needed.\n"
-        "For standard document/spreadsheet exports, this overrides the input tabs’ Fill/Empty merge strategy "
-        "without changing its saved value.\n"
-        "When disabled, use those strategies for ordinary Markdown and report lost structure.\n"
-        "Gongwen optimization uses an independent table renderer and is not covered by this override."
-    ),
+    (
+        "output",
+        "structural_tables",
+    ): "Preserves merged cells, multiple header rows, row headers and tables without headers.\nOn: use < and ^ instead of Fill/Empty for standard document and spreadsheet exports. Saved choices stay unchanged.\nOff: use each input tab’s Fill/Empty choice and report lost table structure.\n\nException: “Official documents” optimization handles tables separately.",
     ("input", "captions_references"): (
         "Recognize Number Suite captions, identifiers and cross-references. When disabled, declarations and @ "
         "references remain visible text."

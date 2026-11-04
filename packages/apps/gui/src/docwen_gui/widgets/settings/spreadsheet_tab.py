@@ -49,10 +49,7 @@ class SpreadsheetTab(DynamicSettingsTab):
                         "label": t("settings.table_export.merge_strategy_label", "Merge Cell Export Strategy:"),
                         "tooltip": t(
                             "settings.table_export.merge_strategy_help",
-                            "Ordinary Markdown only:\nFill repeats the merged anchor text.\nEmpty leaves covered cells blank.\n\n"
-                            "Generate Markdown > Structural Tables overrides this strategy for standard document and "
-                            "spreadsheet exports, using < and ^ markers. The saved choice is retained.\n"
-                            "Gongwen optimization uses an independent table renderer and is not covered by this override.",
+                            "For ordinary Markdown:\nFill: repeat the top-left cell’s text (Title | Title).\nEmpty: leave covered cells blank (Title | ).\n\nWhen enabled in “Generate Markdown”, Structural Tables uses < and ^ instead. Your choice here stays saved.\nException: “Official documents” optimization handles tables separately.",
                         ),
                         "items": [
                             (t("settings.table_export.strategies.fill", "Fill"), "fill"),

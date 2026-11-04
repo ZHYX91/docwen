@@ -65,7 +65,9 @@ def test_opening_tabs_does_not_mark_settings_dirty(qapp) -> None:
     assert not vm.is_dirty
 
 
-@pytest.mark.parametrize("locale", ["en_US", "zh_CN", "zh_TW"])
+@pytest.mark.parametrize(
+    "locale", sorted(path.stem for path in (Path(__file__).resolve().parents[4] / "i18n" / "locales").glob("*.toml"))
+)
 def test_info_buttons_preserve_multiline_help_and_exception(qapp, locale) -> None:
     previous = get_locale()
     set_locale(locale)
@@ -105,6 +107,20 @@ def test_all_locale_catalogs_have_multiline_policy_and_status() -> None:
         help_text = catalog["table_export"]["merge_strategy_help"]
         assert help_text.count("\n") >= 5, path.name
         assert "<" in help_text and "^" in help_text
+        labels = catalog["table_export"]["strategies"]
+        output_help = catalog["markdown_extensions"]["output_help"]["structural_tables"]
+        assert "<" in output_help and "^" in output_help
+        if path.stem == "ar_SA":
+            for text in (help_text, output_help):
+                assert "\u2066<\u2069" in text and "\u2066^\u2069" in text
+        for label in labels.values():
+            assert label in help_text and label in output_help
+            assert label in catalog["table_export"]["structural_active"]
+            assert label in catalog["table_export"]["ordinary_active"]
+        assert catalog["tabs"]["formatting"] in help_text
+        assert catalog["gongwen"]["title"] in help_text
+        assert catalog["gongwen"]["title"] in output_help
+        assert "Gongwen" not in help_text and "Gongwen" not in output_help
         assert catalog["table_export"]["structural_active"]
         assert catalog["table_export"]["ordinary_active"]
         assert catalog["markdown_extensions"]["output_help"]["structural_tables"].count("\n") >= 4

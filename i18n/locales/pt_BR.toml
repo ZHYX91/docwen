@@ -444,9 +444,9 @@ section = "Exportação de células mescladas"
 desc = "Controla como células mescladas são representadas na saída Markdown."
 merge_strategy_label = "Estratégia de exportação de células mescladas:"
 
-merge_strategy_help = "Apenas para Markdown comum:\nPreencher: repetir o texto da célula de origem (Título | Título).\nVazio: deixar vazias as células cobertas (Título | ).\n\nStructural Tables em Gerar Markdown substitui esta estratégia por < e ^ na exportação padrão de documentos/planilhas. A escolha salva é mantida.\nA otimização Gongwen usa um renderizador de tabelas independente e é uma exceção."
-structural_active = "Exportação padrão de documentos/planilhas: Structural Tables ativado; Preencher/Vazio é mantido, mas não aplicado."
-ordinary_active = "Exportação padrão de documentos/planilhas: Structural Tables desativado; aplica-se Preencher/Vazio de cada aba de entrada."
+merge_strategy_help = "Para Markdown comum:\nPreencher: repetir o texto da célula superior esquerda (Título | Título).\nDeixar vazio: deixar vazias as células cobertas (Título | ).\n\nCom Structural Tables ativado em “Gerar Markdown”, são usados < e ^ no lugar desta opção. Sua escolha permanece salva.\nExceção: a otimização “Documentos oficiais” processa as tabelas separadamente."
+structural_active = "Exportação padrão de documentos/planilhas: Structural Tables ativado; Preencher/Deixar vazio é mantido, mas não aplicado."
+ordinary_active = "Exportação padrão de documentos/planilhas: Structural Tables desativado; aplica-se Preencher/Deixar vazio de cada aba de entrada."
 [settings.table_export.strategies]
 fill = "Preencher"
 empty = "Deixar vazio"
@@ -1842,7 +1842,7 @@ extended_headings = "Reconhece H7–H9. Desativado, sete a nove # iniciais perma
 typed_endnotes = "Usa rótulos como endnote: para distinguir notas de fim de notas de rodapé. Desativado, esses rótulos são tratados como notas de rodapé comuns."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Aceita várias linhas de cabeçalho, cabeçalhos de linha, tabelas sem cabeçalho e células mescladas.\nEscreve marcadores e estrutura estendida de Structural Tables (<, ^) quando necessário.\nDesativado, achata para tabelas Markdown comuns e informa perda de estrutura.\n\nNa exportação padrão de documentos/planilhas, substitui Preencher/Vazio das abas de entrada sem alterar as escolhas salvas.\nQuando desativado, essas escolhas se aplicam ao Markdown comum.\nA otimização Gongwen usa um renderizador de tabelas independente e é uma exceção."
+structural_tables = "Preserva células mescladas, várias linhas de cabeçalho, cabeçalhos de linha e tabelas sem cabeçalho.\nAtivado: < e ^ substituem Preencher/Deixar vazio na exportação padrão de documentos e planilhas. A escolha salva não muda.\nDesativado: aplica a escolha de cada aba de entrada e informa a perda de estrutura.\n\nExceção: a otimização “Documentos oficiais” processa as tabelas separadamente."
 
 captions_references = "Gera legendas e referências cruzadas do Number Suite quando disponíveis. Desativado, emite texto comum e informa perda de referências."
 extended_headings = "Gera H7–H9. Desativado, esses títulos viram H6 e a perda é informada."
