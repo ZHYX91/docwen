@@ -378,7 +378,9 @@ section = "結合セルのエクスポート"
 desc = "Markdown 出力で結合セルをどのように表現するかを設定します。"
 merge_strategy_label = "結合セルのエクスポート方式："
 
-merge_strategy_help = "通常の Markdown のみ：［埋める］は結合領域の左上セルの文字を繰り返します（例「見出し | 見出し」）。\n\n［空］は覆われるセルを空にします（「見出し | 」）。\n\nStructural Tables 出力が有効な場合は代わりに < と ^ の構造マーカーを使います。"
+merge_strategy_help = "通常の Markdown 用：\n埋める：結合範囲の左上のセルのテキストを繰り返します（見出し | 見出し）。\n空にする：結合で覆われるセルを空白にします（見出し | ）。\n\n「Markdown を生成」で Structural Tables を有効にすると、代わりに < と ^ を使います。ここでの選択は保持されます。\n例外：「公文書」の最適化では表を別の方法で処理します。"
+structural_active = "通常の文書・表計算の出力：Structural Tables は有効です。「埋める／空にする」は保持されますが適用されません。"
+ordinary_active = "通常の文書・表計算の出力：Structural Tables は無効です。各入力タブの「埋める／空にする」を適用します。"
 [settings.table_export.strategies]
 fill = "埋める"
 empty = "空にする"
@@ -1845,7 +1847,7 @@ extended_headings = "H7–H9 を認識します。無効時は先頭の 7～9 �
 typed_endnotes = "endnote: などの注記ラベルで文末脚注と脚注を区別します。無効時はそれらを通常の脚注として扱います。"
 
 [settings.markdown_extensions.output_help]
-structural_tables = "複数行の列見出し、行見出し、見出し行のない表、セルの結合に対応します。必要に応じて Structural Tables のマーカーと拡張構造を出力します。無効時は通常の Markdown 表へ平坦化し、構造損失を通知します。"
+structural_tables = "結合セル、複数行の列見出し、行見出し、見出しのない表を保持します。\n有効：通常の文書・表計算の出力では「埋める／空にする」の代わりに < と ^ を使います。保存済みの選択は変更しません。\n無効：各入力タブの選択を使い、失われた表の構造を通知します。\n\n例外：「公文書」の最適化では表を別の方法で処理します。"
 
 captions_references = "該当する意味情報がある場合に Number Suite のキャプションと相互参照を出力します。無効時は通常のテキストを出力し、参照損失を通知します。"
 extended_headings = "H7–H9 を出力します。無効時は H6 に下げ、階層損失を通知します。"

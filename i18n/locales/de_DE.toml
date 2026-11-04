@@ -378,7 +378,9 @@ section = "Export verbundener Zellen"
 desc = "Legt fest, wie verbundene Zellen in der Markdown-Ausgabe dargestellt werden."
 merge_strategy_label = "Exportstrategie für verbundene Zellen:"
 
-merge_strategy_help = "Nur für normales Markdown: Füllen wiederholt den Text der Ankerzelle (z.\n\nB. „Titel | Titel“); Leer lässt überdeckte Zellen leer („Titel | “).\n\nBei aktivierter Structural-Tables-Ausgabe werden stattdessen die Strukturmarkierungen < und ^ verwendet."
+merge_strategy_help = "Für normale Markdown-Tabellen:\nAusfüllen: Text der linken oberen Zelle wiederholen (Titel | Titel).\nLeer lassen: überdeckte Zellen leer lassen (Titel | ).\n\nIst Structural Tables unter „Markdown erzeugen“ aktiv, werden stattdessen < und ^ verwendet. Ihre Auswahl bleibt gespeichert.\nAusnahme: Die Optimierung „Amtliche Dokumente“ verarbeitet Tabellen separat."
+structural_active = "Normaler Dokument-/Tabellenexport: Structural Tables ist aktiv; Ausfüllen/Leer lassen bleibt gespeichert, wird aber nicht angewendet."
+ordinary_active = "Normaler Dokument-/Tabellenexport: Structural Tables ist inaktiv; Ausfüllen/Leer lassen aus dem jeweiligen Eingabe-Tab gilt."
 [settings.table_export.strategies]
 fill = "Ausfüllen"
 empty = "Leer lassen"
@@ -1845,7 +1847,7 @@ extended_headings = "Erkennt H7–H9. Deaktiviert bleiben sieben bis neun führe
 typed_endnotes = "Verwendet Notizkennungen wie endnote:, um Endnoten von Fußnoten zu unterscheiden. Deaktiviert werden diese Kennungen als normale Fußnoten behandelt."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Unterstützt mehrere Kopfzeilen, Zeilenüberschriften, Tabellen ohne Kopfzeile und verbundene Zellen. Gibt bei Bedarf Structural-Tables-Markierungen und erweiterte Strukturen aus. Deaktiviert werden normale Markdown-Tabellen erzeugt und Strukturverluste gemeldet."
+structural_tables = "Erhält verbundene Zellen, mehrere Kopfzeilen, Zeilenüberschriften und Tabellen ohne Kopfzeile.\nEin: Beim normalen Dokument- und Tabellenexport ersetzen < und ^ die Auswahl Ausfüllen/Leer lassen. Die Auswahl bleibt gespeichert.\nAus: Die Auswahl im jeweiligen Eingabe-Tab gilt; Strukturverluste werden gemeldet.\n\nAusnahme: Die Optimierung „Amtliche Dokumente“ verarbeitet Tabellen separat."
 
 captions_references = "Gibt Number-Suite-Beschriftungen und Querverweise aus, wenn die Semantik vorhanden ist. Deaktiviert wird normaler Text ausgegeben und Referenzverlust gemeldet."
 extended_headings = "Gibt H7–H9 aus. Deaktiviert werden diese Überschriften zu H6 und der Verlust wird gemeldet."

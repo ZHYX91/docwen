@@ -445,7 +445,9 @@ section = "合并单元格导出"
 desc = "控制合并单元格在 Markdown 输出中的表示方式。"
 merge_strategy_label = "普通 Markdown 中的合并单元格:"
 
-merge_strategy_help = "仅用于普通 Markdown：填充会重复合并区域左上角文本（例如“标题 | 标题”）；留空会让被覆盖单元格为空（“标题 | ”）。\n\n开启 Structural Tables 输出时，合并单元格改用 <、^ 结构标记。"
+merge_strategy_help = "用于普通 Markdown：\n填充：重复合并区域左上角文本（标题 | 标题）。\n留空：被覆盖的单元格保持空白（标题 | ）。\n\n在“生成 Markdown”中开启 Structural Tables 后，改用 <、^ 标记；这里的选择仍会保留。\n例外：“公文”优化单独处理表格，不受此开关控制。"
+structural_active = "普通文档/表格导出：Structural Tables 已开启，填充/留空选择保留但暂不使用。"
+ordinary_active = "普通文档/表格导出：Structural Tables 已关闭，使用各传入选项卡的填充/留空选择。"
 [settings.table_export.strategies]
 fill = "填充"
 empty = "留空"
@@ -1839,7 +1841,7 @@ extended_headings = "识别 H7–H9；关闭时七至九个开头 # 保留为可
 typed_endnotes = "用 endnote: 等注释标签区分尾注与脚注；关闭时这些标签按普通脚注处理。"
 
 [settings.markdown_extensions.output_help]
-structural_tables = "支持多行表头、行标题列、无表头和合并单元格。需要时输出 Structural Tables 标记和扩展结构；关闭时扁平化为普通 Markdown 表格，并报告结构损失。"
+structural_tables = "保留合并单元格、多行表头、行标题列和无表头表格。\n开启：常规文档和表格导出改用 <、^ 标记，不使用“填充/留空”，但保留原选择。\n关闭：使用各传入选项卡的“填充/留空”，并提示丢失的表格结构。\n\n例外：“公文”优化单独处理表格，不受此开关控制。"
 
 captions_references = "将文档中的题注和交叉引用转换为 Number Suite 格式；关闭时保留显示文字，并提示引用关系未保留。"
 extended_headings = "输出 H7–H9；关闭时这些标题降为 H6，并报告层级损失。"
