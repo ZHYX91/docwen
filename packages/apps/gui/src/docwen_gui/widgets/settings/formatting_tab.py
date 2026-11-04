@@ -13,6 +13,7 @@ from ...i18n import t
 from ...view_models.settings_vm import SECTION_FORMATTING, SettingsViewModel
 from .base_tab import BaseSettingsTab
 from .mermaid_controls import MermaidControls
+from .table_export_status import TableExportStatus
 
 
 def _sep_options() -> list[tuple[str, str]]:
@@ -84,8 +85,11 @@ _EXTENSION_HELP_FALLBACKS: dict[tuple[str, str], str] = {
         "When disabled, treat them as ordinary Markdown table content."
     ),
     ("output", "structural_tables"): (
-        "Write Structural Tables markers and extended structure when needed. When disabled, flatten to ordinary "
-        "Markdown tables and report lost structure."
+        "Write Structural Tables markers (< and ^) and extended structure when needed.\n"
+        "For standard document/spreadsheet exports, this overrides the input tabs’ Fill/Empty merge strategy "
+        "without changing its saved value.\n"
+        "When disabled, use those strategies for ordinary Markdown and report lost structure.\n"
+        "Gongwen optimization uses an independent table renderer and is not covered by this override."
     ),
     ("input", "captions_references"): (
         "Recognize Number Suite captions, identifiers and cross-references. When disabled, declarations and @ "
@@ -345,6 +349,10 @@ class FormattingTab(BaseSettingsTab):
             self._extension_checks[(direction, name)] = checkbox
             form.addRow(help_widget)
             checkbox.toggled.connect(self._save_extensions)
+            if direction == "output" and name == "structural_tables":
+                status = self.add_form_description(form, "")
+                status.setObjectName("tableExportStatus")
+                self._table_export_status = TableExportStatus(status, self._vm)
         preset = QPushButton(t("settings.markdown_extensions.obsidian_preset", "Use Obsidian extensions"))
         preset.setObjectName(f"markdownExtensions{direction.title()}Preset")
         preset.clicked.connect(lambda _checked=False, selected=direction: self._apply_extension_preset(selected))

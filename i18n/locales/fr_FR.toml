@@ -441,7 +441,9 @@ section = "Export des cellules fusionnées"
 desc = "Définit la représentation des cellules fusionnées dans la sortie Markdown."
 merge_strategy_label = "Stratégie d’export des cellules fusionnées :"
 
-merge_strategy_help = "Pour Markdown ordinaire uniquement : Remplir répète le texte de la cellule d’ancrage (par ex. « Titre | Titre ») ; Vide laisse les cellules couvertes vides (« Titre | »).\n\nAvec la sortie Structural Tables activée, les marqueurs < et ^ sont utilisés à la place."
+merge_strategy_help = "Uniquement pour le Markdown standard :\nRemplir : répéter le texte de la cellule source (Titre | Titre).\nVide : laisser les cellules couvertes vides (Titre | ).\n\nStructural Tables dans Générer Markdown remplace cette stratégie par < et ^ pour les exports standard de documents/tableurs. Le choix enregistré est conservé.\nL’optimisation Gongwen utilise un rendu de tableaux indépendant et fait exception."
+structural_active = "Export standard de documents/tableurs : Structural Tables activé ; Remplir/Vide reste enregistré mais n’est pas utilisé."
+ordinary_active = "Export standard de documents/tableurs : Structural Tables désactivé ; le choix Remplir/Vide de chaque onglet d’entrée s’applique."
 [settings.table_export.strategies]
 fill = "Remplir"
 empty = "Laisser vide"
@@ -1841,7 +1843,7 @@ extended_headings = "Reconnaît H7–H9. Désactivé, sept à neuf # initiaux re
 typed_endnotes = "Utilise des étiquettes comme endnote: pour distinguer notes de fin et notes de bas de page. Désactivé, ces étiquettes sont traitées comme des notes de bas de page ordinaires."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Prend en charge plusieurs lignes d’en-tête, les en-têtes de ligne, les tableaux sans en-tête et les cellules fusionnées. Écrit les marqueurs et structures étendues Structural Tables lorsque nécessaire. Désactivé, aplatit en tableaux Markdown ordinaires et signale les pertes de structure."
+structural_tables = "Prend en charge plusieurs lignes d’en-tête, les en-têtes de ligne, les tableaux sans en-tête et les cellules fusionnées.\nÉcrit les marqueurs et structures étendues Structural Tables (<, ^) lorsque nécessaire.\nDésactivé, aplatit en tableaux Markdown ordinaires et signale les pertes de structure.\n\nPour les exports standard de documents/tableurs, remplace Remplir/Vide des onglets d’entrée sans modifier les choix enregistrés.\nDésactivé, ces choix s’appliquent au Markdown standard.\nL’optimisation Gongwen utilise un rendu de tableaux indépendant et fait exception."
 
 captions_references = "Génère les légendes et renvois Number Suite lorsqu’ils existent. Désactivé, émet du texte ordinaire et signale les références perdues."
 extended_headings = "Génère H7–H9. Désactivé, ces titres deviennent H6 et la perte est signalée."

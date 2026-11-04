@@ -563,7 +563,9 @@ class DynamicSettingsTab(BaseSettingsTab):
                 tooltip = field.get("tooltip", "")
 
                 if widget_type == "description":
-                    self.add_form_description(form, str(field.get("text", "") or ""))
+                    label = self.add_form_description(form, str(field.get("text", "") or ""))
+                    if field.get("object_name"):
+                        label.setObjectName(str(field["object_name"]))
                     continue
 
                 widget: QWidget | None = None

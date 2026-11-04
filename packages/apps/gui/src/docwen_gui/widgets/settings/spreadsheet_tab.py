@@ -8,6 +8,7 @@ from __future__ import annotations
 from ...i18n import t
 from ...view_models.settings_vm import SettingsViewModel
 from .base_tab import DynamicSettingsTab
+from .table_export_status import TableExportStatus
 
 
 class SpreadsheetTab(DynamicSettingsTab):
@@ -48,13 +49,20 @@ class SpreadsheetTab(DynamicSettingsTab):
                         "label": t("settings.table_export.merge_strategy_label", "Merge Cell Export Strategy:"),
                         "tooltip": t(
                             "settings.table_export.merge_strategy_help",
-                            "For ordinary Markdown only: Fill repeats the merged anchor text; Empty leaves covered "
-                            "cells blank. With Structural Tables output enabled, merges use < and ^ structure markers.",
+                            "Ordinary Markdown only:\nFill repeats the merged anchor text.\nEmpty leaves covered cells blank.\n\n"
+                            "Generate Markdown > Structural Tables overrides this strategy for standard document and "
+                            "spreadsheet exports, using < and ^ markers. The saved choice is retained.\n"
+                            "Gongwen optimization uses an independent table renderer and is not covered by this override.",
                         ),
                         "items": [
                             (t("settings.table_export.strategies.fill", "Fill"), "fill"),
                             (t("settings.table_export.strategies.empty", "Empty"), "empty"),
                         ],
+                    },
+                    {
+                        "key": "table_export_status",
+                        "type": "description",
+                        "object_name": "tableExportStatus",
                     },
                 ],
             },
@@ -88,6 +96,7 @@ class SpreadsheetTab(DynamicSettingsTab):
         self._vm = view_model
         super().__init__(None, "conversion_defaults", "spreadsheet", schema)
         self._load_values()
+        self._table_export_status = TableExportStatus.attach(self, self._vm)
 
     def _load_values(self) -> None:
         data = self._vm.config.conversion_defaults.spreadsheet

@@ -445,7 +445,9 @@ section = "Exportación de celdas combinadas"
 desc = "Controla cómo se representan las celdas combinadas en la salida Markdown."
 merge_strategy_label = "Estrategia de exportación de celdas combinadas:"
 
-merge_strategy_help = "Solo para Markdown normal: Rellenar repite el texto de la celda ancla (p. ej., «Título | Título»); Vacío deja en blanco las celdas cubiertas («Título | »).\n\nCon la salida Structural Tables activada se usan en su lugar los marcadores < y ^."
+merge_strategy_help = "Solo para Markdown normal:\nRellenar: repetir el texto de la celda de origen (Título | Título).\nVacío: dejar vacías las celdas cubiertas (Título | ).\n\nStructural Tables en Generar Markdown reemplaza esta estrategia en la exportación normal de documentos/hojas de cálculo con < y ^. La selección guardada se conserva.\nLa optimización Gongwen usa un renderizador de tablas independiente y queda excluida."
+structural_active = "Exportación normal de documentos/hojas de cálculo: Structural Tables activado; Rellenar/Vacío se conserva pero no se aplica."
+ordinary_active = "Exportación normal de documentos/hojas de cálculo: Structural Tables desactivado; se aplica Rellenar/Vacío de cada pestaña de entrada."
 [settings.table_export.strategies]
 fill = "Rellenar"
 empty = "Dejar vacío"
@@ -1851,7 +1853,7 @@ extended_headings = "Reconoce H7–H9. Desactivado, de siete a nueve # iniciales
 typed_endnotes = "Usa etiquetas como endnote: para distinguir notas finales de notas al pie. Desactivado, esas etiquetas se tratan como notas al pie normales."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Admite varias filas de encabezado, encabezados de fila, tablas sin encabezado y celdas combinadas. Escribe marcadores y estructura ampliada de Structural Tables cuando sea necesario. Desactivado, aplana a tablas Markdown normales e informa de la pérdida de estructura."
+structural_tables = "Admite varias filas de encabezado, encabezados de fila, tablas sin encabezado y celdas combinadas.\nEscribe marcadores y estructura ampliada de Structural Tables (<, ^) cuando sea necesario.\nDesactivado, aplana a tablas Markdown normales e informa de la pérdida de estructura.\n\nEn la exportación normal de documentos/hojas de cálculo, reemplaza Rellenar/Vacío de las pestañas de entrada sin cambiar la selección guardada.\nAl desactivarlo, se aplican esas opciones a Markdown normal.\nLa optimización Gongwen usa un renderizador de tablas independiente y queda excluida."
 
 captions_references = "Genera títulos y referencias cruzadas de Number Suite cuando existan. Desactivado, emite texto normal e informa de referencias perdidas."
 extended_headings = "Genera H7–H9. Desactivado, esos encabezados pasan a H6 y se informa de la pérdida."
