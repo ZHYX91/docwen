@@ -9,6 +9,7 @@ from docwen_application.conversion_capabilities import (
     CapabilityBinding,
 )
 from docwen_application.conversion_contracts import (
+    MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID,
     ConversionPlanRequest,
 )
 from docwen_core.models import (
@@ -19,6 +20,7 @@ from docwen_core.models import (
     OutputManifestPolicy,
     OutputPolicy,
 )
+from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 
 
 def build_conversion_request(
@@ -40,6 +42,10 @@ def build_conversion_request(
         ),
     )
     runtime_options = dict(effective_options)
+    # This is a public, source-only intent. Keep private pipeline keys out of
+    # plans and wire schemas, and never redirect the frozen resolved port.
+    if binding.capability_id == MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID and "proofread" in runtime_options:
+        runtime_options[POSTPROCESS_PROOFREAD_OPTION] = runtime_options.pop("proofread")
     public_properties = binding.options_schema.get("properties", {})
     if isinstance(public_properties, dict):
         for public, internal in (("recognize_text", "to_md_enable_ocr"), ("preserve_resources", "to_md_keep_images")):

@@ -68,7 +68,7 @@
       },
       {
         "path": "contracts/conformance-manifest.json",
-        "sha256": "6e3e177fa7ccd795f3c0dad1204073c7c7a552e0ffeb9c732c3252c3a5b14041"
+        "sha256": "b6b5a7b757785e93a54c84016e76497221268d44d2bde27798abf1aa442b7a70"
       },
       {
         "path": "contracts/fixtures/invalid/machine.legacy-bundle-producer.trace.json",

@@ -25,6 +25,7 @@ from docwen_application.conversion_capabilities import (
 )
 from docwen_application.conversion_contracts import (
     DOCX_TO_MARKDOWN_CAPABILITY_ID,
+    MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID,
     MARKDOWN_TO_DOCX_CAPABILITY_ID,
     ConversionPlan,
     ConversionPlanRequest,
@@ -495,6 +496,25 @@ class ConversionService:
                     f"input role {slot.role} has invalid cardinality",
                 )
         effective_options = resolve_conversion_options(request.options, binding)
+        if binding.capability_id == MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID and "proofread" in effective_options:
+            # Omitted switches inherit configuration, so only four explicit
+            # false values can prove that no validator is needed at admission.
+            checks = effective_options["proofread"]
+            all_disabled = len(checks) == 4 and all(value is False for value in checks.values())
+            if not all_disabled:
+                proofread_route = (
+                    discovery.catalog.resolve_route(
+                        detected_format="docx", workflow_category="document", action_name="validate", target="docx"
+                    )
+                    if discovery.catalog is not None
+                    else None
+                )
+                if proofread_route is None or not proofread_route.available:
+                    raise ConversionServiceError(
+                        "unavailable",
+                        "proofread_postprocess_unavailable",
+                        "The active runtime cannot proofread the generated DOCX.",
+                    )
         if request.output.staging_policy != "require_empty":
             raise ConversionServiceError(
                 "invalid_request",
