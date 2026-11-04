@@ -510,9 +510,13 @@ md_file_link_style_tooltip = "Stil für Dateilinks."
 non_embed_section = "Nicht-eingebettete Links"
 non_embed_desc = "Legt fest, wie normale Links aus der Markdown-Eingabe beim Erzeugen von Dokumenten oder Tabellen behandelt werden."
 wiki_link_mode = "Wiki-Links:"
-wiki_link_tooltip = "Verarbeitet [[link]] oder [[link|text]]. Beibehalten erhält die Quellmarkierung; Text extrahieren behält nur den Anzeigetext; Hyperlink behält Text und Ziel und erzeugt einen anklickbaren Link, wenn das Zielformat dies unterstützt; Entfernen löscht den Link."
+wiki_link_tooltip = "[[link]] / [[link|text]] verarbeiten.\n\nBehalten: die vollständige Quellsyntax beibehalten.\nText extrahieren: nur den Anzeigetext beibehalten.\nAdresse extrahieren: nur die Quelladresse einschließlich Anker beibehalten.\nEntfernen: den gesamten Link einschließlich Anzeigetext löschen.\nHyperlink: einen anklickbaren Link erzeugen; andernfalls den Ersatz verwenden."
 markdown_link_mode = "Markdown-Links:"
-markdown_link_tooltip = "Verarbeitet [text](url). Beibehalten erhält die Quellmarkierung; Text extrahieren behält nur den Text; Hyperlink behält Text und Ziel und erzeugt einen anklickbaren Link, wenn das Zielformat dies unterstützt; Entfernen löscht den Link."
+markdown_link_tooltip = "[text](url) verarbeiten.\n\nBehalten: die vollständige Quellsyntax beibehalten.\nText extrahieren: nur den Anzeigetext beibehalten.\nAdresse extrahieren: nur die Quelladresse einschließlich Anker beibehalten.\nEntfernen: den gesamten Link einschließlich Anzeigetext löschen.\nHyperlink: einen anklickbaren Link erzeugen; andernfalls den Ersatz verwenden."
+markdown_hyperlink_fallback_tooltip = "Gilt nur im Hyperlink-Modus, wenn kein anklickbarer Link erzeugt werden kann, auch bei CSV-Ausgaben.\nDiese Auswahl wird für Markdown-Links unabhängig gespeichert.\n\nBehalten: die vollständige Quellsyntax beibehalten.\nText extrahieren: nur den Anzeigetext beibehalten.\nAdresse extrahieren: nur die Quelladresse einschließlich Anker beibehalten."
+markdown_hyperlink_fallback = "Ersatz für Markdown-Hyperlinks:"
+wiki_hyperlink_fallback_tooltip = "Gilt nur im Hyperlink-Modus, wenn kein anklickbarer Link erzeugt werden kann, auch bei CSV-Ausgaben.\nDiese Auswahl wird für Wiki-Links unabhängig gespeichert.\n\nBehalten: die vollständige Quellsyntax beibehalten.\nText extrahieren: nur den Anzeigetext beibehalten.\nAdresse extrahieren: nur die Quelladresse einschließlich Anker beibehalten."
+wiki_hyperlink_fallback = "Ersatz für Wiki-Hyperlinks:"
 
 # 嵌入链接处理区域
 embed_section = "Eingebettete Links"
@@ -541,6 +545,7 @@ md_link = "Markdown Link"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "Adresse extrahieren"
 keep = "Behalten"
 extract_text = "Text extrahieren"
 remove = "Entfernen"

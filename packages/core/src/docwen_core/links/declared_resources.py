@@ -214,7 +214,7 @@ def reject_declared_input_link_lookups(
 
     from docwen_core.links._markdown_inline import parse_inline_link
 
-    if wiki_mode in {"keep", "extract_text", "remove"}:
+    if wiki_mode in {"keep", "extract_text", "extract_address", "remove"}:
         return
 
     def reject(segment: str) -> str:

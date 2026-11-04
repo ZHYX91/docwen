@@ -117,6 +117,8 @@ class LinkRuntimeConfig:
     circular_reference_mode: str = "placeholder"
     max_depth_reached_mode: str = "placeholder"
     auto_link_bare_url: bool = False
+    wiki_hyperlink_fallback: str = "keep"
+    markdown_hyperlink_fallback: str = "keep"
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> LinkRuntimeConfig:
@@ -136,6 +138,8 @@ class LinkRuntimeConfig:
             non_embed_wiki_mode=str(non_embed.get("wiki_mode", "hyperlink")),
             non_embed_markdown_mode=str(non_embed.get("markdown_mode", "hyperlink")),
             auto_link_bare_url=non_embed.get("auto_link_bare_url") is True,
+            wiki_hyperlink_fallback=str(non_embed.get("wiki_hyperlink_fallback", "keep")),
+            markdown_hyperlink_fallback=str(non_embed.get("markdown_hyperlink_fallback", "keep")),
             embed_wiki_image_mode=str(embed_links.get("wiki_image_mode", "embed")),
             embed_markdown_image_mode=str(embed_links.get("markdown_image_mode", "embed")),
             embed_md_file_mode=str(embed_links.get("md_file_mode", "embed")),

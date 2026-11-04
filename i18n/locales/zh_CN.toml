@@ -577,9 +577,13 @@ md_file_link_style_tooltip = "设置MD文件在MD文件中的链接格式\n\n•
 non_embed_section = "非嵌入链接处理"
 non_embed_desc = "设置 Markdown 输入中的普通链接在生成文档或表格时如何处理。"
 wiki_link_mode = "Wiki链接处理:"
-wiki_link_tooltip = "处理 [[link]] 或 [[link|text]]。保留原样：保留源标记；提取文本：仅保留显示文本；超链接：保留显示文本和目标，并在目标格式支持时生成可点击链接；完全移除：删除链接。"
+wiki_link_tooltip = "处理 [[link]] / [[link|text]]。\n\n保留原样: 保留完整的源链接标记。\n提取文本: 仅保留显示文本。\n提取地址: 仅保留源地址，包含锚点。\n完全移除: 删除整个链接，包含显示文本。\n超链接: 生成可点击链接；无法生成时使用回退方式。"
 markdown_link_mode = "Markdown链接处理:"
-markdown_link_tooltip = "处理 [text](url)。保留原样：保留源标记；提取文本：仅保留 text；超链接：保留文本和目标，并在目标格式支持时生成可点击链接；完全移除：删除链接。"
+markdown_link_tooltip = "处理 [text](url)。\n\n保留原样: 保留完整的源链接标记。\n提取文本: 仅保留显示文本。\n提取地址: 仅保留源地址，包含锚点。\n完全移除: 删除整个链接，包含显示文本。\n超链接: 生成可点击链接；无法生成时使用回退方式。"
+markdown_hyperlink_fallback_tooltip = "仅在“超链接”模式无法生成可点击链接时生效，包括 CSV 输出。\nMarkdown 链接的回退方式独立保存。\n\n保留原样: 保留完整的源链接标记。\n提取文本: 仅保留显示文本。\n提取地址: 仅保留源地址，包含锚点。"
+markdown_hyperlink_fallback = "Markdown超链接回退方式:"
+wiki_hyperlink_fallback_tooltip = "仅在“超链接”模式无法生成可点击链接时生效，包括 CSV 输出。\nWiki 链接的回退方式独立保存。\n\n保留原样: 保留完整的源链接标记。\n提取文本: 仅保留显示文本。\n提取地址: 仅保留源地址，包含锚点。"
+wiki_hyperlink_fallback = "Wiki超链接回退方式:"
 
 # 嵌入链接处理区域
 embed_section = "嵌入链接处理"
@@ -608,6 +612,7 @@ md_link = "Markdown链接"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "提取地址"
 keep = "保留原样"
 extract_text = "提取文本"
 remove = "完全移除"

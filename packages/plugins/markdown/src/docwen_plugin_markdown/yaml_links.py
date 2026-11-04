@@ -12,7 +12,7 @@ from docx.oxml.ns import qn
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import project_field_links, reject_declared_input_link_lookups
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
-from docwen_plugin_markdown.renderer_inlines import add_hyperlink, extract_text_content
+from docwen_plugin_markdown.renderer_inlines import add_hyperlink, extract_text_content, plain_link_label
 
 
 class _RunWriter:
@@ -42,7 +42,10 @@ class _RunWriter:
 class YamlLinkProjection:
     """Only issued link tokens become hyperlinks; all other text stays literal."""
 
-    def __init__(self, source: str, config: LinkRuntimeConfig, *, declared_inputs: bool = False) -> None:
+    def __init__(
+        self, source: str, config: LinkRuntimeConfig, *, declared_inputs: bool = False, navigation_links: Any = None
+    ) -> None:
+        self.navigation_links = navigation_links
         self.source = source
         self.config = config
         self.declared_inputs = declared_inputs
@@ -57,16 +60,27 @@ class YamlLinkProjection:
         if not isinstance(value, str):
             return value
         if self.declared_inputs:
-            reject_declared_input_link_lookups(value)
+            reject_declared_input_link_lookups(value, wiki_mode=self.config.non_embed_wiki_mode)
         return project_field_links(
             value,
             source_file_path=self.source,
             wiki_mode=self.config.non_embed_wiki_mode,
+            local_lookup_allowed=not self.declared_inputs,
+            markdown_text_renderer=plain_link_label,
+            wiki_hyperlink_fallback=self.config.wiki_hyperlink_fallback,
+            markdown_hyperlink_fallback=self.config.markdown_hyperlink_fallback,
             markdown_mode=self.config.non_embed_markdown_mode,
             search_dirs=self.config.search_dirs,
             on_not_found=self.config.file_not_found_mode,
             hyperlink_renderer=self._link,
+            hyperlink_projection=self._project_link if self.navigation_links is not None else None,
         )
+
+    def _project_link(self, label: str, target: str, original: str, syntax: str) -> str:
+        if target.startswith("#"):
+            self.navigation_links.issue(label, target, original, syntax)
+            target = next(reversed(self.navigation_links.links))
+        return self._link(label, target)
 
     def _link(self, label: str, target: str) -> str:
         nodes = parse_markdown_text(label, consume_initial_bom=False)
@@ -128,7 +142,19 @@ class YamlLinkProjection:
                     writer.text(source[cursor:start])
                     label, target = self.links[token]
                     before = len(parent)
-                    add_hyperlink(paragraph, target, text=label)
+                    navigation = self.navigation_links.resolve(target) if self.navigation_links is not None else None
+                    if navigation is not None and navigation[0] is None:
+                        paragraph.add_run(navigation[1])
+                    else:
+                        add_hyperlink(
+                            paragraph,
+                            target,
+                            text=label,
+                            internal_anchor=navigation[0] if navigation is not None else None,
+                            internal_target_hint=self.navigation_links.hints.get(target)
+                            if self.navigation_links is not None
+                            else None,
+                        )
                     added = list(parent)[before:]
                     if not added:
                         raise ValueError("YAML hyperlink could not be materialized")

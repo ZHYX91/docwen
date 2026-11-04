@@ -577,9 +577,13 @@ md_file_link_style_tooltip = "Establece el formato de enlace para archivos MD de
 non_embed_section = "Procesamiento de enlaces no incrustados"
 non_embed_desc = "Elige cómo tratar los enlaces normales de la entrada Markdown al generar documentos u hojas de cálculo."
 wiki_link_mode = "Procesamiento de enlace Wiki:"
-wiki_link_tooltip = "Procesa [[link]] o [[link|text]]. Mantener conserva el marcado; Extraer texto conserva solo el texto visible; Hipervínculo conserva texto y destino y crea un enlace pulsable si el formato de destino lo admite; Eliminar borra el enlace."
+wiki_link_tooltip = "Procesar [[link]] / [[link|text]].\n\nMantener: conservar toda la sintaxis original.\nExtraer texto: conservar solo el texto visible.\nExtraer dirección: conservar solo la dirección original, incluido el ancla.\nEliminar: eliminar todo el enlace, incluido su texto visible.\nHipervínculo: crear un enlace en el que se pueda hacer clic; si no es posible, usar la alternativa."
 markdown_link_mode = "Procesamiento de enlace Markdown:"
-markdown_link_tooltip = "Procesa [text](url). Mantener conserva el marcado; Extraer texto conserva solo text; Hipervínculo conserva texto y destino y crea un enlace pulsable si el formato de destino lo admite; Eliminar borra el enlace."
+markdown_link_tooltip = "Procesar [text](url).\n\nMantener: conservar toda la sintaxis original.\nExtraer texto: conservar solo el texto visible.\nExtraer dirección: conservar solo la dirección original, incluido el ancla.\nEliminar: eliminar todo el enlace, incluido su texto visible.\nHipervínculo: crear un enlace en el que se pueda hacer clic; si no es posible, usar la alternativa."
+markdown_hyperlink_fallback_tooltip = "Solo se usa en modo Hipervínculo cuando no se puede crear un enlace clicable, incluidas las salidas CSV.\nEsta opción se guarda de forma independiente para los enlaces Markdown.\n\nMantener: conservar toda la sintaxis original.\nExtraer texto: conservar solo el texto visible.\nExtraer dirección: conservar solo la dirección original, incluido el ancla."
+markdown_hyperlink_fallback = "Alternativa para hipervínculos Markdown:"
+wiki_hyperlink_fallback_tooltip = "Solo se usa en modo Hipervínculo cuando no se puede crear un enlace clicable, incluidas las salidas CSV.\nEsta opción se guarda de forma independiente para los enlaces Wiki.\n\nMantener: conservar toda la sintaxis original.\nExtraer texto: conservar solo el texto visible.\nExtraer dirección: conservar solo la dirección original, incluido el ancla."
+wiki_hyperlink_fallback = "Alternativa para hipervínculos Wiki:"
 
 # 嵌入链接处理区域
 embed_section = "Procesamiento de enlaces incrustados"
@@ -608,6 +612,7 @@ md_link = "Enlace Markdown"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "Extraer dirección"
 keep = "Mantener"
 extract_text = "Extraer texto"
 remove = "Eliminar"

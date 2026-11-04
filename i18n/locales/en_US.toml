@@ -577,9 +577,13 @@ md_file_link_style_tooltip = "Set the link format for MD files in MD files\n\n�
 non_embed_section = "Non-Embed Link Processing"
 non_embed_desc = "Choose how ordinary links in Markdown input are handled when generating documents or spreadsheets."
 wiki_link_mode = "Wiki link processing:"
-wiki_link_tooltip = "Process [[link]] or [[link|text]]. Keep keeps the source markup; Extract text keeps only display text; Hyperlink keeps display text and target and creates a clickable link when the target format supports it; Remove deletes the link."
+wiki_link_tooltip = "Process [[link]] / [[link|text]].\n\nKeep as-is: preserve the complete source markup.\nExtract text: keep only display text.\nExtract address: keep only the source address, including its anchor.\nRemove: delete the whole link, including its display text.\nHyperlink: create a clickable link; use the fallback if this is not possible."
 markdown_link_mode = "Markdown link processing:"
-markdown_link_tooltip = "Process [text](url). Keep keeps the source markup; Extract text keeps only text; Hyperlink keeps text and target and creates a clickable link when the target format supports it; Remove deletes the link."
+markdown_link_tooltip = "Process [text](url).\n\nKeep as-is: preserve the complete source markup.\nExtract text: keep only display text.\nExtract address: keep only the source address, including its anchor.\nRemove: delete the whole link, including its display text.\nHyperlink: create a clickable link; use the fallback if this is not possible."
+markdown_hyperlink_fallback_tooltip = "Used only in Hyperlink mode when a clickable link cannot be created, including CSV output.\nThis choice is saved independently for Markdown links.\n\nKeep as-is: preserve the complete source markup.\nExtract text: keep only display text.\nExtract address: keep only the source address, including its anchor."
+markdown_hyperlink_fallback = "Markdown hyperlink fallback:"
+wiki_hyperlink_fallback_tooltip = "Used only in Hyperlink mode when a clickable link cannot be created, including CSV output.\nThis choice is saved independently for Wiki links.\n\nKeep as-is: preserve the complete source markup.\nExtract text: keep only display text.\nExtract address: keep only the source address, including its anchor."
+wiki_hyperlink_fallback = "Wiki hyperlink fallback:"
 
 # 嵌入链接处理区域
 embed_section = "Embed Link Processing"
@@ -608,6 +612,7 @@ md_link = "Markdown Link"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "Extract address"
 keep = "Keep as-is"
 extract_text = "Extract text"
 remove = "Remove"

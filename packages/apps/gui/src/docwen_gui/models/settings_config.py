@@ -156,6 +156,8 @@ class LinkConfig:
     md_file_link_style: str = "wiki_embed"
     wiki_link_mode: str = "hyperlink"
     markdown_link_mode: str = "hyperlink"
+    wiki_hyperlink_fallback: str = "keep"
+    markdown_hyperlink_fallback: str = "keep"
     wiki_embed_image_mode: str = "embed"
     markdown_embed_image_mode: str = "embed"
     embed_md_file_mode: str = "embed"

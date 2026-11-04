@@ -573,9 +573,13 @@ md_file_link_style_tooltip = "Style pour les liens de fichier."
 non_embed_section = "Liens non intégrés"
 non_embed_desc = "Choisissez comment les liens ordinaires de l’entrée Markdown sont traités lors de la génération de documents ou de feuilles de calcul."
 wiki_link_mode = "Liens Wiki :"
-wiki_link_tooltip = "Traite [[link]] ou [[link|text]]. Conserver garde le balisage source ; Extraire le texte garde seulement le texte affiché ; Hyperlien garde texte et cible et crée un lien cliquable si le format cible le permet ; Supprimer efface le lien."
+wiki_link_tooltip = "Traiter [[link]] / [[link|text]].\n\nGarder: conserver toute la syntaxe source.\nExtraire le texte: conserver uniquement le texte affiché.\nExtraire l’adresse: conserver uniquement l’adresse source, ancre comprise.\nSupprimer: supprimer tout le lien, y compris le texte affiché.\nHyperlien: créer un lien cliquable ; sinon, utiliser le repli."
 markdown_link_mode = "Liens Markdown :"
-markdown_link_tooltip = "Traite [text](url). Conserver garde le balisage source ; Extraire le texte garde seulement text ; Hyperlien garde texte et cible et crée un lien cliquable si le format cible le permet ; Supprimer efface le lien."
+markdown_link_tooltip = "Traiter [text](url).\n\nGarder: conserver toute la syntaxe source.\nExtraire le texte: conserver uniquement le texte affiché.\nExtraire l’adresse: conserver uniquement l’adresse source, ancre comprise.\nSupprimer: supprimer tout le lien, y compris le texte affiché.\nHyperlien: créer un lien cliquable ; sinon, utiliser le repli."
+markdown_hyperlink_fallback_tooltip = "Utilisé uniquement en mode Hyperlien si aucun lien cliquable ne peut être créé, notamment pour les sorties CSV.\nCe choix est enregistré séparément pour les liens Markdown.\n\nGarder: conserver toute la syntaxe source.\nExtraire le texte: conserver uniquement le texte affiché.\nExtraire l’adresse: conserver uniquement l’adresse source, ancre comprise."
+markdown_hyperlink_fallback = "Repli des hyperliens Markdown :"
+wiki_hyperlink_fallback_tooltip = "Utilisé uniquement en mode Hyperlien si aucun lien cliquable ne peut être créé, notamment pour les sorties CSV.\nCe choix est enregistré séparément pour les liens Wiki.\n\nGarder: conserver toute la syntaxe source.\nExtraire le texte: conserver uniquement le texte affiché.\nExtraire l’adresse: conserver uniquement l’adresse source, ancre comprise."
+wiki_hyperlink_fallback = "Repli des hyperliens Wiki :"
 
 # 嵌入链接处理区域
 embed_section = "Liens intégrés"
@@ -604,6 +608,7 @@ md_link = "Lien Markdown"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "Extraire l’adresse"
 keep = "Garder"
 extract_text = "Extraire le texte"
 remove = "Supprimer"

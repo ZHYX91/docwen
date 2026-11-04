@@ -65,6 +65,50 @@ The removed keys `image.ocr_language` and `conversion.md_to_docx.list_separator`
 
 旧键 `image.ocr_language` 和 `conversion.md_to_docx.list_separator` 不再通过验证，不提供别名或自动迁移。其他键即使调整设置页归属，也保留功能命名空间。重置传入页保留软件优先级；八组优先级统一归属“转换软件”。编号和校对编辑器保存仍是立即生效的事务，不丢弃其他设置草稿。
 
+## Ordinary link processing / 普通链接处理
+
+The Link settings page owns `configs/link.toml`. Under `[non_embed_links]`, `wiki_mode` and
+`markdown_mode` are independent and both default to `"hyperlink"`:
+
+- `keep`: retain the complete authored link syntax.
+- `extract_text`: retain only the display text.
+- `extract_address`: retain the source target, including its fragment, without resolving it to an absolute path.
+- `remove`: remove the whole link, including its display text.
+- `hyperlink`: create a clickable link where the target format and destination support it; otherwise use that syntax's fallback.
+
+`wiki_hyperlink_fallback` and `markdown_hyperlink_fallback` independently accept `keep`, `extract_text` or
+`extract_address`; both default to `"keep"` to avoid silently losing the target or display text. Each secondary
+selector is enabled only while its main mode is `hyperlink`. Changing the main mode retains the saved fallback;
+Apply persists it, and resetting Link settings restores both fallbacks to `keep`. Help buttons explain each choice
+on separate lines. Existing profiles that omit the new keys inherit these defaults without rewriting their files.
+
+XLSX creates a native hyperlink only when the final cell consists entirely of one supported link. Mixed text and
+multiple links use the selected fallback instead of making the whole cell clickable or choosing one target. CSV
+has no native hyperlinks and always uses the fallback. Used YAML template fields follow the same ordinary-link
+policy and final-output limits. DOCX supports unique rendered heading navigation; missing or ambiguous headings
+fall back. Ordinary `^block` navigation and navigation across embedded-source identities are not supported. See
+[Markdown compatibility](specs/markdown-compatibility.md#ordinary-links-and-heading-navigation--普通链接与标题导航)
+for the current provenance guard and semantic boundaries.
+
+“链接”设置页管理 `configs/link.toml`。`[non_embed_links]` 中的 `wiki_mode` 与 `markdown_mode`
+彼此独立，均默认 `"hyperlink"`：
+
+- `keep`：保留完整的源链接语法。
+- `extract_text`：仅保留显示文字。
+- `extract_address`：保留源目标及其锚点，不改成解析后的绝对路径。
+- `remove`：删除整个链接，包含显示文字。
+- `hyperlink`：在输出格式和目标支持时生成可点击链接，否则采用对应语法的回退方式。
+
+`wiki_hyperlink_fallback` 与 `markdown_hyperlink_fallback` 分别可选 `keep`、`extract_text` 或
+`extract_address`，均默认 `"keep"`，避免静默丢失目标或显示文字。二级选择器仅在主模式为 `hyperlink`
+时启用；切换主模式保留已有回退选择，“应用”保存配置，“恢复链接默认”将两项回退重置为 `keep`。
+信息按钮逐行解释选项。未写入新键的旧配置继承默认值，不改写用户原文件。
+
+XLSX 仅在最终单元格完全由一个受支持链接构成时写入原生超链接；混合正文或多个链接时采用回退方式，
+不把整格变成链接，也不擅自选取某个目标。CSV 不支持原生超链接，始终采用回退方式。实际使用的 YAML
+模板字段遵守同一普通链接策略及最终输出限制。DOCX 支持唯一已渲染标题的内部导航，缺失或重名目标按
+回退方式处理；普通 `^block` 导航及跨嵌入来源身份的导航仍不支持。当前来源保护和语义边界见上述兼容说明。
+
 ## Chinese official-document fields / 公文字段
 
 `template_fill.gongwen_fields_enabled` is a boolean, enabled by default. It formats the fixed Chinese official-document fields in Word templates independently of interface or output language. Both Markdown input routes use the same implementation. It does not select document-to-Markdown recognition. The Official documents settings page owns this switch and its reset behavior; the generic list separator remains on Incoming text.

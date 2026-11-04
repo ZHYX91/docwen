@@ -576,9 +576,13 @@ md_file_link_style_tooltip = "Estilo para links de arquivos."
 non_embed_section = "Links não incorporados"
 non_embed_desc = "Escolha como links comuns da entrada Markdown são tratados ao gerar documentos ou planilhas."
 wiki_link_mode = "Links Wiki:"
-wiki_link_tooltip = "Processa [[link]] ou [[link|text]]. Manter preserva a marcação; Extrair texto mantém apenas o texto exibido; Hiperlink mantém texto e destino e cria um link clicável quando o formato de destino oferece suporte; Remover apaga o link."
+wiki_link_tooltip = "Processar [[link]] / [[link|text]].\n\nManter: preservar toda a sintaxe original.\nExtrair texto: manter apenas o texto exibido.\nExtrair endereço: manter apenas o endereço original, incluindo a âncora.\nRemover: excluir o link inteiro, incluindo o texto exibido.\nHiperlink: criar um link clicável; se não for possível, usar a alternativa."
 markdown_link_mode = "Links Markdown:"
-markdown_link_tooltip = "Processa [text](url). Manter preserva a marcação; Extrair texto mantém apenas text; Hiperlink mantém texto e destino e cria um link clicável quando o formato de destino oferece suporte; Remover apaga o link."
+markdown_link_tooltip = "Processar [text](url).\n\nManter: preservar toda a sintaxe original.\nExtrair texto: manter apenas o texto exibido.\nExtrair endereço: manter apenas o endereço original, incluindo a âncora.\nRemover: excluir o link inteiro, incluindo o texto exibido.\nHiperlink: criar um link clicável; se não for possível, usar a alternativa."
+markdown_hyperlink_fallback_tooltip = "Usado apenas no modo Hiperlink quando não é possível criar um link clicável, incluindo saídas CSV.\nEsta opção é salva separadamente para links Markdown.\n\nManter: preservar toda a sintaxe original.\nExtrair texto: manter apenas o texto exibido.\nExtrair endereço: manter apenas o endereço original, incluindo a âncora."
+markdown_hyperlink_fallback = "Alternativa para hiperlinks Markdown:"
+wiki_hyperlink_fallback_tooltip = "Usado apenas no modo Hiperlink quando não é possível criar um link clicável, incluindo saídas CSV.\nEsta opção é salva separadamente para links Wiki.\n\nManter: preservar toda a sintaxe original.\nExtrair texto: manter apenas o texto exibido.\nExtrair endereço: manter apenas o endereço original, incluindo a âncora."
+wiki_hyperlink_fallback = "Alternativa para hiperlinks Wiki:"
 
 # 嵌入链接处理区域
 embed_section = "Links incorporados"
@@ -607,6 +611,7 @@ md_link = "Link Markdown"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "Extrair endereço"
 keep = "Manter"
 extract_text = "Extrair texto"
 remove = "Remover"
