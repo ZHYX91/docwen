@@ -1056,30 +1056,23 @@ class DocxToMarkdownConverter:
             lines.append(final_sep)
             lines.append("")
 
-        # Normalize: smart content joining (M3)
+        # Normalize native block boundaries without merging quote paragraphs.
         #  - Consecutive list items → single newline (no blank)
-        #  - Consecutive blockquotes → single newline (no blank)
-        #  - Different block types → blank line separator
+        #  - Consecutive quotes → an empty line at their common quote depth.
+        #    This ends the native paragraph without closing a shared container
+        #    or treating a shallower quote as lazy continuation of a deeper one.
+        #  - Other block boundaries → blank line separator
         import re as _re
 
-        def _detect_block_type(ln: str) -> str | None:
-            """Return ``"list"``, ``"quote"``, ``"other"``, or ``None`` (blank)."""
-            stripped = ln.strip()
-            if not stripped:
-                return None
-            authored_fence = exact_fenced_fragments.get(ln)
-            if authored_fence is not None:
-                first_line = authored_fence.splitlines()[0].strip()
-                if first_line.startswith(">"):
-                    return "quote"
-                if _re.match(r"^(?:[-*+] |\d+[.)] )", first_line):
-                    return "list"
-                return "other"
-            if stripped.startswith(">"):
-                return "quote"
-            if _re.match(r"^(\s*[-*+] |\s*\d+[.)] )", stripped):
-                return "list"
-            return "other"
+        def _first_fragment_line(fragment: str) -> str:
+            return exact_fenced_fragments.get(fragment, fragment).splitlines()[0]
+
+        def _is_list_fragment(fragment: str) -> bool:
+            return _re.match(r"^(?:[-*+] |\d+[.)] )", _first_fragment_line(fragment).strip()) is not None
+
+        def _quote_prefix(fragment: str) -> tuple[str, int] | None:
+            match = _re.match(r"^([ \t]*)(?:>[ \t]*)+", _first_fragment_line(fragment))
+            return (match[1], match[0].count(">")) if match is not None else None
 
         normalized: list[str] = []
         prev_blank = False
@@ -1090,14 +1083,17 @@ class DocxToMarkdownConverter:
                 prev_blank = True
                 continue  # defer blank — decide when next non-blank arrives
 
-            # Non-blank line
-            block_type = _detect_block_type(line)
-
             if prev_blank and normalized:
-                # Get the type of the last emitted non-blank line
-                last_type = _detect_block_type(normalized[-1])
-                if last_type != block_type or block_type not in ("list", "quote"):
-                    normalized.append("")  # different types → blank separator
+                previous = normalized[-1]
+                previous_quote, current_quote = _quote_prefix(previous), _quote_prefix(line)
+                if previous_quote is not None and current_quote is not None and previous_quote[0] == current_quote[0]:
+                    common_prefix = current_quote[0] + ">" * min(previous_quote[1], current_quote[1])
+                    # A structural quote-blank already supplied by the native
+                    # container/anchor walker provides the same boundary.
+                    if previous.strip() != common_prefix.strip() and line.strip() != common_prefix.strip():
+                        normalized.append(common_prefix)
+                elif not (_is_list_fragment(previous) and _is_list_fragment(line)):
+                    normalized.append("")
 
             normalized.append(line)
             prev_blank = False
@@ -1301,6 +1297,7 @@ class DocxToMarkdownConverter:
         # ── 0. Page/section break detection ─────────────────────────
         from docwen_core.docx_parsing.break_utils import (
             detect_all_breaks,
+            detect_horizontal_rule,
             extract_paragraph_border_info,
         )
 
@@ -1313,8 +1310,14 @@ class DocxToMarkdownConverter:
         # ── 1. Border group tracking ────────────────────────────────
         if para is not None and border_tracker is not None:
             border_info = extract_paragraph_border_info(para)
-            for sep in border_tracker.process_paragraph(border_info):
+            standalone_rule = detect_horizontal_rule(para)
+            for sep in border_tracker.process_paragraph({} if standalone_rule else border_info):
                 lines.append(sep)
+                lines.append("")
+            if standalone_rule and self._horizontal_rule_separator:
+                # The current native paragraph owns this rule's position,
+                # including immediately before a table or at document end.
+                lines.append(self._horizontal_rule_separator)
                 lines.append("")
 
         # ── 2. Get paragraph style name ─────────────────────────────

@@ -9,10 +9,8 @@ from docwen_core.docx_parsing.break_utils import (
     detect_all_breaks,
     detect_horizontal_rule,
     detect_page_break,
-    detect_page_break_in_run,
     detect_section_break,
     extract_paragraph_border_info,
-    split_paragraph_by_page_breaks,
 )
 
 pytestmark = pytest.mark.unit
@@ -37,28 +35,6 @@ def test_detect_page_break_false_for_normal_paragraph():
     assert detect_page_break(para) is False
 
 
-def test_detect_page_break_in_run():
-    doc = Document()
-    para = doc.add_paragraph()
-    run = para.add_run("before")
-    run.add_break(WD_BREAK.PAGE)
-    para.add_run("after")
-
-    found = False
-    for r in para.runs:
-        if detect_page_break_in_run(r):
-            found = True
-    assert found
-
-
-def test_detect_page_break_in_run_false_for_normal():
-    doc = Document()
-    para = doc.add_paragraph("normal")
-
-    for r in para.runs:
-        assert detect_page_break_in_run(r) is False
-
-
 # ── Section break detection ────────────────────────────────────────────
 
 
@@ -75,11 +51,30 @@ def test_detect_section_break_with_sectPr():
     para = doc.add_paragraph("last para")
     # Inject a sectPr element into the paragraph
     sect_pr = OxmlElement("w:sectPr")
-    para._p.append(sect_pr)
+    para._p.get_or_add_pPr().append(sect_pr)
 
     result = detect_section_break(para)
     assert result is not None
     assert result[0] == "nextPage"
+
+
+def test_section_type_is_a_child_and_revision_history_is_not_a_current_break():
+    doc = Document()
+    paragraph = doc.add_paragraph("current")
+    properties = paragraph._p.get_or_add_pPr()
+    change = OxmlElement("w:pPrChange")
+    old_properties = OxmlElement("w:pPr")
+    old_properties.append(OxmlElement("w:sectPr"))
+    change.append(old_properties)
+    properties.append(change)
+    assert detect_section_break(paragraph) is None
+
+    section = OxmlElement("w:sectPr")
+    section_type = OxmlElement("w:type")
+    section_type.set(qn("w:val"), "continuous")
+    section.append(section_type)
+    properties.append(section)
+    assert detect_section_break(paragraph) == ("continuous", "")
 
 
 # ── detect_all_breaks ──────────────────────────────────────────────────
@@ -93,7 +88,7 @@ def test_detect_all_breaks_combined():
     para.add_run("after")
     # Add a sectPr
     sect_pr = OxmlElement("w:sectPr")
-    para._p.append(sect_pr)
+    para._p.get_or_add_pPr().append(sect_pr)
 
     breaks = detect_all_breaks(para)
     types = [b[0] for b in breaks]
@@ -137,6 +132,25 @@ def test_detect_horizontal_rule_border_with_text():
 
     # Not empty → not a horizontal rule
     assert detect_horizontal_rule(para) is False
+
+
+def test_horizontal_rule_ignores_moved_away_text_but_keeps_accepted_sdt_text():
+    doc = Document()
+    paragraph = doc.add_paragraph()
+    borders = OxmlElement("w:pBdr")
+    bottom = OxmlElement("w:bottom")
+    bottom.set(qn("w:val"), "single")
+    borders.append(bottom)
+    paragraph._p.get_or_add_pPr().append(borders)
+    moved = OxmlElement("w:moveFrom")
+    moved.append(paragraph.add_run("moved away")._r)
+    paragraph._p.append(moved)
+    assert detect_horizontal_rule(paragraph)
+
+    content = OxmlElement("w:sdtContent")
+    content.append(paragraph.add_run("accepted content")._r)
+    paragraph._p.append(content)
+    assert not detect_horizontal_rule(paragraph)
 
 
 def test_extract_paragraph_border_info():
@@ -224,59 +238,3 @@ def test_border_group_tracker_empty_separator_omits_output():
 
     assert tracker.finalize() is None
     assert not tracker.is_in_group
-
-
-# ── Page-break text splitting ──────────────────────────────────────────
-
-
-def test_split_paragraph_by_page_breaks_simple():
-    doc = Document()
-    para = doc.add_paragraph()
-    para.add_run("first part")
-    run = para.add_run(" ")
-    run.add_break(WD_BREAK.PAGE)
-    para.add_run("second part")
-
-    result = split_paragraph_by_page_breaks(para)
-    # Should contain text before and after the page break, with "---" between
-    joined = "".join(result)
-    assert "first part" in joined
-    assert "---" in result
-    assert "second part" in joined
-
-
-def test_split_paragraph_by_page_breaks_no_break():
-    doc = Document()
-    para = doc.add_paragraph("plain text, no breaks")
-
-    result = split_paragraph_by_page_breaks(para)
-    assert len(result) == 1
-    assert "plain text" in result[0]
-
-
-def test_split_paragraph_by_page_breaks_collapse_adjacent():
-    """Adjacent page breaks should collapse to a single separator."""
-    doc = Document()
-    para = doc.add_paragraph()
-    run1 = para.add_run(" ")
-    run1.add_break(WD_BREAK.PAGE)
-    run2 = para.add_run(" ")
-    run2.add_break(WD_BREAK.PAGE)
-    para.add_run("after")
-
-    result = split_paragraph_by_page_breaks(para)
-    # Should not have consecutive "---"
-    sep_count = sum(1 for r in result if r == "---")
-    assert sep_count == 1
-
-
-def test_split_paragraph_by_page_breaks_empty_separator_omits_token():
-    doc = Document()
-    para = doc.add_paragraph()
-    para.add_run("first part")
-    run = para.add_run(" ")
-    run.add_break(WD_BREAK.PAGE)
-    para.add_run("second part")
-
-    result = split_paragraph_by_page_breaks(para, separator="")
-    assert result == ["first part", "second part"]

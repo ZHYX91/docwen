@@ -43,6 +43,21 @@ not interactive Word controls.
 每次出现绑定，覆盖 Wiki/Markdown 混排、重复资源及显式空 alt。任务项使用原生列表保留可见的 `[ ]` / `[x]`
 状态、子块与顺序；状态标记为文本，不承诺 Word 交互控件。
 
+The supported inline HTML formatting tags are `<u>`, `<sub>`, `<sup>`, `<del>`, `<mark>`, `<strong>` and `<em>`,
+without attributes. They accept nested supported inline content and are recognized before generic HTML. Code and
+escaped tags remain literal. Markdown export keeps the configured marker choices where those delimiters are
+unambiguous; adjacent different emphasis runs, intraword underscores and formatted boundary whitespace use the
+equivalent HTML tags instead of adding spaces or losing formatting. Body, table, list, quote and note text use the
+same run-property resolver and serializer. Character styles follow their explicit `basedOn` chain; direct off values
+override inherited formatting. Paragraph/default presentation and recognized code/quote character-style defaults do
+not invent authored emphasis. Unknown style IDs and independent style roots do not inherit unrelated Normal properties.
+
+无属性的 `<u>`、`<sub>`、`<sup>`、`<del>`、`<mark>`、`<strong>`、`<em>` 作为行内格式解析，支持嵌套；
+代码和转义标签保持字面量。导出在合法位置使用已配置的 Markdown 标记，在相邻强调、词内下划线或格式化首尾
+空白等无法无歧义表达的位置使用等价 HTML，不通过增删文字修补标记。正文、表格、列表、引用及注释共用行内属性
+解析和序列化；字符样式按明确的继承链求值，直接关闭优先。段落／默认外观和代码／引用字符样式的默认装饰不冒充
+作者强调；独立根样式、无效样式 ID 不猜测继承 Normal。
+
 ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions that map one-to-one to Word
 `Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
 direct `outlineLvl=0..8` values and outline levels inherited through paragraph styles.
@@ -78,6 +93,18 @@ Setext 下划线不会错移其动作。行内 `<br>` 在标题、表格单元�
 代码和公式中的字面内容不改写。
 DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标题。公式段落复用普通段落的文本渲染器，按所选
 格式策略保留行内代码、接受的修订、链接、注释，以及同一文本片段换行或制表符两侧的内容。
+
+Page breaks are read in native run order by the shared rich-text walker. Section breaks come from the current
+paragraph's `sectPr`, not a revision-history copy. Horizontal rules resolve paragraph-style borders, including
+inherited edges and explicit `none`/`nil` resets. A standalone rule is emitted at its own paragraph position, including
+before tables and at document end. These structures use the configured, distinct output separators.
+Native quote paragraphs retain paragraph separators, while line breaks within one paragraph stay within it. A return
+to a shallower quote must not become lazy continuation of the preceding deeper quote.
+
+分页符按当前 run 内的位置读取；分节符只读取当前段落属性，不把修订历史当成现有分节。水平线沿段落样式继承边框，
+直接 `none`／`nil` 可关闭继承边。独立水平线在自己的段落位置输出，包括表格之前和文末；三种结构分别使用所配置的
+输出分隔符。
+引用的原生段落边界保留为段间分隔，段内换行仍留在同一段；返回较浅引用层级时，不作为前一个深层引用的续行。
 
 ## Rules / 规则
 
@@ -189,6 +216,16 @@ objects and overrides only explicitly supplied booleans. The four keys are `stru
 | Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
 | H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
 | Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
+
+With typed-note input enabled, `[^id]` and `[^footnote:id]` identify footnotes and `[^endnote:id]` identifies an
+endnote. `[^endnote-id]` remains an ordinary footnote ID; its spelling never selects an endnote or a legacy mode.
+Input and output switches are independent. Preserving note kinds on a round trip requires typed-note recognition
+on input and typed-note syntax on output. Definitions, repeated references and formatted note bodies are rebuilt from
+the current native note parts; renumbering by first reference does not change note identity.
+
+开启输入 typed notes 时，`[^id]`／`[^footnote:id]` 为脚注，`[^endnote:id]` 为尾注；`[^endnote-id]` 始终是普通
+脚注 ID，不推测旧版本含义。输入识别和输出语法独立配置，往返保留类型时两端均须启用。定义、重复引用和正文格式
+均读取当前原生注释部件；按首次引用重新编号不改变引用关系。
 
 Ordinary pipe tables inside quote and list containers remain available when Structural Tables input is disabled.
 The opt-in controls advanced table roles and merge syntax; it does not gate ordinary nested table recognition.

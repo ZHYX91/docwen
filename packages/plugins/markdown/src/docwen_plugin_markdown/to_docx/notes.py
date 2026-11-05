@@ -30,8 +30,6 @@ XML_NS = "http://www.w3.org/XML/1998/namespace"
 # Mistune uppercases footnote keys in the parsed AST. Authored identifiers
 # never share this namespace: normalization projects every note to an opaque
 # request-local key before parsing.
-ENDNOTE_PREFIX_UC = "ENDNOTE-"  # legacy internal key accepted by NoteContext
-_ENDNOTE_PFX_LEN = len(ENDNOTE_PREFIX_UC)
 _INTERNAL_FOOTNOTE_PREFIX_UC = "DOCWEN-FN-"
 _INTERNAL_ENDNOTE_PREFIX_UC = "DOCWEN-EN-"
 
@@ -373,10 +371,6 @@ def extract_notes_from_ast(
                         note_ctx._endnote_children[clean_id] = para_children
                     else:
                         note_ctx._footnote_children[clean_id] = para_children
-                elif key.upper().startswith(ENDNOTE_PREFIX_UC):
-                    # Backward-compatible support for pre-opaque AST fixtures.
-                    clean_id = key[_ENDNOTE_PFX_LEN:]
-                    note_ctx._endnote_children[clean_id] = para_children
                 else:
                     note_ctx._footnote_children[key] = para_children
         else:
@@ -544,26 +538,17 @@ class NoteContext:
         return self._footnote_id_map[md_key]
 
     def get_endnote_word_id(self, md_key: str) -> int | None:
-        """Return the Word ID for an endnote markdown key.
-
-        Accepts keys with or without the ``ENDNOTE-`` prefix.
-        """
-        decoded = decode_internal_note_key(md_key)
-        if decoded is not None and decoded[0] == "endnote":
-            clean_key = decoded[1]
-        else:
-            clean_key = md_key[_ENDNOTE_PFX_LEN:] if md_key.upper().startswith(ENDNOTE_PREFIX_UC) else md_key
-
-        if clean_key not in self._endnote_children:
+        """Return the Word ID for one decoded, request-local endnote key."""
+        if md_key not in self._endnote_children:
             return None
 
-        if clean_key not in self._endnote_id_map:
+        if md_key not in self._endnote_id_map:
             word_id = self._endnote_counter
-            self._endnote_id_map[clean_key] = word_id
+            self._endnote_id_map[md_key] = word_id
             self._endnote_used_ids.add(word_id)
             self._endnote_counter = _lowest_unused_positive(self._endnote_used_ids)
 
-            children = self._endnote_children[clean_key]
+            children = self._endnote_children[md_key]
             elem = _create_endnote_element(
                 word_id,
                 children,
@@ -572,7 +557,7 @@ class NoteContext:
             )
             self.endnote_elements.append(elem)
 
-        return self._endnote_id_map[clean_key]
+        return self._endnote_id_map[md_key]
 
     # ── Reference run creation ──────────────────────────────────────
 
@@ -644,7 +629,7 @@ def _render_note_inlines(
     _f = fmt or {}
     for child in children:
         ctype = child.get("type", "")
-        if ctype == "text":
+        if ctype in {"text", "inline_html"}:
             _nr_text(para_elem, child, _f)
         elif ctype == "strong":
             _render_note_inlines(para_elem, child.get("children", []), _fmt_set(_f, _DC_BOLD))
@@ -653,7 +638,7 @@ def _render_note_inlines(
         elif ctype == "strikethrough":
             _render_note_inlines(para_elem, child.get("children", []), _fmt_set(_f, _DC_STRIKE))
         elif ctype == "codespan":
-            _nr_codespan(para_elem, child)
+            _nr_codespan(para_elem, child, _f)
         elif ctype in {"inline_math", "block_math"}:
             # Notes currently have no native formula writer. Preserve the
             # authored formula as readable LaTeX instead of dropping its leaf.
@@ -678,7 +663,12 @@ def _render_note_inlines(
 
 def _fmt_set(fmt: dict[str, bool], key: str) -> dict[str, bool]:
     """Return a shallow copy of *fmt* with *key* = True."""
-    return {**fmt, key: True}
+    result = {**fmt, key: True}
+    if key == _DC_SUPERSCRIPT:
+        result.pop(_DC_SUBSCRIPT, None)
+    elif key == _DC_SUBSCRIPT:
+        result.pop(_DC_SUPERSCRIPT, None)
+    return result
 
 
 def _nr_text(
@@ -709,32 +699,37 @@ def _apply_fmt(r: etree._Element, fmt: dict[str, bool] | None) -> None:
         etree.SubElement(rPr, f"{{{WML_NS}}}i")
     if fmt.get(_DC_STRIKE):
         etree.SubElement(rPr, f"{{{WML_NS}}}strike")
-    if fmt.get(_DC_SUPERSCRIPT):
-        va = etree.SubElement(rPr, f"{{{WML_NS}}}vertAlign")
-        va.set(f"{{{WML_NS}}}val", "superscript")
-    if fmt.get(_DC_SUBSCRIPT):
-        va = etree.SubElement(rPr, f"{{{WML_NS}}}vertAlign")
-        va.set(f"{{{WML_NS}}}val", "subscript")
-    if fmt.get(_DC_UNDERLINE):
-        u = etree.SubElement(rPr, f"{{{WML_NS}}}u")
-        u.set(f"{{{WML_NS}}}val", "single")
     if fmt.get(_DC_HIGHLIGHT):
         hl = etree.SubElement(rPr, f"{{{WML_NS}}}highlight")
         hl.set(f"{{{WML_NS}}}val", "yellow")
+    if fmt.get(_DC_UNDERLINE):
+        u = etree.SubElement(rPr, f"{{{WML_NS}}}u")
+        u.set(f"{{{WML_NS}}}val", "single")
+    if fmt.get(_DC_SUPERSCRIPT) or fmt.get(_DC_SUBSCRIPT):
+        va = etree.SubElement(rPr, f"{{{WML_NS}}}vertAlign")
+        va.set(f"{{{WML_NS}}}val", "superscript" if fmt.get(_DC_SUPERSCRIPT) else "subscript")
 
 
-def _nr_codespan(para: etree._Element, node: dict[str, Any]) -> None:
+def _nr_codespan(para: etree._Element, node: dict[str, Any], fmt: dict[str, bool] | None = None) -> None:
     text = node.get("raw", "") or node.get("text", "")
     if not text:
         return
     r = etree.SubElement(para, f"{{{WML_NS}}}r")
-    rPr = etree.SubElement(r, f"{{{WML_NS}}}rPr")
-    rFonts = etree.SubElement(rPr, f"{{{WML_NS}}}rFonts")
+    _apply_fmt(r, fmt)
+    rPr = r.find(f"{{{WML_NS}}}rPr")
+    if rPr is None:
+        rPr = etree.SubElement(r, f"{{{WML_NS}}}rPr")
+    rFonts = etree.Element(f"{{{WML_NS}}}rFonts")
+    rPr.insert(0, rFonts)
     rFonts.set(f"{{{WML_NS}}}ascii", "Consolas")
     rFonts.set(f"{{{WML_NS}}}hAnsi", "Consolas")
     shd = etree.SubElement(rPr, f"{{{WML_NS}}}shd")
     shd.set(f"{{{WML_NS}}}val", "clear")
     shd.set(f"{{{WML_NS}}}fill", "D9D9D9")
+    vertical = rPr.find(f"{{{WML_NS}}}vertAlign")
+    if vertical is not None:
+        rPr.remove(vertical)
+        rPr.append(vertical)
     t = etree.SubElement(r, f"{{{WML_NS}}}t")
     if text.startswith(" ") or text.endswith(" "):
         t.set(f"{{{XML_NS}}}space", "preserve")

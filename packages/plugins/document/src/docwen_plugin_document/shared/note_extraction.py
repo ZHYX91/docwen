@@ -13,6 +13,7 @@ from docwen_plugin_document.shared.markdown_runs import (
     _run_is_hidden,
     append_formatted_run_text,
     append_literal_run_text,
+    join_markdown_parts,
     resolve_run_style_type,
 )
 from docwen_plugin_document.shared.note_target_structure import NOTE_WRAPPERS, is_pure_note_target
@@ -117,7 +118,9 @@ def _extract_note_content(
         run_texts: list[str] = []
         separator_expected = False
         for run in child.iter(f"{{{w_ns}}}r"):
-            if _run_is_hidden(run):
+            if any(ancestor.tag in {f"{{{w_ns}}}del", f"{{{w_ns}}}moveFrom"} for ancestor in run.iterancestors()):
+                continue
+            if _run_is_hidden(run, style_parent):
                 continue
             if run.find(f"{{{w_ns}}}{ref_tag}") is not None:
                 separator_expected = True
@@ -136,8 +139,10 @@ def _extract_note_content(
                 style_parent=style_parent,
             )
         if run_texts:
-            para_texts.append("".join(run_texts))
-    return "\n".join(para_texts)
+            para_texts.append(join_markdown_parts(run_texts))
+    # Paragraph boundaries must not become soft line breaks on the next
+    # Markdown import. Breaks within a paragraph remain single newlines.
+    return "\n\n".join(para_texts)
 
 
 def _append_note_run(
@@ -174,6 +179,7 @@ def _append_note_run(
                 syntax_config=syntax_config,
                 style_detector_config=style_detector_config,
                 run_style_type=resolve_run_style_type(run, style_parent, style_detector_config),
+                parent=style_parent,
             )
         else:
             append_literal_run_text(rendered, segment)
@@ -273,7 +279,7 @@ def _note_bookmark_targets(doc) -> dict[str, tuple[str, int]]:
         if not _native_marker_is_run_payload(reference):
             continue
         if any(
-            ancestor.tag in {q + "del", q + "moveFrom"} or (ancestor.tag == q + "r" and _run_is_hidden(ancestor))
+            ancestor.tag in {q + "del", q + "moveFrom"} or (ancestor.tag == q + "r" and _run_is_hidden(ancestor, doc))
             for ancestor in reference.iterancestors()
         ):
             continue
