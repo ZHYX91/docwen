@@ -151,6 +151,7 @@ class DocxToMarkdownConverter:
         self._ordinary_container_list_bindings: frozenset[tuple[str, str]] = frozenset()
         self._resolved_v4_diagnostics: list[tuple[str, str, str]] = []
         self._table_role_diagnostics: list[str] = []
+        self._formula_diagnostics: list[tuple[str, str]] = []
         self._table_role_overrides: dict[Any, tuple[int, int]] = {}
         self._pending_artifacts: list[Any] = []
         self._pending_primary_path: str | None = None
@@ -199,6 +200,7 @@ class DocxToMarkdownConverter:
         """
         self._resolved_v4_diagnostics.clear()
         self._table_role_diagnostics.clear()
+        self._formula_diagnostics.clear()
         self._table_role_overrides.clear()
         from docwen_core.models.result import (
             ConversionDiagnostic,
@@ -405,6 +407,12 @@ class DocxToMarkdownConverter:
                 level="warning", message=message, code="DOCX2MD-TABLE-ROLES-STALE", location="word/document.xml"
             )
             for message in self._table_role_diagnostics
+        )
+        all_diagnostics.extend(
+            ConversionDiagnostic(
+                level="warning", message=message, code="DOCX2MD-FORMULA-SOURCE-FALLBACK", location=location
+            )
+            for message, location in self._formula_diagnostics
         )
         all_diagnostics.extend(
             ConversionDiagnostic(
@@ -2034,22 +2042,13 @@ class DocxToMarkdownConverter:
             render_paragraph_runs_split_on_page_breaks,
         )
 
-        standalone_formula = not (getattr(para, "text", "") or "").strip()
-
-        def _render_formula(child: Any) -> str | None:
-            tag = child.tag.split("}")[-1] if "}" in (child.tag or "") else (child.tag or "")
-            return extract_formula_from_element(
-                child,
-                block=(tag == "oMathPara" or standalone_formula),
-            )
-
         segments = render_paragraph_runs_split_on_page_breaks(
             para,
             note_extractor=self._note_extractor,
             preserve_formatting=(self._preserve_formatting if preserve_formatting is None else preserve_formatting),
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
-            math_renderer=_render_formula,
+            math_renderer=self._render_formula,
             image_renderer=self._render_inline_images,
             line_break_text=line_break_text,
             text_transform=text_transform,
@@ -2139,6 +2138,17 @@ class DocxToMarkdownConverter:
         text = tb_para.text.strip() if tb_para.text else ""
         return text
 
+    def _render_formula(self, element: Any) -> str:
+        """Use explicit Office math identity and report this XML occurrence."""
+
+        def report_failure(message: str) -> None:
+            location = "word/document.xml:" + element.getroottree().getpath(element)
+            diagnostic = (message, location)
+            if diagnostic not in self._formula_diagnostics:
+                self._formula_diagnostics.append(diagnostic)
+
+        return extract_formula_from_element(element, on_failure=report_failure)
+
     def _build_paragraph_text_with_formulas(
         self,
         para_element: Any,
@@ -2151,28 +2161,13 @@ class DocxToMarkdownConverter:
         """Render formulas and surrounding text through the shared run walker."""
         from docwen_plugin_document.shared.markdown_runs import render_paragraph_runs
 
-        # The shared renderer owns the visible XML projection. An empty
-        # projection is a valid result (for example an all-hidden paragraph).
-        visible_paragraph_text = self._extract_paragraph_text_formatted(
-            para if para is not None else para_element,
-            preserve_formatting=False,
-            style_detector_config=style_detector_config,
-            escape_literal_text=False,
-        )
-        paragraph_text = visible_paragraph_text.strip()
-        standalone_formula = not paragraph_text
-
-        def render_formula(child: Any) -> str | None:
-            tag = child.tag.split("}")[-1] if "}" in (child.tag or "") else (child.tag or "")
-            return extract_formula_from_element(child, block=(tag == "oMathPara" or standalone_formula))
-
         return render_paragraph_runs(
             para if para is not None else para_element,
             note_extractor=self._note_extractor,
             preserve_formatting=preserve_formatting,
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
-            math_renderer=render_formula,
+            math_renderer=self._render_formula,
             text_transform=text_transform,
             image_renderer=self._render_inline_images,
             reference_spans=self._paragraph_reference_spans(para_element),

@@ -328,9 +328,11 @@ def test_unknown_math_leaf_preserves_source_formula_and_reports_fallback(
     )
     root = _xml(output)
     assert not root.findall(".//m:oMath", _NS)
-    paragraphs = ["".join(p.itertext()) for p in root.findall("w:body/w:p", _NS)]
-    assert paragraphs == (["Before.", latex, "After."] if block else [f"Before {latex} after."])
+    paragraphs = [p.text for p in Document(output).paragraphs]
+    assert paragraphs == (["Before.", f"$$\n{latex}\n$$", "After."] if block else [f"Before ${latex}$ after."])
     assert sum(d.code == "MD2DOCX-FORMULA-TEXT-FALLBACK" for d in result.diagnostics) == 1
+    diagnostic = next(d for d in result.diagnostics if d.code == "MD2DOCX-FORMULA-TEXT-FALLBACK")
+    assert "/w:document/w:body/w:p" in diagnostic.message
 
 
 @pytest.mark.parametrize("text", ["001 国发〔2024〕号", "001 国发2024-号"])

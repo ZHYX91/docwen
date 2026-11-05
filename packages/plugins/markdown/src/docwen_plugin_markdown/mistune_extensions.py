@@ -38,6 +38,7 @@ from mistune.plugins.table import table_in_list, table_in_quote
 
 from docwen_core.links import markdown_table_cell_ranges, markdown_table_delimiter
 from docwen_core.markdown_extensions import MarkdownExtensions
+from docwen_core.markdown_math import DISPLAY_MATH_START, match_formula
 from docwen_plugin_markdown.callouts import plugin_callout_headers
 
 _EXTENDED_ATX_HEADING_TRIM = re.compile(r"(\s+|^)#+\s*$")
@@ -77,46 +78,45 @@ def plugin_underline(md: mistune.Markdown) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Custom plugin: standalone single-line display math
+# Custom plugin: shared dollar-math grammar
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def plugin_single_line_block_math(md: mistune.Markdown) -> None:
-    """Parse a standalone ``$$formula$$`` line as ``block_math``.
+def plugin_math(md: mistune.Markdown) -> None:
+    """Use the source scanner's math boundaries in every Markdown container."""
 
-    Mistune's built-in math plugin only treats the three-line form as display
-    math.  The maintained parser contract also accepts the common single-line form; if
-    it falls through to the inline parser, the two outer dollar signs become
-    literal text in Word.  Registering this as a block rule keeps fenced code
-    untouched and gives both spellings the same AST contract.
-    """
-
-    pattern = r"^ {0,3}\$\$(?P<single_line_math_text>[^\n]+?)\$\$[ \t]*$"
-
-    def parse_single_line_block_math(block, match, state):
+    def append_formula(state, formula):
         state.append_token(
             {
-                "type": "block_math",
-                "raw": match.group("single_line_math_text").strip(),
+                "type": "inline_math" if formula["is_inline"] else "block_math",
+                "raw": formula["latex"],
+                "_math_source": state.src[formula["start"] : formula["end"]],
             }
         )
-        return match.end() + 1
 
-    md.block.register(
-        "single_line_block_math",
-        pattern,
-        parse_single_line_block_math,
-        before="block_math",
-    )
-    # Both display spellings are blocks inside native quote/list containers.
-    # Otherwise Mistune emits block_math as a paragraph's inline child, which
-    # has no block owner and is silently skipped by the inline renderer.
+    def parse_block_math(block, match, state):
+        start = match.end() - 2
+        formula = match_formula(state.src, start, standalone=True)
+        if formula is None:
+            return None
+        append_formula(state, formula)
+        end = formula["end"]
+        line_end = state.src.find("\n", end)
+        return len(state.src) if line_end < 0 else line_end + 1
+
+    def parse_inline_math(inline, match, state):
+        formula = match_formula(state.src, match.start())
+        if formula is None:
+            return None
+        append_formula(state, formula)
+        return formula["end"]
+
+    md.block.register("block_math", DISPLAY_MATH_START.pattern, parse_block_math, before="list")
+    md.inline.register("inline_math", r"\$", parse_inline_math, before="codespan")
     for rules_name in ("block_quote_rules", "list_rules"):
         rules = getattr(md.block, rules_name)
         if "block_math" not in rules:
             md.block.insert_rule(rules, "block_math", before="list")
-        if "single_line_block_math" not in rules:
-            md.block.insert_rule(rules, "single_line_block_math", before="block_math")
 
 
 def plugin_extended_atx_headings(md: mistune.Markdown) -> None:
@@ -343,7 +343,7 @@ def create_extended_markdown(
     """Create a mistune Markdown instance with the requested plugins.
 
     Includes:
-    - Built-in: table, footnotes, strikethrough, task_lists, math
+    - Built-in: table, footnotes, strikethrough, task_lists
     - Formatting: mark (``==text==``), insert (``^^text^^``),
       superscript (``^text^``), subscript (``~text~``)
     - Custom: underline (``<u>text</u>``)
@@ -360,12 +360,11 @@ def create_extended_markdown(
         "footnotes",
         "strikethrough",
         "task_lists",
-        "math",
+        plugin_math,
         _mark,
         _insert,
         _superscript,
         _subscript,
-        plugin_single_line_block_math,
         plugin_underline,
         plugin_source_breaks,
         plugin_callout_headers,

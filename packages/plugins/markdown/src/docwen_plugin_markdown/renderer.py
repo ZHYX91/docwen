@@ -1121,17 +1121,18 @@ class MdToDocxRenderer:
                     try:
                         result = self._dispatch(child)
                         if result is not None:
-                            if isinstance(result, list):
-                                for r in result:
-                                    apply_list_indent(r, depth, left_twips=continuation_indent) if hasattr(
-                                        r, "_p"
-                                    ) else None
-                                paragraphs.extend(result)
-                            else:
-                                apply_list_indent(result, depth, left_twips=continuation_indent) if hasattr(
-                                    result, "_p"
-                                ) else None
-                                paragraphs.append(result)
+                            items = result if isinstance(result, list) else [result]
+                            for item in items:
+                                if hasattr(item, "_p"):
+                                    if not paragraphs and num_id is not None:
+                                        # The first block owns the list marker.
+                                        # Its hanging indent comes from the
+                                        # numbering definition, not a direct
+                                        # continuation firstLine=0 override.
+                                        apply_list_to_paragraph(item, num_id, depth)
+                                    else:
+                                        apply_list_indent(item, depth, left_twips=continuation_indent)
+                                paragraphs.append(item)
                     finally:
                         self._list_depth = prev_depth
         elif ntype in ("list", "bullet_list", "ordered_list"):
@@ -1270,12 +1271,15 @@ class MdToDocxRenderer:
             paragraphs.append(paragraph)
         return paragraphs
 
-    def _handle_block_latex(self, node: dict[str, Any]):
+    def _handle_block_math(self, node: dict[str, Any]):
         """Render block LaTeX as OMML equation."""
-        if not render_formula(self._doc, node, block_style=self._formula_block_style):
-            self._warnings.append(
-                ("MD2DOCX-FORMULA-TEXT-FALLBACK", "An unsupported formula was preserved as its original LaTeX text.")
-            )
+        render_formula(
+            self._doc,
+            node,
+            block_style=self._formula_block_style,
+            in_list=self._list_depth > 0,
+            on_failure=lambda message: self._warnings.append(("MD2DOCX-FORMULA-TEXT-FALLBACK", message)),
+        )
         # Return the last paragraph (created by render_formula)
         paragraph = self._doc.paragraphs[-1] if self._doc.paragraphs else None
         if paragraph is None:
@@ -1318,10 +1322,6 @@ class MdToDocxRenderer:
         )
         paragraph._p.addprevious(caption._p)
         return [caption, paragraph]
-
-    def _handle_block_math(self, node: dict[str, Any]):
-        """Handle block_math from mistune's math plugin."""
-        return self._handle_block_latex(node)
 
     def _handle_blank_line(self, node: dict[str, Any]):
         """Blank lines between blocks — no-op in DOCX."""

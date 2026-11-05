@@ -30,12 +30,12 @@ class TestFormulaRenderer:
 
     def test_inline_formula_embeds_omath_in_paragraph(self):
         from docwen_plugin_markdown.to_docx.formula_renderer import (
-            render_inline_formula,
+            append_formula,
         )
 
         doc = Document()
         p = doc.add_paragraph("Before ")
-        render_inline_formula(p, r"x_1")
+        append_formula(p, r"x_1", block=False)
         p.add_run(" after")
         xml = _docx_xml(doc)
         assert "oMath" in xml
@@ -66,13 +66,13 @@ class TestFormulaRenderer:
     def test_inline_formula_fallback_for_invalid_latex(self):
         """Invalid LaTeX is rendered as plain text rather than crashing."""
         from docwen_plugin_markdown.to_docx.formula_renderer import (
-            render_inline_formula,
+            append_formula,
         )
 
         doc = Document()
         p = doc.add_paragraph()
         # Intentionally malformed LaTeX
-        render_inline_formula(p, r"\invalid{")
+        append_formula(p, r"\invalid{", block=False)
         _docx_xml(doc)
         # Either we get OMML or plain text; should not crash
         assert len(doc.paragraphs) >= 1
@@ -153,6 +153,7 @@ class TestFormulaViaFullPipeline:
             {
                 "type": "block_math",
                 "raw": r"x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}",
+                "_math_source": r"$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$",
             }
         ]
 

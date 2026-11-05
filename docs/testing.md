@@ -451,6 +451,16 @@ The OCR sidecar case substitutes only the typed OCR engine outcome; resource all
 hash checks remain real. The native attachment fixture contains actual DOCX bytes, not text with an invented MIME.
 `test_mathml_text_and_tokens.py` supplies independent MathML leaf and lexical-boundary expectations.
 
+`test_formula_roundtrip.py` carries a generic fifteen-formula fixture through two complete Runtime conversions
+in each direction. It checks ordered mathematical atoms, inline/display identity, all matrix dimensions, the
+limit's fraction argument, root visibility and list alignment, then compares native math structures between
+cycles. Code and currency negatives stay literal. `test_math_structures.py` separately checks compound root
+degrees, function script placement, adjacent function products and whole-source failure for unsupported
+operators; `test_math_containers.py` pairs parser/source ownership in body, list and quote containers. These
+source checks do not certify Word/WPS host layout; actual host renders remain a separate acceptance step.
+Additional complete cycles cover list/table matrices and native adjacent formulas beside literal dollars/digits;
+the reader separately checks that final formatting wrappers do not receive unnecessary separator spaces.
+
 这些回归使用真实最小 OOXML／ENEX／PPTX，经生产转换、finalizer 与 Bundle 发布，按 ZIP/XML 原始事实、完整
 正文／次数／顺序、数学 token、独立 Markdown table AST 及最终目标→资源 SHA 核验。quote 在 fresh reader
 之前检查物理 carrier 和 break 节点，再调用生产 replan。重定位边界测试显式提供声明 manifest，只证明

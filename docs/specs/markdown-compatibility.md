@@ -1401,9 +1401,64 @@ The supported visible projection suppresses directly enabled `w:vanish` runs in 
 
 ## Text and math source ownership / 文本与公式的源所有权
 
+Dollar-math boundaries are shared by the Markdown parser and source protection. `$...$` is inline math;
+`$$...$$` is display math in paragraphs, lists and table cells. Display delimiters may share the first/last
+content line or occupy their own lines. A complete formula owns its body before heading numbering, so a matrix's
+standalone `=` is never a Setext heading and its `\\` row separators stay literal. Code spans, code blocks,
+escaped dollars and amounts such as `$5 and $10` remain ordinary content.
+
+Markdown 解析和源保护共用美元符号数学边界。`$...$` 为行内公式，`$$...$$` 为块公式，正文、列表和
+表格单元格采用相同身份。块公式围栏可以与首尾内容同行，也可以独占一行。完整公式先于标题编号拥有
+内部原文，矩阵的独立 `=` 不得成为 Setext 标题，`\\` 行分隔符不得被普通 Markdown 转义处理。
+代码、转义美元符和 `$5 and $10` 这样的金额保持字面内容。
+
+DOCX writes inline math as `m:oMath` and display math as `m:oMathPara`. Reading uses that explicit structure,
+including formula-only paragraphs, instead of guessing from the absence of ordinary text. Multiline display
+output uses separate fence lines; a table cell uses one physical line while preserving TeX row separators.
+List display equations are left aligned with their real list content and marker. Ordinary body display math
+uses the formula paragraph style (centered by default); alignment never changes formula identity.
+Visible braces, dollar signs and underscores are escaped on math export, so `\{x\}`, `\$5` and `a\_b`
+cannot become an invisible group, a Markdown delimiter or a subscript on re-import.
+The final fragment join checks the same dollar grammar and adds visible whitespace where adjacent native
+formulas or ordinary digits would otherwise merge their delimiters; formatting and code boundaries remain literal.
+
+DOCX 分别用 `m:oMath` 与 `m:oMathPara` 表示行内和块公式。回读直接依据这一结构，纯公式段落也不再按
+“没有普通文字”猜为块公式。多行块公式输出独立围栏；表格单元格保持单行 Markdown，同时保留 TeX 行分隔符。
+列表中的块公式与真实列表内容、编号左对齐；正文块公式采用公式段落样式，默认居中。对齐不会改变公式身份。
+公式回读转义可见花括号、美元符号和下划线，`\{x\}`、`\$5`、`a\_b` 不得在再次导入时变为不可见分组、
+Markdown 分隔符或下标。
+最终片段拼接使用同一美元符号语法，原生相邻公式或后接普通数字会粘连分隔符时添加必要的可见空白；
+格式和代码以最终序列化后的真实边界判断。
+
+Square roots explicitly hide their empty root degree; indexed roots retain the complete degree and radicand.
+Ordinary named functions retain token order and side scripts (for example `\sin^2 x` and `\log_2 x`); the
+writer does not infer a function argument from adjacent presentation tokens. Thus `\sin x \cos y` remains
+a product and `\sin(x)y` does not become `\sin((x)y)`. A limit uses an explicit native function with its
+limit scripts only when a fraction or group establishes its operand; ambiguous ungrouped operands/factors
+preserve source with a diagnostic. N-ary operands keep a following product, including named-function
+factors, together up to a sum or relation. Use explicit TeX grouping for a whole sum as the operand.
+
+平方根明确隐藏空根指数；有根指数的根式完整保留根指数和被开方项。普通命名函数保留原记号顺序和侧标，
+如 `\sin^2 x` 和 `\log_2 x`；不根据相邻展示记号猜测函数参数。因此 `\sin x \cos y` 保持乘积，
+`\sin(x)y` 不会变为 `\sin((x)y)`。极限仅在分式或分组明确参数范围时采用原生函数及上下限结构；未分组的
+参数、后续因子范围有歧义时保留原文并诊断。求和、积分等 n 元运算的连续乘积保持完整，包含命名函数因子，
+至加减或关系符结束；对整个和式运算应使用显式 TeX 分组。
+
 MathML `mtext` retains literal text and whitespace, including units and conditions. DOCX output marks these as normal-text math runs and preserves their spacing. Native formula import keeps TeX control words lexically separate from following ASCII identifiers in ordinary groups, scripts and matrix cells. An unsupported MathML leaf on Markdown-to-DOCX export preserves the original LaTeX as visible text with `MD2DOCX-FORMULA-TEXT-FALLBACK`; a nonempty partial formula is not success. This defines a supported subset, not every LaTeX command.
 
 MathML `mtext` 保留字面文本及空白，包括单位与条件；DOCX 写出普通文本数学 run 并保留空格。原生公式导入在普通分组、上下标与矩阵单元格中保留 TeX 控制词和后续 ASCII 标识符的词法边界。Markdown→DOCX 导出遇到无法表示的 MathML 叶节点时，保留原 LaTeX 为可见文本并发出 `MD2DOCX-FORMULA-TEXT-FALLBACK`，不得以非空的残缺公式报告成功；此能力不覆盖全部 LaTeX 命令。
+
+Unknown mathematical containers are also refused as a whole, including unmodeled accents/enclosures. Export
+fallback keeps the original dollar delimiters and LaTeX, and identifies the XML paragraph/cell occurrence in
+the diagnostic. Import fallback retains the complete original OMML as a JSON string in a Markdown code span
+and reports `DOCX2MD-FORMULA-SOURCE-FALLBACK` with its package/XML location. The pinned TeX parser erases ASCII
+upright-identifier information from `\mathrm`/`\rm`; those commands therefore use explicit source fallback.
+This supported subset does not flatten an unknown operation or claim a partial expression as successful math.
+
+未知数学容器同样整式拒绝，包括尚未建模的重音、外框。导出失败保留原美元分隔符和 LaTeX，并报告所在
+XML 段落／单元格。导入失败把完整原 OMML 作为 JSON 字符串保存在 Markdown 代码片段中，发出带包内 XML
+位置的 `DOCX2MD-FORMULA-SOURCE-FALLBACK`。锁定的 TeX 解析器会丢失 `\mathrm`／`\rm` 的 ASCII 正体信息，
+这两类命令也明确采用原文回退。受支持子集不得把未知运算摊平后将残缺表达式当作成功公式。
 
 Gongwen extraction owns text and math occurrences in XML order. Text before, between and after inline formulas survives regardless of paragraph length; an outer `oMathPara` owns its nested math once. Combined copy/document-number recognition and extraction share one full-line parse, before request heading cleanup can claim a leading copy ID. Consume the paragraph only after both fields represent its source completely; conflicting or uncertain combined fields and formula-bearing metadata remain visible with a precise source-preservation diagnostic. Existing missing-field warnings still apply. Copy IDs retain leading zeros as strings. These rules do not add rich formula extraction to Gongwen's existing plain-text table projection.
 
