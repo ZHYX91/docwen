@@ -16,7 +16,7 @@ pytestmark = pytest.mark.contract
 _MATRIX = "\\begin{bmatrix}\na & b \\\\\nc & d\n\\end{bmatrix}"
 
 
-@pytest.mark.parametrize("fenced", [f"$${_MATRIX}$$", f"$$\n{_MATRIX}\n$$"])
+@pytest.mark.parametrize("fenced", [f"$${_MATRIX}$$", f"$$\n{_MATRIX}\n$$", f"$$\n{_MATRIX}\n $$"])
 @pytest.mark.parametrize("container", ["body", "list", "quote"])
 def test_multiline_formula_owns_its_raw_body_before_heading_rules(fenced: str, container: str) -> None:
     source = fenced.replace("\nc & d", "\n=\nc & d")

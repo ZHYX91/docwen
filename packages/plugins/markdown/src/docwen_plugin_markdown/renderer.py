@@ -1123,15 +1123,12 @@ class MdToDocxRenderer:
                         if result is not None:
                             items = result if isinstance(result, list) else [result]
                             for item in items:
-                                if hasattr(item, "_p"):
-                                    if not paragraphs and num_id is not None:
-                                        # The first block owns the list marker.
-                                        # Its hanging indent comes from the
-                                        # numbering definition, not a direct
-                                        # continuation firstLine=0 override.
-                                        apply_list_to_paragraph(item, num_id, depth)
-                                    else:
-                                        apply_list_indent(item, depth, left_twips=continuation_indent)
+                                # The first numbered block keeps its hanging
+                                # indent and any numbering policy established
+                                # by its own renderer. Final item binding below
+                                # adds numPr only when the block has none.
+                                if hasattr(item, "_p") and (paragraphs or num_id is None):
+                                    apply_list_indent(item, depth, left_twips=continuation_indent)
                                 paragraphs.append(item)
                     finally:
                         self._list_depth = prev_depth
