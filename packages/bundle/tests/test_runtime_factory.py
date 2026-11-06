@@ -208,9 +208,10 @@ def test_register_plugin_rejects_modules_missing_required_exports(
 
 
 def test_portable_runtime_is_profile_owned_and_explicit_override_wins(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
     import docwen_bundle.runtime_factory as factory
     import docwen_runtime.profile_paths as profile_paths
-    from types import SimpleNamespace
 
     monkeypatch.delenv("DOCWEN_RUNTIME_ROOT", raising=False)
     root = tmp_path / "portable" / "data"
