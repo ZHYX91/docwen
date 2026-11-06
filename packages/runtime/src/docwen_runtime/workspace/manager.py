@@ -172,7 +172,7 @@ class WorkspaceManager:
             staging_dir = os.path.join(ws_dir, "staging")
             try:
                 os.makedirs(staging_dir)
-                declared_refs, declared_input_path = self._materialize_declared_inputs(ws_dir, input_refs)
+                declared_refs, declared_input_path = self._materialize_declared_inputs(ws_dir, input_refs, cancellation=cancellation)
                 if cancellation is not None:
                     cancellation.check()
             except Exception:
@@ -187,6 +187,8 @@ class WorkspaceManager:
     def _materialize_declared_inputs(
         workspace_dir: str,
         input_refs: tuple[FileRef, ...],
+        *,
+        cancellation: CancellationTokenView | None = None,
     ) -> tuple[tuple[FileRef, ...], str | None]:
         """Copy typed inputs into their isolated request virtual root."""
         if not input_refs or not any(item.logical_path for item in input_refs):
@@ -199,6 +201,8 @@ class WorkspaceManager:
         source_path: str | None = None
         logical_paths: set[str] = set()
         for index, item in enumerate(input_refs):
+            if cancellation is not None:
+                cancellation.check()
             segments = item.logical_path.split("/")
             if (
                 not item.logical_path
@@ -220,7 +224,16 @@ class WorkspaceManager:
                 raise ValueError("typed input must be an existing regular file")
             suffix = source.suffix if len(source.suffix) <= 32 else ""
             destination = input_root / f"input-{index:04d}{suffix}"
-            shutil.copy2(source, destination)
+            with source.open("rb") as source_stream, destination.open("xb") as destination_stream:
+                while chunk := source_stream.read(1024 * 1024):
+                    if cancellation is not None:
+                        cancellation.check()
+                    destination_stream.write(chunk)
+                destination_stream.flush()
+                os.fsync(destination_stream.fileno())
+            shutil.copystat(source, destination, follow_symlinks=False)
+            if cancellation is not None:
+                cancellation.check()
             expected_sha = item.metadata.get(MANAGED_INPUT_SHA256_METADATA_KEY)
             expected_size = item.metadata.get(MANAGED_INPUT_SIZE_BYTES_METADATA_KEY)
             if expected_sha is None and expected_size is None:

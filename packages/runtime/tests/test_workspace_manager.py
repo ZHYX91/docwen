@@ -518,3 +518,36 @@ def test_workspace_name_collision_is_bounded_and_cancelled_before_retry(tmp_path
     with pytest.raises(TemporaryDirectoryUnavailable, match="unique temporary"):
         make_bounded_temp_dir(root, prefix="dw-", attempts=4)
     assert len(attempts) == 7
+
+
+
+def test_workspace_materialization_checks_cancellation_between_inputs(tmp_path):
+    from docwen_core.cancellation import CancellationToken
+    from docwen_core.errors import CancellationRequested
+    from docwen_core.models.file_ref import FileRef
+
+    first = tmp_path / "first.md"
+    second = tmp_path / "second.md"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    refs = (
+        FileRef(path=str(first), format="md", input_role="source", logical_path="first.md"),
+        FileRef(path=str(second), format="md", input_role="attachment", logical_path="second.md"),
+    )
+    token = CancellationToken()
+    calls = 0
+
+    class CancelAfterFirst:
+        def check(self):
+            nonlocal calls
+            calls += 1
+            if calls >= 3:
+                token.cancel("user_cancelled")
+                raise CancellationRequested("cancelled during materialization")
+
+    root = tmp_path / "workspace"
+    root.mkdir()
+    with pytest.raises(CancellationRequested, match="materialization"):
+        WorkspaceManager._materialize_declared_inputs(str(root), refs, cancellation=CancelAfterFirst())
+    assert (root / "inputs" / "input-0000.md").read_text(encoding="utf-8") == "first"
+    assert not (root / "inputs" / "input-0001.md").exists()
