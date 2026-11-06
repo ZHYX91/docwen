@@ -31,13 +31,12 @@ def test_numbering_review_is_general_and_preserves_saved_mode_and_cancel(qapp, l
         assert card is not None
         assert tab.findChild(QCheckBox, "textNumberingText") is None
         assert card.isAncestorOf(tab._numbering_comments)
-        assert tab._numbering_comments.isChecked()
+        assert not tab._numbering_comments.isChecked()
         assert tab._numbering_comments.isEnabled()
         assert tab._numbering_comments.toolTip() == t("settings.text.numbering_comments_help")
         assert tab._render_mode_combo.toolTip() == t("settings.text.render_mode_hint")
         assert not any(label.text() == t("settings.text.render_mode_hint") for label in card.findChildren(QLabel))
 
-        tab._numbering_comments.setChecked(False)
         assert vm.config.text.gongwen_numbering_comments is False
         tab._add_numbering.setChecked(True)
         tab.set_combo_data(tab._render_mode_combo, "text")
@@ -49,9 +48,8 @@ def test_numbering_review_is_general_and_preserves_saved_mode_and_cancel(qapp, l
         assert vm.config.text.gongwen_fields_enabled is False
         assert vm.config.text.heading_numbering_render_mode == "word_native"
 
-        tab._numbering_comments.setChecked(False)
         vm.cancel()
-        assert tab._numbering_comments.isChecked()
+        assert not tab._numbering_comments.isChecked()
         assert tab._render_mode_combo.currentData() == "word_native"
         assert not vm.is_dirty
     finally:

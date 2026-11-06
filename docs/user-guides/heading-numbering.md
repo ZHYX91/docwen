@@ -7,7 +7,7 @@ numbers. **Text** inserts a literal label; **DOCX native** uses Word multilevel
 numbering. The mode description is available from the setting's information
 button. Adding numbering remains a separate switch.
 
-Review comments can be enabled independently in either mode. Text-mode comments
+Review comments are off by default and can be enabled independently in either mode. Text-mode comments
 anchor the generated number. Native-numbering labels are not text runs, so their
 comments anchor the first visible character of the heading instead. Existing
 handwritten numbers are not marked as newly generated numbers.

@@ -199,7 +199,7 @@ can introduce small differences between its calculated indent and rendered name 
 
 `text.heading_numbering_render_mode` is the single renderer choice for newly added heading numbers:
 `text` (default) or `word_native`. It never enables `add_numbering` or rewrites existing template numbering.
-`template_fill.gongwen_numbering_comments` is an independent review preference. Native numbering does not
+`template_fill.gongwen_numbering_comments` is an independent review preference, off by default. Native numbering does not
 materialize a text-number anchor, so its comments anchor the first visible heading character instead.
 Selecting either mode does not erase the saved comment preference. New text-numbered headings locally
 suppress inherited native numbering with `ilvl=0,numId=0`, retaining inherited numbering indentation on

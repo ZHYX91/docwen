@@ -15,6 +15,7 @@ from lxml import etree
 from PIL import Image
 from tests.support.numbering import repository_numbering_registry, repository_numbering_snapshot
 
+from docwen_core.docx_parsing.numbering_index import NumberingIndex
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 from docwen_plugin_markdown.to_docx.numbering_comments import (
     NUMBERING_REVIEW_TEXT,
@@ -213,9 +214,18 @@ def test_render_mode_controls_native_numbers_independently_of_legacy_text_switch
         assert b"20000" in package.read("word/numbering.xml")
 
 
-def test_missing_old_comment_key_now_defaults_on_without_enabling_numbering(tmp_path):
-    _result, _original, output_path = _convert(tmp_path, enabled=None)
-    assert len([c for c in Document(str(output_path)).comments if c.text == NUMBERING_REVIEW_TEXT]) == 2
+@pytest.mark.parametrize("mode", ["text", "word_native"])
+def test_missing_comment_key_defaults_off_without_disabling_numbering(tmp_path, mode):
+    _result, _original, output_path = _convert(tmp_path, enabled=None, mode=mode, source="# Title\n")
+    document = Document(str(output_path))
+    assert [comment.text for comment in document.comments] == ["Original review"]
+    heading = next(p for p in document.paragraphs if p.style.name == "Heading 1")
+    if mode == "text":
+        assert heading.text == "一、Title"
+    else:
+        assert heading.text == "Title"
+        assert heading.style is not None
+        assert NumberingIndex(document).lookup_by_style_id(heading.style.style_id) is not None
 
 
 @pytest.mark.parametrize(

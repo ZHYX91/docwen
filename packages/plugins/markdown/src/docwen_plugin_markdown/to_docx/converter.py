@@ -663,7 +663,7 @@ class MdToDocxConverter:
             supported_heading_levels: set[int] | None = None
 
             numbering_text = render_mode == "text"
-            numbering_comments = bool(_config_value(context.config, "template_fill.gongwen_numbering_comments", True))
+            numbering_comments = bool(_config_value(context.config, "template_fill.gongwen_numbering_comments", False))
             numbering_provenance = NumberingProvenance(content) if numbering_text else None
             added_prefixes: list[str] = []
             unanchored_number_comments = 0

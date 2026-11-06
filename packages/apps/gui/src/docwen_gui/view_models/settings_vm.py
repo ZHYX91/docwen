@@ -1021,7 +1021,7 @@ class SettingsViewModel(QObject):
             template_fill.get("gongwen_fields_enabled", True) if isinstance(template_fill, dict) else True
         )
         config.text.gongwen_numbering_comments = (
-            template_fill.get("gongwen_numbering_comments", True) if isinstance(template_fill, dict) else True
+            template_fill.get("gongwen_numbering_comments", False) if isinstance(template_fill, dict) else False
         )
         config.text.gongwen_numbering_text = (
             template_fill.get("gongwen_numbering_text", True) if isinstance(template_fill, dict) else True
