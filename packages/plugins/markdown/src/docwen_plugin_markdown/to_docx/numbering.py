@@ -18,7 +18,7 @@ import lxml.etree as etree
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import TemporaryDirectory
 logger = logging.getLogger(__name__)
 
 # ── OOXML constants ───────────────────────────────────────────────────────

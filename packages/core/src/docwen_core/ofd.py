@@ -50,7 +50,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, cast
 
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import make_temp_dir
 logger = logging.getLogger(__name__)
 
 _patches_applied: bool = False
@@ -347,8 +347,6 @@ def _patch_fileread() -> bool:
 
     def _patched_init(self, ofdb64: str):
         original_init(self, ofdb64)
-        import tempfile
-
         owner_root = Path(make_temp_dir(prefix="docwen-ofd-")).resolve(strict=True)
         self._docwen_scratch_root = owner_root
         owner_stats = owner_root.lstat()

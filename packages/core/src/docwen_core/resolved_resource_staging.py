@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import make_temp_dir
 from docwen_core.links._markdown_inline import parse_inline_link, parse_markdown_destination
 from docwen_core.links._patterns import WIKI_EMBED_PATTERN
 from docwen_core.models.resolved_numbering import (

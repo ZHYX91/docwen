@@ -7,7 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_application.postprocessing import postprocess_proofread_options
 
 

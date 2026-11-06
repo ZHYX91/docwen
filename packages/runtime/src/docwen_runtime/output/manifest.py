@@ -8,7 +8,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.models.artifact import ARTIFACT_KIND_MANIFEST, ArtifactManifest
 from docwen_core.models.conversion_manifest import ConversionManifestContext
 from docwen_core.models.request import ConversionRequest, OutputPolicy

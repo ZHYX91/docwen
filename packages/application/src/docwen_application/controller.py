@@ -19,7 +19,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.cancellation import CancellationToken
 from docwen_core.errors import DocWenError
 

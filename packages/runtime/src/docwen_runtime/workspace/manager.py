@@ -23,7 +23,7 @@ from docwen_core.models.file_ref import (
     FileRef,
 )
 from docwen_runtime.path_io import filesystem_path
-from docwen_runtime.workspace.temporary import make_bounded_temp_dir
+from docwen_core.tempfiles import make_temp_dir
 
 if TYPE_CHECKING:
     from docwen_core.models.artifact import ArtifactManifest
@@ -164,7 +164,7 @@ class WorkspaceManager:
                 cancellation.check()
             try:
                 os.makedirs(self._root, exist_ok=True)
-                ws_dir = make_bounded_temp_dir(self._root, prefix="dw-", cancellation=cancellation)
+                ws_dir = make_temp_dir(prefix="dw-", dir=self._root, cancellation_check=cancellation.check if cancellation is not None else None)
             except OSError as exc:
                 raise WorkspaceRootUnavailable(
                     "Cannot prepare the temporary work folder. Check folder permissions or security software."

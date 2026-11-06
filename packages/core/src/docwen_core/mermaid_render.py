@@ -17,7 +17,7 @@ from typing import Any, cast
 
 from PIL import Image
 
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import make_temp_dir
 from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
 from docwen_core.mermaid_runtime import inspect_mermaid_runtime
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning, ocr_diagnostic_code
 
 if TYPE_CHECKING:

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import lxml.etree as etree
 
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.text.numbering_word_adapter import (
     TranslationResult,
     WordNumberingLevel,
