@@ -45,7 +45,8 @@ def test_name_collision_is_bounded_and_checks_cancellation(monkeypatch, tmp_path
             raise CancellationRequested("cancelled")
 
     monkeypatch.setattr(os, "mkdir", conflict)
-    with pytest.raises(Exception, match="cancelled"):
+    from docwen_core.errors import CancellationRequested
+    with pytest.raises(CancellationRequested, match="cancelled"):
         make_temp_dir(prefix="dw-", dir=tmp_path, cancellation_check=check)
     assert calls == 3
 

@@ -498,7 +498,8 @@ def test_workspace_name_collision_is_bounded_and_cancelled_before_retry(tmp_path
     from docwen_core.cancellation import CancellationToken
     from docwen_core.errors import CancellationRequested
     from docwen_runtime.workspace import temporary
-    from docwen_runtime.workspace.temporary import TemporaryDirectoryUnavailable, make_bounded_temp_dir
+    from docwen_core.tempfiles import TemporaryDirectoryError
+    from docwen_runtime.workspace.temporary import make_bounded_temp_dir
 
     root = tmp_path / "runtime"
     root.mkdir()
@@ -515,7 +516,7 @@ def test_workspace_name_collision_is_bounded_and_cancelled_before_retry(tmp_path
     with pytest.raises(CancellationRequested):
         make_bounded_temp_dir(root, prefix="dw-", cancellation=token.view())
     assert len(attempts) == 3
-    with pytest.raises(TemporaryDirectoryUnavailable, match="unique temporary"):
+    with pytest.raises(TemporaryDirectoryError, match="unique temporary"):
         make_bounded_temp_dir(root, prefix="dw-", attempts=4)
     assert len(attempts) == 7
 
