@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.errors import CancellationRequested
-from docwen_core.file_io import replace_private_file
+from docwen_core.file_io import replace_authorized_file
 from docwen_core.models.artifact import ArtifactManifest, validate_artifact_ownership
 from docwen_core.models.result import (
     ConversionDiagnostic,
@@ -187,7 +187,7 @@ class OutputFinalizer:
                     self._io_path(source).touch(exist_ok=False)
                     publish = self._publish_no_clobber
                 if not group_outputs and policy.overwrite_mode == "overwrite":
-                    replace_private_file(
+                    replace_authorized_file(
                         self._io_path(source),
                         self._io_path(destination),
                         before_attempt=lambda: self._check_cancellation(cancellation),
@@ -1006,7 +1006,7 @@ class OutputFinalizer:
                 cls._check_cancellation(item.cancellation)
                 cls._check_prepared_destination(item, destination)
 
-            replace_private_file(
+            replace_authorized_file(
                 cls._io_path(item.temp_path),
                 cls._io_path(destination),
                 before_attempt=check_before_replace,

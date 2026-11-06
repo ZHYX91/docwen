@@ -19,7 +19,7 @@ def _is_windows() -> bool:
     return sys.platform == "win32"
 
 
-def replace_private_file(
+def replace_authorized_file(
     prepared: str | os.PathLike[str],
     destination: str | os.PathLike[str],
     *,

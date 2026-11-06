@@ -37,7 +37,7 @@ def test_retry_then_commit(monkeypatch, tmp_path: Path, code: int) -> None:
         original(src, dst)
 
     monkeypatch.setattr(file_io.os, "replace", flaky)
-    file_io.replace_private_file(source, target, before_attempt=lambda: checks.append("checked"))
+    file_io.replace_authorized_file(source, target, before_attempt=lambda: checks.append("checked"))
     assert target.read_bytes() == b"new"
     assert not source.exists()
     assert len(checks) == 3
@@ -59,7 +59,7 @@ def test_exhaustion_preserves_destination_and_original_error(monkeypatch, tmp_pa
 
     monkeypatch.setattr(file_io.os, "replace", denied)
     with pytest.raises(PermissionError):
-        file_io.replace_private_file(source, target)
+        file_io.replace_authorized_file(source, target)
     assert tries == 5
     assert source.read_bytes() == b"new" and target.read_bytes() == b"old"
 
@@ -75,7 +75,7 @@ def test_nonwindows_never_retries(monkeypatch, tmp_path: Path) -> None:
 
     monkeypatch.setattr(file_io.os, "replace", denied)
     with pytest.raises(PermissionError):
-        file_io.replace_private_file(tmp_path / "a", tmp_path / "b")
+        file_io.replace_authorized_file(tmp_path / "a", tmp_path / "b")
     assert tries == 1
 
 
@@ -99,5 +99,5 @@ def test_cancellation_and_identity_recheck_before_every_attempt(monkeypatch, tmp
 
     monkeypatch.setattr(file_io.os, "replace", denied)
     with pytest.raises(CancellationRequested):
-        file_io.replace_private_file(tmp_path / "a", tmp_path / "b", before_attempt=check)
+        file_io.replace_authorized_file(tmp_path / "a", tmp_path / "b", before_attempt=check)
     assert (tries, checks) == (1, 2)

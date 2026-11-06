@@ -117,7 +117,7 @@ from docwen_core.docx_standalone_caption_occurrence import (
     standalone_caption_occurrence_map_xml,
     wrap_standalone_caption_occurrence,
 )
-from docwen_core.file_io import replace_private_file
+from docwen_core.file_io import replace_authorized_file
 from docwen_core.models._resolved_numbering_semantics import (
     validate_document,
     validate_plan,
@@ -752,7 +752,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 if not temporary.is_file() or temporary.is_symlink():
                     raise ResolvedNumberingDocxError("package transform replaced the package unsafely")
             self.prove_package(temporary)
-            replace_private_file(temporary, package_path)
+            replace_authorized_file(temporary, package_path)
         finally:
             temporary.unlink(missing_ok=True)
 

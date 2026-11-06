@@ -20,7 +20,7 @@ from zipfile import BadZipFile, ZipFile
 import lxml.etree as etree
 
 from docwen_core.docx_xml import parse_word_xml_int as parse_word_note_id
-from docwen_core.file_io import replace_private_file
+from docwen_core.file_io import replace_authorized_file
 from docwen_core.links import is_markdown_source_escaped, split_markdown_block_segments
 from docwen_plugin_markdown.literal_source_spans import literal_source_spans
 
@@ -1271,7 +1271,7 @@ def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> int:
                 touch_endnotes=bool(new_endnote_ids),
                 final=True,
             )
-            replace_private_file(tmp_path, original)
+            replace_authorized_file(tmp_path, original)
         return projection.deferred_count
     except NoteWritebackError:
         raise
