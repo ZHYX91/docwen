@@ -301,14 +301,11 @@ class WrapRowLayout(QLayout):
     def minimumSize(self) -> QSize:
         size = QSize()
         for item in self._items:
-            hint = item.sizeHint()
+            hint = item.minimumSize()
             size = size.expandedTo(hint)
         margins = self.contentsMargins()
         size += QSize(margins.left() + margins.right(), margins.top() + margins.bottom())
-        width = size.width()
-        if width <= 0:
-            return size
-        return QSize(width, self.heightForWidth(width))
+        return size
 
     def _do_layout(self, rect: QRect, *, test_only: bool) -> int:
         margins = self.contentsMargins()
@@ -321,6 +318,9 @@ class WrapRowLayout(QLayout):
 
         for item in self._items:
             hint = item.sizeHint()
+            width = min(hint.width(), max(0, effective_rect.width()))
+            height = item.heightForWidth(width) if item.hasHeightForWidth() else hint.height()
+            hint = QSize(width, height)
             next_x = x + hint.width()
             if line_height > 0 and next_x > max_right + 1:
                 x = effective_rect.x()
