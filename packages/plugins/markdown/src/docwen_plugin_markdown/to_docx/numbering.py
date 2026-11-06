@@ -1,3 +1,4 @@
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 """Word-native list numbering for MD→DOCX conversion.
 
 Creates OOXML numbering definitions (abstractNum + num elements) and
@@ -370,7 +371,7 @@ def write_numbering_to_docx(
     abstract_elems, num_elems = numbering._get_elements()
     original = Path(docx_path)
 
-    with tempfile.TemporaryDirectory(prefix=".dw-numbering-", dir=original.parent) as tmpdir:
+    with TemporaryDirectory(prefix=".dw-numbering-", dir=original.parent) as tmpdir:
         tmp_path = Path(tmpdir) / "numbering_writeback.docx"
 
         with (

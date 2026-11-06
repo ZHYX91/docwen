@@ -1,3 +1,4 @@
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 """Runtime monkey-patches for the easyofd library.
 
 Upstream issues (unfixed as of 2026-04-27):
@@ -348,7 +349,7 @@ def _patch_fileread() -> bool:
         original_init(self, ofdb64)
         import tempfile
 
-        owner_root = Path(tempfile.mkdtemp(prefix="docwen-ofd-")).resolve(strict=True)
+        owner_root = Path(make_temp_dir(prefix="docwen-ofd-")).resolve(strict=True)
         self._docwen_scratch_root = owner_root
         owner_stats = owner_root.lstat()
         self._docwen_scratch_signature = (

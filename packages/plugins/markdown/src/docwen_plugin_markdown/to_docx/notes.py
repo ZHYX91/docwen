@@ -19,6 +19,7 @@ from zipfile import BadZipFile, ZipFile
 
 import lxml.etree as etree
 
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 from docwen_core.docx_xml import parse_word_xml_int as parse_word_note_id
 from docwen_core.links import is_markdown_source_escaped, split_markdown_block_segments
 from docwen_plugin_markdown.literal_source_spans import literal_source_spans
@@ -1195,7 +1196,7 @@ def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> int:
 
         projection = project_repeated_note_references(original.read_bytes(), new_footnote_ids, new_endnote_ids)
 
-        with tempfile.TemporaryDirectory(prefix=".dw-notes-", dir=original.parent) as tmpdir:
+        with TemporaryDirectory(prefix=".dw-notes-", dir=original.parent) as tmpdir:
             tmp_path = Path(tmpdir) / "notes_writeback.docx"
 
             with (

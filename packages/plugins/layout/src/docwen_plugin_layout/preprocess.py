@@ -1,3 +1,4 @@
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 """Preprocessing layer for fixed-layout inputs.
 
 Handles OFD/XPS -> PDF pre-conversion so that downstream converters
@@ -18,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import shutil
-import tempfile
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -378,7 +378,7 @@ def _save_data_uri_image(
         return src
 
     try:
-        with tempfile.TemporaryDirectory(prefix=".docwen-data-uri-", dir=output_folder) as temporary:
+        with TemporaryDirectory(prefix=".docwen-data-uri-", dir=output_folder) as temporary:
             temp_file = resolve_data_uri_image_to_temp_file(src, temp_dir=temporary)
             if not temp_file:
                 return src
@@ -496,7 +496,7 @@ def build_image_markdown(
         if not is_data_uri_image(src):
             return ""
         try:
-            with tempfile.TemporaryDirectory(prefix=".docwen-data-uri-", dir=output_folder) as temporary:
+            with TemporaryDirectory(prefix=".docwen-data-uri-", dir=output_folder) as temporary:
                 temp_file = resolve_data_uri_image_to_temp_file(src, temp_dir=temporary)
                 if not temp_file:
                     return ""

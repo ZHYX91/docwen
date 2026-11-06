@@ -11,10 +11,10 @@ from __future__ import annotations
 import hashlib
 import os
 import re
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 from docwen_core.links._markdown_inline import parse_inline_link, parse_markdown_destination
 from docwen_core.links._patterns import WIKI_EMBED_PATTERN
 from docwen_core.models.resolved_numbering import (
@@ -264,7 +264,7 @@ def _stage_linked_resources(
     parent = root.parent
     if not root.is_absolute() or not parent.is_dir() or parent.is_symlink() or root.exists() or root.is_symlink():
         raise ResolvedResourceStagingError("request resource directory is not fresh")
-    temporary = Path(tempfile.mkdtemp(prefix=f".{root.name}.", dir=parent))
+    temporary = Path(make_temp_dir(prefix=f".{root.name}.", dir=parent))
     created: list[Path] = []
     try:
         for resource in resources:
