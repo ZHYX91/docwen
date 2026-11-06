@@ -121,9 +121,9 @@ search_dirs = [".", "assets", "images", "attachments"]
 # 文件未找到时的处理方式
 # 可选值：
 #   "ignore"      - 静默忽略（删除链接，不留痕迹）
-#   "keep"        - 保留原链接标记（如 ![[missing.png]]）
+#   "keep"        - 保留原链接标记（如 ![[missing.png]]），默认避免往文档插入错误文字
 #   "placeholder" - 插入占位文本（使用下面的占位文本）
-file_not_found = "placeholder"
+file_not_found = "keep"
 
 # 是否检测循环引用（A嵌入B，B嵌入A）
 # true:  检测并防止循环嵌入

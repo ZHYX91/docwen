@@ -113,7 +113,7 @@ class LinkRuntimeConfig:
         "attachments",
     )
     detect_circular: bool = True
-    file_not_found_mode: str = "placeholder"
+    file_not_found_mode: str = "keep"
     circular_reference_mode: str = "placeholder"
     max_depth_reached_mode: str = "placeholder"
     auto_link_bare_url: bool = False
@@ -145,7 +145,7 @@ class LinkRuntimeConfig:
             embed_md_file_mode=str(embed_links.get("md_file_mode", "embed")),
             search_dirs=tuple(str(d) for d in path_res.get("search_dirs", (".", "assets", "images", "attachments"))),
             detect_circular=bool(err_handling.get("detect_circular", True)),
-            file_not_found_mode=str(err_handling.get("file_not_found", "placeholder")),
+            file_not_found_mode=str(err_handling.get("file_not_found", "keep")),
             circular_reference_mode=str(err_handling.get("circular_reference", "placeholder")),
             max_depth_reached_mode=str(err_handling.get("max_depth_reached", "placeholder")),
         )
