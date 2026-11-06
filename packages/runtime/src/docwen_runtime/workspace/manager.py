@@ -23,7 +23,7 @@ from docwen_core.models.file_ref import (
     FileRef,
 )
 from docwen_runtime.path_io import filesystem_path
-from docwen_runtime.workspace.temporary import TemporaryDirectoryUnavailable, make_bounded_temp_dir
+from docwen_runtime.workspace.temporary import make_bounded_temp_dir
 
 if TYPE_CHECKING:
     from docwen_core.models.artifact import ArtifactManifest

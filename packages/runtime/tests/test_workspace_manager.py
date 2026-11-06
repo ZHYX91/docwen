@@ -478,9 +478,13 @@ def test_workspace_permission_denial_is_bounded_and_does_not_register_task(tmp_p
     root.mkdir()
     attempts = []
 
+    original_mkdir = temporary.os.mkdir
+
     def deny(path, mode=0o777):
-        attempts.append(Path(path))
-        raise PermissionError(13, "Access denied", str(path))
+        if Path(path).name.startswith("dw-"):
+            attempts.append(Path(path))
+            raise PermissionError(13, "Access denied", str(path))
+        return original_mkdir(path, mode)
 
     monkeypatch.setattr(temporary.os, "mkdir", deny)
     manager = WorkspaceManager(root)
