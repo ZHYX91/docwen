@@ -12,7 +12,6 @@ import hashlib
 import os
 import shutil
 import sys
-import tempfile
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -24,9 +23,11 @@ from docwen_core.models.file_ref import (
     FileRef,
 )
 from docwen_runtime.path_io import filesystem_path
+from docwen_runtime.workspace.temporary import TemporaryDirectoryUnavailable, make_bounded_temp_dir
 
 if TYPE_CHECKING:
     from docwen_core.models.artifact import ArtifactManifest
+    from docwen_core.protocols.execution_context import CancellationTokenView
 
 
 class WorkspaceHandle:
@@ -89,6 +90,12 @@ class TypedInputIntegrityError(ValueError):
         super().__init__("typed input copy failed integrity verification")
 
 
+class WorkspaceRootUnavailable(OSError):
+    """The configured runtime work directory is not usable."""
+
+    diagnostic_code = "WORKSPACE_ROOT_UNAVAILABLE"
+
+
 class WorkspaceManager:
     """Creates and cleans up per-task workspace directories.
 
@@ -134,6 +141,8 @@ class WorkspaceManager:
         task_id: str,
         input_path: str,
         input_refs: tuple[FileRef, ...] = (),
+        *,
+        cancellation: CancellationTokenView | None = None,
     ) -> WorkspaceHandle:
         """Create a workspace for a task.
 
@@ -151,12 +160,21 @@ class WorkspaceManager:
             # Keep the caller-controlled task id out of filesystem paths.
             # Besides preventing path traversal, a short opaque name leaves
             # headroom for external Office applications with small path budgets.
-            os.makedirs(self._root, exist_ok=True)
-            ws_dir = tempfile.mkdtemp(prefix="dw-", dir=self._root)
+            if cancellation is not None:
+                cancellation.check()
+            try:
+                os.makedirs(self._root, exist_ok=True)
+                ws_dir = make_bounded_temp_dir(self._root, prefix="dw-", cancellation=cancellation)
+            except OSError as exc:
+                raise WorkspaceRootUnavailable(
+                    "Cannot prepare the temporary work folder. Check folder permissions or security software."
+                ) from exc
             staging_dir = os.path.join(ws_dir, "staging")
             try:
                 os.makedirs(staging_dir)
                 declared_refs, declared_input_path = self._materialize_declared_inputs(ws_dir, input_refs)
+                if cancellation is not None:
+                    cancellation.check()
             except Exception:
                 shutil.rmtree(ws_dir, ignore_errors=True)
                 raise

@@ -58,7 +58,7 @@ from docwen_runtime.templates import (
     is_canonical_template_id,
     validate_template_path,
 )
-from docwen_runtime.workspace.manager import TypedInputIntegrityError
+from docwen_runtime.workspace.manager import TypedInputIntegrityError, WorkspaceRootUnavailable
 
 if TYPE_CHECKING:
     from docwen_runtime._execution_context import RuntimeExecutionContext
@@ -303,6 +303,16 @@ class TaskManager:
                     input_bytes=input_ref.size_bytes,
                 ),
             )
+        except WorkspaceRootUnavailable as exc:
+            return self._known_failure_result(
+                state,
+                ConversionErrorInfo(
+                    error_type="conversion_failed",
+                    message=str(exc),
+                    diagnostic_code=exc.diagnostic_code,
+                ),
+                metrics=ConversionMetrics(input_bytes=input_ref.size_bytes),
+            )
         except TypedInputIntegrityError as exc:
             return self._known_failure_result(
                 state,
@@ -386,10 +396,12 @@ class TaskManager:
             conversion_output=self._is_conversion_output(state),
             audit_output=OutputManifestWriter.audit_enabled(state.request),
         )
+        state.token.check()
         workspace = self._workspaces.create(
             state.task_id,
             state.input_ref.path,
             tuple(state.request.input_refs),
+            cancellation=state.token.view(),
         )
         state.runtime_context = self._build_execution_context(
             state,

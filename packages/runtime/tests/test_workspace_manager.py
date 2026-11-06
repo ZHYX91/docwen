@@ -468,3 +468,49 @@ class TestWorkspaceManager:
             # returns paths within staging_dir.
             path = handle.create_artifact_path("primary", ".docx")
             assert path.startswith(handle.staging_dir)
+
+
+def test_workspace_permission_denial_is_bounded_and_does_not_register_task(tmp_path, monkeypatch):
+    from docwen_runtime.workspace import temporary
+    from docwen_runtime.workspace.manager import WorkspaceRootUnavailable
+
+    root = tmp_path / "runtime"
+    root.mkdir()
+    attempts = []
+
+    def deny(path, mode=0o777):
+        attempts.append(Path(path))
+        raise PermissionError(13, "Access denied", str(path))
+
+    monkeypatch.setattr(temporary.os, "mkdir", deny)
+    manager = WorkspaceManager(root)
+    with pytest.raises(WorkspaceRootUnavailable, match="temporary work folder"):
+        manager.create("blocked", str(tmp_path / "source.md"))
+    assert len(attempts) == 1
+    assert manager.get("blocked") is None
+
+
+def test_workspace_name_collision_is_bounded_and_cancelled_before_retry(tmp_path, monkeypatch):
+    from docwen_core.cancellation import CancellationToken
+    from docwen_core.errors import CancellationRequested
+    from docwen_runtime.workspace import temporary
+    from docwen_runtime.workspace.temporary import TemporaryDirectoryUnavailable, make_bounded_temp_dir
+
+    root = tmp_path / "runtime"
+    root.mkdir()
+    token = CancellationToken()
+    attempts = []
+
+    def conflict(path, mode=0o777):
+        attempts.append(Path(path))
+        if len(attempts) == 3:
+            token.cancel("user_cancelled")
+        raise FileExistsError(17, "occupied", str(path))
+
+    monkeypatch.setattr(temporary.os, "mkdir", conflict)
+    with pytest.raises(CancellationRequested):
+        make_bounded_temp_dir(root, prefix="dw-", cancellation=token.view())
+    assert len(attempts) == 3
+    with pytest.raises(TemporaryDirectoryUnavailable, match="unique temporary"):
+        make_bounded_temp_dir(root, prefix="dw-", attempts=4)
+    assert len(attempts) == 7

@@ -205,3 +205,17 @@ def test_register_plugin_rejects_modules_missing_required_exports(
 
     with pytest.raises(AttributeError, match=missing_export):
         runtime_factory._register_plugin("incomplete_plugin", PluginRegistry())
+
+
+def test_portable_runtime_is_profile_owned_and_explicit_override_wins(monkeypatch, tmp_path):
+    import docwen_bundle.runtime_factory as factory
+    import docwen_runtime.profile_paths as profile_paths
+    from types import SimpleNamespace
+
+    monkeypatch.delenv("DOCWEN_RUNTIME_ROOT", raising=False)
+    root = tmp_path / "portable" / "data"
+    monkeypatch.setattr(profile_paths, "current_profile_paths", lambda: SimpleNamespace(portable=True, data_dir=root))
+    assert factory._runtime_workspace_root() == root / "runtime"
+    explicit = tmp_path / "explicit"
+    monkeypatch.setenv("DOCWEN_RUNTIME_ROOT", str(explicit))
+    assert factory._runtime_workspace_root() == explicit
