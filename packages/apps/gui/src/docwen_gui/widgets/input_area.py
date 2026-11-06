@@ -383,7 +383,7 @@ class InputArea(QFrame):
         set_metric(feedback_layout, "setContentsMargins", _SPACING_MD, _SPACING_SM, _SPACING_MD, _SPACING_SM)
         set_metric(feedback_layout, "setSpacing", _SPACING_XS)
 
-        self._selection_label = QLabel(self._feedback_frame)
+        self._selection_label = WrappingLabel(parent=self._feedback_frame)
         self._selection_label.setObjectName("fileDropSelectionLabel")
         self._selection_label.setWordWrap(True)
         self._selection_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)

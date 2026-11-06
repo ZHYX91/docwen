@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import Any, Protocol
 
 from docwen_core.models.file_inspection import file_admission_message_key
+from docwen_gui.format_presentation import presentation_for
 from docwen_gui.i18n import t
 
 
@@ -71,7 +72,7 @@ def render_file_format_notice(file_ref: Any) -> str:
     return t(
         "file_admission.actual_format",
         "Actual format: {detected_format}",
-        detected_format=detected.upper(),
+        detected_format=presentation_for(detected).display_name,
     )
 
 
