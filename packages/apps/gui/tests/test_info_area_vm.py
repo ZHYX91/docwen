@@ -653,3 +653,32 @@ class TestClearAll:
         vm.stop_all_timers()
         assert len(vm._transient_timers) == 0
         assert vm._activity_timer is None
+
+
+@pytest.mark.parametrize("locale", ["zh_CN", "en_US"])
+def test_preparation_progress_has_readable_localized_stages_and_no_raw_plugin_paths(vm, locale):
+    from docwen_gui.i18n import get_locale, set_locale, t
+
+    previous = get_locale()
+    set_locale(locale)
+    try:
+        vm.begin_task(operation_id="stage-1", current_file="sample.md", total_count=1)
+        cases = [
+            ("docwen.stage.check_output", "info_area.stage_check_output"),
+            ("docwen.stage.prepare_workspace", "info_area.stage_prepare_workspace"),
+            ("docwen.stage.converting", "info_area.stage_converting"),
+            ("Finalizing output", "info_area.stage_saving"),
+        ]
+        for identity, key in cases:
+            vm.update_task_progress("stage-1", message=identity, percent=0)
+            assert t(key) in vm.status_summary_text
+            assert identity not in vm.status_summary_text
+
+        vm.update_task_progress("stage-1", message="Internal plugin: C:/private/path", percent=35)
+        assert "private/path" not in vm.status_summary_text
+        vm.mark_cancelling("stage-1")
+        assert t("info_area.stage_cancelling") in vm.status_summary_text
+        vm.update_task_progress("stage-1", message="docwen.stage.converting", percent=80)
+        assert t("info_area.stage_converting") not in vm.status_summary_text
+    finally:
+        set_locale(previous)

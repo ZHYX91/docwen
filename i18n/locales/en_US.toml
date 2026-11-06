@@ -11,6 +11,8 @@ template_name = "English General Template"
 # Main Window
 # =============================================================================
 [main_window]
+workspace_unavailable = "Cannot prepare the work folder. Check folder permissions or security software, then retry."
+output_folder_unavailable = "The output folder cannot be written safely. Choose another output folder."
 numbering_comments_unanchored = "Some added numbers cannot be isolated as text with this scheme. Their review comments were skipped; heading content was preserved."
 conversion_failed_detail = "Conversion failed."
 note_syntax_invalid = "Footnote or endnote syntax is invalid. Check note references and definitions, then retry."
@@ -97,6 +99,11 @@ save_failed = "Failed to save settings"
 # 状态栏
 # =============================================================================
 [info_area]
+stage_check_output = "Checking the output folder…"
+stage_prepare_workspace = "Preparing a temporary work folder…"
+stage_converting = "Converting the file…"
+stage_saving = "Saving the result…"
+stage_cancelling = "Waiting for the current file operation to finish safely before cancelling…"
 output_each_source = "Save each result beside its source file"
 output_date_subfolder = "Save in a dated subfolder"
 task_warning_count = "{count} conversion notices. Expand activity history for details."

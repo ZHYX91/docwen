@@ -11,6 +11,8 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+workspace_unavailable = "无法准备临时工作文件夹。请检查目录权限或安全软件设置，然后重试。"
+output_folder_unavailable = "输出文件夹无法安全写入，请选择其他输出文件夹。"
 numbering_comments_unanchored = "所选方案的部分自动序号无法单独定位为文字，已跳过这些序号的批注；标题内容保留。"
 conversion_failed_detail = "转换失败。"
 note_syntax_invalid = "脚注或尾注标记格式有误，请核对引用和定义后重试。"
@@ -97,6 +99,11 @@ save_failed = "保存设置失败"
 # 状态栏
 # =============================================================================
 [info_area]
+stage_check_output = "正在检查输出文件夹…"
+stage_prepare_workspace = "正在准备临时工作文件夹…"
+stage_converting = "正在转换文件…"
+stage_saving = "正在保存结果…"
+stage_cancelling = "正在等待当前文件操作安全结束后取消…"
 output_each_source = "分别保存到各文件所在目录"
 output_date_subfolder = "保存到日期子文件夹"
 task_warning_count = "有 {count} 条转换提示，请展开活动记录查看。"

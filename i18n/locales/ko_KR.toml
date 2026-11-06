@@ -30,6 +30,11 @@ save_failed = "설정 저장 실패"
 # 状态栏
 # =============================================================================
 [info_area]
+stage_check_output = "출력 폴더를 확인하는 중…"
+stage_prepare_workspace = "임시 작업 폴더를 준비하는 중…"
+stage_converting = "파일을 변환하는 중…"
+stage_saving = "결과를 저장하는 중…"
+stage_cancelling = "현재 파일 작업이 안전하게 끝난 뒤 취소합니다…"
 output_each_source = "각 결과를 원본 파일 폴더에 저장"
 output_date_subfolder = "날짜 하위 폴더에 저장"
 task_warning_count = "변환 알림 {count}개가 있습니다. 활동 기록을 펼쳐 확인하세요."
@@ -1684,6 +1689,8 @@ subtitle = "부제"
 
 
 [main_window]
+workspace_unavailable = "작업 폴더를 준비할 수 없습니다. 폴더 권한이나 보안 소프트웨어를 확인한 뒤 다시 시도하세요."
+output_folder_unavailable = "출력 폴더에 안전하게 쓸 수 없습니다. 다른 출력 폴더를 선택하세요."
 numbering_comments_unanchored = "이 방식의 일부 추가 번호는 별도 텍스트로 구분할 수 없습니다. 해당 메모를 건너뛰고 제목 내용을 유지했습니다."
 conversion_failed_detail = "변환에 실패했습니다."
 note_syntax_invalid = "각주 또는 미주 구문이 잘못되었습니다. 참조와 정의를 확인하세요."

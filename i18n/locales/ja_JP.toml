@@ -30,6 +30,11 @@ save_failed = "設定の保存に失敗しました"
 # 状态栏
 # =============================================================================
 [info_area]
+stage_check_output = "出力フォルダーを確認しています…"
+stage_prepare_workspace = "一時作業フォルダーを準備しています…"
+stage_converting = "ファイルを変換しています…"
+stage_saving = "結果を保存しています…"
+stage_cancelling = "現在のファイル操作が安全に終了してからキャンセルします…"
 output_each_source = "各結果を元のファイルと同じフォルダーに保存"
 output_date_subfolder = "日付のサブフォルダーに保存"
 task_warning_count = "変換に関する通知が {count} 件あります。操作履歴を展開して確認してください。"
@@ -1684,6 +1689,8 @@ subtitle = "サブタイトル"
 
 
 [main_window]
+workspace_unavailable = "一時作業フォルダーを準備できません。フォルダーの権限やセキュリティソフトの設定を確認して、再試行してください。"
+output_folder_unavailable = "出力フォルダーに安全に書き込めません。別の出力フォルダーを選んでください。"
 numbering_comments_unanchored = "この方式では一部の追加番号を独立した文字として特定できません。該当するコメントを省略し、見出しの内容を保持しました。"
 conversion_failed_detail = "変換に失敗しました。"
 note_syntax_invalid = "脚注または文末脚注の構文が正しくありません。参照と定義を確認してください。"

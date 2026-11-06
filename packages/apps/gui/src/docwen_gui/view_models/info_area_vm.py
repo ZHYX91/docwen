@@ -900,6 +900,28 @@ class InfoAreaViewModel(QObject):
                 progress_lines.append(_t("info_area.task_warning_count", count=ts.warning_count))
             if state in {"active", "cancelling"}:
                 progress_lines.insert(0, _t("info_area.task_current_file", "Current: {name}", name=current_file))
+            if state == "active":
+                # Only fixed stage identities are displayed. Raw plugin progress
+                # strings may contain paths, implementation names or untranslated text.
+                stages = {
+                    "docwen.stage.check_output": ("info_area.stage_check_output", "Checking output folder…"),
+                    "docwen.stage.prepare_workspace": (
+                        "info_area.stage_prepare_workspace",
+                        "Preparing temporary work folder…",
+                    ),
+                    "docwen.stage.converting": ("info_area.stage_converting", "Converting the file…"),
+                    "Finalizing output": ("info_area.stage_saving", "Saving the result…"),
+                }
+                stage = stages.get(ts.progress_message)
+                if stage is not None:
+                    progress_lines.append(_t(stage[0], stage[1]))
+            elif state == "cancelling":
+                progress_lines.append(
+                    _t(
+                        "info_area.stage_cancelling",
+                        "Waiting for the current file operation to finish safely before cancelling…",
+                    )
+                )
             summary_message = "\n".join(progress_lines)
 
             if state == "active" and ts.percent is not None:

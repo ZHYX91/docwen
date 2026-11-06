@@ -30,6 +30,11 @@ save_failed = "Einstellungen konnten nicht gespeichert werden"
 # 状态栏
 # =============================================================================
 [info_area]
+stage_check_output = "Ausgabeordner wird geprüft…"
+stage_prepare_workspace = "Temporärer Arbeitsordner wird vorbereitet…"
+stage_converting = "Datei wird konvertiert…"
+stage_saving = "Ergebnis wird gespeichert…"
+stage_cancelling = "Die aktuelle Dateioperation wird vor dem Abbrechen sicher abgeschlossen…"
 output_each_source = "Ergebnisse jeweils beim Quelldokument speichern"
 output_date_subfolder = "In einem Unterordner mit Datum speichern"
 task_warning_count = "{count} Konvertierungshinweise. Details stehen im Aktivitätsverlauf."
@@ -1684,6 +1689,8 @@ subtitle = "Untertitel"
 
 
 [main_window]
+workspace_unavailable = "Der temporäre Arbeitsordner kann nicht erstellt werden. Prüfen Sie die Ordnerberechtigungen oder Sicherheitssoftware und versuchen Sie es erneut."
+output_folder_unavailable = "Der Ausgabeordner kann nicht sicher beschrieben werden. Wählen Sie einen anderen Ordner."
 numbering_comments_unanchored = "Einige hinzugefügte Nummern können mit diesem Schema nicht als eigener Text isoliert werden. Ihre Kommentare wurden ausgelassen; die Überschriften bleiben erhalten."
 conversion_failed_detail = "Konvertierung fehlgeschlagen."
 note_syntax_invalid = "Die Fußnoten- oder Endnotensyntax ist ungültig. Prüfen Sie Verweise und Definitionen."

@@ -11,6 +11,8 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+workspace_unavailable = "Não foi possível preparar a pasta de trabalho. Verifique as permissões ou o antivírus e tente novamente."
+output_folder_unavailable = "Não é possível gravar com segurança na pasta de saída. Escolha outra pasta."
 numbering_comments_unanchored = "Alguns números adicionados não podem ser isolados como texto neste esquema. Seus comentários foram ignorados; os títulos foram preservados."
 conversion_failed_detail = "Falha na conversão."
 note_syntax_invalid = "A sintaxe das notas é inválida. Verifique as referências e definições."
@@ -96,6 +98,11 @@ save_failed = "Falha ao salvar configurações"
 # 状态栏
 # =============================================================================
 [info_area]
+stage_check_output = "Verificando a pasta de saída…"
+stage_prepare_workspace = "Preparando uma pasta temporária de trabalho…"
+stage_converting = "Convertendo o arquivo…"
+stage_saving = "Salvando o resultado…"
+stage_cancelling = "Aguardando a conclusão segura da operação atual antes de cancelar…"
 output_each_source = "Salvar cada resultado junto ao arquivo de origem"
 output_date_subfolder = "Salvar em uma subpasta com data"
 task_warning_count = "{count} avisos de conversão. Expanda o histórico de atividades para ver os detalhes."

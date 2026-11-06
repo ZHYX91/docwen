@@ -383,6 +383,10 @@ class TaskManager:
 
         self._validate_route_options(state.request, route_spec)
         state.request = self._resolve_template_options(state.request)
+        self._emit(
+            state.on_event,
+            make_task_progress(state.task_id, state.next_sequence(), 0.0, "docwen.stage.check_output"),
+        )
         self._finalizer.preflight(
             state.request.output_policy,
             input_path=state.input_ref.path,
@@ -397,6 +401,10 @@ class TaskManager:
             audit_output=OutputManifestWriter.audit_enabled(state.request),
         )
         state.token.check()
+        self._emit(
+            state.on_event,
+            make_task_progress(state.task_id, state.next_sequence(), 0.0, "docwen.stage.prepare_workspace"),
+        )
         workspace = self._workspaces.create(
             state.task_id,
             state.input_ref.path,
@@ -414,7 +422,7 @@ class TaskManager:
                 state.task_id,
                 state.next_sequence(),
                 0.0,
-                f"Starting conversion via {plugin_id}",
+                "docwen.stage.converting",
             ),
         )
 

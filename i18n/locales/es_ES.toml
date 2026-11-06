@@ -15,6 +15,8 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+workspace_unavailable = "No se puede preparar la carpeta de trabajo. Comprueba los permisos o el software de seguridad e inténtalo de nuevo."
+output_folder_unavailable = "No se puede escribir de forma segura en la carpeta de salida. Elige otra carpeta."
 numbering_comments_unanchored = "Algunos números añadidos no se pueden aislar como texto con este esquema. Se omitieron sus comentarios y se conservaron los títulos."
 conversion_failed_detail = "Error de conversión."
 note_syntax_invalid = "La sintaxis de las notas no es válida. Revise las referencias y definiciones."
@@ -97,6 +99,11 @@ save_failed = "Error al guardar la configuración"
 # 状态栏
 # =============================================================================
 [info_area]
+stage_check_output = "Comprobando la carpeta de salida…"
+stage_prepare_workspace = "Preparando una carpeta de trabajo temporal…"
+stage_converting = "Convirtiendo el archivo…"
+stage_saving = "Guardando el resultado…"
+stage_cancelling = "Esperando a que termine de forma segura la operación actual antes de cancelar…"
 output_each_source = "Guardar cada resultado junto a su archivo de origen"
 output_date_subfolder = "Guardar en una subcarpeta con fecha"
 task_warning_count = "{count} avisos de conversión. Despliegue el historial de actividad para ver los detalles."

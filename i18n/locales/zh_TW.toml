@@ -30,6 +30,11 @@ save_failed = "儲存設定失敗"
 # 状态栏
 # =============================================================================
 [info_area]
+stage_check_output = "正在檢查輸出資料夾…"
+stage_prepare_workspace = "正在準備暫存工作資料夾…"
+stage_converting = "正在轉換檔案…"
+stage_saving = "正在儲存結果…"
+stage_cancelling = "正在等待目前的檔案作業安全結束後取消…"
 output_each_source = "分別儲存到各檔案所在目錄"
 output_date_subfolder = "儲存到日期子資料夾"
 task_warning_count = "有 {count} 則轉換提示，請展開活動記錄查看。"
@@ -1683,6 +1688,8 @@ subtitle = "副標題"
 
 
 [main_window]
+workspace_unavailable = "無法準備暫存工作資料夾。請檢查資料夾權限或安全軟體設定，再重試。"
+output_folder_unavailable = "無法安全地寫入輸出資料夾，請選擇其他輸出資料夾。"
 numbering_comments_unanchored = "所選方案的部分自動編號無法單獨定位為文字，已略過這些編號的註解；標題內容保留。"
 conversion_failed_detail = "轉換失敗。"
 note_syntax_invalid = "註腳或章節附註標記格式有誤，請核對引用和定義後重試。"

@@ -11,6 +11,8 @@ template_name = "Modèle Général Français"
 # 通用文本
 # =============================================================================
 [main_window]
+workspace_unavailable = "Impossible de préparer le dossier de travail. Vérifiez les autorisations ou le logiciel de sécurité, puis réessayez."
+output_folder_unavailable = "Impossible d’écrire en toute sécurité dans le dossier de sortie. Choisissez un autre dossier."
 numbering_comments_unanchored = "Certains numéros ajoutés ne peuvent pas être isolés comme texte avec ce schéma. Leurs commentaires ont été ignorés ; les titres sont conservés."
 conversion_failed_detail = "Échec de la conversion."
 note_syntax_invalid = "La syntaxe des notes est incorrecte. Vérifiez les références et les définitions."
@@ -93,6 +95,11 @@ save_failed = "Échec de l'enregistrement des paramètres"
 # 状态栏
 # =============================================================================
 [info_area]
+stage_check_output = "Vérification du dossier de sortie…"
+stage_prepare_workspace = "Préparation d’un dossier de travail temporaire…"
+stage_converting = "Conversion du fichier…"
+stage_saving = "Enregistrement du résultat…"
+stage_cancelling = "Attente de la fin sécurisée de l’opération sur le fichier avant l’annulation…"
 output_each_source = "Enregistrer chaque résultat à côté de son fichier source"
 output_date_subfolder = "Enregistrer dans un sous-dossier daté"
 task_warning_count = "{count} avis de conversion. Développez l’historique pour les consulter."
