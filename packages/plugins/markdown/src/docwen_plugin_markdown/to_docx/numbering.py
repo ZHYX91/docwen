@@ -1,4 +1,3 @@
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 """Word-native list numbering for MD→DOCX conversion.
 
 Creates OOXML numbering definitions (abstractNum + num elements) and
@@ -19,6 +18,7 @@ import lxml.etree as etree
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 logger = logging.getLogger(__name__)
 
 # ── OOXML constants ───────────────────────────────────────────────────────

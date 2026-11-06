@@ -1,4 +1,3 @@
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 """Preprocessing layer for fixed-layout inputs.
 
 Handles OFD/XPS -> PDF pre-conversion so that downstream converters
@@ -26,6 +25,7 @@ from typing import TypedDict
 from urllib.parse import unquote, urljoin, urlparse
 from urllib.request import url2pathname
 
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 logger = logging.getLogger(__name__)
 
 

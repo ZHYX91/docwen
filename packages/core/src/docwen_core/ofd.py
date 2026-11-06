@@ -1,4 +1,3 @@
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 """Runtime monkey-patches for the easyofd library.
 
 Upstream issues (unfixed as of 2026-04-27):
@@ -51,6 +50,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, cast
 
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 logger = logging.getLogger(__name__)
 
 _patches_applied: bool = False
