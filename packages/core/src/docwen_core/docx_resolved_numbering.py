@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from docwen_core.file_io import replace_private_file
 from docwen_core._docx_resolved_inline import (
     ResolvedInlineCarrier,
     ResolvedInlineFragment,
@@ -751,7 +752,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 if not temporary.is_file() or temporary.is_symlink():
                     raise ResolvedNumberingDocxError("package transform replaced the package unsafely")
             self.prove_package(temporary)
-            os.replace(temporary, package_path)
+            replace_private_file(temporary, package_path)
         finally:
             temporary.unlink(missing_ok=True)
 

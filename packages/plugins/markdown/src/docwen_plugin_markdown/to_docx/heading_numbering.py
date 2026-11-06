@@ -18,6 +18,7 @@ from pathlib import Path
 
 import lxml.etree as etree
 
+from docwen_core.file_io import replace_private_file
 from docwen_core.text.numbering_word_adapter import (
     TranslationResult,
     WordNumberingLevel,
@@ -416,7 +417,7 @@ def write_heading_numbering_to_docx(
                 zi.compress_type = zipfile.ZIP_DEFLATED
                 zf_out.writestr(zi, num_bytes)
 
-        tmp_path.replace(original)
+        replace_private_file(tmp_path, original)
         logger.info(
             "Heading numbering definitions injected: %d levels, numId=%s",
             len(translation_result.levels),

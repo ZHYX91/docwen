@@ -47,6 +47,7 @@ from docwen_core.docx_citation_ooxml import (
     parse_citation_item_map,
     parse_citation_occurrence_map,
 )
+from docwen_core.file_io import replace_private_file
 from docwen_core.docx_numbering_occurrence import (
     NUMBERING_OCCURRENCE_MAP_NAMESPACE,
     numbering_occurrence_map_xml,
@@ -620,7 +621,7 @@ def _rewrite_zip(
                 info.compress_type = ZIP_DEFLATED
                 info.external_attr = 0o600 << 16
                 output.writestr(info, data[name])
-        os.replace(temporary, path)
+        replace_private_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

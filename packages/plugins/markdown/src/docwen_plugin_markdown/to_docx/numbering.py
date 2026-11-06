@@ -18,6 +18,8 @@ import lxml.etree as etree
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docwen_core.file_io import replace_private_file
+
 logger = logging.getLogger(__name__)
 
 # ── OOXML constants ───────────────────────────────────────────────────────
@@ -450,7 +452,7 @@ def write_numbering_to_docx(
             if not has_numbering:
                 zf_out.writestr("word/numbering.xml", num_bytes)
 
-        tmp_path.replace(original)
+        replace_private_file(tmp_path, original)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
