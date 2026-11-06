@@ -27,6 +27,10 @@ from typing import Any
 
 import docwen_runtime.file_transactions as config_transaction
 from docwen_runtime.config.display_migration import migrate_display_preferences
+from docwen_runtime.config.heading_numbering_migration import (
+    MIGRATION_VERSION_KEY,
+    migrate_heading_numbering_preferences,
+)
 from docwen_runtime.config.registry import (
     CONFIG_FILES,
     relative_key_for_spec,
@@ -480,6 +484,7 @@ class ConfigLoader:
         merged: dict[str, Any] = {}
         shipped_tree: dict[str, Any] = {}
         legacy_output_locale: str | None = None
+        pending_heading_migration: tuple[Path, dict[str, Any]] | None = None
         for spec in CONFIG_FILES:
             base_path = self._base_dir / spec.rel_path
             user_path = self._user_dir / spec.rel_path
@@ -490,13 +495,23 @@ class ConfigLoader:
             try:
                 user_data = _read_toml_file(user_path, missing_ok=True)
                 migrated = migrate_display_preferences(user_data) if spec.rel_path == "gui.toml" else user_data
+                if spec.rel_path == "text.toml":
+                    try:
+                        legacy_template_fill = _read_toml_file(self._user_dir / "template_fill.toml", missing_ok=True)
+                    except TOMLDecodeError:
+                        # Its own registry iteration owns validation/quarantine.
+                        legacy_template_fill = {}
+                    migrated = migrate_heading_numbering_preferences(user_data, legacy_template_fill)
                 if spec.rel_path == "conversion.toml" and legacy_output_locale and "output_locale" not in user_data:
                     migrated = {**user_data, "output_locale": legacy_output_locale}
                 file_data = _merge_file_layers(spec, base_data, migrated)
                 file_data = validate_config_file(spec.rel_path, file_data, base_data)
                 if migrated != user_data:
                     # Only persist a validated sparse user layer; never backfill defaults.
-                    write_toml_file(user_path, migrated)
+                    if spec.rel_path == "text.toml":
+                        pending_heading_migration = (user_path, migrated)
+                    else:
+                        write_toml_file(user_path, migrated)
                 if spec.rel_path == "gui.toml":
                     from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
 
@@ -535,6 +550,9 @@ class ConfigLoader:
                 cursor = cursor[namespace_part]
             cursor[spec.namespace[-1]] = validated_file
 
+        if pending_heading_migration is not None:
+            # Invalid runtime overrides must not create or migrate user files.
+            write_toml_file(*pending_heading_migration)
         self._config = merged
         self._wire_logging()
 
@@ -756,6 +774,8 @@ class ConfigLoader:
         doc = load_toml_document(user_path) if user_path.exists() else new_toml_document()
         _reject_reserved_user_keys(doc)
         mutate(doc)
+        if spec.rel_path == "text.toml" and "heading_numbering_render_mode" in doc:
+            doc.setdefault(MIGRATION_VERSION_KEY, 1)
         _reject_reserved_user_keys(doc)
         save_toml_document(user_path, doc)
 
@@ -1014,6 +1034,8 @@ class ConfigLoader:
                     changed = True
                 _reject_reserved_user_keys(user_data)
                 if changed:
+                    if rel_path == "text.toml" and "heading_numbering_render_mode" in user_data:
+                        user_data.setdefault(MIGRATION_VERSION_KEY, 1)
                     write_toml_file(user_path, user_data)
 
         return self._run_user_file_transaction(
@@ -1039,6 +1061,8 @@ class ConfigLoader:
             return False
         try:
             user_data = deepcopy(data)
+            if rel_path == "text.toml" and "heading_numbering_render_mode" in user_data:
+                user_data.setdefault(MIGRATION_VERSION_KEY, 1)
             _reject_reserved_user_keys(user_data)
         except Exception as exc:
             logger.error("配置文件序列化准备失败: %s | 错误: %s", rel_path, exc)
@@ -1097,7 +1121,7 @@ class ConfigLoader:
     def save_file_text(self, rel_path: str, content: str, *, expected_text: str | None = None) -> bool:
         """Persist validated TOML *content* to the user override file.
 
-        The content is written without hidden metadata. Registry-declared
+        Heading renderer saves include an explicit migration-version key. Registry-declared
         replacement sections are complete whenever present; all other mappings
         remain sparse. Calls :meth:`reload` after writing. When *expected_text*
         is supplied, compare the effective source under the transaction lock
@@ -1127,7 +1151,13 @@ class ConfigLoader:
         def _write_text() -> None:
             if expected_text is not None and self.get_file_text(rel_path) != expected_text:
                 raise ValueError("Editable configuration changed after preview")
-            atomic_write_text(user_path, content)
+            saved_content = content
+            if rel_path == "text.toml" and "heading_numbering_render_mode" in doc:
+                import tomlkit
+
+                doc.setdefault(MIGRATION_VERSION_KEY, 1)
+                saved_content = tomlkit.dumps(doc)
+            atomic_write_text(user_path, saved_content)
 
         return self._run_user_file_transaction(
             [user_path],

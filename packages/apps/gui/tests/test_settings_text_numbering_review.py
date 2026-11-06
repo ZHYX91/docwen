@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QCheckBox, QLabel, QWidget
 
 from docwen_gui.i18n import get_locale, set_locale, t
 from docwen_gui.models.settings_config import SettingsConfig, TextConfig
@@ -29,33 +29,61 @@ def test_numbering_review_is_general_and_preserves_saved_mode_and_cancel(qapp, l
     try:
         card = tab.findChild(QWidget, "textNumberingCard")
         assert card is not None
-        assert card.isAncestorOf(tab._numbering_text)
+        assert tab.findChild(QCheckBox, "textNumberingText") is None
         assert card.isAncestorOf(tab._numbering_comments)
-        assert tab._numbering_text.isChecked()
-        assert tab._numbering_comments.isChecked()
+        assert not tab._numbering_comments.isChecked()
         assert tab._numbering_comments.isEnabled()
-        assert tab._numbering_text.toolTip() == t("settings.text.numbering_text_help")
         assert tab._numbering_comments.toolTip() == t("settings.text.numbering_comments_help")
-        assert "settings." not in tab._numbering_text.accessibleName()
+        assert tab._render_mode_combo.toolTip() == t("settings.text.render_mode_hint")
+        assert not any(label.text() == t("settings.text.render_mode_hint") for label in card.findChildren(QLabel))
 
-        tab._numbering_text.setChecked(False)
+        assert vm.config.text.gongwen_numbering_comments is False
+        tab._add_numbering.setChecked(True)
+        tab.set_combo_data(tab._render_mode_combo, "text")
+        assert vm.config.text.heading_numbering_render_mode == "text"
         assert not tab._numbering_comments.isChecked()
-        assert not tab._numbering_comments.isEnabled()
-        tab._numbering_text.setChecked(True)
-        assert not tab._numbering_comments.isChecked()
-        assert tab._numbering_comments.isEnabled()
+        tab.set_combo_data(tab._render_mode_combo, "word_native")
         tab._numbering_comments.setChecked(True)
         assert vm.config.text.gongwen_numbering_comments is True
-        assert vm.config.text.add_numbering is False
         assert vm.config.text.gongwen_fields_enabled is False
         assert vm.config.text.heading_numbering_render_mode == "word_native"
 
-        tab._numbering_text.setChecked(False)
         vm.cancel()
-        assert tab._numbering_text.isChecked()
-        assert tab._numbering_comments.isChecked()
+        assert not tab._numbering_comments.isChecked()
         assert tab._render_mode_combo.currentData() == "word_native"
         assert not vm.is_dirty
     finally:
         tab.close()
         set_locale(previous_locale)
+
+
+def test_document_marker_control_defaults_off_preserves_choice_when_numbering_disabled(qapp) -> None:
+    from docwen_gui.widgets.settings.document_tab import DocumentTab
+
+    config = SettingsConfig()
+    config.conversion_defaults.document = {
+        "to_md_add_numbering": False,
+        "export_numbering_markers": False,
+    }
+    vm = SettingsViewModel(config=config)
+    tab = DocumentTab(vm)
+    try:
+        markers = tab._widgets["export_numbering_markers"]
+        numbering = tab._widgets["to_md_add_numbering"]
+        assert isinstance(markers, QCheckBox)
+        assert isinstance(numbering, QCheckBox)
+        assert not markers.isChecked()
+        assert not markers.isEnabled()
+        numbering.setChecked(True)
+        assert markers.isEnabled()
+        markers.setChecked(True)
+        assert vm.config.conversion_defaults.document["export_numbering_markers"] is True
+        numbering.setChecked(False)
+        assert not markers.isEnabled()
+        assert markers.isChecked()
+        vm.cancel()
+        tab.reload_from_config()
+        assert not markers.isChecked()
+        assert not markers.isEnabled()
+    finally:
+        tab.close()

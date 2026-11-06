@@ -148,7 +148,7 @@ def test_text_reset_owns_numbering_review_and_preserves_gongwen_field_switch(tmp
             "template_fill.list_separator": " / ",
             "template_fill.gongwen_fields_enabled": False,
             "template_fill.gongwen_numbering_text": False,
-            "template_fill.gongwen_numbering_comments": False,
+            "template_fill.gongwen_numbering_comments": True,
             "template_fill.attachment_alignment": "tab",
         }
     )
@@ -159,7 +159,7 @@ def test_text_reset_owns_numbering_review_and_preserves_gongwen_field_switch(tmp
         "list_separator": ", ",
         "gongwen_fields_enabled": False,
         "gongwen_numbering_text": True,
-        "gongwen_numbering_comments": True,
+        "gongwen_numbering_comments": False,
         "attachment_alignment": "tab",
     }
     assert loader.config.as_dict()["template_fill"] == expected_template_fill

@@ -305,12 +305,12 @@ def test_deep_semantic_raw_editor_failure_restores_exact_preimage(tmp_path: Path
     assert loader.config_state_trusted is True
 
 
-def test_numbering_review_dependency_normalizes_external_config_without_altering_input():
+def test_numbering_review_is_independent_of_retired_text_flag():
     from docwen_runtime.config.validation import validate_config_file
 
     effective = {"gongwen_numbering_text": False, "gongwen_numbering_comments": True}
     assert validate_config_file("template_fill.toml", effective, {}) == {
         "gongwen_numbering_text": False,
-        "gongwen_numbering_comments": False,
+        "gongwen_numbering_comments": True,
     }
     assert effective["gongwen_numbering_comments"] is True

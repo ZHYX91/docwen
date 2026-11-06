@@ -280,10 +280,8 @@ batch_mode = "Stapelverarbeitung"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "Neue Überschriftennummern als Text ausgeben"
-numbering_text_help = "Gibt die nach dem gewählten Schema hinzugefügten Überschriftennummern als Text aus und übersteuert für diese Konvertierung den oben gewählten Ausgabemodus. Aktiviert keine Nummerierung und ändert weder den gespeicherten Modus noch vorhandene Vorlagennummern. Standardmäßig aktiviert."
-numbering_comments_label = "Neue textuelle Überschriftennummern kommentieren"
-numbering_comments_help = "Kommentiert nur tatsächlich neu hinzugefügte Textnummern, keine vorhandenen manuell eingegebenen Nummern. Standardmäßig aktiviert. Das Ausschalten der Textnummerierung löscht und deaktiviert diese Auswahl; nach dem Einschalten kann sie erneut gewählt werden. Nicht exakt abgrenzbare benutzerdefinierte Markdown-Nummern werden mit einer Warnung übersprungen."
+numbering_comments_label = "Neue Überschriftennummern kommentieren"
+numbering_comments_help = "Nur neu erzeugte Nummern werden kommentiert. Im Textmodus wird die Nummer markiert, im nativen DOCX-Modus das erste sichtbare Zeichen der Überschrift. Vorhandene manuelle Nummern bleiben unverändert."
 output_format = "Bevorzugter Vorlagentyp"
 output_format_hint = "Beim Hinzufügen von Markdown werden Vorlagen dieses Typs bevorzugt. Das ändert nicht selbst das Konvertierungsausgabeformat."
 # MD转文档序号设置
@@ -295,7 +293,6 @@ add_numbering_tooltip = "Hierarchische Nummerierung zu Überschriften im ausgege
 scheme_label = "Schema:"
 scheme_tooltip = "Nummerierungsschema für Überschriften auswählen"
 render_mode_label = "Ausgabemodus der Überschriftennummerierung:"
-render_mode_tooltip = "Festlegen, ob Überschriftennummern in den Text geschrieben oder mit der nativen DOCX-Nummerierung erzeugt werden"
 render_mode_text = "Text"
 render_mode_word_native = "DOCX-nativ"
 render_mode_hint = "Text = Nummern in Überschriften schreiben; DOCX-nativ = mehrstufige DOCX-Listennummerierung verwenden"
@@ -406,6 +403,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "Neue Nummern mit Zeichen ohne Breite markieren"
+markers_tooltip = "Neue Überschriftennummern mit unsichtbaren Markierungspaaren umgeben, damit Number Suite sie erkennen kann. Standardmäßig ausgeschaltet. Vorhandene Nummern bleiben unverändert."
 section = "Nummerierung (DOCX zu MD)"
 remove = "Alte Nummerierung entfernen"
 remove_tooltip = "Entfernt vorhandene Nummerierung."

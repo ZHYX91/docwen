@@ -120,10 +120,13 @@ def test_docx_to_markdown_declares_document_resource_graph_and_preserves_images(
         "table_merge_strategy",
         "remove_numbering",
         "add_numbering",
+        "export_numbering_markers",
         "numbering_scheme",
     }
     assert "to_md_enable_ocr" not in capability.options_schema["properties"]
     assert "to_md_keep_images" not in capability.options_schema["properties"]
+    # No schema default: an omitted option inherits document.export_numbering_markers.
+    assert capability.options_schema["properties"]["export_numbering_markers"] == {"type": "boolean"}
 
     request = _request(
         source,

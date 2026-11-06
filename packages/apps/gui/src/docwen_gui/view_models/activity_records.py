@@ -21,7 +21,7 @@ def activity_status_label(status: str) -> str:
     return {
         "info": t("activity.info"),
         "not_started": t("activity.not_started"),
-        "warning": t("activity.warning"),
+        "warning": f"⚠ {t('activity.warning')}",
         "pending": t("components.file_drop.status.pending"),
         "processing": t("components.file_drop.status.processing"),
         "completed": t("components.file_drop.status.completed"),
@@ -29,6 +29,12 @@ def activity_status_label(status: str) -> str:
         "skipped": t("components.file_drop.status.skipped"),
         "cancelled": t("components.file_drop.status.cancelled"),
     }[status]
+
+
+def _notice_details(message: str, message_type: str) -> str:
+    if message_type == "warning":
+        return f"{activity_status_label('warning')}: {message}"
+    return message
 
 
 @dataclass(frozen=True)
@@ -101,6 +107,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                     row
                     for row in notices
                     if row.operation_id == operation_id
+                    and row.event_kind == "notice"
                     and (
                         (
                             row.file_path
@@ -112,7 +119,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                 warnings = outcome.warnings if outcome else ()
                 messages = list(
                     dict.fromkeys(
-                        (row.details_message or row.message)
+                        _notice_details(row.details_message or row.message, row.message_type)
                         for row in matching
                         if not warnings or row.message_type != "warning"
                     )
@@ -130,7 +137,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                     details.append(str(summary))
                 if outcome:
                     details.extend(outcome.local_details)
-                details.extend(warnings)
+                details.extend(_notice_details(message, "warning") for message in warnings)
                 details.extend(messages)
                 records.append(
                     ActivityRecord(
@@ -158,6 +165,8 @@ class ActivityRecordsModel(QAbstractTableModel):
                     )
                 )
         for row in notices:
+            if row.event_kind != "notice":
+                continue
             if row.operation_id in known_operations:
                 task = self.history.get(row.operation_id)
                 # Unscoped batch warnings are task notices, not failures of
@@ -167,7 +176,7 @@ class ActivityRecordsModel(QAbstractTableModel):
             status = {"success": "completed", "danger": "failed", "warning": "warning"}.get(row.message_type, "info")
             if row.diagnostic is not None and row.diagnostic.status == "not_started":
                 status = "not_started"
-            details = row.details_message or row.message
+            details = _notice_details(row.details_message or row.message, row.message_type)
             if row.repeat_count > 1:
                 details += "\n" + t("info_area.history_repeated", count=row.repeat_count)
             path = row.file_path or row.navigate_file_path

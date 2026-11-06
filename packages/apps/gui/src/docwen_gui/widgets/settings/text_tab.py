@@ -9,7 +9,6 @@ from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QLabel,
 )
 
 from docwen_gui import numbering_schemes
@@ -95,7 +94,10 @@ class TextTab(BaseSettingsTab):
                 (t("settings.text.render_mode_text", "Text"), "text"),
                 (t("settings.text.render_mode_word_native", "Word native"), "word_native"),
             ],
-            t("settings.text.render_mode_tooltip", "Heading numbering output mode"),
+            t(
+                "settings.text.render_mode_hint",
+                "Text = write numbers into headings; Word native = use Word multilevel list numbering",
+            ),
         )
         self._render_mode_combo.setEnabled(self._add_numbering.isChecked())
         self._add_numbering.stateChanged.connect(lambda state: self._render_mode_combo.setEnabled(bool(state)))
@@ -106,26 +108,6 @@ class TextTab(BaseSettingsTab):
             self._render_mode_combo,
         )
 
-        # Help text
-        help_label = QLabel(
-            t(
-                "settings.text.render_mode_hint",
-                "Text = write numbers into headings; Word native = use Word multilevel list numbering",
-            )
-        )
-        help_label.setWordWrap(True)
-        help_label.setProperty("class", "secondary")
-        form1.addRow(help_label)
-
-        row, self._numbering_text = self._create_toggle_with_info(
-            t("settings.text.numbering_text_label"),
-            t("settings.text.numbering_text_help"),
-        )
-        self._numbering_text.setObjectName("textNumberingText")
-        form1.addRow(row)
-        self._numbering_text.toggled.connect(
-            lambda enabled: self._vm.set_field(SECTION_TEXT, "gongwen_numbering_text", enabled)
-        )
         row, self._numbering_comments = self._create_toggle_with_info(
             t("settings.text.numbering_comments_label"),
             t("settings.text.numbering_comments_help"),
@@ -164,14 +146,11 @@ class TextTab(BaseSettingsTab):
 
     def _load_numbering_review_values(self) -> None:
         text = self._vm.config.text
-        with QSignalBlocker(self._numbering_text):
-            self._numbering_text.setChecked(text.gongwen_numbering_text)
         with QSignalBlocker(self._numbering_comments):
             self._numbering_comments.setChecked(text.gongwen_numbering_comments)
-        self._numbering_comments.setEnabled(text.gongwen_numbering_text)
 
     def _on_numbering_review_changed(self, section: str, key: str, _value: object) -> None:
-        if section == SECTION_TEXT and key in {"gongwen_numbering_text", "gongwen_numbering_comments"}:
+        if section == SECTION_TEXT and key == "gongwen_numbering_comments":
             self._load_numbering_review_values()
 
     def reload_from_config(self) -> None:

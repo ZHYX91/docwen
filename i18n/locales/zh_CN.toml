@@ -347,10 +347,8 @@ batch_mode = "批量模式"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "新增标题序号使用文本编号"
-numbering_text_help = "将本次按所选方案新增的标题序号写为文本，优先于上方的标题序号输出方式。不会启用自动编号、修改已保存的输出方式或模板原有编号。默认开启。"
-numbering_comments_label = "为新增的文本标题序号添加批注"
-numbering_comments_help = "仅为本次实际新增的文本标题序号添加核对批注，不标记原有手写序号。默认开启。关闭文本编号时会取消并禁用此选项；重新开启后可自行勾选。无法精确定位的自定义 Markdown 序号会提示跳过批注。"
+numbering_comments_label = "为新增标题序号添加批注"
+numbering_comments_help = "仅为本次实际新增的标题序号添加核对批注。文本模式标记新增序号；DOCX 原生模式标记标题首个可见字符。不标记原有手写序号。"
 output_format = "优先模板类型"
 output_format_hint = "传入 Markdown 时优先显示此类型的模板；此设置本身不会改变转换输出格式。"
 # MD转文档序号设置
@@ -362,7 +360,6 @@ add_numbering_tooltip = "为输出 DOCX 的小标题新增层级序号"
 scheme_label = "默认序号方案:"
 scheme_tooltip = "选择用于小标题序号的方案"
 render_mode_label = "标题序号输出方式:"
-render_mode_tooltip = "设置小标题序号写入文本，还是使用 DOCX 原生多级列表"
 render_mode_text = "文本"
 render_mode_word_native = "DOCX 原生"
 render_mode_hint = "文本 = 将序号写入标题文本；DOCX 原生 = 使用 DOCX 多级列表自动编号"
@@ -473,6 +470,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "为新增序号添加零宽字符标记"
+markers_tooltip = "为新生成的标题序号加上看不见的成对标记，便于 Number Suite 识别。默认关闭，不改变已有序号。"
 section = "小标题序号设置（文档转为Markdown）"
 remove = "默认清除原有文档小标题序号"
 remove_tooltip = "DOCX转MD时默认清除文档中已有的标题序号"

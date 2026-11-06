@@ -15,6 +15,7 @@ from lxml import etree
 from PIL import Image
 from tests.support.numbering import repository_numbering_registry, repository_numbering_snapshot
 
+from docwen_core.docx_parsing.numbering_index import NumberingIndex
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 from docwen_plugin_markdown.to_docx.numbering_comments import (
     NUMBERING_REVIEW_TEXT,
@@ -43,6 +44,7 @@ def _convert(
     template_native=False,
     captions=False,
     auto_link=False,
+    style_indent=False,
 ):
     template = Document()
     template.styles.add_style("CommentReference", WD_STYLE_TYPE.CHARACTER)
@@ -83,6 +85,13 @@ def _convert(
         style = template.styles["Heading 1"]._element
         assert style is not None
         style.get_or_add_pPr().get_or_add_numPr().get_or_add_numId().val = 1
+    if style_indent:
+        for name in ("Heading 1", "Heading 2"):
+            style = template.styles[name]._element
+            assert style is not None
+            indent = style.get_or_add_pPr().get_or_add_ind()
+            indent.set(qn("w:firstLine"), "632")
+            indent.set(qn("w:firstLineChars"), "200")
     template.add_paragraph("{{正文}}")
     template_path = tmp_path / "template.docx"
     template.save(template_path)
@@ -182,10 +191,10 @@ def test_switch_off_or_numbering_off_never_comments_existing_numbers(tmp_path, e
 
 @pytest.mark.parametrize("text_enabled", [None, True, False])
 @pytest.mark.parametrize("comments_enabled", [True, False])
-def test_text_policy_overrides_only_new_native_numbers_and_enforces_comment_dependency(
+def test_render_mode_controls_native_numbers_independently_of_legacy_text_switch(
     tmp_path, text_enabled, comments_enabled
 ):
-    result, original_path, output_path = _convert(
+    result, _original_path, output_path = _convert(
         tmp_path,
         mode="word_native",
         source="# Title\n",
@@ -196,26 +205,27 @@ def test_text_policy_overrides_only_new_native_numbers_and_enforces_comment_depe
     document = Document(str(output_path))
     reviews = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]
     assert not any(item.code == "MD2DOCX-NUMBERING-COMMENTS-NATIVE" for item in result.diagnostics)
-    if text_enabled is not False:
-        assert len(reviews) == int(comments_enabled)
-        if comments_enabled:
-            assert _anchors(document)[str(reviews[0].comment_id)] == "一、"
-        heading = next(p for p in document.paragraphs if p.text == "一、Title")
-        assert _paragraph_num_id(heading) == "0"
-        original = Document(str(original_path))
-        assert _style_bytes(document, "Heading 1") == _style_bytes(original, "Heading 1")
-        with ZipFile(original_path) as before, ZipFile(output_path) as after:
-            assert before.read("word/numbering.xml") == after.read("word/numbering.xml")
+    assert len(reviews) == int(comments_enabled)
+    if comments_enabled:
+        assert _anchors(document)[str(reviews[0].comment_id)] == "T"
+    heading = next(p for p in document.paragraphs if p.text == "Title")
+    assert _paragraph_num_id(heading) is None
+    with ZipFile(output_path) as package:
+        assert b"20000" in package.read("word/numbering.xml")
+
+
+@pytest.mark.parametrize("mode", ["text", "word_native"])
+def test_missing_comment_key_defaults_off_without_disabling_numbering(tmp_path, mode):
+    _result, _original, output_path = _convert(tmp_path, enabled=None, mode=mode, source="# Title\n")
+    document = Document(str(output_path))
+    assert [comment.text for comment in document.comments] == ["Original review"]
+    heading = next(p for p in document.paragraphs if p.style.name == "Heading 1")
+    if mode == "text":
+        assert heading.text == "一、Title"
     else:
-        assert not reviews  # external inconsistent comments=true is ignored
-        assert any(p.text == "Title" for p in document.paragraphs)
-        with ZipFile(output_path) as package:
-            assert b"20000" in package.read("word/numbering.xml")
-
-
-def test_missing_old_comment_key_now_defaults_on_without_enabling_numbering(tmp_path):
-    _result, _original, output_path = _convert(tmp_path, enabled=None)
-    assert len([c for c in Document(str(output_path)).comments if c.text == NUMBERING_REVIEW_TEXT]) == 2
+        assert heading.text == "Title"
+        assert heading.style is not None
+        assert NumberingIndex(document).lookup_by_style_id(heading.style.style_id) is not None
 
 
 @pytest.mark.parametrize(
@@ -245,7 +255,7 @@ def test_embedded_headings_cannot_consume_original_numbering_provenance(tmp_path
     (tmp_path / "sample.md").write_bytes(fixture_bytes)
     (tmp_path / "same.md").write_text("# 一、Main\n", encoding="utf-8")
     result, original_path, output_path = _convert(
-        tmp_path, source=source, mode="word_native", template_native=True, captions=captions
+        tmp_path, source=source, mode="text", template_native=True, captions=captions
     )
     document = Document(str(output_path))
     reviews = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]
