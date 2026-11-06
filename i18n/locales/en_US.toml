@@ -146,6 +146,7 @@ example = "Example"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Check whether the selected output folder supports safe saving"
 settings = "Settings management"
 settings_reset = "Reset settings to defaults"
 files = "Input file path(s) (supports wildcards like *.docx)"

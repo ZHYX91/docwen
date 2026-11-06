@@ -77,6 +77,7 @@ example = "範例"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "檢查指定輸出資料夾是否支援安全儲存"
 settings = "設定管理"
 settings_reset = "將設定還原為預設值"
 files = "輸入文件路徑（支持通配符，如 *.docx）"

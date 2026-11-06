@@ -142,6 +142,7 @@ example = "Exemple"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Vérifier qu’un dossier de sortie permet un enregistrement sûr"
 settings = "Gestion des paramètres"
 settings_reset = "Rétablir les paramètres par défaut"
 files = "Chemin du fichier d'entrée (prend en charge les caractères génériques, ex: *.docx)"

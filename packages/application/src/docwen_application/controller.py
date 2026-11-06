@@ -157,6 +157,24 @@ class ApplicationController:
             raise CapabilityUnavailableError("Runtime capability discovery is unavailable in this assembly.")
         return runtime_port.describe_capabilities()
 
+    def probe_runtime_workspace(self) -> dict[str, str | None]:
+        """Ask the injected Runtime to test its actual workspace root."""
+        from docwen_application.ports.runtime import RuntimeHealthProbePort
+
+        runtime_port = self._runtime_port
+        if runtime_port is None or not isinstance(runtime_port, RuntimeHealthProbePort):
+            return {"status": "fail", "reason": "probe_unavailable"}
+        return runtime_port.probe_runtime_workspace()
+
+    def probe_output_directory(self, output_dir: str) -> dict[str, str | None]:
+        """Check one selected output location via the Runtime's real finalizer."""
+        from docwen_application.ports.runtime import RuntimeHealthProbePort
+
+        runtime_port = self._runtime_port
+        if runtime_port is None or not isinstance(runtime_port, RuntimeHealthProbePort):
+            return {"status": "fail", "reason": "probe_unavailable"}
+        return runtime_port.probe_output_directory(output_dir)
+
     def describe_gui_runtime_capabilities(self) -> dict[str, Any]:
         """Return the loaded route catalog including GUI-only internal sources."""
 

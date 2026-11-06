@@ -83,6 +83,19 @@ class CancellationReservationPort(Protocol):
 
 
 @runtime_checkable
+class RuntimeHealthProbePort(Protocol):
+    """Optional path-free probe of the actual workspace and a selected output parent."""
+
+    def probe_runtime_workspace(self) -> dict[str, str | None]:
+        """Return only status and a stable reason, never a filesystem path."""
+        ...
+
+    def probe_output_directory(self, output_dir: str) -> dict[str, str | None]:
+        """Check atomic publication safely for a user-selected output parent."""
+        ...
+
+
+@runtime_checkable
 class OutputManifestPersistencePort(Protocol):
     """Optional best-effort sidecar capability implemented by production Runtime."""
 

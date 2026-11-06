@@ -88,6 +88,15 @@ class _Controller:
         self.describe_calls += 1
         return self._projection
 
+    def probe_runtime_workspace(self) -> dict[str, str | None]:
+        return {"status": "ok", "reason": None}
+
+    def probe_output_directory(self, output_dir: str) -> dict[str, str | None]:
+        return {"status": "ok", "reason": None} if Path(output_dir).is_absolute() else {
+            "status": "fail",
+            "reason": "invalid_path",
+        }
+
 
 def _args(*, json_mode: bool) -> argparse.Namespace:
     return argparse.Namespace(json=json_mode, quiet=json_mode, verbose=False)
@@ -110,6 +119,7 @@ def test_doctor_json_uses_canonical_projection_once(capsys: pytest.CaptureFixtur
     assert payload["data"]["capability_summary"] == projection
     assert [check["id"] for check in payload["data"]["checks"]] == [
         "path.temp_directory",
+        "path.runtime_workspace",
         "config.load",
         "security.dependency_egress_guard",
     ]
@@ -134,6 +144,7 @@ def test_doctor_required_gate_failure_stays_in_capability_summary(capsys: pytest
     assert payload["data"]["capability_summary"]["sources"][0]["routes"][0]["available"] is False
     assert {check["id"] for check in payload["data"]["checks"]} == {
         "path.temp_directory",
+        "path.runtime_workspace",
         "config.load",
         "security.dependency_egress_guard",
     }
@@ -172,6 +183,7 @@ def test_doctor_optional_gate_failure_does_not_fail_base_health(
     assert payload["data"]["capability_summary"]["sources"][0]["routes"][0]["available"] is True
     assert [check["id"] for check in payload["data"]["checks"]] == [
         "path.temp_directory",
+        "path.runtime_workspace",
         "config.load",
         "security.dependency_egress_guard",
     ]
@@ -224,6 +236,7 @@ def test_doctor_external_office_failure_does_not_fail_base_health(
     assert payload["data"]["capability_summary"]["sources"][-1]["routes"][0]["available"] is False
     assert [check["id"] for check in payload["data"]["checks"]] == [
         "path.temp_directory",
+        "path.runtime_workspace",
         "config.load",
         "security.dependency_egress_guard",
     ]
@@ -341,3 +354,34 @@ def test_main_doctor_uses_injected_controller(capsys: pytest.CaptureFixture[str]
     assert exit_code == 0
     assert payload["data"]["all_ok"] is True
     assert controller.describe_calls == 1
+
+
+def test_runtime_work_folder_check_is_path_free_and_fails_on_denial(capsys, monkeypatch) -> None:
+    from docwen_cli.commands.doctor import execute_doctor
+    from docwen_cli.exit_codes import ExitCode
+
+    controller = _Controller(_projection())
+    monkeypatch.setattr(
+        controller,
+        "probe_runtime_workspace",
+        lambda: {"status": "fail", "reason": "not_writable", "path": "/private/user/dir"},
+    )
+    exit_code = execute_doctor(_args(json_mode=True), controller)
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == int(ExitCode.UNAVAILABLE)
+    check = next(x for x in payload["data"]["checks"] if x["id"] == "path.runtime_workspace")
+    assert check["status"] == "fail" and check["reason"] == "not_writable"
+    assert "/private/user/dir" not in json.dumps(payload)
+
+
+def test_explicit_output_folder_checks_atomic_publication_without_exposing_path(capsys, tmp_path) -> None:
+    from docwen_cli.commands.doctor import execute_doctor
+
+    args = _args(json_mode=True)
+    args.output_dir = str(tmp_path / "output")
+    exit_code = execute_doctor(args, _Controller(_projection()))
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    check = next(x for x in payload["data"]["checks"] if x["id"] == "path.output_folder")
+    assert check["status"] == "ok"
+    assert str(tmp_path) not in json.dumps(payload["data"]["checks"])

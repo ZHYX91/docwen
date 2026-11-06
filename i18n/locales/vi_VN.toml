@@ -146,6 +146,7 @@ example = "Ví dụ"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Kiểm tra khả năng lưu an toàn vào thư mục đầu ra"
 settings = "Quản lý cài đặt"
 settings_reset = "Đặt lại cài đặt về mặc định"
 files = "Đường dẫn tệp đầu vào (hỗ trợ ký tự đại diện như *.docx)"

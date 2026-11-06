@@ -188,6 +188,41 @@ class RuntimePortAdapter:
             raise RuntimeError("runtime_gui_capability_discovery_unavailable")
         return provider()
 
+    def probe_runtime_workspace(self) -> dict[str, str | None]:
+        """Check the actual configured runtime root, without returning its path."""
+        from pathlib import Path
+
+        from docwen_runtime.workspace.temporary import bounded_temporary_directory
+
+        root = Path(self._task_manager._workspaces.root_dir)
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+            with bounded_temporary_directory(prefix=".__dw-doctor-", dir=root) as temporary:
+                probe = Path(temporary) / "test-write"
+                probe.write_bytes(b"DocWen")
+                if probe.read_bytes() != b"DocWen":
+                    raise OSError("work directory read/write probe failed")
+        except OSError:
+            return {"status": "fail", "reason": "not_writable"}
+        return {"status": "ok", "reason": None}
+
+    def probe_output_directory(self, output_dir: str) -> dict[str, str | None]:
+        """Check atomic publication at a chosen output parent, without writing results."""
+        from pathlib import Path
+
+        from docwen_core.models.request import OutputPolicy
+        from docwen_runtime.output.finalizer import AtomicPublishUnavailable
+
+        if not Path(output_dir).is_absolute():
+            return {"status": "fail", "reason": "invalid_path"}
+        try:
+            self._task_manager._finalizer.preflight(OutputPolicy(output_dir=output_dir))
+        except AtomicPublishUnavailable:
+            return {"status": "fail", "reason": "atomic_publish_unsupported"}
+        except (OSError, ValueError):
+            return {"status": "fail", "reason": "not_writable"}
+        return {"status": "ok", "reason": None}
+
     def shutdown(self) -> None:
         """Shut down the runtime adapter."""
         self._task_manager.cancel_all()

@@ -77,6 +77,7 @@ example = "Beispiel"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Prüfen, ob ein Ausgabeordner sicheres Speichern unterstützt"
 settings = "Einstellungen verwalten"
 settings_reset = "Einstellungen auf Standardwerte zurücksetzen"
 files = "Eingabedateipfad (unterstützt Wildcards, z.B. *.docx)"

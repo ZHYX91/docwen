@@ -78,6 +78,46 @@ def _check_temp_directory() -> DoctorCheck:
     )
 
 
+def _path_free_probe(controller: Any, method: str, *, output_dir: str | None = None) -> tuple[str, str | None]:
+    """Never propagate raw paths or exception messages into doctor JSON."""
+    callback = getattr(controller, method, None)
+    if not callable(callback):
+        return "fail", "probe_unavailable"
+    try:
+        raw = callback(output_dir) if output_dir is not None else callback()
+    except Exception:
+        return "fail", "probe_failed"
+    if not isinstance(raw, dict):
+        return "fail", "probe_failed"
+    if raw.get("status") == "ok":
+        return "ok", None
+    reason = raw.get("reason")
+    allowed = {"not_writable", "invalid_path", "probe_unavailable", "atomic_publish_unsupported"}
+    return "fail", reason if isinstance(reason, str) and reason in allowed else "probe_failed"
+
+
+def _check_runtime_workspace(controller: Any) -> DoctorCheck:
+    status, reason = _path_free_probe(controller, "probe_runtime_workspace")
+    return DoctorCheck(
+        id="path.runtime_workspace",
+        kind="path",
+        label="Runtime work folder",
+        status=status,
+        reason=reason,
+    )
+
+
+def _check_output_folder(controller: Any, path: str) -> DoctorCheck:
+    status, reason = _path_free_probe(controller, "probe_output_directory", output_dir=path)
+    return DoctorCheck(
+        id="path.output_folder",
+        kind="path",
+        label="Selected output folder",
+        status=status,
+        reason=reason,
+    )
+
+
 def _check_config(controller: Any) -> DoctorCheck:
     """Exercise the injected config port without exposing configuration values."""
 
@@ -148,10 +188,20 @@ def _check_dependency_egress_guard(projection: dict[str, Any]) -> DoctorCheck:
     )
 
 
-def collect_doctor_checks(controller: Any, projection: dict[str, Any]) -> list[DoctorCheck]:
-    """Collect path-free base-health checks from injected product services."""
+def collect_doctor_checks(
+    controller: Any, projection: dict[str, Any], *, output_dir: str | None = None
+) -> list[DoctorCheck]:
+    """Collect path-free checks of the actual runtime and selected destination."""
 
-    return [_check_temp_directory(), _check_config(controller), _check_dependency_egress_guard(projection)]
+    checks = [
+        _check_temp_directory(),
+        _check_runtime_workspace(controller),
+        _check_config(controller),
+        _check_dependency_egress_guard(projection),
+    ]
+    if output_dir:
+        checks.append(_check_output_folder(controller, output_dir))
+    return checks
 
 
 def _print_capability_text(projection: dict[str, Any]) -> None:
@@ -188,18 +238,28 @@ def _print_capability_text(projection: dict[str, Any]) -> None:
 def register_doctor_parser(subparsers: Any) -> argparse.ArgumentParser:
     """Register the ``doctor`` command."""
 
-    return subparsers.add_parser(
+    parser = subparsers.add_parser(
         "doctor",
         parents=[get_common_parser()],
         help=cli_t("cli.help.doctor"),
     )
+    parser.add_argument(
+        "--output-dir",
+        metavar="DIR",
+        help=cli_t("cli.help.doctor_output_dir"),
+    )
+    return parser
 
 
 def execute_doctor(args: argparse.Namespace, controller: Any = None) -> int:
     """Execute diagnostics against one initialized runtime composition."""
 
     projection = runtime_capability_projection(controller)
-    checks = collect_doctor_checks(controller, projection)
+    checks = collect_doctor_checks(
+        controller,
+        projection,
+        output_dir=getattr(args, "output_dir", None),
+    )
     all_ok = all(check.ok for check in checks)
     data = {
         "checks": [check.to_dict() for check in checks],

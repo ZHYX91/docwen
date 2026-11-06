@@ -146,6 +146,7 @@ example = "Ejemplo"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Comprobar si la carpeta de salida permite guardar de forma segura"
 settings = "Gestionar la configuración"
 settings_reset = "Restablecer la configuración predeterminada"
 files = "Ruta(s) de archivo de entrada (admite comodines como *.docx)"

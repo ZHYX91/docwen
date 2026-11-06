@@ -77,6 +77,7 @@ example = "예시"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "선택한 출력 폴더에 안전하게 저장할 수 있는지 확인"
 settings = "설정 관리"
 settings_reset = "설정을 기본값으로 재설정"
 files = "입력 파일 경로(와일드카드 *.docx 지원)"
