@@ -11,7 +11,6 @@ template_name = "English General Template"
 # Main Window
 # =============================================================================
 [main_window]
-missing_embedded_resources = "Some embedded files or images were not found. Check the source links and missing-file settings."
 numbering_comments_unanchored = "Some added numbers cannot be isolated as text with this scheme. Their review comments were skipped; heading content was preserved."
 conversion_failed_detail = "Conversion failed."
 note_syntax_invalid = "Footnote or endnote syntax is invalid. Check note references and definitions, then retry."
@@ -27,6 +26,7 @@ extension_loss_references = "Captions and cross-references were converted to vis
 extension_loss_tables = "Merged cells and header structure were flattened to an ordinary Markdown table."
 route_catalog_failed = "Available operations could not be loaded; the request was not started."
 conversion_failed = "Conversion failed. Open failure details for diagnostic information."
+missing_embedded_resources = "Some embedded files or images were not found. Check the source links and missing-file settings."
 conversion_warning = "Conversion completed with a warning."
 ocr_no_text = "OCR detected no text; verify this image against the source."
 ocr_degraded = "OCR did not complete normally (status={status}); usable results were retained."

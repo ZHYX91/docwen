@@ -1689,7 +1689,6 @@ subtitle = "부제"
 
 
 [main_window]
-missing_embedded_resources = "일부 포함된 파일이나 이미지를 찾지 못했습니다. 원본 링크와 누락 파일 처리 설정을 확인하세요."
 numbering_comments_unanchored = "이 방식의 일부 추가 번호는 별도 텍스트로 구분할 수 없습니다. 해당 메모를 건너뛰고 제목 내용을 유지했습니다."
 conversion_failed_detail = "변환에 실패했습니다."
 note_syntax_invalid = "각주 또는 미주 구문이 잘못되었습니다. 참조와 정의를 확인하세요."
@@ -1705,6 +1704,7 @@ extension_loss_references = "캡션과 상호 참조를 표시 텍스트로 변�
 extension_loss_tables = "병합 셀과 머리글 구조를 일반 Markdown 표로 변환했습니다."
 route_catalog_failed = "사용 가능한 작업을 불러오지 못해 요청을 시작하지 않았습니다."
 conversion_failed = "변환에 실패했습니다. 진단 정보는 실패 상세 정보를 열어 확인하세요."
+missing_embedded_resources = "일부 포함된 파일이나 이미지를 찾지 못했습니다. 원본 링크와 누락 파일 처리 설정을 확인하세요."
 conversion_warning = "변환은 완료되었지만 경고가 있습니다."
 ocr_no_text = "OCR에서 텍스트를 감지하지 못했습니다. 원본 이미지와 확인하세요."
 ocr_degraded = "OCR이 정상적으로 완료되지 않았습니다(상태: {status}). 사용 가능한 결과는 유지했습니다."

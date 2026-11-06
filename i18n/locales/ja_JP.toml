@@ -1689,7 +1689,6 @@ subtitle = "サブタイトル"
 
 
 [main_window]
-missing_embedded_resources = "一部の埋め込みファイルまたは画像が見つかりません。元のリンクとファイルが見つからない場合の設定を確認してください。"
 numbering_comments_unanchored = "この方式では一部の追加番号を独立した文字として特定できません。該当するコメントを省略し、見出しの内容を保持しました。"
 conversion_failed_detail = "変換に失敗しました。"
 note_syntax_invalid = "脚注または文末脚注の構文が正しくありません。参照と定義を確認してください。"
@@ -1705,6 +1704,7 @@ extension_loss_references = "キャプションと相互参照を表示テキス
 extension_loss_tables = "結合セルと見出し構造を通常の Markdown 表に変換しました。"
 route_catalog_failed = "利用可能な操作を読み込めなかったため、要求は開始されませんでした。"
 conversion_failed = "変換に失敗しました。診断情報は失敗の詳細を開いて確認してください。"
+missing_embedded_resources = "一部の埋め込みファイルまたは画像が見つかりません。元のリンクとファイルが見つからない場合の設定を確認してください。"
 conversion_warning = "変換は完了しましたが、警告があります。"
 ocr_no_text = "OCR で文字を検出できませんでした。元画像と照合してください。"
 ocr_degraded = "OCR は正常に完了しませんでした（状態: {status}）。利用可能な結果は保持しました。"

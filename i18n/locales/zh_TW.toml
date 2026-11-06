@@ -1688,7 +1688,6 @@ subtitle = "副標題"
 
 
 [main_window]
-missing_embedded_resources = "部分嵌入檔案或圖片找不到。請檢查來源檔中的連結，以及檔案遺失時的處理設定。"
 numbering_comments_unanchored = "所選方案的部分自動編號無法單獨定位為文字，已略過這些編號的註解；標題內容保留。"
 conversion_failed_detail = "轉換失敗。"
 note_syntax_invalid = "註腳或章節附註標記格式有誤，請核對引用和定義後重試。"
@@ -1704,6 +1703,7 @@ extension_loss_references = "題註與交互參照已轉換為可見文字。"
 extension_loss_tables = "合併儲存格與表頭結構已轉換為一般 Markdown 表格。"
 route_catalog_failed = "無法載入可用操作，未啟動本次工作。"
 conversion_failed = "轉換失敗。請開啟失敗詳情查看診斷資訊。"
+missing_embedded_resources = "部分嵌入檔案或圖片找不到。請檢查來源檔中的連結，以及檔案遺失時的處理設定。"
 conversion_warning = "轉換已完成，但有警告。"
 ocr_no_text = "OCR 未辨識到文字；請對照原圖確認是否為無文字內容。"
 ocr_degraded = "OCR 未正常完成（狀態：{status}）；已保留可用結果。"

@@ -11,7 +11,6 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
-missing_embedded_resources = "Alguns arquivos ou imagens incorporados não foram encontrados. Confira os links de origem e as opções para arquivos ausentes."
 numbering_comments_unanchored = "Alguns números adicionados não podem ser isolados como texto neste esquema. Seus comentários foram ignorados; os títulos foram preservados."
 conversion_failed_detail = "Falha na conversão."
 note_syntax_invalid = "A sintaxe das notas é inválida. Verifique as referências e definições."
@@ -27,6 +26,7 @@ extension_loss_references = "As legendas e referências cruzadas foram convertid
 extension_loss_tables = "As células mescladas e a estrutura do cabeçalho foram convertidas em uma tabela Markdown comum."
 route_catalog_failed = "Não foi possível carregar as operações disponíveis; a solicitação não foi iniciada."
 conversion_failed = "A conversão falhou. Abra os detalhes da falha para consultar as informações de diagnóstico."
+missing_embedded_resources = "Alguns arquivos ou imagens incorporados não foram encontrados. Confira os links de origem e as opções para arquivos ausentes."
 conversion_warning = "A conversão foi concluída com um aviso."
 ocr_no_text = "O OCR não detectou texto; confira esta imagem com a fonte."
 ocr_degraded = "O OCR não foi concluído normalmente (status: {status}); os resultados utilizáveis foram preservados."

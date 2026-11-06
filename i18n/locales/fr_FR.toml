@@ -11,7 +11,6 @@ template_name = "Modèle Général Français"
 # 通用文本
 # =============================================================================
 [main_window]
-missing_embedded_resources = "Certains fichiers ou images intégrés sont introuvables. Vérifiez les liens source et les paramètres des fichiers manquants."
 numbering_comments_unanchored = "Certains numéros ajoutés ne peuvent pas être isolés comme texte avec ce schéma. Leurs commentaires ont été ignorés ; les titres sont conservés."
 conversion_failed_detail = "Échec de la conversion."
 note_syntax_invalid = "La syntaxe des notes est incorrecte. Vérifiez les références et les définitions."
@@ -27,6 +26,7 @@ extension_loss_references = "Les légendes et les renvois ont été convertis en
 extension_loss_tables = "Les cellules fusionnées et les en-têtes ont été convertis en tableau Markdown ordinaire."
 route_catalog_failed = "Les opérations disponibles n’ont pas pu être chargées ; la demande n’a pas été lancée."
 conversion_failed = "La conversion a échoué. Ouvrez les détails de l’échec pour consulter le diagnostic."
+missing_embedded_resources = "Certains fichiers ou images intégrés sont introuvables. Vérifiez les liens source et les paramètres des fichiers manquants."
 conversion_warning = "La conversion s’est terminée avec un avertissement."
 ocr_no_text = "L’OCR n’a détecté aucun texte ; vérifiez cette image par rapport à la source."
 ocr_degraded = "L’OCR ne s’est pas terminé normalement (état : {status}) ; les résultats utilisables ont été conservés."

@@ -15,7 +15,6 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
-missing_embedded_resources = "No se encontraron algunos archivos o imágenes incrustados. Compruebe los enlaces del origen y la configuración de archivos ausentes."
 numbering_comments_unanchored = "Algunos números añadidos no se pueden aislar como texto con este esquema. Se omitieron sus comentarios y se conservaron los títulos."
 conversion_failed_detail = "Error de conversión."
 note_syntax_invalid = "La sintaxis de las notas no es válida. Revise las referencias y definiciones."
@@ -31,6 +30,7 @@ extension_loss_references = "Los títulos y las referencias cruzadas se convirti
 extension_loss_tables = "Las celdas combinadas y la estructura del encabezado se convirtieron en una tabla Markdown normal."
 route_catalog_failed = "No se pudieron cargar las operaciones disponibles; la solicitud no se inició."
 conversion_failed = "La conversión falló. Abra los detalles del error para consultar la información de diagnóstico."
+missing_embedded_resources = "No se encontraron algunos archivos o imágenes incrustados. Compruebe los enlaces del origen y la configuración de archivos ausentes."
 conversion_warning = "La conversión terminó con una advertencia."
 ocr_no_text = "OCR no detectó texto; compruebe esta imagen con la fuente."
 ocr_degraded = "OCR no terminó normalmente (estado: {status}); se conservaron los resultados utilizables."

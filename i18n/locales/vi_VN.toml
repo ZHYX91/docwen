@@ -12,7 +12,6 @@ template_name = "Mẫu Chung Tiếng Việt"
 # Cua so chinh
 # =============================================================================
 [main_window]
-missing_embedded_resources = "Không tìm thấy một số tệp hoặc ảnh được nhúng. Hãy kiểm tra liên kết nguồn và thiết lập xử lý tệp bị thiếu."
 numbering_comments_unanchored = "Một số số được thêm không thể tách thành văn bản riêng theo sơ đồ này. Đã bỏ qua nhận xét tương ứng và giữ nguyên tiêu đề."
 conversion_failed_detail = "Chuyển đổi thất bại."
 note_syntax_invalid = "Cú pháp chú thích không hợp lệ. Hãy kiểm tra tham chiếu và định nghĩa."
@@ -28,6 +27,7 @@ extension_loss_references = "Chú thích và tham chiếu chéo đã được ch
 extension_loss_tables = "Ô gộp và cấu trúc tiêu đề đã được chuyển thành bảng Markdown thông thường."
 route_catalog_failed = "Không thể tải các thao tác khả dụng; yêu cầu chưa được bắt đầu."
 conversion_failed = "Chuyển đổi thất bại. Hãy mở chi tiết lỗi để xem thông tin chẩn đoán."
+missing_embedded_resources = "Không tìm thấy một số tệp hoặc ảnh được nhúng. Hãy kiểm tra liên kết nguồn và thiết lập xử lý tệp bị thiếu."
 conversion_warning = "Chuyển đổi hoàn tất nhưng có cảnh báo."
 ocr_no_text = "OCR không phát hiện văn bản; hãy đối chiếu ảnh này với nguồn."
 ocr_degraded = "OCR không hoàn tất bình thường (trạng thái: {status}); các kết quả dùng được đã được giữ lại."

@@ -11,7 +11,6 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
-missing_embedded_resources = "部分嵌入文件或图片未找到。请检查源文件中的链接，以及文件未找到时的处理设置。"
 numbering_comments_unanchored = "所选方案的部分自动序号无法单独定位为文字，已跳过这些序号的批注；标题内容保留。"
 conversion_failed_detail = "转换失败。"
 note_syntax_invalid = "脚注或尾注标记格式有误，请核对引用和定义后重试。"
@@ -27,6 +26,7 @@ extension_loss_references = "题注和交叉引用已转换为可见文本。"
 extension_loss_tables = "合并单元格和表头结构已转换为普通 Markdown 表格。"
 route_catalog_failed = "无法加载可用操作，未启动本次任务。"
 conversion_failed = "转换失败。请打开失败详情查看诊断信息。"
+missing_embedded_resources = "部分嵌入文件或图片未找到。请检查源文件中的链接，以及文件未找到时的处理设置。"
 conversion_warning = "转换已完成，但有警告。"
 ocr_no_text = "OCR 未识别到文字；请对照原图确认是否为无文字内容。"
 ocr_degraded = "OCR 未正常完成（状态：{status}）；已保留可用结果。"
