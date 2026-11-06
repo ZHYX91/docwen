@@ -145,6 +145,14 @@ class ApplicationController:
         """Whether a runtime port has been injected."""
         return self._runtime_port is not None
 
+    def probe_runtime_work_directory(self) -> bool | None:
+        """Ask the injected runtime to probe its own work folder, if supported."""
+        runtime_port = self._runtime_port
+        probe = getattr(runtime_port, "probe_work_directory", None)
+        if not callable(probe):
+            return None
+        return bool(probe())
+
     def describe_runtime_capabilities(self) -> dict[str, Any]:
         """Return runtime composition facts without exposing the runtime port."""
 

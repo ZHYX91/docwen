@@ -145,6 +145,25 @@ class RuntimePortAdapter:
             )
         return writer.persist(req, result)
 
+    def probe_work_directory(self) -> bool:
+        """Check the exact runtime workspace root without publishing its path.
+
+        This is an explicit user-invoked doctor probe, not an execution-time
+        permission cache. One mkdir is attempted; it never calls mkdtemp.
+        """
+        import secrets
+        from pathlib import Path
+
+        root = Path(self._task_manager._workspaces.root_dir)
+        candidate = root / f".docwen-doctor-{secrets.token_hex(5)}"
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+            candidate.mkdir(mode=0o700)
+            candidate.rmdir()
+        except OSError:
+            return False
+        return True
+
     def cancel(self, task_id: str) -> None:
         """Request cancellation of a running task."""
         self._task_manager.cancel(task_id)

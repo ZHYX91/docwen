@@ -148,10 +148,35 @@ def _check_dependency_egress_guard(projection: dict[str, Any]) -> DoctorCheck:
     )
 
 
-def collect_doctor_checks(controller: Any, projection: dict[str, Any]) -> list[DoctorCheck]:
-    """Collect path-free base-health checks from injected product services."""
+def _check_runtime_work_directory(controller: Any) -> DoctorCheck | None:
+    """Probe the actual runtime work root, never exposing its physical path."""
+    probe = getattr(controller, "probe_runtime_work_directory", None)
+    if not callable(probe):
+        return None
+    try:
+        result = probe()
+    except Exception:
+        result = False
+    if result is None:
+        return None
+    return DoctorCheck(
+        id="path.runtime_directory",
+        kind="path",
+        label="Runtime work directory",
+        status="ok" if result is True else "fail",
+        reason=None if result is True else "not_writable",
+    )
 
-    return [_check_temp_directory(), _check_config(controller), _check_dependency_egress_guard(projection)]
+
+def collect_doctor_checks(controller: Any, projection: dict[str, Any]) -> list[DoctorCheck]:
+    """Collect path-free health checks without duplicating runtime root selection."""
+
+    checks = [_check_temp_directory()]
+    runtime_check = _check_runtime_work_directory(controller)
+    if runtime_check is not None:
+        checks.append(runtime_check)
+    checks.extend((_check_config(controller), _check_dependency_egress_guard(projection)))
+    return checks
 
 
 def _print_capability_text(projection: dict[str, Any]) -> None:

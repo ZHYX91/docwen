@@ -114,6 +114,16 @@ def _localized_failure_message(error: object | None = None, *, details: bool = F
         return _t("main_window.note_template_incompatible")
     if stable_code == "OUTPUT_ATOMIC_PUBLISH_UNSUPPORTED":
         return _t("main_window.output_filesystem_unsupported")
+    if stable_code == "WORKSPACE_ROOT_UNAVAILABLE":
+        return _t(
+            "main_window.runtime_folder_unavailable",
+            "Cannot prepare the temporary work folder. Check folder permissions or security software and retry.",
+        )
+    if stable_code == "OUTPUT_PREFLIGHT_FAILED":
+        return _t(
+            "main_window.output_folder_unavailable",
+            "Cannot safely use the selected save folder. Check permissions or choose another folder.",
+        )
     if stable_code == "MERGE-FORMULA-CACHE-MISSING":
         return _t("main_window.merge_formula_cache_missing")
     return f"{base} [{stable_code}]" if stable_code else base

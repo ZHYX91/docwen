@@ -373,6 +373,10 @@ class TaskManager:
 
         self._validate_route_options(state.request, route_spec)
         state.request = self._resolve_template_options(state.request)
+        self._emit(
+            state.on_event,
+            make_task_progress(state.task_id, state.next_sequence(), 0.0, "Preparing output folder"),
+        )
         self._finalizer.preflight(
             state.request.output_policy,
             input_path=state.input_ref.path,
@@ -385,6 +389,10 @@ class TaskManager:
             identity=state.identity,
             conversion_output=self._is_conversion_output(state),
             audit_output=OutputManifestWriter.audit_enabled(state.request),
+        )
+        self._emit(
+            state.on_event,
+            make_task_progress(state.task_id, state.next_sequence(), 0.0, "Preparing temporary workspace"),
         )
         workspace = self._workspaces.create(
             state.task_id,
