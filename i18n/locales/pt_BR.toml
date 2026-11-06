@@ -11,6 +11,7 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+missing_embedded_resources = "Alguns arquivos ou imagens incorporados não foram encontrados. Confira os links de origem e as opções para arquivos ausentes."
 numbering_comments_unanchored = "Alguns números adicionados não podem ser isolados como texto neste esquema. Seus comentários foram ignorados; os títulos foram preservados."
 conversion_failed_detail = "Falha na conversão."
 note_syntax_invalid = "A sintaxe das notas é inválida. Verifique as referências e definições."

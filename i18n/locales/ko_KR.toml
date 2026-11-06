@@ -1689,6 +1689,7 @@ subtitle = "부제"
 
 
 [main_window]
+missing_embedded_resources = "일부 포함된 파일이나 이미지를 찾지 못했습니다. 원본 링크와 누락 파일 처리 설정을 확인하세요."
 numbering_comments_unanchored = "이 방식의 일부 추가 번호는 별도 텍스트로 구분할 수 없습니다. 해당 메모를 건너뛰고 제목 내용을 유지했습니다."
 conversion_failed_detail = "변환에 실패했습니다."
 note_syntax_invalid = "각주 또는 미주 구문이 잘못되었습니다. 참조와 정의를 확인하세요."

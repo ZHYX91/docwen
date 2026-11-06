@@ -1688,6 +1688,7 @@ subtitle = "副標題"
 
 
 [main_window]
+missing_embedded_resources = "部分嵌入檔案或圖片找不到。請檢查來源檔中的連結，以及檔案遺失時的處理設定。"
 numbering_comments_unanchored = "所選方案的部分自動編號無法單獨定位為文字，已略過這些編號的註解；標題內容保留。"
 conversion_failed_detail = "轉換失敗。"
 note_syntax_invalid = "註腳或章節附註標記格式有誤，請核對引用和定義後重試。"

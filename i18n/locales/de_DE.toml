@@ -1689,6 +1689,7 @@ subtitle = "Untertitel"
 
 
 [main_window]
+missing_embedded_resources = "Einige eingebettete Dateien oder Bilder wurden nicht gefunden. Prüfen Sie die Quellverweise und die Einstellung für fehlende Dateien."
 numbering_comments_unanchored = "Einige hinzugefügte Nummern können mit diesem Schema nicht als eigener Text isoliert werden. Ihre Kommentare wurden ausgelassen; die Überschriften bleiben erhalten."
 conversion_failed_detail = "Konvertierung fehlgeschlagen."
 note_syntax_invalid = "Die Fußnoten- oder Endnotensyntax ist ungültig. Prüfen Sie Verweise und Definitionen."

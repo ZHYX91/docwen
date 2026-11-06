@@ -11,6 +11,7 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+missing_embedded_resources = "部分嵌入文件或图片未找到。请检查源文件中的链接，以及文件未找到时的处理设置。"
 numbering_comments_unanchored = "所选方案的部分自动序号无法单独定位为文字，已跳过这些序号的批注；标题内容保留。"
 conversion_failed_detail = "转换失败。"
 note_syntax_invalid = "脚注或尾注标记格式有误，请核对引用和定义后重试。"

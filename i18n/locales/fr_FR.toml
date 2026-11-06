@@ -11,6 +11,7 @@ template_name = "Modèle Général Français"
 # 通用文本
 # =============================================================================
 [main_window]
+missing_embedded_resources = "Certains fichiers ou images intégrés sont introuvables. Vérifiez les liens source et les paramètres des fichiers manquants."
 numbering_comments_unanchored = "Certains numéros ajoutés ne peuvent pas être isolés comme texte avec ce schéma. Leurs commentaires ont été ignorés ; les titres sont conservés."
 conversion_failed_detail = "Échec de la conversion."
 note_syntax_invalid = "La syntaxe des notes est incorrecte. Vérifiez les références et les définitions."
