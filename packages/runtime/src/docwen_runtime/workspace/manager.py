@@ -164,7 +164,11 @@ class WorkspaceManager:
                 cancellation.check()
             try:
                 os.makedirs(self._root, exist_ok=True)
-                ws_dir = make_temp_dir(prefix="dw-", dir=self._root, cancellation_check=cancellation.check if cancellation is not None else None)
+                ws_dir = make_temp_dir(
+                    prefix="dw-",
+                    dir=self._root,
+                    cancellation_check=cancellation.check if cancellation is not None else None,
+                )
             except OSError as exc:
                 raise WorkspaceRootUnavailable(
                     "Cannot prepare the temporary work folder. Check folder permissions or security software."
@@ -172,7 +176,9 @@ class WorkspaceManager:
             staging_dir = os.path.join(ws_dir, "staging")
             try:
                 os.makedirs(staging_dir)
-                declared_refs, declared_input_path = self._materialize_declared_inputs(ws_dir, input_refs, cancellation=cancellation)
+                declared_refs, declared_input_path = self._materialize_declared_inputs(
+                    ws_dir, input_refs, cancellation=cancellation
+                )
                 if cancellation is not None:
                     cancellation.check()
             except Exception:

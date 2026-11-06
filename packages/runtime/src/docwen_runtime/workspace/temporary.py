@@ -11,14 +11,10 @@ from contextlib import contextmanager
 from os import PathLike
 from typing import TYPE_CHECKING
 
-from docwen_core.tempfiles import TemporaryDirectory, TemporaryDirectoryError, make_temp_dir
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import CancellationTokenView
-
-
-class TemporaryDirectoryUnavailable(TemporaryDirectoryError):
-    """Compatibility-free Runtime name for a failed temporary directory."""
 
 
 def make_bounded_temp_dir(
