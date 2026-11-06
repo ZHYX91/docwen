@@ -99,6 +99,7 @@ save_failed = "保存设置失败"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "正在保存结果…"
 phase_checking_output = "正在检查保存位置…"
 phase_preparing_workspace = "正在准备临时工作目录…"
 phase_converting = "正在转换文件…"
@@ -145,6 +146,7 @@ example = "示例"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "检查指定输出目录是否支持安全保存"
 settings = "设置管理"
 settings_reset = "将设置还原为默认值"
 files = "输入文件路径（支持通配符，如 *.docx）"

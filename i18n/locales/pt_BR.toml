@@ -98,6 +98,7 @@ save_failed = "Falha ao salvar configurações"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Salvando o resultado…"
 phase_checking_output = "Verificando a pasta de destino…"
 phase_preparing_workspace = "Preparando a pasta temporária de trabalho…"
 phase_converting = "Convertendo arquivo…"
@@ -144,6 +145,7 @@ example = "Exemplo"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Verificar se a pasta de saída selecionada permite salvar com segurança"
 settings = "Gerenciar configurações"
 settings_reset = "Redefinir configurações para os padrões"
 files = "Caminho do arquivo de entrada (suporta curingas, ex: *.docx)"

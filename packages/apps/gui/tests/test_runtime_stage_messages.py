@@ -48,3 +48,11 @@ def test_live_stage_and_cancelling_hint_appear_in_task_summary(qapp) -> None:
     assert info.status_summary_text
     assert _localized_progress_stage("Preparing temporary workspace") not in info.status_summary_text
     info.clear_task_summary()
+
+
+def test_finalizing_output_is_presented_as_saving_not_conversion(qapp):
+    from docwen_gui.execution_coordinator import _localized_progress_stage
+    from docwen_gui.i18n import t
+
+    message = _localized_progress_stage("Finalizing output")
+    assert message == t("info_area.phase_saving", "Saving the result…")

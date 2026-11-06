@@ -30,6 +30,7 @@ save_failed = "설정 저장 실패"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "결과를 저장하는 중…"
 phase_checking_output = "저장 폴더 확인 중…"
 phase_preparing_workspace = "임시 작업 폴더 준비 중…"
 phase_converting = "파일 변환 중…"
@@ -76,6 +77,7 @@ example = "예시"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "선택한 출력 폴더에 안전하게 저장할 수 있는지 확인"
 settings = "설정 관리"
 settings_reset = "설정을 기본값으로 재설정"
 files = "입력 파일 경로(와일드카드 *.docx 지원)"

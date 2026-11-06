@@ -88,6 +88,12 @@ class _Controller:
         self.describe_calls += 1
         return self._projection
 
+    def probe_runtime_work_directory(self) -> bool:
+        return True
+
+    def probe_output_directory(self, output_dir: str) -> str:
+        return "ok" if Path(output_dir).is_absolute() else "invalid_path"
+
 
 def _args(*, json_mode: bool) -> argparse.Namespace:
     return argparse.Namespace(json=json_mode, quiet=json_mode, verbose=False)
@@ -381,3 +387,39 @@ def test_doctor_runtime_work_folder_denial_has_stable_reason(capsys):
     assert check["status"] == "fail"
     assert check["reason"] == "not_writable"
     assert "private" not in json.dumps(payload)
+
+
+def test_doctor_output_directory_probe_is_opt_in_and_path_free(capsys, tmp_path) -> None:
+    from docwen_cli.commands.doctor import execute_doctor
+    from docwen_cli.exit_codes import ExitCode
+
+    args = _args(json_mode=True)
+    args.output_dir = str(tmp_path / "out")
+    controller = _Controller(_projection())
+    assert execute_doctor(args, controller) == 0
+    payload = json.loads(capsys.readouterr().out)
+    check = next(item for item in payload["data"]["checks"] if item["id"] == "path.output_directory")
+    assert check["status"] == "ok"
+    assert str(tmp_path) not in json.dumps(payload["data"]["checks"])
+
+    class Blocked(_Controller):
+        def probe_output_directory(self, output_dir: str) -> str:
+            return "atomic_publish_unsupported"
+
+    assert execute_doctor(args, Blocked(_projection())) == int(ExitCode.UNAVAILABLE)
+    payload = json.loads(capsys.readouterr().out)
+    check = next(item for item in payload["data"]["checks"] if item["id"] == "path.output_directory")
+    assert check["reason"] == "atomic_publish_unsupported"
+
+
+def test_doctor_without_output_dir_does_not_probe_output(capsys) -> None:
+    from docwen_cli.commands.doctor import execute_doctor
+
+    class Controller(_Controller):
+        def probe_output_directory(self, output_dir: str) -> str:
+            raise AssertionError("must remain opt-in")
+
+    args = _args(json_mode=True)
+    args.output_dir = None
+    assert execute_doctor(args, Controller(_projection())) == 0
+    capsys.readouterr()

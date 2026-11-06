@@ -146,23 +146,40 @@ class RuntimePortAdapter:
         return writer.persist(req, result)
 
     def probe_work_directory(self) -> bool:
-        """Check the exact runtime workspace root without publishing its path.
-
-        This is an explicit user-invoked doctor probe, not an execution-time
-        permission cache. One mkdir is attempted; it never calls mkdtemp.
-        """
-        import secrets
+        """Check the actual runtime work root and always clean the private probe."""
         from pathlib import Path
 
+        from docwen_runtime.workspace.temporary import bounded_temporary_directory
+
         root = Path(self._task_manager.workspace_root)
-        candidate = root / f".docwen-doctor-{secrets.token_hex(5)}"
         try:
             root.mkdir(parents=True, exist_ok=True)
-            candidate.mkdir(mode=0o700)
-            candidate.rmdir()
+            with bounded_temporary_directory(prefix=".__docwen-doctor-", dir=root) as probe_dir:
+                probe = Path(probe_dir) / "write-check"
+                probe.write_bytes(b"DocWen")
+                if probe.read_bytes() != b"DocWen":
+                    return False
         except OSError:
             return False
         return True
+
+    def probe_output_directory(self, output_dir: str) -> str:
+        """Run the real output safety preflight for one explicitly selected folder."""
+        from pathlib import Path
+
+        from docwen_core.models.request import OutputPolicy
+        from docwen_runtime.output.finalizer import AtomicPublishUnavailable
+
+        selected = Path(output_dir)
+        if not selected.is_absolute():
+            return "invalid_path"
+        try:
+            self._task_manager._finalizer.preflight(OutputPolicy(output_dir=str(selected)))
+        except AtomicPublishUnavailable:
+            return "atomic_publish_unsupported"
+        except (OSError, ValueError):
+            return "not_writable"
+        return "ok"
 
     def cancel(self, task_id: str) -> None:
         """Request cancellation of a running task."""

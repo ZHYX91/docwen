@@ -95,6 +95,7 @@ save_failed = "Échec de l'enregistrement des paramètres"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Enregistrement du résultat…"
 phase_checking_output = "Vérification du dossier de destination…"
 phase_preparing_workspace = "Préparation du dossier de travail temporaire…"
 phase_converting = "Conversion du fichier…"
@@ -141,6 +142,7 @@ example = "Exemple"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Vérifier si le dossier de sortie permet un enregistrement sûr"
 settings = "Gestion des paramètres"
 settings_reset = "Rétablir les paramètres par défaut"
 files = "Chemin du fichier d'entrée (prend en charge les caractères génériques, ex: *.docx)"

@@ -30,6 +30,7 @@ save_failed = "Einstellungen konnten nicht gespeichert werden"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Ergebnis wird gespeichert…"
 phase_checking_output = "Speicherordner wird geprüft…"
 phase_preparing_workspace = "Temporärer Arbeitsordner wird vorbereitet…"
 phase_converting = "Datei wird konvertiert…"
@@ -76,6 +77,7 @@ example = "Beispiel"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Prüfen, ob der ausgewählte Ausgabeordner sicheres Speichern unterstützt"
 settings = "Einstellungen verwalten"
 settings_reset = "Einstellungen auf Standardwerte zurücksetzen"
 files = "Eingabedateipfad (unterstützt Wildcards, z.B. *.docx)"

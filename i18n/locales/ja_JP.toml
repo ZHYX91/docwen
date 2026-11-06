@@ -30,6 +30,7 @@ save_failed = "設定の保存に失敗しました"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "結果を保存しています…"
 phase_checking_output = "保存先を確認しています…"
 phase_preparing_workspace = "一時作業フォルダーを準備しています…"
 phase_converting = "ファイルを変換しています…"
@@ -76,6 +77,7 @@ example = "例"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "選択した出力フォルダーに安全に保存できるか確認"
 settings = "設定を管理"
 settings_reset = "設定を既定値に戻す"
 files = "入力ファイルパス（*.docx などのワイルドカードをサポート）"

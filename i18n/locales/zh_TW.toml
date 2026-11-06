@@ -30,6 +30,7 @@ save_failed = "儲存設定失敗"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "正在儲存結果…"
 phase_checking_output = "正在檢查儲存位置…"
 phase_preparing_workspace = "正在準備暫存工作資料夾…"
 phase_converting = "正在轉換檔案…"
@@ -76,6 +77,7 @@ example = "範例"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "檢查指定輸出資料夾是否支援安全儲存"
 settings = "設定管理"
 settings_reset = "將設定還原為預設值"
 files = "輸入文件路徑（支持通配符，如 *.docx）"

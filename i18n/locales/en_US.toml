@@ -99,6 +99,7 @@ save_failed = "Failed to save settings"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Saving the result…"
 phase_checking_output = "Checking save folder…"
 phase_preparing_workspace = "Preparing temporary work folder…"
 phase_converting = "Converting file…"
@@ -145,6 +146,7 @@ example = "Example"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Check whether the selected output folder supports safe saving"
 settings = "Settings management"
 settings_reset = "Reset settings to defaults"
 files = "Input file path(s) (supports wildcards like *.docx)"

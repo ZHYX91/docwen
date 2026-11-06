@@ -168,13 +168,40 @@ def _check_runtime_work_directory(controller: Any) -> DoctorCheck | None:
     )
 
 
-def collect_doctor_checks(controller: Any, projection: dict[str, Any]) -> list[DoctorCheck]:
+def _check_output_directory(controller: Any, output_dir: str) -> DoctorCheck | None:
+    probe = getattr(controller, "probe_output_directory", None)
+    if not callable(probe):
+        return None
+    try:
+        reason = probe(output_dir)
+    except Exception:
+        reason = "not_writable"
+    if reason is None:
+        return None
+    allowed = {"invalid_path", "atomic_publish_unsupported", "not_writable"}
+    status = "ok" if reason == "ok" else "fail"
+    return DoctorCheck(
+        id="path.output_directory",
+        kind="path",
+        label="Selected output directory",
+        status=status,
+        reason=None if status == "ok" else reason if reason in allowed else "not_writable",
+    )
+
+
+def collect_doctor_checks(
+    controller: Any, projection: dict[str, Any], *, output_dir: str | None = None
+) -> list[DoctorCheck]:
     """Collect path-free health checks without duplicating runtime root selection."""
 
     checks = [_check_temp_directory()]
     runtime_check = _check_runtime_work_directory(controller)
     if runtime_check is not None:
         checks.append(runtime_check)
+    if output_dir:
+        output_check = _check_output_directory(controller, output_dir)
+        if output_check is not None:
+            checks.append(output_check)
     checks.extend((_check_config(controller), _check_dependency_egress_guard(projection)))
     return checks
 
@@ -213,18 +240,24 @@ def _print_capability_text(projection: dict[str, Any]) -> None:
 def register_doctor_parser(subparsers: Any) -> argparse.ArgumentParser:
     """Register the ``doctor`` command."""
 
-    return subparsers.add_parser(
+    parser = subparsers.add_parser(
         "doctor",
         parents=[get_common_parser()],
         help=cli_t("cli.help.doctor"),
     )
+    parser.add_argument("--output-dir", metavar="DIR", help=cli_t("cli.help.doctor_output_dir"))
+    return parser
 
 
 def execute_doctor(args: argparse.Namespace, controller: Any = None) -> int:
     """Execute diagnostics against one initialized runtime composition."""
 
     projection = runtime_capability_projection(controller)
-    checks = collect_doctor_checks(controller, projection)
+    checks = collect_doctor_checks(
+        controller,
+        projection,
+        output_dir=getattr(args, "output_dir", None),
+    )
     all_ok = all(check.ok for check in checks)
     data = {
         "checks": [check.to_dict() for check in checks],

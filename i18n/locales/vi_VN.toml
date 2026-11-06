@@ -99,6 +99,7 @@ save_failed = "Lưu cài đặt thất bại"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Đang lưu kết quả…"
 phase_checking_output = "Đang kiểm tra thư mục lưu…"
 phase_preparing_workspace = "Đang chuẩn bị thư mục làm việc tạm thời…"
 phase_converting = "Đang chuyển đổi tệp…"
@@ -145,6 +146,7 @@ example = "Ví dụ"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Kiểm tra thư mục đầu ra đã chọn có hỗ trợ lưu an toàn không"
 settings = "Quản lý cài đặt"
 settings_reset = "Đặt lại cài đặt về mặc định"
 files = "Đường dẫn tệp đầu vào (hỗ trợ ký tự đại diện như *.docx)"
