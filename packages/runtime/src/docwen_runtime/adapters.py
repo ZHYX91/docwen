@@ -154,7 +154,7 @@ class RuntimePortAdapter:
         import secrets
         from pathlib import Path
 
-        root = Path(self._task_manager._workspaces.root_dir)
+        root = Path(self._task_manager.workspace_root)
         candidate = root / f".docwen-doctor-{secrets.token_hex(5)}"
         try:
             root.mkdir(parents=True, exist_ok=True)

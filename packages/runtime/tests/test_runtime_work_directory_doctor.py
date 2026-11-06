@@ -13,7 +13,7 @@ pytestmark = pytest.mark.unit
 
 def test_runtime_probe_creates_then_removes_its_private_entry(tmp_path) -> None:
     root = tmp_path / "runtime"
-    adapter = RuntimePortAdapter(task_manager=SimpleNamespace(_workspaces=SimpleNamespace(root_dir=root)))
+    adapter = RuntimePortAdapter(task_manager=SimpleNamespace(workspace_root=root))
     assert adapter.probe_work_directory() is True
     assert root.is_dir()
     assert list(root.iterdir()) == []
@@ -22,6 +22,6 @@ def test_runtime_probe_creates_then_removes_its_private_entry(tmp_path) -> None:
 def test_runtime_probe_reports_blocked_root_without_guessing_other_location(tmp_path) -> None:
     root = tmp_path / "blocked"
     root.write_text("this is a file", encoding="utf-8")
-    adapter = RuntimePortAdapter(task_manager=SimpleNamespace(_workspaces=SimpleNamespace(root_dir=root)))
+    adapter = RuntimePortAdapter(task_manager=SimpleNamespace(workspace_root=root))
     assert adapter.probe_work_directory() is False
     assert root.read_text(encoding="utf-8") == "this is a file"

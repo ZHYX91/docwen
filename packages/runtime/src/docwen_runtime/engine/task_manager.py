@@ -956,6 +956,11 @@ class TaskManager:
         with self._cancellation_lock:
             return list(self._active_task_ids)
 
+    @property
+    def workspace_root(self) -> str:
+        """Return the one runtime-owned workspace parent for internal diagnostics."""
+        return self._workspaces.root_dir
+
     # ── Helpers ─────────────────────────────────────────────────────
 
     @staticmethod
