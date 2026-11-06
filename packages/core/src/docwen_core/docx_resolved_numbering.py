@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from docwen_core.file_io import replace_private_file
 from docwen_core._docx_resolved_inline import (
     ResolvedInlineCarrier,
     ResolvedInlineFragment,
@@ -118,6 +117,7 @@ from docwen_core.docx_standalone_caption_occurrence import (
     standalone_caption_occurrence_map_xml,
     wrap_standalone_caption_occurrence,
 )
+from docwen_core.file_io import replace_private_file
 from docwen_core.models._resolved_numbering_semantics import (
     validate_document,
     validate_plan,

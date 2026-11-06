@@ -47,7 +47,6 @@ from docwen_core.docx_citation_ooxml import (
     parse_citation_item_map,
     parse_citation_occurrence_map,
 )
-from docwen_core.file_io import replace_private_file
 from docwen_core.docx_numbering_occurrence import (
     NUMBERING_OCCURRENCE_MAP_NAMESPACE,
     numbering_occurrence_map_xml,
@@ -59,6 +58,7 @@ from docwen_core.docx_standalone_caption_occurrence import (
     standalone_caption_occurrence_map_xml,
 )
 from docwen_core.docx_table_roles import TABLE_ROLES_NAMESPACE, canonical_table_roles_xml
+from docwen_core.file_io import replace_private_file
 
 _RELATIONSHIPS_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/relationships"
 _CONTENT_TYPES_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/content-types"
