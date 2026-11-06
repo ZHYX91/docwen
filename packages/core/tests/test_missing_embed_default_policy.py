@@ -48,3 +48,26 @@ def test_shipped_link_config_and_runtime_default_agree() -> None:
     data = tomllib.loads((root / "configs/link.toml").read_text(encoding="utf-8"))
     assert data["error_handling"]["file_not_found"] == "keep"
     assert LinkRuntimeConfig.from_config(data).file_not_found_mode == "keep"
+
+
+def test_missing_embed_notification_reports_only_attempted_lookup(tmp_path: Path) -> None:
+    source = tmp_path / "original.md"
+    content = (
+        "![[missing.md]]\n\n"
+        "![photo](missing.png)\n\n"
+        "`![literal](not-a-lookup.png)`\n\n"
+        "```md\n![[also-not-a-lookup.md]]\n```\n"
+    )
+    source.write_text(content, encoding="utf-8")
+    events: list[int] = []
+    projected = process_markdown_links(
+        content,
+        str(source),
+        link_config=LinkRuntimeConfig(),
+        target_format="md",
+        on_missing_embed=lambda: events.append(1),
+    )
+    assert len(events) == 2
+    assert "File not found" not in projected
+    assert "![photo](missing.png)" in projected
+    assert "![[missing.md]]" in projected

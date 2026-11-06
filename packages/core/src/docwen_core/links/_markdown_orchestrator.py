@@ -93,6 +93,7 @@ def _replace_markdown_images(
     table_safe: bool,
     image_scope: str | None,
     declared_image: Callable[[str, str], str] | None = None,
+    on_missing_embed: Callable[[], None] | None = None,
     cancellation_check: Callable[[], None] | None = None,
 ) -> str:
     """Apply a mode to standard ``![alt](target)`` image syntax."""
@@ -140,6 +141,7 @@ def _replace_markdown_images(
                 table_safe=table_safe,
                 image_scope=image_scope,
                 declared_image=declared_image,
+                on_missing_embed=on_missing_embed,
                 literal_text=escape_markdown_source_literal if target_format == "docx" else None,
             )
             if embedded is None:
@@ -347,6 +349,7 @@ def process_markdown_links(
     _canonicalize_local_docx_targets: bool = False,
     _boundary_rescan_remaining: int = 1,
     declared_image: Callable[[str, str], str] | None = None,
+    on_missing_embed: Callable[[], None] | None = None,
     declared_wiki_link: Callable[[str, str], str | None] | None = None,
     hyperlink_projection: Callable[[str, str, str, str], str] | None = None,
     literal_projection: Callable[[str], str] | None = None,
@@ -420,6 +423,7 @@ def process_markdown_links(
             _depth=inner_depth,
             _canonicalize_local_docx_targets=True,
             declared_image=declared_image,
+            on_missing_embed=on_missing_embed,
             declared_wiki_link=declared_wiki_link,
             local_lookup_allowed=local_lookup_allowed,
             literal_projection=literal_projection,
@@ -482,6 +486,7 @@ def process_markdown_links(
                 structural_tables=structural_tables,
                 extended_headings=extended_headings,
                 declared_image=declared_image,
+                on_missing_embed=on_missing_embed,
                 literal_text=escape_markdown_source_literal if normalized_target == "docx" else None,
             )
             if normalized_target == "docx" and replacement == original:
@@ -524,6 +529,7 @@ def process_markdown_links(
             source_file_path=resolved_source,
             search_dirs=resolved_search_dirs,
             on_not_found=resolved_not_found,
+            on_missing_embed=on_missing_embed,
             temp_dir=temp_dir,
             table_safe=table_safe,
             image_scope=image_scope,
@@ -601,6 +607,7 @@ def process_markdown_links(
                 structural_tables=structural_tables,
                 extended_headings=extended_headings,
                 declared_image=declared_image,
+                on_missing_embed=on_missing_embed,
                 declared_wiki_link=declared_wiki_link,
                 local_lookup_allowed=local_lookup_allowed,
                 literal_projection=literal_projection,

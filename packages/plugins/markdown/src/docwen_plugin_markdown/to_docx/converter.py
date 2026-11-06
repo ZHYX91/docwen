@@ -813,6 +813,12 @@ class MdToDocxConverter:
 
             cleaned_ast = []
             note_ctx = NoteContext()
+            missing_embedded_sources = 0
+
+            def record_missing_embed() -> None:
+                nonlocal missing_embedded_sources
+                missing_embedded_sources += 1
+
             if render_body:
                 cancellable.check()
 
@@ -841,6 +847,7 @@ class MdToDocxConverter:
                     structural_tables=extensions.structural_tables,
                     protect_source_comments=True,
                     cancellation_check=cancellable.check,
+                    on_missing_embed=record_missing_embed,
                     declared_image=(
                         declared_resource_resolver.resolve_image if declared_resource_resolver is not None else None
                     ),
@@ -1360,6 +1367,17 @@ class MdToDocxConverter:
                 ConversionDiagnostic(level="warning", message=message, code=code)
                 for code, message in (renderer.warnings if renderer is not None else ())
             ]
+            if missing_embedded_sources:
+                diagnostics.append(
+                    ConversionDiagnostic(
+                        level="warning",
+                        code="MD2DOCX-EMBED-SOURCE-MISSING",
+                        message=(
+                            "Some embedded files or images could not be found. "
+                            "Check the source links and the selected missing-file fallback."
+                        ),
+                    )
+                )
             if unanchored_number_comments:
                 diagnostics.append(
                     ConversionDiagnostic(
