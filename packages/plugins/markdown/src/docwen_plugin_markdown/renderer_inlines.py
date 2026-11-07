@@ -620,13 +620,14 @@ def _link_segments(
                     highlight=highlight or child_type in {"highlight", "mark"},
                     superscript=superscript or (child_type == "superscript" and not subscript),
                     subscript=subscript or (child_type == "subscript" and not superscript),
-                    formula=formula or child_type in {"inline_math", "inline_latex"},
+                    formula=formula or child_type in {"inline_math", "block_math"},
                 )
             )
         else:
             value = child.get("raw", "") or child.get("text", "")
-            if child_type in {"inline_math", "inline_latex"}:
-                value = f"${value}$"
+            if child_type in {"inline_math", "block_math"}:
+                delimiter = "$$" if child_type == "block_math" else "$"
+                value = f"{delimiter}{value}{delimiter}"
             segments.append(
                 _LinkSegment(
                     str(value),
@@ -638,7 +639,7 @@ def _link_segments(
                     highlight or child_type in {"highlight", "mark"},
                     superscript or (child_type == "superscript" and not subscript),
                     subscript or (child_type == "subscript" and not superscript),
-                    formula or child_type in {"inline_math", "inline_latex"},
+                    formula or child_type in {"inline_math", "block_math"},
                 )
             )
     return segments
@@ -1165,11 +1166,16 @@ def extract_text_content(children: list[dict[str, Any]]) -> str:
 
 
 def plain_link_label(label: str) -> str:
-    """Render a Markdown link label as plain field/cell display text."""
-    from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
+    """Use the DOCX hyperlink's readable text projection for every plain label.
 
-    nodes = parse_markdown_text(label, consume_initial_bom=False)
-    return "".join(extract_text_content(node.get("children", [])) for node in nodes)
+    Formatting contributes its text, formulas retain readable LaTeX, breaks
+    become spaces, and other leaves retain their literal payload. Labels use
+    inline parsing so leading ``#``/list markers and U+FEFF stay visible.
+    """
+    from docwen_plugin_markdown.mistune_extensions import create_extended_markdown
+
+    nodes = create_extended_markdown().inline(label, {})
+    return "".join(segment.text for segment in _link_segments(nodes))
 
 
 def serialize_inlines_to_markdown(children: list[dict[str, Any]]) -> str:

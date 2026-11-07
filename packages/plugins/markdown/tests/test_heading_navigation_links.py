@@ -199,3 +199,15 @@ def test_embedded_document_cannot_supply_a_root_fragment_target(tmp_path: Path) 
     assert ANCHOR_TAG_PREFIX in observation.document_xml
     assert source.read_bytes() == source_bytes
     assert child.read_bytes() == child_bytes
+
+
+@pytest.mark.parametrize("label", ["Energy $mc^2$ result", "$mc^2$"])
+def test_unresolved_heading_link_preserves_formula_in_text_fallback(tmp_path: Path, label: str) -> None:
+    source = tmp_path / "formula-label.md"
+    source.write_text(f"[{label}](#missing)", encoding="utf-8")
+    config = _link_config()
+    config["link"]["non_embed_links"]["markdown_hyperlink_fallback"] = "extract_text"
+    observation = _convert_docx(source, config)
+    assert observation.text == label
+    assert not _anchors(observation.document_xml)
+    assert not observation.hyperlink_targets

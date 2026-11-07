@@ -13,8 +13,7 @@ from docx.oxml.ns import qn
 
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import encode_markdown_angle_destination
-from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
-from docwen_plugin_markdown.renderer_inlines import extract_text_content
+from docwen_plugin_markdown.renderer_inlines import extract_text_content, plain_link_label
 
 
 class DocxNavigationLinks:
@@ -33,10 +32,7 @@ class DocxNavigationLinks:
         if not target.startswith("#"):
             return f"[{label}](<{encode_markdown_angle_destination(target)}>)"
         mode = self.config.wiki_hyperlink_fallback if syntax == "wiki" else self.config.markdown_hyperlink_fallback
-        visible = "".join(
-            extract_text_content(node.get("children", []))
-            for node in parse_markdown_text(label, consume_initial_bom=False)
-        )
+        visible = plain_link_label(label)
         fallback = target if mode == "extract_address" else visible if mode == "extract_text" else original
         token = self.prefix + str(len(self.links))
         self.links[token] = (unquote(target[1:]), fallback)

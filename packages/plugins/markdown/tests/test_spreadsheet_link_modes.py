@@ -226,3 +226,23 @@ def test_formatted_markdown_label_is_plain_in_text_projection(tmp_path: Path, ta
         with open(path, encoding="utf-8-sig", newline="") as handle:
             value = list(csv.reader(handle))[1][0]
     assert value == "prefix Bold code suffix"
+
+
+@pytest.mark.parametrize("target", ["xlsx", "csv"])
+@pytest.mark.parametrize("mode", ["extract_text", "hyperlink"])
+@pytest.mark.parametrize("label", ["Energy $mc^2$ result", "$mc^2$"])
+def test_formula_link_label_survives_spreadsheet_projection(tmp_path: Path, target: str, mode: str, label: str) -> None:
+    path = convert(
+        tmp_path,
+        f"| Link |\n| --- |\n| [{label}](https://example.com) |\n",
+        target=target,
+        config={"markdown_mode": mode, "markdown_hyperlink_fallback": "extract_text"},
+    )
+    if target == "xlsx":
+        cell = active(load_workbook(path))["A2"]
+        assert cell.value == label
+        assert cell.data_type == "s"
+        assert getattr(cell.hyperlink, "target", None) == ("https://example.com" if mode == "hyperlink" else None)
+    else:
+        with open(path, encoding="utf-8-sig", newline="") as handle:
+            assert list(csv.reader(handle)) == [["Link"], [label]]

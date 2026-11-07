@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
@@ -9,7 +10,7 @@ import pytest
 
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 
-from ._link_processing_routes_support import _link_config
+from ._link_processing_routes_support import _link_config, _visible_docx_text
 from .conftest import make_context
 
 pytestmark = pytest.mark.contract
@@ -31,9 +32,10 @@ def test_missing_embeds_issue_one_warning_without_file_not_found_body(tmp_path: 
     assert warning[0].level == "warning"
     output = Path(result.artifacts[0].staging_path)
     with zipfile.ZipFile(output) as docx:
-        body = docx.read("word/document.xml").decode("utf-8")
-    assert "File not found" not in body
-    assert "not-here.md" in body and "not-here.png" in body
+        body = ET.fromstring(docx.read("word/document.xml"))
+    visible = _visible_docx_text(body)
+    assert "File not found" not in visible
+    assert "Missing ![[not-here.md]] and ![image](not-here.png)" in visible
 
 
 def test_literal_image_syntax_does_not_report_missing_embed(tmp_path: Path) -> None:

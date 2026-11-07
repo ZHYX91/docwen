@@ -11,8 +11,7 @@ from docx.oxml.ns import qn
 
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import project_field_links, reject_declared_input_link_lookups
-from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
-from docwen_plugin_markdown.renderer_inlines import add_hyperlink, extract_text_content, plain_link_label
+from docwen_plugin_markdown.renderer_inlines import add_hyperlink, plain_link_label
 
 
 class _RunWriter:
@@ -83,8 +82,7 @@ class YamlLinkProjection:
         return self._link(label, target)
 
     def _link(self, label: str, target: str) -> str:
-        nodes = parse_markdown_text(label, consume_initial_bom=False)
-        visible = "".join(extract_text_content(node.get("children", [])) for node in nodes)
+        visible = plain_link_label(label)
         token = f"{self.prefix}N{len(self.links)}END"
         self.links[token] = (visible or label, target)
         return token

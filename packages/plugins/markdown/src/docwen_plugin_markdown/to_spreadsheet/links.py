@@ -10,8 +10,7 @@ from typing import Any
 
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import process_markdown_links, project_field_links
-from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
-from docwen_plugin_markdown.renderer_inlines import _resolve_hyperlink_target, extract_text_content, plain_link_label
+from docwen_plugin_markdown.renderer_inlines import _resolve_hyperlink_target, plain_link_label
 from docwen_plugin_markdown.xlsx_text import assign_bounded_xlsx_value, existing_xlsx_cells
 
 
@@ -24,8 +23,7 @@ class SpreadsheetLinks:
         self.links: dict[str, tuple[str, str, str]] = {}
 
     def issue(self, label: str, target: str, original: str, syntax: str) -> str:
-        nodes = parse_markdown_text(label, consume_initial_bom=False)
-        visible = "".join(extract_text_content(node.get("children", [])) for node in nodes)
+        visible = plain_link_label(label)
         mode = self.config.wiki_hyperlink_fallback if syntax == "wiki" else self.config.markdown_hyperlink_fallback
         # Run extraction on the original source, never the resolved absolute URI.
         fallback_config = replace(

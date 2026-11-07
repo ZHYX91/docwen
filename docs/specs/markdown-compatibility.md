@@ -32,6 +32,9 @@ These policies cover the existing parser-owned ordinary inline Wiki/Markdown con
 and autolink syntax keep their existing handling; bare-URL conversion remains a separate default-off option.
 Text extraction in used YAML fields and spreadsheet cells projects Markdown label formatting as visible text,
 while kept source syntax and literal Wiki alias punctuation remain unchanged.
+Plain labels in fields, cells and heading-link fallbacks use the same inline text rules as DOCX hyperlinks:
+formulas retain readable LaTeX, line breaks become spaces, and unhandled inline syntax stays literal. Leading heading
+or list markers within a label remain part of its text.
 
 For authored Markdown-to-DOCX, an ordinary same-document fragment can target a unique rendered heading. The
 decoded fragment must match its visible title exactly or its simple lowercase slug: punctuation is removed and
@@ -68,6 +71,8 @@ native destinations remain visible text. This does not promise lossless import o
 `wiki_hyperlink_fallback` 与 `markdown_hyperlink_fallback` 各自默认 `keep`，可选值仅为 `keep`、
 `extract_text`、`extract_address`。保留原样保存完整源语法；提取地址保留源目标和锚点，不替换为解析后的
 绝对路径。无法生成超链接时遵守对应回退，不隐式删除链接。
+字段、单元格和标题链接回退中的纯文本标签使用与 DOCX 超链接一致的行内文字规则：公式保留可读的
+LaTeX，换行转为空格，未解析的行内语法保留原文。标签开头的井号或列表标记仍是标签文字的一部分。
 
 源 Markdown→DOCX 的同文档片段可跳转至唯一已渲染标题：解码后的片段须精确匹配可见标题，或匹配简单
 slug（转为小写、去除标点、空格换为连字符）。输出使用独立的 Word 书签和原生内部链接，保存并重开后仍
