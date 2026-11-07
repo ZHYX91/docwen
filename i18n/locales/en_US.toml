@@ -11,6 +11,8 @@ template_name = "English General Template"
 # Main Window
 # =============================================================================
 [main_window]
+runtime_folder_unavailable = "Cannot create a temporary work folder. Check folder permissions or security software and try again."
+output_folder_unavailable = "Cannot safely use the selected save folder. Check permissions or choose another folder."
 numbering_comments_unanchored = "Some added numbers cannot be isolated as text with this scheme. Their review comments were skipped; heading content was preserved."
 conversion_failed_detail = "Conversion failed."
 note_syntax_invalid = "Footnote or endnote syntax is invalid. Check note references and definitions, then retry."
@@ -97,6 +99,11 @@ save_failed = "Failed to save settings"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Saving the result…"
+phase_checking_output = "Checking save folder…"
+phase_preparing_workspace = "Preparing temporary work folder…"
+phase_converting = "Converting file…"
+phase_cancelling_hint = "Cancellation requested. Finishing the current safe step…"
 output_each_source = "Save each result beside its source file"
 output_date_subfolder = "Save in a dated subfolder"
 task_warning_count = "{count} conversion notices. Expand activity history for details."
@@ -139,6 +146,7 @@ example = "Example"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Check whether the selected output folder supports safe saving"
 settings = "Settings management"
 settings_reset = "Reset settings to defaults"
 files = "Input file path(s) (supports wildcards like *.docx)"

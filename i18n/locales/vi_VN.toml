@@ -12,6 +12,8 @@ template_name = "Mẫu Chung Tiếng Việt"
 # Cua so chinh
 # =============================================================================
 [main_window]
+runtime_folder_unavailable = "Không thể tạo thư mục làm việc tạm thời. Hãy kiểm tra quyền truy cập hoặc phần mềm bảo mật rồi thử lại."
+output_folder_unavailable = "Không thể dùng an toàn thư mục lưu đã chọn. Hãy kiểm tra quyền truy cập hoặc chọn thư mục khác."
 numbering_comments_unanchored = "Một số số được thêm không thể tách thành văn bản riêng theo sơ đồ này. Đã bỏ qua nhận xét tương ứng và giữ nguyên tiêu đề."
 conversion_failed_detail = "Chuyển đổi thất bại."
 note_syntax_invalid = "Cú pháp chú thích không hợp lệ. Hãy kiểm tra tham chiếu và định nghĩa."
@@ -97,6 +99,11 @@ save_failed = "Lưu cài đặt thất bại"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Đang lưu kết quả…"
+phase_checking_output = "Đang kiểm tra thư mục lưu…"
+phase_preparing_workspace = "Đang chuẩn bị thư mục làm việc tạm thời…"
+phase_converting = "Đang chuyển đổi tệp…"
+phase_cancelling_hint = "Đã yêu cầu hủy. Đang kết thúc an toàn bước hiện tại…"
 output_each_source = "Lưu từng kết quả cạnh tệp nguồn"
 output_date_subfolder = "Lưu trong thư mục con theo ngày"
 task_warning_count = "Có {count} thông báo chuyển đổi. Mở rộng lịch sử hoạt động để xem chi tiết."
@@ -139,6 +146,7 @@ example = "Ví dụ"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Kiểm tra thư mục đầu ra đã chọn có hỗ trợ lưu an toàn không"
 settings = "Quản lý cài đặt"
 settings_reset = "Đặt lại cài đặt về mặc định"
 files = "Đường dẫn tệp đầu vào (hỗ trợ ký tự đại diện như *.docx)"

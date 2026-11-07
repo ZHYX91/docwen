@@ -11,6 +11,8 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+runtime_folder_unavailable = "Não foi possível criar a pasta temporária de trabalho. Verifique as permissões ou o software de segurança e tente novamente."
+output_folder_unavailable = "Não é possível usar a pasta de destino com segurança. Verifique as permissões ou escolha outra pasta."
 numbering_comments_unanchored = "Alguns números adicionados não podem ser isolados como texto neste esquema. Seus comentários foram ignorados; os títulos foram preservados."
 conversion_failed_detail = "Falha na conversão."
 note_syntax_invalid = "A sintaxe das notas é inválida. Verifique as referências e definições."
@@ -96,6 +98,11 @@ save_failed = "Falha ao salvar configurações"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Salvando o resultado…"
+phase_checking_output = "Verificando a pasta de destino…"
+phase_preparing_workspace = "Preparando a pasta temporária de trabalho…"
+phase_converting = "Convertendo arquivo…"
+phase_cancelling_hint = "Cancelamento solicitado. Finalizando a etapa atual com segurança…"
 output_each_source = "Salvar cada resultado junto ao arquivo de origem"
 output_date_subfolder = "Salvar em uma subpasta com data"
 task_warning_count = "{count} avisos de conversão. Expanda o histórico de atividades para ver os detalhes."
@@ -138,6 +145,7 @@ example = "Exemplo"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "Verificar se a pasta de saída selecionada permite salvar com segurança"
 settings = "Gerenciar configurações"
 settings_reset = "Redefinir configurações para os padrões"
 files = "Caminho do arquivo de entrada (suporta curingas, ex: *.docx)"

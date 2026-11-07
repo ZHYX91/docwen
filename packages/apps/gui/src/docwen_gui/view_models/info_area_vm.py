@@ -900,6 +900,15 @@ class InfoAreaViewModel(QObject):
                 progress_lines.append(_t("info_area.task_warning_count", count=ts.warning_count))
             if state in {"active", "cancelling"}:
                 progress_lines.insert(0, _t("info_area.task_current_file", "Current: {name}", name=current_file))
+            if state == "active" and ts.progress_message:
+                progress_lines.append(ts.progress_message)
+            elif state == "cancelling":
+                progress_lines.append(
+                    _t(
+                        "info_area.phase_cancelling_hint",
+                        "Cancellation requested. Finishing the current safe step…",
+                    )
+                )
             summary_message = "\n".join(progress_lines)
 
             if state == "active" and ts.percent is not None:

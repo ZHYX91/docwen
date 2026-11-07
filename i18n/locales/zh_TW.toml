@@ -30,6 +30,11 @@ save_failed = "儲存設定失敗"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "正在儲存結果…"
+phase_checking_output = "正在檢查儲存位置…"
+phase_preparing_workspace = "正在準備暫存工作資料夾…"
+phase_converting = "正在轉換檔案…"
+phase_cancelling_hint = "已要求取消，正在安全結束目前的步驟…"
 output_each_source = "分別儲存到各檔案所在目錄"
 output_date_subfolder = "儲存到日期子資料夾"
 task_warning_count = "有 {count} 則轉換提示，請展開活動記錄查看。"
@@ -72,6 +77,7 @@ example = "範例"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "檢查指定輸出資料夾是否支援安全儲存"
 settings = "設定管理"
 settings_reset = "將設定還原為預設值"
 files = "輸入文件路徑（支持通配符，如 *.docx）"
@@ -1683,6 +1689,8 @@ subtitle = "副標題"
 
 
 [main_window]
+runtime_folder_unavailable = "無法建立暫存工作資料夾。請檢查資料夾權限或防護軟體設定後再試。"
+output_folder_unavailable = "無法安全使用選取的儲存資料夾。請檢查權限或改選其他資料夾。"
 numbering_comments_unanchored = "所選方案的部分自動編號無法單獨定位為文字，已略過這些編號的註解；標題內容保留。"
 conversion_failed_detail = "轉換失敗。"
 note_syntax_invalid = "註腳或章節附註標記格式有誤，請核對引用和定義後重試。"

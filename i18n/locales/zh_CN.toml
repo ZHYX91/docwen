@@ -11,6 +11,8 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+runtime_folder_unavailable = "无法创建临时工作目录。请检查文件夹权限或安全软件设置后重试。"
+output_folder_unavailable = "无法安全使用所选保存目录。请检查权限或更换目录。"
 numbering_comments_unanchored = "所选方案的部分自动序号无法单独定位为文字，已跳过这些序号的批注；标题内容保留。"
 conversion_failed_detail = "转换失败。"
 note_syntax_invalid = "脚注或尾注标记格式有误，请核对引用和定义后重试。"
@@ -97,6 +99,11 @@ save_failed = "保存设置失败"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "正在保存结果…"
+phase_checking_output = "正在检查保存位置…"
+phase_preparing_workspace = "正在准备临时工作目录…"
+phase_converting = "正在转换文件…"
+phase_cancelling_hint = "已请求取消，正在安全结束当前步骤…"
 output_each_source = "分别保存到各文件所在目录"
 output_date_subfolder = "保存到日期子文件夹"
 task_warning_count = "有 {count} 条转换提示，请展开活动记录查看。"
@@ -139,6 +146,7 @@ example = "示例"
 
 # CLI帮助文本
 [cli.help]
+doctor_output_dir = "检查指定输出目录是否支持安全保存"
 settings = "设置管理"
 settings_reset = "将设置还原为默认值"
 files = "输入文件路径（支持通配符，如 *.docx）"
