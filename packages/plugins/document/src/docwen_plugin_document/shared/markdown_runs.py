@@ -497,10 +497,12 @@ def _render_paragraph_run_segments(
     literal_text: bool = False,
     escape_literal_text: bool = True,
     text_transform: Callable[[str], str] | None = None,
+    style_parent: Any = None,
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
     element = root_element if root_element is not None else getattr(para, "_p", para)
+    formatting_parent = style_parent if style_parent is not None else para
     spans = (reference_spans or {}) if not literal_text else {}
     covered_nodes = _reference_covered_nodes(element, spans)
 
@@ -564,7 +566,11 @@ def _render_paragraph_run_segments(
 
             if tag == "r":
                 resolver = getattr(note_extractor, "get_noteref_text", None) if not literal_text else None
-                resolved = _complex_note_reference(children, index, resolver, para) if resolver is not None else None
+                resolved = (
+                    _complex_note_reference(children, index, resolver, formatting_parent)
+                    if resolver is not None
+                    else None
+                )
                 if resolved is not None:
                     reference, consumed_through = resolved
                     _append(reference)
@@ -580,7 +586,7 @@ def _render_paragraph_run_segments(
                         _is_transparent_proof_marker(run)
                         or (
                             run.tag == f"{{{NS_W}}}r"
-                            and not _run_is_hidden(run, para)
+                            and not _run_is_hidden(run, formatting_parent)
                             and run_metadata_is_valid(run)
                             and all(node.tag in {f"{{{NS_W}}}rPr", f"{{{NS_W}}}t"} for node in run)
                         )
@@ -683,13 +689,13 @@ def _render_paragraph_run_segments(
             run,
             syntax_config=syntax_config,
             style_detector_config=style_detector_config,
-            run_style_type=resolve_run_style_type(run, para, style_detector_config),
-            parent=para,
+            run_style_type=resolve_run_style_type(run, formatting_parent, style_detector_config),
+            parent=formatting_parent,
         )
 
     def _handle_run(run: Any) -> None:
         w_ns = NS_W
-        if _run_is_hidden(run, para):
+        if _run_is_hidden(run, formatting_parent):
             return
         text_parts: list[str] = []
 
@@ -754,6 +760,7 @@ def render_paragraph_runs(
     literal_text: bool = False,
     escape_literal_text: bool = True,
     text_transform: Callable[[str], str] | None = None,
+    style_parent: Any = None,
 ) -> str:
     """Render paragraph XML children in order, producing Markdown text.
 
@@ -767,6 +774,8 @@ def render_paragraph_runs(
         note_extractor: Optional NoteExtractor for inline note references.
         preserve_formatting: If True, emit ``**bold**`` etc.
         syntax_config: Inline Markdown syntax policy owned by this request.
+        style_parent: Document-owning parent for raw XML from another part.
+            It supplies styles only, never relationships for that other part.
 
     Returns:
         Markdown string for the paragraph content.
@@ -784,6 +793,7 @@ def render_paragraph_runs(
         literal_text=literal_text,
         escape_literal_text=escape_literal_text,
         text_transform=text_transform,
+        style_parent=style_parent,
     )[0]
 
 

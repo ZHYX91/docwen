@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 from zipfile import ZipFile
+
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
+from lxml import etree
 
 from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_bookmark_name
 from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_core.docx_parsing.xml_ns import NS_W
 from docwen_plugin_document.shared.markdown_runs import (
     _run_is_hidden,
-    append_formatted_run_text,
-    append_literal_run_text,
-    join_markdown_parts,
-    resolve_run_style_type,
+    render_paragraph_runs,
 )
 from docwen_plugin_document.shared.note_target_structure import NOTE_WRAPPERS, is_pure_note_target
 
@@ -28,6 +29,7 @@ def _extract_notes_with_status(
     preserve_formatting: bool = True,
     syntax_config: DocxMarkdownSyntaxConfig | None = None,
     style_detector_config: StyleDetectorConfig | None = None,
+    math_renderer: Callable[[Any, str], str] | None = None,
 ) -> tuple[dict[int, str], bool]:
     """Extract notes from python-docx part or ZIP fallback.
 
@@ -38,17 +40,32 @@ def _extract_notes_with_status(
     ref_tag = note_tag.rstrip("s") + "Ref"
 
     elem = None
+    source_part = f"word/{part_name}.xml"
     package_part_failed = False
     try:
         part = getattr(doc.part, f"{part_name}_part", None)
+        if part is None:
+            relation_type = RT.FOOTNOTES if part_name == "footnotes" else RT.ENDNOTES
+            part = next(
+                (
+                    relation.target_part
+                    for relation in getattr(doc.part, "rels", {}).values()
+                    if relation.reltype == relation_type and not relation.is_external
+                ),
+                None,
+            )
         if part is not None:
-            elem = part.element
+            source_part = str(part.partname).lstrip("/")
+            elem = getattr(part, "element", None)
+            if elem is None:
+                elem = etree.fromstring(part.blob)
     except Exception:
         package_part_failed = True
 
     if elem is None and docx_path:
         elem, zip_part_failed = _load_notes_elem_from_zip(docx_path, part_name)
         if elem is not None:
+            source_part = f"word/{part_name}.xml"
             package_part_failed = False
         elif zip_part_failed:
             package_part_failed = True
@@ -72,6 +89,8 @@ def _extract_notes_with_status(
             syntax_config=syntax_config,
             style_detector_config=style_detector_config,
             style_parent=doc,
+            math_renderer=math_renderer,
+            source_part=source_part,
         )
         if content.strip():
             notes[int(w_id_raw)] = content
@@ -80,8 +99,6 @@ def _extract_notes_with_status(
 
 def _load_notes_elem_from_zip(docx_path: str, part_name: str) -> tuple[Any | None, bool]:
     """Load one notes element and report whether a present part was unreadable."""
-    import lxml.etree as etree
-
     target = f"word/{part_name}.xml"
     try:
         with ZipFile(docx_path, "r") as zf:
@@ -107,82 +124,57 @@ def _extract_note_content(
     syntax_config: DocxMarkdownSyntaxConfig | None = None,
     style_detector_config: StyleDetectorConfig | None = None,
     style_parent: Any = None,
+    math_renderer: Callable[[Any, str], str] | None = None,
+    source_part: str | None = None,
 ) -> str:
-    """Extract note Markdown while preserving supported run formatting and breaks."""
+    """Read notes in XML order through the body text and formula renderer."""
+
+    def render_math(element: Any) -> str:
+        if math_renderer is not None:
+            part = source_part or f"word/{ref_tag.removesuffix('Ref')}s.xml"
+            return math_renderer(element, part)
+        from docwen_plugin_document.to_markdown.formula_extractor import extract_formula_from_element
+
+        return extract_formula_from_element(element)
 
     para_texts: list[str] = []
     for child in elem:
         tag = child.tag.split("}")[-1] if "}" in (child.tag or "") else (child.tag or "")
         if tag != "p":
             continue
-        run_texts: list[str] = []
-        separator_expected = False
+        # Keep the original XML attached to its part, so formula diagnostics
+        # retain their exact occurrence path. Suppress only the native marker
+        # and its adjacent writer-owned separator through the shared walker.
+        marker_spans: dict[Any, tuple[Any, str]] = {}
         for run in child.iter(f"{{{w_ns}}}r"):
             if any(ancestor.tag in {f"{{{w_ns}}}del", f"{{{w_ns}}}moveFrom"} for ancestor in run.iterancestors()):
                 continue
             if _run_is_hidden(run, style_parent):
                 continue
-            if run.find(f"{{{w_ns}}}{ref_tag}") is not None:
-                separator_expected = True
+            if run.find(f"{{{w_ns}}}{ref_tag}") is None:
                 continue
-            if separator_expected and _is_reference_separator_run(run, w_ns):
-                separator_expected = False
-                continue
-            separator_expected = False
-            _append_note_run(
-                run_texts,
-                run,
-                w_ns,
-                preserve_formatting=preserve_formatting,
-                syntax_config=syntax_config or DocxMarkdownSyntaxConfig(),
-                style_detector_config=style_detector_config,
-                style_parent=style_parent,
-            )
-        if run_texts:
-            para_texts.append(join_markdown_parts(run_texts))
+            marker_spans[run] = (run, "")
+            separator = run.getnext()
+            if (
+                separator is not None
+                and separator.tag == f"{{{w_ns}}}r"
+                and _is_reference_separator_run(separator, w_ns)
+            ):
+                marker_spans[separator] = (separator, "")
+        text = render_paragraph_runs(
+            child,
+            preserve_formatting=preserve_formatting,
+            syntax_config=syntax_config or DocxMarkdownSyntaxConfig(),
+            style_detector_config=style_detector_config,
+            style_parent=style_parent,
+            math_renderer=render_math,
+            reference_spans=marker_spans,
+        )
+        if text:
+            para_texts.append(text)
     # Paragraph boundaries must not become soft line breaks on the next
     # Markdown import. Breaks within a paragraph remain single newlines.
     return "\n\n".join(para_texts)
-
-
-def _append_note_run(
-    rendered: list[str],
-    run: Any,
-    w_ns: str,
-    *,
-    preserve_formatting: bool,
-    syntax_config: DocxMarkdownSyntaxConfig,
-    style_detector_config: StyleDetectorConfig | None,
-    style_parent: Any,
-) -> None:
-    """Use the body renderer's syntax, code-span padding and run coalescing."""
-
-    parts: list[str] = []
-    for child in run:
-        if child.tag == f"{{{w_ns}}}t":
-            parts.append(child.text or "")
-        elif child.tag == f"{{{w_ns}}}br":
-            parts.append("\n")
-        elif child.tag == f"{{{w_ns}}}tab":
-            parts.append("\t")
-    text = "".join(parts)
-    for index, segment in enumerate(text.split("\n")):
-        if index:
-            rendered.append("\n")
-        if not segment:
-            continue
-        if preserve_formatting:
-            append_formatted_run_text(
-                rendered,
-                segment,
-                run,
-                syntax_config=syntax_config,
-                style_detector_config=style_detector_config,
-                run_style_type=resolve_run_style_type(run, style_parent, style_detector_config),
-                parent=style_parent,
-            )
-        else:
-            append_literal_run_text(rendered, segment)
 
 
 def _is_reference_separator_run(run: Any, w_ns: str) -> bool:
@@ -308,6 +300,7 @@ class NoteExtractor:
         preserve_formatting: bool = True,
         syntax_config: DocxMarkdownSyntaxConfig | None = None,
         style_detector_config: StyleDetectorConfig | None = None,
+        math_renderer: Callable[[Any, str], str] | None = None,
     ) -> None:
         self._endnote_prefix = "endnote:" if typed_endnotes else "endnote-"
         self.footnotes, self.footnote_part_failed = _extract_notes_with_status(
@@ -318,6 +311,7 @@ class NoteExtractor:
             preserve_formatting=preserve_formatting,
             syntax_config=syntax_config,
             style_detector_config=style_detector_config,
+            math_renderer=math_renderer,
         )
         self.endnotes, self.endnote_part_failed = _extract_notes_with_status(
             doc,
@@ -327,6 +321,7 @@ class NoteExtractor:
             preserve_formatting=preserve_formatting,
             syntax_config=syntax_config,
             style_detector_config=style_detector_config,
+            math_renderer=math_renderer,
         )
         # Display IDs are assigned lazily from the first body reference.
         # Footnotes and endnotes own independent per-file domains.

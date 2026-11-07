@@ -8,6 +8,7 @@ from typing import Any
 import lxml.etree as etree
 
 from docwen_core.formula.constants import BRACKET_PAIRS, LIMIT_FUNCTIONS, NAMED_FUNCTIONS, NARY_OP_MAP, OMML_NS
+from docwen_core.formula.fractions import mathml_fraction_type
 
 logger = logging.getLogger(__name__)
 M_NS = OMML_NS["m"]
@@ -191,6 +192,8 @@ def _convert_mathml_to_omml_node(node, parent) -> None:
         }[tag]
         children = _children(node, 3 if tag == "msubsup" else 2)
         native = etree.SubElement(parent, _mk_omml(native_tag))
+        if tag == "mfrac" and mathml_fraction_type(node) == "noBar":
+            _property(etree.SubElement(native, _mk_omml("fPr")), "type", "noBar")
         for child, slot in zip(children, slots, strict=True):
             _convert_mathml_to_omml_node(child, etree.SubElement(native, _mk_omml(slot)))
     elif tag in {"msqrt", "mroot"}:

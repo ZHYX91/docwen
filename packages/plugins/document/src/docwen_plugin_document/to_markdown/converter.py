@@ -558,6 +558,7 @@ class DocxToMarkdownConverter:
             preserve_formatting=self._preserve_formatting,
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=self._request_policy.style_detector,
+            math_renderer=self._render_formula,
         )
         if self._note_extractor.endnotes and not self._extensions.typed_endnotes:
             self._record_extension_loss("typed_endnotes", "Endnotes were exported as ordinary Markdown footnotes.")
@@ -2141,11 +2142,11 @@ class DocxToMarkdownConverter:
         text = tb_para.text.strip() if tb_para.text else ""
         return text
 
-    def _render_formula(self, element: Any) -> str:
+    def _render_formula(self, element: Any, source_part: str = "word/document.xml") -> str:
         """Use explicit Office math identity and report this XML occurrence."""
 
         def report_failure(message: str) -> None:
-            location = "word/document.xml:" + element.getroottree().getpath(element)
+            location = source_part + ":" + element.getroottree().getpath(element)
             diagnostic = (message, location)
             if diagnostic not in self._formula_diagnostics:
                 self._formula_diagnostics.append(diagnostic)
