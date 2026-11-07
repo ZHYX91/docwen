@@ -31,6 +31,14 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
         if diagnostic.code == "MD2DOCX-NUMBERING-COMMENTS-UNANCHORED":
             messages.append(_t("main_window.numbering_comments_unanchored"))
             continue
+        if diagnostic.code == "MD2DOCX-EMBED-SOURCE-MISSING":
+            messages.append(
+                _t(
+                    "main_window.missing_embedded_resources",
+                    "Some embedded files or images were not found. Check the source links and missing-file settings.",
+                )
+            )
+            continue
         extension_messages = {
             "docwen.conversion.markdown_extension.typed_endnotes.flattened": _t("main_window.extension_loss_endnotes"),
             "docwen.conversion.markdown_extension.extended_headings.flattened": _t(

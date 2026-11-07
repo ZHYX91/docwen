@@ -297,8 +297,9 @@ def append_formatted_run_text(
 def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
     """Resolve the real URL from a ``<w:hyperlink>`` element.
 
-    Uses ``para.part.rels[rel_id].target_ref`` to resolve the
-    relationship id stored in ``r:id``.
+    Uses ``para.part.rels[rel_id].target_ref`` for ``r:id`` links. Without
+    a relationship, a separate conservative reader may project an ordinary
+    heading fragment after checking the untrusted hint and physical target.
 
     Args:
         para: A python-docx Paragraph object.
@@ -310,7 +311,9 @@ def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
     r_ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
     rel_id = hyperlink_element.get(f"{{{r_ns}}}id")
     if not rel_id:
-        return None
+        from docwen_plugin_document.shared.heading_navigation import resolve_ordinary_heading_target
+
+        return resolve_ordinary_heading_target(para, hyperlink_element)
 
     try:
         part = para.part

@@ -442,6 +442,8 @@ def add_hyperlink(
     *,
     children: list[dict[str, Any]] | None = None,
     source_dir: Path | None = None,
+    internal_anchor: str | None = None,
+    internal_target_hint: str | None = None,
     style_reference: str | None = None,
     override_style: bool = False,
     strip_formatting: bool = False,
@@ -458,8 +460,9 @@ def add_hyperlink(
     """
     link_children = children if children is not None else [{"type": "text", "raw": text or ""}]
     target = _resolve_hyperlink_target(url, source_dir)
-    if not target or not target.lower().startswith(
-        ("http://", "https://", "mailto:", "ftp://", "file://", "obsidian://")
+    if internal_anchor is None and (
+        not target
+        or not target.lower().startswith(("http://", "https://", "mailto:", "ftp://", "file://", "obsidian://"))
     ):
         if fallback_renderer is not None:
             fallback_renderer(paragraph, link_children)
@@ -505,6 +508,15 @@ def add_hyperlink(
                     t.text = segment_text
                     r.append(t)
                 hyperlink.append(r)
+
+        if internal_anchor is not None:
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,39}", internal_anchor) is None:
+                raise ValueError("invalid internal hyperlink bookmark")
+            hyperlink.set(qn("w:anchor"), internal_anchor)
+            if internal_target_hint is not None:
+                hyperlink.set(qn("w:tooltip"), internal_target_hint)
+            paragraph._p.append(hyperlink)
+            return
 
         part = paragraph.part
         existing_relationship_ids = set(part.rels)
@@ -608,13 +620,14 @@ def _link_segments(
                     highlight=highlight or child_type in {"highlight", "mark"},
                     superscript=superscript or (child_type == "superscript" and not subscript),
                     subscript=subscript or (child_type == "subscript" and not superscript),
-                    formula=formula or child_type in {"inline_math", "inline_latex"},
+                    formula=formula or child_type in {"inline_math", "block_math"},
                 )
             )
         else:
             value = child.get("raw", "") or child.get("text", "")
-            if child_type in {"inline_math", "inline_latex"}:
-                value = f"${value}$"
+            if child_type in {"inline_math", "block_math"}:
+                delimiter = "$$" if child_type == "block_math" else "$"
+                value = f"{delimiter}{value}{delimiter}"
             segments.append(
                 _LinkSegment(
                     str(value),
@@ -626,7 +639,7 @@ def _link_segments(
                     highlight or child_type in {"highlight", "mark"},
                     superscript or (child_type == "superscript" and not subscript),
                     subscript or (child_type == "subscript" and not superscript),
-                    formula or child_type in {"inline_math", "inline_latex"},
+                    formula or child_type in {"inline_math", "block_math"},
                 )
             )
     return segments
@@ -1150,6 +1163,19 @@ def extract_text_content(children: list[dict[str, Any]]) -> str:
             if nested:
                 parts.append(extract_text_content(nested))
     return "".join(parts)
+
+
+def plain_link_label(label: str) -> str:
+    """Use the DOCX hyperlink's readable text projection for every plain label.
+
+    Formatting contributes its text, formulas retain readable LaTeX, breaks
+    become spaces, and other leaves retain their literal payload. Labels use
+    inline parsing so leading ``#``/list markers and U+FEFF stay visible.
+    """
+    from docwen_plugin_markdown.mistune_extensions import create_extended_markdown
+
+    nodes = create_extended_markdown().inline(label, {})
+    return "".join(segment.text for segment in _link_segments(nodes))
 
 
 def serialize_inlines_to_markdown(children: list[dict[str, Any]]) -> str:

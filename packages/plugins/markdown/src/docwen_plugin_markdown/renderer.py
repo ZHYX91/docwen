@@ -142,6 +142,7 @@ class MdToDocxRenderer:
         semantic_v3_session: DocxSemanticsV3Session | None = None,
         resolved_numbering_session: ResolvedNumberingDocxSession | None = None,
         resolved_image_urls: tuple[str, ...] | None = None,
+        navigation_links: Any = None,
         mermaid_mode: str = "code",
         mermaid_cli_path: str = "",
         mermaid_work_dir: str | None = None,
@@ -294,6 +295,7 @@ class MdToDocxRenderer:
         self._hr_actions = hr_actions or {}
         self._source_dir = Path(source_file_path).resolve().parent if source_file_path else None
         self._declared_resource_resolver = declared_resource_resolver
+        self._navigation_links = navigation_links
         self._semantic_v3_session = semantic_v3_session
         self._resolved_numbering_session = resolved_numbering_session
         self._pending_resolved_captions: list[tuple[Any, tuple[Any, ...], ResolvedDocumentTarget, bool]] = []
@@ -390,6 +392,8 @@ class MdToDocxRenderer:
             else:
                 self._note_ctx.resolve_note_styles(self._doc)
 
+        if self._navigation_links is not None and self._source_carrier_session is not None:
+            self._navigation_links.prepare(ast_nodes, self._source_carrier_session.bookmark_allocator)
         paragraphs: list = []
         skip_merged = False
         for i, node in enumerate(ast_nodes):
@@ -687,6 +691,9 @@ class MdToDocxRenderer:
                     start_index=body_run_start,
                     reset_inherited_emphasis=True,
                 )
+
+        if self._navigation_links is not None:
+            self._navigation_links.bind(node, heading)
 
         resolved_target = self._resolved_target(node, "heading")
         if resolved_target is not None:
@@ -1824,9 +1831,19 @@ class MdToDocxRenderer:
                 renderer_instance=self,
             )
 
+        anchor = None
+        if self._navigation_links is not None:
+            navigation = self._navigation_links.resolve(url)
+            if navigation is not None:
+                anchor, fallback = navigation
+                if anchor is None:
+                    paragraph.add_run(fallback)
+                    return
         add_hyperlink(
             paragraph,
             url,
+            internal_anchor=anchor,
+            internal_target_hint=self._navigation_links.hints.get(url) if self._navigation_links is not None else None,
             children=link_children,
             source_dir=self._source_dir,
             style_reference=self._hyperlink_style_id,

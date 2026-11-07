@@ -623,6 +623,13 @@ def project_field_links(
     search_dirs: Sequence[str],
     on_not_found: str,
     hyperlink_renderer: Callable[[str, str], str],
+    local_lookup_allowed: bool = True,
+    wiki_hyperlink_fallback: str = "keep",
+    markdown_hyperlink_fallback: str = "keep",
+    hyperlink_projection: Callable[[str, str, str, str], str] | None = None,
+    literal_projection: Callable[[str], str] | None = None,
+    markdown_text_renderer: Callable[[str], str] | None = None,
+    target_format: str = "docx",
 ) -> str:
     """Project ordinary links into a field consumer without reparsing kept text."""
     return _process_non_embed_links(
@@ -632,10 +639,16 @@ def project_field_links(
         markdown_mode=markdown_mode,
         search_dirs=search_dirs,
         on_not_found=on_not_found,
-        target_format="docx",
+        target_format=target_format,
+        literal_projection=literal_projection,
+        markdown_text_renderer=markdown_text_renderer,
         canonicalize_local_docx_targets=True,
         literal_keep=True,
+        hyperlink_projection=hyperlink_projection,
         hyperlink_renderer=hyperlink_renderer,
+        local_lookup_allowed=local_lookup_allowed,
+        wiki_hyperlink_fallback=wiki_hyperlink_fallback,
+        markdown_hyperlink_fallback=markdown_hyperlink_fallback,
     )
 
 
@@ -651,7 +664,13 @@ def _process_non_embed_links(
     canonicalize_local_docx_targets: bool = False,
     table_safe: bool = False,
     literal_keep: bool = False,
+    literal_projection: Callable[[str], str] | None = None,
+    markdown_text_renderer: Callable[[str], str] | None = None,
+    local_lookup_allowed: bool = True,
+    wiki_hyperlink_fallback: str = "keep",
+    markdown_hyperlink_fallback: str = "keep",
     hyperlink_renderer: Callable[[str, str], str] | None = None,
+    hyperlink_projection: Callable[[str, str, str, str], str] | None = None,
     declared_wiki_link: Callable[[str, str], str | None] | None = None,
     protect_source_comments: bool = False,
     structural_tables: bool = False,
@@ -660,18 +679,55 @@ def _process_non_embed_links(
 ) -> str:
     """Process links outside fenced and inline code.
 
-    ``hyperlink`` becomes renderer-ready Markdown for DOCX.  XLSX and CSV
-    deliberately retain the source syntax because they have no equivalent
-    renderer boundary.  A DOCX ``keep`` policy escapes standard Markdown link
-    syntax so the renderer emits it literally.
+    ``hyperlink`` becomes renderer-ready Markdown for DOCX, or passes through
+    an explicit request-owned projection for another native consumer. Without
+    a native sink, the independent fallback policy applies. DOCX ``keep``
+    escapes source syntax so the renderer emits it literally.
     """
     if not text:
         return text
 
     normalized_target = (target_format or "").strip().lower()
 
-    def emit_link(label: str, target: str) -> str:
+    def literal(value: str) -> str:
+        return escape_markdown_source_literal(value) if normalized_target == "docx" and not literal_keep else value
+
+    def fallback(original: str, display: str, target: str, mode: str) -> str:
+        if mode == "extract_address":
+            return literal(target)
+        if mode == "extract_text":
+            return display
+        return literal(original)
+
+    def safe_target(target: str) -> bool:
+        target = encode_markdown_destination_escapes(target)
+        if not target or any(ord(char) < 32 for char in target):
+            return False
+        if target.startswith("#"):
+            return hyperlink_projection is not None and normalized_target == "docx"
+        if target.startswith("//"):
+            return False
+        if re.match(r"^[A-Za-z]:[/\\]", target):
+            return True
+        try:
+            parsed_uri = urlsplit(target)
+            scheme = parsed_uri.scheme.lower()
+        except ValueError:
+            return False
+        if scheme in ("http", "https", "ftp", "obsidian"):
+            return bool(parsed_uri.netloc)
+        if scheme in ("mailto", "file"):
+            return bool(parsed_uri.path)
+        return not scheme
+
+    issued_links: set[str] = set()
+
+    def emit_link(label: str, target: str, original: str, syntax: str) -> str:
         parsed = parse_markdown_destination(target)
+        if hyperlink_projection is not None and parsed is not None:
+            result = hyperlink_projection(label, parsed.destination, original, syntax)
+            issued_links.add(result)
+            return result
         if hyperlink_renderer is not None and parsed is not None:
             return hyperlink_renderer(label, parsed.destination)
         return f"[{label}]({target})"
@@ -689,17 +745,27 @@ def _process_non_embed_links(
         # A field's extracted text is already plain text, whereas its hyperlink
         # callback consumes a Markdown label before materializing a Word run.
         display_label = (
-            escape_markdown_source_literal(display) if normalized_target == "docx" else escape_markdown_label(display)
+            escape_markdown_source_literal(display)
+            if normalized_target == "docx" or hyperlink_projection is not None
+            else escape_markdown_label(display)
         )
 
         if wiki_mode == "keep" and normalized_target == "docx" and not literal_keep:
             return escape_markdown_source_literal(match.group(0))
+        if wiki_mode == "extract_address":
+            return literal(target)
         if wiki_mode == "extract_text":
             return display_source
         if wiki_mode == "remove":
             return ""
 
-        should_resolve = wiki_mode == "resolve" or (wiki_mode == "hyperlink" and normalized_target == "docx")
+        if wiki_mode == "hyperlink" and (
+            (normalized_target in ("xlsx", "csv") and hyperlink_projection is None) or not safe_target(target)
+        ):
+            return fallback(match.group(0), display_source, target, wiki_hyperlink_fallback)
+        should_resolve = wiki_mode == "resolve" or (
+            wiki_mode == "hyperlink" and (normalized_target == "docx" or hyperlink_projection is not None)
+        )
         if not should_resolve:
             return match.group(0)
         if not target:
@@ -709,13 +775,15 @@ def _process_non_embed_links(
             declared_target = declared_wiki_link(match.group(0), target)
             if declared_target is not None:
                 destination = encode_markdown_angle_destination(declared_target)
-                return emit_link(display_label, f"<{destination}>")
+                return emit_link(display_label, f"<{destination}>", match.group(0), "wiki")
 
         encoded_target = encode_markdown_destination_escapes(target)
         path_and_query, separator, raw_fragment = encoded_target.partition("#")
         raw_path, query_separator, raw_query = path_and_query.partition("?")
         target_path = unquote(raw_path)
         fragment = unquote(raw_fragment)
+        if not raw_path and hyperlink_projection is not None:
+            return emit_link(display_label, f"<{encode_markdown_angle_destination(target)}>", match.group(0), "wiki")
         if not raw_path:
             # Word output has no heading-bookmark contract yet.  Rendering a
             # fragment-only target as a hyperlink would therefore create only
@@ -725,16 +793,20 @@ def _process_non_embed_links(
 
         if re.match(r"^(?:https?|ftp|file|mailto):", raw_path, re.IGNORECASE):
             destination = encode_markdown_angle_destination(target)
-            return emit_link(display_label, f"<{destination}>")
+            return emit_link(display_label, f"<{destination}>", match.group(0), "wiki")
         if encoded_target.startswith("//"):
             return display_source
 
+        if not local_lookup_allowed:
+            return fallback(match.group(0), display_source, target, wiki_hyperlink_fallback)
         resolved = resolve_file_path(
             raw_path,
             source_file_path,
             search_dirs=list(search_dirs) if search_dirs is not None else None,
         )
         if resolved is None:
+            if wiki_mode == "hyperlink":
+                return fallback(match.group(0), display_source, target, wiki_hyperlink_fallback)
             heading = fragment if separator and not fragment.startswith("^") else None
             block_id = fragment[1:] if separator and fragment.startswith("^") else None
             error_output = dispatch_error_output(
@@ -748,13 +820,13 @@ def _process_non_embed_links(
             if normalized_target == "docx" and not literal_keep:
                 return escape_markdown_source_literal(error_output)
             return error_output
-        if canonicalize_local_docx_targets and normalized_target == "docx":
+        if canonicalize_local_docx_targets and (normalized_target == "docx" or hyperlink_projection is not None):
             path_text = Path(resolved).resolve().as_uri()
             if query_separator:
                 path_text = f"{path_text}?{raw_query}"
             if separator:
                 path_text = f"{path_text}#{quote(unquote(fragment), safe='/-._~')}"
-            return emit_link(display_label, f"<{path_text}>")
+            return emit_link(display_label, f"<{path_text}>", match.group(0), "wiki")
 
         try:
             source_dir = Path(source_file_path).parent
@@ -766,25 +838,49 @@ def _process_non_embed_links(
             path_text = f"{path_text}?{raw_query}"
         if separator:
             path_text = f"{path_text}#{quote(fragment, safe='/-._~')}"
-        return emit_link(display_label, f"<{path_text}>")
+        return emit_link(display_label, f"<{path_text}>", match.group(0), "wiki")
 
     def _replace_markdown(display: str, target: str, original: str) -> str | None:
         display_text = display.strip()
+        needs_plain = markdown_mode == "extract_text" or (
+            markdown_mode == "hyperlink" and markdown_hyperlink_fallback == "extract_text"
+        )
+        display_plain = (
+            markdown_text_renderer(display_text) if markdown_text_renderer is not None and needs_plain else display_text
+        )
         target_text = target.strip(" \t\r\n")
+        parsed_target = parse_markdown_destination(target_text)
+        address = parsed_target.destination if parsed_target is not None else target_text
+        if markdown_mode == "extract_address":
+            return literal(address)
+        if markdown_mode == "hyperlink" and (
+            (normalized_target in ("xlsx", "csv") and hyperlink_projection is None) or not safe_target(address)
+        ):
+            return fallback(original, display_plain or literal(address), address, markdown_hyperlink_fallback)
         if markdown_mode == "extract_text":
             if not display_text and normalized_target == "docx" and not literal_keep:
                 return escape_markdown_source_literal(target_text)
-            return display_text or target_text or ""
+            return display_plain or target_text or ""
         if markdown_mode == "remove":
             return ""
         if markdown_mode == "keep" and normalized_target == "docx" and not literal_keep:
             return escape_markdown_source_literal(original)
-        if markdown_mode == "hyperlink" and normalized_target == "docx":
+        if markdown_mode == "hyperlink" and (normalized_target == "docx" or hyperlink_projection is not None):
             parsed_target = parse_markdown_destination(target_text)
             if parsed_target is None:
                 return None
-            if parsed_target.destination.startswith("#"):
+            if parsed_target.destination.startswith("#") and hyperlink_projection is None:
                 return display
+            destination = encode_markdown_destination_escapes(parsed_target.destination)
+            parsed_uri = urlsplit(destination)
+            if not parsed_uri.scheme and not parsed_uri.netloc and parsed_uri.path:
+                if not local_lookup_allowed:
+                    return fallback(original, display_plain or literal(address), address, markdown_hyperlink_fallback)
+                local = Path(unquote(parsed_uri.path))
+                if not local.is_absolute():
+                    local = Path(source_file_path).parent / local
+                if not local.is_file():
+                    return fallback(original, display_plain or literal(address), address, markdown_hyperlink_fallback)
             canonical_target = None
             if canonicalize_local_docx_targets:
                 canonical_target = _canonical_local_docx_target(
@@ -797,7 +893,7 @@ def _process_non_embed_links(
             # ``display`` is the original, validated Markdown label source.
             # Re-encoding its backslashes would change escape/formatting
             # semantics (for example ``\*literal\*``).
-            return emit_link(display, canonical_target)
+            return emit_link(display, canonical_target, original, "markdown")
         return None
 
     def _replace_wiki_links(segment: str) -> str:
@@ -822,6 +918,8 @@ def _process_non_embed_links(
                 continue
             parts.append(segment[cursor:index])
             replacement = _replace_wiki(match)
+            if literal_projection is not None and replacement not in issued_links:
+                replacement = literal_projection(replacement)
             if table_safe and _is_table_context(segment, index):
                 replacement = escape_unescaped_pipes(replacement)
             parts.append(replacement)
@@ -830,24 +928,31 @@ def _process_non_embed_links(
         parts.append(segment[cursor:])
         return "".join(parts)
 
+    def project_markdown(display: str, target: str, original: str) -> str | None:
+        result = _replace_markdown(display, target, original)
+        if literal_projection is not None and result not in issued_links:
+            return literal_projection(original if result is None else result)
+        return result
+
     def _process_visible(segment: str) -> str:
         result = segment
         # Apply the standard-Markdown policy first.  A DOCX wiki hyperlink is
         # generated as Markdown below and must not then be mistaken for an
         # input link governed by ``markdown_mode`` (notably ``keep``).
         should_process_markdown = (
-            table_safe
-            or markdown_mode in ("extract_text", "remove")
+            literal_projection is not None
+            or table_safe
+            or markdown_mode in ("extract_text", "extract_address", "remove", "hyperlink")
             or (normalized_target == "docx" and markdown_mode in ("keep", "hyperlink"))
         )
         if should_process_markdown:
             result = _replace_markdown_links(
                 result,
-                _replace_markdown,
+                lambda display, target, original: project_markdown(display, target, original),
                 table_safe=table_safe,
                 cancellation_check=cancellation_check,
             )
-        if wiki_mode in ("keep", "extract_text", "remove", "resolve", "hyperlink"):
+        if wiki_mode in ("keep", "extract_text", "extract_address", "remove", "resolve", "hyperlink"):
             result = _replace_wiki_links(result)
         return result
 

@@ -510,9 +510,13 @@ md_file_link_style_tooltip = "MD 파일에서 MD 파일 링크 형식을 설정�
 non_embed_section = "비임베드 링크 처리"
 non_embed_desc = "Markdown 입력의 일반 링크를 문서나 스프레드시트 생성 시 어떻게 처리할지 설정합니다."
 wiki_link_mode = "위키 링크 처리:"
-wiki_link_tooltip = "[[link]] 또는 [[link|text]]를 처리합니다. 유지: 원본 마크업 유지. 텍스트 추출: 표시 텍스트만 유지. 하이퍼링크: 표시 텍스트와 대상을 유지하고 출력 형식이 지원하면 클릭 가능한 링크 생성. 제거: 링크 삭제."
+wiki_link_tooltip = "[[link]] / [[link|text]] 형식을 처리합니다.\n\n그대로 유지: 원본 링크 구문을 모두 유지합니다.\n텍스트 추출: 표시 텍스트만 유지합니다.\n주소 추출: 앵커를 포함한 원본 주소만 유지합니다.\n제거: 표시 텍스트를 포함한 링크 전체를 삭제합니다.\n하이퍼링크: 클릭 가능한 링크를 생성하고, 생성할 수 없으면 대체 처리를 사용합니다."
 markdown_link_mode = "마크다운 링크 처리:"
-markdown_link_tooltip = "[text](url)을 처리합니다. 유지: 원본 마크업 유지. 텍스트 추출: text만 유지. 하이퍼링크: 텍스트와 대상을 유지하고 출력 형식이 지원하면 클릭 가능한 링크 생성. 제거: 링크 삭제."
+markdown_link_tooltip = "[text](url) 형식을 처리합니다.\n\n그대로 유지: 원본 링크 구문을 모두 유지합니다.\n텍스트 추출: 표시 텍스트만 유지합니다.\n주소 추출: 앵커를 포함한 원본 주소만 유지합니다.\n제거: 표시 텍스트를 포함한 링크 전체를 삭제합니다.\n하이퍼링크: 클릭 가능한 링크를 생성하고, 생성할 수 없으면 대체 처리를 사용합니다."
+markdown_hyperlink_fallback_tooltip = "하이퍼링크 모드에서 클릭 가능한 링크를 생성할 수 없을 때만 사용합니다. CSV 출력도 포함됩니다.\nMarkdown 링크의 설정은 개별적으로 저장됩니다.\n\n그대로 유지: 원본 링크 구문을 모두 유지합니다.\n텍스트 추출: 표시 텍스트만 유지합니다.\n주소 추출: 앵커를 포함한 원본 주소만 유지합니다."
+markdown_hyperlink_fallback = "마크다운 하이퍼링크 대체 처리:"
+wiki_hyperlink_fallback_tooltip = "하이퍼링크 모드에서 클릭 가능한 링크를 생성할 수 없을 때만 사용합니다. CSV 출력도 포함됩니다.\nWiki 링크의 설정은 개별적으로 저장됩니다.\n\n그대로 유지: 원본 링크 구문을 모두 유지합니다.\n텍스트 추출: 표시 텍스트만 유지합니다.\n주소 추출: 앵커를 포함한 원본 주소만 유지합니다."
+wiki_hyperlink_fallback = "위키 하이퍼링크 대체 처리:"
 
 # 嵌入链接处理区域
 embed_section = "임베드 링크 처리"
@@ -541,6 +545,7 @@ md_link = "마크다운 링크"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "주소 추출"
 keep = "그대로 유지"
 extract_text = "텍스트 추출"
 remove = "제거"
@@ -1699,6 +1704,7 @@ extension_loss_references = "캡션과 상호 참조를 표시 텍스트로 변�
 extension_loss_tables = "병합 셀과 머리글 구조를 일반 Markdown 표로 변환했습니다."
 route_catalog_failed = "사용 가능한 작업을 불러오지 못해 요청을 시작하지 않았습니다."
 conversion_failed = "변환에 실패했습니다. 진단 정보는 실패 상세 정보를 열어 확인하세요."
+missing_embedded_resources = "일부 포함된 파일이나 이미지를 찾지 못했습니다. 원본 링크와 누락 파일 처리 설정을 확인하세요."
 conversion_warning = "변환은 완료되었지만 경고가 있습니다."
 ocr_no_text = "OCR에서 텍스트를 감지하지 못했습니다. 원본 이미지와 확인하세요."
 ocr_degraded = "OCR이 정상적으로 완료되지 않았습니다(상태: {status}). 사용 가능한 결과는 유지했습니다."

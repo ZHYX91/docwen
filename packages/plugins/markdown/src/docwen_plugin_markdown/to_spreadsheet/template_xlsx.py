@@ -6,6 +6,7 @@ import html
 import re
 import unicodedata
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, unquote
@@ -45,6 +46,9 @@ def build_template_workbook(
     image_scope: str | None = None,
     list_separator: str = ", ",
     structural_tables: bool = True,
+    yaml_value_projector: Callable[[Any], Any] | None = None,
+    cell_value_writer: Callable[[Any, Any], None] | None = None,
+    header_value_projector: Callable[[Any], Any] | None = None,
 ) -> tuple[Any, dict[str, int]]:
     """Fill an XLSX template using Markdown YAML and table data.
 
@@ -61,11 +65,14 @@ def build_template_workbook(
         preserve_merge_marker_escapes=True,
         structural_tables=structural_tables,
     )
+    if header_value_projector is not None:
+        for table in tables + raw_tables:
+            table["headers"] = [header_value_projector(value) for value in table.get("headers", [])]
     table_columns = _columns_from_tables(tables)
 
     with Path(template_path).open("rb") as stream:
         workbook = load_workbook(stream)
-    image_plan = XlsxImageTextPlan()
+    image_plan = XlsxImageTextPlan(cell_value_writer)
     if image_scope is not None:
         image_plan.protect_template_literals(workbook, image_scope=image_scope, markdown=markdown)
         _promote_template_image_placeholders(workbook, image_scope, image_plan)
@@ -80,6 +87,7 @@ def build_template_workbook(
         yaml_data,
         source_stem=source_stem,
         list_separator=list_separator,
+        yaml_value_projector=yaml_value_projector,
         image_plan=image_plan,
     )
     yaml_replaced = _replace_yaml_placeholders(workbook, yaml_replacements, image_plan)
@@ -147,6 +155,7 @@ def _yaml_replacements(
     source_stem: str,
     list_separator: str,
     image_plan: XlsxImageTextPlan,
+    yaml_value_projector: Callable[[Any], Any] | None = None,
 ) -> dict[str, tuple[Any, str | None]]:
     field_names: set[str] = set()
     for worksheet in workbook.worksheets:
@@ -165,7 +174,7 @@ def _yaml_replacements(
         if field_name not in yaml_data:
             continue
         replacements[f"{{{{{field_name}}}}}"] = _coerce_cell_value(
-            yaml_data[field_name],
+            yaml_value_projector(yaml_data[field_name]) if yaml_value_projector is not None else yaml_data[field_name],
             list_separator=list_separator,
         )
     return replacements

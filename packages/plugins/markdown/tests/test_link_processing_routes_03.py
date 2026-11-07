@@ -77,7 +77,7 @@ def test_csv_literal_percent_7c_filename_round_trips_exactly_once(
     assert rows == [["Image"], ["a%7Cb.png"]]
 
 
-def test_csv_yaml_front_matter_is_not_link_processed_before_template_fill(
+def test_csv_yaml_front_matter_applies_ordinary_link_policy_only(
     tmp_path: Path,
 ) -> None:
     image = tmp_path / "logo.png"
@@ -120,7 +120,7 @@ def test_csv_yaml_front_matter_is_not_link_processed_before_template_fill(
         newline="",
     ) as handle:
         rows = list(csv.reader(handle))
-    assert rows[0] == ["![logo](logo.png)", "[drop](https://drop.example)"]
+    assert rows[0] == ["![logo](logo.png)", ""]
 
 
 @pytest.mark.parametrize("target_format", ["docx", "xlsx", "csv"])
@@ -521,4 +521,6 @@ def test_spreadsheet_link_replacements_keep_wiki_pipes_in_one_cell(
             rows = list(csv.reader(handle))
         row = rows[1]
         assert len(row) == 2
+    if target_format == "xlsx" and "hyperlink" in config_override.values():
+        expected_cell = "Shown" if syntax.startswith("[[") else "Shown|More"
     assert row == [expected_cell, "ok"]

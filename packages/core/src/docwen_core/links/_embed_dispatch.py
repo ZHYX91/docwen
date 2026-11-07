@@ -147,6 +147,7 @@ def process_single_embed(
     image_scope: str | None = None,
     process_links: Callable[..., str] | None = None,
     declared_image: Callable[[str, str], str] | None = None,
+    on_missing_embed: Callable[[], None] | None = None,
     literal_text: Callable[[str], str] | None = None,
     structural_tables: bool = False,
     extended_headings: bool = False,
@@ -288,6 +289,8 @@ def process_single_embed(
 
     if resolved_path is None:
         logger.warning("Embed target was not found (source_context=%s)", bool(source_file_path))
+        if on_missing_embed is not None:
+            on_missing_embed()
         if on_not_found in {"ignore", "keep"}:
             return _unresolved_embed_output(original_link, link_target, on_not_found)
         # placeholder
@@ -408,6 +411,7 @@ def resolve_embedded_links(
     image_scope: str | None = None,
     process_links: Callable[..., str] | None = None,
     declared_image: Callable[[str, str], str] | None = None,
+    on_missing_embed: Callable[[], None] | None = None,
     _table_context_scoped: bool = False,
     literal_text: Callable[[str], str] | None = None,
     structural_tables: bool = False,
@@ -476,6 +480,7 @@ def resolve_embedded_links(
                 image_mode=image_mode,
                 md_mode=md_mode,
                 on_not_found=on_not_found,
+                on_missing_embed=on_missing_embed,
                 on_circular=on_circular,
                 on_max_depth=on_max_depth,
                 detect_circular=detect_circular,
@@ -542,6 +547,7 @@ def resolve_embedded_links(
             structural_tables=structural_tables,
             extended_headings=extended_headings,
             declared_image=declared_image,
+            on_missing_embed=on_missing_embed,
             literal_text=literal_text,
         )
 
