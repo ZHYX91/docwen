@@ -88,6 +88,12 @@ def _convert_omml_to_mathml_node(node, parent) -> None:
             "limUpp": ("mover", ("e", "lim")),
         }[tag]
         output = etree.SubElement(parent, native_tag)
+        if tag == "f":
+            fraction_type = _property(node, "fPr", "type", "bar")
+            if fraction_type == "noBar":
+                output.set("linethickness", "0")
+            elif fraction_type != "bar":
+                raise ValueError(f"unsupported native fraction type: {fraction_type!r}")
         for slot in slots:
             _argument(node, slot, output)
     elif tag == "func":

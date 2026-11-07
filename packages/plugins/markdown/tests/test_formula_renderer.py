@@ -100,6 +100,24 @@ class TestFormulaViaFullPipeline:
         assert "oMath" in xml, "Inline formula $x^2+y^2$ was dropped — F-F1-008 regression"
         assert "formula inline" in xml
 
+    def test_binomial_formula_keeps_no_bar_and_its_arguments(self):
+        from docwen_core.formula.constants import OMML_NS
+        from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
+        from docwen_plugin_markdown.renderer import MdToDocxRenderer
+
+        doc = Document()
+        renderer = MdToDocxRenderer(doc)
+        renderer.render(parse_markdown_text(r"Ways: $\binom{n}{k}$ choices."))
+
+        ns = {"m": OMML_NS["m"]}
+        [fraction] = doc._element.xpath(".//m:f")
+        fraction_type = fraction.find("m:fPr/m:type", ns)
+        assert fraction_type is not None and fraction_type.get(f"{{{OMML_NS['m']}}}val") == "noBar"
+        assert [node.text for node in fraction.findall("m:num//m:t", ns)] == ["n"]
+        assert [node.text for node in fraction.findall("m:den//m:t", ns)] == ["k"]
+        assert doc.paragraphs[0].text == "Ways:  choices."
+        assert not renderer.warnings
+
     def test_multiple_inline_formulas_same_paragraph(self):
         """Multiple inline formulas in one paragraph all render."""
         from docwen_plugin_markdown.mistune_extensions import parse_markdown_text

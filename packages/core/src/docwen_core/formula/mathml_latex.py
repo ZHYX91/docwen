@@ -8,6 +8,7 @@ import re
 import lxml.etree as etree
 
 from docwen_core.formula.constants import LIMIT_FUNCTIONS, NARY_OP_MAP, SYMBOL_MAP
+from docwen_core.formula.fractions import mathml_fraction_type
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +111,13 @@ def _mathml_node_to_latex(node) -> str:
 
     elif tag == "mfrac":
         children = _children(node, 2)
+        fraction_type = mathml_fraction_type(node)
         num = _mathml_node_to_latex(children[0]).strip()
         den = _mathml_node_to_latex(children[1]).strip()
+        if fraction_type == "noBar":
+            # The pinned LaTeX parser supports grouped \\atop, including
+            # nested expressions; it does not support \\genfrac.
+            return f"{{{num} \\atop {den}}}"
         return f"\\frac{{{num}}}{{{den}}}"
 
     elif tag == "msup":
