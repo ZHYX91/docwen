@@ -36,15 +36,12 @@ from docwen_core.links._markdown_inline import (
 )
 from docwen_core.links._patterns import WIKI_EMBED_PATTERN
 from docwen_core.links._resolver import resolve_file_path
+from docwen_core.markdown_math import DISPLAY_MATH_START, display_math_closer, match_formula
 
 logger = logging.getLogger(__name__)
 
 _WIKI_NON_EMBED_RE = re.compile(r"(?<!!)" + WIKI_EMBED_PATTERN[1:])
 _WIKI_EMBED_RE = re.compile(WIKI_EMBED_PATTERN)
-_INLINE_MATH_RE = re.compile(r"\$(?!\s)(?:[^$\\]|\\.)+?(?!\s)\$")
-_SINGLE_LINE_BLOCK_MATH_RE = re.compile(r" {0,3}\$\$[^\r\n]*?\$\$[ \t]*$")
-_BLOCK_MATH_OPEN_RE = re.compile(r" {0,3}\$\$[ \t]*$")
-_BLOCK_MATH_CLOSE_RE = re.compile(r"\$\$[ \t]*$")
 
 
 def _unescape_pipe(text: str) -> str:
@@ -105,9 +102,9 @@ def _protected_inline_atom_end(
         if match is not None:
             return match.end()
     if text[start] == "$" and not _is_backslash_escaped(text, start):
-        match = _INLINE_MATH_RE.match(text, start)
-        if match is not None:
-            return match.end()
+        formula = match_formula(text, start)
+        if formula is not None:
+            return formula["end"]
     if protect_bare_urls and text[start] == "h":
         return _bare_url_end(text, start)
     return None
@@ -121,8 +118,6 @@ def _matching_math_block_end(
 ) -> tuple[int | None, int]:
     """Prove one complete math block in the current logical container scope.
 
-    The production multiline rule needs a content line between the delimiters;
-    its closing delimiter starts in column zero of the extracted container.
     A snapshot uses the same qualified container exits as the main block scan.
     Context rows replace their state collections, so this shallow copy cannot
     mutate the caller's lifecycle.
@@ -133,8 +128,8 @@ def _matching_math_block_end(
         row = candidate_context.line(lines[index], allow_new=False, allow_lazy=True, literal=True)
         if row.containers[: len(containers)] != containers:
             return None, index
-        if index > start + 1 and _BLOCK_MATH_CLOSE_RE.fullmatch(row.content.rstrip("\r\n")):
-            return index, index
+        if display_math_closer(row.content) is not None:
+            return (index, index) if display_math_closer(row.content, standalone=True) is not None else (None, index)
     return None, len(lines)
 
 
@@ -211,8 +206,11 @@ def _split_fenced_code_blocks(md: str, *, extended_headings: bool = False) -> li
                     html_end_marker = None
                 continue
             logical_line = block_line.rstrip("\r\n")
-            single_line_math = _SINGLE_LINE_BLOCK_MATH_RE.fullmatch(logical_line)
-            if single_line_math:
+            math_opening = DISPLAY_MATH_START.match(logical_line)
+            single_line_math = (
+                match_formula(logical_line, math_opening.end() - 2, standalone=True) if math_opening else None
+            )
+            if single_line_math is not None:
                 context.end_paragraph()
                 if buffer:
                     segments.append(("".join(buffer), False))
@@ -220,7 +218,8 @@ def _split_fenced_code_blocks(md: str, *, extended_headings: bool = False) -> li
                 segments.append((line, True))
                 continue
             if (
-                _BLOCK_MATH_OPEN_RE.fullmatch(logical_line)
+                math_opening is not None
+                and display_math_closer(logical_line, math_opening.end()) is None
                 and math_no_closer_until.get(source_line.containers, -1) <= line_index
             ):
                 closing_index, checked_until = _matching_math_block_end(

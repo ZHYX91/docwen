@@ -7,32 +7,6 @@ import pytest
 pytestmark = pytest.mark.unit
 
 
-class TestMarkdownParser:
-    """Tests for parse_latex_from_markdown."""
-
-    def test_block_formula(self) -> None:
-        from docwen_core.formula import parse_latex_from_markdown
-
-        r = parse_latex_from_markdown("Before $$E=mc^2$$ after")
-        assert r == [{"latex": "E=mc^2", "is_inline": False, "start": 7, "end": 17}]
-
-    def test_inline_formula(self) -> None:
-        from docwen_core.formula import parse_latex_from_markdown
-
-        r = parse_latex_from_markdown("Before $x_1$ after")
-        assert len(r) == 1
-        assert r[0]["latex"] == "x_1"
-        assert r[0]["is_inline"] is True
-
-    def test_block_ignores_inner_inline_dollars(self) -> None:
-        from docwen_core.formula import parse_latex_from_markdown
-
-        r = parse_latex_from_markdown("$$a+b$$ and $c+d$")
-        assert len(r) == 2
-        assert r[0]["is_inline"] is False
-        assert r[1]["is_inline"] is True
-
-
 class TestLatexToMathml:
     """Tests for latex_to_mathml."""
 

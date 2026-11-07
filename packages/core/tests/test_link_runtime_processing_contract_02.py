@@ -494,6 +494,7 @@ def test_bare_url_policy_uses_a_safe_autolink(tmp_path: Path, url: str) -> None:
         "$[x](https://example.com)$",
         "$$[x](https://example.com)$$",
         "$$\n[x](https://example.com)\n$$",
+        "$$\n[x](url)\n $$",
         "<foo>\n[x](url) [[x|y]]\n</foo>",
         "> ~~~\n> [x](url) [[x|y]]\n> ~~~",
         "- ~~~\n  [x](url) [[x|y]]\n  ~~~",
@@ -561,7 +562,6 @@ def test_bare_url_precedence_protects_link_like_url_content(
 @pytest.mark.parametrize(
     "syntax",
     [
-        "$$\n[x](url)\n $$",
         "$$\n[x](url)",
         "<!doctype\n[x](url)\n>",
         "<![cdata[\n[x](url)\n]]>",

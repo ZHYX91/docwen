@@ -16,6 +16,7 @@ from docwen_core.docx_parsing.format_features import (
     detect_run_style_type,
 )
 from docwen_core.docx_parsing.xml_ns import NS_W
+from docwen_core.markdown_math import match_formula
 from docwen_core.text.markdown_literal import escape_markdown_literal
 from docwen_plugin_document.shared.word_metadata import run_metadata_is_valid
 
@@ -77,6 +78,42 @@ class _RenderedRunPart(str):
         part.wrappers = tuple(wrappers)
         part.inline_code = inline_code
         return part
+
+
+class _RenderedMathPart(str):
+    """Keep an explicit math fragment identifiable at Markdown join seams."""
+
+    multiline_display: bool
+
+    def __new__(cls, text: str, *, multiline_display: bool):
+        part = super().__new__(cls, text)
+        part.multiline_display = multiline_display
+        return part
+
+
+def _join_math_parts(parts: list[str]) -> str:
+    """Join final Markdown fragments with the authoritative math grammar.
+
+    A required separator is visible whitespace. Literal/code fragments and
+    formatting wrappers are already encoded, so their actual boundaries are
+    checked rather than their unformatted source text.
+    """
+    joined: list[str] = []
+    for part in parts:
+        if not part:
+            continue
+        if isinstance(part, _RenderedMathPart) and joined:
+            previous = joined[-1]
+            if part.multiline_display and not previous.endswith("\n\n"):
+                joined.append("\n\n")
+            elif match_formula(previous + part, len(previous)) is None:
+                joined.append(" ")
+        if joined and isinstance(previous := joined[-1], _RenderedMathPart):
+            formula = match_formula(previous + part, standalone=previous.multiline_display)
+            if formula is None or formula["end"] != len(previous):
+                joined.append("\n\n" if previous.multiline_display else " ")
+        joined.append(part)
+    return "".join(joined)
 
 
 def _append_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, str]]) -> None:
@@ -440,6 +477,14 @@ def _render_paragraph_run_segments(
         if text:
             _parts().append(text)
 
+    def _append_math(text: str) -> None:
+        formula = match_formula(text) if not literal_text else None
+        if formula is None or formula["end"] != len(text):
+            _append(text)
+            return
+        multiline = not formula["is_inline"] and "\n" in text
+        _append(_RenderedMathPart(text, multiline_display=multiline))
+
     def _handle_break(child: Any) -> None:
         if text_transform is not None:
             text_transform("\n")  # advance source coordinates; native breaks remain structural
@@ -458,7 +503,7 @@ def _render_paragraph_run_segments(
         segments = [[]]
         try:
             _process_children(child)
-            hyperlink_segments = ["".join(parts) for parts in segments]
+            hyperlink_segments = [_join_math_parts(parts) for parts in segments]
         finally:
             segments = outer_segments
         for index, text in enumerate(hyperlink_segments):
@@ -522,7 +567,7 @@ def _render_paragraph_run_segments(
                 pass  # skip tracked deletions
             elif tag in ("oMath", "oMathPara"):
                 if math_renderer is not None:
-                    _append(math_renderer(child) or "")
+                    _append_math(math_renderer(child) or "")
                 else:
                     # Pass through raw text; formula rendering is external.
                     for text_element in child.iter(f"{{{NS_W}}}t"):
@@ -658,7 +703,7 @@ def _render_paragraph_run_segments(
         _flush_text()
 
     _process_children(element)
-    return ["".join(parts) for parts in segments]
+    return [_join_math_parts(parts) for parts in segments]
 
 
 def render_paragraph_runs(

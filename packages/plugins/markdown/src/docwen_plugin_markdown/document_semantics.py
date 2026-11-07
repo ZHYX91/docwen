@@ -279,7 +279,7 @@ def _captionable_kind(node: dict[str, Any]) -> str | None:
     node_type = node.get("type")
     if node_type == "table":
         return "table"
-    if node_type in {"block_math", "block_latex"}:
+    if node_type == "block_math":
         return "equation"
     if node_type == "block_code":
         return "listing"
@@ -668,7 +668,7 @@ def _project_blocks(ast: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if caption.get("target_id"):
                 block["target_id"] = caption["target_id"]
             blocks.append(block)
-        elif node_type in {"block_math", "block_latex", "block_code"} and node.get("_document_semantics_caption"):
+        elif node_type in {"block_math", "block_code"} and node.get("_document_semantics_caption"):
             caption = node["_document_semantics_caption"]
             block = {
                 "type": caption["kind"],

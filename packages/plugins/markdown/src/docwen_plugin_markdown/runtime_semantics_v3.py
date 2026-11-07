@@ -703,7 +703,7 @@ def _captionable_node_kind(node: dict[str, Any]) -> str | None:
     node_type = node.get("type")
     if node_type == "table":
         return "table"
-    if node_type in {"block_math", "block_latex"}:
+    if node_type == "block_math":
         return "equation"
     if node_type == "block_code":
         return "code_block"
