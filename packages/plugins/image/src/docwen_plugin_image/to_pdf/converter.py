@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
 
 from docwen_core.paths import input_stem
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_plugin_image._common import (
     file_size,
     new_artifact_id,
@@ -66,7 +66,7 @@ class ImageToPdfConverter:
         try:
             import img2pdf
 
-            with tempfile.TemporaryDirectory() as temp_dir:
+            with TemporaryDirectory() as temp_dir:
                 source_for_pdf = input_path
                 source_format = source_format_from_context(context)
                 if source_format == "bmp":

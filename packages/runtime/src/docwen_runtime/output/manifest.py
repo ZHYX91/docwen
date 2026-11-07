@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -13,6 +12,7 @@ from docwen_core.models.artifact import ARTIFACT_KIND_MANIFEST, ArtifactManifest
 from docwen_core.models.conversion_manifest import ConversionManifestContext
 from docwen_core.models.request import ConversionRequest, OutputPolicy
 from docwen_core.models.result import ConversionDiagnostic, ConversionResult
+from docwen_core.tempfiles import TemporaryDirectory
 
 if TYPE_CHECKING:
     from docwen_runtime.output.finalizer import OutputFinalizer
@@ -151,7 +151,7 @@ class OutputManifestWriter:
                 request.output_policy,
                 context.inputs[0].path,
             )
-            with tempfile.TemporaryDirectory(prefix="docwen_manifest_", ignore_cleanup_errors=True) as staging_dir:
+            with TemporaryDirectory(prefix="docwen_manifest_", ignore_cleanup_errors=True) as staging_dir:
                 staging_path = Path(staging_dir) / suggested_name
                 staging_path.write_bytes(canonical_manifest_bytes(document))
                 manifest_artifact = ArtifactManifest(

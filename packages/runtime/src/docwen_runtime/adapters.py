@@ -149,12 +149,12 @@ class RuntimePortAdapter:
         """Check the actual runtime work root and always clean the private probe."""
         from pathlib import Path
 
-        from docwen_runtime.workspace.temporary import bounded_temporary_directory
+        from docwen_core.tempfiles import TemporaryDirectory
 
         root = Path(self._task_manager.workspace_root)
         try:
             root.mkdir(parents=True, exist_ok=True)
-            with bounded_temporary_directory(prefix=".__docwen-doctor-", dir=root) as probe_dir:
+            with TemporaryDirectory(prefix=".__docwen-doctor-", dir=root) as probe_dir:
                 probe = Path(probe_dir) / "write-check"
                 probe.write_bytes(b"DocWen")
                 if probe.read_bytes() != b"DocWen":
@@ -170,14 +170,19 @@ class RuntimePortAdapter:
         from docwen_core.models.request import OutputPolicy
         from docwen_runtime.output.finalizer import AtomicPublishUnavailable
 
-        selected = Path(output_dir)
-        if not selected.is_absolute():
+        try:
+            selected = Path(output_dir).expanduser().resolve(strict=False)
+        except (ValueError, RuntimeError):
             return "invalid_path"
+        except OSError:
+            return "not_writable"
         try:
             self._task_manager._finalizer.preflight(OutputPolicy(output_dir=str(selected)))
         except AtomicPublishUnavailable:
             return "atomic_publish_unsupported"
-        except (OSError, ValueError):
+        except ValueError:
+            return "invalid_path"
+        except OSError:
             return "not_writable"
         return "ok"
 

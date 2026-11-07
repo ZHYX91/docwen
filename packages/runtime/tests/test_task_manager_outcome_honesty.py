@@ -130,8 +130,42 @@ def test_output_preflight_failure_never_starts_conversion(tmp_path: Path, monkey
     assert result.error is not None
     assert result.error.diagnostic_code == "OUTPUT_ATOMIC_PUBLISH_UNSUPPORTED"
     assert result.artifacts == []
-    assert [event.event_type for event in events] == ["task_started", "task_failed"]
+    assert [event.event_type for event in events] == ["task_started", "task_progress", "task_failed"]
+    assert events[1].payload["message"] == "Preparing output folder"
     assert Path(request.input_refs[0].path).read_bytes() == original
+    assert not (tmp_path / "output").exists()
+    assert not list(tmp_path.glob(".__docwen-preflight-*"))
+
+
+@pytest.mark.parametrize("stage", ["Preparing output folder", "Preparing temporary workspace"])
+def test_cancellation_from_preparation_progress_never_starts_conversion(tmp_path: Path, stage: str) -> None:
+    def convert(context: Any) -> ConversionResult:
+        pytest.fail("Cancellation during preparation must stop before conversion")
+
+    request = _request(tmp_path, "cancel-preparation")
+    original = Path(request.input_refs[0].path).read_bytes()
+    manager = _build_manager(tmp_path, convert)
+    events: list[TaskEvent] = []
+
+    def cancel_at_stage(event: TaskEvent) -> None:
+        events.append(event)
+        if event.event_type == "task_progress" and event.payload.get("message") == stage:
+            assert manager.cancel(request.request_id)
+
+    result = manager.execute_single(request, on_event=cancel_at_stage)
+
+    assert not result.success
+    assert result.error is not None and result.error.error_type == "cancelled"
+    assert result.artifacts == []
+    assert [event.event_type for event in _terminal_events(events)] == ["task_cancelled"]
+    progress = [event.payload["message"] for event in events if event.event_type == "task_progress"]
+    expected = ["Preparing output folder"]
+    if stage == "Preparing temporary workspace":
+        expected.append(stage)
+    assert progress == expected
+    assert [event.sequence for event in events] == sorted({event.sequence for event in events})
+    assert Path(request.input_refs[0].path).read_bytes() == original
+    assert not (tmp_path / "runtime").exists()
     assert not (tmp_path / "output").exists()
     assert not list(tmp_path.glob(".__docwen-preflight-*"))
 

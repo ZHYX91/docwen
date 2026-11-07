@@ -39,9 +39,7 @@ def test_file_preparation_failure_has_actionable_public_copy(code: str) -> None:
 def test_live_stage_and_cancelling_hint_appear_in_task_summary(qapp) -> None:
     info = InfoAreaViewModel()
     info.begin_task(operation_id="one", current_file="sample.md", total_count=1)
-    info.update_task_progress(
-        "one", message=_localized_progress_stage("Preparing temporary workspace"), percent=0.0
-    )
+    info.update_task_progress("one", message=_localized_progress_stage("Preparing temporary workspace"), percent=0.0)
     assert _localized_progress_stage("Preparing temporary workspace") in info.status_summary_text
     info.mark_cancelling("one")
     assert info.task_summary.state == "cancelling"

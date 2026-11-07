@@ -153,10 +153,14 @@ def _check_runtime_work_directory(controller: Any) -> DoctorCheck | None:
     probe = getattr(controller, "probe_runtime_work_directory", None)
     if not callable(probe):
         return None
+    failure_reason = "not_writable"
     try:
         result = probe()
+    except OSError:
+        result = False
     except Exception:
         result = False
+        failure_reason = "probe_failed"
     if result is None:
         return None
     return DoctorCheck(
@@ -164,7 +168,7 @@ def _check_runtime_work_directory(controller: Any) -> DoctorCheck | None:
         kind="path",
         label="Runtime work directory",
         status="ok" if result is True else "fail",
-        reason=None if result is True else "not_writable",
+        reason=None if result is True else failure_reason,
     )
 
 
@@ -174,18 +178,23 @@ def _check_output_directory(controller: Any, output_dir: str) -> DoctorCheck | N
         return None
     try:
         reason = probe(output_dir)
-    except Exception:
+    except OSError:
         reason = "not_writable"
+    except Exception:
+        reason = "probe_failed"
     if reason is None:
         return None
-    allowed = {"invalid_path", "atomic_publish_unsupported", "not_writable"}
+    allowed = {"invalid_path", "atomic_publish_unsupported", "not_writable", "probe_failed"}
     status = "ok" if reason == "ok" else "fail"
+    failure_reason = None
+    if status == "fail":
+        failure_reason = reason if isinstance(reason, str) and reason in allowed else "probe_failed"
     return DoctorCheck(
         id="path.output_directory",
         kind="path",
         label="Selected output directory",
         status=status,
-        reason=None if status == "ok" else reason if reason in allowed else "not_writable",
+        reason=failure_reason,
     )
 
 
