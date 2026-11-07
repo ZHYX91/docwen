@@ -268,6 +268,13 @@ def _render_formatted_container(
     apply_style = not strip_formatting or property_name in {"underline", "superscript", "subscript"}
 
     def apply_property(run: Run) -> None:
+        if (
+            property_name in {"superscript", "subscript"}
+            and run._r.find(qn("w:rPr") + "/" + qn("w:vertAlign")) is not None
+        ):
+            # Nested script containers override their outer script, matching
+            # the inherited format context used by note rendering.
+            return
         if property_name in {"strike", "superscript", "subscript"}:
             setattr(run.font, property_name, True)
         elif property_name == "highlight":

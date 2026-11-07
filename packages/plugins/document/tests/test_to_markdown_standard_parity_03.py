@@ -229,7 +229,7 @@ def test_paragraph_section_break_emits_separator():
     para = doc.add_paragraph("section-end paragraph")
     # Inject sectPr
     sect_pr = OxmlElement("w:sectPr")
-    para._p.append(sect_pr)
+    para._p.get_or_add_pPr().append(sect_pr)
 
     converter = DocxToMarkdownConverter()
     lines, _stats = converter._process_paragraph(
@@ -245,7 +245,7 @@ def test_paragraph_section_break_ignore_omits_separator():
     doc = Document()
     para = doc.add_paragraph("section-end paragraph")
     sect_pr = OxmlElement("w:sectPr")
-    para._p.append(sect_pr)
+    para._p.get_or_add_pPr().append(sect_pr)
 
     converter = DocxToMarkdownConverter()
     converter._section_break_separator = ""
@@ -408,7 +408,7 @@ def test_formula_paragraph_preserves_character_code_and_text_around_run_breaks()
         para,
         style_detector_config=StyleDetectorConfig(code_character_style_names=frozenset({"Custom Literal"})),
     )
-    assert output == "before `<br>`\n`after-break`\t`after-tab`$x$** end**"
+    assert output == "before `<br>`\n`after-break`\t`after-tab`$x$<strong> end</strong>"
     plain = converter._build_paragraph_text_with_formulas(para._element, para, preserve_formatting=False)
     assert plain == "before \\<br\\>\nafter-break\tafter-tab$x$ end"
 

@@ -1887,8 +1887,6 @@ class MdToDocxRenderer:
                 if note_kind == "endnote"
                 else self._note_ctx.create_footnote_ref_run(clean_key)
             )
-        elif key.upper().startswith("ENDNOTE-"):
-            ref_run = self._note_ctx.create_endnote_ref_run(key)
         else:
             ref_run = self._note_ctx.create_footnote_ref_run(key)
 

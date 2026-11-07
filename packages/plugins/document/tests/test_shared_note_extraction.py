@@ -41,7 +41,7 @@ def test_note_content_removes_only_structural_reference_separator(ref_tag: str):
     continuation.text = " Continuation leading whitespace"
 
     assert _extract_note_content(note, WML_NS, ref_tag) == (
-        "  Authored leading whitespace\n Continuation leading whitespace"
+        "  Authored leading whitespace\n\n Continuation leading whitespace"
     )
 
 
@@ -61,6 +61,17 @@ def test_note_content_preserves_breaks_and_basic_inline_formatting():
     etree.SubElement(bold_run, f"{{{WML_NS}}}t").text = "Bold line"
 
     assert _extract_note_content(note, WML_NS, "footnoteRef") == "First line\n**Bold line**"
+
+
+@pytest.mark.parametrize("ref_tag", ["footnoteRef", "endnoteRef"])
+def test_note_content_reads_accepted_revisions_only(ref_tag):
+    note = etree.Element(f"{{{WML_NS}}}note")
+    paragraph = etree.SubElement(note, f"{{{WML_NS}}}p")
+    for kind, text in (("moveFrom", "removed move"), ("del", "deleted"), ("ins", "accepted"), ("moveTo", " move")):
+        revision = etree.SubElement(paragraph, f"{{{WML_NS}}}{kind}")
+        run = etree.SubElement(revision, f"{{{WML_NS}}}r")
+        etree.SubElement(run, f"{{{WML_NS}}}t").text = text
+    assert _extract_note_content(note, WML_NS, ref_tag) == "accepted move"
 
 
 def test_note_content_preserves_codespan_with_embedded_backtick():
@@ -115,7 +126,7 @@ def test_note_content_uses_selected_formatting_and_syntax(ref_tag, preserve):
         preserve_formatting=preserve,
         syntax_config=DocxMarkdownSyntaxConfig(bold="underscore", italic="underscore", strikethrough="html"),
     )
-    assert actual == ("__Bold___Italic_<del>Strike</del>" if preserve else "BoldItalicStrike")
+    assert actual == ("<strong>Bold</strong><em>Italic</em><del>Strike</del>" if preserve else "BoldItalicStrike")
 
 
 @pytest.mark.parametrize("note_tag", ["footnote", "endnote"])

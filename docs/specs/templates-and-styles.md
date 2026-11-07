@@ -325,9 +325,11 @@ must resolve to a style of the correct type.
 
 ## Existing note parts / 既有注释部件
 
-Markdown note syntax is frozen as follows: `[^id]` and `[^footnote:id]` are footnotes, while
-`[^endnote:id]` is an endnote. The retired `[^endnote-id]` spelling is rejected; DOCX → Markdown always emits the
-canonical colon form. Footnotes and endnotes are numbered independently from 1 in first-reference
+With the typed-note input extension enabled, `[^id]` and `[^footnote:id]` are footnotes, while
+`[^endnote:id]` is an endnote. `[^endnote-id]` is an ordinary footnote ID, never an implicit endnote.
+Disabled input treats all labels as ordinary footnotes. DOCX → Markdown emits the canonical colon form when the
+typed-note output extension is enabled; disabled output uses ordinary `endnote-` footnote IDs and reports the lost
+note kind. Input and output are independent request-scoped policies. Footnotes and endnotes are numbered independently from 1 in first-reference
 order, and repeated references reuse the first number. Missing definitions, duplicate definitions, and collisions
 between default and explicit footnote IDs fail closed. Continuation content indented by two spaces or a tab remains
 inside the definition and is not reinterpreted as a heading, caption, or semantic reference. Normalization is scoped
