@@ -19,6 +19,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 from docwen_core.tempfiles import TemporaryDirectory
+
 logger = logging.getLogger(__name__)
 
 # ── OOXML constants ───────────────────────────────────────────────────────
@@ -361,7 +362,6 @@ def write_numbering_to_docx(
     Must be called **after** ``Document.save()`` so the ZIP contains
     all body content.
     """
-    import tempfile
     import zipfile
     from pathlib import Path
 

@@ -7,8 +7,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from docwen_core.tempfiles import TemporaryDirectory
 from docwen_application.postprocessing import postprocess_proofread_options
+from docwen_core.tempfiles import TemporaryDirectory
 
 
 def _pipeline_conversion_identity(request: Any, task_id: str) -> Any:

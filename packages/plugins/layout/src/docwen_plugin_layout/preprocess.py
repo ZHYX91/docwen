@@ -26,6 +26,7 @@ from urllib.parse import unquote, urljoin, urlparse
 from urllib.request import url2pathname
 
 from docwen_core.tempfiles import TemporaryDirectory
+
 logger = logging.getLogger(__name__)
 
 

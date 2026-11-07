@@ -172,7 +172,6 @@ class InvoiceCnConverter:
                         25.0,
                         "Scan-based PDF page detected — rendering to PNG for OCR",
                     )
-                    import tempfile
                     from pathlib import Path as _Path
 
                     try:

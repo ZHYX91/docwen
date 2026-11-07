@@ -19,9 +19,9 @@ from zipfile import BadZipFile, ZipFile
 
 import lxml.etree as etree
 
-from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.docx_xml import parse_word_xml_int as parse_word_note_id
 from docwen_core.links import is_markdown_source_escaped, split_markdown_block_segments
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_plugin_markdown.literal_source_spans import literal_source_spans
 
 # ── OOXML constants ─────────────────────────────────────────────────────
@@ -1171,7 +1171,6 @@ def write_notes_to_docx(docx_path: str, note_ctx: NoteContext) -> int:
 
     original = Path(docx_path)
     try:
-        import tempfile
         import zipfile
 
         new_footnote_ids = _new_note_ids(

@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 from PIL import Image
 
-from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.paths import input_stem
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_plugin_image._common import (
     file_size,
     new_artifact_id,

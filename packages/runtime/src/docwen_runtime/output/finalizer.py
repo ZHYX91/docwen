@@ -28,6 +28,7 @@ from docwen_core.models.result import (
     ConversionMetrics,
     ConversionResult,
 )
+from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 from docwen_runtime.output.document_node import (
     DocumentNodeLayoutPlan,
     has_markdown_artifacts,
@@ -37,7 +38,6 @@ from docwen_runtime.output.document_node import (
 )
 from docwen_runtime.output.node_audit import stage_node_audit
 from docwen_runtime.path_io import filesystem_path
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
 
 if TYPE_CHECKING:
     from docwen_core.models.document_node import ConversionIdentity
@@ -177,7 +177,11 @@ class OutputFinalizer:
         while not directory.exists() and directory.parent != directory:
             directory = directory.parent
         try:
-            with TemporaryDirectory(prefix=".__docwen-preflight-", dir=directory, cancellation_check=cancellation.check if cancellation is not None else None) as root:
+            with TemporaryDirectory(
+                prefix=".__docwen-preflight-",
+                dir=directory,
+                cancellation_check=cancellation.check if cancellation is not None else None,
+            ) as root:
                 source = str(Path(root) / "source")
                 destination = str(Path(root) / "destination")
                 if group_outputs:
@@ -508,7 +512,11 @@ class OutputFinalizer:
         try:
             self._ensure_contained(output_dir, final_root)
             temp_parent = filesystem_path(output_dir, force_extended=sys.platform == "win32")
-            temp_root = make_temp_dir(prefix=".__docwen-node-", dir=os.fspath(temp_parent), cancellation_check=cancellation.check if cancellation is not None else None)
+            temp_root = make_temp_dir(
+                prefix=".__docwen-node-",
+                dir=os.fspath(temp_parent),
+                cancellation_check=cancellation.check if cancellation is not None else None,
+            )
             self._ensure_contained(output_dir, temp_root)
             prepared: list[ArtifactManifest] = []
             for artifact in selected.artifacts:

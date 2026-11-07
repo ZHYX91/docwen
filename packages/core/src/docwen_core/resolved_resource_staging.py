@@ -14,7 +14,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from docwen_core.tempfiles import make_temp_dir
 from docwen_core.links._markdown_inline import parse_inline_link, parse_markdown_destination
 from docwen_core.links._patterns import WIKI_EMBED_PATTERN
 from docwen_core.models.resolved_numbering import (
@@ -24,6 +23,7 @@ from docwen_core.models.resolved_numbering import (
 )
 from docwen_core.models.semantic_document import SemanticBibliographyFragment
 from docwen_core.semantic_bibliography import parse_semantic_bibliography
+from docwen_core.tempfiles import make_temp_dir
 
 _WIKI_EMBED_RE = re.compile(WIKI_EMBED_PATTERN)
 _WIKI_SIZE_RE = re.compile(r"(?P<width>[1-9][0-9]*)(?:x(?P<height>[1-9][0-9]*))?")

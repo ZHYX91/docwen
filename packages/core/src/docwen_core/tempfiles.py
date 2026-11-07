@@ -5,10 +5,10 @@ from __future__ import annotations
 import os
 import secrets
 import shutil
-import sys
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
+from types import TracebackType
 
 
 class TemporaryDirectoryError(OSError):
@@ -77,25 +77,39 @@ class TemporaryDirectory:
         self._cleaned = False
 
     def cleanup(self) -> None:
+        """Remove owned files, retaining ownership when cleanup needs a retry."""
         if self._cleaned:
             return
         try:
             shutil.rmtree(self.name)
         except OSError as exc:
-            if self._ignore_cleanup_errors:
-                self._cleaned = True
-                return
-            if sys.exc_info()[0] is not None:
-                active = sys.exc_info()[1]
-                if active is not None and hasattr(active, "add_note"):
-                    active.add_note(f"Temporary directory cleanup failed: {type(exc).__name__}")
-                self._cleaned = True
-                return
-            raise
+            if isinstance(exc, FileNotFoundError):
+                # A missing child is still a failed cleanup when the owned
+                # directory remains. Only an absent root completes ownership.
+                try:
+                    os.lstat(self.name)
+                except FileNotFoundError:
+                    self._cleaned = True
+                    return
+                except OSError:
+                    pass
+            if not self._ignore_cleanup_errors:
+                raise
+            return
         self._cleaned = True
 
     def __enter__(self) -> str:
         return self.name
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
-        self.cleanup()
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        try:
+            self.cleanup()
+        except OSError as cleanup_error:
+            if exc_value is None:
+                raise
+            exc_value.add_note(f"Temporary directory cleanup failed: {type(cleanup_error).__name__}")

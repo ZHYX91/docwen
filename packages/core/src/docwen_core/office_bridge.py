@@ -21,9 +21,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, Literal, Protocol
 
-from docwen_core.tempfiles import make_temp_dir
 from docwen_core.detection import SUPPORTED_EXTENSION_FORMATS
 from docwen_core.office_macro_security import OfficeMacroPolicyError, ensure_excel_input_has_no_xlm
+from docwen_core.tempfiles import make_temp_dir
 from docwen_core.windows_process import WindowsProcessIdentity
 
 AppType = Literal["word", "excel", "powerpoint"]

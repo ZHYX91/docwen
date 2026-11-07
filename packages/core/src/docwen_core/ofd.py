@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from docwen_core.tempfiles import make_temp_dir
+
 logger = logging.getLogger(__name__)
 
 _patches_applied: bool = False

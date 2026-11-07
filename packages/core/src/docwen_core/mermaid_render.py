@@ -17,9 +17,9 @@ from typing import Any, cast
 
 from PIL import Image
 
-from docwen_core.tempfiles import make_temp_dir
 from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
 from docwen_core.mermaid_runtime import inspect_mermaid_runtime
+from docwen_core.tempfiles import make_temp_dir
 
 # Import the CLI only after Python attaches this process to its cleanup
 # boundary, closing the Windows race between creation and job assignment.

@@ -41,7 +41,7 @@ def test_read_only_operation_never_probes_output(monkeypatch, tmp_path: Path):
     def unexpected(*args, **kwargs):
         pytest.fail("Read-only operation attempted an output probe")
 
-    monkeypatch.setattr("docwen_runtime.output.finalizer.bounded_temporary_directory", unexpected)
+    monkeypatch.setattr("docwen_runtime.output.finalizer.TemporaryDirectory", unexpected)
     OutputFinalizer().preflight(OutputPolicy(output_dir=str(tmp_path), write_artifacts=False))
 
 
@@ -75,7 +75,7 @@ def test_audit_export_requires_output_parent_before_any_write_probe(tmp_path, mo
     def unexpected(*args, **kwargs):
         pytest.fail("audit with exact output must fail before probing")
 
-    monkeypatch.setattr("docwen_runtime.output.finalizer.bounded_temporary_directory", unexpected)
+    monkeypatch.setattr("docwen_runtime.output.finalizer.TemporaryDirectory", unexpected)
     with pytest.raises(ValueError, match="output parent directory"):
         OutputFinalizer().preflight(
             OutputPolicy(output_path=str(tmp_path / "chosen.docx")),
@@ -86,9 +86,9 @@ def test_audit_export_requires_output_parent_before_any_write_probe(tmp_path, mo
 
 
 def test_preflight_permission_denial_fails_without_long_retry(tmp_path, monkeypatch):
-    from docwen_runtime.workspace import temporary
+    from docwen_core import tempfiles
 
-    original = temporary.os.mkdir
+    original = tempfiles.os.mkdir
     count = 0
 
     def deny_private_directory(path, mode=0o777):
@@ -98,7 +98,7 @@ def test_preflight_permission_denial_fails_without_long_retry(tmp_path, monkeypa
             raise PermissionError(13, "Blocked by folder protection", str(path))
         return original(path, mode)
 
-    monkeypatch.setattr(temporary.os, "mkdir", deny_private_directory)
+    monkeypatch.setattr(tempfiles.os, "mkdir", deny_private_directory)
     with pytest.raises(OutputPreflightError, match="Cannot safely save"):
         OutputFinalizer().preflight(OutputPolicy(output_dir=str(tmp_path)))
     assert count == 1

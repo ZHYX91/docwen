@@ -22,8 +22,8 @@ from docwen_core.models.file_ref import (
     MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
     FileRef,
 )
-from docwen_runtime.path_io import filesystem_path
 from docwen_core.tempfiles import make_temp_dir
+from docwen_runtime.path_io import filesystem_path
 
 if TYPE_CHECKING:
     from docwen_core.models.artifact import ArtifactManifest

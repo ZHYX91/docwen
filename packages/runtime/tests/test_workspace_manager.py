@@ -471,14 +471,14 @@ class TestWorkspaceManager:
 
 
 def test_workspace_permission_denial_is_bounded_and_does_not_register_task(tmp_path, monkeypatch):
-    from docwen_runtime.workspace import temporary
+    from docwen_core import tempfiles
     from docwen_runtime.workspace.manager import WorkspaceRootUnavailable
 
     root = tmp_path / "runtime"
     root.mkdir()
     attempts = []
 
-    original_mkdir = temporary.os.mkdir
+    original_mkdir = tempfiles.os.mkdir
 
     def deny(path, mode=0o777):
         if Path(path).name.startswith("dw-"):
@@ -486,7 +486,7 @@ def test_workspace_permission_denial_is_bounded_and_does_not_register_task(tmp_p
             raise PermissionError(13, "Access denied", str(path))
         return original_mkdir(path, mode)
 
-    monkeypatch.setattr(temporary.os, "mkdir", deny)
+    monkeypatch.setattr(tempfiles.os, "mkdir", deny)
     manager = WorkspaceManager(root)
     with pytest.raises(WorkspaceRootUnavailable, match="temporary work folder"):
         manager.create("blocked", str(tmp_path / "source.md"))
@@ -495,11 +495,10 @@ def test_workspace_permission_denial_is_bounded_and_does_not_register_task(tmp_p
 
 
 def test_workspace_name_collision_is_bounded_and_cancelled_before_retry(tmp_path, monkeypatch):
+    from docwen_core import tempfiles
     from docwen_core.cancellation import CancellationToken
     from docwen_core.errors import CancellationRequested
-    from docwen_runtime.workspace import temporary
-    from docwen_core.tempfiles import TemporaryDirectoryError
-    from docwen_runtime.workspace.temporary import make_bounded_temp_dir
+    from docwen_core.tempfiles import TemporaryDirectoryError, make_temp_dir
 
     root = tmp_path / "runtime"
     root.mkdir()
@@ -512,14 +511,13 @@ def test_workspace_name_collision_is_bounded_and_cancelled_before_retry(tmp_path
             token.cancel("user_cancelled")
         raise FileExistsError(17, "occupied", str(path))
 
-    monkeypatch.setattr(temporary.os, "mkdir", conflict)
+    monkeypatch.setattr(tempfiles.os, "mkdir", conflict)
     with pytest.raises(CancellationRequested):
-        make_bounded_temp_dir(root, prefix="dw-", cancellation=token.view())
+        make_temp_dir(dir=root, prefix="dw-", cancellation_check=token.check)
     assert len(attempts) == 3
     with pytest.raises(TemporaryDirectoryError, match="unique temporary"):
-        make_bounded_temp_dir(root, prefix="dw-", attempts=4)
+        make_temp_dir(dir=root, prefix="dw-", attempts=4)
     assert len(attempts) == 7
-
 
 
 def test_workspace_materialization_checks_cancellation_between_inputs(tmp_path):
@@ -532,14 +530,20 @@ def test_workspace_materialization_checks_cancellation_between_inputs(tmp_path):
     first.write_text("first", encoding="utf-8")
     second.write_text("second", encoding="utf-8")
     refs = (
-        FileRef(path=str(first), format="md", input_role="source", logical_path="first.md"),
-        FileRef(path=str(second), format="md", input_role="attachment", logical_path="second.md"),
+        FileRef(path=str(first), format="markdown", category="markdown", input_role="source", logical_path="first.md"),
+        FileRef(
+            path=str(second), format="markdown", category="markdown", input_role="attachment", logical_path="second.md"
+        ),
     )
     token = CancellationToken()
     calls = 0
 
     class CancelAfterFirst:
-        def check(self):
+        @property
+        def is_cancelled(self) -> bool:
+            return token.is_cancelled
+
+        def check(self) -> None:
             nonlocal calls
             calls += 1
             if calls >= 3:
