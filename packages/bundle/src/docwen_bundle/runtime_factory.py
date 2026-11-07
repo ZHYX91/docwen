@@ -185,6 +185,12 @@ def _runtime_workspace_root() -> Path:
                 raise RuntimeError("invalid DocWen runtime root")
         return selected
 
+    from docwen_runtime.profile_paths import current_profile_paths
+
+    profile = current_profile_paths()
+    if profile.portable:
+        return profile.data_dir / "runtime"
+
     from platformdirs import user_cache_dir
 
     return Path(user_cache_dir("docwen", appauthor=False)) / "runtime"

@@ -9,7 +9,6 @@ import shutil
 import signal
 import subprocess
 import sys
-import tempfile
 import time
 from collections.abc import Iterator
 from io import BytesIO
@@ -20,6 +19,7 @@ from PIL import Image
 
 from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnconfirmed
 from docwen_core.mermaid_runtime import inspect_mermaid_runtime
+from docwen_core.tempfiles import make_temp_dir
 
 # Import the CLI only after Python attaches this process to its cleanup
 # boundary, closing the Windows race between creation and job assignment.
@@ -199,7 +199,7 @@ def _run_renderer(command: list[str], job_dir: Path, cancellation: Any, timeout:
 
 @contextlib.contextmanager
 def _renderer_directory(root: Path) -> Iterator[Path]:
-    directory = Path(tempfile.mkdtemp(prefix="docwen-mermaid-", dir=root))
+    directory = Path(make_temp_dir(prefix="docwen-mermaid-", dir=root))
     preserve = False
     interrupted: BaseException | None = None
     try:

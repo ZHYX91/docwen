@@ -454,8 +454,8 @@ def test_backend_priority_reports_workspace_creation_exception_without_fake_clea
     source = tmp_path / "input.doc"
     source.write_bytes(b"legacy document")
     monkeypatch.setattr(
-        office_bridge.tempfile,
-        "mkdtemp",
+        office_bridge,
+        "make_temp_dir",
         lambda **_kwargs: (_ for _ in ()).throw(PermissionError("workspace denied")),
     )
 

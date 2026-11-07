@@ -18,7 +18,8 @@ RUNTIME_TESTS = ROOT / "packages/runtime/tests/test_fake_closed_loop_*.py"
 def test_preconversion_staging_has_owner_isolation_and_original_index_alignment() -> None:
     controller = CONTROLLER.read_text(encoding="utf-8")
 
-    assert "tempfile.TemporaryDirectory(" in controller
+    assert "from docwen_core.tempfiles import TemporaryDirectory" in controller
+    assert "TemporaryDirectory(" in controller
     assert 'prefix="docwen_pre_"' in controller
     assert "physical_temp_root = Path(temp_owner.name).resolve(strict=True)" in controller
     assert "staging_dir = physical_temp_root / str(idx)" in controller

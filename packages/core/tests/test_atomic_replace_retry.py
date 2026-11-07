@@ -12,8 +12,12 @@ from docwen_core import file_io
 pytestmark = pytest.mark.unit
 
 
+class _WindowsPermissionError(PermissionError):
+    winerror: int
+
+
 def _winerror(code: int) -> OSError:
-    exc = PermissionError(errno.EACCES, "temporary sharing or access denial")
+    exc = _WindowsPermissionError(errno.EACCES, "temporary sharing or access denial")
     exc.winerror = code
     return exc
 

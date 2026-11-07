@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, Any
 
 from docx.oxml.ns import qn
 
-from docwen_core.file_io import replace_authorized_file
 from docwen_core.docx_resolved_numbering import (
     ResolvedNumberingDocxError,
     ResolvedNumberingDocxSession,
@@ -28,6 +27,7 @@ from docwen_core.docx_resolved_numbering import (
 from docwen_core.docx_semantics import DocxSemanticRenderer
 from docwen_core.docx_semantics_v3 import CaptionStyleBindingV3
 from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
+from docwen_core.file_io import replace_authorized_file
 from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.models.artifact import ARTIFACT_KIND_PRIMARY, ArtifactManifest
 from docwen_core.models.result import (
