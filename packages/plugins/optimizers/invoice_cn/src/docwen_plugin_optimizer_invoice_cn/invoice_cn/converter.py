@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning, ocr_diagnostic_code
 
 if TYPE_CHECKING:
@@ -171,11 +172,10 @@ class InvoiceCnConverter:
                         25.0,
                         "Scan-based PDF page detected — rendering to PNG for OCR",
                     )
-                    import tempfile
                     from pathlib import Path as _Path
 
                     try:
-                        with tempfile.TemporaryDirectory() as tmpdir:
+                        with TemporaryDirectory() as tmpdir:
                             png_path = str(_Path(tmpdir) / "__page_0.png")
                             render_pdf_page_to_png(
                                 file_path=input_path,

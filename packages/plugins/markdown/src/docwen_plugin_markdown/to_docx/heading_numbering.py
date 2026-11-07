@@ -10,7 +10,6 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import logging
-import tempfile
 import zipfile
 from collections.abc import Mapping
 from dataclasses import replace
@@ -18,6 +17,7 @@ from pathlib import Path
 
 import lxml.etree as etree
 
+from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.text.numbering_word_adapter import (
     TranslationResult,
     WordNumberingLevel,
@@ -309,7 +309,7 @@ def write_heading_numbering_to_docx(
 
     original = Path(docx_path)
 
-    with tempfile.TemporaryDirectory(prefix=".dw-heading-numbering-", dir=original.parent) as tmpdir:
+    with TemporaryDirectory(prefix=".dw-heading-numbering-", dir=original.parent) as tmpdir:
         tmp_path = Path(tmpdir) / "heading_numbering_writeback.docx"
 
         with (

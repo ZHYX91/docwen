@@ -11,7 +11,6 @@ from __future__ import annotations
 import hashlib
 import os
 import re
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,6 +23,7 @@ from docwen_core.models.resolved_numbering import (
 )
 from docwen_core.models.semantic_document import SemanticBibliographyFragment
 from docwen_core.semantic_bibliography import parse_semantic_bibliography
+from docwen_core.tempfiles import make_temp_dir
 
 _WIKI_EMBED_RE = re.compile(WIKI_EMBED_PATTERN)
 _WIKI_SIZE_RE = re.compile(r"(?P<width>[1-9][0-9]*)(?:x(?P<height>[1-9][0-9]*))?")
@@ -264,7 +264,7 @@ def _stage_linked_resources(
     parent = root.parent
     if not root.is_absolute() or not parent.is_dir() or parent.is_symlink() or root.exists() or root.is_symlink():
         raise ResolvedResourceStagingError("request resource directory is not fresh")
-    temporary = Path(tempfile.mkdtemp(prefix=f".{root.name}.", dir=parent))
+    temporary = Path(make_temp_dir(prefix=f".{root.name}.", dir=parent))
     created: list[Path] = []
     try:
         for resource in resources:
