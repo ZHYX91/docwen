@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 import secrets
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -59,13 +59,15 @@ from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges, spli
 from docwen_plugin_markdown.common_utils import (
     add_md_numbering,
     conversion_error_text,
+    has_synthetic_source,
     link_source_path,
     read_input_markdown,
     remove_md_numbering,
 )
-from docwen_plugin_markdown.document_semantics import analyze_document_semantics
+from docwen_plugin_markdown.document_semantics import SemanticDiagnostic, analyze_document_semantics
 from docwen_plugin_markdown.gongwen_fields import GongwenFieldPlacementError
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
+from docwen_plugin_markdown.navigation_links import DocxNavigationLinks
 from docwen_plugin_markdown.preprocessor import (
     materialize_image_placeholders,
 )
@@ -104,6 +106,7 @@ from docwen_plugin_markdown.to_docx.bibliography import (
 )
 from docwen_plugin_markdown.to_docx.managed_styles import (
     ManagedStyleCompletionError,
+    ManagedStyleConflict,
     complete_managed_styles,
     validate_managed_style_package,
 )
@@ -115,7 +118,11 @@ from docwen_plugin_markdown.to_docx.notes import (
     prepare_note_context_for_document,
     write_notes_to_docx,
 )
-from docwen_plugin_markdown.to_docx.numbering_comments import NumberingProvenance, annotate_numbering_prefixes
+from docwen_plugin_markdown.to_docx.numbering_comments import (
+    NumberingProvenance,
+    annotate_native_numbering,
+    annotate_numbering_prefixes,
+)
 from docwen_plugin_markdown.yaml_links import YamlLinkProjection
 from docwen_plugin_markdown.yaml_processor import (
     TITLE_PLACEHOLDER_ALIASES,
@@ -432,6 +439,118 @@ def _note_failure(
     )
 
 
+def _success_diagnostics(
+    *,
+    semantic_v3_diagnostics: Iterable[dict[str, Any]],
+    semantic_diagnostics: Iterable[SemanticDiagnostic],
+    style_conflicts: Iterable[ManagedStyleConflict],
+    renderer: MdToDocxRenderer | None,
+    messages: Mapping[str, str],
+    include_source_content: bool,
+    missing_embedded_sources: bool,
+    unanchored_number_comments: int,
+    approximate_warning: str | None,
+    deferred_note_references: int,
+) -> list[ConversionDiagnostic]:
+    """Assemble successful conversion notices without widening transaction flow."""
+    diagnostics = [
+        ConversionDiagnostic(
+            level="info",
+            message="MD→DOCX conversion successful",
+            code="MD2DOCX-OK",
+        )
+    ]
+    diagnostics[0:0] = [_semantic_v3_diagnostic(item) for item in semantic_v3_diagnostics]
+    diagnostics[0:0] = [
+        ConversionDiagnostic(
+            level=item.level,
+            message=item.message,
+            code=item.code,
+        )
+        for item in semantic_diagnostics
+    ]
+    diagnostics[0:0] = [
+        ConversionDiagnostic(
+            level="warning",
+            message=item.message,
+            code=item.code,
+            location=(
+                f"style:{item.semantic_key};requested:{item.requested_style_id};resolved:{item.resolved_style_id}"
+            ),
+        )
+        for item in style_conflicts
+    ]
+    _append_renderer_diagnostics(diagnostics, renderer, messages, include_source_content=include_source_content)
+    if missing_embedded_sources:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="MD2DOCX-EMBED-SOURCE-MISSING",
+                message=(
+                    "Some embedded files or images could not be found. "
+                    "Check the source links and the selected missing-file fallback."
+                ),
+            )
+        )
+    if unanchored_number_comments:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="MD2DOCX-NUMBERING-COMMENTS-UNANCHORED",
+                message=(
+                    "Some added heading numbers could not be isolated as text in this scheme. "
+                    "Their review comments were skipped; the heading content was preserved."
+                ),
+            )
+        )
+    if approximate_warning:
+        diagnostics.insert(
+            0,
+            ConversionDiagnostic(
+                level="warning",
+                message=approximate_warning,
+                code="MD2DOCX-NUMBERING-APPROXIMATE",
+            ),
+        )
+
+    if deferred_note_references:
+        diagnostics.insert(
+            0,
+            ConversionDiagnostic(
+                level="warning",
+                code="MD2DOCX-NOTE-FIELD-UPDATE-REQUIRED",
+                message=(
+                    f"{deferred_note_references} repeated note reference(s) require the document editor to "
+                    "calculate their numbering. A ? mark is shown until fields are updated; "
+                    "update fields in Word after pagination and before printing or PDF export."
+                ),
+            ),
+        )
+
+    return diagnostics
+
+
+def _append_renderer_diagnostics(
+    diagnostics: list[ConversionDiagnostic],
+    renderer: MdToDocxRenderer | None,
+    messages: Mapping[str, str],
+    *,
+    include_source_content: bool,
+) -> None:
+    """Compose loss notices outside the conversion transaction's control flow."""
+    if renderer is None:
+        return
+    diagnostics[0:0] = [
+        ConversionDiagnostic(level="warning", message=message, code=code) for code, message in renderer.warnings
+    ]
+    diagnostics[0:0] = [
+        loss.to_diagnostic(messages, include_source_content=include_source_content) for loss in renderer.losses.records
+    ]
+    summary = renderer.losses.summary(messages, annotated_count=renderer.loss_comments_added)
+    if summary is not None:
+        diagnostics.append(summary)
+
+
 def _semantic_v3_diagnostic(item: dict[str, Any]) -> ConversionDiagnostic:
     payload = dict(item)
     payload["level"] = payload.pop("severity")
@@ -658,12 +777,8 @@ class MdToDocxConverter:
             scheme_config: dict[str, dict[str, str]] | None = None
             supported_heading_levels: set[int] | None = None
 
-            numbering_text = bool(_config_value(context.config, "template_fill.gongwen_numbering_text", True))
-            numbering_comments = numbering_text and bool(
-                _config_value(context.config, "template_fill.gongwen_numbering_comments", True)
-            )
-            if numbering_text:
-                render_mode = "text"
+            numbering_text = render_mode == "text"
+            numbering_comments = bool(_config_value(context.config, "template_fill.gongwen_numbering_comments", False))
             numbering_provenance = NumberingProvenance(content) if numbering_text else None
             added_prefixes: list[str] = []
             unanchored_number_comments = 0
@@ -805,12 +920,19 @@ class MdToDocxConverter:
             yaml_dict, md_body = extract_yaml_front_matter(content.removeprefix("\ufeff"))
             cancellable.check()
             link_config = _request_link_config(context.config)
+            navigation_links = DocxNavigationLinks(link_config, md_body)
 
             # ── Stage 2: Preprocess & Parse ────────────────────────────
             progress.report_progress(20.0, "Preprocessing Markdown")
 
             cleaned_ast = []
             note_ctx = NoteContext()
+            missing_embedded_sources = 0
+
+            def record_missing_embed() -> None:
+                nonlocal missing_embedded_sources
+                missing_embedded_sources += 1
+
             if render_body:
                 cancellable.check()
 
@@ -831,12 +953,15 @@ class MdToDocxConverter:
                     resource_source_path,
                     link_config=link_config,
                     target_format="docx",
+                    hyperlink_projection=navigation_links.issue,
+                    local_lookup_allowed=declared_resource_resolver is None,
                     temp_dir=str(workspace.staging_dir),
                     image_scope=image_scope,
                     extended_headings=extensions.extended_headings,
                     structural_tables=extensions.structural_tables,
                     protect_source_comments=True,
                     cancellation_check=cancellable.check,
+                    on_missing_embed=record_missing_embed,
                     declared_image=(
                         declared_resource_resolver.resolve_image if declared_resource_resolver is not None else None
                     ),
@@ -884,10 +1009,12 @@ class MdToDocxConverter:
                 raw_ast = parse_markdown_text(
                     md_body, auto_link_bare_url=False, extensions=extensions, consume_initial_bom=False
                 )
-                if added_prefixes:
+                if numbering_text:
                     unanchored_number_comments += annotate_numbering_prefixes(
-                        raw_ast, added_prefixes, comments=numbering_comments, text_numbering=numbering_text
+                        raw_ast, added_prefixes, comments=numbering_comments, text_numbering=add_num
                     )
+                if numbering_comments and word_native_translation is not None:
+                    annotate_native_numbering(raw_ast, supported_heading_levels or set())
                 cancellable.check()
                 try:
                     raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
@@ -1030,7 +1157,10 @@ class MdToDocxConverter:
                 source_stem=context.request.source_stem,
             )
             yaml_links = YamlLinkProjection(
-                resource_source_path, link_config, declared_inputs=declared_resource_resolver is not None
+                resource_source_path,
+                link_config,
+                declared_inputs=declared_resource_resolver is not None,
+                navigation_links=navigation_links,
             )
             for key in placeholder_map:
                 if key in template_yaml:
@@ -1142,10 +1272,14 @@ class MdToDocxConverter:
                     template_style_keys=template_style_keys,
                     managed_styles=managed_styles,
                     semantic_v3_session=semantic_v3_session,
+                    navigation_links=navigation_links,
                     hr_mapping=hr_mapping,
                     hr_actions=hr_actions,
                     cancellation=cancellable,
                     note_ctx=note_ctx,
+                    loss_comments=bool(_config_value(context.config, "conversion.loss_comments", True)),
+                    defer_loss_comments=True,
+                    loss_messages=getattr(context, "loss_messages", {}),
                     source_file_path=resource_source_path or None,
                     declared_resource_resolver=declared_resource_resolver,
                     mermaid_mode=mermaid_mode,
@@ -1222,6 +1356,8 @@ class MdToDocxConverter:
             from docwen_core.docx_table_roles import inject_table_roles, prepare_table_roles
 
             table_roles = prepare_table_roles(doc)
+            if renderer is not None:
+                renderer.finalize_loss_comments()
             doc.save(output_path)
 
             # Write footnote/endnote body elements into the DOCX ZIP parts
@@ -1320,72 +1456,18 @@ class MdToDocxConverter:
 
             # ── 7. Return success ──────────────────────────────────────
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
-            diagnostics = [
-                ConversionDiagnostic(
-                    level="info",
-                    message="MD→DOCX conversion successful",
-                    code="MD2DOCX-OK",
-                )
-            ]
-            diagnostics[0:0] = [_semantic_v3_diagnostic(item) for item in semantic_v3_plan.analysis.diagnostics]
-            diagnostics[0:0] = [
-                ConversionDiagnostic(
-                    level=item.level,
-                    message=item.message,
-                    code=item.code,
-                )
-                for item in semantic_analysis.diagnostics
-            ]
-            diagnostics[0:0] = [
-                ConversionDiagnostic(
-                    level="warning",
-                    message=item.message,
-                    code=item.code,
-                    location=(
-                        f"style:{item.semantic_key};requested:{item.requested_style_id};"
-                        f"resolved:{item.resolved_style_id}"
-                    ),
-                )
-                for item in managed_styles.conflicts
-            ]
-            diagnostics[0:0] = [
-                ConversionDiagnostic(level="warning", message=message, code=code)
-                for code, message in (renderer.warnings if renderer is not None else ())
-            ]
-            if unanchored_number_comments:
-                diagnostics.append(
-                    ConversionDiagnostic(
-                        level="warning",
-                        code="MD2DOCX-NUMBERING-COMMENTS-UNANCHORED",
-                        message=(
-                            "Some added heading numbers could not be isolated as text in this scheme. "
-                            "Their review comments were skipped; the heading content was preserved."
-                        ),
-                    )
-                )
-            if approximate_warning:
-                diagnostics.insert(
-                    0,
-                    ConversionDiagnostic(
-                        level="warning",
-                        message=approximate_warning,
-                        code="MD2DOCX-NUMBERING-APPROXIMATE",
-                    ),
-                )
-
-            if deferred_note_references:
-                diagnostics.insert(
-                    0,
-                    ConversionDiagnostic(
-                        level="warning",
-                        code="MD2DOCX-NOTE-FIELD-UPDATE-REQUIRED",
-                        message=(
-                            f"{deferred_note_references} repeated note reference(s) require the document editor to "
-                            "calculate their numbering. A ? mark is shown until fields are updated; "
-                            "update fields in Word after pagination and before printing or PDF export."
-                        ),
-                    ),
-                )
+            diagnostics = _success_diagnostics(
+                semantic_v3_diagnostics=semantic_v3_plan.analysis.diagnostics,
+                semantic_diagnostics=semantic_analysis.diagnostics,
+                style_conflicts=managed_styles.conflicts,
+                renderer=renderer,
+                messages=getattr(context, "loss_messages", {}),
+                include_source_content=not has_synthetic_source(context.request),
+                missing_embedded_sources=bool(missing_embedded_sources),
+                unanchored_number_comments=unanchored_number_comments,
+                approximate_warning=approximate_warning,
+                deferred_note_references=deferred_note_references,
+            )
 
             result = ConversionResult(
                 task_id=task_id,

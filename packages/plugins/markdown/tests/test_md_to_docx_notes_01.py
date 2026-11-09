@@ -218,20 +218,19 @@ class TestNoteContextFoundation:
         assert id_2 == 2
         assert len(ctx.endnote_elements) == 2
 
-    def test_foundation_endnote_with_prefix(self):
-        """get_endnote_word_id accepts keys with or without prefix."""
-        ens: dict[str, list[list[dict]]] = {"x": _mk_children("End X")}
-        ctx = NoteContext()
-        ctx._endnote_children = ens
+    def test_canonical_repeated_endnote_uses_one_native_definition(self):
+        from docx import Document
 
-        id1 = ctx.get_endnote_word_id("x")
-        id2 = ctx.get_endnote_word_id("ENDNOTE-x")
-        id3 = ctx.get_endnote_word_id("endnote-x")
+        from docwen_plugin_markdown.renderer import MdToDocxRenderer
 
-        assert id1 == 1
-        assert id2 == 1
-        assert id3 == 1
-        # Only one element created
+        nodes, ctx = process_md_body_with_notes("First[^endnote:x] again[^endnote:x].\n\n[^endnote:x]: End X.\n")
+        doc = Document()
+        renderer = MdToDocxRenderer(doc, note_ctx=ctx)
+        renderer.render(nodes)
+        references = list(doc.element.iter(_q("endnoteReference")))
+
+        assert len(references) == 2
+        assert [reference.get(_q("id")) for reference in references] == ["1", "1"]
         assert len(ctx.endnote_elements) == 1
 
     def test_foundation_create_footnote_ref_run(self):

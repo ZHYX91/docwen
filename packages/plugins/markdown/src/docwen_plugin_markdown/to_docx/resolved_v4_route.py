@@ -27,6 +27,7 @@ from docwen_core.docx_resolved_numbering import (
 from docwen_core.docx_semantics import DocxSemanticRenderer
 from docwen_core.docx_semantics_v3 import CaptionStyleBindingV3
 from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
+from docwen_core.file_io import replace_authorized_file
 from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.models.artifact import ARTIFACT_KIND_PRIMARY, ArtifactManifest
 from docwen_core.models.result import (
@@ -457,7 +458,7 @@ def _render_resolved_v4_docx(
     )
     validate_managed_style_package(candidate_path.read_bytes(), style_catalog, managed_styles)
     session.prove_package(candidate_path)
-    os.replace(candidate_path, output_path)
+    replace_authorized_file(candidate_path, output_path)
     _remove_request_resource_root(Path(workspace.staging_dir), resource_root)
     state["resource_root"] = None
 

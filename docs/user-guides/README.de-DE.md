@@ -169,9 +169,11 @@ Das Bedienfeld passt die verfügbaren Optionen automatisch basierend auf dem Dat
 
 Eine Optimierung wird nur angeboten, wenn sie für die aktuelle Oberflächensprache und das erkannte Eingabeformat geeignet ist und die benötigte Konvertierungssoftware verfügbar ist. Auch die zugehörige Einstellungsseite erscheint nur für eine geeignete Optimierung. Die integrierten Optimierungen für chinesische amtliche Dokumente und Rechnungen gelten derzeit nur für die vereinfachte chinesische Oberfläche (`zh_CN`). In anderen Sprachen bleiben diese Optionen und Seiten verborgen; gespeicherte Vorgaben werden nicht angewendet, bleiben aber für einen späteren Sprachwechsel erhalten. Diese Regel betrifft die GUI-Auswahl, nicht explizit angegebene CLI- oder Machine-Aufträge.
 
-In allen Oberflächensprachen stehen die Optionen für Textnummern bei neu hinzugefügten Überschriftennummern und zugehörige Prüfkommentare unter **Texteingabe → Nummerierung (MD zu DOCX)**. Diese Schalter aktivieren die Überschriftennummerierung nicht selbst.
+In allen Oberflächensprachen bietet **Texteingabe → Nummerierung (MD zu DOCX)** eine Auswahl des Ausgabemodus: **Text** schreibt neue Nummern in den Überschriftentext; **DOCX-nativ** verwendet die mehrstufige Nummerierung von Word. **Neue Überschriftennummern kommentieren** ist unabhängig davon in beiden Modi verfügbar. Im Textmodus markieren Kommentare die neue Nummer, im nativen Modus das erste sichtbare Zeichen der Überschrift. Das Hinzufügen von Überschriftennummern muss separat aktiviert werden.
 
 Für geeignete Optimierungen erscheinen eigene Seiten für **Amtliche Dokumente** und **Rechnungen**. Bei amtlichen Dokumenten regelt **Dokument → Markdown** die Erkennungsvorgabe und **Markdown → Dokument** die Formatierung von Vorlagenfeldern mit Hinweisen zu Anlagen, Verteiler, Datum und Vermerken. Rechnungen bieten getrennte Vorgaben für **PDF / OFD → Markdown** und **Bild → Markdown**. Diese Optionen bestimmen nur die anfängliche Auswahl geeigneter Dateien und klassifizieren sie nicht automatisch. **Übernehmen / OK** speichert, **Abbrechen** verwirft ungespeicherte Änderungen.
+
+Davon unabhängig steuert `template_fill.gongwen_fields_enabled` (standardmäßig aktiviert) die Formatierung chinesischer Amtsdokumentfelder bei **Markdown → Dokument**, unabhängig von Oberflächen- und Ausgabesprache. Eine ausgeblendete Einstellungsseite für amtliche Dokumente deaktiviert diese Funktion nicht. Sie formatiert feste chinesische Vorlagenfelder und steuert nicht die Erkennung bei Dokument → Markdown.
 
 **Geltungsbereich:** Die spezielle Feldformatierung ist für chinesische Amtsdokumente ausgelegt; die Rechnungsoptimierung zielt auf chinesische Rechnungsformate. Andere Dateien können weiterhin die normalen Konvertierungswege verwenden.
 
@@ -397,7 +399,7 @@ Unterstützt klickbare Links bei Markdown -> DOCX:
 | :--- | :--- |
 | **Bilder extrahieren** | Wenn aktiviert, werden Bilder im Dokument in den Ausgabeordner extrahiert und Bildlinks in die MD-Datei eingefügt. |
 | **OCR** | Text in Bildern erkennen. Je nach OCR-Ausgabeeinstellung wird er in einer Markdown-Datei pro Bild oder in der Hauptdatei gespeichert. |
-| **Optimierung** | Wenden Sie eine Optimierung für den gewählten Dokumenttyp an, etwa zum Extrahieren von Feldern aus chinesischen Amtsdokumenten. Ohne diese Option wird die Standardkonvertierung verwendet. |
+| **Optimierung** | Wenden Sie eine Optimierung für den gewählten Dokumenttyp an, etwa zum Extrahieren von Feldern aus chinesischen Amtsdokumenten. Ohne diese Option wird die Standardkonvertierung verwendet. Die integrierten Exportoptimierungen für chinesische Amtsdokumente und Rechnungen werden in der GUI nur bei vereinfachter chinesischer Oberfläche (`zh_CN`) und geeignetem Eingabeweg angeboten. Diese GUI-Grenze verhindert keine explizite Auswahl von `gongwen` oder `invoice_cn` über CLI/Machine. |
 | **Nr. entfernen** | Wenn aktiviert, werden Nummern vor Untertiteln entfernt (z.B. "一、", "（一）", "1." usw.) und in reinen Titeltext konvertiert. |
 | **Nr. hinzufügen** | Wenn aktiviert, werden Nummern basierend auf Überschriftenebenen automatisch hinzugefügt (Nummerierungsschema kann in den Einstellungen konfiguriert werden). |
 

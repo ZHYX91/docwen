@@ -23,6 +23,7 @@ from typing import Any, BinaryIO, Literal, Protocol
 
 from docwen_core.detection import SUPPORTED_EXTENSION_FORMATS
 from docwen_core.office_macro_security import OfficeMacroPolicyError, ensure_excel_input_has_no_xlm
+from docwen_core.tempfiles import make_temp_dir
 from docwen_core.windows_process import WindowsProcessIdentity
 
 AppType = Literal["word", "excel", "powerpoint"]
@@ -730,7 +731,7 @@ class _OfficeConversionOwner:
         # A task workspace can be cleaned by Runtime after a failed bridge.
         # Linux process state must outlive that scope if native exit is unproven.
         process_parent = None if sys.platform == "linux" else self.output.parent
-        self.workspace = Path(tempfile.mkdtemp(prefix=_OFFICE_WORKSPACE_PREFIX, dir=process_parent))
+        self.workspace = Path(make_temp_dir(prefix=_OFFICE_WORKSPACE_PREFIX, dir=process_parent))
         self.input_snapshot = self.workspace / f"input{preferred_extension}"
         self.backend_output = self.workspace / f"output{self.output.suffix}"
         _copy_private_office_input(
@@ -932,8 +933,8 @@ def _try_libreoffice_conversion(
         # Its disposable profile is process state, not an output artifact, so
         # own it directly beneath the system temp root.  Conversion output
         # stays beside the requested output to preserve same-volume staging.
-        profile_dir = Path(tempfile.mkdtemp(prefix=_LIBREOFFICE_PROFILE_PREFIX))
-        conversion_dir = Path(tempfile.mkdtemp(prefix=_LIBREOFFICE_OUTPUT_PREFIX, dir=output.parent))
+        profile_dir = Path(make_temp_dir(prefix=_LIBREOFFICE_PROFILE_PREFIX))
+        conversion_dir = Path(make_temp_dir(prefix=_LIBREOFFICE_OUTPUT_PREFIX, dir=output.parent))
         try:
             _prepare_libreoffice_profile(
                 profile_dir,

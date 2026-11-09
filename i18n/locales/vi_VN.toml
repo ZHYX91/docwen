@@ -12,6 +12,8 @@ template_name = "Mẫu Chung Tiếng Việt"
 # Cua so chinh
 # =============================================================================
 [main_window]
+runtime_folder_unavailable = "Không thể tạo thư mục làm việc tạm thời. Hãy kiểm tra quyền truy cập hoặc phần mềm bảo mật rồi thử lại."
+output_folder_unavailable = "Không thể dùng an toàn thư mục lưu đã chọn. Hãy kiểm tra quyền truy cập hoặc chọn thư mục khác."
 numbering_comments_unanchored = "Một số số được thêm không thể tách thành văn bản riêng theo sơ đồ này. Đã bỏ qua nhận xét tương ứng và giữ nguyên tiêu đề."
 conversion_failed_detail = "Chuyển đổi thất bại."
 note_syntax_invalid = "Cú pháp chú thích không hợp lệ. Hãy kiểm tra tham chiếu và định nghĩa."
@@ -27,6 +29,7 @@ extension_loss_references = "Chú thích và tham chiếu chéo đã được ch
 extension_loss_tables = "Ô gộp và cấu trúc tiêu đề đã được chuyển thành bảng Markdown thông thường."
 route_catalog_failed = "Không thể tải các thao tác khả dụng; yêu cầu chưa được bắt đầu."
 conversion_failed = "Chuyển đổi thất bại. Hãy mở chi tiết lỗi để xem thông tin chẩn đoán."
+missing_embedded_resources = "Không tìm thấy một số tệp hoặc ảnh được nhúng. Hãy kiểm tra liên kết nguồn và thiết lập xử lý tệp bị thiếu."
 conversion_warning = "Chuyển đổi hoàn tất nhưng có cảnh báo."
 ocr_no_text = "OCR không phát hiện văn bản; hãy đối chiếu ảnh này với nguồn."
 ocr_degraded = "OCR không hoàn tất bình thường (trạng thái: {status}); các kết quả dùng được đã được giữ lại."
@@ -97,6 +100,11 @@ save_failed = "Lưu cài đặt thất bại"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Đang lưu kết quả…"
+phase_checking_output = "Đang kiểm tra thư mục lưu…"
+phase_preparing_workspace = "Đang chuẩn bị thư mục làm việc tạm thời…"
+phase_converting = "Đang chuyển đổi tệp…"
+phase_cancelling_hint = "Đã yêu cầu hủy. Đang kết thúc an toàn bước hiện tại…"
 output_each_source = "Lưu từng kết quả cạnh tệp nguồn"
 output_date_subfolder = "Lưu trong thư mục con theo ngày"
 task_warning_count = "Có {count} thông báo chuyển đổi. Mở rộng lịch sử hoạt động để xem chi tiết."
@@ -139,6 +147,8 @@ example = "Ví dụ"
 
 # CLI帮助文本
 [cli.help]
+lang = "Chọn ngôn ngữ cho các thông báo CLI đã được dịch và đầu ra của những tác vụ có hỗ trợ. Không dịch nội dung tài liệu. Khi ở chế độ auto, OCR cũng dùng lựa chọn này để chọn mô hình nhận dạng."
+doctor_output_dir = "Kiểm tra thư mục đầu ra đã chọn có hỗ trợ lưu an toàn không"
 settings = "Quản lý cài đặt"
 settings_reset = "Đặt lại cài đặt về mặc định"
 files = "Đường dẫn tệp đầu vào (hỗ trợ ký tự đại diện như *.docx)"
@@ -347,10 +357,8 @@ batch_mode = "Chế độ hàng loạt"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "Dùng văn bản cho số tiêu đề mới thêm"
-numbering_text_help = "Ghi số tiêu đề được thêm theo sơ đồ đã chọn dưới dạng văn bản, ưu tiên hơn chế độ xuất số ở trên trong lần chuyển đổi này. Không bật đánh số, đổi chế độ đã lưu hoặc số có sẵn trong mẫu. Mặc định bật."
-numbering_comments_label = "Thêm nhận xét cho số tiêu đề dạng văn bản mới thêm"
-numbering_comments_help = "Chỉ nhận xét số tiêu đề dạng văn bản thực sự được thêm, không đánh dấu số đã nhập thủ công. Mặc định bật. Tắt số dạng văn bản sẽ bỏ chọn và vô hiệu hóa tùy chọn này; sau khi bật lại, bạn có thể chọn nếu cần. Số Markdown tùy chỉnh không thể xác định chính xác sẽ được bỏ qua kèm cảnh báo."
+numbering_comments_label = "Thêm chú thích cho số tiêu đề mới"
+numbering_comments_help = "Chỉ áp dụng cho số mới tạo. Chế độ văn bản đánh dấu số; chế độ DOCX gốc đánh dấu ký tự hiển thị đầu tiên của tiêu đề. Không đánh dấu số đã nhập thủ công."
 output_format = "Loại mẫu ưu tiên"
 output_format_hint = "Khi thêm Markdown, ưu tiên mẫu thuộc loại này. Thiết lập này tự nó không đổi định dạng đầu ra chuyển đổi."
 # MD转文档序号设置
@@ -362,7 +370,6 @@ add_numbering_tooltip = "Thêm đánh số phân cấp cho tiêu đề trong DOC
 scheme_label = "Sơ đồ đánh số mặc định:"
 scheme_tooltip = "Chọn lược đồ đánh số cho tiêu đề"
 render_mode_label = "Chế độ xuất số tiêu đề:"
-render_mode_tooltip = "Chọn ghi số trực tiếp vào tiêu đề hay tạo bằng tính năng đánh số gốc của DOCX"
 render_mode_text = "Văn bản"
 render_mode_word_native = "Gốc của DOCX"
 render_mode_hint = "Văn bản = ghi số vào tiêu đề; gốc của DOCX = dùng danh sách đa cấp của DOCX"
@@ -445,7 +452,9 @@ section = "Xuất ô đã hợp nhất"
 desc = "Kiểm soát cách thể hiện ô đã hợp nhất trong đầu ra Markdown."
 merge_strategy_label = "Cách xuất ô đã hợp nhất:"
 
-merge_strategy_help = "Chỉ áp dụng cho Markdown thường: Điền lặp lại văn bản ô neo (ví dụ “Tiêu đề | Tiêu đề”); Trống để các ô bị phủ trống (“Tiêu đề | ”).\n\nKhi bật đầu ra Structural Tables, dùng dấu cấu trúc < và ^ thay thế."
+merge_strategy_help = "Dành cho Markdown thông thường:\nĐiền: lặp lại văn bản ô trên cùng bên trái (Tiêu đề | Tiêu đề).\nĐể trống: để trống các ô bị che (Tiêu đề | ).\n\nKhi bật Structural Tables trong “Tạo Markdown”, < và ^ được dùng thay thế. Lựa chọn tại đây vẫn được lưu.\nNgoại lệ: tối ưu hóa “Công văn” xử lý bảng riêng."
+structural_active = "Xuất tài liệu/bảng tính thông thường: Structural Tables đang bật; Điền/Để trống được giữ lại nhưng không áp dụng."
+ordinary_active = "Xuất tài liệu/bảng tính thông thường: Structural Tables đang tắt; áp dụng Điền/Để trống của từng thẻ đầu vào."
 [settings.table_export.strategies]
 fill = "Điền"
 empty = "Để trống"
@@ -473,6 +482,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "Đánh dấu số mới bằng ký tự không độ rộng"
+markers_tooltip = "Bao số tiêu đề mới bằng các cặp dấu không hiển thị để Number Suite nhận biết. Mặc định tắt. Không thay đổi số hiện có."
 section = "Đánh số tiêu đề (Tài liệu → Markdown)"
 remove = "Mặc định xóa đánh số tiêu đề trong tài liệu"
 remove_tooltip = "Xóa đánh số tiêu đề hiện có trong tài liệu khi chuyển DOCX → MD"
@@ -577,9 +588,13 @@ md_file_link_style_tooltip = "Đặt định dạng liên kết cho tệp MD tro
 non_embed_section = "Xử lý liên kết không nhúng"
 non_embed_desc = "Chọn cách xử lý liên kết thường trong đầu vào Markdown khi tạo tài liệu hoặc bảng tính."
 wiki_link_mode = "Xử lý liên kết Wiki:"
-wiki_link_tooltip = "Xử lý [[link]] hoặc [[link|text]]. Giữ nguyên giữ markup nguồn; Trích văn bản chỉ giữ văn bản hiển thị; Siêu liên kết giữ văn bản và đích rồi tạo liên kết bấm được nếu định dạng đích hỗ trợ; Xóa sẽ xóa liên kết."
+wiki_link_tooltip = "Xử lý [[link]] / [[link|text]].\n\nGiữ nguyên: giữ nguyên toàn bộ cú pháp gốc.\nTrích văn bản: chỉ giữ văn bản hiển thị.\nTrích xuất địa chỉ: chỉ giữ địa chỉ gốc, bao gồm điểm neo.\nXóa: xóa toàn bộ liên kết, bao gồm văn bản hiển thị.\nSiêu liên kết: tạo liên kết có thể nhấp; nếu không thể, dùng phương án dự phòng."
 markdown_link_mode = "Xử lý liên kết Markdown:"
-markdown_link_tooltip = "Xử lý [text](url). Giữ nguyên giữ markup nguồn; Trích văn bản chỉ giữ text; Siêu liên kết giữ văn bản và đích rồi tạo liên kết bấm được nếu định dạng đích hỗ trợ; Xóa sẽ xóa liên kết."
+markdown_link_tooltip = "Xử lý [text](url).\n\nGiữ nguyên: giữ nguyên toàn bộ cú pháp gốc.\nTrích văn bản: chỉ giữ văn bản hiển thị.\nTrích xuất địa chỉ: chỉ giữ địa chỉ gốc, bao gồm điểm neo.\nXóa: xóa toàn bộ liên kết, bao gồm văn bản hiển thị.\nSiêu liên kết: tạo liên kết có thể nhấp; nếu không thể, dùng phương án dự phòng."
+markdown_hyperlink_fallback_tooltip = "Chỉ dùng trong chế độ Siêu liên kết khi không thể tạo liên kết có thể nhấp, bao gồm đầu ra CSV.\nLựa chọn này được lưu riêng cho liên kết Markdown.\n\nGiữ nguyên: giữ nguyên toàn bộ cú pháp gốc.\nTrích văn bản: chỉ giữ văn bản hiển thị.\nTrích xuất địa chỉ: chỉ giữ địa chỉ gốc, bao gồm điểm neo."
+markdown_hyperlink_fallback = "Phương án dự phòng siêu liên kết Markdown:"
+wiki_hyperlink_fallback_tooltip = "Chỉ dùng trong chế độ Siêu liên kết khi không thể tạo liên kết có thể nhấp, bao gồm đầu ra CSV.\nLựa chọn này được lưu riêng cho liên kết Wiki.\n\nGiữ nguyên: giữ nguyên toàn bộ cú pháp gốc.\nTrích văn bản: chỉ giữ văn bản hiển thị.\nTrích xuất địa chỉ: chỉ giữ địa chỉ gốc, bao gồm điểm neo."
+wiki_hyperlink_fallback = "Phương án dự phòng siêu liên kết Wiki:"
 
 # 嵌入链接处理区域
 embed_section = "Xử lý liên kết nhúng"
@@ -608,6 +623,7 @@ md_link = "Liên kết Markdown"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "Trích xuất địa chỉ"
 keep = "Giữ nguyên"
 extract_text = "Trích văn bản"
 remove = "Xóa"
@@ -687,11 +703,11 @@ md_to_docx_section = "Markdown → Tài liệu"
 md_format_processing = "Xử lý định dạng"
 md_format_processing_tooltip = "Cấu hình cách xử lý markup định dạng khi chuyển Markdown → tài liệu DOCX"
 md_body_format_label = "Xử lý markup thân bài:"
-md_body_format_tooltip = "Áp dụng định dạng: **Bold** chuyển thành chữ in đậm thực\nGiữ markup: Hiển thị **Bold** nguyên dạng\nLàm sạch markup: Chỉ hiển thị chữ \"Bold\", không có định dạng"
+md_body_format_tooltip = "Áp dụng định dạng: **đậm** trở thành chữ in đậm.\nGiữ markup: hiển thị nguyên dạng **đậm**.\nLàm sạch markup: bỏ dấu Markdown và giữ kiểu của mẫu."
 md_heading_format_label = "Xử lý markup tiêu đề:"
 md_heading_format_tooltip = "Áp dụng định dạng: Ghi đè định dạng tiêu đề, cho phép in đậm cục bộ\nGiữ markup: Hiển thị markup nguyên dạng\nLàm sạch markup: Để định dạng style tiêu đề DOCX tự áp dụng\nLưu ý: Khi tiêu đề vốn đã in đậm, 'Áp dụng định dạng' giúp đạt hiệu ứng in đậm từng phần"
 md_table_header_format_label = "Xử lý markup tiêu đề bảng:"
-md_table_header_format_tooltip = "Áp dụng định dạng: biến **đậm** thành chữ đậm thật (có thể chồng với kiểu bảng). Giữ markup: hiển thị markup nguyên dạng. Làm sạch markup: bỏ dấu Markdown và để định dạng hàng đầu của kiểu bảng tự áp dụng. Kiểu bảng thường định dạng hàng đầu, vì vậy Làm sạch markup thường phù hợp hơn."
+md_table_header_format_tooltip = "Áp dụng định dạng: biến **đậm** thành chữ đậm thật (có thể chồng với kiểu bảng).\nGiữ markup: hiển thị markup nguyên dạng.\nLàm sạch markup: bỏ dấu Markdown và để định dạng hàng đầu của kiểu bảng tự áp dụng.\nKiểu bảng thường định dạng hàng đầu, vì vậy Làm sạch markup thường phù hợp hơn."
 heading_merge_mode_label = "Chế độ gộp tiêu đề và nội dung:"
 heading_merge_mode_tooltip = "Điều khiển việc gộp tiêu đề và dòng nội dung thường ngay bên dưới thành một đoạn\nChỉ gộp khi có dấu câu: Chỉ gộp khi tiêu đề kết thúc bằng dấu câu và dòng sau là nội dung thường (mặc định)\nGặp nội dung là gộp: Gộp nếu dòng sau là nội dung thường (không cần dấu câu)\nKhông bao giờ gộp: Tiêu đề và nội dung luôn được tách riêng\nLưu ý: danh sách/khối mã/bảng/trích dẫn/đường phân cách sẽ không được gộp"
 heading_merge_punctuation_label = "Dấu câu để gộp:"
@@ -797,6 +813,7 @@ section = "Thư mục con theo ngày"
 create_label = "Tạo thư mục con theo ngày"
 create_tooltip = "Tạo thư mục con theo ngày trong thư mục đầu ra\nVí dụ: Thư mục đầu ra/2025-01-06/file.pdf\nTùy chọn này áp dụng cho cả hai chế độ đầu ra"
 format_label = "Định dạng ngày:"
+format_tooltip = "Chọn định dạng ngày dùng để đặt tên thư mục con đầu ra.\nChỉ áp dụng khi bật thư mục con theo ngày."
 
 # 日期格式选项
 [settings.output.date_formats]
@@ -1842,7 +1859,7 @@ extended_headings = "Nhận dạng H7–H9. Khi tắt, 7–9 dấu # đầu dòn
 typed_endnotes = "Dùng nhãn như endnote: để phân biệt chú thích cuối với chú thích chân trang. Khi tắt, các nhãn đó được xử lý như chú thích chân trang thông thường."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Hỗ trợ nhiều hàng tiêu đề, tiêu đề hàng, bảng không có hàng tiêu đề và ô gộp. Xuất dấu và cấu trúc mở rộng của Structural Tables khi cần. Khi tắt, làm phẳng thành bảng Markdown thường và báo mất cấu trúc."
+structural_tables = "Giữ ô gộp, nhiều hàng tiêu đề, tiêu đề hàng và bảng không có tiêu đề.\nBật: dùng < và ^ thay cho Điền/Để trống khi xuất tài liệu và bảng tính thông thường. Lựa chọn đã lưu không đổi.\nTắt: áp dụng lựa chọn của từng thẻ đầu vào và thông báo cấu trúc bảng bị mất.\n\nNgoại lệ: tối ưu hóa “Công văn” xử lý bảng riêng."
 
 captions_references = "Xuất chú thích và tham chiếu chéo Number Suite khi có. Khi tắt, xuất văn bản thường và báo mất tham chiếu."
 extended_headings = "Xuất H7–H9. Khi tắt, các tiêu đề này chuyển thành H6 và báo mất cấp."
@@ -1865,7 +1882,7 @@ document_settings = "Trích xuất, đánh số và bảng trong tài liệu"
 from_markdown_title = "Markdown → DOCX"
 title = "Công văn"
 fields_label = "Định dạng trường công văn Trung Quốc"
-fields_help = "Định dạng phụ lục, nơi nhận bản sao, ngày văn bản, ngày phát hành và ghi chú trong mẫu DOCX; xóa các trường trống theo quy tắc.\n\nChỗ giữ chỗ phụ lục phải nằm trong một đoạn riêng ở nội dung hoặc ô bảng.\n\nKhông hỗ trợ đầu trang, chân trang, hộp văn bản hay vị trí giữa câu.\n\nKhi tắt, dùng cách điền thông thường và dấu phân cách danh sách chung."
+fields_help = "Định dạng phụ lục, nơi nhận bản sao, ngày văn bản, ngày phát hành và ghi chú trong mẫu DOCX; xóa các trường trống theo quy tắc.\n\nDanh sách có nhiều người ký, nơi nhận chính hoặc nơi nhận bản sao được tạm nối bằng dấu «、». Một nhận xét DOCX nhắc bạn kiểm tra bố cục hoặc dấu câu. Chuỗi văn bản đã viết sẵn được giữ nguyên dấu câu.\n\nChỗ giữ chỗ phụ lục phải nằm trong một đoạn riêng ở nội dung hoặc ô bảng.\n\nKhông hỗ trợ đầu trang, chân trang, hộp văn bản hay vị trí giữa câu.\n\nKhi tắt, dùng cách điền thông thường và dấu phân cách danh sách chung."
 
 attachment_alignment_label = "Căn chỉnh tên tài liệu đính kèm"
 attachment_alignment_spaces = "Khoảng trắng + thụt treo"
@@ -1881,3 +1898,33 @@ layout_settings = "Cài đặt trích xuất PDF và OCR"
 image_title = "Ảnh → Markdown"
 image_description = "Ảnh hóa đơn luôn dùng OCR với cài đặt ngôn ngữ OCR dùng chung."
 ocr_settings = "Cài đặt ngôn ngữ OCR dùng chung"
+
+[conversion_loss]
+settings_section = "Mất mát khi chuyển đổi"
+settings_label = "Đánh dấu bằng chú thích nội dung không được giữ nguyên đầy đủ"
+settings_help = "Thêm chú thích khi định dạng hỗ trợ. Khi tắt, chi tiết chuyển đổi vẫn báo mất mát. Việc chủ động bỏ định dạng không được coi là mất mát."
+formula_unconverted = "〔Không thể chuyển đổi công thức〕"
+formula_reason = "Không thể chuyển đổi cấu trúc công thức."
+formula_change = "Đã chèn dấu giữ chỗ; hãy kiểm tra tài liệu nguồn."
+note_formula_reason = "Không thể ghi phương trình trong chú thích này dưới dạng phương trình gốc của Word."
+note_formula_change = "Công thức được giữ lại dưới dạng văn bản LaTeX có thể đọc được."
+comment_failed = "Không thể thêm chú thích về mất mát; hãy xem chi tiết chuyển đổi."
+summary = "Đã chuyển đổi xong, có {count} mục không được giữ lại đầy đủ. Hãy xem chi tiết."
+summary_annotated = "Đã chuyển đổi xong, có {count} mục không được giữ lại đầy đủ. Đã thêm chú thích."
+original = "Nội dung gốc: {original}"
+comment = "{reason}\n{change}\n{location}\n{original}"
+math_as_text_reason = "Đầu ra bảng tính này không hiển thị phương trình toán học."
+math_as_text_change = "Phương trình được giữ lại dưới dạng văn bản LaTeX có thể đọc được."
+protected_cell_reason = "Ô trong mẫu được bảo vệ."
+protected_cell_change = "Giá trị mới không được ghi; ô hiện có được giữ nguyên."
+comment_failed_reason = "Không thể ghi chú thích vào ô."
+comment_failed_change = "Thông tin mất mát vẫn có trong chi tiết chuyển đổi."
+note_placeholder = "[Không thể đọc chú thích; hãy kiểm tra tài liệu nguồn]"
+formula_placeholder = "〔Không thể chuyển đổi công thức〕"
+csv_merge_reason = "CSV không thể biểu diễn các ô gộp."
+csv_merge_change = "Các giá trị hàng và cột hiện có được giữ nguyên mà không gộp ô."
+docx_paragraph = "Đoạn {paragraph}, mục {item}"
+docx_cell = "Bảng {table}, hàng {row}, cột {column}, đoạn {paragraph}, mục {item}"
+note_unreadable_reason = "Không thể đọc chú thích được tham chiếu."
+merge_failed_reason = "Không thể giữ nguyên cấu trúc ô gộp."
+merge_failed_change = "Văn bản trong ô và các ô gộp hiện có của mẫu được giữ nguyên."

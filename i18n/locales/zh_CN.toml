@@ -11,6 +11,8 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+runtime_folder_unavailable = "无法创建临时工作目录。请检查文件夹权限或安全软件设置后重试。"
+output_folder_unavailable = "无法安全使用所选保存目录。请检查权限或更换目录。"
 numbering_comments_unanchored = "所选方案的部分自动序号无法单独定位为文字，已跳过这些序号的批注；标题内容保留。"
 conversion_failed_detail = "转换失败。"
 note_syntax_invalid = "脚注或尾注标记格式有误，请核对引用和定义后重试。"
@@ -26,6 +28,7 @@ extension_loss_references = "题注和交叉引用已转换为可见文本。"
 extension_loss_tables = "合并单元格和表头结构已转换为普通 Markdown 表格。"
 route_catalog_failed = "无法加载可用操作，未启动本次任务。"
 conversion_failed = "转换失败。请打开失败详情查看诊断信息。"
+missing_embedded_resources = "部分嵌入文件或图片未找到。请检查源文件中的链接，以及文件未找到时的处理设置。"
 conversion_warning = "转换已完成，但有警告。"
 ocr_no_text = "OCR 未识别到文字；请对照原图确认是否为无文字内容。"
 ocr_degraded = "OCR 未正常完成（状态：{status}）；已保留可用结果。"
@@ -97,6 +100,11 @@ save_failed = "保存设置失败"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "正在保存结果…"
+phase_checking_output = "正在检查保存位置…"
+phase_preparing_workspace = "正在准备临时工作目录…"
+phase_converting = "正在转换文件…"
+phase_cancelling_hint = "已请求取消，正在安全结束当前步骤…"
 output_each_source = "分别保存到各文件所在目录"
 output_date_subfolder = "保存到日期子文件夹"
 task_warning_count = "有 {count} 条转换提示，请展开活动记录查看。"
@@ -139,6 +147,8 @@ example = "示例"
 
 # CLI帮助文本
 [cli.help]
+lang = "选择已提供翻译的命令行提示及受支持任务的输出语言；不会翻译文档正文。OCR 设为 auto 时，也按此语言选择识别模型。"
+doctor_output_dir = "检查指定输出目录是否支持安全保存"
 settings = "设置管理"
 settings_reset = "将设置还原为默认值"
 files = "输入文件路径（支持通配符，如 *.docx）"
@@ -347,10 +357,8 @@ batch_mode = "批量模式"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "新增标题序号使用文本编号"
-numbering_text_help = "将本次按所选方案新增的标题序号写为文本，优先于上方的标题序号输出方式。不会启用自动编号、修改已保存的输出方式或模板原有编号。默认开启。"
-numbering_comments_label = "为新增的文本标题序号添加批注"
-numbering_comments_help = "仅为本次实际新增的文本标题序号添加核对批注，不标记原有手写序号。默认开启。关闭文本编号时会取消并禁用此选项；重新开启后可自行勾选。无法精确定位的自定义 Markdown 序号会提示跳过批注。"
+numbering_comments_label = "为新增标题序号添加批注"
+numbering_comments_help = "仅为本次实际新增的标题序号添加核对批注。文本模式标记新增序号；DOCX 原生模式标记标题首个可见字符。不标记原有手写序号。"
 output_format = "优先模板类型"
 output_format_hint = "传入 Markdown 时优先显示此类型的模板；此设置本身不会改变转换输出格式。"
 # MD转文档序号设置
@@ -362,7 +370,6 @@ add_numbering_tooltip = "为输出 DOCX 的小标题新增层级序号"
 scheme_label = "默认序号方案:"
 scheme_tooltip = "选择用于小标题序号的方案"
 render_mode_label = "标题序号输出方式:"
-render_mode_tooltip = "设置小标题序号写入文本，还是使用 DOCX 原生多级列表"
 render_mode_text = "文本"
 render_mode_word_native = "DOCX 原生"
 render_mode_hint = "文本 = 将序号写入标题文本；DOCX 原生 = 使用 DOCX 多级列表自动编号"
@@ -445,7 +452,9 @@ section = "合并单元格导出"
 desc = "控制合并单元格在 Markdown 输出中的表示方式。"
 merge_strategy_label = "普通 Markdown 中的合并单元格:"
 
-merge_strategy_help = "仅用于普通 Markdown：填充会重复合并区域左上角文本（例如“标题 | 标题”）；留空会让被覆盖单元格为空（“标题 | ”）。\n\n开启 Structural Tables 输出时，合并单元格改用 <、^ 结构标记。"
+merge_strategy_help = "用于普通 Markdown：\n填充：重复合并区域左上角文本（标题 | 标题）。\n留空：被覆盖的单元格保持空白（标题 | ）。\n\n在“生成 Markdown”中开启 Structural Tables 后，改用 <、^ 标记；这里的选择仍会保留。\n例外：“公文”优化单独处理表格，不受此开关控制。"
+structural_active = "普通文档/表格导出：Structural Tables 已开启，填充/留空选择保留但暂不使用。"
+ordinary_active = "普通文档/表格导出：Structural Tables 已关闭，使用各传入选项卡的填充/留空选择。"
 [settings.table_export.strategies]
 fill = "填充"
 empty = "留空"
@@ -473,6 +482,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "为新增序号添加零宽字符标记"
+markers_tooltip = "为新生成的标题序号加上看不见的成对标记，便于 Number Suite 识别。默认关闭，不改变已有序号。"
 section = "小标题序号设置（文档转为Markdown）"
 remove = "默认清除原有文档小标题序号"
 remove_tooltip = "DOCX转MD时默认清除文档中已有的标题序号"
@@ -577,9 +588,13 @@ md_file_link_style_tooltip = "设置MD文件在MD文件中的链接格式\n\n•
 non_embed_section = "非嵌入链接处理"
 non_embed_desc = "设置 Markdown 输入中的普通链接在生成文档或表格时如何处理。"
 wiki_link_mode = "Wiki链接处理:"
-wiki_link_tooltip = "处理 [[link]] 或 [[link|text]]。保留原样：保留源标记；提取文本：仅保留显示文本；超链接：保留显示文本和目标，并在目标格式支持时生成可点击链接；完全移除：删除链接。"
+wiki_link_tooltip = "处理 [[link]] / [[link|text]]。\n\n保留原样: 保留完整的源链接标记。\n提取文本: 仅保留显示文本。\n提取地址: 仅保留源地址，包含锚点。\n完全移除: 删除整个链接，包含显示文本。\n超链接: 生成可点击链接；无法生成时使用回退方式。"
 markdown_link_mode = "Markdown链接处理:"
-markdown_link_tooltip = "处理 [text](url)。保留原样：保留源标记；提取文本：仅保留 text；超链接：保留文本和目标，并在目标格式支持时生成可点击链接；完全移除：删除链接。"
+markdown_link_tooltip = "处理 [text](url)。\n\n保留原样: 保留完整的源链接标记。\n提取文本: 仅保留显示文本。\n提取地址: 仅保留源地址，包含锚点。\n完全移除: 删除整个链接，包含显示文本。\n超链接: 生成可点击链接；无法生成时使用回退方式。"
+markdown_hyperlink_fallback_tooltip = "仅在“超链接”模式无法生成可点击链接时生效，包括 CSV 输出。\nMarkdown 链接的回退方式独立保存。\n\n保留原样: 保留完整的源链接标记。\n提取文本: 仅保留显示文本。\n提取地址: 仅保留源地址，包含锚点。"
+markdown_hyperlink_fallback = "Markdown超链接回退方式:"
+wiki_hyperlink_fallback_tooltip = "仅在“超链接”模式无法生成可点击链接时生效，包括 CSV 输出。\nWiki 链接的回退方式独立保存。\n\n保留原样: 保留完整的源链接标记。\n提取文本: 仅保留显示文本。\n提取地址: 仅保留源地址，包含锚点。"
+wiki_hyperlink_fallback = "Wiki超链接回退方式:"
 
 # 嵌入链接处理区域
 embed_section = "嵌入链接处理"
@@ -608,6 +623,7 @@ md_link = "Markdown链接"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "提取地址"
 keep = "保留原样"
 extract_text = "提取文本"
 remove = "完全移除"
@@ -684,7 +700,7 @@ md_body_format_tooltip = "应用格式：将 **粗体** 转为真正的粗体格
 md_heading_format_label = "小标题格式标记处理:"
 md_heading_format_tooltip = "应用格式：覆盖标题样式默认格式，可实现部分加粗效果。\n保留标记：保留标记原样显示。\n清理标记：去掉 Markdown 标记，让 DOCX 标题样式自然生效。\n注意：当标题样式本身为加粗时，“应用格式”可实现局部格式差异。"
 md_table_header_format_label = "表头格式标记处理:"
-md_table_header_format_tooltip = "应用格式：把 **粗体** 转为真正的粗体（可能与表格样式重叠）。保留标记：原样显示标记。清理标记：移除 Markdown 标记，让表格样式的首行格式自然生效。表格样式通常会设置首行格式，因此一般更适合使用“清理标记”。"
+md_table_header_format_tooltip = "应用格式：把 **粗体** 转为真正的粗体（可能与表格样式重叠）。\n保留标记：原样显示标记。\n清理标记：移除 Markdown 标记，让表格样式的首行格式自然生效。\n表格样式通常会设置首行格式，因此一般更适合使用“清理标记”。"
 heading_merge_mode_label = "标题+正文合并模式:"
 heading_merge_mode_tooltip = "控制小标题与紧邻下一行普通正文是否合并为同一段落\n有标点才合并：标题末尾有结束标点且下一行是普通正文时合并（默认）\n紧邻正文就合并：下一行是普通正文时合并（不要求结束标点）\n永不合并：标题与正文按普通解析分段\n注：列表/代码块/表格/引用/分隔线等不会被合并"
 heading_merge_punctuation_label = "合并触发标点:"
@@ -796,6 +812,7 @@ section = "日期子文件夹"
 create_label = "创建日期子文件夹"
 create_tooltip = "在输出目录下创建日期子文件夹\n例如: 输出目录/2025-01-06/文件.pdf\n此选项对两种输出模式都有效"
 format_label = "日期格式:"
+format_tooltip = "选择输出日期子文件夹的名称格式。\n仅在开启日期子文件夹时生效。"
 
 # 日期格式选项
 [settings.output.date_formats]
@@ -1839,7 +1856,7 @@ extended_headings = "识别 H7–H9；关闭时七至九个开头 # 保留为可
 typed_endnotes = "用 endnote: 等注释标签区分尾注与脚注；关闭时这些标签按普通脚注处理。"
 
 [settings.markdown_extensions.output_help]
-structural_tables = "支持多行表头、行标题列、无表头和合并单元格。需要时输出 Structural Tables 标记和扩展结构；关闭时扁平化为普通 Markdown 表格，并报告结构损失。"
+structural_tables = "保留合并单元格、多行表头、行标题列和无表头表格。\n开启：常规文档和表格导出改用 <、^ 标记，不使用“填充/留空”，但保留原选择。\n关闭：使用各传入选项卡的“填充/留空”，并提示丢失的表格结构。\n\n例外：“公文”优化单独处理表格，不受此开关控制。"
 
 captions_references = "将文档中的题注和交叉引用转换为 Number Suite 格式；关闭时保留显示文字，并提示引用关系未保留。"
 extended_headings = "输出 H7–H9；关闭时这些标题降为 H6，并报告层级损失。"
@@ -1878,3 +1895,33 @@ layout_settings = "PDF 提取与 OCR 设置"
 image_title = "图片 → Markdown"
 image_description = "发票图片始终使用 OCR，识别语言沿用共享 OCR 设置。"
 ocr_settings = "共享 OCR 语言设置"
+
+[conversion_loss]
+settings_section = "转换损失"
+settings_label = "用批注标出未完整保留的内容"
+settings_help = "在支持的格式中添加批注。关闭后，转换详情仍会提示损失。主动选择去除格式等处理不算损失。"
+formula_unconverted = "〔公式未能转换〕"
+formula_reason = "此公式的结构无法转换。"
+formula_change = "已插入占位提示，请核对源文档。"
+note_formula_reason = "此注释中的公式无法写入为 Word 原生公式。"
+note_formula_change = "公式已保留为可读的 LaTeX 文字。"
+comment_failed = "无法添加损失批注，请查看转换详情。"
+summary = "转换完成，有 {count} 处内容未完整保留。请查看转换详情。"
+summary_annotated = "转换完成，有 {count} 处内容未完整保留，已添加批注。"
+original = "原文：{original}"
+comment = "{reason}\n{change}\n{location}\n{original}"
+math_as_text_reason = "此表格输出不支持显示数学公式。"
+math_as_text_change = "公式已保留为可读的 LaTeX 文字。"
+protected_cell_reason = "模板单元格受到保护。"
+protected_cell_change = "未写入传入值，已保留原有单元格。"
+comment_failed_reason = "无法写入单元格批注。"
+comment_failed_change = "转换详情中仍会显示此项损失。"
+note_placeholder = "〔无法读取注释，请核对源文档〕"
+formula_placeholder = "〔公式未能转换〕"
+csv_merge_reason = "CSV 无法表示合并单元格。"
+csv_merge_change = "已保留现有行列中的值，不进行合并。"
+docx_paragraph = "第 {paragraph} 段，第 {item} 项"
+docx_cell = "表 {table}，第 {row} 行，第 {column} 列，第 {paragraph} 段，第 {item} 项"
+note_unreadable_reason = "无法读取引用的注释。"
+merge_failed_reason = "无法保留合并单元格结构。"
+merge_failed_change = "已保留单元格文字和模板中已有的合并关系。"

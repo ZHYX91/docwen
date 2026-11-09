@@ -47,8 +47,8 @@ def test_fa02_accepted_view_repairs_have_direct_guards() -> None:
     assert 'resolver = getattr(note_extractor, "get_noteref_text", None)' in renderer
     assert "else:\n                    _process_children(child)" in renderer
     assert 'elif tag == "noBreakHyphen":' in renderer
-    assert "return vanish is not None and _on_off_property_is_enabled(vanish)" in renderer
-    assert "if _run_is_hidden(run):\n            return" in renderer
+    assert "return resolve_run_formatting(run, parent).hidden" in renderer
+    assert "if _run_is_hidden(run, formatting_parent):\n            return" in renderer
     # The accepted view keeps authored XML occurrences. Text equality and a
     # shared paragraph anchor are not authority to discard another paragraph.
     textbox_tree = ast.parse(textbox)

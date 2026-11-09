@@ -231,6 +231,7 @@ class ExecutionCoordinator(QObject):
             self._info_area_vm.add_message(
                 _t("info_area.history_started", name=context["display_name"]),
                 "info",
+                event_kind="started",
                 show_location=False,
                 operation_id=task_id,
             )

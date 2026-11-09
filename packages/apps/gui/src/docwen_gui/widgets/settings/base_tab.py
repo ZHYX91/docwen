@@ -11,9 +11,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import QEvent, QPoint, QSize, Qt, Signal
+from PySide6.QtCore import QEvent, QPoint, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QCursor, QKeyEvent
 from PySide6.QtWidgets import (
     QAbstractSpinBox,
+    QApplication,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
@@ -83,18 +85,32 @@ def _prepare_combo(widget: QComboBox) -> None:
 
 
 class _SettingsInfoButton(QToolButton):
-    """Keyboard-operable settings help affordance."""
+    """Keyboard-operable help with a pointer-accessible hover popup."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._help_menu: QMenu | None = None
         self._hover_help: QFrame | None = None
+        self._help_sources: dict[int, QWidget] = {}
+        self._hover_close_timer = QTimer(self)
+        self._hover_close_timer.setSingleShot(True)
+        self._hover_close_timer.setInterval(180)
+        self._hover_close_timer.timeout.connect(self._close_hover_if_outside)
+        self._hover_focus_timer = QTimer(self)
+        self._hover_focus_timer.setSingleShot(True)
+        self._hover_focus_timer.setInterval(0)
+        self._hover_focus_timer.timeout.connect(self._close_hover_if_focus_left)
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.Type.ToolTip:
             if self._help_menu is None or not self._help_menu.isVisible():
+                if self._hover_help is not None and self._hover_help.isVisible():
+                    self._hover_close_timer.stop()
+                    event.accept()
+                    return True
                 self._close_hover_help()
                 popup = QFrame(self, Qt.WindowType.ToolTip)
+                popup.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
                 popup.setObjectName("settingsHelpPopup")
                 layout = QVBoxLayout(popup)
                 set_metric(layout, "setContentsMargins", 1, 1, 1, 1)
@@ -106,25 +122,95 @@ class _SettingsInfoButton(QToolButton):
                 position.setY(max(screen.top(), min(position.y(), screen.bottom() - popup.height() + 1)))
                 popup.move(position)
                 self._hover_help = popup
+                app = QApplication.instance()
+                if app is not None:
+                    app.installEventFilter(self)
                 popup.show()
             event.accept()
             return True
-        if event.type() in {QEvent.Type.Leave, QEvent.Type.Hide, QEvent.Type.MouseButtonPress, QEvent.Type.FocusOut}:
+        if event.type() == QEvent.Type.Leave:
+            self._hover_close_timer.start()
+        elif event.type() == QEvent.Type.Enter:
+            self._hover_close_timer.stop()
+        elif event.type() in {QEvent.Type.Hide, QEvent.Type.MouseButtonPress}:
             self._close_hover_help()
         return super().event(event)
 
+    def watch_tooltip_source(self, widget: QWidget) -> None:
+        sources = self._help_sources
+        key = id(widget)
+        if key in sources:
+            return
+        sources[key] = widget
+        # This callback only touches Python state, even if the button dies first.
+        widget.destroyed.connect(lambda _object=None, sources=sources, key=key: sources.pop(key, None))
+        widget.installEventFilter(self)
+
+    def _owns_hover_widget(self, widget: object) -> bool:
+        popup = self._hover_help
+        return isinstance(widget, QWidget) and (
+            widget is self
+            or id(widget) in self._help_sources
+            or (popup is not None and (widget is popup or popup.isAncestorOf(widget)))
+        )
+
+    def _close_hover_if_outside(self) -> None:
+        popup = self._hover_help
+        if popup is None:
+            return
+        position = QCursor.pos()
+        if any(
+            source.isVisible() and source.rect().contains(source.mapFromGlobal(position))
+            for source in (self, *self._help_sources.values())
+        ) or popup.frameGeometry().contains(position):
+            return
+        self._close_hover_help()
+
+    def _close_hover_if_focus_left(self) -> None:
+        if not self._owns_hover_widget(QApplication.focusWidget()):
+            self._close_hover_help()
+
     def _close_hover_help(self) -> None:
+        # Clear the pointer before hide events can re-enter the global filter.
         popup = getattr(self, "_hover_help", None)
         if popup is not None:
+            self._hover_help = None
+            self._hover_close_timer.stop()
+            self._hover_focus_timer.stop()
+            app = QApplication.instance()
+            if app is not None:
+                app.removeEventFilter(self)
             popup.hide()
             popup.deleteLater()
-            self._hover_help = None
 
     def eventFilter(self, watched, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.ToolTip:
+        popup = self._hover_help
+        if popup is not None:
+            owned = self._owns_hover_widget(watched)
+            if event.type() == QEvent.Type.Enter and owned:
+                self._hover_close_timer.stop()
+            elif event.type() == QEvent.Type.Leave and owned:
+                self._hover_close_timer.start()
+            elif event.type() == QEvent.Type.MouseButtonPress and not (
+                isinstance(watched, QWidget) and (watched is popup or popup.isAncestorOf(watched))
+            ):
+                self._close_hover_help()
+            elif event.type() == QEvent.Type.FocusOut and owned:
+                self._hover_focus_timer.start()
+            elif event.type() == QEvent.Type.ApplicationDeactivate or (
+                (event.type() in {QEvent.Type.Hide, QEvent.Type.WindowDeactivate} and watched is self.window())
+                or (event.type() == QEvent.Type.Hide and owned)
+            ):
+                self._close_hover_help()
+            elif (
+                isinstance(event, QKeyEvent)
+                and event.type() == QEvent.Type.KeyPress
+                and event.key() == Qt.Key.Key_Escape
+            ):
+                self._close_hover_help()
+                return True
+        if id(watched) in self._help_sources and event.type() == QEvent.Type.ToolTip:
             return self.event(event)
-        if event.type() in {QEvent.Type.Leave, QEvent.Type.Hide, QEvent.Type.MouseButtonPress, QEvent.Type.FocusOut}:
-            self._close_hover_help()
         return super().eventFilter(watched, event)
 
     def keyPressEvent(self, event) -> None:
@@ -185,7 +271,7 @@ def _create_info_button(
     parent: QWidget | None = None,
     *,
     accessible_name: str = "",
-) -> QToolButton:
+) -> _SettingsInfoButton:
     """Create one shared, focusable settings help affordance."""
     btn = _SettingsInfoButton(parent)
     btn.setObjectName(SETTINGS_INFO_BUTTON_OBJECT_NAME)
@@ -344,8 +430,8 @@ class BaseSettingsTab(QWidget):
         )
         if suffix is not None:
             QWidget.setTabOrder(widget, suffix)
-            widget.installEventFilter(suffix)
-            row.label.installEventFilter(suffix)
+            suffix.watch_tooltip_source(widget)
+            suffix.watch_tooltip_source(row.label)
         if peers is not None:
             peers.append(row)
         if isinstance(form, _SettingsFormLayout):
@@ -412,7 +498,7 @@ class BaseSettingsTab(QWidget):
         if tooltip:
             info = _create_info_button(tooltip, container, accessible_name=text)
             layout.addWidget(info, 0, Qt.AlignmentFlag.AlignVCenter)
-            checkbox.installEventFilter(info)
+            info.watch_tooltip_source(checkbox)
         layout.addStretch(1)
         return container, checkbox
 
@@ -563,7 +649,9 @@ class DynamicSettingsTab(BaseSettingsTab):
                 tooltip = field.get("tooltip", "")
 
                 if widget_type == "description":
-                    self.add_form_description(form, str(field.get("text", "") or ""))
+                    label = self.add_form_description(form, str(field.get("text", "") or ""))
+                    if field.get("object_name"):
+                        label.setObjectName(str(field["object_name"]))
                     continue
 
                 widget: QWidget | None = None

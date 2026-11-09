@@ -24,3 +24,19 @@ def output_yaml_labels(locale: str) -> dict[str, str]:
     table = load_locale_table(ResourceRegistry.default().locales_dir() / f"{locale}.toml")
     keys = table.get("yaml_keys", {})
     return {key: str(keys.get(key) or key) if isinstance(keys, Mapping) else key for key in ("title", "subtitle")}
+
+
+def output_loss_messages(locale: str) -> dict[str, str]:
+    """Load conversion notices for the output locale, never an arbitrary path."""
+    from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
+    from docwen_runtime.i18n import load_locale_table
+    from docwen_runtime.resources import ResourceRegistry
+
+    selected = locale if locale in SHIPPED_STYLE_LOCALES else DEFAULT_OUTPUT_LOCALE
+    table = load_locale_table(ResourceRegistry.default().locales_dir() / f"{selected}.toml")
+    messages = table.get("conversion_loss", {})
+    return (
+        {f"conversion_loss.{key}": value for key, value in messages.items() if isinstance(value, str)}
+        if isinstance(messages, Mapping)
+        else {}
+    )

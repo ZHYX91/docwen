@@ -322,7 +322,7 @@ def test_batch_details_do_not_blame_another_file(activity):
     assert "A is locked" in a.details and "A is locked" not in b.details
     assert "B needs review" in b.details and "B needs review" not in a.details
     assert a.status == "failed" and b.status == "warning"
-    assert any(row.details == "Batch notice" and not row.source_path for row in model.records)
+    assert any("Batch notice" in row.details and not row.source_path for row in model.records)
 
 
 def test_task_warnings_and_skip_reasons_survive_notice_eviction(activity):
@@ -382,3 +382,91 @@ def test_preflight_notices_keep_file_operation_reason_and_safe_copy(qtbot):
     )
     assert "private" not in unsafe.to_text() and "secret" not in unsafe.to_text()
     feedback.stop_all_timers()
+
+
+@pytest.mark.parametrize("locale", ["zh_CN", "en_US", "ar_SA"])
+def test_activity_filters_lifecycle_notices_and_labels_real_warnings(qapp, locale):
+    from docwen_gui.i18n import get_locale, set_locale, t
+
+    previous = get_locale()
+    set_locale(locale)
+    feedback = InfoAreaViewModel()
+    try:
+        history = TaskHistory()
+        model = ActivityRecordsModel(history, feedback)
+        history.remember({"request_id": "warn", "file_path": "/source.md"})
+        feedback.add_message("Started source.md", "info", operation_id="warn", event_kind="started")
+        history.record("warn", "/source.md", "completed", warnings=("Merged cells flattened", "Low confidence"))
+        feedback.add_message("Completed source.md", "warning", operation_id="warn", event_kind="completed")
+        for warning in ("Merged cells flattened", "Low confidence"):
+            feedback.add_message(warning, "warning", operation_id="warn")
+        record = model.records[0]
+        assert "Started source.md" not in record.details
+        assert "Completed source.md" not in record.details
+        assert record.warning_messages == ("Merged cells flattened", "Low confidence")
+        assert record.status_label == f"⚠ {t('activity.warning')}"
+        for warning in record.warning_messages:
+            assert record.details.count(f"⚠ {t('activity.warning')}: {warning}") == 1
+        feedback.clear_history()
+        assert model.records[0].details == record.details
+    finally:
+        feedback.stop_all_timers()
+        set_locale(previous)
+
+
+def test_activity_keeps_substantive_info_and_ignores_warning_toned_completion(qapp):
+    history, feedback = TaskHistory(), InfoAreaViewModel()
+    model = ActivityRecordsModel(history, feedback)
+    history.remember({"request_id": "done", "file_path": "/source.md"})
+    history.record("done", "/source.md", "completed")
+    feedback.add_message("Useful OCR explanation", "info", operation_id="done")
+    feedback.add_message("Completed", "warning", operation_id="done", event_kind="completed")
+    assert model.records[0].status == "completed"
+    assert model.records[0].warning_messages == ()
+    assert "Useful OCR explanation" in model.records[0].details
+    assert "Completed" not in model.records[0].details
+    feedback.stop_all_timers()
+
+
+def test_activity_output_selection_is_scoped_to_record_and_defaults_to_primary(activity):
+    history, feedback, _, dialog = activity
+    for request_id, primary in (("first", "/first.docx"), ("second", "/second.docx")):
+        history.remember({"request_id": request_id, "file_path": f"/{request_id}.md"})
+        history.record(
+            request_id,
+            f"/{request_id}.md",
+            "completed",
+            output_path=primary,
+            output_paths=("/shared.md", primary),
+        )
+    dialog.show_records(operation_id="first")
+    assert dialog.outputs.currentData() == "/first.docx"
+    dialog.outputs.setCurrentIndex(dialog.outputs.findData("/shared.md"))
+    feedback.add_message("Unrelated notice", "info")
+    assert dialog.outputs.currentData() == "/shared.md"
+    dialog.show_records(operation_id="second")
+    assert dialog.outputs.currentData() == "/second.docx"
+    opened = []
+    dialog.location_requested.connect(lambda path, parent: opened.append((path, parent)))
+    dialog.open_output.click()
+    assert opened == [("/second.docx", True)]
+
+
+def test_activity_and_main_output_actions_use_the_same_reveal_route(main_window, monkeypatch):
+    from docwen_gui import path_actions
+    from docwen_gui.path_actions import PathActionResult
+
+    monkeypatch.setattr("docwen_gui.main_window.sys.platform", "win32")
+    revealed = []
+    monkeypatch.setattr(
+        path_actions,
+        "reveal_path",
+        lambda path: revealed.append(path) or PathActionResult(success=True, precise=True),
+    )
+    primary = "/output/报告 with spaces.docx"
+    main_window._task_history.remember({"request_id": "reveal", "file_path": "/source.md"})
+    main_window._task_history.record("reveal", "/source.md", "completed", output_path=primary)
+    main_window._handle_navigation_request(primary)
+    dialog = main_window._show_activity_records(operation_id="reveal")
+    dialog.open_output.click()
+    assert revealed == [primary, primary]

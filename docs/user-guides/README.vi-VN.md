@@ -169,9 +169,11 @@ Trang **OCR và hình ảnh** quản lý nhận dạng chung và xuất hình �
 
 Tùy chọn tối ưu chỉ xuất hiện khi có tính năng phù hợp với cả ngôn ngữ giao diện hiện tại và định dạng đầu vào đã nhận dạng, đồng thời có đủ phần mềm chuyển đổi cần thiết. Trang cài đặt tương ứng cũng chỉ hiện khi có tối ưu phù hợp. Hiện tại, tối ưu tích hợp cho công văn Trung Quốc và hóa đơn Trung Quốc chỉ áp dụng cho giao diện tiếng Trung giản thể (`zh_CN`). Với ngôn ngữ khác, các tùy chọn và trang này bị ẩn, giá trị mặc định đã lưu không được áp dụng nhưng vẫn được giữ để dùng lại khi chuyển về ngôn ngữ phù hợp. Quy tắc này điều khiển lựa chọn trong GUI, không thay đổi tác vụ được chỉ định rõ qua CLI hoặc Machine.
 
-Với mọi ngôn ngữ giao diện, **Văn bản đầu vào → Đánh số tiêu đề (Markdown → Tài liệu)** cho phép dùng văn bản cho số tiêu đề mới thêm và thêm nhận xét rà soát cho chúng. Hai tùy chọn này không tự bật tính năng đánh số tiêu đề.
+Với mọi ngôn ngữ giao diện, **Văn bản đầu vào → Đánh số tiêu đề (Markdown → Tài liệu)** có một lựa chọn chế độ xuất: **Văn bản** ghi số mới vào văn bản tiêu đề; **Gốc của DOCX** dùng đánh số đa cấp của Word. **Thêm chú thích cho số tiêu đề mới** là tùy chọn độc lập, dùng được ở cả hai chế độ. Ở chế độ văn bản, chú thích đánh dấu số mới thêm; ở chế độ gốc, chú thích đánh dấu ký tự hiển thị đầu tiên của tiêu đề. Cần bật riêng tính năng thêm số tiêu đề.
 
 Khi có tối ưu phù hợp, **Công văn** và **Hóa đơn** có trang cài đặt riêng. **Tài liệu → Markdown** đặt lựa chọn nhận dạng ban đầu cho công văn; **Markdown → Tài liệu** cấu hình định dạng trường mẫu, kèm trợ giúp về phần đính kèm, nơi nhận bản sao, ngày và ghi chú. Hóa đơn có lựa chọn riêng cho **PDF / OFD → Markdown** và **Ảnh → Markdown**. Các giá trị mặc định chỉ thay đổi lựa chọn ban đầu cho tệp tương thích, không tự phân loại tệp. **Áp dụng / OK** để lưu, **Hủy** để bỏ thay đổi chưa áp dụng.
+
+Riêng việc định dạng trường công văn tiếng Trung trong **Markdown → Tài liệu** do `template_fill.gongwen_fields_enabled` điều khiển (mặc định bật), không phụ thuộc ngôn ngữ giao diện hay đầu ra tác vụ. Ẩn trang cài đặt Công văn không tắt chức năng này. Chức năng định dạng các trường tiếng Trung cố định trong mẫu, không điều khiển nhận dạng công văn khi chuyển Tài liệu → Markdown.
 
 **Phạm vi áp dụng:** Tính năng định dạng trường chuyên biệt hướng đến công văn Trung Quốc, còn tối ưu trích xuất hóa đơn hướng đến các mẫu hóa đơn Trung Quốc. Các tệp khác vẫn dùng được các đường chuyển đổi thông thường.
 
@@ -397,7 +399,7 @@ Hỗ trợ liên kết có thể bấm trong Markdown -> DOCX:
 | :--- | :--- |
 | **Trích xuất ảnh** | Nếu bật, ảnh trong tài liệu sẽ được xuất ra thư mục và chèn link ảnh vào file MD. |
 | **OCR ảnh** | Nhận dạng chữ trong ảnh. Tùy cài đặt vị trí đầu ra OCR, lưu vào file Markdown riêng cho mỗi ảnh hoặc file Markdown chính. |
-| **Tối ưu theo loại tài liệu** | Áp dụng tối ưu cho loại tài liệu đã chọn, chẳng hạn trích xuất trường từ công văn tiếng Trung. Tắt tùy chọn này để dùng chuyển đổi tiêu chuẩn. |
+| **Tối ưu theo loại tài liệu** | Áp dụng tối ưu cho loại tài liệu đã chọn, chẳng hạn trích xuất trường từ công văn tiếng Trung. Tắt tùy chọn này để dùng chuyển đổi tiêu chuẩn. Các tối ưu xuất công văn Trung Quốc và hóa đơn Trung Quốc tích hợp chỉ xuất hiện trong GUI khi dùng giao diện tiếng Trung giản thể (`zh_CN`) và có tuyến đầu vào tương thích. Giới hạn GUI này không ngăn việc chọn rõ `gongwen` hoặc `invoice_cn` qua CLI/Machine. |
 | **Xóa số tiêu đề gốc** | Nếu bật, xoá số trước tiêu đề phụ (ví dụ: "一、", "（一）", "1.", ...). |
 | **Thêm số tiêu đề mới** | Nếu bật, tự thêm số theo cấp tiêu đề (có thể cấu hình). |
 

@@ -90,6 +90,7 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
     "general": (
         ("gui", "language"),
         ("gui", "output_language"),
+        ("gui", "loss_comments"),
         ("gui", "theme"),
         ("gui", "font_size_preset"),
         ("gui", "scale_percent"),
@@ -134,6 +135,7 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("conversion_defaults", "document", "to_md_table_merge_export_strategy"),
         ("conversion_defaults", "document", "to_md_remove_numbering"),
         ("conversion_defaults", "document", "to_md_add_numbering"),
+        ("conversion_defaults", "document", "export_numbering_markers"),
         ("conversion_defaults", "document", "to_md_default_scheme"),
     ),
     "spreadsheet": (
@@ -242,8 +244,6 @@ def _normalize_priority(values: object, allowed_backends: tuple[str, ...]) -> li
 
 
 def _normalize_settings_config(config: SettingsConfig) -> SettingsConfig:
-    if not config.text.gongwen_numbering_text:
-        config.text.gongwen_numbering_comments = False
     for key, allowed_backends in _SPECIAL_CONVERSION_ALLOWED_BACKENDS.items():
         setattr(
             config.software_priority,
@@ -465,13 +465,6 @@ class SettingsViewModel(QObject):
             if not hasattr(section_obj, key):
                 return
             value = _normalize_field_value(section, key, value)
-            comments_cleared = False
-            if section == SECTION_TEXT:
-                if key == "gongwen_numbering_comments" and not self._config.text.gongwen_numbering_text:
-                    value = False
-                elif key == "gongwen_numbering_text" and value is False:
-                    comments_cleared = self._config.text.gongwen_numbering_comments
-                    self._config.text.gongwen_numbering_comments = False
             old = getattr(section_obj, key)
             if old == value:
                 return
@@ -479,8 +472,6 @@ class SettingsViewModel(QObject):
             self._config.mark_dirty(section)
             dirty = self._recompute_dirty()
         self.config_changed.emit(section, key, value)
-        if comments_cleared:
-            self.config_changed.emit(section, "gongwen_numbering_comments", False)
         if dirty != self._is_dirty:
             self._is_dirty = dirty
             self.dirty_state_changed.emit(dirty)
@@ -968,12 +959,14 @@ class SettingsViewModel(QObject):
         conversion = raw.get("conversion", {})
         if isinstance(conversion, dict):
             config.gui.output_language = str(conversion.get("output_locale") or "zh_CN")
+            config.gui.loss_comments = bool(conversion.get("loss_comments", True))
 
         # gui section
         gui = raw.get("gui", {})
         if isinstance(gui, dict):
             config.gui = GUIConfig(
                 output_language=config.gui.output_language,
+                loss_comments=config.gui.loss_comments,
                 language=gui.get("language", {}).get("locale", "zh_CN")
                 if isinstance(gui.get("language"), dict)
                 else "zh_CN",
@@ -1031,7 +1024,7 @@ class SettingsViewModel(QObject):
             template_fill.get("gongwen_fields_enabled", True) if isinstance(template_fill, dict) else True
         )
         config.text.gongwen_numbering_comments = (
-            template_fill.get("gongwen_numbering_comments", True) if isinstance(template_fill, dict) else True
+            template_fill.get("gongwen_numbering_comments", False) if isinstance(template_fill, dict) else False
         )
         config.text.gongwen_numbering_text = (
             template_fill.get("gongwen_numbering_text", True) if isinstance(template_fill, dict) else True
@@ -1117,6 +1110,12 @@ class SettingsViewModel(QObject):
                 markdown_link_mode=non_embed.get("markdown_mode", "hyperlink")
                 if isinstance(non_embed, dict)
                 else "hyperlink",
+                wiki_hyperlink_fallback=non_embed.get("wiki_hyperlink_fallback", "keep")
+                if isinstance(non_embed, dict)
+                else "keep",
+                markdown_hyperlink_fallback=non_embed.get("markdown_hyperlink_fallback", "keep")
+                if isinstance(non_embed, dict)
+                else "keep",
                 wiki_embed_image_mode=embed.get("wiki_image_mode", "embed") if isinstance(embed, dict) else "embed",
                 markdown_embed_image_mode=embed.get("markdown_image_mode", "embed")
                 if isinstance(embed, dict)
@@ -1387,6 +1386,7 @@ class SettingsViewModel(QObject):
         gui = config.gui
         put("gui.language.locale", gui.language)
         put("conversion.output_locale", gui.output_language)
+        put("conversion.loss_comments", bool(gui.loss_comments))
         put("gui.theme.default_theme", gui.theme)
         put("gui.font.size_preset", gui.font_size_preset)
         put("gui.appearance.scale_percent", gui.scale_percent)
@@ -1403,6 +1403,8 @@ class SettingsViewModel(QObject):
         put("link.format.md_file_link_style", link.md_file_link_style)
         put("link.non_embed_links.wiki_mode", link.wiki_link_mode)
         put("link.non_embed_links.markdown_mode", link.markdown_link_mode)
+        put("link.non_embed_links.wiki_hyperlink_fallback", link.wiki_hyperlink_fallback)
+        put("link.non_embed_links.markdown_hyperlink_fallback", link.markdown_hyperlink_fallback)
         put("link.embed_links.wiki_image_mode", link.wiki_embed_image_mode)
         put("link.embed_links.markdown_image_mode", link.markdown_embed_image_mode)
         put("link.embed_links.md_file_mode", link.embed_md_file_mode)
@@ -1561,6 +1563,7 @@ class SettingsViewModel(QObject):
                 "to_md_enable_ocr",
                 "to_md_remove_numbering",
                 "to_md_add_numbering",
+                "export_numbering_markers",
                 "to_md_default_scheme",
                 "to_md_optimization",
                 "to_md_table_merge_export_strategy",

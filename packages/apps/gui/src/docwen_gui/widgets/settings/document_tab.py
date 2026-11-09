@@ -16,6 +16,7 @@ from ...view_models.settings_vm import (
 from .base_tab import DynamicSettingsTab
 from .content_controls import DocumentContentControls
 from .numbering_editors import NumberingEditors
+from .table_export_status import TableExportStatus
 
 
 class DocumentTab(DynamicSettingsTab):
@@ -74,6 +75,17 @@ class DocumentTab(DynamicSettingsTab):
                         ),
                     },
                     {
+                        "key": "export_numbering_markers",
+                        "type": "checkbox",
+                        "text": t(
+                            "settings.document.numbering.markers", "Mark newly added numbers with zero-width characters"
+                        ),
+                        "tooltip": t(
+                            "settings.document.numbering.markers_tooltip",
+                            "Wrap newly generated heading numbers in paired U+2060 markers compatible with Number Suite. Off by default; existing numbering and resolved-v4 recovery stay unchanged.",
+                        ),
+                    },
+                    {
                         "key": "to_md_default_scheme",
                         "type": "combobox",
                         "label": t("settings.document.numbering.scheme_label", "Default numbering scheme:"),
@@ -95,13 +107,17 @@ class DocumentTab(DynamicSettingsTab):
                         "label": t("settings.table_export.merge_strategy_label", "Merge Cell Export Strategy:"),
                         "tooltip": t(
                             "settings.table_export.merge_strategy_help",
-                            "For ordinary Markdown only: Fill repeats the merged anchor text; Empty leaves covered "
-                            "cells blank. With Structural Tables output enabled, merges use < and ^ structure markers.",
+                            "For ordinary Markdown:\nFill: repeat the top-left cell’s text (Title | Title).\nEmpty: leave covered cells blank (Title | ).\n\nWhen enabled in “Generate Markdown”, Structural Tables uses < and ^ instead. Your choice here stays saved.\nException: “Official documents” optimization handles tables separately.",
                         ),
                         "items": [
                             (t("settings.table_export.strategies.fill", "Fill"), "fill"),
                             (t("settings.table_export.strategies.empty", "Empty"), "empty"),
                         ],
+                    },
+                    {
+                        "key": "table_export_status",
+                        "type": "description",
+                        "object_name": "tableExportStatus",
                     },
                 ],
             },
@@ -109,6 +125,7 @@ class DocumentTab(DynamicSettingsTab):
         self._vm = view_model
         super().__init__(None, "conversion_defaults", "document", schema)
         self._load_values()
+        self._table_export_status = TableExportStatus.attach(self, self._vm)
         self._wire_numbering_controls()
         self._content_controls = DocumentContentControls(self, self._vm)
         self._numbering_editors = NumberingEditors(self, self._vm, self._refresh_scheme_combo_items)
@@ -143,6 +160,9 @@ class DocumentTab(DynamicSettingsTab):
         scheme = self._widgets.get("to_md_default_scheme")
         if isinstance(add_numbering, QCheckBox) and isinstance(scheme, QComboBox):
             add_numbering.toggled.connect(scheme.setEnabled)
+        markers = self._widgets.get("export_numbering_markers")
+        if isinstance(add_numbering, QCheckBox) and isinstance(markers, QCheckBox):
+            add_numbering.toggled.connect(markers.setEnabled)
         self._sync_numbering_controls()
 
     def _sync_numbering_controls(self) -> None:
@@ -150,3 +170,6 @@ class DocumentTab(DynamicSettingsTab):
         scheme = self._widgets.get("to_md_default_scheme")
         if isinstance(add_numbering, QCheckBox) and isinstance(scheme, QComboBox):
             scheme.setEnabled(add_numbering.isChecked())
+        markers = self._widgets.get("export_numbering_markers")
+        if isinstance(add_numbering, QCheckBox) and isinstance(markers, QCheckBox):
+            markers.setEnabled(add_numbering.isChecked())

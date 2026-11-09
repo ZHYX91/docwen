@@ -42,6 +42,11 @@ DOCX_TO_MD_OPTIONS_SCHEMA: dict = {
             "description": "Add heading numbering to output using the specified scheme.",
             "x-docwen-status": "implemented",
         },
+        "export_numbering_markers": {
+            "type": "boolean",
+            "description": "Wrap newly added heading numbers in paired U+2060 markers for Number Suite recognition.",
+            "x-docwen-status": "implemented",
+        },
         "numbering_scheme": {
             "type": "string",
             "enum": ["gongwen_standard", "hierarchical_standard", "hierarchical_h2_start", "legal_standard"],

@@ -169,9 +169,11 @@ Abra as configurações pelo ícone na parte inferior da janela ou com **Ctrl+,*
 
 Uma otimização só aparece quando está disponível para o idioma atual da interface e o formato de entrada detectado, com o software de conversão necessário. Sua página de configurações também aparece apenas quando ela é aplicável. As otimizações integradas para documentos oficiais chineses e faturas chinesas atualmente só se aplicam à interface em chinês simplificado (`zh_CN`). Nos outros idiomas, suas opções e páginas ficam ocultas e os padrões salvos não são aplicados; essas preferências são mantidas para quando você voltar ao idioma compatível. Essa regra controla as escolhas da GUI, sem alterar tarefas definidas explicitamente pela CLI ou pelo Machine.
 
-Em todos os idiomas, **Texto de entrada → Numeração (MD para DOCX)** permite usar texto nos novos números de títulos e adicionar comentários de revisão a eles. Essas opções não ativam a numeração de títulos por si mesmas.
+Em todos os idiomas, **Texto de entrada → Numeração (MD para DOCX)** oferece uma única escolha de modo de saída: **Texto** escreve os novos números no texto do título; **Nativa do DOCX** usa a numeração multinível do Word. **Comentar novos números de títulos** é independente e funciona nos dois modos. No modo texto, os comentários marcam o número adicionado; no modo nativo, o primeiro caractere visível do título. Ative a adição de números aos títulos separadamente.
 
 Quando a otimização é aplicável, **Documentos oficiais** e **Faturas** têm páginas próprias. Para documentos oficiais, **Documento → Markdown** define a escolha inicial de reconhecimento e **Markdown → Documento** a formatação de campos do modelo, com ajuda sobre anexos, destinatários em cópia, datas e notas. Faturas têm padrões separados para **PDF / OFD → Markdown** e **Imagem → Markdown**. Eles apenas definem a escolha inicial de arquivos compatíveis, sem identificá-los automaticamente. **Aplicar / OK** salva; **Cancelar** descarta alterações não aplicadas.
+
+Separadamente, `template_fill.gongwen_fields_enabled` (ativado por padrão) controla a formatação de campos de documentos oficiais chineses em **Markdown → Documento**, independentemente do idioma da interface ou da saída. Ocultar a página Documentos oficiais não desativa essa função. Ela formata campos chineses fixos do modelo e não controla o reconhecimento Documento → Markdown.
 
 **Escopo:** A formatação especializada de campos é voltada a documentos oficiais chineses, e a otimização da extração de faturas é voltada a formatos de faturas chinesas. Outros arquivos continuam podendo usar as conversões normais.
 
@@ -395,7 +397,7 @@ Suporta links clicáveis em Markdown -> DOCX:
 | :--- | :--- |
 | **Extrair Imagens** | Se marcado, as imagens no documento são extraídas para a pasta de saída, e links de imagem são inseridos no arquivo MD. |
 | **OCR** | Reconhece texto nas imagens. Conforme a configuração de saída do OCR, salva em um arquivo Markdown por imagem ou no arquivo Markdown principal. |
-| **Otimização** | Aplica uma otimização para o tipo de documento escolhido, como extrair campos de documentos oficiais chineses. Se desativada, usa a conversão padrão. |
+| **Otimização** | Aplica uma otimização para o tipo de documento escolhido, como extrair campos de documentos oficiais chineses. Se desativada, usa a conversão padrão. As otimizações integradas de exportação de documentos oficiais chineses e faturas chinesas só são oferecidas na GUI com a interface em chinês simplificado (`zh_CN`) e uma rota de entrada compatível. Essa limitação da GUI não impede a seleção explícita de `gongwen` ou `invoice_cn` pela CLI/Machine. |
 | **Remover num.** | Se marcado, remove números antes dos subtítulos (por exemplo, "一、", "（一）", "1.", etc.) e os converte em texto de título puro. |
 | **Add num.** | Se marcado, adiciona automaticamente números com base nos níveis de cabeçalho (esquema de numeração pode ser configurado nas configurações). |
 

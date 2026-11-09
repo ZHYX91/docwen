@@ -8,8 +8,8 @@ formatting plugins from ``mistune.plugins.formatting`` provide:
 - ``^superscript^`` — via plugin ``superscript``
 - ``~subscript~``   — via plugin ``subscript``
 
-We also provide a custom ``plugin_underline`` for ``<u>text</u>`` inline
-HTML support (rendered as underline in AST mode).
+The inline HTML formatting plugin accepts the finite set of tags emitted by
+the DOCX Markdown writer; arbitrary HTML remains literal content.
 
 The module exposes ``parse_markdown_text()`` as the Markdown plugin's parser
 entry point.
@@ -36,8 +36,14 @@ from mistune.plugins.formatting import (
 )
 from mistune.plugins.table import table_in_list, table_in_quote
 
-from docwen_core.links import markdown_table_cell_ranges, markdown_table_delimiter
+from docwen_core.links import (
+    is_markdown_source_escaped,
+    markdown_source_owners,
+    markdown_table_cell_ranges,
+    markdown_table_delimiter,
+)
 from docwen_core.markdown_extensions import MarkdownExtensions
+from docwen_core.markdown_math import DISPLAY_MATH_START, match_formula
 from docwen_plugin_markdown.callouts import plugin_callout_headers
 
 _EXTENDED_ATX_HEADING_TRIM = re.compile(r"(\s+|^)#+\s*$")
@@ -47,76 +53,142 @@ _STRUCTURAL_TABLE_BLOCK = (
 )
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Custom plugin: <u>underline</u>
+# Custom plugin: semantic inline HTML formatting
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def plugin_underline(md: mistune.Markdown) -> None:
-    """Mistune v3 plugin: inline ``<u>text</u>`` → underline token.
+_HTML_FORMAT_TYPES = {
+    "u": "underline",
+    "sub": "subscript",
+    "sup": "superscript",
+    "del": "strikethrough",
+    "mark": "mark",
+    "strong": "strong",
+    "em": "emphasis",
+}
+_HTML_FORMAT_TAG = r"(?i:<(?:u|sub|sup|del|mark|strong|em)>)"
+_HTML_FORMAT_BOUNDARY = re.compile(r"(?i:</?(?:u|sub|sup|del|mark|strong|em)>)")
 
-    Registers a parse rule that captures ``<u>...</u>`` and emits a
-    ``underline`` token in AST mode.
+
+def _html_format_end(source: str, start: int, tag: str, protected: list[tuple[int, int]]) -> tuple[int, int] | None:
+    """Balance tags without consuming code, formulas or link metadata."""
+    stack = [tag]
+    position = start
+    owner_index = 0
+    while match := _HTML_FORMAT_BOUNDARY.search(source, position):
+        token = match.group(0)
+        position = match.end()
+        while owner_index < len(protected) and protected[owner_index][1] <= match.start():
+            owner_index += 1
+        if owner_index < len(protected) and protected[owner_index][0] <= match.start():
+            position = protected[owner_index][1]
+            continue
+        if is_markdown_source_escaped(source, match.start()):
+            continue
+        name = token.strip("</>").lower()
+        if token.startswith("</"):
+            if name != stack[-1]:
+                return None
+            stack.pop()
+            if not stack:
+                return match.start(), match.end()
+        else:
+            stack.append(name)
+            # Bound recursive inline parsing just as Mistune bounds emphasis.
+            if len(stack) > 20:
+                return None
+    return None
+
+
+def plugin_inline_html_formatting(md: mistune.Markdown) -> None:
+    """Parse supported HTML tags before generic ``inline_html`` consumes them.
+
+    Named groups are required: Mistune combines plugin patterns into one
+    scanner. A numeric group is not local to this rule. The explicit outer
+    emphasis form also accepts ``中**<u>文</u>**中`` without treating the
+    semantic HTML container as punctuation at the emphasis boundary.
     """
 
-    PATTERN = r"<u>(.*?)</u>"
-
-    def parse_underline(inline, m, state):
-        text = m.group(1)
-        new_state = state.copy()
-        new_state.src = text
-        children = inline.render(new_state)
-        state.append_token({"type": "underline", "children": children})
-        return m.end()
+    def parse_html_format(inline, match, state):
+        opening = match.group("docwen_html_format_open")
+        tag = opening[1:-1].lower()
+        # Keep source ownership in the existing Core lexer rather than adding
+        # separate approximations for code, math and link destinations here.
+        ownership = state.env.setdefault("docwen_html_format_owners", {})
+        if state.src not in ownership:
+            ownership[state.src] = [
+                (owner.start, owner.end)
+                for owner in markdown_source_owners(state.src)
+                if not (owner.kind == "literal" and _HTML_FORMAT_BOUNDARY.fullmatch(state.src[owner.start : owner.end]))
+            ]
+        end = _html_format_end(state.src, match.end(), tag, ownership[state.src])
+        if end is None:
+            return None
+        content_end, token_end = end
+        marker = match.group("docwen_html_format_emphasis")
+        if marker:
+            if not state.src.startswith(marker, token_end):
+                return None
+            token_end += len(marker)
+        child_state = state.copy()
+        child_state.src = state.src[match.end() : content_end]
+        token = {"type": _HTML_FORMAT_TYPES[tag], "children": inline.render(child_state)}
+        if marker:
+            if len(marker) >= 2:
+                token = {"type": "strong", "children": [token]}
+            if len(marker) % 2:
+                token = {"type": "emphasis", "children": [token]}
+        state.append_token(token)
+        return token_end
 
     md.inline.register(
-        "underline",
-        PATTERN,
-        parse_underline,
-        before="linebreak",
+        "docwen_html_format",
+        rf"(?P<docwen_html_format_emphasis>\*{{1,3}}|_{{1,3}})?(?P<docwen_html_format_open>{_HTML_FORMAT_TAG})",
+        parse_html_format,
+        before="emphasis",
     )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Custom plugin: standalone single-line display math
+# Custom plugin: shared dollar-math grammar
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def plugin_single_line_block_math(md: mistune.Markdown) -> None:
-    """Parse a standalone ``$$formula$$`` line as ``block_math``.
+def plugin_math(md: mistune.Markdown) -> None:
+    """Use the source scanner's math boundaries in every Markdown container."""
 
-    Mistune's built-in math plugin only treats the three-line form as display
-    math.  The maintained parser contract also accepts the common single-line form; if
-    it falls through to the inline parser, the two outer dollar signs become
-    literal text in Word.  Registering this as a block rule keeps fenced code
-    untouched and gives both spellings the same AST contract.
-    """
-
-    pattern = r"^ {0,3}\$\$(?P<single_line_math_text>[^\n]+?)\$\$[ \t]*$"
-
-    def parse_single_line_block_math(block, match, state):
+    def append_formula(state, formula):
         state.append_token(
             {
-                "type": "block_math",
-                "raw": match.group("single_line_math_text").strip(),
+                "type": "inline_math" if formula["is_inline"] else "block_math",
+                "raw": formula["latex"],
+                "_math_source": state.src[formula["start"] : formula["end"]],
             }
         )
-        return match.end() + 1
 
-    md.block.register(
-        "single_line_block_math",
-        pattern,
-        parse_single_line_block_math,
-        before="block_math",
-    )
-    # Both display spellings are blocks inside native quote/list containers.
-    # Otherwise Mistune emits block_math as a paragraph's inline child, which
-    # has no block owner and is silently skipped by the inline renderer.
+    def parse_block_math(block, match, state):
+        start = match.end() - 2
+        formula = match_formula(state.src, start, standalone=True)
+        if formula is None:
+            return None
+        append_formula(state, formula)
+        end = formula["end"]
+        line_end = state.src.find("\n", end)
+        return len(state.src) if line_end < 0 else line_end + 1
+
+    def parse_inline_math(inline, match, state):
+        formula = match_formula(state.src, match.start())
+        if formula is None:
+            return None
+        append_formula(state, formula)
+        return formula["end"]
+
+    md.block.register("block_math", DISPLAY_MATH_START.pattern, parse_block_math, before="list")
+    md.inline.register("inline_math", r"\$", parse_inline_math, before="codespan")
     for rules_name in ("block_quote_rules", "list_rules"):
         rules = getattr(md.block, rules_name)
         if "block_math" not in rules:
             md.block.insert_rule(rules, "block_math", before="list")
-        if "single_line_block_math" not in rules:
-            md.block.insert_rule(rules, "single_line_block_math", before="block_math")
 
 
 def plugin_extended_atx_headings(md: mistune.Markdown) -> None:
@@ -343,10 +415,10 @@ def create_extended_markdown(
     """Create a mistune Markdown instance with the requested plugins.
 
     Includes:
-    - Built-in: table, footnotes, strikethrough, task_lists, math
+    - Built-in: table, footnotes, strikethrough, task_lists
     - Formatting: mark (``==text==``), insert (``^^text^^``),
       superscript (``^text^``), subscript (``~text~``)
-    - Custom: underline (``<u>text</u>``)
+    - Custom: inline HTML formats emitted by the DOCX Markdown writer
 
     Returns:
         A mistune ``Markdown`` instance configured with ``renderer="ast"``
@@ -360,13 +432,12 @@ def create_extended_markdown(
         "footnotes",
         "strikethrough",
         "task_lists",
-        "math",
+        plugin_math,
         _mark,
         _insert,
         _superscript,
         _subscript,
-        plugin_single_line_block_math,
-        plugin_underline,
+        plugin_inline_html_formatting,
         plugin_source_breaks,
         plugin_callout_headers,
         partial(plugin_obsidian_comment_blocks, hide_content=dialect.structural_tables),

@@ -55,4 +55,5 @@ def test_spreadsheet_cross_boundary_wiki_pipe_keeps_outer_table_context(
             rows = list(csv.reader(handle))
         row = rows[1]
         assert len(row) == 2
-    assert row == ["[[target.md|Shown]]", "ok"]
+    expected = "Shown" if target_format == "xlsx" and wiki_mode == "hyperlink" else "[[target.md|Shown]]"
+    assert row == [expected, "ok"]

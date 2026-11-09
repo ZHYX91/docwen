@@ -200,7 +200,7 @@ class TestMarkdownExportSemanticsDefaults:
 class TestLinkRuntimeConfig:
     """``LinkRuntimeConfig`` is complete and immutable."""
 
-    def test_defaults_match_old_constants(self) -> None:
+    def test_defaults_preserve_unresolved_links_and_embeds(self) -> None:
         cfg = LinkRuntimeConfig()
         assert cfg.max_depth == 3
         assert cfg.non_embed_wiki_mode == "hyperlink"
@@ -210,7 +210,9 @@ class TestLinkRuntimeConfig:
         assert cfg.embed_md_file_mode == "embed"
         assert cfg.search_dirs == (".", "assets", "images", "attachments")
         assert cfg.detect_circular is True
-        assert cfg.file_not_found_mode == "placeholder"
+        assert cfg.file_not_found_mode == "keep"
+        assert cfg.wiki_hyperlink_fallback == "keep"
+        assert cfg.markdown_hyperlink_fallback == "keep"
         assert cfg.circular_reference_mode == "placeholder"
         assert cfg.max_depth_reached_mode == "placeholder"
         assert cfg.auto_link_bare_url is False

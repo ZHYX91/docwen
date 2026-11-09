@@ -324,3 +324,12 @@ evidence manifest, and any external handoff independently bind the receipt's nor
 and lowercase SHA-256. Those outer records may also repeat source/package identities for convenience, but no digest
 edge points back from the receipt to an object that already hashes the receipt. A receipt self-hash or mutual-hash
 cycle is invalid.
+
+### Source-native post-render proofreading
+
+The source-native DOCX capability optionally advertises a closed `options.proofread` object with four
+independent optional boolean rule switches. Its normative discovery fixture is
+`fixtures/valid/machine.source-proofread-capability.response.json`; semantics and omission/configuration
+precedence are specified in [Machine protocol](../docs/specs/machine-protocol-v2.md#optional-source-document-proofreading--可选生成文档校对).
+This is a discoverable capability option, not a Machine envelope/version or Bundle change. The frozen
+resolved-v4 input/capability contract is unchanged and rejects this source-only option.

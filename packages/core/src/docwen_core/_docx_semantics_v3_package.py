@@ -58,6 +58,7 @@ from docwen_core.docx_standalone_caption_occurrence import (
     standalone_caption_occurrence_map_xml,
 )
 from docwen_core.docx_table_roles import TABLE_ROLES_NAMESPACE, canonical_table_roles_xml
+from docwen_core.file_io import replace_authorized_file
 
 _RELATIONSHIPS_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/relationships"
 _CONTENT_TYPES_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/content-types"
@@ -620,7 +621,7 @@ def _rewrite_zip(
                 info.compress_type = ZIP_DEFLATED
                 info.external_attr = 0o600 << 16
                 output.writestr(info, data[name])
-        os.replace(temporary, path)
+        replace_authorized_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

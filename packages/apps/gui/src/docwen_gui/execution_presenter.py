@@ -31,6 +31,14 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
         if diagnostic.code == "MD2DOCX-NUMBERING-COMMENTS-UNANCHORED":
             messages.append(_t("main_window.numbering_comments_unanchored"))
             continue
+        if diagnostic.code == "MD2DOCX-EMBED-SOURCE-MISSING":
+            messages.append(
+                _t(
+                    "main_window.missing_embedded_resources",
+                    "Some embedded files or images were not found. Check the source links and missing-file settings.",
+                )
+            )
+            continue
         extension_messages = {
             "docwen.conversion.markdown_extension.typed_endnotes.flattened": _t("main_window.extension_loss_endnotes"),
             "docwen.conversion.markdown_extension.extended_headings.flattened": _t(
@@ -114,6 +122,16 @@ def _localized_failure_message(error: object | None = None, *, details: bool = F
         return _t("main_window.note_template_incompatible")
     if stable_code == "OUTPUT_ATOMIC_PUBLISH_UNSUPPORTED":
         return _t("main_window.output_filesystem_unsupported")
+    if stable_code == "WORKSPACE_ROOT_UNAVAILABLE":
+        return _t(
+            "main_window.runtime_folder_unavailable",
+            "Cannot prepare the temporary work folder. Check folder permissions or security software and retry.",
+        )
+    if stable_code == "OUTPUT_PREFLIGHT_FAILED":
+        return _t(
+            "main_window.output_folder_unavailable",
+            "Cannot safely use the selected save folder. Check permissions or choose another folder.",
+        )
     if stable_code == "MERGE-FORMULA-CACHE-MISSING":
         return _t("main_window.merge_formula_cache_missing")
     return f"{base} [{stable_code}]" if stable_code else base
@@ -201,6 +219,7 @@ class ExecutionPresenter(QObject):
             self._info_area_vm.add_message(
                 _t("info_area.history_completed", name=context.get("display_name", Path(file_path).name)),
                 completion_tone,
+                event_kind="completed",
                 show_location=bool(output_path),
                 file_path=output_path or file_path,
                 navigate_file_path=output_path or "",
@@ -493,6 +512,7 @@ class ExecutionPresenter(QObject):
                 cancelled=cancelled_count,
             ),
             tone,
+            event_kind="completed",
             show_location=bool(guide_output_path),
             file_path=guide_output_path,
             navigate_file_path=guide_output_path,

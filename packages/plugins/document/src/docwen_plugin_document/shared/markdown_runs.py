@@ -15,7 +15,9 @@ from docwen_core.docx_parsing.format_features import (
     StyleDetectorConfig,
     detect_run_style_type,
 )
+from docwen_core.docx_parsing.style_properties import resolve_run_formatting
 from docwen_core.docx_parsing.xml_ns import NS_W
+from docwen_core.markdown_math import match_formula
 from docwen_core.text.markdown_literal import escape_markdown_literal
 from docwen_plugin_document.shared.word_metadata import run_metadata_is_valid
 
@@ -79,6 +81,42 @@ class _RenderedRunPart(str):
         return part
 
 
+class _RenderedMathPart(str):
+    """Keep an explicit math fragment identifiable at Markdown join seams."""
+
+    multiline_display: bool
+
+    def __new__(cls, text: str, *, multiline_display: bool):
+        part = super().__new__(cls, text)
+        part.multiline_display = multiline_display
+        return part
+
+
+def _join_math_parts(parts: list[str]) -> str:
+    """Join final Markdown fragments with the authoritative math grammar.
+
+    A required separator is visible whitespace. Literal/code fragments and
+    formatting wrappers are already encoded, so their actual boundaries are
+    checked rather than their unformatted source text.
+    """
+    joined: list[str] = []
+    for part in parts:
+        if not part:
+            continue
+        if isinstance(part, _RenderedMathPart) and joined:
+            previous = joined[-1]
+            if part.multiline_display and not previous.endswith("\n\n"):
+                joined.append("\n\n")
+            elif match_formula(previous + part, len(previous)) is None:
+                joined.append(" ")
+        if joined and isinstance(previous := joined[-1], _RenderedMathPart):
+            formula = match_formula(previous + part, standalone=previous.multiline_display)
+            if formula is None or formula["end"] != len(previous):
+                joined.append("\n\n" if previous.multiline_display else " ")
+        joined.append(part)
+    return "".join(joined)
+
+
 def _append_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, str]]) -> None:
     if parts:
         previous = parts[-1]
@@ -91,6 +129,68 @@ def _append_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, s
 def append_literal_run_text(parts: list[str], raw_text: str) -> None:
     """Join plain run fragments before encoding their possible Markdown syntax."""
     _append_wrapped(parts, raw_text, [])
+
+
+_HTML_WRAPPERS = {
+    "*": ("<em>", "</em>"),
+    "_": ("<em>", "</em>"),
+    "**": ("<strong>", "</strong>"),
+    "__": ("<strong>", "</strong>"),
+    "***": ("<strong><em>", "</em></strong>"),
+    "___": ("<strong><em>", "</em></strong>"),
+    "~~": ("<del>", "</del>"),
+    "==": ("<mark>", "</mark>"),
+    "^": ("<sup>", "</sup>"),
+    "~": ("<sub>", "</sub>"),
+}
+
+
+def join_markdown_parts(parts: list[str]) -> str:
+    """Keep configured markers where valid, using HTML at unsafe boundaries.
+
+    Adjacent different emphasis runs, intraword underscores and formatted
+    whitespace cannot always be represented by independent Markdown delimiter
+    pairs. HTML is an equivalent syntax for these cases, without adding spaces
+    to the document or changing the character formatting.
+    """
+    result: list[str] = []
+
+    def visible(part: str) -> str:
+        return part.raw_text if isinstance(part, _RenderedRunPart) else part
+
+    def emphasis_boundary(part: str, *, first: bool) -> bool:
+        if not isinstance(part, _RenderedRunPart) or not part.wrappers:
+            return False
+        marker = part.wrappers[-1][0 if first else 1]
+        return bool(marker) and marker[0] in "*_"
+
+    for index, part in enumerate(parts):
+        if not isinstance(part, _RenderedRunPart) or not part.wrappers:
+            result.append(part)
+            continue
+        raw = part.raw_text
+        before = visible(parts[index - 1])[-1:] if index else ""
+        after = visible(parts[index + 1])[:1] if index + 1 < len(parts) else ""
+        unsafe = bool(raw) and (raw[0].isspace() or raw[-1].isspace())
+        if any(prefix in {"^", "~"} for prefix, _ in part.wrappers) and any(char.isspace() for char in raw):
+            unsafe = True
+        if emphasis_boundary(part, first=True):
+            marker = part.wrappers[-1][0]
+            unsafe = unsafe or (
+                bool(before and raw) and before.isalnum() and (marker.startswith("_") or not raw[0].isalnum())
+            )
+            unsafe = unsafe or (
+                bool(after and raw) and after.isalnum() and (marker.startswith("_") or not raw[-1].isalnum())
+            )
+            unsafe = unsafe or (index > 0 and emphasis_boundary(parts[index - 1], first=False))
+            unsafe = unsafe or (index + 1 < len(parts) and emphasis_boundary(parts[index + 1], first=True))
+        if unsafe:
+            wrappers = [_HTML_WRAPPERS.get(prefix, (prefix, suffix)) for prefix, suffix in part.wrappers]
+            body = _render_inline_code_span(raw) if part.inline_code else escape_markdown_literal(raw)
+            result.append(_apply_wrappers(body, wrappers))
+        else:
+            result.append(part)
+    return _join_math_parts(result)
 
 
 def _longest_backtick_run(text: str) -> int:
@@ -151,14 +251,8 @@ def _extended_pair(kind: str, config: DocxMarkdownSyntaxConfig) -> tuple[str, st
     return ("~", "~") if config.subscript == "extended" else ("<sub>", "</sub>")
 
 
-def _on_off_property_is_enabled(element: Any) -> bool:
-    value = element.get(f"{{{NS_W}}}val")
-    return value is None or value.strip(" \t\r\n").casefold() not in {"0", "false", "off", "no", "none"}
-
-
-def _run_is_hidden(run: Any) -> bool:
-    vanish = run.find(f"{{{NS_W}}}rPr/{{{NS_W}}}vanish")
-    return vanish is not None and _on_off_property_is_enabled(vanish)
+def _run_is_hidden(run: Any, parent: Any = None) -> bool:
+    return resolve_run_formatting(run, parent).hidden
 
 
 def _format_wrappers(
@@ -194,7 +288,11 @@ def _format_wrappers(
             wrappers.append(_marker_pair("bold", syntax_config))
     if has_highlight:
         wrappers.append(_extended_pair("highlight", syntax_config))
-    return wrappers
+    # HTML containers enclose Markdown emphasis, so their angle brackets do
+    # not invalidate emphasis delimiters next to ordinary prose.
+    return [pair for pair in wrappers if not pair[0].startswith("<")] + [
+        pair for pair in wrappers if pair[0].startswith("<")
+    ]
 
 
 def append_formatted_run_text(
@@ -205,10 +303,12 @@ def append_formatted_run_text(
     syntax_config: DocxMarkdownSyntaxConfig,
     style_detector_config: StyleDetectorConfig | None = None,
     run_style_type: str | None = None,
+    parent: Any = None,
 ) -> None:
     """Append one OOXML run's text using an explicit Markdown syntax policy.
 
-    Formatting is read from the run's ``w:rPr`` element.  Adjacent runs with
+    Formatting resolves character styles and direct ``w:rPr`` properties
+    relative to the paragraph's presentation baseline. Adjacent runs with
     identical wrappers are coalesced so callers do not emit constructs such as
     ``**Hello ****World**``.  ``syntax_config`` is deliberately required: a
     request-scoped caller must not fall back to mutable process-wide policy.
@@ -219,46 +319,17 @@ def append_formatted_run_text(
         run: The OOXML ``w:r`` element containing optional run properties.
         syntax_config: Markdown markers selected for the current request.
     """
-    r_pr = run.find(f"{{{NS_W}}}rPr")
-    is_bold = False
-    is_italic = False
-    is_underline = False
-    is_strikethrough = False
-    is_superscript = False
-    is_subscript = False
-    has_highlight = False
-    has_shading = False
-    if r_pr is not None:
-        bold = r_pr.find(f"{{{NS_W}}}b")
-        italic = r_pr.find(f"{{{NS_W}}}i")
-        underline = r_pr.find(f"{{{NS_W}}}u")
-        strike = r_pr.find(f"{{{NS_W}}}strike")
-        is_bold = bold is not None and _on_off_property_is_enabled(bold)
-        is_italic = italic is not None and _on_off_property_is_enabled(italic)
-        is_underline = underline is not None and _on_off_property_is_enabled(underline)
-        is_strikethrough = strike is not None and _on_off_property_is_enabled(strike)
-        vert = r_pr.find(f"{{{NS_W}}}vertAlign")
-        if vert is not None:
-            val = vert.get(f"{{{NS_W}}}val")
-            if val == "superscript":
-                is_superscript = True
-            elif val == "subscript":
-                is_subscript = True
-
-        highlight = r_pr.find(f"{{{NS_W}}}highlight")
-        if highlight is not None:
-            highlight_value = highlight.get(f"{{{NS_W}}}val")
-            if highlight_value and highlight_value.lower() not in ("none", ""):
-                has_highlight = True
-
-        shading = r_pr.find(f"{{{NS_W}}}shd")
-        if shading is not None:
-            fill = (shading.get(f"{{{NS_W}}}fill") or "").upper()
-            value = (shading.get(f"{{{NS_W}}}val") or "").lower()
-            effective = style_detector_config or StyleDetectorConfig()
-            has_shading = (effective.wps_shading_enabled and fill in _WPS_RUN_SHADING_GRAY_COLORS) or (
-                effective.word_shading_enabled and value.startswith("pct") and fill in {"FFFFFF", "AUTO", ""}
-            )
+    formatting = resolve_run_formatting(run, parent, structural_character_style=run_style_type in {"code", "quote"})
+    effective = style_detector_config or StyleDetectorConfig()
+    has_shading = (
+        effective.wps_shading_enabled
+        and formatting.shading_value not in {"nil", "none"}
+        and formatting.shading_fill in _WPS_RUN_SHADING_GRAY_COLORS
+    ) or (
+        effective.word_shading_enabled
+        and formatting.shading_value.startswith("pct")
+        and formatting.shading_fill in {"FFFFFF", "AUTO", ""}
+    )
 
     # Quote character styles can promote a whole paragraph to a blockquote,
     # but Markdown has no inline quote marker.  Mapping them to shading would
@@ -268,13 +339,13 @@ def append_formatted_run_text(
     if has_shading:
         outer_wrappers = _format_wrappers(
             has_shading=False,
-            has_highlight=has_highlight,
-            is_superscript=is_superscript,
-            is_subscript=is_subscript,
-            is_strikethrough=is_strikethrough,
-            is_underline=is_underline,
-            is_bold=is_bold,
-            is_italic=is_italic,
+            has_highlight=formatting.highlight,
+            is_superscript=formatting.superscript,
+            is_subscript=formatting.subscript,
+            is_strikethrough=formatting.strike,
+            is_underline=formatting.underline,
+            is_bold=formatting.bold,
+            is_italic=formatting.italic,
             syntax_config=syntax_config,
         )
         _append_inline_code_wrapped(parts, raw_text, outer_wrappers)
@@ -282,13 +353,13 @@ def append_formatted_run_text(
 
     wrappers = _format_wrappers(
         has_shading=False,
-        has_highlight=has_highlight,
-        is_superscript=is_superscript,
-        is_subscript=is_subscript,
-        is_strikethrough=is_strikethrough,
-        is_underline=is_underline,
-        is_bold=is_bold,
-        is_italic=is_italic,
+        has_highlight=formatting.highlight,
+        is_superscript=formatting.superscript,
+        is_subscript=formatting.subscript,
+        is_strikethrough=formatting.strike,
+        is_underline=formatting.underline,
+        is_bold=formatting.bold,
+        is_italic=formatting.italic,
         syntax_config=syntax_config,
     )
     _append_wrapped(parts, raw_text, wrappers)
@@ -297,8 +368,9 @@ def append_formatted_run_text(
 def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
     """Resolve the real URL from a ``<w:hyperlink>`` element.
 
-    Uses ``para.part.rels[rel_id].target_ref`` to resolve the
-    relationship id stored in ``r:id``.
+    Uses ``para.part.rels[rel_id].target_ref`` for ``r:id`` links. Without
+    a relationship, a separate conservative reader may project an ordinary
+    heading fragment after checking the untrusted hint and physical target.
 
     Args:
         para: A python-docx Paragraph object.
@@ -310,7 +382,9 @@ def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
     r_ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
     rel_id = hyperlink_element.get(f"{{{r_ns}}}id")
     if not rel_id:
-        return None
+        from docwen_plugin_document.shared.heading_navigation import resolve_ordinary_heading_target
+
+        return resolve_ordinary_heading_target(para, hyperlink_element)
 
     try:
         part = para.part
@@ -332,14 +406,14 @@ def _is_transparent_proof_marker(element: Any) -> bool:
     )
 
 
-def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> tuple[str, int] | None:
+def _complex_note_reference(children: list[Any], start: int, resolver: Any, parent: Any) -> tuple[str, int] | None:
     """Read Word's split-run NOTEREF form without swallowing unrelated content.
 
     Unsupported switches, nested fields, mixed boundary runs and malformed
     fields retain their ordinary visible cached projection.
     """
     q = f"{{{NS_W}}}"
-    if _run_is_hidden(children[start]) or not run_metadata_is_valid(children[start]):
+    if _run_is_hidden(children[start], parent) or not run_metadata_is_valid(children[start]):
         return None
     first = [node for node in children[start] if node.tag != q + "rPr"]
     if len(first) != 1 or first[0].tag != q + "fldChar" or first[0].get(q + "fldCharType") != "begin":
@@ -352,7 +426,7 @@ def _complex_note_reference(children: list[Any], start: int, resolver: Any) -> t
         # markers contribute no visible content or field instruction.
         if _is_transparent_proof_marker(run):
             continue
-        if run.tag != q + "r" or _run_is_hidden(run) or not run_metadata_is_valid(run):
+        if run.tag != q + "r" or _run_is_hidden(run, parent) or not run_metadata_is_valid(run):
             return None
         payload = [node for node in run if node.tag != q + "rPr"]
         if len(payload) == 1 and payload[0].tag == q + "fldChar":
@@ -426,10 +500,12 @@ def _render_paragraph_run_segments(
     literal_text: bool = False,
     escape_literal_text: bool = True,
     text_transform: Callable[[str], str] | None = None,
+    style_parent: Any = None,
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
     element = root_element if root_element is not None else getattr(para, "_p", para)
+    formatting_parent = style_parent if style_parent is not None else para
     spans = (reference_spans or {}) if not literal_text else {}
     covered_nodes = _reference_covered_nodes(element, spans)
 
@@ -439,6 +515,14 @@ def _render_paragraph_run_segments(
     def _append(text: str) -> None:
         if text:
             _parts().append(text)
+
+    def _append_math(text: str) -> None:
+        formula = match_formula(text) if not literal_text else None
+        if formula is None or formula["end"] != len(text):
+            _append(text)
+            return
+        multiline = not formula["is_inline"] and "\n" in text
+        _append(_RenderedMathPart(text, multiline_display=multiline))
 
     def _handle_break(child: Any) -> None:
         if text_transform is not None:
@@ -458,7 +542,7 @@ def _render_paragraph_run_segments(
         segments = [[]]
         try:
             _process_children(child)
-            hyperlink_segments = ["".join(parts) for parts in segments]
+            hyperlink_segments = [join_markdown_parts(parts) for parts in segments]
         finally:
             segments = outer_segments
         for index, text in enumerate(hyperlink_segments):
@@ -485,7 +569,11 @@ def _render_paragraph_run_segments(
 
             if tag == "r":
                 resolver = getattr(note_extractor, "get_noteref_text", None) if not literal_text else None
-                resolved = _complex_note_reference(children, index, resolver) if resolver is not None else None
+                resolved = (
+                    _complex_note_reference(children, index, resolver, formatting_parent)
+                    if resolver is not None
+                    else None
+                )
                 if resolved is not None:
                     reference, consumed_through = resolved
                     _append(reference)
@@ -501,7 +589,7 @@ def _render_paragraph_run_segments(
                         _is_transparent_proof_marker(run)
                         or (
                             run.tag == f"{{{NS_W}}}r"
-                            and not _run_is_hidden(run)
+                            and not _run_is_hidden(run, formatting_parent)
                             and run_metadata_is_valid(run)
                             and all(node.tag in {f"{{{NS_W}}}rPr", f"{{{NS_W}}}t"} for node in run)
                         )
@@ -522,7 +610,7 @@ def _render_paragraph_run_segments(
                 pass  # skip tracked deletions
             elif tag in ("oMath", "oMathPara"):
                 if math_renderer is not None:
-                    _append(math_renderer(child) or "")
+                    _append_math(math_renderer(child) or "")
                 else:
                     # Pass through raw text; formula rendering is external.
                     for text_element in child.iter(f"{{{NS_W}}}t"):
@@ -604,12 +692,13 @@ def _render_paragraph_run_segments(
             run,
             syntax_config=syntax_config,
             style_detector_config=style_detector_config,
-            run_style_type=resolve_run_style_type(run, para, style_detector_config),
+            run_style_type=resolve_run_style_type(run, formatting_parent, style_detector_config),
+            parent=formatting_parent,
         )
 
     def _handle_run(run: Any) -> None:
         w_ns = NS_W
-        if _run_is_hidden(run):
+        if _run_is_hidden(run, formatting_parent):
             return
         text_parts: list[str] = []
 
@@ -658,7 +747,7 @@ def _render_paragraph_run_segments(
         _flush_text()
 
     _process_children(element)
-    return ["".join(parts) for parts in segments]
+    return [join_markdown_parts(parts) for parts in segments]
 
 
 def render_paragraph_runs(
@@ -674,6 +763,7 @@ def render_paragraph_runs(
     literal_text: bool = False,
     escape_literal_text: bool = True,
     text_transform: Callable[[str], str] | None = None,
+    style_parent: Any = None,
 ) -> str:
     """Render paragraph XML children in order, producing Markdown text.
 
@@ -687,6 +777,8 @@ def render_paragraph_runs(
         note_extractor: Optional NoteExtractor for inline note references.
         preserve_formatting: If True, emit ``**bold**`` etc.
         syntax_config: Inline Markdown syntax policy owned by this request.
+        style_parent: Document-owning parent for raw XML from another part.
+            It supplies styles only, never relationships for that other part.
 
     Returns:
         Markdown string for the paragraph content.
@@ -704,6 +796,7 @@ def render_paragraph_runs(
         literal_text=literal_text,
         escape_literal_text=escape_literal_text,
         text_transform=text_transform,
+        style_parent=style_parent,
     )[0]
 
 

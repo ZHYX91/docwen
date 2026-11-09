@@ -58,7 +58,7 @@ from docwen_runtime.templates import (
     is_canonical_template_id,
     validate_template_path,
 )
-from docwen_runtime.workspace.manager import TypedInputIntegrityError
+from docwen_runtime.workspace.manager import TypedInputIntegrityError, WorkspaceRootUnavailable
 
 if TYPE_CHECKING:
     from docwen_runtime._execution_context import RuntimeExecutionContext
@@ -303,6 +303,16 @@ class TaskManager:
                     input_bytes=input_ref.size_bytes,
                 ),
             )
+        except WorkspaceRootUnavailable as exc:
+            return self._known_failure_result(
+                state,
+                ConversionErrorInfo(
+                    error_type="conversion_failed",
+                    message=str(exc),
+                    diagnostic_code=exc.diagnostic_code,
+                ),
+                metrics=ConversionMetrics(input_bytes=input_ref.size_bytes),
+            )
         except TypedInputIntegrityError as exc:
             return self._known_failure_result(
                 state,
@@ -373,6 +383,10 @@ class TaskManager:
 
         self._validate_route_options(state.request, route_spec)
         state.request = self._resolve_template_options(state.request)
+        self._emit(
+            state.on_event,
+            make_task_progress(state.task_id, state.next_sequence(), 0.0, "Preparing output folder"),
+        )
         self._finalizer.preflight(
             state.request.output_policy,
             input_path=state.input_ref.path,
@@ -386,10 +400,16 @@ class TaskManager:
             conversion_output=self._is_conversion_output(state),
             audit_output=OutputManifestWriter.audit_enabled(state.request),
         )
+        state.token.check()
+        self._emit(
+            state.on_event,
+            make_task_progress(state.task_id, state.next_sequence(), 0.0, "Preparing temporary workspace"),
+        )
         workspace = self._workspaces.create(
             state.task_id,
             state.input_ref.path,
             tuple(state.request.input_refs),
+            cancellation=state.token.view(),
         )
         state.runtime_context = self._build_execution_context(
             state,
@@ -947,6 +967,11 @@ class TaskManager:
         """Return ids of currently active tasks."""
         with self._cancellation_lock:
             return list(self._active_task_ids)
+
+    @property
+    def workspace_root(self) -> str:
+        """Return the one runtime-owned workspace parent for internal diagnostics."""
+        return self._workspaces.root_dir
 
     # ── Helpers ─────────────────────────────────────────────────────
 

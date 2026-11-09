@@ -103,8 +103,10 @@ def test_all_visible_link_fields_round_trip_through_apply(
     combo_updates = (
         ("_image_link_style", "image_link_style", "markdown_link"),
         ("_md_file_link_style", "md_file_link_style", "wiki_link"),
-        ("_wiki_link_mode", "wiki_link_mode", "extract_text"),
+        ("_wiki_link_mode", "wiki_link_mode", "extract_address"),
         ("_md_link_mode", "markdown_link_mode", "remove"),
+        ("_wiki_hyperlink_fallback", "wiki_hyperlink_fallback", "extract_text"),
+        ("_markdown_hyperlink_fallback", "markdown_hyperlink_fallback", "extract_address"),
         ("_wiki_embed_image_mode", "wiki_embed_image_mode", "keep"),
         ("_md_embed_image_mode", "markdown_embed_image_mode", "extract_text"),
         ("_embed_md_file_mode", "embed_md_file_mode", "remove"),
@@ -119,6 +121,8 @@ def test_all_visible_link_fields_round_trip_through_apply(
         "link.md_file_link_style",
         "link.wiki_link_mode",
         "link.markdown_link_mode",
+        "link.wiki_hyperlink_fallback",
+        "link.markdown_hyperlink_fallback",
         "link.wiki_embed_image_mode",
         "link.markdown_embed_image_mode",
         "link.embed_md_file_mode",
@@ -134,8 +138,10 @@ def test_all_visible_link_fields_round_trip_through_apply(
         "image_link_style": "markdown_link",
         "md_file_link_style": "wiki_link",
     }
-    assert link["non_embed_links"]["wiki_mode"] == "extract_text"
+    assert link["non_embed_links"]["wiki_mode"] == "extract_address"
     assert link["non_embed_links"]["markdown_mode"] == "remove"
+    assert link["non_embed_links"]["wiki_hyperlink_fallback"] == "extract_text"
+    assert link["non_embed_links"]["markdown_hyperlink_fallback"] == "extract_address"
     assert link["embed_links"] == {
         "wiki_image_mode": "keep",
         "markdown_image_mode": "extract_text",
@@ -151,9 +157,34 @@ def test_all_visible_link_fields_round_trip_through_apply(
     fresh = fresh_view_model.config.link
     assert fresh.image_link_style == "markdown_link"
     assert fresh.md_file_link_style == "wiki_link"
-    assert fresh.wiki_link_mode == "extract_text"
+    assert fresh.wiki_link_mode == "extract_address"
     assert fresh.markdown_link_mode == "remove"
+    assert fresh.wiki_hyperlink_fallback == "extract_text"
+    assert fresh.markdown_hyperlink_fallback == "extract_address"
     assert fresh.wiki_embed_image_mode == "keep"
     assert fresh.markdown_embed_image_mode == "extract_text"
     assert fresh.embed_md_file_mode == "remove"
     assert fresh.max_depth == 7
+
+
+def test_reset_link_restores_both_hyperlink_fallbacks(qapp, tmp_path: Path) -> None:
+    from docwen_gui.view_models.settings_vm import SECTION_LINK
+    from docwen_gui.widgets.settings.link_tab import LinkTab
+
+    view_model, config_port = _new_view_model(tmp_path / "user")
+    tab = LinkTab(view_model)
+    tab.set_combo_data(tab._wiki_hyperlink_fallback, "extract_text")
+    tab.set_combo_data(tab._markdown_hyperlink_fallback, "extract_address")
+    tab.set_combo_data(tab._wiki_link_mode, "extract_address")
+    assert view_model.apply_settings()
+    assert view_model.reset_section(SECTION_LINK)
+    tab.reload_from_config()
+
+    non_embed = config_port.snapshot()["link"]["non_embed_links"]
+    assert non_embed["wiki_mode"] == non_embed["markdown_mode"] == "hyperlink"
+    assert non_embed["wiki_hyperlink_fallback"] == non_embed["markdown_hyperlink_fallback"] == "keep"
+    assert tab._wiki_hyperlink_fallback.currentData() == "keep"
+    assert tab._markdown_hyperlink_fallback.currentData() == "keep"
+    assert tab._wiki_hyperlink_fallback.isEnabled()
+    assert tab._markdown_hyperlink_fallback.isEnabled()
+    assert not view_model.is_dirty

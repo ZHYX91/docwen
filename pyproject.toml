@@ -62,7 +62,7 @@ docwen-bundle = { workspace = true }
 
 [project]
 name = "docwen"
-version = "0.21.3"
+version = "0.22.0"
 description = "DocWen - 支持 Word/Markdown/Excel 互转"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -119,12 +119,10 @@ dependencies = [
     "pillow-heif>=1.1.1",
     # OCR / table-structure recognition
     "rapidocr_onnxruntime>=1.4.0",
-    # ONNX Runtime 1.24.x emits a hard-coded Linux device-discovery warning
-    # while its Python extension is importing, before its logging API exists.
-    # Conversely, 1.23.x misclassifies Windows Server 2025 during import. The
-    # Machine Protocol owns a silent stderr transport, so pin the clean release
-    # for each supported platform instead of filtering process diagnostics.
-    "onnxruntime==1.23.2; sys_platform == 'linux'",
+    # Linux 1.31.1 fixes the missing DRM vendor-file warning. Its POSIX
+    # telemetry must be disabled before import (see DocWen's bootstrap guard).
+    # Machine keeps native diagnostic stderr separate from framed stdout.
+    "onnxruntime==1.31.1; sys_platform == 'linux'",
     "onnxruntime==1.24.4; sys_platform != 'linux'",
     "opencv-python-headless==4.13.0.92",
     # Windows COM 自动化

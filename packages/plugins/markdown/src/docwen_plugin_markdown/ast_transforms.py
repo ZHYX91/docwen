@@ -11,7 +11,7 @@ from docwen_core.text.heading_merge import HEADING_MERGE_PUNCTUATION_SET
 def _heading_text(node: dict[str, Any]) -> str:
     """Read visible inline text without dropping an opaque trailing atom."""
     kind = node.get("type")
-    if kind in {"image", "inline_math", "inline_latex"}:
+    if kind in {"image", "inline_math", "block_math"}:
         return "\ufffc"
     if "children" in node:
         return "".join(_heading_text(child) for child in node["children"])

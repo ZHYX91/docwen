@@ -30,6 +30,11 @@ save_failed = "設定の保存に失敗しました"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "結果を保存しています…"
+phase_checking_output = "保存先を確認しています…"
+phase_preparing_workspace = "一時作業フォルダーを準備しています…"
+phase_converting = "ファイルを変換しています…"
+phase_cancelling_hint = "キャンセルを受け付けました。現在の処理を安全に終了しています…"
 output_each_source = "各結果を元のファイルと同じフォルダーに保存"
 output_date_subfolder = "日付のサブフォルダーに保存"
 task_warning_count = "変換に関する通知が {count} 件あります。操作履歴を展開して確認してください。"
@@ -72,6 +77,8 @@ example = "例"
 
 # CLI帮助文本
 [cli.help]
+lang = "翻訳済みの CLI メッセージと、対応する処理の出力に使う言語を選びます。文書本文は翻訳しません。OCR が auto の場合は、この言語を基に認識モデルも選びます。"
+doctor_output_dir = "選択した出力フォルダーに安全に保存できるか確認"
 settings = "設定を管理"
 settings_reset = "設定を既定値に戻す"
 files = "入力ファイルパス（*.docx などのワイルドカードをサポート）"
@@ -280,10 +287,8 @@ batch_mode = "バッチモード"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "新しく追加する見出し番号をテキストにする"
-numbering_text_help = "選択した方式で追加する見出し番号を文字として出力し、今回の変換では上の番号出力方式より優先します。番号付けを有効にせず、保存済みの出力方式やテンプレートの既存番号も変更しません。既定でオンです。"
-numbering_comments_label = "新しく追加した文字の見出し番号にコメントを付ける"
-numbering_comments_help = "今回実際に追加した文字の見出し番号だけに確認用コメントを付け、既存の手入力番号は対象にしません。既定でオンです。テキスト番号をオフにすると選択が解除され無効になります。再度オンにした後は必要に応じて選択してください。正確に特定できない独自の Markdown 番号は警告してスキップします。"
+numbering_comments_label = "新しい見出し番号にコメントを追加"
+numbering_comments_help = "新しく生成した番号のみが対象です。テキストモードでは番号、DOCX ネイティブモードでは見出しの最初の可視文字にコメントします。既存の手入力番号は対象外です。"
 output_format = "優先テンプレート種類"
 output_format_hint = "Markdown を追加したとき、この種類のテンプレートを優先表示します。この設定だけで変換の出力形式が変わるわけではありません。"
 # MD转文档序号设置
@@ -295,7 +300,6 @@ add_numbering_tooltip = "出力する DOCX の見出しに階層番号を追加�
 scheme_label = "デフォルトの番号付けスキーム："
 scheme_tooltip = "見出し番号に使用する番号体系を選択します"
 render_mode_label = "見出し番号の出力方式："
-render_mode_tooltip = "見出し番号をテキストに書き込むか、DOCX のネイティブ番号機能で生成するかを選択します"
 render_mode_text = "テキスト"
 render_mode_word_native = "DOCX ネイティブ"
 render_mode_hint = "テキスト = 見出しに番号を書き込む；DOCX ネイティブ = DOCX のアウトライン番号を使用する"
@@ -378,7 +382,9 @@ section = "結合セルのエクスポート"
 desc = "Markdown 出力で結合セルをどのように表現するかを設定します。"
 merge_strategy_label = "結合セルのエクスポート方式："
 
-merge_strategy_help = "通常の Markdown のみ：［埋める］は結合領域の左上セルの文字を繰り返します（例「見出し | 見出し」）。\n\n［空］は覆われるセルを空にします（「見出し | 」）。\n\nStructural Tables 出力が有効な場合は代わりに < と ^ の構造マーカーを使います。"
+merge_strategy_help = "通常の Markdown 用：\n埋める：結合範囲の左上のセルのテキストを繰り返します（見出し | 見出し）。\n空にする：結合で覆われるセルを空白にします（見出し | ）。\n\n「Markdown を生成」で Structural Tables を有効にすると、代わりに < と ^ を使います。ここでの選択は保持されます。\n例外：「公文書」の最適化では表を別の方法で処理します。"
+structural_active = "通常の文書・表計算の出力：Structural Tables は有効です。「埋める／空にする」は保持されますが適用されません。"
+ordinary_active = "通常の文書・表計算の出力：Structural Tables は無効です。各入力タブの「埋める／空にする」を適用します。"
 [settings.table_export.strategies]
 fill = "埋める"
 empty = "空にする"
@@ -406,6 +412,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "新しい番号にゼロ幅文字マーカーを追加"
+markers_tooltip = "新しい見出し番号を目に見えないマーカーのペアで囲み、Number Suite が識別できるようにします。既定ではオフです。既存の番号は変更しません。"
 section = "見出し番号付け (ドキュメントからMarkdown)"
 remove = "デフォルトで元のドキュメント見出し番号を削除"
 remove_tooltip = "DOCXをMDに変換する際、既存の見出し番号を削除します"
@@ -510,9 +518,13 @@ md_file_link_style_tooltip = "MDファイル内のMDファイルのリンク形�
 non_embed_section = "非埋め込みリンク処理"
 non_embed_desc = "Markdown 入力の通常リンクを文書または表計算ファイル生成時にどう扱うか設定します。"
 wiki_link_mode = "Wikiリンク処理："
-wiki_link_tooltip = "[[link]] または [[link|text]] を処理します。保持：元のマークアップを保持。テキスト抽出：表示テキストのみ保持。ハイパーリンク：表示テキストとリンク先を保持し、出力形式が対応する場合はクリック可能なリンクを作成。削除：リンクを削除。"
+wiki_link_tooltip = "[[link]] / [[link|text]] を処理します。\n\nそのまま保持: 元のリンク記法をすべて保持します。\nテキスト抽出: 表示テキストのみを保持します。\nアドレスを抽出: アンカーを含む元のアドレスのみを保持します。\n削除: 表示テキストを含め、リンク全体を削除します。\nハイパーリンク: クリック可能なリンクを生成し、生成できない場合は代替処理を使用します。"
 markdown_link_mode = "Markdownリンク処理："
-markdown_link_tooltip = "[text](url) を処理します。保持：元のマークアップを保持。テキスト抽出：text のみ保持。ハイパーリンク：テキストとリンク先を保持し、出力形式が対応する場合はクリック可能なリンクを作成。削除：リンクを削除。"
+markdown_link_tooltip = "[text](url) を処理します。\n\nそのまま保持: 元のリンク記法をすべて保持します。\nテキスト抽出: 表示テキストのみを保持します。\nアドレスを抽出: アンカーを含む元のアドレスのみを保持します。\n削除: 表示テキストを含め、リンク全体を削除します。\nハイパーリンク: クリック可能なリンクを生成し、生成できない場合は代替処理を使用します。"
+markdown_hyperlink_fallback_tooltip = "ハイパーリンクモードでクリック可能なリンクを生成できない場合にのみ使用します。CSV出力も対象です。\nMarkdownリンクの設定は個別に保存されます。\n\nそのまま保持: 元のリンク記法をすべて保持します。\nテキスト抽出: 表示テキストのみを保持します。\nアドレスを抽出: アンカーを含む元のアドレスのみを保持します。"
+markdown_hyperlink_fallback = "Markdownハイパーリンクの代替処理："
+wiki_hyperlink_fallback_tooltip = "ハイパーリンクモードでクリック可能なリンクを生成できない場合にのみ使用します。CSV出力も対象です。\nWikiリンクの設定は個別に保存されます。\n\nそのまま保持: 元のリンク記法をすべて保持します。\nテキスト抽出: 表示テキストのみを保持します。\nアドレスを抽出: アンカーを含む元のアドレスのみを保持します。"
+wiki_hyperlink_fallback = "Wikiハイパーリンクの代替処理："
 
 # 嵌入链接处理区域
 embed_section = "埋め込みリンク処理"
@@ -541,6 +553,7 @@ md_link = "Markdownリンク"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "アドレスを抽出"
 keep = "そのまま保持"
 extract_text = "テキスト抽出"
 remove = "削除"
@@ -624,7 +637,7 @@ md_body_format_tooltip = "フォーマット適用：**太字** を実際の太�
 md_heading_format_label = "見出しフォーマットマークアップ処理："
 md_heading_format_tooltip = "フォーマット適用：ソースの指定に応じて見出しスタイルの書式を上書きします。\nマークアップ保持：ソースの記号をそのまま表示します。\nマークアップ削除：Markdown 記号を除去し、DOCX の見出しスタイルを自然に適用します。\n注：見出しスタイル自体が太字でも、フォーマット適用で局所的な書式差を保持できます。"
 md_table_header_format_label = "テーブルヘッダーフォーマットマークアップ処理："
-md_table_header_format_tooltip = "書式を適用：**太字**を実際の太字にします（表スタイルと重なる場合があります）。マークアップ保持：記号をそのまま表示。マークアップ削除：Markdown 記号を除き、表スタイルの先頭行書式を適用させます。表スタイルは先頭行を装飾することが多いため、通常はマークアップ削除が適します。"
+md_table_header_format_tooltip = "フォーマット適用：**太字**を実際の太字にします（表スタイルと重なる場合があります）。\nマークアップ保持：記号をそのまま表示。\nマークアップ削除：Markdown 記号を除き、表スタイルの先頭行書式を適用させます。\n表スタイルは先頭行を装飾することが多いため、通常はマークアップ削除が適します。"
 heading_merge_mode_label = "見出し+本文の結合モード:"
 heading_merge_mode_tooltip = "見出しと直後の通常本文行を1つの段落として結合するかを制御します\n句読点がある場合のみ結合: 見出し末尾に文末記号があり、次の行が通常本文の場合のみ結合します（既定）\n本文が続けば結合: 次の行が通常本文なら結合します（文末記号は不要）\n結合しない: 見出しと本文を常に別段落として解析します\n注: リスト/コードブロック/表/引用/区切り線などは結合されません"
 heading_merge_punctuation_label = "結合を判定する句読点:"
@@ -730,6 +743,7 @@ section = "日付サブフォルダ"
 create_label = "日付サブフォルダを作成"
 create_tooltip = "出力ディレクトリに日付サブフォルダを作成します\n例：Output Directory/2025-01-06/file.pdf\nこのオプションは両方の出力モードで機能します"
 format_label = "日付形式："
+format_tooltip = "出力先の日付サブフォルダー名の形式を選びます。\n日付サブフォルダーが有効な場合に適用されます。"
 
 # 日期格式选项
 [settings.output.date_formats]
@@ -1684,6 +1698,8 @@ subtitle = "サブタイトル"
 
 
 [main_window]
+runtime_folder_unavailable = "一時作業フォルダーを作成できません。フォルダーの権限やセキュリティソフトを確認して再試行してください。"
+output_folder_unavailable = "選択した保存先フォルダーを安全に使用できません。権限を確認するか、別のフォルダーを選んでください。"
 numbering_comments_unanchored = "この方式では一部の追加番号を独立した文字として特定できません。該当するコメントを省略し、見出しの内容を保持しました。"
 conversion_failed_detail = "変換に失敗しました。"
 note_syntax_invalid = "脚注または文末脚注の構文が正しくありません。参照と定義を確認してください。"
@@ -1699,6 +1715,7 @@ extension_loss_references = "キャプションと相互参照を表示テキス
 extension_loss_tables = "結合セルと見出し構造を通常の Markdown 表に変換しました。"
 route_catalog_failed = "利用可能な操作を読み込めなかったため、要求は開始されませんでした。"
 conversion_failed = "変換に失敗しました。診断情報は失敗の詳細を開いて確認してください。"
+missing_embedded_resources = "一部の埋め込みファイルまたは画像が見つかりません。元のリンクとファイルが見つからない場合の設定を確認してください。"
 conversion_warning = "変換は完了しましたが、警告があります。"
 ocr_no_text = "OCR で文字を検出できませんでした。元画像と照合してください。"
 ocr_degraded = "OCR は正常に完了しませんでした（状態: {status}）。利用可能な結果は保持しました。"
@@ -1845,7 +1862,7 @@ extended_headings = "H7–H9 を認識します。無効時は先頭の 7～9 �
 typed_endnotes = "endnote: などの注記ラベルで文末脚注と脚注を区別します。無効時はそれらを通常の脚注として扱います。"
 
 [settings.markdown_extensions.output_help]
-structural_tables = "複数行の列見出し、行見出し、見出し行のない表、セルの結合に対応します。必要に応じて Structural Tables のマーカーと拡張構造を出力します。無効時は通常の Markdown 表へ平坦化し、構造損失を通知します。"
+structural_tables = "結合セル、複数行の列見出し、行見出し、見出しのない表を保持します。\n有効：通常の文書・表計算の出力では「埋める／空にする」の代わりに < と ^ を使います。保存済みの選択は変更しません。\n無効：各入力タブの選択を使い、失われた表の構造を通知します。\n\n例外：「公文書」の最適化では表を別の方法で処理します。"
 
 captions_references = "該当する意味情報がある場合に Number Suite のキャプションと相互参照を出力します。無効時は通常のテキストを出力し、参照損失を通知します。"
 extended_headings = "H7–H9 を出力します。無効時は H6 に下げ、階層損失を通知します。"
@@ -1868,7 +1885,7 @@ document_settings = "文書の抽出・番号付け・表の設定"
 from_markdown_title = "Markdown → DOCX"
 title = "公文書"
 fields_label = "中国公文書のフィールドを整形"
-fields_help = "DOCX テンプレートの添付資料、写しの送付先、文書日付、発行日、注記を整形し、規則に該当する空欄を削除します。\n\n添付資料のプレースホルダーは本文または表のセル内で独立した段落に置いてください。\n\nヘッダー、フッター、テキストボックス、文中への配置には対応していません。\n\nオフの場合は通常の入力規則と共通のリスト区切り文字を使用します。"
+fields_help = "DOCX テンプレートの添付資料、写しの送付先、文書日付、発行日、注記を整形し、規則に該当する空欄を削除します。\n\n署名者、主な宛先、写しの送付先が複数項目のリストの場合は、項目を一時的に「、」でつなぎ、レイアウトや句読点の確認を促す DOCX コメントを追加します。句読点を含む入力済みの文字列はそのまま保持します。\n\n添付資料のプレースホルダーは本文または表のセル内で独立した段落に置いてください。\n\nヘッダー、フッター、テキストボックス、文中への配置には対応していません。\n\nオフの場合は通常の入力規則と共通のリスト区切り文字を使用します。"
 
 attachment_alignment_label = "添付資料名の配置"
 attachment_alignment_spaces = "空白＋ぶら下げ"
@@ -1884,3 +1901,33 @@ layout_settings = "PDF 抽出と OCR の設定"
 image_title = "画像 → Markdown"
 image_description = "請求書画像には常に OCR を使用し、言語は共通の OCR 設定に従います。"
 ocr_settings = "共通の OCR 言語設定"
+
+[conversion_loss]
+settings_section = "変換による欠落"
+settings_label = "完全に保持できなかった内容をコメントで示す"
+settings_help = "対応する形式でコメントを追加します。オフでも変換の詳細に欠落を表示します。書式の削除など、ユーザーが選択した処理は欠落に含みません。"
+formula_unconverted = "〔数式を変換できませんでした〕"
+formula_reason = "数式の構造を変換できませんでした。"
+formula_change = "プレースホルダーを挿入しました。元の文書を確認してください。"
+note_formula_reason = "この脚注・文末脚注の数式を Word のネイティブ数式として書き込めません。"
+note_formula_change = "数式は読み取り可能な LaTeX テキストとして保持されました。"
+comment_failed = "欠落を示すコメントを追加できませんでした。変換の詳細を確認してください。"
+summary = "変換が完了しました。{count} か所の内容が完全には保持されていません。変換の詳細を確認してください。"
+summary_annotated = "変換が完了しました。{count} か所の内容が完全には保持されていません。コメントを追加しました。"
+original = "元の内容：{original}"
+comment = "{reason}\n{change}\n{location}\n{original}"
+math_as_text_reason = "この表計算出力では数式を表示できません。"
+math_as_text_change = "数式は読み取り可能な LaTeX テキストとして保持されます。"
+protected_cell_reason = "テンプレートのセルは保護されています。"
+protected_cell_change = "入力値は書き込まれず、既存のセルが保持されました。"
+comment_failed_reason = "セルのコメントを書き込めませんでした。"
+comment_failed_change = "この欠落は変換の詳細で確認できます。"
+note_placeholder = "〔注釈を読み取れませんでした。元の文書を確認してください〕"
+formula_placeholder = "〔数式を変換できませんでした〕"
+csv_merge_reason = "CSV では結合セルを表現できません。"
+csv_merge_change = "既存の行と列の値を、結合せずに保持します。"
+docx_paragraph = "段落 {paragraph}、項目 {item}"
+docx_cell = "表 {table}、行 {row}、列 {column}、段落 {paragraph}、項目 {item}"
+note_unreadable_reason = "参照先の脚注・文末脚注を読み取れませんでした。"
+merge_failed_reason = "結合セルの構造を保持できませんでした。"
+merge_failed_change = "セルの文字とテンプレートの既存の結合を保持しました。"

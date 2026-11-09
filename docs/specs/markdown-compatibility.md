@@ -20,6 +20,79 @@ Markdown-to-XLSX treats template-declared images and images produced by the acti
 
 Markdown→XLSX 将模板自身声明的图片及当前链接策略生成的图片作为独立 drawing 处理。YAML、纵横填充及合并阶段的临时图片标记保存在工作簿外；只处理最终仍存在的单元格草稿，再对实际文本执行赋值前和保存前的 32767 UTF-16 单元检查。内部标记长度不挤占正文容量，真实超限仍明确失败并保留既有产物。正文中的字面标记不获得读图权限，重复的受信任图片分别保留 drawing。
 
+## Ordinary links and heading navigation / 普通链接与标题导航
+
+Authored ordinary Wiki and Markdown links independently support `keep`, `extract_text`, `extract_address`,
+`remove` and `hyperlink`. The main mode defaults to `hyperlink`; each syntax has its own fallback setting,
+`wiki_hyperlink_fallback` or `markdown_hyperlink_fallback`, defaulting to `keep`. Fallback choices are limited to
+`keep`, `extract_text` and `extract_address`. Keeping preserves the whole original syntax, extracting an address
+keeps the source destination and fragment rather than a resolved absolute path, and removal includes the display
+text. Unsupported or unresolved hyperlink destinations use the selected fallback, not an implicit removal.
+These policies cover the existing parser-owned ordinary inline Wiki/Markdown constructs. Reference-definition
+and autolink syntax keep their existing handling; bare-URL conversion remains a separate default-off option.
+Text extraction in used YAML fields and spreadsheet cells projects Markdown label formatting as visible text,
+while kept source syntax and literal Wiki alias punctuation remain unchanged.
+Plain labels in fields, cells and heading-link fallbacks use the same inline text rules as DOCX hyperlinks:
+formulas retain readable LaTeX, line breaks become spaces, and unhandled inline syntax stays literal. Leading heading
+or list markers within a label remain part of its text.
+
+For authored Markdown-to-DOCX, an ordinary same-document fragment can target a unique rendered heading. The
+decoded fragment must match its visible title exactly or its simple lowercase slug: punctuation is removed and
+spaces become hyphens. A matched heading receives a separate Word bookmark and links use a native internal
+anchor, preserved through DOCX save/reopen. Missing and ambiguous matches fall back; no duplicate heading wins
+by order. The converter does not search other documents to invent an internal destination.
+
+The current embedded-source guard is deliberately conservative: a source body containing Wiki embed syntax
+(`![[`) uses the selected fallback for ordinary internal-heading jumps throughout that conversion. This also
+covers Wiki image spellings and literal occurrences of that spelling. Without a proven source-origin map, an
+embedded heading must not silently become the target of a root-document fragment. Ordinary links to `^block`
+IDs remain non-navigable and use the fallback. Existing source block-ID recovery, semantic `@[[...]]` references,
+frozen v3 behavior and the separately validated resolved-v4 input contract are unchanged. This is not complete
+heading/block navigation across embedded files, nor a new lossless ordinary-link Markdown round-trip contract.
+Generated ordinary navigation links carry their original fragment as a standard Word tooltip. On DOCX-to-Markdown,
+that untrusted hint is used only for a readable ordinary-link projection after proving a unique, balanced whole-heading
+bookmark and a unique visible heading matching the hint. It is not authentication or frozen recovery metadata.
+Foreign/missing hints, ambiguous or changed headings, partial/crossing ranges and unsupported title structures fall
+back to visible text. External relationship links retain their existing import route; no ordinary block anchor is promoted.
+
+For XLSX, only a final cell consisting entirely of one supported hyperlink receives a native cell hyperlink.
+Any surrounding text or multiple links uses each occurrence's fallback, preserving text and order rather than
+choosing the first target, making unrelated text clickable, or splitting the workbook structure. CSV has no
+native hyperlink representation and uses the fallback for every hyperlink-mode occurrence. Links are not emitted
+as `HYPERLINK` formulas. Final restored text still passes the existing Excel capacity checks before publication.
+YAML values used in templates follow the same independent policies and the same final-cell rule; existing template
+text is not reparsed as Markdown. Conversion does not rewrite the source files or fetch link destinations.
+XLSX-to-Markdown also retains display text and allowed external native hyperlink destinations with escaped labels
+and URI targets. It does not evaluate `HYPERLINK` formulas or guess worksheet-location/relative targets; unsupported
+native destinations remain visible text. This does not promise lossless import of every foreign Office link form.
+
+普通 Wiki 与 Markdown 链接各自支持 `keep`（保留原样）、`extract_text`（提取文字）、`extract_address`
+（提取地址）、`remove`（连同显示文字删除）和 `hyperlink`（生成超链接）。主模式默认 `hyperlink`；
+`wiki_hyperlink_fallback` 与 `markdown_hyperlink_fallback` 各自默认 `keep`，可选值仅为 `keep`、
+`extract_text`、`extract_address`。保留原样保存完整源语法；提取地址保留源目标和锚点，不替换为解析后的
+绝对路径。无法生成超链接时遵守对应回退，不隐式删除链接。
+字段、单元格和标题链接回退中的纯文本标签使用与 DOCX 超链接一致的行内文字规则：公式保留可读的
+LaTeX，换行转为空格，未解析的行内语法保留原文。标签开头的井号或列表标记仍是标签文字的一部分。
+
+源 Markdown→DOCX 的同文档片段可跳转至唯一已渲染标题：解码后的片段须精确匹配可见标题，或匹配简单
+slug（转为小写、去除标点、空格换为连字符）。输出使用独立的 Word 书签和原生内部链接，保存并重开后仍
+有效；缺失或重名目标按回退方式处理，不按出现顺序猜选，也不搜索其他文件制造文内目标。
+
+当前嵌入来源保护采用保守策略：正文含 Wiki 嵌入拼写 `![[` 时，本次转换的普通标题内部跳转均使用回退，
+包括 Wiki 图片和字面示例中的该拼写。在来源身份未得到证明前，不将嵌入文档中的标题误作根文档片段的目标。
+普通 `^block` 链接仍不可导航；已有块 ID 恢复、语义 `@[[...]]`、冻结 v3 以及独立验证的 resolved-v4
+输入合同不变。因此尚不支持完整的跨嵌入标题／块导航，也不新增普通链接 Markdown 无损往返承诺。
+生成的普通导航链接以标准 Word tooltip 保留原始片段；反向导入只在书签完整唯一、实际可见标题唯一且与提示
+匹配时投影回 Markdown 链接。提示及书签均是不可信文档内容，不是认证或冻结恢复证据；外来、缺失、含糊、
+已改写或无法证明的结构仅保留可见文字。XLSX 反向转换也保留受支持的原生外链文字和目标，但不执行
+`HYPERLINK` 公式，不猜工作表内部位置或相对目标；不承诺任意外来 Office 链接无损往返。
+
+XLSX 只为最终完整单元格中的一个受支持链接生成原生超链接；混合正文或多个链接时逐个采用回退，保留
+文字和顺序，不选取首个目标、不让无关文字可点击，也不拆分工作簿结构。CSV 没有原生超链接，始终采用
+回退；不生成 `HYPERLINK` 公式。恢复后的最终文字仍须通过既有 Excel 容量检查。模板实际使用的 YAML
+值遵守同一独立策略和最终单元格规则，模板原有正文不作为 Markdown 重解析。转换不改写源文件，也不访问
+链接目标内容。
+
 ## Supported structures / 支持结构
 
 - headings, paragraphs, emphasis, code, quotes and horizontal rules;
@@ -42,6 +115,21 @@ not interactive Word controls.
 高亮、下划线与上下标等行内样式容器递归保留受支持的公式、图片、超链接及注释引用。图片描述按源码中的
 每次出现绑定，覆盖 Wiki/Markdown 混排、重复资源及显式空 alt。任务项使用原生列表保留可见的 `[ ]` / `[x]`
 状态、子块与顺序；状态标记为文本，不承诺 Word 交互控件。
+
+The supported inline HTML formatting tags are `<u>`, `<sub>`, `<sup>`, `<del>`, `<mark>`, `<strong>` and `<em>`,
+without attributes. They accept nested supported inline content and are recognized before generic HTML. Code and
+escaped tags remain literal. Markdown export keeps the configured marker choices where those delimiters are
+unambiguous; adjacent different emphasis runs, intraword underscores and formatted boundary whitespace use the
+equivalent HTML tags instead of adding spaces or losing formatting. Body, table, list, quote and note text use the
+same run-property resolver and serializer. Character styles follow their explicit `basedOn` chain; direct off values
+override inherited formatting. Paragraph/default presentation and recognized code/quote character-style defaults do
+not invent authored emphasis. Unknown style IDs and independent style roots do not inherit unrelated Normal properties.
+
+无属性的 `<u>`、`<sub>`、`<sup>`、`<del>`、`<mark>`、`<strong>`、`<em>` 作为行内格式解析，支持嵌套；
+代码和转义标签保持字面量。导出在合法位置使用已配置的 Markdown 标记，在相邻强调、词内下划线或格式化首尾
+空白等无法无歧义表达的位置使用等价 HTML，不通过增删文字修补标记。正文、表格、列表、引用及注释共用行内属性
+解析和序列化；字符样式按明确的继承链求值，直接关闭优先。段落／默认外观和代码／引用字符样式的默认装饰不冒充
+作者强调；独立根样式、无效样式 ID 不猜测继承 Normal。
 
 ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions that map one-to-one to Word
 `Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
@@ -78,6 +166,18 @@ Setext 下划线不会错移其动作。行内 `<br>` 在标题、表格单元�
 代码和公式中的字面内容不改写。
 DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标题。公式段落复用普通段落的文本渲染器，按所选
 格式策略保留行内代码、接受的修订、链接、注释，以及同一文本片段换行或制表符两侧的内容。
+
+Page breaks are read in native run order by the shared rich-text walker. Section breaks come from the current
+paragraph's `sectPr`, not a revision-history copy. Horizontal rules resolve paragraph-style borders, including
+inherited edges and explicit `none`/`nil` resets. A standalone rule is emitted at its own paragraph position, including
+before tables and at document end. These structures use the configured, distinct output separators.
+Native quote paragraphs retain paragraph separators, while line breaks within one paragraph stay within it. A return
+to a shallower quote must not become lazy continuation of the preceding deeper quote.
+
+分页符按当前 run 内的位置读取；分节符只读取当前段落属性，不把修订历史当成现有分节。水平线沿段落样式继承边框，
+直接 `none`／`nil` 可关闭继承边。独立水平线在自己的段落位置输出，包括表格之前和文末；三种结构分别使用所配置的
+输出分隔符。
+引用的原生段落边界保留为段间分隔，段内换行仍留在同一段；返回较浅引用层级时，不作为前一个深层引用的续行。
 
 ## Rules / 规则
 
@@ -189,6 +289,16 @@ objects and overrides only explicitly supplied booleans. The four keys are `stru
 | Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
 | H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
 | Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
+
+With typed-note input enabled, `[^id]` and `[^footnote:id]` identify footnotes and `[^endnote:id]` identifies an
+endnote. `[^endnote-id]` remains an ordinary footnote ID; its spelling never selects an endnote or a legacy mode.
+Input and output switches are independent. Preserving note kinds on a round trip requires typed-note recognition
+on input and typed-note syntax on output. Definitions, repeated references and formatted note bodies are rebuilt from
+the current native note parts; renumbering by first reference does not change note identity.
+
+开启输入 typed notes 时，`[^id]`／`[^footnote:id]` 为脚注，`[^endnote:id]` 为尾注；`[^endnote-id]` 始终是普通
+脚注 ID，不推测旧版本含义。输入识别和输出语法独立配置，往返保留类型时两端均须启用。定义、重复引用和正文格式
+均读取当前原生注释部件；按首次引用重新编号不改变引用关系。
 
 Ordinary pipe tables inside quote and list containers remain available when Structural Tables input is disabled.
 The opt-in controls advanced table roles and merge syntax; it does not gate ordinary nested table recognition.
@@ -1372,9 +1482,9 @@ DOCX 的标题、副标题、别名以及发票元数据均按字符串字段输
 
 ## YAML field links
 
-Authored Markdown-to-DOCX applies ordinary Wiki and Markdown link policies independently to string leaves used by template fields, before field-specific list/punctuation formatting. `keep` retains literal syntax, `extract_text` inserts display text, `remove` removes the link, and `hyperlink` produces a real DOCX relationship where the ordinary-link contract provides a navigable target. Numbers, booleans, dates, keys and container structure are preserved; embedded resources are not expanded from YAML.
+Authored Markdown-to-DOCX applies ordinary Wiki and Markdown link policies independently to string leaves used by template fields, before field-specific list/punctuation formatting. `keep` retains literal syntax, `extract_text` inserts display text, `extract_address` inserts the source target, `remove` removes the whole link, and `hyperlink` produces a real DOCX relationship or a proven ordinary heading anchor. When a hyperlink cannot be produced, the syntax-specific fallback applies. Numbers, booleans, dates, keys and container structure are preserved; embedded resources are not expanded from YAML.
 
-Only links explicitly selected by the policy are materialized. Existing template text is not reparsed as Markdown. Split text runs, run breaks and special attachment fields retain their surrounding structure and formatting. An inserted hyperlink inside an existing hyperlink is rejected rather than nesting invalid OOXML. Declared-input requests retain their no-local-lookup boundary; unused fields do not trigger resolution. DOCX metadata receives display text, never internal projection markers. Spreadsheet YAML behavior is unchanged by this DOCX change.
+Only links explicitly selected by the policy are materialized. Existing template text is not reparsed as Markdown. Split text runs, run breaks and special attachment fields retain their surrounding structure and formatting. An inserted hyperlink inside an existing hyperlink is rejected rather than nesting invalid OOXML. Declared-input requests retain their no-local-lookup boundary; unused fields do not trigger resolution. DOCX metadata receives display text, never internal projection markers. Spreadsheet YAML uses the same ordinary-link modes and independent fallbacks. XLSX materializes a native link only when the final cell contains exactly one complete supported link; mixed/multiple content and CSV use the selected fallback.
 
 
 ## Native resource and table text export / 原生资源与表格文本导出
@@ -1401,9 +1511,64 @@ The supported visible projection suppresses directly enabled `w:vanish` runs in 
 
 ## Text and math source ownership / 文本与公式的源所有权
 
+Dollar-math boundaries are shared by the Markdown parser and source protection. `$...$` is inline math;
+`$$...$$` is display math in paragraphs, lists and table cells. Display delimiters may share the first/last
+content line or occupy their own lines. A complete formula owns its body before heading numbering, so a matrix's
+standalone `=` is never a Setext heading and its `\\` row separators stay literal. Code spans, code blocks,
+escaped dollars and amounts such as `$5 and $10` remain ordinary content.
+
+Markdown 解析和源保护共用美元符号数学边界。`$...$` 为行内公式，`$$...$$` 为块公式，正文、列表和
+表格单元格采用相同身份。块公式围栏可以与首尾内容同行，也可以独占一行。完整公式先于标题编号拥有
+内部原文，矩阵的独立 `=` 不得成为 Setext 标题，`\\` 行分隔符不得被普通 Markdown 转义处理。
+代码、转义美元符和 `$5 and $10` 这样的金额保持字面内容。
+
+DOCX writes inline math as `m:oMath` and display math as `m:oMathPara`. Reading uses that explicit structure,
+including formula-only paragraphs, instead of guessing from the absence of ordinary text. Multiline display
+output uses separate fence lines; a table cell uses one physical line while preserving TeX row separators.
+List display equations are left aligned with their real list content and marker. Ordinary body display math
+uses the formula paragraph style (centered by default); alignment never changes formula identity.
+Visible braces, dollar signs and underscores are escaped on math export, so `\{x\}`, `\$5` and `a\_b`
+cannot become an invisible group, a Markdown delimiter or a subscript on re-import.
+The final fragment join checks the same dollar grammar and adds visible whitespace where adjacent native
+formulas or ordinary digits would otherwise merge their delimiters; formatting and code boundaries remain literal.
+
+DOCX 分别用 `m:oMath` 与 `m:oMathPara` 表示行内和块公式。回读直接依据这一结构，纯公式段落也不再按
+“没有普通文字”猜为块公式。多行块公式输出独立围栏；表格单元格保持单行 Markdown，同时保留 TeX 行分隔符。
+列表中的块公式与真实列表内容、编号左对齐；正文块公式采用公式段落样式，默认居中。对齐不会改变公式身份。
+公式回读转义可见花括号、美元符号和下划线，`\{x\}`、`\$5`、`a\_b` 不得在再次导入时变为不可见分组、
+Markdown 分隔符或下标。
+最终片段拼接使用同一美元符号语法，原生相邻公式或后接普通数字会粘连分隔符时添加必要的可见空白；
+格式和代码以最终序列化后的真实边界判断。
+
+Square roots explicitly hide their empty root degree; indexed roots retain the complete degree and radicand.
+Ordinary named functions retain token order and side scripts (for example `\sin^2 x` and `\log_2 x`); the
+writer does not infer a function argument from adjacent presentation tokens. Thus `\sin x \cos y` remains
+a product and `\sin(x)y` does not become `\sin((x)y)`. A limit uses an explicit native function with its
+limit scripts only when a fraction or group establishes its operand; ambiguous ungrouped operands/factors
+preserve source with a diagnostic. N-ary operands keep a following product, including named-function
+factors, together up to a sum or relation. Use explicit TeX grouping for a whole sum as the operand.
+
+平方根明确隐藏空根指数；有根指数的根式完整保留根指数和被开方项。普通命名函数保留原记号顺序和侧标，
+如 `\sin^2 x` 和 `\log_2 x`；不根据相邻展示记号猜测函数参数。因此 `\sin x \cos y` 保持乘积，
+`\sin(x)y` 不会变为 `\sin((x)y)`。极限仅在分式或分组明确参数范围时采用原生函数及上下限结构；未分组的
+参数、后续因子范围有歧义时保留原文并诊断。求和、积分等 n 元运算的连续乘积保持完整，包含命名函数因子，
+至加减或关系符结束；对整个和式运算应使用显式 TeX 分组。
+
 MathML `mtext` retains literal text and whitespace, including units and conditions. DOCX output marks these as normal-text math runs and preserves their spacing. Native formula import keeps TeX control words lexically separate from following ASCII identifiers in ordinary groups, scripts and matrix cells. An unsupported MathML leaf on Markdown-to-DOCX export preserves the original LaTeX as visible text with `MD2DOCX-FORMULA-TEXT-FALLBACK`; a nonempty partial formula is not success. This defines a supported subset, not every LaTeX command.
 
 MathML `mtext` 保留字面文本及空白，包括单位与条件；DOCX 写出普通文本数学 run 并保留空格。原生公式导入在普通分组、上下标与矩阵单元格中保留 TeX 控制词和后续 ASCII 标识符的词法边界。Markdown→DOCX 导出遇到无法表示的 MathML 叶节点时，保留原 LaTeX 为可见文本并发出 `MD2DOCX-FORMULA-TEXT-FALLBACK`，不得以非空的残缺公式报告成功；此能力不覆盖全部 LaTeX 命令。
+
+Unknown mathematical containers are also refused as a whole, including unmodeled accents/enclosures. Export
+fallback keeps the original dollar delimiters and LaTeX, and identifies the XML paragraph/cell occurrence in
+the diagnostic. Import fallback retains the complete original OMML as a JSON string in a Markdown code span
+and reports `DOCX2MD-FORMULA-SOURCE-FALLBACK` with its package/XML location. The pinned TeX parser erases ASCII
+upright-identifier information from `\mathrm`/`\rm`; those commands therefore use explicit source fallback.
+This supported subset does not flatten an unknown operation or claim a partial expression as successful math.
+
+未知数学容器同样整式拒绝，包括尚未建模的重音、外框。导出失败保留原美元分隔符和 LaTeX，并报告所在
+XML 段落／单元格。导入失败把完整原 OMML 作为 JSON 字符串保存在 Markdown 代码片段中，发出带包内 XML
+位置的 `DOCX2MD-FORMULA-SOURCE-FALLBACK`。锁定的 TeX 解析器会丢失 `\mathrm`／`\rm` 的 ASCII 正体信息，
+这两类命令也明确采用原文回退。受支持子集不得把未知运算摊平后将残缺表达式当作成功公式。
 
 Gongwen extraction owns text and math occurrences in XML order. Text before, between and after inline formulas survives regardless of paragraph length; an outer `oMathPara` owns its nested math once. Combined copy/document-number recognition and extraction share one full-line parse, before request heading cleanup can claim a leading copy ID. Consume the paragraph only after both fields represent its source completely; conflicting or uncertain combined fields and formula-bearing metadata remain visible with a precise source-preservation diagnostic. Existing missing-field warnings still apply. Copy IDs retain leading zeros as strings. These rules do not add rich formula extraction to Gongwen's existing plain-text table projection.
 

@@ -30,6 +30,11 @@ save_failed = "설정 저장 실패"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "결과를 저장하는 중…"
+phase_checking_output = "저장 폴더 확인 중…"
+phase_preparing_workspace = "임시 작업 폴더 준비 중…"
+phase_converting = "파일 변환 중…"
+phase_cancelling_hint = "취소 요청을 받았습니다. 현재 단계를 안전하게 마치는 중…"
 output_each_source = "각 결과를 원본 파일 폴더에 저장"
 output_date_subfolder = "날짜 하위 폴더에 저장"
 task_warning_count = "변환 알림 {count}개가 있습니다. 활동 기록을 펼쳐 확인하세요."
@@ -72,6 +77,8 @@ example = "예시"
 
 # CLI帮助文本
 [cli.help]
+lang = "번역이 제공되는 CLI 메시지와 지원되는 작업 출력의 언어를 선택합니다. 문서 본문은 번역하지 않습니다. OCR이 auto 모드이면 이 언어를 기준으로 인식 모델도 선택합니다."
+doctor_output_dir = "선택한 출력 폴더에 안전하게 저장할 수 있는지 확인"
 settings = "설정 관리"
 settings_reset = "설정을 기본값으로 재설정"
 files = "입력 파일 경로(와일드카드 *.docx 지원)"
@@ -280,10 +287,8 @@ batch_mode = "일괄 모드"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "새 제목 번호를 텍스트로 추가"
-numbering_text_help = "선택한 방식으로 추가하는 제목 번호를 텍스트로 출력하며, 이번 변환에서는 위의 번호 출력 방식보다 우선합니다. 번호 매기기를 켜거나 저장된 출력 방식 또는 템플릿의 기존 번호를 변경하지 않습니다. 기본으로 켜져 있습니다."
-numbering_comments_label = "새로 추가한 텍스트 제목 번호에 검토 메모 추가"
-numbering_comments_help = "이번 변환에서 실제로 추가한 텍스트 제목 번호에만 메모를 추가하며 기존에 직접 입력한 번호는 표시하지 않습니다. 기본으로 켜져 있습니다. 텍스트 번호를 끄면 이 옵션이 해제되고 비활성화됩니다. 다시 켠 뒤 필요하면 선택할 수 있습니다. 정확히 구분할 수 없는 사용자 지정 Markdown 번호는 경고 후 건너뜁니다."
+numbering_comments_label = "새 제목 번호에 메모 추가"
+numbering_comments_help = "새로 생성한 번호에만 적용합니다. 텍스트 모드에서는 번호, DOCX 기본 모드에서는 제목의 첫 번째 보이는 문자에 메모합니다. 기존 수동 번호는 제외합니다."
 output_format = "우선 템플릿 유형"
 output_format_hint = "Markdown을 추가할 때 이 유형의 템플릿을 우선 표시합니다. 이 설정 자체가 변환 출력 형식을 바꾸지는 않습니다."
 # MD转文档序号设置
@@ -295,7 +300,6 @@ add_numbering_tooltip = "출력 DOCX의 제목에 계층형 번호를 추가합�
 scheme_label = "기본 번호 매김 스킴:"
 scheme_tooltip = "제목 번호에 사용할 번호 체계를 선택합니다"
 render_mode_label = "제목 번호 출력 방식:"
-render_mode_tooltip = "제목 번호를 텍스트에 기록할지 DOCX 기본 번호 매기기로 생성할지 선택합니다"
 render_mode_text = "텍스트"
 render_mode_word_native = "DOCX 기본"
 render_mode_hint = "텍스트 = 제목에 번호 기록; DOCX 기본 = DOCX 다단계 목록 번호 사용"
@@ -378,7 +382,9 @@ section = "병합 셀 내보내기"
 desc = "Markdown 출력에서 병합 셀을 표현하는 방식을 설정합니다."
 merge_strategy_label = "병합 셀 내보내기 방식:"
 
-merge_strategy_help = "일반 Markdown에만 적용됩니다. 채우기는 병합 영역 왼쪽 위 셀의 텍스트를 반복하고(예: ‘제목 | 제목’), 비우기는 덮이는 셀을 비웁니다(‘제목 | ’).\n\nStructural Tables 출력이 켜져 있으면 대신 <, ^ 구조 표시를 사용합니다."
+merge_strategy_help = "일반 Markdown용:\n채우기: 병합 영역의 왼쪽 위 셀 텍스트를 반복합니다(제목 | 제목).\n비우기: 병합으로 덮인 셀을 비웁니다(제목 | ).\n\n“Markdown 생성”에서 Structural Tables를 켜면 대신 <와 ^를 사용합니다. 여기서 선택한 값은 유지됩니다.\n예외: “공문서” 최적화는 표를 별도로 처리합니다."
+structural_active = "일반 문서/스프레드시트 내보내기: Structural Tables 켜짐. 채우기/비우기는 저장되지만 적용되지 않습니다."
+ordinary_active = "일반 문서/스프레드시트 내보내기: Structural Tables 꺼짐. 각 입력 탭의 채우기/비우기를 적용합니다."
 [settings.table_export.strategies]
 fill = "채우기"
 empty = "비우기"
@@ -406,6 +412,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "새 번호에 너비 없는 문자 표시 추가"
+markers_tooltip = "새 제목 번호를 보이지 않는 마커 쌍으로 감싸 Number Suite가 인식할 수 있게 합니다. 기본값은 꺼짐입니다. 기존 번호는 바꾸지 않습니다."
 section = "제목 번호(문서 → 마크다운)"
 remove = "기본으로 문서 제목 번호 제거"
 remove_tooltip = "DOCX → MD 변환 시 문서의 기존 제목 번호를 제거합니다"
@@ -510,9 +518,13 @@ md_file_link_style_tooltip = "MD 파일에서 MD 파일 링크 형식을 설정�
 non_embed_section = "비임베드 링크 처리"
 non_embed_desc = "Markdown 입력의 일반 링크를 문서나 스프레드시트 생성 시 어떻게 처리할지 설정합니다."
 wiki_link_mode = "위키 링크 처리:"
-wiki_link_tooltip = "[[link]] 또는 [[link|text]]를 처리합니다. 유지: 원본 마크업 유지. 텍스트 추출: 표시 텍스트만 유지. 하이퍼링크: 표시 텍스트와 대상을 유지하고 출력 형식이 지원하면 클릭 가능한 링크 생성. 제거: 링크 삭제."
+wiki_link_tooltip = "[[link]] / [[link|text]] 형식을 처리합니다.\n\n그대로 유지: 원본 링크 구문을 모두 유지합니다.\n텍스트 추출: 표시 텍스트만 유지합니다.\n주소 추출: 앵커를 포함한 원본 주소만 유지합니다.\n제거: 표시 텍스트를 포함한 링크 전체를 삭제합니다.\n하이퍼링크: 클릭 가능한 링크를 생성하고, 생성할 수 없으면 대체 처리를 사용합니다."
 markdown_link_mode = "마크다운 링크 처리:"
-markdown_link_tooltip = "[text](url)을 처리합니다. 유지: 원본 마크업 유지. 텍스트 추출: text만 유지. 하이퍼링크: 텍스트와 대상을 유지하고 출력 형식이 지원하면 클릭 가능한 링크 생성. 제거: 링크 삭제."
+markdown_link_tooltip = "[text](url) 형식을 처리합니다.\n\n그대로 유지: 원본 링크 구문을 모두 유지합니다.\n텍스트 추출: 표시 텍스트만 유지합니다.\n주소 추출: 앵커를 포함한 원본 주소만 유지합니다.\n제거: 표시 텍스트를 포함한 링크 전체를 삭제합니다.\n하이퍼링크: 클릭 가능한 링크를 생성하고, 생성할 수 없으면 대체 처리를 사용합니다."
+markdown_hyperlink_fallback_tooltip = "하이퍼링크 모드에서 클릭 가능한 링크를 생성할 수 없을 때만 사용합니다. CSV 출력도 포함됩니다.\nMarkdown 링크의 설정은 개별적으로 저장됩니다.\n\n그대로 유지: 원본 링크 구문을 모두 유지합니다.\n텍스트 추출: 표시 텍스트만 유지합니다.\n주소 추출: 앵커를 포함한 원본 주소만 유지합니다."
+markdown_hyperlink_fallback = "마크다운 하이퍼링크 대체 처리:"
+wiki_hyperlink_fallback_tooltip = "하이퍼링크 모드에서 클릭 가능한 링크를 생성할 수 없을 때만 사용합니다. CSV 출력도 포함됩니다.\nWiki 링크의 설정은 개별적으로 저장됩니다.\n\n그대로 유지: 원본 링크 구문을 모두 유지합니다.\n텍스트 추출: 표시 텍스트만 유지합니다.\n주소 추출: 앵커를 포함한 원본 주소만 유지합니다."
+wiki_hyperlink_fallback = "위키 하이퍼링크 대체 처리:"
 
 # 嵌入链接处理区域
 embed_section = "임베드 링크 처리"
@@ -541,6 +553,7 @@ md_link = "마크다운 링크"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "주소 추출"
 keep = "그대로 유지"
 extract_text = "텍스트 추출"
 remove = "제거"
@@ -620,11 +633,11 @@ md_to_docx_section = "마크다운 → 문서"
 md_format_processing = "서식 처리"
 md_format_processing_tooltip = "Markdown을 DOCX 문서로 변환할 때 마크업 처리 방식을 설정합니다"
 md_body_format_label = "본문 마크업 처리:"
-md_body_format_tooltip = "서식 적용: **Bold**를 실제 굵게로 변환\n마크업 유지: **Bold**를 그대로 표시\n마크업 정리: \"Bold\" 텍스트만 표시(서식 없음)"
+md_body_format_tooltip = "서식 적용: **굵게**를 실제 굵은 글씨로 바꿉니다.\n마크업 유지: **굵게**를 그대로 표시합니다.\n마크업 정리: Markdown 표시를 제거하고 템플릿 스타일을 유지합니다."
 md_heading_format_label = "제목 마크업 처리:"
 md_heading_format_tooltip = "서식 적용: 기본 제목 스타일 서식을 덮어써 부분 굵게 등을 허용\n마크업 유지: 마크업을 그대로 표시\n마크업 정리: DOCX 제목 스타일이 자연스럽게 적용되도록 함\n참고: 제목 스타일 자체가 굵게인 경우 \"서식 적용\"으로 부분 굵게를 구현할 수 있습니다"
 md_table_header_format_label = "표 머리글 마크업 처리:"
-md_table_header_format_tooltip = "서식 적용: **굵게**를 실제 굵게로 바꿉니다(표 스타일과 겹칠 수 있음). 마크업 유지: 마크업을 그대로 표시. 마크업 정리: Markdown 표시를 제거하고 표 스타일의 첫 행 서식이 적용되게 합니다. 표 스타일은 보통 첫 행을 서식 지정하므로 마크업 정리가 일반적으로 적합합니다."
+md_table_header_format_tooltip = "서식 적용: **굵게**를 실제 굵게로 바꿉니다(표 스타일과 겹칠 수 있음).\n마크업 유지: 마크업을 그대로 표시.\n마크업 정리: Markdown 표시를 제거하고 표 스타일의 첫 행 서식이 적용되게 합니다.\n표 스타일은 보통 첫 행을 서식 지정하므로 마크업 정리가 일반적으로 적합합니다."
 heading_merge_mode_label = "제목+본문 병합 모드:"
 heading_merge_mode_tooltip = "소제목과 바로 다음 줄의 일반 본문을 하나의 단락으로 합칠지 제어합니다\n문장부호가 있을 때만 병합: 제목 끝에 문장 끝 부호가 있고 다음 줄이 일반 본문일 때만 병합합니다(기본값)\n바로 본문이면 병합: 다음 줄이 일반 본문이면 병합합니다(문장부호 불필요)\n병합 안 함: 제목과 본문을 항상 별도 단락으로 처리합니다\n참고: 목록/코드 블록/표/인용/구분선 등은 병합하지 않습니다"
 heading_merge_punctuation_label = "병합 문장부호:"
@@ -730,6 +743,7 @@ section = "날짜 하위 폴더"
 create_label = "날짜 하위 폴더 생성"
 create_tooltip = "출력 디렉터리에 날짜 하위 폴더를 생성합니다\n예: 출력 디렉터리/2025-01-06/file.pdf\n이 옵션은 모든 출력 모드에서 동작합니다"
 format_label = "날짜 형식:"
+format_tooltip = "출력 날짜 하위 폴더의 이름 형식을 선택합니다.\n날짜 하위 폴더가 활성화된 경우에 적용됩니다."
 
 # 日期格式选项
 [settings.output.date_formats]
@@ -1684,6 +1698,8 @@ subtitle = "부제"
 
 
 [main_window]
+runtime_folder_unavailable = "임시 작업 폴더를 만들 수 없습니다. 폴더 권한이나 보안 소프트웨어를 확인한 후 다시 시도하세요."
+output_folder_unavailable = "선택한 저장 폴더를 안전하게 사용할 수 없습니다. 권한을 확인하거나 다른 폴더를 선택하세요."
 numbering_comments_unanchored = "이 방식의 일부 추가 번호는 별도 텍스트로 구분할 수 없습니다. 해당 메모를 건너뛰고 제목 내용을 유지했습니다."
 conversion_failed_detail = "변환에 실패했습니다."
 note_syntax_invalid = "각주 또는 미주 구문이 잘못되었습니다. 참조와 정의를 확인하세요."
@@ -1699,6 +1715,7 @@ extension_loss_references = "캡션과 상호 참조를 표시 텍스트로 변�
 extension_loss_tables = "병합 셀과 머리글 구조를 일반 Markdown 표로 변환했습니다."
 route_catalog_failed = "사용 가능한 작업을 불러오지 못해 요청을 시작하지 않았습니다."
 conversion_failed = "변환에 실패했습니다. 진단 정보는 실패 상세 정보를 열어 확인하세요."
+missing_embedded_resources = "일부 포함된 파일이나 이미지를 찾지 못했습니다. 원본 링크와 누락 파일 처리 설정을 확인하세요."
 conversion_warning = "변환은 완료되었지만 경고가 있습니다."
 ocr_no_text = "OCR에서 텍스트를 감지하지 못했습니다. 원본 이미지와 확인하세요."
 ocr_degraded = "OCR이 정상적으로 완료되지 않았습니다(상태: {status}). 사용 가능한 결과는 유지했습니다."
@@ -1845,7 +1862,7 @@ extended_headings = "H7–H9를 인식합니다. 끄면 앞의 # 7~9개를 보�
 typed_endnotes = "endnote: 같은 주석 레이블로 미주와 각주를 구분합니다. 끄면 해당 레이블을 일반 각주로 처리합니다."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "여러 머리글 행, 행 머리글, 머리글 행이 없는 표와 병합 셀을 지원합니다. 필요할 때 Structural Tables 표시와 확장 구조를 출력합니다. 끄면 일반 Markdown 표로 평탄화하고 구조 손실을 알립니다."
+structural_tables = "병합 셀, 여러 머리글 행, 행 머리글, 머리글이 없는 표를 유지합니다.\n켜짐: 일반 문서·스프레드시트 내보내기에서 채우기/비우기 대신 <와 ^를 사용합니다. 저장된 선택은 바꾸지 않습니다.\n꺼짐: 각 입력 탭의 선택을 적용하고 손실된 표 구조를 알립니다.\n\n예외: “공문서” 최적화는 표를 별도로 처리합니다."
 
 captions_references = "해당 의미 정보가 있으면 Number Suite 캡션과 상호 참조를 출력합니다. 끄면 일반 텍스트를 출력하고 참조 손실을 알립니다."
 extended_headings = "H7–H9를 출력합니다. 끄면 해당 제목을 H6로 낮추고 손실을 알립니다."
@@ -1868,7 +1885,7 @@ document_settings = "문서 추출, 번호 매기기 및 표 설정"
 from_markdown_title = "Markdown → DOCX"
 title = "공문서"
 fields_label = "중국 공문서 필드 서식 적용"
-fields_help = "DOCX 서식 파일의 첨부 설명, 참조 수신처, 작성일, 발행일과 주석을 정리하고 규칙에 해당하는 빈 필드를 제거합니다. 첨부 자리표시자는 본문 또는 표 셀의 독립된 문단에 있어야 합니다. 머리글, 바닥글, 텍스트 상자와 문장 안의 배치는 지원하지 않습니다. 끄면 일반 필드 채우기와 공통 목록 구분자를 사용합니다."
+fields_help = "DOCX 서식 파일의 첨부 설명, 참조 수신처, 작성일, 발행일과 주석을 정리하고 규칙에 해당하는 빈 필드를 제거합니다. 첨부 자리표시자는 본문 또는 표 셀의 독립된 문단에 있어야 합니다. 머리글, 바닥글, 텍스트 상자와 문장 안의 배치는 지원하지 않습니다. 끄면 일반 필드 채우기와 공통 목록 구분자를 사용합니다.\n\n서명자, 주 수신처, 참조 수신처가 여러 항목의 목록이면 항목을 임시로 중국어 구분점(、)으로 연결하고, 배치나 문장부호를 확인하도록 DOCX 메모를 추가합니다. 문장부호를 포함해 작성한 문자열은 그대로 유지합니다."
 
 attachment_alignment_label = "첨부 설명 정렬 방식"
 attachment_alignment_spaces = "공백 + 내어쓰기"
@@ -1884,3 +1901,33 @@ layout_settings = "PDF 추출 및 OCR 설정"
 image_title = "이미지 → Markdown"
 image_description = "송장 이미지는 항상 OCR을 사용하며 공유 OCR 언어 설정을 따릅니다."
 ocr_settings = "공유 OCR 언어 설정"
+
+[conversion_loss]
+settings_section = "변환 손실"
+settings_label = "완전히 보존되지 않은 내용을 주석으로 표시"
+settings_help = "지원되는 형식에 주석을 추가합니다. 꺼도 변환 세부 정보에 손실이 표시됩니다. 사용자가 선택한 서식 제거 등은 손실로 처리하지 않습니다."
+formula_unconverted = "〔수식을 변환하지 못했습니다〕"
+formula_reason = "수식 구조를 변환하지 못했습니다."
+formula_change = "자리 표시자를 삽입했습니다. 원본 문서를 확인하세요."
+note_formula_reason = "이 각주 또는 미주의 수식을 Word 기본 수식으로 작성할 수 없습니다."
+note_formula_change = "수식을 읽을 수 있는 LaTeX 텍스트로 보존했습니다."
+comment_failed = "손실 주석을 추가하지 못했습니다. 변환 세부 정보를 확인하세요."
+summary = "변환 완료: {count}개 항목이 완전히 보존되지 않았습니다. 세부 정보를 확인하세요."
+summary_annotated = "변환 완료: {count}개 항목이 완전히 보존되지 않았습니다. 주석을 추가했습니다."
+original = "원본: {original}"
+comment = "{reason}\n{change}\n{location}\n{original}"
+math_as_text_reason = "이 스프레드시트 출력은 수학 수식을 표시하지 않습니다."
+math_as_text_change = "수식을 읽을 수 있는 LaTeX 텍스트로 보존합니다."
+protected_cell_reason = "템플릿 셀이 보호되어 있습니다."
+protected_cell_change = "입력 값을 쓰지 않고 기존 셀을 유지했습니다."
+comment_failed_reason = "셀 주석을 작성하지 못했습니다."
+comment_failed_change = "변환 세부 정보에서 이 손실을 확인할 수 있습니다."
+note_placeholder = "[각주 또는 미주를 읽지 못했습니다. 원본 문서를 확인하세요]"
+formula_placeholder = "〔수식을 변환하지 못했습니다〕"
+csv_merge_reason = "CSV는 병합된 셀을 표현할 수 없습니다."
+csv_merge_change = "기존 행과 열의 값을 병합하지 않고 유지합니다."
+docx_paragraph = "문단 {paragraph}, 항목 {item}"
+docx_cell = "표 {table}, 행 {row}, 열 {column}, 문단 {paragraph}, 항목 {item}"
+note_unreadable_reason = "참조된 각주 또는 미주를 읽지 못했습니다."
+merge_failed_reason = "병합된 셀 구조를 보존하지 못했습니다."
+merge_failed_change = "셀 텍스트와 템플릿의 기존 병합을 유지했습니다."

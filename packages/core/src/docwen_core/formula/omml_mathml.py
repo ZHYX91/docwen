@@ -1,4 +1,4 @@
-"""OMML to MathML conversion."""
+"""Native Office Math to MathML without silently flattening unknown operators."""
 
 from __future__ import annotations
 
@@ -6,270 +6,172 @@ import logging
 
 import lxml.etree as etree
 
-from docwen_core.formula.constants import MATHML_NS, NARY_OP_MAP, OMML_NS, SYMBOL_MAP
+from docwen_core.formula.constants import MATHML_NS, NAMED_FUNCTIONS, NARY_OP_MAP, OMML_NS, SYMBOL_MAP
 
 logger = logging.getLogger(__name__)
-
 M_NS = OMML_NS["m"]
 
 
-def _get_child_by_tag(element, tag_name: str):
-    """Find direct child element by local tag name."""
-    for child in element:
-        if etree.QName(child).localname == tag_name:
-            return child
-    return None
+def _child(node, name: str):
+    return node.find(f"{{{M_NS}}}{name}")
 
 
-def _convert_omml_to_mathml_node(omml_node, mathml_parent) -> None:
-    """Recursively convert OMML node to MathML nodes."""
-    tag = etree.QName(omml_node).localname
+def _property(node, group: str, name: str, default: str) -> str:
+    properties = _child(node, group)
+    value = _child(properties, name) if properties is not None else None
+    present_default = "1" if name in {"nor", "degHide", "subHide", "supHide"} else default
+    return value.get(f"{{{M_NS}}}val", present_default) if value is not None else default
 
-    if tag == "oMath":
-        for child in omml_node:
-            _convert_omml_to_mathml_node(child, mathml_parent)
 
+def _contents(source, destination) -> None:
+    for child in source:
+        _convert_omml_to_mathml_node(child, destination)
+
+
+def _argument(node, name: str, parent):
+    source = _child(node, name)
+    if source is None:
+        raise ValueError(f"{etree.QName(node).localname} is missing {name}")
+    row = etree.SubElement(parent, "mrow")
+    _contents(source, row)
+    return row
+
+
+def _grouped_argument(node, parent) -> None:
+    # Empty delimiters express TeX grouping, not visible parentheses. Keeping
+    # the argument grouped prevents an imported function or n-ary expression
+    # from changing its operand on the next export.
+    group = etree.SubElement(parent, "mfenced", open="", close="", separators="")
+    _argument(node, "e", group)
+
+
+def _convert_omml_to_mathml_node(node, parent) -> None:
+    name = etree.QName(node)
+    tag = name.localname
+    if name.namespace != M_NS:
+        # Word run properties are presentation metadata inside a math run.
+        if name.namespace == OMML_NS["w"] and tag in {"rPr", "rStyle"}:
+            return
+        raise ValueError(f"unsupported math namespace: {name.namespace}")
+    if tag.endswith("Pr") or tag in {"ctrlPr", "argPr"}:
+        return
+    if tag in {"oMath", "oMathPara", "e", "fName"}:
+        _contents(node, parent)
     elif tag == "r":
-        t_elem = _get_child_by_tag(omml_node, "t")
-
-        if t_elem is not None and t_elem.text:
-            text = t_elem.text
-            run_properties = _get_child_by_tag(omml_node, "rPr")
-            normal_text = _get_child_by_tag(run_properties, "nor") if run_properties is not None else None
-            # Explicit normal-text math runs retain literal spacing and are
-            # not reclassified as identifiers or mathematical operators.
-            if normal_text is not None and normal_text.get(f"{{{M_NS}}}val", "1") not in {"0", "false", "off"}:
-                elem = etree.SubElement(mathml_parent, "mtext")
-            elif text in SYMBOL_MAP or text in NARY_OP_MAP or not text.isalnum():
-                elem = etree.SubElement(mathml_parent, "mo")
-            elif text.isdigit():
-                elem = etree.SubElement(mathml_parent, "mn")
-            else:
-                elem = etree.SubElement(mathml_parent, "mi")
-            elem.text = text
-
-    elif tag == "f":
-        frac = etree.SubElement(mathml_parent, "mfrac")
-        num_elem = _get_child_by_tag(omml_node, "num")
-        den_elem = _get_child_by_tag(omml_node, "den")
-
-        if num_elem is not None:
-            num_row = etree.SubElement(frac, "mrow")
-            for child in num_elem:
-                _convert_omml_to_mathml_node(child, num_row)
+        leaf = _child(node, "t")
+        if leaf is None or leaf.text is None:
+            return
+        text = leaf.text
+        normal = _property(node, "rPr", "nor", "0") not in {"0", "false", "off"}
+        if normal:
+            native_tag = "mtext"
+        elif text in SYMBOL_MAP or text in NARY_OP_MAP or not text.isalnum():
+            native_tag = "mo"
+        elif text.isdigit():
+            native_tag = "mn"
         else:
-            etree.SubElement(frac, "mrow")
-
-        if den_elem is not None:
-            den_row = etree.SubElement(frac, "mrow")
-            for child in den_elem:
-                _convert_omml_to_mathml_node(child, den_row)
-        else:
-            etree.SubElement(frac, "mrow")
-
-    elif tag == "sSup":
-        ssup = etree.SubElement(mathml_parent, "msup")
-        base_elem = _get_child_by_tag(omml_node, "e")
-        sup_elem = _get_child_by_tag(omml_node, "sup")
-
-        if base_elem is not None:
-            base_row = etree.SubElement(ssup, "mrow")
-            for child in base_elem:
-                _convert_omml_to_mathml_node(child, base_row)
-        else:
-            etree.SubElement(ssup, "mrow")
-
-        if sup_elem is not None:
-            sup_row = etree.SubElement(ssup, "mrow")
-            for child in sup_elem:
-                _convert_omml_to_mathml_node(child, sup_row)
-        else:
-            etree.SubElement(ssup, "mrow")
-
-    elif tag == "sSub":
-        ssub = etree.SubElement(mathml_parent, "msub")
-        base_elem = _get_child_by_tag(omml_node, "e")
-        sub_elem = _get_child_by_tag(omml_node, "sub")
-
-        if base_elem is not None:
-            base_row = etree.SubElement(ssub, "mrow")
-            for child in base_elem:
-                _convert_omml_to_mathml_node(child, base_row)
-        else:
-            etree.SubElement(ssub, "mrow")
-
-        if sub_elem is not None:
-            sub_row = etree.SubElement(ssub, "mrow")
-            for child in sub_elem:
-                _convert_omml_to_mathml_node(child, sub_row)
-        else:
-            etree.SubElement(ssub, "mrow")
-
-    elif tag == "sSubSup":
-        subsup = etree.SubElement(mathml_parent, "msubsup")
-        base_elem = _get_child_by_tag(omml_node, "e")
-        sub_elem = _get_child_by_tag(omml_node, "sub")
-        sup_elem = _get_child_by_tag(omml_node, "sup")
-
-        if base_elem is not None:
-            base_row = etree.SubElement(subsup, "mrow")
-            for child in base_elem:
-                _convert_omml_to_mathml_node(child, base_row)
-        else:
-            etree.SubElement(subsup, "mrow")
-
-        if sub_elem is not None:
-            sub_row = etree.SubElement(subsup, "mrow")
-            for child in sub_elem:
-                _convert_omml_to_mathml_node(child, sub_row)
-        else:
-            etree.SubElement(subsup, "mrow")
-
-        if sup_elem is not None:
-            sup_row = etree.SubElement(subsup, "mrow")
-            for child in sup_elem:
-                _convert_omml_to_mathml_node(child, sup_row)
-        else:
-            etree.SubElement(subsup, "mrow")
-
+            native_tag = "mi"
+        output = etree.SubElement(parent, native_tag)
+        output.text = text
+        style = _property(node, "rPr", "sty", "")
+        if not normal and style in {"i", "b", "bi"}:
+            output.set("mathvariant", {"i": "italic", "b": "bold", "bi": "bold-italic"}[style])
+        elif not normal and style == "p" and text.isalnum() and not text.isdigit() and text not in NAMED_FUNCTIONS:
+            output.set("mathvariant", "normal")
+    elif tag in {"f", "sSup", "sSub", "sSubSup", "limLow", "limUpp"}:
+        native_tag, slots = {
+            "f": ("mfrac", ("num", "den")),
+            "sSup": ("msup", ("e", "sup")),
+            "sSub": ("msub", ("e", "sub")),
+            "sSubSup": ("msubsup", ("e", "sub", "sup")),
+            "limLow": ("munder", ("e", "lim")),
+            "limUpp": ("mover", ("e", "lim")),
+        }[tag]
+        output = etree.SubElement(parent, native_tag)
+        if tag == "f":
+            fraction_type = _property(node, "fPr", "type", "bar")
+            if fraction_type == "noBar":
+                output.set("linethickness", "0")
+            elif fraction_type != "bar":
+                raise ValueError(f"unsupported native fraction type: {fraction_type!r}")
+        for slot in slots:
+            _argument(node, slot, output)
+    elif tag == "func":
+        function = etree.SubElement(parent, "mrow")
+        _argument(node, "fName", function)
+        _grouped_argument(node, function)
     elif tag == "nary":
-        naryPr = _get_child_by_tag(omml_node, "naryPr")
-        op_char = "∫"
-        lim_loc = "subSup"
-
-        if naryPr is not None:
-            chr_elem = _get_child_by_tag(naryPr, "chr")
-            if chr_elem is not None:
-                op_char = chr_elem.attrib.get(f"{{{M_NS}}}val", "∫")
-
-            lim_loc_elem = _get_child_by_tag(naryPr, "limLoc")
-            if lim_loc_elem is not None:
-                lim_loc = lim_loc_elem.attrib.get(f"{{{M_NS}}}val", "subSup")
-
-        mathml_tag = "munderover" if lim_loc == "undOvr" else "msubsup"
-        nary_elem = etree.SubElement(mathml_parent, mathml_tag)
-
-        op = etree.SubElement(nary_elem, "mo")
-        op.text = op_char
-
-        sub_elem = _get_child_by_tag(omml_node, "sub")
-        sub_row = etree.SubElement(nary_elem, "mrow")
-        if sub_elem is not None:
-            for child in sub_elem:
-                _convert_omml_to_mathml_node(child, sub_row)
-
-        sup_elem = _get_child_by_tag(omml_node, "sup")
-        sup_row = etree.SubElement(nary_elem, "mrow")
-        if sup_elem is not None:
-            for child in sup_elem:
-                _convert_omml_to_mathml_node(child, sup_row)
-
-        base_elem = _get_child_by_tag(omml_node, "e")
-        if base_elem is not None:
-            for child in base_elem:
-                _convert_omml_to_mathml_node(child, mathml_parent)
-
+        operator = _property(node, "naryPr", "chr", "∫")
+        limits_under = _property(node, "naryPr", "limLoc", "subSup") == "undOvr"
+        lower = _child(node, "sub")
+        upper = _child(node, "sup")
+        show_lower = (
+            lower is not None and len(lower) > 0 and _property(node, "naryPr", "subHide", "0") in {"0", "false", "off"}
+        )
+        show_upper = (
+            upper is not None and len(upper) > 0 and _property(node, "naryPr", "supHide", "0") in {"0", "false", "off"}
+        )
+        if show_lower and show_upper:
+            native_tag = "munderover" if limits_under else "msubsup"
+        elif show_lower:
+            native_tag = "munder" if limits_under else "msub"
+        elif show_upper:
+            native_tag = "mover" if limits_under else "msup"
+        else:
+            native_tag = "mrow"
+        output = etree.SubElement(parent, native_tag)
+        etree.SubElement(output, "mo").text = operator
+        if show_lower:
+            _argument(node, "sub", output)
+        if show_upper:
+            _argument(node, "sup", output)
+        _grouped_argument(node, parent)
     elif tag == "rad":
-        deg_elem = _get_child_by_tag(omml_node, "deg")
-        base_elem = _get_child_by_tag(omml_node, "e")
-        if deg_elem is not None:
-            text = "".join(t for t in deg_elem.itertext()).strip()
-            if text:
-                root = etree.SubElement(mathml_parent, "mroot")
-                if base_elem is not None:
-                    for child in base_elem:
-                        _convert_omml_to_mathml_node(child, root)
-                for child in deg_elem:
-                    _convert_omml_to_mathml_node(child, root)
-                return
-
-        sqrt = etree.SubElement(mathml_parent, "msqrt")
-        if base_elem is not None:
-            for child in base_elem:
-                _convert_omml_to_mathml_node(child, sqrt)
-
-    elif tag == "limLow":
-        munder = etree.SubElement(mathml_parent, "munder")
-
-        base_elem = _get_child_by_tag(omml_node, "e")
-        lim_elem = _get_child_by_tag(omml_node, "lim")
-
-        if base_elem is not None:
-            base_row = etree.SubElement(munder, "mrow")
-            for child in base_elem:
-                _convert_omml_to_mathml_node(child, base_row)
-        else:
-            mo = etree.SubElement(munder, "mo")
-            mo.text = "lim"
-
-        if lim_elem is not None:
-            lim_row = etree.SubElement(munder, "mrow")
-            for child in lim_elem:
-                _convert_omml_to_mathml_node(child, lim_row)
-        else:
-            etree.SubElement(munder, "mrow")
-
+        degree = _child(node, "deg")
+        hidden = _property(node, "radPr", "degHide", "0") not in {"0", "false", "off"}
+        indexed = not hidden and degree is not None and len(degree) > 0
+        output = etree.SubElement(parent, "mroot" if indexed else "msqrt")
+        _argument(node, "e", output)
+        if indexed:
+            _argument(node, "deg", output)
     elif tag == "m":
-        mtable = etree.SubElement(mathml_parent, "mtable")
-
-        for mr in omml_node:
-            if etree.QName(mr).localname == "mr":
-                mtr = etree.SubElement(mtable, "mtr")
-
-                for e_elem in mr:
-                    if etree.QName(e_elem).localname == "e":
-                        mtd = etree.SubElement(mtr, "mtd")
-
-                        for child in e_elem:
-                            _convert_omml_to_mathml_node(child, mtd)
-
+        output = etree.SubElement(parent, "mtable")
+        for row in node:
+            if etree.QName(row).localname == "mPr":
+                continue
+            if etree.QName(row).localname != "mr":
+                raise ValueError("unsupported matrix row")
+            native_row = etree.SubElement(output, "mtr")
+            for cell in row:
+                if etree.QName(cell).localname != "e":
+                    raise ValueError("unsupported matrix cell")
+                _contents(cell, etree.SubElement(native_row, "mtd"))
     elif tag == "d":
-        dPr = _get_child_by_tag(omml_node, "dPr")
-        open_char = "("
-        close_char = ")"
-
-        if dPr is not None:
-            begChr = _get_child_by_tag(dPr, "begChr")
-            if begChr is not None:
-                open_char = begChr.get(f"{{{M_NS}}}val", "(")
-            endChr = _get_child_by_tag(dPr, "endChr")
-            if endChr is not None:
-                close_char = endChr.get(f"{{{M_NS}}}val", ")")
-
-        mfenced = etree.SubElement(mathml_parent, "mfenced")
-        mfenced.set("open", open_char)
-        mfenced.set("close", close_char)
-
-        e_elem = _get_child_by_tag(omml_node, "e")
-        if e_elem is not None:
-            for child in e_elem:
-                _convert_omml_to_mathml_node(child, mfenced)
-
-    elif tag == "e":
-        # OMML element container: pass through to parent
-        for child in omml_node:
-            _convert_omml_to_mathml_node(child, mathml_parent)
-
+        output = etree.SubElement(
+            parent,
+            "mfenced",
+            open=_property(node, "dPr", "begChr", "("),
+            close=_property(node, "dPr", "endChr", ")"),
+            separators=_property(node, "dPr", "sepChr", "|"),
+        )
+        for child in node:
+            if etree.QName(child).localname == "e":
+                _contents(child, etree.SubElement(output, "mrow"))
+            elif etree.QName(child).localname != "dPr":
+                raise ValueError("unsupported delimiter child")
     else:
-        # Unknown tag: recurse into children
-        for child in omml_node:
-            _convert_omml_to_mathml_node(child, mathml_parent)
+        raise ValueError(f"unsupported OMML structure: {tag}")
 
 
 def omml_to_mathml(omml_str: str) -> str | None:
-    """Convert OMML to MathML format.
-
-    Args:
-        omml_str: OMML XML string.
-
-    Returns:
-        MathML XML string, or None if conversion fails.
-    """
+    """Convert one complete supported formula, refusing lossy flattening."""
     try:
-        omml_tree = etree.fromstring(omml_str.encode("utf-8"))
-        mathml_math = etree.Element("math", xmlns=MATHML_NS)
-        _convert_omml_to_mathml_node(omml_tree, mathml_math)
-        return etree.tostring(mathml_math, encoding="unicode", pretty_print=True)
-    except Exception as e:
-        logger.error("OMML to MathML failed: %s", type(e).__name__)
+        source = etree.fromstring(omml_str.encode("utf-8"))
+        math = etree.Element("math", xmlns=MATHML_NS)
+        _convert_omml_to_mathml_node(source, math)
+        if not len(math):
+            raise ValueError("empty OMML expression")
+        return etree.tostring(math, encoding="unicode")
+    except Exception as exc:
+        logger.error("OMML to MathML failed: %s", exc)
         return None

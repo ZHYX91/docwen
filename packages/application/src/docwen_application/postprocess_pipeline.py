@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import tempfile
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from docwen_application.postprocessing import postprocess_proofread_options
+from docwen_core.tempfiles import TemporaryDirectory
 
 
 def _pipeline_conversion_identity(request: Any, task_id: str) -> Any:
@@ -111,7 +111,7 @@ def _execute_docx_proofread_pipeline(
     render_options = dict(request.options)
     render_options.pop(POSTPROCESS_PROOFREAD_OPTION, None)
 
-    with tempfile.TemporaryDirectory(prefix="docwen_postprocess_", ignore_cleanup_errors=True) as private_output:
+    with TemporaryDirectory(prefix="docwen_postprocess_", ignore_cleanup_errors=True) as private_output:
         # tempfile may use macOS's /var alias. This directory is ours; pass its
         # physical path to the next admitted stage without relaxing input checks.
         private_output = str(Path(private_output).resolve(strict=True))

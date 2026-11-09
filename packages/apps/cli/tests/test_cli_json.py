@@ -250,3 +250,21 @@ def test_json_preserves_unicode(capsys: pytest.CaptureFixture[str]) -> None:
     JsonPresenter().present_error("inspect", "文件不存在", error_code="file_not_found")
 
     assert json.loads(capsys.readouterr().out)["error"]["message"] == "文件不存在"
+
+
+def test_conversion_loss_diagnostics_keep_location_and_success(capsys: pytest.CaptureFixture[str]) -> None:
+    from docwen_cli.presenters.json_presenter import JsonPresenter
+    from docwen_core.conversion_loss import ConversionLoss, LossCollector
+    from docwen_core.models.result import ConversionResult
+
+    loss = ConversionLoss("LOSS", "Unsupported formula", "Text retained", "line 4", "Sheet1!B2", "$x$")
+    collector = LossCollector()
+    collector.add(loss)
+    summary = collector.summary()
+    assert summary is not None
+    result = ConversionResult(task_id="loss", success=True, diagnostics=[loss.to_diagnostic(), summary])
+    JsonPresenter().present_single(result, command="convert")
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["warnings"][0]["location"] == "Sheet1!B2"
+    assert "$x$" in payload["warnings"][0]["message"]
+    assert payload["warnings"][1]["code"] == "CONVERSION-LOSS-SUMMARY"

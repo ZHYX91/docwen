@@ -12,6 +12,7 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import lxml.etree as etree
 
+from docwen_core.file_io import replace_authorized_file
 from docwen_core.models.resolved_numbering import (
     HeadingCounterSegment,
     HeadingLiteralSegment,
@@ -490,6 +491,6 @@ def _rewrite_package(
                 info.compress_type = ZIP_DEFLATED
                 info.external_attr = 0o600 << 16
                 output.writestr(info, data[name])
-        os.replace(temporary, path)
+        replace_authorized_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)

@@ -129,6 +129,47 @@ def compile_clean_rules_from_data(
 # ═══════════════════════════════════════════════════════════════════════════
 
 
+WORD_JOINER = "\u2060"
+_MARKED_NUMBER_SEPARATORS = " \t\u00a0\u3000"
+
+
+def has_incomplete_numbering_marker(text: str) -> bool:
+    """Match Number Suite's one-sided-marker protection, even inside a title."""
+    first = text.find(WORD_JOINER)
+    return first >= 0 and text.find(WORD_JOINER, first + 1) < 0
+
+
+def marked_heading_prefix(text: str) -> HeadingPrefixInfo | None:
+    """Read Number Suite's leading paired U+2060 provenance marker.
+
+    Accepts a nonblank, single-line label, optional spaces or tabs (including
+    the no-break and ideographic spaces used by schemes), and a meaningful title.
+    A marker is provenance, not a restriction to a particular number alphabet.
+    """
+    if not text.startswith(WORD_JOINER):
+        return None
+    closing = text.find(WORD_JOINER, 1)
+    if closing < 0:
+        return None
+    label = text[1:closing]
+    if not label.strip() or "\n" in label or "\r" in label:
+        return None
+    end = closing + 1
+    while end < len(text) and text[end] in _MARKED_NUMBER_SEPARATORS:
+        end += 1
+    if not text[end:].strip():
+        return None
+    return HeadingPrefixInfo(text[:end], text[end:], 0, "plugin-marker")
+
+
+def wrap_generated_heading_number(prefix: str) -> str:
+    """Wrap the complete generated label, leaving its separator unchanged."""
+    label = prefix.rstrip(_MARKED_NUMBER_SEPARATORS)
+    if not label.strip() or WORD_JOINER in prefix or "\n" in prefix or "\r" in prefix:
+        return prefix
+    return WORD_JOINER + label + WORD_JOINER + prefix[len(label) :]
+
+
 def detect_heading_prefix(
     text: str,
     *,
@@ -136,7 +177,8 @@ def detect_heading_prefix(
 ) -> HeadingPrefixInfo | None:
     """Detect a heading-numbering prefix in *text*.
 
-    Tries each request-owned clean rule in order. The first match wins.
+    Recognizes a safe provenance marker first, then tries each request-owned
+    clean rule in order. One-sided markers protect the original text.
 
     Args:
         text: The heading text to inspect.
@@ -146,6 +188,11 @@ def detect_heading_prefix(
         A :class:`HeadingPrefixInfo` describing the match, or ``None``
         when no rule matches.
     """
+    marked = marked_heading_prefix(text)
+    if marked is not None:
+        return marked
+    if has_incomplete_numbering_marker(text):
+        return None
     for rule_id, pattern, level in rules:
         m = pattern.match(text)
         if m:
@@ -225,6 +272,8 @@ class HeadingFormatter:
         self,
         scheme_config: dict[str, Any],
         max_level: int = 9,
+        *,
+        mark_generated_numbers: bool = False,
     ) -> None:
         """Initialise with a numbering scheme's level config dict.
 
@@ -232,8 +281,10 @@ class HeadingFormatter:
             scheme_config: Dict like ``{"level_1": {"format": "..."},
                 "level_2": {"format": "..."}, ...}``.
             max_level: Maximum heading level (default 9).
+            mark_generated_numbers: Wrap new labels in paired U+2060 markers.
         """
         self._counters = [0] * max_level
+        self._mark_generated_numbers = mark_generated_numbers
         self._templates: dict[int, str] = {}
 
         for key, value in scheme_config.items():
@@ -263,6 +314,11 @@ class HeadingFormatter:
             for i in range(idx + 1, len(self._counters)):
                 self._counters[i] = 0
 
+        # Existing provenance or a one-sided marker must never be doubled.
+        # Counters still advance so subsequent headings keep their positions.
+        if marked_heading_prefix(text) is not None or has_incomplete_numbering_marker(text):
+            return text
+
         # Fetch template for this level
         template = self._templates.get(level, "")
         if not template:
@@ -272,6 +328,8 @@ class HeadingFormatter:
         prefix = self._resolve_template(template)
         prefix = prefix.replace("&nbsp;", "\u00a0")
 
+        if self._mark_generated_numbers and text.strip():
+            prefix = wrap_generated_heading_number(prefix)
         return prefix + text
 
     def _resolve_template(self, template: str) -> str:

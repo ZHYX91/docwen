@@ -30,12 +30,12 @@ class TestFormulaRenderer:
 
     def test_inline_formula_embeds_omath_in_paragraph(self):
         from docwen_plugin_markdown.to_docx.formula_renderer import (
-            render_inline_formula,
+            append_formula,
         )
 
         doc = Document()
         p = doc.add_paragraph("Before ")
-        render_inline_formula(p, r"x_1")
+        append_formula(p, r"x_1", block=False)
         p.add_run(" after")
         xml = _docx_xml(doc)
         assert "oMath" in xml
@@ -66,13 +66,13 @@ class TestFormulaRenderer:
     def test_inline_formula_fallback_for_invalid_latex(self):
         """Invalid LaTeX is rendered as plain text rather than crashing."""
         from docwen_plugin_markdown.to_docx.formula_renderer import (
-            render_inline_formula,
+            append_formula,
         )
 
         doc = Document()
         p = doc.add_paragraph()
         # Intentionally malformed LaTeX
-        render_inline_formula(p, r"\invalid{")
+        append_formula(p, r"\invalid{", block=False)
         _docx_xml(doc)
         # Either we get OMML or plain text; should not crash
         assert len(doc.paragraphs) >= 1
@@ -99,6 +99,24 @@ class TestFormulaViaFullPipeline:
         assert "Some text with" in xml
         assert "oMath" in xml, "Inline formula $x^2+y^2$ was dropped — F-F1-008 regression"
         assert "formula inline" in xml
+
+    def test_binomial_formula_keeps_no_bar_and_its_arguments(self):
+        from docwen_core.formula.constants import OMML_NS
+        from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
+        from docwen_plugin_markdown.renderer import MdToDocxRenderer
+
+        doc = Document()
+        renderer = MdToDocxRenderer(doc)
+        renderer.render(parse_markdown_text(r"Ways: $\binom{n}{k}$ choices."))
+
+        ns = {"m": OMML_NS["m"]}
+        [fraction] = doc._element.xpath(".//m:f")
+        fraction_type = fraction.find("m:fPr/m:type", ns)
+        assert fraction_type is not None and fraction_type.get(f"{{{OMML_NS['m']}}}val") == "noBar"
+        assert [node.text for node in fraction.findall("m:num//m:t", ns)] == ["n"]
+        assert [node.text for node in fraction.findall("m:den//m:t", ns)] == ["k"]
+        assert doc.paragraphs[0].text == "Ways:  choices."
+        assert not renderer.warnings
 
     def test_multiple_inline_formulas_same_paragraph(self):
         """Multiple inline formulas in one paragraph all render."""
@@ -153,6 +171,7 @@ class TestFormulaViaFullPipeline:
             {
                 "type": "block_math",
                 "raw": r"x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}",
+                "_math_source": r"$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$",
             }
         ]
 

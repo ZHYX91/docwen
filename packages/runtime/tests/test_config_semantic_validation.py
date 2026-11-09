@@ -14,6 +14,8 @@ PROJECT_CONFIGS = Path(__file__).resolve().parents[3] / "configs"
 @pytest.mark.parametrize(
     ("rel_path", "invalid_text"),
     (
+        ("conversion.toml", 'loss_comments = "false"\n'),
+        ("conversion.toml", "loss_comments = 1\n"),
         ("gui.toml", '[history]\nrecent_files = ["ok.docx", 7]\n'),
         (
             "conversion.toml",
@@ -24,6 +26,10 @@ PROJECT_CONFIGS = Path(__file__).resolve().parents[3] / "configs"
         ("export.toml", 'to_md_ocr_placement_mode = "sidecar"\n'),
         ("link.toml", '[format]\nmd_file_link_style = "markdown_embed"\n'),
         ("link.toml", '[non_embed_links]\nwiki_mode = "render"\n'),
+        ("link.toml", '[non_embed_links]\nwiki_hyperlink_fallback = "hyperlink"\n'),
+        ("link.toml", '[non_embed_links]\nmarkdown_hyperlink_fallback = "remove"\n'),
+        ("link.toml", '[non_embed_links]\nwiki_hyperlink_fallback = " KEEP "\n'),
+        ("link.toml", "[non_embed_links]\nmarkdown_hyperlink_fallback = false\n"),
         ("link.toml", "[embedding]\nmax_depth = 0\n"),
         ("link.toml", '[path_resolution]\nsearch_dirs = ["assets", 7]\n'),
         (
@@ -305,12 +311,63 @@ def test_deep_semantic_raw_editor_failure_restores_exact_preimage(tmp_path: Path
     assert loader.config_state_trusted is True
 
 
-def test_numbering_review_dependency_normalizes_external_config_without_altering_input():
+def test_numbering_review_is_independent_of_retired_text_flag():
     from docwen_runtime.config.validation import validate_config_file
 
     effective = {"gongwen_numbering_text": False, "gongwen_numbering_comments": True}
     assert validate_config_file("template_fill.toml", effective, {}) == {
         "gongwen_numbering_text": False,
-        "gongwen_numbering_comments": False,
+        "gongwen_numbering_comments": True,
     }
     assert effective["gongwen_numbering_comments"] is True
+
+
+@pytest.mark.parametrize("key", ["wiki_hyperlink_fallback", "markdown_hyperlink_fallback"])
+@pytest.mark.parametrize("value", ["hyperlink", "remove", "embed", " KEEP ", "", False, 1])
+def test_invalid_hyperlink_fallback_runtime_override_fails_closed(tmp_path: Path, key: str, value: object) -> None:
+    from docwen_runtime.config.loader import ConfigLoader
+    from docwen_runtime.config.validation import ConfigSemanticError
+
+    with pytest.raises(ConfigSemanticError):
+        ConfigLoader(
+            base_dir=PROJECT_CONFIGS,
+            user_dir=tmp_path / "user",
+            runtime_overrides={"link": {"non_embed_links": {key: value}}},
+        )
+
+
+@pytest.mark.parametrize("mode", ["keep", "extract_text", "extract_address", "remove", "hyperlink"])
+@pytest.mark.parametrize("fallback", ["keep", "extract_text", "extract_address"])
+def test_all_link_modes_and_independent_fallbacks_are_admitted(tmp_path: Path, mode: str, fallback: str) -> None:
+    from docwen_runtime.config.loader import ConfigLoader
+
+    non_embed = {
+        "wiki_mode": mode,
+        "markdown_mode": mode,
+        "wiki_hyperlink_fallback": fallback,
+        "markdown_hyperlink_fallback": "extract_text" if fallback != "extract_text" else "extract_address",
+    }
+    loader = ConfigLoader(
+        base_dir=PROJECT_CONFIGS,
+        user_dir=tmp_path / "user",
+        runtime_overrides={"link": {"non_embed_links": non_embed}},
+    )
+    snapshot = loader.config.as_dict()["link"]["non_embed_links"]
+    for key, expected in non_embed.items():
+        assert snapshot[key] == expected
+
+
+def test_legacy_link_override_receives_lossless_hyperlink_fallback_defaults(tmp_path: Path) -> None:
+    from docwen_runtime.config.loader import ConfigLoader
+
+    user_dir = tmp_path / "user"
+    user_dir.mkdir()
+    user_file = user_dir / "link.toml"
+    original = b'[non_embed_links]\nwiki_mode = "hyperlink"\nmarkdown_mode = "hyperlink"\n'
+    user_file.write_bytes(original)
+    loader = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=user_dir)
+    snapshot = loader.config.as_dict()["link"]["non_embed_links"]
+
+    assert snapshot["wiki_hyperlink_fallback"] == snapshot["markdown_hyperlink_fallback"] == "keep"
+    assert user_file.read_bytes() == original
+    assert not list(user_dir.glob("*.bak_*"))

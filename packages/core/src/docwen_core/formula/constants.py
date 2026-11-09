@@ -22,8 +22,46 @@ OMML_NS: dict[str, str] = {
 # MathML namespace
 MATHML_NS: str = "http://www.w3.org/1998/Math/MathML"
 
+# Named operators are distinct from an italic identifier or normal text.
+# The same inventory drives native function construction and TeX recovery.
+NAMED_FUNCTIONS: dict[str, str] = {
+    name: "\\" + name
+    for name in (
+        "lim",
+        "sin",
+        "cos",
+        "tan",
+        "cot",
+        "sec",
+        "csc",
+        "sinh",
+        "cosh",
+        "tanh",
+        "arcsin",
+        "arccos",
+        "arctan",
+        "log",
+        "ln",
+        "exp",
+        "min",
+        "max",
+        "sup",
+        "inf",
+        "det",
+        "gcd",
+        "arg",
+        "ker",
+        "dim",
+        "hom",
+        "Pr",
+    )
+}
+NAMED_FUNCTIONS.update({"lim inf": r"\liminf", "lim sup": r"\limsup"})
+LIMIT_FUNCTIONS = frozenset({"lim", "lim inf", "lim sup", "min", "max", "sup", "inf"})
+
 # Special symbol mapping (Unicode -> LaTeX)
 SYMBOL_MAP: dict[str, str] = {
+    **NAMED_FUNCTIONS,
     "α": r"\alpha",
     "β": r"\beta",
     "γ": r"\gamma",
@@ -80,7 +118,6 @@ SYMBOL_MAP: dict[str, str] = {
     "∂": r"\partial",
     "∇": r"\nabla",
     "∞": r"\infty",
-    "lim": r"\lim",
     "→": r"\to",
     "←": r"\gets",
     "↔": r"\leftrightarrow",
@@ -108,18 +145,11 @@ NARY_OP_MAP: dict[str, str] = {
     "∑": r"\sum",
     "∏": r"\prod",
     "∫": r"\int",
+    "∬": r"\iint",
+    "∭": r"\iiint",
+    "∮": r"\oint",
     "⋃": r"\bigcup",
     "⋂": r"\bigcap",
-}
-
-# Matrix environment to bracket mapping
-MATRIX_BRACKET_MAP: dict[str, tuple[str, str]] = {
-    "bmatrix": ("[", "]"),
-    "pmatrix": ("(", ")"),
-    "vmatrix": ("|", "|"),
-    "Vmatrix": ("‖", "‖"),
-    "Bmatrix": ("{", "}"),
-    "matrix": ("", ""),
 }
 
 # Bracket pair mapping (for recognizing opening-bracket content closing-bracket patterns)

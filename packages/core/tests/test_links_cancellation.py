@@ -50,6 +50,8 @@ def test_link_batches_stop_before_next_resolution(tmp_path, monkeypatch, kind):
         monkeypatch.setattr(_non_embed, "resolve_file_path", resolve)
         text = "[[one.md]] [[two.md]]"
     elif kind == "markdown-link":
+        (tmp_path / "one.md").write_text("one", encoding="utf-8")
+        (tmp_path / "two.md").write_text("two", encoding="utf-8")
         monkeypatch.setattr(_non_embed, "_canonical_local_docx_target", resolve)
         text = "[one](one.md) [two](two.md)"
     else:

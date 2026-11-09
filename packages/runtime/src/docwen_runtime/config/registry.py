@@ -113,6 +113,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "gui.transparency",
         "gui.language",
         "conversion.output_locale",
+        "conversion.loss_comments",
     ),
     "text": (
         "conversion.md_to_docx.formatting_mode",
@@ -187,6 +188,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "document.to_md_table_merge_export_strategy",
         "document.to_md_remove_numbering",
         "document.to_md_add_numbering",
+        "document.export_numbering_markers",
         "document.to_md_default_scheme",
     ),
     "spreadsheet": (
@@ -221,6 +223,8 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "link.format.md_file_link_style",
         "link.non_embed_links.wiki_mode",
         "link.non_embed_links.markdown_mode",
+        "link.non_embed_links.wiki_hyperlink_fallback",
+        "link.non_embed_links.markdown_hyperlink_fallback",
         "link.embed_links.wiki_image_mode",
         "link.embed_links.markdown_image_mode",
         "link.embed_links.md_file_mode",

@@ -15,6 +15,8 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+runtime_folder_unavailable = "No se pudo crear la carpeta temporal de trabajo. Compruebe los permisos o el software de seguridad e inténtelo de nuevo."
+output_folder_unavailable = "No se puede usar con seguridad la carpeta de destino. Compruebe los permisos o elija otra carpeta."
 numbering_comments_unanchored = "Algunos números añadidos no se pueden aislar como texto con este esquema. Se omitieron sus comentarios y se conservaron los títulos."
 conversion_failed_detail = "Error de conversión."
 note_syntax_invalid = "La sintaxis de las notas no es válida. Revise las referencias y definiciones."
@@ -30,6 +32,7 @@ extension_loss_references = "Los títulos y las referencias cruzadas se convirti
 extension_loss_tables = "Las celdas combinadas y la estructura del encabezado se convirtieron en una tabla Markdown normal."
 route_catalog_failed = "No se pudieron cargar las operaciones disponibles; la solicitud no se inició."
 conversion_failed = "La conversión falló. Abra los detalles del error para consultar la información de diagnóstico."
+missing_embedded_resources = "No se encontraron algunos archivos o imágenes incrustados. Compruebe los enlaces del origen y la configuración de archivos ausentes."
 conversion_warning = "La conversión terminó con una advertencia."
 ocr_no_text = "OCR no detectó texto; compruebe esta imagen con la fuente."
 ocr_degraded = "OCR no terminó normalmente (estado: {status}); se conservaron los resultados utilizables."
@@ -97,6 +100,11 @@ save_failed = "Error al guardar la configuración"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Guardando el resultado…"
+phase_checking_output = "Comprobando la carpeta de destino…"
+phase_preparing_workspace = "Preparando la carpeta temporal…"
+phase_converting = "Convirtiendo el archivo…"
+phase_cancelling_hint = "Cancelación solicitada. Terminando de forma segura el paso actual…"
 output_each_source = "Guardar cada resultado junto a su archivo de origen"
 output_date_subfolder = "Guardar en una subcarpeta con fecha"
 task_warning_count = "{count} avisos de conversión. Despliegue el historial de actividad para ver los detalles."
@@ -139,6 +147,8 @@ example = "Ejemplo"
 
 # CLI帮助文本
 [cli.help]
+lang = "Elige el idioma de los mensajes traducidos de la CLI y de la salida de las tareas compatibles. No traduce el texto del documento. El OCR en modo auto también usa esta elección para seleccionar el modelo de reconocimiento."
+doctor_output_dir = "Comprobar si la carpeta de salida permite guardar de forma segura"
 settings = "Gestionar la configuración"
 settings_reset = "Restablecer la configuración predeterminada"
 files = "Ruta(s) de archivo de entrada (admite comodines como *.docx)"
@@ -347,10 +357,8 @@ batch_mode = "Modo por lotes"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "Usar texto para los nuevos números de títulos"
-numbering_text_help = "Escribe como texto los números de títulos añadidos con el esquema seleccionado, sustituyendo el modo de salida anterior para esta conversión. No activa la numeración ni cambia el modo guardado o los números existentes de la plantilla. Activado por defecto."
-numbering_comments_label = "Añadir comentarios a los nuevos números de títulos en texto"
-numbering_comments_help = "Comenta solo los números de títulos en texto realmente añadidos, nunca los ya escritos manualmente. Activado por defecto. Desactivar la numeración de texto desmarca e inhabilita esta opción; al reactivarla puede seleccionarla de nuevo. Los números Markdown personalizados que no puedan localizarse con precisión se omiten con un aviso."
+numbering_comments_label = "Comentar los nuevos números de títulos"
+numbering_comments_help = "Solo se comentan los números recién generados. El modo texto marca el número; el modo nativo DOCX marca el primer carácter visible del título. Se excluyen los números manuales existentes."
 output_format = "Tipo de plantilla preferido"
 output_format_hint = "Al añadir Markdown, se prefieren las plantillas de este tipo. Esto no cambia por sí solo el formato de salida de la conversión."
 # MD转文档序号设置
@@ -362,7 +370,6 @@ add_numbering_tooltip = "Añadir numeración jerárquica a los títulos del DOCX
 scheme_label = "Esquema de numeración predeterminado:"
 scheme_tooltip = "Elegir el esquema de numeración de los títulos"
 render_mode_label = "Modo de salida de la numeración de títulos:"
-render_mode_tooltip = "Elegir si los números de título se escriben en el texto o se generan mediante la numeración nativa de DOCX"
 render_mode_text = "Texto"
 render_mode_word_native = "Nativa de DOCX"
 render_mode_hint = "Texto = escribir los números en los títulos; nativa de DOCX = usar listas multinivel de DOCX"
@@ -445,7 +452,9 @@ section = "Exportación de celdas combinadas"
 desc = "Controla cómo se representan las celdas combinadas en la salida Markdown."
 merge_strategy_label = "Estrategia de exportación de celdas combinadas:"
 
-merge_strategy_help = "Solo para Markdown normal: Rellenar repite el texto de la celda ancla (p. ej., «Título | Título»); Vacío deja en blanco las celdas cubiertas («Título | »).\n\nCon la salida Structural Tables activada se usan en su lugar los marcadores < y ^."
+merge_strategy_help = "Para Markdown normal:\nRellenar: repetir el texto de la celda superior izquierda (Título | Título).\nDejar vacío: dejar vacías las celdas cubiertas (Título | ).\n\nSi Structural Tables está activado en «Generar Markdown», se usan < y ^ en su lugar. La selección se conserva.\nExcepción: la optimización «Documentos oficiales» procesa las tablas por separado."
+structural_active = "Exportación normal de documentos/hojas de cálculo: Structural Tables activado; Rellenar/Dejar vacío se conserva pero no se aplica."
+ordinary_active = "Exportación normal de documentos/hojas de cálculo: Structural Tables desactivado; se aplica Rellenar/Dejar vacío de cada pestaña de entrada."
 [settings.table_export.strategies]
 fill = "Rellenar"
 empty = "Dejar vacío"
@@ -473,6 +482,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "Marcar números nuevos con caracteres de ancho cero"
+markers_tooltip = "Rodea los nuevos números de títulos con pares de marcadores invisibles para que Number Suite pueda reconocerlos. Desactivado por defecto. No cambia los números existentes."
 section = "Numeración de encabezados (Documento → Markdown)"
 remove = "Eliminar por defecto la numeración de encabezados del documento"
 remove_tooltip = "Elimina la numeración existente al convertir DOCX → MD"
@@ -577,9 +588,13 @@ md_file_link_style_tooltip = "Establece el formato de enlace para archivos MD de
 non_embed_section = "Procesamiento de enlaces no incrustados"
 non_embed_desc = "Elige cómo tratar los enlaces normales de la entrada Markdown al generar documentos u hojas de cálculo."
 wiki_link_mode = "Procesamiento de enlace Wiki:"
-wiki_link_tooltip = "Procesa [[link]] o [[link|text]]. Mantener conserva el marcado; Extraer texto conserva solo el texto visible; Hipervínculo conserva texto y destino y crea un enlace pulsable si el formato de destino lo admite; Eliminar borra el enlace."
+wiki_link_tooltip = "Procesar [[link]] / [[link|text]].\n\nMantener: conservar toda la sintaxis original.\nExtraer texto: conservar solo el texto visible.\nExtraer dirección: conservar solo la dirección original, incluido el ancla.\nEliminar: eliminar todo el enlace, incluido su texto visible.\nHipervínculo: crear un enlace en el que se pueda hacer clic; si no es posible, usar la alternativa."
 markdown_link_mode = "Procesamiento de enlace Markdown:"
-markdown_link_tooltip = "Procesa [text](url). Mantener conserva el marcado; Extraer texto conserva solo text; Hipervínculo conserva texto y destino y crea un enlace pulsable si el formato de destino lo admite; Eliminar borra el enlace."
+markdown_link_tooltip = "Procesar [text](url).\n\nMantener: conservar toda la sintaxis original.\nExtraer texto: conservar solo el texto visible.\nExtraer dirección: conservar solo la dirección original, incluido el ancla.\nEliminar: eliminar todo el enlace, incluido su texto visible.\nHipervínculo: crear un enlace en el que se pueda hacer clic; si no es posible, usar la alternativa."
+markdown_hyperlink_fallback_tooltip = "Solo se usa en modo Hipervínculo cuando no se puede crear un enlace clicable, incluidas las salidas CSV.\nEsta opción se guarda de forma independiente para los enlaces Markdown.\n\nMantener: conservar toda la sintaxis original.\nExtraer texto: conservar solo el texto visible.\nExtraer dirección: conservar solo la dirección original, incluido el ancla."
+markdown_hyperlink_fallback = "Alternativa para hipervínculos Markdown:"
+wiki_hyperlink_fallback_tooltip = "Solo se usa en modo Hipervínculo cuando no se puede crear un enlace clicable, incluidas las salidas CSV.\nEsta opción se guarda de forma independiente para los enlaces Wiki.\n\nMantener: conservar toda la sintaxis original.\nExtraer texto: conservar solo el texto visible.\nExtraer dirección: conservar solo la dirección original, incluido el ancla."
+wiki_hyperlink_fallback = "Alternativa para hipervínculos Wiki:"
 
 # 嵌入链接处理区域
 embed_section = "Procesamiento de enlaces incrustados"
@@ -608,6 +623,7 @@ md_link = "Enlace Markdown"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "Extraer dirección"
 keep = "Mantener"
 extract_text = "Extraer texto"
 remove = "Eliminar"
@@ -687,13 +703,13 @@ md_to_docx_section = "Markdown → Documento"
 md_format_processing = "Procesamiento de formato"
 md_format_processing_tooltip = "Configura el manejo de markup al convertir Markdown a documentos DOCX"
 md_body_format_label = "Manejo de markup del cuerpo:"
-md_body_format_tooltip = "Aplicar formato: **Bold** se convierte en negrita real\nMantener markup: se muestra **Bold** tal cual\nLimpiar markup: se muestra solo \"Bold\", sin formato"
+md_body_format_tooltip = "Aplicar formato: **negrita** se convierte en texto en negrita.\nMantener markup: **negrita** se muestra literalmente.\nLimpiar markup: quitar los marcadores Markdown y conservar el estilo de la plantilla."
 md_heading_format_label = "Manejo de markup de encabezados:"
 md_heading_format_tooltip = "Aplicar formato: anula el estilo predeterminado, permitiendo negrita parcial\nMantener markup: se muestra el markup tal cual\nLimpiar markup: deja que el estilo de encabezado de DOCX se aplique de forma natural\nNota: cuando el estilo del encabezado es negrita, \"Aplicar formato\" permite negrita parcial"
 md_table_header_format_label = "Manejo de markup de cabecera de tabla:"
-md_table_header_format_tooltip = "Aplicar formato: convierte **negrita** en negrita real (puede solaparse con el estilo de tabla). Mantener marcado: muestra el marcado literalmente. Limpiar marcado: quita los marcadores Markdown y deja actuar al formato de la primera fila del estilo de tabla. Los estilos suelen formatear la primera fila, por lo que Limpiar marcado suele ser preferible."
+md_table_header_format_tooltip = "Aplicar formato: convierte **negrita** en negrita real (puede solaparse con el estilo de tabla).\nMantener markup: muestra el marcado literalmente.\nLimpiar markup: quita los marcadores Markdown y deja actuar al formato de la primera fila del estilo de tabla.\nLos estilos suelen formatear la primera fila, por lo que Limpiar marcado suele ser preferible."
 heading_merge_mode_label = "Modo de fusion de titulo y cuerpo:"
-heading_merge_mode_tooltip = "Controla si un titulo y la siguiente linea adyacente de texto normal deben fusionarse en un mismo parrafo\nRequiere puntuacion: solo fusiona si el titulo termina con un signo de cierre y la siguiente linea es texto normal (predeterminado)\nFusionar siempre: fusiona si la siguiente linea es texto normal (sin requerir signo final)\nNo fusionar nunca: el titulo y el texto se analizan siempre como parrafos separados\nNota: listas/bloques de codigo/tablas/citas/separadores no se fusionan"
+heading_merge_mode_tooltip = "Controla si un título y la siguiente línea adyacente de texto normal deben fusionarse en un mismo párrafo\nRequiere puntuación: solo fusiona si el título termina con un signo de cierre y la siguiente línea es texto normal (predeterminado)\nFusionar siempre: fusiona si la siguiente línea es texto normal (sin requerir signo final)\nNo fusionar nunca: el título y el texto se analizan siempre como párrafos separados\nNota: listas/bloques de código/tablas/citas/separadores no se fusionan"
 heading_merge_punctuation_label = "Puntuación para fusionar:"
 heading_merge_punctuation_tooltip = "Caracteres que activan la fusión de título y cuerpo en el modo Requiere puntuación. Un valor vacío desactiva la fusión por puntuación."
 
@@ -797,6 +813,7 @@ section = "Subcarpeta por fecha"
 create_label = "Crear subcarpeta por fecha"
 create_tooltip = "Crea una subcarpeta con la fecha en el directorio de salida\nEjemplo: Directorio de salida/2025-01-06/file.pdf\nEsta opción funciona en ambos modos de salida"
 format_label = "Formato de fecha:"
+format_tooltip = "Elige el formato de fecha para los nombres de las subcarpetas de salida.\nSe aplica cuando están activadas las subcarpetas por fecha."
 
 # 日期格式选项
 [settings.output.date_formats]
@@ -1851,7 +1868,7 @@ extended_headings = "Reconoce H7–H9. Desactivado, de siete a nueve # iniciales
 typed_endnotes = "Usa etiquetas como endnote: para distinguir notas finales de notas al pie. Desactivado, esas etiquetas se tratan como notas al pie normales."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Admite varias filas de encabezado, encabezados de fila, tablas sin encabezado y celdas combinadas. Escribe marcadores y estructura ampliada de Structural Tables cuando sea necesario. Desactivado, aplana a tablas Markdown normales e informa de la pérdida de estructura."
+structural_tables = "Conserva celdas combinadas, varias filas de encabezado, encabezados de fila y tablas sin encabezado.\nActivado: < y ^ sustituyen a Rellenar/Dejar vacío al exportar documentos y hojas de cálculo de forma normal. La selección se conserva.\nDesactivado: se aplica la selección de cada pestaña de entrada y se informa de la estructura perdida.\n\nExcepción: la optimización «Documentos oficiales» procesa las tablas por separado."
 
 captions_references = "Genera títulos y referencias cruzadas de Number Suite cuando existan. Desactivado, emite texto normal e informa de referencias perdidas."
 extended_headings = "Genera H7–H9. Desactivado, esos encabezados pasan a H6 y se informa de la pérdida."
@@ -1874,7 +1891,7 @@ document_settings = "Extracción, numeración y tablas de documentos"
 from_markdown_title = "Markdown → DOCX"
 title = "Documentos oficiales"
 fields_label = "Dar formato a campos de documentos oficiales chinos"
-fields_help = "Da formato a anexos, destinatarios de copias, fechas y notas en plantillas de DOCX, y elimina los campos vacíos previstos.\n\nEl marcador de anexos debe ocupar un párrafo propio en el cuerpo o en una celda.\n\nNo se admiten encabezados, pies, cuadros de texto ni marcadores entre texto.\n\nAl desactivarlo, se aplican el relleno normal y el separador general de listas."
+fields_help = "Da formato a anexos, destinatarios de copias, fechas y notas en plantillas de DOCX, y elimina los campos vacíos previstos.\n\nLas listas de varios firmantes, destinatarios principales o en copia se unen provisionalmente con «、». Se añade un comentario DOCX para revisar la disposición o la puntuación. Los textos ya redactados conservan su puntuación.\n\nEl marcador de anexos debe ocupar un párrafo propio en el cuerpo o en una celda.\n\nNo se admiten encabezados, pies, cuadros de texto ni marcadores entre texto.\n\nAl desactivarlo, se aplican el relleno normal y el separador general de listas."
 
 attachment_alignment_label = "Alineación de los anexos"
 attachment_alignment_spaces = "Espacios + sangría"
@@ -1890,3 +1907,33 @@ layout_settings = "Extracción de PDF y ajustes de OCR"
 image_title = "Imagen → Markdown"
 image_description = "Las imágenes de facturas siempre usan OCR con el ajuste de idioma compartido."
 ocr_settings = "Ajustes compartidos del idioma de OCR"
+
+[conversion_loss]
+settings_section = "Pérdidas de conversión"
+settings_label = "Marcar con comentarios el contenido no conservado íntegramente"
+settings_help = "Añade comentarios cuando el formato lo permite. Al desactivarlo, las pérdidas siguen apareciendo en los detalles. Eliminar formato por elección propia no se considera una pérdida."
+formula_unconverted = "〔No se pudo convertir la fórmula〕"
+formula_reason = "No se pudo convertir la estructura de la fórmula."
+formula_change = "Se insertó un marcador; compruebe el documento de origen."
+note_formula_reason = "Las ecuaciones de esta nota no se pueden escribir como ecuaciones nativas de Word."
+note_formula_change = "La fórmula se conservó como texto LaTeX legible."
+comment_failed = "No se pudo añadir el comentario de pérdida; consulte los detalles de conversión."
+summary = "Conversión completada con {count} elementos no conservados íntegramente. Consulte los detalles."
+summary_annotated = "Conversión completada con {count} elementos no conservados íntegramente. Se añadieron comentarios."
+original = "Original: {original}"
+comment = "{reason}\n{change}\n{location}\n{original}"
+math_as_text_reason = "Esta salida de hoja de cálculo no representa ecuaciones matemáticas."
+math_as_text_change = "La ecuación se conserva como texto LaTeX legible."
+protected_cell_reason = "La celda de la plantilla está protegida."
+protected_cell_change = "No se escribió el valor entrante; se conservó la celda existente."
+comment_failed_reason = "No se pudo escribir el comentario de la celda."
+comment_failed_change = "La pérdida sigue disponible en los detalles de conversión."
+note_placeholder = "[No se pudo leer la nota; compruebe el documento de origen]"
+formula_placeholder = "〔No se pudo convertir la fórmula〕"
+csv_merge_reason = "CSV no puede representar celdas combinadas."
+csv_merge_change = "Se conservan los valores de las filas y columnas existentes sin combinar celdas."
+docx_paragraph = "Párrafo {paragraph}, elemento {item}"
+docx_cell = "Tabla {table}, fila {row}, columna {column}, párrafo {paragraph}, elemento {item}"
+note_unreadable_reason = "No se pudo leer la nota referenciada."
+merge_failed_reason = "No se pudo conservar la estructura de celdas combinadas."
+merge_failed_change = "Se conservaron el texto de las celdas y las combinaciones existentes de la plantilla."

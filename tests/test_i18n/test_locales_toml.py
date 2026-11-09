@@ -35,7 +35,6 @@ LOCALIZED_PROSE_KEYS = (
     "settings.text.add_numbering_tooltip",
     "settings.text.scheme_tooltip",
     "settings.text.render_mode_label",
-    "settings.text.render_mode_tooltip",
     "settings.text.render_mode_hint",
     "settings.text.save_numbering_schemes_failed",
     "settings.text.save_numbering_clean_rules_failed",
@@ -197,6 +196,7 @@ def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
         "conversion_panel.layout.page_range_placeholder",
         "placeholders.title",
         "placeholders.body",
+        "conversion_loss.comment",  # Assembles separately localized text with no literal prose.
         "yaml_keys.title",
         "yaml_keys.subtitle",
     }
@@ -233,8 +233,8 @@ def test_specialized_optimization_settings_are_localized() -> None:
         "settings.gongwen.description",
         "settings.text.numbering_comments_label",
         "settings.text.numbering_comments_help",
-        "settings.text.numbering_text_label",
-        "settings.text.numbering_text_help",
+        "settings.document.numbering.markers",
+        "settings.document.numbering.markers_tooltip",
         "main_window.numbering_comments_unanchored",
         "main_window.conversion_failed_detail",
         "main_window.note_syntax_invalid",

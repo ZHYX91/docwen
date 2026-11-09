@@ -65,6 +65,17 @@ TASK_SUMMARY_STATES = frozenset({"active", "cancelling", "success", "partial", "
 TASK_SUMMARY_TONES = frozenset({"info", "success", "warning", "danger"})
 
 
+def _localized_progress_stage(message: str) -> str:
+    """Render only declared progress states, never internal paths or plugin IDs."""
+    if message == "Preparing output folder":
+        return _t("info_area.phase_checking_output", "Checking save folder…")
+    if message == "Preparing temporary workspace":
+        return _t("info_area.phase_preparing_workspace", "Preparing temporary workspace…")
+    if message == "Finalizing output":
+        return _t("info_area.phase_saving", "Saving the result…")
+    return _t("info_area.phase_converting", "Converting document…")
+
+
 # ── Data classes ──────────────────────────────────────────────────────────
 
 
@@ -96,6 +107,7 @@ class HistoryRowData:
     repeat_count: int = 1
     created_at: datetime = field(default_factory=datetime.now)
     details_message: str = ""
+    event_kind: str = "notice"
 
 
 @dataclass
@@ -363,6 +375,7 @@ class InfoAreaViewModel(QObject):
         operation: str = "",
         diagnostic: DiagnosticSummary | None = None,
         details_message: str = "",
+        event_kind: str = "notice",
     ) -> None:
         """Add a message to the history area.
 
@@ -390,6 +403,7 @@ class InfoAreaViewModel(QObject):
             operation,
             diagnostic,
             details_message,
+            event_kind,
         )
         timestamp = datetime.now().strftime("%H:%M:%S")
         if signature == self._last_message_signature and self._history_rows:
@@ -415,6 +429,7 @@ class InfoAreaViewModel(QObject):
             operation=operation,
             diagnostic=diagnostic,
             details_message=details_message,
+            event_kind=event_kind,
         )
         self._history_rows.append(row)
         self._enforce_message_limit()
@@ -900,6 +915,15 @@ class InfoAreaViewModel(QObject):
                 progress_lines.append(_t("info_area.task_warning_count", count=ts.warning_count))
             if state in {"active", "cancelling"}:
                 progress_lines.insert(0, _t("info_area.task_current_file", "Current: {name}", name=current_file))
+            if state == "active" and ts.progress_message:
+                progress_lines.append(_localized_progress_stage(ts.progress_message))
+            elif state == "cancelling":
+                progress_lines.append(
+                    _t(
+                        "info_area.phase_cancelling_hint",
+                        "Cancellation requested. Finishing the current safe step…",
+                    )
+                )
             summary_message = "\n".join(progress_lines)
 
             if state == "active" and ts.percent is not None:

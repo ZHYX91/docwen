@@ -221,6 +221,17 @@ _MARKDOWN_SOURCE_TO_DOCX_OPTIONS = _strict_options(
     {
         **_MARKDOWN_TO_DOCX_OPTIONS["properties"],
         "markdown_resource_bindings": MARKDOWN_RESOURCE_BINDINGS_SCHEMA,
+        "proofread": {
+            "type": "object",
+            "properties": {
+                "enable_symbol_pairing": {"type": "boolean"},
+                "enable_symbol_correction": {"type": "boolean"},
+                "enable_typos_rule": {"type": "boolean"},
+                "enable_sensitive_word": {"type": "boolean"},
+            },
+            "required": [],
+            "additionalProperties": False,
+        },
         "remove_numbering": {"type": "boolean"},
         "add_numbering": {"type": "boolean"},
         "numbering_scheme": {
@@ -299,6 +310,8 @@ _DOCX_TO_MARKDOWN_OPTIONS = _strict_options(
         },
         "remove_numbering": {"type": "boolean", "default": True},
         "add_numbering": {"type": "boolean", "default": False},
+        # Omission inherits the request config; a schema default would mask it.
+        "export_numbering_markers": {"type": "boolean"},
         "numbering_scheme": {
             "type": "string",
             "default": "gongwen_standard",

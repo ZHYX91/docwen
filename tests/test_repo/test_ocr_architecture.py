@@ -14,7 +14,7 @@ pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PYTHON_REQUIREMENT = ">=3.12,<3.13"
-ONNXRUNTIME_LINUX_VERSION = "1.23.2"
+ONNXRUNTIME_LINUX_VERSION = "1.31.1"
 ONNXRUNTIME_OTHER_VERSION = "1.24.4"
 
 
@@ -34,6 +34,11 @@ def test_ocr_runtime_and_python_release_boundary_are_exact() -> None:
         ONNXRUNTIME_LINUX_VERSION,
         ONNXRUNTIME_OTHER_VERSION,
     }
+    linux_package = next(package for package in locked_onnxruntime if package["version"] == ONNXRUNTIME_LINUX_VERSION)
+    wheel_urls = [wheel["url"] for wheel in linux_package["wheels"]]
+    for architecture in ("x86_64", "aarch64"):
+        assert any("cp312-cp312-manylinux_" in url and f"{architecture}.whl" in url for url in wheel_urls)
+    assert linux_package["resolution-markers"] == ["sys_platform == 'linux'"]
     expected_installed = ONNXRUNTIME_LINUX_VERSION if sys.platform == "linux" else ONNXRUNTIME_OTHER_VERSION
     assert importlib.metadata.version("onnxruntime") == expected_installed
 

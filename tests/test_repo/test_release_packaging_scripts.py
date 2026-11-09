@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import subprocess
 import sys
+from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -166,6 +168,92 @@ def test_machine_protocol_smoke_cleans_process_and_temp_after_failure(
     assert process.stdout is not None and process.stdout.closed
     assert process.stderr is not None and process.stderr.closed
     assert temp_path is not None and not temp_path.exists()
+
+
+@pytest.mark.parametrize(
+    "kind", ["log", "frame", "deep-frame", "large-number-frame", "overflow", "nonzero", "trailing-stdout"]
+)
+def test_machine_protocol_stderr_is_drained_bounded_and_kept_separate(tmp_path: Path, capsys, kind: str) -> None:
+    from scripts.release import verify_packaged_cli as verifier
+
+    # This valid human log is larger than the pipe buffer and includes text
+    # resembling a header with a non-JSON-RPC JSON object.
+    invalid_json = b'{"jsonrpc":"2.0","value":NaN}'
+    prefix = (
+        b'Native diagnostic\nContent-Length: 7\r\n\r\n{"x":1}\n'
+        + f"Content-Length: {len(invalid_json)}\r\n\r\n".encode("ascii")
+        + invalid_json
+        + b"\n"
+    )
+    frame = verifier._machine_frame({"jsonrpc": "2.0", "method": "task/progress"})
+    if kind == "frame":
+        chunks = (prefix + frame[:12], frame[12:])
+    elif kind == "deep-frame":
+        body = b'{"jsonrpc":"2.0","nested":' + b"[" * 2048 + b"0" + b"]" * 2048 + b"}"
+        chunks = (prefix + f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body)
+    elif kind == "large-number-frame":
+        body = b'{"jsonrpc":"2.0","value":' + b"9" * 4301 + b"}"
+        chunks = (prefix + f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"), body)
+    elif kind == "overflow":
+        chunks = (b"x" * 131072, b"x" * 131073)
+    elif kind == "log":
+        chunks = (prefix, b"x" * (262144 - len(prefix)))
+    else:
+        chunks = (prefix,)
+
+    # Pass a file to avoid platform command-line length limits.
+    fixture = tmp_path / "stderr-chunks.json"
+    fixture.write_text(json.dumps([chunk.hex() for chunk in chunks]), encoding="utf-8")
+    command = (
+        "import json, sys, time; from pathlib import Path\n"
+        "for text in json.loads(Path(sys.argv[1]).read_text()):\n"
+        "    sys.stderr.buffer.write(bytes.fromhex(text)); sys.stderr.flush(); time.sleep(0.02)\n"
+        "if sys.argv[2] == 'trailing-stdout': sys.stdout.buffer.write(b'unframed')\n"
+        "sys.exit(int(sys.argv[2] == 'nonzero'))\n"
+    )
+    resources = verifier._MachineSmokeResources()
+    process = subprocess.Popen(
+        [sys.executable, "-c", command, str(fixture), kind],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    resources.process = process
+    try:
+        assert process.stderr is not None and process.stdout is not None
+        resources.start_stderr_drain(process, process.stderr, tmp_path)
+        code = process.wait(timeout=15)
+        trailing_stdout = process.stdout.read()
+        if kind == "overflow":
+            with pytest.raises(RuntimeError, match="stderr_limit_exceeded"):
+                resources.finish_stderr_drain()
+        else:
+            stderr = resources.finish_stderr_drain()
+        retained = b"".join(chunks)[:262144]
+        assert (tmp_path / "machine-stderr.bin").read_bytes() == retained
+        evidence_lines = capsys.readouterr().err.splitlines()
+        assert evidence_lines[0] == f"Machine smoke captured {len(retained)} stderr bytes (base64):"
+        assert base64.b64decode("".join(evidence_lines[1:])) == retained
+        if kind == "log":
+            assert stderr == b"".join(chunks)
+            verifier._validate_machine_exit(code, trailing_stdout, stderr)
+        elif kind != "overflow":
+            failure = {
+                "frame": "frame_on_stderr",
+                "deep-frame": "frame_on_stderr|stderr_frame_unverified",
+                "large-number-frame": "frame_on_stderr",
+            }.get(kind, "process_failed")
+            with pytest.raises(RuntimeError, match=failure):
+                verifier._validate_machine_exit(code, trailing_stdout, stderr)
+    finally:
+        assert not resources.cleanup()
+
+
+def test_machine_protocol_stdout_rejects_oversize_frame_before_reading_body() -> None:
+    from scripts.release import verify_packaged_cli as verifier
+
+    with pytest.raises(RuntimeError, match="frame_limit_exceeded"):
+        verifier._read_machine_frame(BytesIO(b"Content-Length: 16777217\r\n\r\n"))
 
 
 def test_packaged_cli_verifier_uses_protocol_3_convert_command(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

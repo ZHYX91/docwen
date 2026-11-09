@@ -295,3 +295,36 @@ gate to rerun.
 
 0.9.0 包与两个 2.0.0 消费者 Release 已记录本合同的托管发布证据。schema、capability、消费者、adapter
 或打包输入变化后，受影响结果立即失效并须重跑相应门。
+
+## Optional source-document proofreading / 可选生成文档校对
+
+`convert.markdown_source.to_docx` accepts an optional `proofread` object in `options`.
+It is closed (`additionalProperties=false`, `required=[]`) and contains only four optional booleans:
+`enable_symbol_pairing`, `enable_symbol_correction`, `enable_typos_rule`, and `enable_sensitive_word`.
+There are no schema defaults for the object or its members. Omission preserves the historical conversion,
+without proofreading. An empty object explicitly requests proofreading with the request-scoped DocWen
+configuration; each supplied boolean overrides that rule's configuration. Four explicit `false` values
+skip proofreading and emit `POSTPROCESS_PROOFREAD_SKIPPED`. Four explicit values make rule selection
+independent of saved configuration. Non-booleans, unknown nested keys, top-level rule switches and private
+Application intent keys are rejected.
+
+This is a post-render operation: the admitted Markdown and declared image resources first produce a private
+DOCX, then the existing DOCX validator annotates that document. The authored Markdown is never rewritten or
+pre-validated. The final output remains one DOCX document with one preferred primary entry, with hashes and
+byte counts calculated from the final annotated bytes. No intermediate DOCX or report sidecar is returned.
+Render/proofread failure or cancellation never returns a successful partial bundle. Input admission, declared
+resource restrictions and cancellation ownership remain unchanged. Planning and acceptance check the DOCX
+validator route when rules may run; a missing/unavailable route fails with
+`proofread_postprocess_unavailable`, without preventing old requests or an explicit all-false request.
+
+This option is capability-discovered within Machine 2.0; it does not add envelope fields or change Bundle v3.
+Consumers must check the selected source capability's schema before sending it. An older server may reject
+it; clients must not silently discard an explicitly requested check. Disabling the feature omits the object
+and remains compatible with older source-native servers. The frozen resolved-v4
+`convert.markdown.to_docx` capability does not expose or accept `proofread`; its exact two authenticated
+inputs, source-preserving semantics and output contract are unchanged. `validate.markdown` remains a
+separate source-validation capability, not an implementation of this operation.
+
+`proofread` 只对源 Markdown→DOCX 能力开放。省略对象保持旧行为；空对象启用配置默认四规则；成员逐项覆盖配置，
+四项全 false 则明确跳过。校对发生在生成 DOCX 后，通过批注提示，不改源 Markdown；失败或取消不返回部分成功产物。
+客户端须按发现的 schema 判断支持，不能静默丢弃用户开启的校对。resolved-v4 和独立 Markdown 校对保持原合同。

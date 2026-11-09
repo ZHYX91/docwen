@@ -88,6 +88,12 @@ class _Controller:
         self.describe_calls += 1
         return self._projection
 
+    def probe_runtime_work_directory(self) -> bool:
+        return True
+
+    def probe_output_directory(self, output_dir: str) -> str:
+        return "ok"
+
 
 def _args(*, json_mode: bool) -> argparse.Namespace:
     return argparse.Namespace(json=json_mode, quiet=json_mode, verbose=False)
@@ -110,6 +116,7 @@ def test_doctor_json_uses_canonical_projection_once(capsys: pytest.CaptureFixtur
     assert payload["data"]["capability_summary"] == projection
     assert [check["id"] for check in payload["data"]["checks"]] == [
         "path.temp_directory",
+        "path.runtime_directory",
         "config.load",
         "security.dependency_egress_guard",
     ]
@@ -134,6 +141,7 @@ def test_doctor_required_gate_failure_stays_in_capability_summary(capsys: pytest
     assert payload["data"]["capability_summary"]["sources"][0]["routes"][0]["available"] is False
     assert {check["id"] for check in payload["data"]["checks"]} == {
         "path.temp_directory",
+        "path.runtime_directory",
         "config.load",
         "security.dependency_egress_guard",
     }
@@ -172,6 +180,7 @@ def test_doctor_optional_gate_failure_does_not_fail_base_health(
     assert payload["data"]["capability_summary"]["sources"][0]["routes"][0]["available"] is True
     assert [check["id"] for check in payload["data"]["checks"]] == [
         "path.temp_directory",
+        "path.runtime_directory",
         "config.load",
         "security.dependency_egress_guard",
     ]
@@ -224,6 +233,7 @@ def test_doctor_external_office_failure_does_not_fail_base_health(
     assert payload["data"]["capability_summary"]["sources"][-1]["routes"][0]["available"] is False
     assert [check["id"] for check in payload["data"]["checks"]] == [
         "path.temp_directory",
+        "path.runtime_directory",
         "config.load",
         "security.dependency_egress_guard",
     ]
@@ -341,3 +351,138 @@ def test_main_doctor_uses_injected_controller(capsys: pytest.CaptureFixture[str]
     assert exit_code == 0
     assert payload["data"]["all_ok"] is True
     assert controller.describe_calls == 1
+
+
+def test_doctor_probes_runtime_work_folder_without_leaking_private_paths(capsys, tmp_path):
+    from docwen_cli.commands.doctor import execute_doctor
+
+    class Controller(_Controller):
+        def probe_runtime_work_directory(self):
+            self.probes += 1
+            return True
+
+    controller = Controller(_projection())
+    controller.probes = 0
+    assert execute_doctor(_args(json_mode=True), controller) == 0
+    payload = json.loads(capsys.readouterr().out)
+    checks = payload["data"]["checks"]
+    assert controller.probes == 1
+    assert [item["id"] for item in checks] == [
+        "path.temp_directory",
+        "path.runtime_directory",
+        "config.load",
+        "security.dependency_egress_guard",
+    ]
+    assert all(item["status"] == "ok" for item in checks)
+    assert str(tmp_path) not in json.dumps(checks)
+
+
+def test_doctor_runtime_work_folder_denial_has_stable_reason(capsys):
+    from docwen_cli.commands.doctor import execute_doctor
+    from docwen_cli.exit_codes import ExitCode
+
+    class Controller(_Controller):
+        def probe_runtime_work_directory(self):
+            raise PermissionError("C:/Users/private/blocked-work-folder")
+
+    assert execute_doctor(_args(json_mode=True), Controller(_projection())) == int(ExitCode.UNAVAILABLE)
+    payload = json.loads(capsys.readouterr().out)
+    check = next(item for item in payload["data"]["checks"] if item["id"] == "path.runtime_directory")
+    assert check["status"] == "fail"
+    assert check["reason"] == "not_writable"
+    assert "private" not in json.dumps(payload)
+
+
+def test_doctor_output_directory_probe_is_opt_in_and_path_free(capsys, tmp_path) -> None:
+    from docwen_cli.commands.doctor import execute_doctor
+    from docwen_cli.exit_codes import ExitCode
+
+    args = _args(json_mode=True)
+    args.output_dir = str(tmp_path / "out")
+    controller = _Controller(_projection())
+    assert execute_doctor(args, controller) == 0
+    payload = json.loads(capsys.readouterr().out)
+    check = next(item for item in payload["data"]["checks"] if item["id"] == "path.output_directory")
+    assert check["status"] == "ok"
+    assert str(tmp_path) not in json.dumps(payload["data"]["checks"])
+
+    class Blocked(_Controller):
+        def probe_output_directory(self, output_dir: str) -> str:
+            return "atomic_publish_unsupported"
+
+    assert execute_doctor(args, Blocked(_projection())) == int(ExitCode.UNAVAILABLE)
+    payload = json.loads(capsys.readouterr().out)
+    check = next(item for item in payload["data"]["checks"] if item["id"] == "path.output_directory")
+    assert check["reason"] == "atomic_publish_unsupported"
+
+
+def test_doctor_without_output_dir_does_not_probe_output(capsys) -> None:
+    from docwen_cli.commands.doctor import execute_doctor
+
+    class Controller(_Controller):
+        def probe_output_directory(self, output_dir: str) -> str:
+            raise AssertionError("must remain opt-in")
+
+    args = _args(json_mode=True)
+    args.output_dir = None
+    assert execute_doctor(args, Controller(_projection())) == 0
+    capsys.readouterr()
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [ModuleNotFoundError("private_module"), RuntimeError("C:/Users/private/work")],
+)
+def test_doctor_runtime_probe_internal_errors_are_not_permission_failures(capsys, failure: Exception) -> None:
+    from docwen_cli.commands.doctor import execute_doctor
+    from docwen_cli.exit_codes import ExitCode
+
+    class Controller(_Controller):
+        def probe_runtime_work_directory(self):
+            raise failure
+
+    assert execute_doctor(_args(json_mode=True), Controller(_projection())) == int(ExitCode.UNAVAILABLE)
+    payload = json.loads(capsys.readouterr().out)
+    check = next(item for item in payload["data"]["checks"] if item["id"] == "path.runtime_directory")
+    assert check["status"] == "fail"
+    assert check["reason"] == "probe_failed"
+    assert "private" not in json.dumps(payload)
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [ModuleNotFoundError("private_module"), RuntimeError("C:/Users/private/output")],
+)
+def test_doctor_output_probe_internal_errors_are_not_permission_failures(capsys, tmp_path, failure: Exception) -> None:
+    from docwen_cli.commands.doctor import execute_doctor
+    from docwen_cli.exit_codes import ExitCode
+
+    class Controller(_Controller):
+        def probe_output_directory(self, output_dir: str) -> str:
+            raise failure
+
+    args = _args(json_mode=True)
+    args.output_dir = str(tmp_path)
+    assert execute_doctor(args, Controller(_projection())) == int(ExitCode.UNAVAILABLE)
+    payload = json.loads(capsys.readouterr().out)
+    check = next(item for item in payload["data"]["checks"] if item["id"] == "path.output_directory")
+    assert check["status"] == "fail"
+    assert check["reason"] == "probe_failed"
+    assert "private" not in json.dumps(payload)
+
+
+def test_doctor_rejects_unrecognized_output_probe_reasons_without_leaking_them(capsys, tmp_path) -> None:
+    from docwen_cli.commands.doctor import execute_doctor
+    from docwen_cli.exit_codes import ExitCode
+
+    class Controller(_Controller):
+        def probe_output_directory(self, output_dir: str) -> str:
+            return "C:/Users/private/unexpected-result"
+
+    args = _args(json_mode=True)
+    args.output_dir = str(tmp_path)
+    assert execute_doctor(args, Controller(_projection())) == int(ExitCode.UNAVAILABLE)
+    payload = json.loads(capsys.readouterr().out)
+    check = next(item for item in payload["data"]["checks"] if item["id"] == "path.output_directory")
+    assert check["reason"] == "probe_failed"
+    assert "private" not in json.dumps(payload)
