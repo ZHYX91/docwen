@@ -182,6 +182,8 @@ For all interface languages, **Incoming text → Heading Numbering (Markdown to 
 
 When available, the **Specialized** group has dedicated **Official documents** and **Invoices** pages. Official document settings separate **Document → Markdown** recognition defaults from **Markdown → Document** template field formatting. The field toggle has an information button describing attachment notes, copied recipients, dates, annotations and supported placeholder positions.
 
+Separately, **Markdown → Document** Chinese official-document field formatting is controlled by `template_fill.gongwen_fields_enabled` (on by default), independently of interface and task output language. Hiding the Official documents settings page does not disable this formatter. It formats fixed Chinese template fields, not Document → Markdown recognition.
+
 Invoices have separate defaults for **PDF / OFD → Markdown** and **Image → Markdown**. A default only sets the initial choice for compatible files; it does not classify a file as an official document or invoice. Each input category has one default: **Set as default** replaces its previous choice, while **Clear default** removes the current page's choice. Apply or OK saves these changes; Cancel discards the draft. Shared extraction and OCR settings remain on their own pages, with links from the optimization pages. Invoice images always use OCR; scanned PDFs require OCR enabled in the incoming fixed-layout settings, and OFD reads existing text and structure without OCR for scanned content.
 
 **Interface language** controls application text and layout. **Task output language** independently controls generated labels, document styles and proofreading comments; it does not translate body text. Changing the interface keeps saved template choices and output language. OCR **Auto** follows the task output language; choose an OCR language explicitly when needed. See [language settings](docs/specs/task-language.md).
@@ -419,7 +421,7 @@ Supports clickable links in Markdown -> DOCX:
 | :--- | :--- |
 | **Extract Images** | If checked, images in the document are extracted to the output folder, and image links are inserted into the MD file. |
 | **Image OCR** | Recognize text in images. Save it in a Markdown file for each image or in the main Markdown file, according to the OCR output setting. |
-| **Optimize for document type** | Apply an optimization for the selected document type, such as extracting fields from Chinese official documents. Leave this off to use the standard conversion. |
+| **Optimize for document type** | Apply an optimization for the selected document type, such as extracting fields from Chinese official documents. Leave this off to use the standard conversion. The built-in Chinese official-document and Chinese-invoice export optimizations are offered in the GUI only with the Simplified Chinese interface (`zh_CN`) and a compatible input route. This GUI restriction does not block explicit CLI/Machine selection of `gongwen` or `invoice_cn`. |
 | **Remove existing heading numbers** | If checked, removes numbers before subheadings (e.g., "一、", "（一）", "1.", etc.) and converts them to pure title text. |
 | **Add heading numbers** | If checked, automatically adds numbers based on heading levels (numbering scheme can be configured in settings). |
 

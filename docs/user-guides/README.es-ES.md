@@ -173,6 +173,8 @@ En todos los idiomas, **Texto de entrada → Numeración de encabezados (Markdow
 
 Cuando la optimización es aplicable, **Documentos oficiales** y **Facturas** tienen páginas independientes. En documentos oficiales, **Documento → Markdown** controla la selección inicial de reconocimiento y **Markdown → Documento** el formato de campos de plantilla, con ayuda sobre anexos, destinatarios en copia, fechas y notas. Las facturas separan **PDF / OFD → Markdown** e **Imagen → Markdown**. Estas preferencias solo establecen la elección inicial para archivos compatibles; no clasifican automáticamente el archivo. **Aplicar / Aceptar** guarda y **Cancelar** descarta los cambios no aplicados.
 
+Por separado, `template_fill.gongwen_fields_enabled` (activado por defecto) controla el formato de campos de documentos oficiales chinos en **Markdown → Documento**, independientemente del idioma de la interfaz o de salida. Ocultar la página Documentos oficiales no desactiva esta función. Da formato a campos chinos fijos de la plantilla y no controla el reconocimiento Documento → Markdown.
+
 **Ámbito:** El formato especializado de campos está pensado para documentos oficiales chinos y la optimización de extracción, para facturas chinas. Otros archivos pueden seguir las rutas de conversión habituales.
 
 ### Atajos
@@ -396,7 +398,7 @@ Soporta enlaces clicables en Markdown -> DOCX:
 | :--- | :--- |
 | **Extraer imágenes** | Si se activa, las imágenes se extraen a la carpeta de salida y se insertan enlaces en el archivo MD. |
 | **OCR de imagen** | Reconoce el texto de las imágenes. Según el ajuste de salida de OCR, lo guarda en un archivo Markdown por imagen o en el archivo Markdown principal. |
-| **Optimizar según tipo de documento** | Aplica una optimización para el tipo de documento elegido, como extraer campos de documentos oficiales chinos. Si se desactiva, se usa la conversión estándar. |
+| **Optimizar según tipo de documento** | Aplica una optimización para el tipo de documento elegido, como extraer campos de documentos oficiales chinos. Si se desactiva, se usa la conversión estándar. Las optimizaciones integradas de exportación de documentos oficiales chinos y facturas chinas solo se ofrecen en la GUI con la interfaz en chino simplificado (`zh_CN`) y una ruta de entrada compatible. Esta limitación de la GUI no impide seleccionar explícitamente `gongwen` o `invoice_cn` mediante CLI/Machine. |
 | **Eliminar numeración original** | Si se activa, elimina números antes de subtítulos (p. ej., "一、", "（一）", "1.", etc.). |
 | **Añadir nueva numeración** | Si se activa, añade números automáticamente según los niveles de encabezado (configurable). |
 
