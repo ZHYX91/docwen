@@ -173,6 +173,8 @@ Với mọi ngôn ngữ giao diện, **Văn bản đầu vào → Đánh số ti
 
 Khi có tối ưu phù hợp, **Công văn** và **Hóa đơn** có trang cài đặt riêng. **Tài liệu → Markdown** đặt lựa chọn nhận dạng ban đầu cho công văn; **Markdown → Tài liệu** cấu hình định dạng trường mẫu, kèm trợ giúp về phần đính kèm, nơi nhận bản sao, ngày và ghi chú. Hóa đơn có lựa chọn riêng cho **PDF / OFD → Markdown** và **Ảnh → Markdown**. Các giá trị mặc định chỉ thay đổi lựa chọn ban đầu cho tệp tương thích, không tự phân loại tệp. **Áp dụng / OK** để lưu, **Hủy** để bỏ thay đổi chưa áp dụng.
 
+Riêng việc định dạng trường công văn tiếng Trung trong **Markdown → Tài liệu** do `template_fill.gongwen_fields_enabled` điều khiển (mặc định bật), không phụ thuộc ngôn ngữ giao diện hay đầu ra tác vụ. Ẩn trang cài đặt Công văn không tắt chức năng này. Chức năng định dạng các trường tiếng Trung cố định trong mẫu, không điều khiển nhận dạng công văn khi chuyển Tài liệu → Markdown.
+
 **Phạm vi áp dụng:** Tính năng định dạng trường chuyên biệt hướng đến công văn Trung Quốc, còn tối ưu trích xuất hóa đơn hướng đến các mẫu hóa đơn Trung Quốc. Các tệp khác vẫn dùng được các đường chuyển đổi thông thường.
 
 ### Phím tắt
@@ -397,7 +399,7 @@ Hỗ trợ liên kết có thể bấm trong Markdown -> DOCX:
 | :--- | :--- |
 | **Trích xuất ảnh** | Nếu bật, ảnh trong tài liệu sẽ được xuất ra thư mục và chèn link ảnh vào file MD. |
 | **OCR ảnh** | Nhận dạng chữ trong ảnh. Tùy cài đặt vị trí đầu ra OCR, lưu vào file Markdown riêng cho mỗi ảnh hoặc file Markdown chính. |
-| **Tối ưu theo loại tài liệu** | Áp dụng tối ưu cho loại tài liệu đã chọn, chẳng hạn trích xuất trường từ công văn tiếng Trung. Tắt tùy chọn này để dùng chuyển đổi tiêu chuẩn. |
+| **Tối ưu theo loại tài liệu** | Áp dụng tối ưu cho loại tài liệu đã chọn, chẳng hạn trích xuất trường từ công văn tiếng Trung. Tắt tùy chọn này để dùng chuyển đổi tiêu chuẩn. Các tối ưu xuất công văn Trung Quốc và hóa đơn Trung Quốc tích hợp chỉ xuất hiện trong GUI khi dùng giao diện tiếng Trung giản thể (`zh_CN`) và có tuyến đầu vào tương thích. Giới hạn GUI này không ngăn việc chọn rõ `gongwen` hoặc `invoice_cn` qua CLI/Machine. |
 | **Xóa số tiêu đề gốc** | Nếu bật, xoá số trước tiêu đề phụ (ví dụ: "一、", "（一）", "1.", ...). |
 | **Thêm số tiêu đề mới** | Nếu bật, tự thêm số theo cấp tiêu đề (có thể cấu hình). |
 

@@ -173,6 +173,8 @@ Dans toutes les langues, **Texte entrant → Numérotation (MD vers DOCX)** perm
 
 Lorsque l’optimisation est applicable, les **Documents officiels** et les **Factures** ont chacun leur page. Pour les documents officiels, **Document → Markdown** règle la reconnaissance initiale et **Markdown → Document** les champs de modèle, avec une aide sur les annexes, les destinataires en copie, les dates et les notes. Les factures ont des valeurs distinctes pour **PDF / OFD → Markdown** et **Image → Markdown**. Ces valeurs ne fixent que le choix initial des fichiers compatibles, sans détecter automatiquement leur type. **Appliquer / OK** enregistre et **Annuler** écarte les changements non appliqués.
 
+Indépendamment, `template_fill.gongwen_fields_enabled` (activé par défaut) contrôle le formatage des champs des documents officiels chinois pour **Markdown → Document**, quelle que soit la langue de l’interface ou de sortie. Masquer la page Documents officiels ne désactive pas cette fonction. Elle formate des champs de modèle chinois fixes et ne contrôle pas la reconnaissance Document → Markdown.
+
 **Portée :** Le formatage spécialisé des champs vise les documents officiels chinois et l’optimisation de l’extraction vise les factures chinoises. Les autres fichiers peuvent toujours utiliser les conversions ordinaires.
 
 ### Raccourcis
@@ -397,7 +399,7 @@ Prend en charge les liens cliquables en Markdown -> DOCX :
 | :--- | :--- |
 | **Extraire les images** | Si coché, les images du document sont extraites dans le dossier de sortie et les liens d'image sont insérés dans le fichier MD. |
 | **OCR** | Reconnaît le texte des images. Selon le réglage de sortie OCR, il est enregistré dans un fichier Markdown par image ou dans le fichier Markdown principal. |
-| **Optimisation** | Applique une optimisation pour le type de document choisi, par exemple l’extraction des champs de documents administratifs chinois. Si cette option est désactivée, la conversion standard est utilisée. |
+| **Optimisation** | Applique une optimisation pour le type de document choisi, par exemple l’extraction des champs de documents administratifs chinois. Si cette option est désactivée, la conversion standard est utilisée. Les optimisations intégrées d’export des documents officiels chinois et des factures chinoises ne sont proposées dans la GUI qu’avec l’interface en chinois simplifié (`zh_CN`) et un parcours d’entrée compatible. Cette limite de la GUI n’empêche pas la sélection explicite de `gongwen` ou `invoice_cn` via CLI/Machine. |
 | **Suppr. num.** | Si coché, supprime les numéros avant les sous-titres (ex: "一、", "（一）", "1.", etc.) et les convertit en texte de titre pur. |
 | **Ajout num.** | Si coché, ajoute automatiquement des numéros en fonction des niveaux d'en-tête (le schéma de numérotation peut être configuré dans les paramètres). |
 
