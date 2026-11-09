@@ -7,6 +7,9 @@
 # interface text, the selected template, proofreading rules or an explicit OCR model.
 output_locale = "zh_CN"
 
+# Annotate unintended conversion losses. Diagnostics remain enabled when false.
+loss_comments = true
+
 [docx_to_md]
 # 正文非小标题格式处理
 # true: 保留格式，转换为Markdown标记（如 **粗体**、*斜体* 等）

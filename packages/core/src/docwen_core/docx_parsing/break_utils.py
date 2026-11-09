@@ -4,45 +4,38 @@ from __future__ import annotations
 
 from typing import Any
 
+from docwen_core.docx_parsing.style_properties import paragraph_property_sources
 from docwen_core.docx_parsing.xml_ns import NS_W
 
 # ── Break detection ─────────────────────────────────────────────────────
+
+
+def _is_in_rejected_revision(element: Any, paragraph: Any) -> bool:
+    parent = element.getparent() if hasattr(element, "getparent") else None
+    while parent is not None and parent is not paragraph:
+        local_name = parent.tag.split("}")[-1] if "}" in (parent.tag or "") else (parent.tag or "")
+        if local_name in {"del", "moveFrom"}:
+            return True
+        parent = parent.getparent() if hasattr(parent, "getparent") else None
+    return False
 
 
 def detect_page_break(para: Any) -> bool:
     """Return True if the paragraph contains a page break."""
     nsmap = {"w": NS_W}
     breaks = para._p.findall(".//w:br", nsmap)
-
-    def _is_in_rejected_revision(element: Any) -> bool:
-        parent = element.getparent() if hasattr(element, "getparent") else None
-        while parent is not None and parent is not para._p:
-            local_name = parent.tag.split("}")[-1] if "}" in (parent.tag or "") else (parent.tag or "")
-            if local_name in {"del", "moveFrom"}:
-                return True
-            parent = parent.getparent() if hasattr(parent, "getparent") else None
-        return False
-
-    return any(br.get(f"{{{NS_W}}}type") == "page" and not _is_in_rejected_revision(br) for br in breaks)
-
-
-def detect_page_break_in_run(run: Any) -> bool:
-    """Return True if a run contains a page break."""
-    br = run._r.find(f"{{{NS_W}}}br")
-    if br is not None:
-        return br.get(f"{{{NS_W}}}type") == "page"
-    return False
+    return any(br.get(f"{{{NS_W}}}type") == "page" and not _is_in_rejected_revision(br, para._p) for br in breaks)
 
 
 def detect_section_break(para: Any) -> tuple[str, str] | None:
-    """Return (type, None) or None if no section break."""
+    """Read the current paragraph section properties, excluding revision history."""
     elem = para._p
-    sect_pr = elem.find(f".//{{{NS_W}}}sectPr")
+    sect_pr = elem.find(f"{{{NS_W}}}pPr/{{{NS_W}}}sectPr")
     if sect_pr is None:
         return None
-    # Check for type attribute on sectPr
-    stype = sect_pr.get(f"{{{NS_W}}}type") or "nextPage"
-    return (stype, None)  # pyright: ignore[reportReturnType]
+    section_type = sect_pr.find(f"{{{NS_W}}}type")
+    stype = section_type.get(f"{{{NS_W}}}val", "nextPage") if section_type is not None else "nextPage"
+    return (stype, "")
 
 
 def detect_all_breaks(para: Any) -> list[tuple[str, str]]:
@@ -62,30 +55,43 @@ def detect_all_breaks(para: Any) -> list[tuple[str, str]]:
 def detect_horizontal_rule(para: Any) -> bool:
     """Return True if the paragraph is a horizontal rule (border + empty text)."""
     info = extract_paragraph_border_info(para)
-    if info.get("bottom") in ("single", "double"):
-        text = para.text.strip() if hasattr(para, "text") else ""
-        return text == ""
+    if info.get("bottom"):
+        element = getattr(para, "_p", None)
+        if element is None:
+            return False
+        for child in element.iter():
+            if _is_in_rejected_revision(child, element):
+                continue
+            name = child.tag.rsplit("}", 1)[-1]
+            if name in {"drawing", "pict", "oMath", "oMathPara"}:
+                return False
+            if name == "t" and (child.text or "").strip():
+                return False
+        return True
     return False
 
 
 def extract_paragraph_border_info(para: Any) -> dict:
-    """Extract paragraph border info dict (top/bottom/left/right/between)."""
+    """Resolve each border edge through direct properties and paragraph styles.
+
+    An explicit ``none``/``nil`` edge clears its inherited counterpart; an
+    unrelated direct paragraph property must not hide the style's borders.
+    """
     info: dict = {}
-    try:
-        pPr = para._p.find(f"{{{NS_W}}}pPr")
-        if pPr is None:
-            return info
+    seen: set[str] = set()
+    for pPr in paragraph_property_sources(para):
         pBdr = pPr.find(f"{{{NS_W}}}pBdr")
         if pBdr is None:
-            return info
+            continue
         for direction in ("top", "bottom", "left", "right", "between"):
+            if direction in seen:
+                continue
             bdr = pBdr.find(f"{{{NS_W}}}{direction}")
             if bdr is not None:
+                seen.add(direction)
                 val = bdr.get(f"{{{NS_W}}}val")
                 if val and val not in ("none", "nil"):
                     info[direction] = val
-    except Exception:
-        pass
     return info
 
 
@@ -168,47 +174,3 @@ class BorderGroupTracker:
             self._bottom_only_pending = False
             return self._separator or None
         return None
-
-
-# ── Page‑break text splitting ─────────────────────────────────────────
-
-
-def split_paragraph_by_page_breaks(para: Any, separator: str = "---") -> list[str]:
-    """Split a paragraph's runs into text segments at page‑break positions.
-
-    Each page break produces a separator between segments.
-    If no page breaks exist the full paragraph text is returned as
-    a single element.
-
-    Args:
-        para: python-docx Paragraph object.
-        separator: The separator string to insert at break points.
-
-    Returns:
-        List of text segments with separator at split points.
-    """
-    result: list[str] = []
-    current_buf: list[str] = []
-
-    for run in para.runs:
-        if detect_page_break_in_run(run):
-            # Close current text segment
-            text = "".join(current_buf).strip()
-            if text:
-                result.append(text)
-            current_buf = []
-            # Emit separator (collapse consecutive)
-            if separator and (not result or result[-1] != separator):
-                result.append(separator)
-        else:
-            if run.text:
-                current_buf.append(run.text)
-
-    # Final text segment
-    text = "".join(current_buf).strip()
-    if text:
-        result.append(text)
-
-    if not result:
-        return [para.text]
-    return result

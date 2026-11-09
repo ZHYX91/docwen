@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from collections.abc import Mapping
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -24,6 +26,8 @@ from docx.image.image import Image as DocxImage
 from docx.oxml.ns import qn
 from docx.shared import Pt
 
+from docwen_core.conversion_loss import ConversionLoss, LossCollector, loss_text
+from docwen_core.docx_comments import append_docx_comment
 from docwen_core.docx_semantics import (
     DocxSemanticRenderer,
     apply_semantic_table_roles,
@@ -133,6 +137,9 @@ class MdToDocxRenderer:
         template_style_keys: dict[str, str] | None = None,
         cancellation=None,
         note_ctx: Any = None,
+        loss_comments: bool = True,
+        defer_loss_comments: bool = False,
+        loss_messages: Mapping[str, str] | None = None,
         formatting_mode: str = "full",
         hr_mapping: str | None = None,
         hr_actions: dict[str, str] | None = None,
@@ -314,6 +321,13 @@ class MdToDocxRenderer:
         self._mermaid_work_dir = mermaid_work_dir
         self._mermaid_render = mermaid_render
         self._warnings: list[tuple[str, str]] = []
+        self._loss_comments = loss_comments
+        self._defer_loss_comments = defer_loss_comments
+        self._pending_losses: list[tuple[ConversionLoss, Any]] = []
+        self._loss_messages = loss_messages
+        self.losses = LossCollector()
+        self.loss_comments_added = 0
+        self._annotated_notes: set[tuple[str, str]] = set()
         if note_ctx is not None and getattr(note_ctx, "callout_fallback_keys", ()):
             keys = ", ".join(note_ctx.callout_fallback_keys)
             self._warnings.append(
@@ -351,6 +365,55 @@ class MdToDocxRenderer:
     def warnings(self) -> tuple[tuple[str, str], ...]:
         """Return non-fatal renderer warnings collected for the request."""
         return tuple(self._warnings)
+
+    def record_loss(self, loss: ConversionLoss, run: Any) -> None:
+        """Retain diagnostics even if comments are disabled or cannot be written."""
+        if not self.losses.add(loss):
+            return
+        if self._defer_loss_comments:
+            self._pending_losses.append((loss, run))
+            return
+        self._annotate_loss(loss, run)
+
+    def finalize_loss_comments(self) -> None:
+        """Resolve coordinates after template relocation, then annotate once."""
+        from docwen_plugin_markdown.to_docx.formula_renderer import formula_loss_location
+
+        replacements: dict[ConversionLoss, ConversionLoss] = {}
+        pending = self._pending_losses
+        self._pending_losses = []
+        for loss, run in pending:
+            finalized = loss
+            if loss.code == "CONVERSION-LOSS-FORMULA":
+                finalized = replace(loss, output_location=formula_loss_location(run._parent, run, self._loss_messages))
+            replacements[loss] = finalized
+            self._annotate_loss(finalized, run)
+        finalized_losses = LossCollector()
+        for loss in self.losses.records:
+            finalized_losses.add(replacements.get(loss, loss))
+        self.losses = finalized_losses
+
+    def _annotate_loss(self, loss: ConversionLoss, run: Any) -> None:
+        if not self._loss_comments:
+            return
+        try:
+            append_docx_comment(self._doc, [run], text=loss.message(self._loss_messages))
+        except Exception:
+            logger.warning("Could not annotate conversion loss at %s", loss.output_location, exc_info=True)
+            self._warnings.append(
+                (
+                    "CONVERSION-LOSS-COMMENT-FAILED",
+                    loss_text(
+                        self._loss_messages,
+                        "comment_failed",
+                        "The loss comment could not be added; check the conversion details.",
+                    )
+                    + " "
+                    + loss.output_location,
+                )
+            )
+        else:
+            self.loss_comments_added += 1
 
     @property
     def list_numbering(self) -> DocxListNumbering:
@@ -1128,17 +1191,15 @@ class MdToDocxRenderer:
                     try:
                         result = self._dispatch(child)
                         if result is not None:
-                            if isinstance(result, list):
-                                for r in result:
-                                    apply_list_indent(r, depth, left_twips=continuation_indent) if hasattr(
-                                        r, "_p"
-                                    ) else None
-                                paragraphs.extend(result)
-                            else:
-                                apply_list_indent(result, depth, left_twips=continuation_indent) if hasattr(
-                                    result, "_p"
-                                ) else None
-                                paragraphs.append(result)
+                            items = result if isinstance(result, list) else [result]
+                            for item in items:
+                                # The first numbered block keeps its hanging
+                                # indent and any numbering policy established
+                                # by its own renderer. Final item binding below
+                                # adds numPr only when the block has none.
+                                if hasattr(item, "_p") and (paragraphs or num_id is None):
+                                    apply_list_indent(item, depth, left_twips=continuation_indent)
+                                paragraphs.append(item)
                     finally:
                         self._list_depth = prev_depth
         elif ntype in ("list", "bullet_list", "ordered_list"):
@@ -1277,12 +1338,16 @@ class MdToDocxRenderer:
             paragraphs.append(paragraph)
         return paragraphs
 
-    def _handle_block_latex(self, node: dict[str, Any]):
+    def _handle_block_math(self, node: dict[str, Any]):
         """Render block LaTeX as OMML equation."""
-        if not render_formula(self._doc, node, block_style=self._formula_block_style):
-            self._warnings.append(
-                ("MD2DOCX-FORMULA-TEXT-FALLBACK", "An unsupported formula was preserved as its original LaTeX text.")
-            )
+        render_formula(
+            self._doc,
+            node,
+            block_style=self._formula_block_style,
+            in_list=self._list_depth > 0,
+            on_loss=self.record_loss,
+            loss_messages=self._loss_messages,
+        )
         # Return the last paragraph (created by render_formula)
         paragraph = self._doc.paragraphs[-1] if self._doc.paragraphs else None
         if paragraph is None:
@@ -1325,10 +1390,6 @@ class MdToDocxRenderer:
         )
         paragraph._p.addprevious(caption._p)
         return [caption, paragraph]
-
-    def _handle_block_math(self, node: dict[str, Any]):
-        """Handle block_math from mistune's math plugin."""
-        return self._handle_block_latex(node)
 
     def _handle_blank_line(self, node: dict[str, Any]):
         """Blank lines between blocks — no-op in DOCX."""
@@ -1907,13 +1968,37 @@ class MdToDocxRenderer:
                 if note_kind == "endnote"
                 else self._note_ctx.create_footnote_ref_run(clean_key)
             )
-        elif key.upper().startswith("ENDNOTE-"):
-            ref_run = self._note_ctx.create_endnote_ref_run(key)
         else:
+            note_kind, clean_key = "footnote", key
             ref_run = self._note_ctx.create_footnote_ref_run(key)
 
         if ref_run is not None:
             parent._p.append(ref_run)
+            identity = (note_kind, clean_key)
+            if identity not in self._annotated_notes:
+                self._annotated_notes.add(identity)
+                from docx.text.run import Run
+
+                for ordinal, original in enumerate(self._note_ctx.formula_sources(note_kind, clean_key), 1):
+                    self.record_loss(
+                        ConversionLoss(
+                            code="CONVERSION-LOSS-NOTE-FORMULA",
+                            reason=loss_text(
+                                self._loss_messages,
+                                "note_formula_reason",
+                                "Equations in this note cannot be written as native Word equations.",
+                            ),
+                            change=loss_text(
+                                self._loss_messages,
+                                "note_formula_change",
+                                "The formula was preserved as readable LaTeX text.",
+                            ),
+                            source_location=f"{note_kind} {clean_key}, formula {ordinal}",
+                            output_location=f"{note_kind} {clean_key}, formula {ordinal}; first body reference",
+                            original=original,
+                        ),
+                        Run(ref_run, parent),
+                    )
         else:
             parent.add_run(f"[^{key}]")
 

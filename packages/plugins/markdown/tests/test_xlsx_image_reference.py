@@ -98,11 +98,23 @@ def test_protected_image_consumption_is_readable_and_does_not_insert(tmp_path: P
         sheet = output.active
         assert sheet is not None and sheet[protected].value == "keep" and sheet["A1"].value == "first"
         assert sheet[protected].comment is not None
-        assert sheet[protected].comment.text == "Protected cell skipped; consumed value: Image: " + image.name
+        losses = [
+            diagnostic for diagnostic in result.diagnostics if diagnostic.code == "CONVERSION-LOSS-PROTECTED-CELL"
+        ]
+        assert len(losses) == 2
+        by_location = {diagnostic.location: diagnostic for diagnostic in losses}
+        image_loss = by_location[f"{sheet.title}!{protected}"]
+        assert sheet[protected].comment.text == image_loss.message
+        assert image_loss.message.count("Original: Image: " + image.name) == 1
+        assert "{{IMAGE" not in image_loss.message
+        assert "The incoming value was not written; the existing cell was retained." in image_loss.message
         assert sheet[long_protected].value == "keep long"
         assert sheet[long_protected].comment is not None
-        assert len(sheet[long_protected].comment.text) == 500
-        assert sheet[long_protected].comment.text.endswith("…")
+        long_loss = by_location[f"{sheet.title}!{long_protected}"]
+        assert sheet[long_protected].comment.text == long_loss.message
+        assert long_loss.message.endswith("Original: " + "😀" * 1000)
+        summaries = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "CONVERSION-LOSS-SUMMARY"]
+        assert len(summaries) == 1 and "2" in summaries[0].message
         assert vars(sheet).get("_images") == []
         assert result.artifacts[0].metadata["protected_cells_skipped"] == 2
     finally:

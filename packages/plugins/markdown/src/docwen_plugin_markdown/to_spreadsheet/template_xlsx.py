@@ -49,6 +49,8 @@ def build_template_workbook(
     yaml_value_projector: Callable[[Any], Any] | None = None,
     cell_value_writer: Callable[[Any, Any], None] | None = None,
     header_value_projector: Callable[[Any], Any] | None = None,
+    protected_cell_handler: Callable[[Any, str], None] | None = None,
+    merge_loss_handler: Callable[[Any, str], None] | None = None,
 ) -> tuple[Any, dict[str, int]]:
     """Fill an XLSX template using Markdown YAML and table data.
 
@@ -78,7 +80,7 @@ def build_template_workbook(
         _promote_template_image_placeholders(workbook, image_scope, image_plan)
     template_merged_ranges = _merged_ranges_by_sheet(workbook)
     merge_plans, merge_plan_warnings = (
-        _collect_markdown_table_merge_plans(workbook, raw_tables or tables, image_plan)
+        _collect_markdown_table_merge_plans(workbook, raw_tables or tables, image_plan, merge_loss_handler)
         if structural_tables
         else ([], 0)
     )
@@ -92,13 +94,13 @@ def build_template_workbook(
     )
     yaml_replaced = _replace_yaml_placeholders(workbook, yaml_replacements, image_plan)
     column_filled, column_merged_skipped, column_protected_skipped = _fill_column_placeholders(
-        workbook, table_columns, image_plan, image_scope=image_scope
+        workbook, table_columns, image_plan, image_scope=image_scope, protected_cell_handler=protected_cell_handler
     )
     row_filled, row_merged_skipped, row_protected_skipped = _fill_row_placeholders(
-        workbook, table_columns, image_plan, image_scope=image_scope
+        workbook, table_columns, image_plan, image_scope=image_scope, protected_cell_handler=protected_cell_handler
     )
     markdown_merges_applied, markdown_merge_warnings = _apply_markdown_table_merge_plans(
-        workbook, merge_plans, template_merged_ranges
+        workbook, merge_plans, template_merged_ranges, merge_loss_handler
     )
     remaining_cleaned = _clean_remaining_placeholders(workbook, image_plan)
     images_inserted = process_image_placeholders(
@@ -225,6 +227,7 @@ def _fill_column_placeholders(
     image_plan: XlsxImageTextPlan,
     *,
     image_scope: str | None = None,
+    protected_cell_handler: Callable[[Any, str], None] | None = None,
 ) -> tuple[int, int, int]:
     filled = 0
     merged_skipped = 0
@@ -255,7 +258,7 @@ def _fill_column_placeholders(
                 target = worksheet.cell(row=current_row, column=anchor.column)
                 value, number_format = values[data_index]
                 if _is_cell_protected(worksheet, target):
-                    _add_protected_comment(target, value, image_scope=image_scope)
+                    _add_protected_comment(target, value, image_scope=image_scope, handler=protected_cell_handler)
                     data_index += 1
                     current_row += 1
                     protected_skipped += 1
@@ -274,6 +277,7 @@ def _fill_row_placeholders(
     image_plan: XlsxImageTextPlan,
     *,
     image_scope: str | None = None,
+    protected_cell_handler: Callable[[Any, str], None] | None = None,
 ) -> tuple[int, int, int]:
     filled = 0
     merged_skipped = 0
@@ -304,7 +308,7 @@ def _fill_row_placeholders(
                 target = worksheet.cell(row=anchor.row, column=current_col)
                 value, number_format = values[data_index]
                 if _is_cell_protected(worksheet, target):
-                    _add_protected_comment(target, value, image_scope=image_scope)
+                    _add_protected_comment(target, value, image_scope=image_scope, handler=protected_cell_handler)
                     data_index += 1
                     current_col += 1
                     protected_skipped += 1
@@ -334,14 +338,27 @@ def _is_cell_protected(worksheet: Any, cell: Any) -> bool:
         return False
 
 
-def _add_protected_comment(cell: Any, consumed_value: Any, *, image_scope: str | None = None) -> None:
+def _add_protected_comment(
+    cell: Any,
+    consumed_value: Any,
+    *,
+    image_scope: str | None = None,
+    handler: Callable[[Any, str], None] | None = None,
+) -> None:
     def describe_image(match: re.Match[str]) -> str:
         image_path, _width, _height = _parse_image_payload(match.group(1), decode_path=image_scope is not None)
         return "Image: " + image_path.replace("\\", "/").rsplit("/", 1)[-1]
 
     readable = _image_placeholder_re(image_scope).sub(describe_image, str(consumed_value))
+    if handler is not None:
+        handler(cell, readable)
+        return
     text = "Protected cell skipped; consumed value: " + readable
-    cell.comment = Comment(text if len(text) <= 500 else text[:499] + "…", "DocWen")
+    previous = cell.comment
+    cell.comment = Comment(
+        previous.text + "\n\n" + text if previous is not None else text,
+        previous.author if previous is not None else "DocWen",
+    )
 
 
 def _assign_cell_value(cell: Any, value: Any, number_format: str | None, image_plan: XlsxImageTextPlan) -> None:
@@ -351,7 +368,10 @@ def _assign_cell_value(cell: Any, value: Any, number_format: str | None, image_p
 
 
 def _collect_markdown_table_merge_plans(
-    workbook: Any, tables: list[dict[str, Any]], image_plan: XlsxImageTextPlan
+    workbook: Any,
+    tables: list[dict[str, Any]],
+    image_plan: XlsxImageTextPlan,
+    merge_loss_handler: Callable[[Any, str], None] | None = None,
 ) -> tuple[list[dict[str, int]], int]:
     merge_plans: list[dict[str, int]] = []
     warnings = 0
@@ -367,12 +387,21 @@ def _collect_markdown_table_merge_plans(
         if not candidate_regions:
             continue
 
-        merge_regions, planning_warnings = _plan_rectangular_merges(rows)
+        invalid_positions: list[tuple[int, int]] = []
+        merge_regions, planning_warnings = _plan_rectangular_merges(
+            rows, on_invalid=lambda row, col, invalid_positions=invalid_positions: invalid_positions.append((row, col))
+        )
         warnings += planning_warnings
 
         for region in candidate_regions:
             group_key = region["group_key"]
             row_offset = row_offsets_by_group[group_key]
+            if merge_loss_handler is not None:
+                for row, col in invalid_positions:
+                    cell = workbook[region["sheet_name"]].cell(
+                        region["start_row"] + row_offset + row, region["start_col"] + col
+                    )
+                    merge_loss_handler(cell, rows[row][col])
             for start_row, start_col, end_row, end_col in merge_regions:
                 merge_plans.append(
                     {
@@ -426,7 +455,11 @@ def _find_column_placeholder_regions(
     return candidate_regions
 
 
-def _plan_rectangular_merges(rows: list[list[str]]) -> tuple[list[tuple[int, int, int, int]], int]:
+def _plan_rectangular_merges(
+    rows: list[list[str]],
+    *,
+    on_invalid: Callable[[int, int], None] | None = None,
+) -> tuple[list[tuple[int, int, int, int]], int]:
     """Resolve Structural Tables markers to rectangular merge regions.
 
     Marker chains are resolved to their actual anchor instead of requiring one
@@ -495,6 +528,10 @@ def _plan_rectangular_merges(rows: list[list[str]]) -> tuple[list[tuple[int, int
             continue
         merge_regions.append((min_row, min_col, max_row, max_col))
 
+    if invalid and on_invalid is not None:
+        for row, col in markers:
+            if not any(r1 <= row <= r2 and c1 <= col <= c2 for r1, c1, r2, c2 in merge_regions):
+                on_invalid(row, col)
     return merge_regions, int(invalid)
 
 
@@ -524,6 +561,7 @@ def _apply_markdown_table_merge_plans(
     workbook: Any,
     merge_plans: list[dict[str, int]],
     template_merged_ranges: dict[str, list[str]],
+    merge_loss_handler: Callable[[Any, str], None] | None = None,
 ) -> tuple[int, int]:
     template_bounds_by_sheet: dict[str, list[tuple[int, int, int, int]]] = defaultdict(list)
     applied_bounds_by_sheet: dict[str, list[tuple[int, int, int, int]]] = defaultdict(list)
@@ -543,11 +581,24 @@ def _apply_markdown_table_merge_plans(
         max_col = int(merge_plan["end_col"])
         bounds = (min_row, min_col, max_row, max_col)
 
+        def report_loss(sheet_name=sheet_name, min_row=min_row, min_col=min_col, max_row=max_row, max_col=max_col):
+            if merge_loss_handler is not None:
+                cell = workbook[sheet_name].cell(min_row, min_col)
+                # A conflicting template range may make the source anchor a
+                # MergedCell. Annotate its retained visible anchor instead.
+                for existing in workbook[sheet_name].merged_cells.ranges:
+                    if cell.coordinate in existing:
+                        cell = workbook[sheet_name].cell(existing.min_row, existing.min_col)
+                        break
+                merge_loss_handler(cell, f"R{min_row}C{min_col}:R{max_row}C{max_col}")
+
         if any(_ranges_overlap(bounds, existing) for existing in template_bounds_by_sheet.get(sheet_name, [])):
             warnings += 1
+            report_loss()
             continue
         if any(_ranges_overlap(bounds, existing) for existing in applied_bounds_by_sheet.get(sheet_name, [])):
             warnings += 1
+            report_loss()
             continue
 
         try:
@@ -555,6 +606,7 @@ def _apply_markdown_table_merge_plans(
             worksheet.merge_cells(start_row=min_row, start_column=min_col, end_row=max_row, end_column=max_col)
         except Exception:
             warnings += 1
+            report_loss()
             continue
         applied_bounds_by_sheet[sheet_name].append(bounds)
         applied += 1

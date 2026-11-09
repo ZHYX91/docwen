@@ -577,8 +577,8 @@ def test_docx_to_md_convert_smart_joins_adjacent_list_items(tmp_path: Path) -> N
     assert "- list first\n\n- list second" not in markdown
 
 
-def test_docx_to_md_convert_smart_joins_adjacent_quote_blocks(tmp_path: Path) -> None:
-    """F-E1-011/F-E1-013: adjacent quotes join, then separate from ordinary body."""
+def test_docx_to_md_convert_keeps_adjacent_native_quote_paragraphs(tmp_path: Path) -> None:
+    """Native quote paragraphs remain paragraphs instead of soft-line continuations."""
     document = Document()
     document.add_paragraph("quote first", style="Quote")
     document.add_paragraph("quote second", style="Quote")
@@ -586,5 +586,5 @@ def test_docx_to_md_convert_smart_joins_adjacent_quote_blocks(tmp_path: Path) ->
 
     markdown = _convert_document_fixture_to_markdown(tmp_path, document, request_id="smart-join-quote")
 
-    assert "> quote first\n> quote second\n\nafter quote" in markdown
-    assert "> quote first\n\n> quote second" not in markdown
+    assert "> quote first\n>\n> quote second\n\nafter quote" in markdown
+    assert "> quote first\n> quote second" not in markdown

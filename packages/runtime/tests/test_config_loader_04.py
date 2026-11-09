@@ -26,6 +26,7 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "gui.transparency",
         "gui.language",
         "conversion.output_locale",
+        "conversion.loss_comments",
     }
 
     text_plan = reset_plan_for_group("text")

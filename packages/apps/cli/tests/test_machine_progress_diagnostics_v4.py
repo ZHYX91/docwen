@@ -475,3 +475,31 @@ def test_invalid_semantic_outcome_fails_terminally_and_releases_admission(invali
     assert lifecycle[1]["params"]["error"]["code"] == "internal_error"
     assert lifecycle[1]["params"]["diagnostics"] == []
     assert active == {}
+
+
+@pytest.mark.parametrize("comments", [True, False])
+def test_real_formula_loss_reaches_machine_completed_diagnostics(comments):
+    from docx import Document
+
+    from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
+    from docwen_plugin_markdown.renderer import MdToDocxRenderer
+
+    renderer = MdToDocxRenderer(Document(), loss_comments=comments)
+    renderer.render(parse_markdown_text(r"Before $x\hspace{1em}y$ after"))
+    [loss] = renderer.losses.records
+    summary = renderer.losses.summary(annotated_count=renderer.loss_comments_added)
+    assert summary is not None
+    diagnostics = (loss.to_diagnostic(), summary)
+    responses, active = _run(
+        _Service(outcome_factory=lambda task_id: replace(_completed_outcome(task_id), diagnostics=diagnostics))
+    )
+    completed = _lifecycle(responses)[-1]
+    assert completed["method"] == "task/completed"
+    wire = completed["params"]["diagnostics"]
+    assert [item["code"] for item in wire] == ["CONVERSION-LOSS-FORMULA", "CONVERSION-LOSS-SUMMARY"]
+    assert wire[0]["severity"] == "warning"
+    assert loss.output_location in wire[0]["message"]
+    assert loss.original in wire[0]["message"]
+    assert ("Comments were added" in wire[1]["message"]) is comments
+    assert all("source" not in item and "range" not in item for item in wire)
+    assert active == {}

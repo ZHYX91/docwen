@@ -116,6 +116,21 @@ not interactive Word controls.
 每次出现绑定，覆盖 Wiki/Markdown 混排、重复资源及显式空 alt。任务项使用原生列表保留可见的 `[ ]` / `[x]`
 状态、子块与顺序；状态标记为文本，不承诺 Word 交互控件。
 
+The supported inline HTML formatting tags are `<u>`, `<sub>`, `<sup>`, `<del>`, `<mark>`, `<strong>` and `<em>`,
+without attributes. They accept nested supported inline content and are recognized before generic HTML. Code and
+escaped tags remain literal. Markdown export keeps the configured marker choices where those delimiters are
+unambiguous; adjacent different emphasis runs, intraword underscores and formatted boundary whitespace use the
+equivalent HTML tags instead of adding spaces or losing formatting. Body, table, list, quote and note text use the
+same run-property resolver and serializer. Character styles follow their explicit `basedOn` chain; direct off values
+override inherited formatting. Paragraph/default presentation and recognized code/quote character-style defaults do
+not invent authored emphasis. Unknown style IDs and independent style roots do not inherit unrelated Normal properties.
+
+无属性的 `<u>`、`<sub>`、`<sup>`、`<del>`、`<mark>`、`<strong>`、`<em>` 作为行内格式解析，支持嵌套；
+代码和转义标签保持字面量。导出在合法位置使用已配置的 Markdown 标记，在相邻强调、词内下划线或格式化首尾
+空白等无法无歧义表达的位置使用等价 HTML，不通过增删文字修补标记。正文、表格、列表、引用及注释共用行内属性
+解析和序列化；字符样式按明确的继承链求值，直接关闭优先。段落／默认外观和代码／引用字符样式的默认装饰不冒充
+作者强调；独立根样式、无效样式 ID 不猜测继承 Normal。
+
 ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions that map one-to-one to Word
 `Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
 direct `outlineLvl=0..8` values and outline levels inherited through paragraph styles.
@@ -151,6 +166,18 @@ Setext 下划线不会错移其动作。行内 `<br>` 在标题、表格单元�
 代码和公式中的字面内容不改写。
 DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标题。公式段落复用普通段落的文本渲染器，按所选
 格式策略保留行内代码、接受的修订、链接、注释，以及同一文本片段换行或制表符两侧的内容。
+
+Page breaks are read in native run order by the shared rich-text walker. Section breaks come from the current
+paragraph's `sectPr`, not a revision-history copy. Horizontal rules resolve paragraph-style borders, including
+inherited edges and explicit `none`/`nil` resets. A standalone rule is emitted at its own paragraph position, including
+before tables and at document end. These structures use the configured, distinct output separators.
+Native quote paragraphs retain paragraph separators, while line breaks within one paragraph stay within it. A return
+to a shallower quote must not become lazy continuation of the preceding deeper quote.
+
+分页符按当前 run 内的位置读取；分节符只读取当前段落属性，不把修订历史当成现有分节。水平线沿段落样式继承边框，
+直接 `none`／`nil` 可关闭继承边。独立水平线在自己的段落位置输出，包括表格之前和文末；三种结构分别使用所配置的
+输出分隔符。
+引用的原生段落边界保留为段间分隔，段内换行仍留在同一段；返回较浅引用层级时，不作为前一个深层引用的续行。
 
 ## Rules / 规则
 
@@ -262,6 +289,16 @@ objects and overrides only explicitly supplied booleans. The four keys are `stru
 | Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
 | H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
 | Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
+
+With typed-note input enabled, `[^id]` and `[^footnote:id]` identify footnotes and `[^endnote:id]` identifies an
+endnote. `[^endnote-id]` remains an ordinary footnote ID; its spelling never selects an endnote or a legacy mode.
+Input and output switches are independent. Preserving note kinds on a round trip requires typed-note recognition
+on input and typed-note syntax on output. Definitions, repeated references and formatted note bodies are rebuilt from
+the current native note parts; renumbering by first reference does not change note identity.
+
+开启输入 typed notes 时，`[^id]`／`[^footnote:id]` 为脚注，`[^endnote:id]` 为尾注；`[^endnote-id]` 始终是普通
+脚注 ID，不推测旧版本含义。输入识别和输出语法独立配置，往返保留类型时两端均须启用。定义、重复引用和正文格式
+均读取当前原生注释部件；按首次引用重新编号不改变引用关系。
 
 Ordinary pipe tables inside quote and list containers remain available when Structural Tables input is disabled.
 The opt-in controls advanced table roles and merge syntax; it does not gate ordinary nested table recognition.
@@ -1474,9 +1511,64 @@ The supported visible projection suppresses directly enabled `w:vanish` runs in 
 
 ## Text and math source ownership / 文本与公式的源所有权
 
+Dollar-math boundaries are shared by the Markdown parser and source protection. `$...$` is inline math;
+`$$...$$` is display math in paragraphs, lists and table cells. Display delimiters may share the first/last
+content line or occupy their own lines. A complete formula owns its body before heading numbering, so a matrix's
+standalone `=` is never a Setext heading and its `\\` row separators stay literal. Code spans, code blocks,
+escaped dollars and amounts such as `$5 and $10` remain ordinary content.
+
+Markdown 解析和源保护共用美元符号数学边界。`$...$` 为行内公式，`$$...$$` 为块公式，正文、列表和
+表格单元格采用相同身份。块公式围栏可以与首尾内容同行，也可以独占一行。完整公式先于标题编号拥有
+内部原文，矩阵的独立 `=` 不得成为 Setext 标题，`\\` 行分隔符不得被普通 Markdown 转义处理。
+代码、转义美元符和 `$5 and $10` 这样的金额保持字面内容。
+
+DOCX writes inline math as `m:oMath` and display math as `m:oMathPara`. Reading uses that explicit structure,
+including formula-only paragraphs, instead of guessing from the absence of ordinary text. Multiline display
+output uses separate fence lines; a table cell uses one physical line while preserving TeX row separators.
+List display equations are left aligned with their real list content and marker. Ordinary body display math
+uses the formula paragraph style (centered by default); alignment never changes formula identity.
+Visible braces, dollar signs and underscores are escaped on math export, so `\{x\}`, `\$5` and `a\_b`
+cannot become an invisible group, a Markdown delimiter or a subscript on re-import.
+The final fragment join checks the same dollar grammar and adds visible whitespace where adjacent native
+formulas or ordinary digits would otherwise merge their delimiters; formatting and code boundaries remain literal.
+
+DOCX 分别用 `m:oMath` 与 `m:oMathPara` 表示行内和块公式。回读直接依据这一结构，纯公式段落也不再按
+“没有普通文字”猜为块公式。多行块公式输出独立围栏；表格单元格保持单行 Markdown，同时保留 TeX 行分隔符。
+列表中的块公式与真实列表内容、编号左对齐；正文块公式采用公式段落样式，默认居中。对齐不会改变公式身份。
+公式回读转义可见花括号、美元符号和下划线，`\{x\}`、`\$5`、`a\_b` 不得在再次导入时变为不可见分组、
+Markdown 分隔符或下标。
+最终片段拼接使用同一美元符号语法，原生相邻公式或后接普通数字会粘连分隔符时添加必要的可见空白；
+格式和代码以最终序列化后的真实边界判断。
+
+Square roots explicitly hide their empty root degree; indexed roots retain the complete degree and radicand.
+Ordinary named functions retain token order and side scripts (for example `\sin^2 x` and `\log_2 x`); the
+writer does not infer a function argument from adjacent presentation tokens. Thus `\sin x \cos y` remains
+a product and `\sin(x)y` does not become `\sin((x)y)`. A limit uses an explicit native function with its
+limit scripts only when a fraction or group establishes its operand; ambiguous ungrouped operands/factors
+preserve source with a diagnostic. N-ary operands keep a following product, including named-function
+factors, together up to a sum or relation. Use explicit TeX grouping for a whole sum as the operand.
+
+平方根明确隐藏空根指数；有根指数的根式完整保留根指数和被开方项。普通命名函数保留原记号顺序和侧标，
+如 `\sin^2 x` 和 `\log_2 x`；不根据相邻展示记号猜测函数参数。因此 `\sin x \cos y` 保持乘积，
+`\sin(x)y` 不会变为 `\sin((x)y)`。极限仅在分式或分组明确参数范围时采用原生函数及上下限结构；未分组的
+参数、后续因子范围有歧义时保留原文并诊断。求和、积分等 n 元运算的连续乘积保持完整，包含命名函数因子，
+至加减或关系符结束；对整个和式运算应使用显式 TeX 分组。
+
 MathML `mtext` retains literal text and whitespace, including units and conditions. DOCX output marks these as normal-text math runs and preserves their spacing. Native formula import keeps TeX control words lexically separate from following ASCII identifiers in ordinary groups, scripts and matrix cells. An unsupported MathML leaf on Markdown-to-DOCX export preserves the original LaTeX as visible text with `MD2DOCX-FORMULA-TEXT-FALLBACK`; a nonempty partial formula is not success. This defines a supported subset, not every LaTeX command.
 
 MathML `mtext` 保留字面文本及空白，包括单位与条件；DOCX 写出普通文本数学 run 并保留空格。原生公式导入在普通分组、上下标与矩阵单元格中保留 TeX 控制词和后续 ASCII 标识符的词法边界。Markdown→DOCX 导出遇到无法表示的 MathML 叶节点时，保留原 LaTeX 为可见文本并发出 `MD2DOCX-FORMULA-TEXT-FALLBACK`，不得以非空的残缺公式报告成功；此能力不覆盖全部 LaTeX 命令。
+
+Unknown mathematical containers are also refused as a whole, including unmodeled accents/enclosures. Export
+fallback keeps the original dollar delimiters and LaTeX, and identifies the XML paragraph/cell occurrence in
+the diagnostic. Import fallback retains the complete original OMML as a JSON string in a Markdown code span
+and reports `DOCX2MD-FORMULA-SOURCE-FALLBACK` with its package/XML location. The pinned TeX parser erases ASCII
+upright-identifier information from `\mathrm`/`\rm`; those commands therefore use explicit source fallback.
+This supported subset does not flatten an unknown operation or claim a partial expression as successful math.
+
+未知数学容器同样整式拒绝，包括尚未建模的重音、外框。导出失败保留原美元分隔符和 LaTeX，并报告所在
+XML 段落／单元格。导入失败把完整原 OMML 作为 JSON 字符串保存在 Markdown 代码片段中，发出带包内 XML
+位置的 `DOCX2MD-FORMULA-SOURCE-FALLBACK`。锁定的 TeX 解析器会丢失 `\mathrm`／`\rm` 的 ASCII 正体信息，
+这两类命令也明确采用原文回退。受支持子集不得把未知运算摊平后将残缺表达式当作成功公式。
 
 Gongwen extraction owns text and math occurrences in XML order. Text before, between and after inline formulas survives regardless of paragraph length; an outer `oMathPara` owns its nested math once. Combined copy/document-number recognition and extraction share one full-line parse, before request heading cleanup can claim a leading copy ID. Consume the paragraph only after both fields represent its source completely; conflicting or uncertain combined fields and formula-bearing metadata remain visible with a precise source-preservation diagnostic. Existing missing-field warnings still apply. Copy IDs retain leading zeros as strings. These rules do not add rich formula extraction to Gongwen's existing plain-text table projection.
 

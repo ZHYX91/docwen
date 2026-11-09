@@ -157,7 +157,8 @@ def test_malformed_referenced_note_part_is_a_typed_visible_loss(
     assert result.success is True
     markdown = _markdown_from_result(result)
     assert "body note[^" in markdown
-    assert "[^1]:" not in markdown
+    key = "1" if note_type == "footnote" else "endnote-1"
+    assert f"[^{key}]: [Note could not be read; check the source document]" in markdown
     warning = next(diagnostic for diagnostic in result.diagnostics if diagnostic.code == "DOCX2MD-NOTE-DEFINITION-LOSS")
     assert warning.level == "warning"
     assert f"footnotes={footnote_loss_count}" in warning.message

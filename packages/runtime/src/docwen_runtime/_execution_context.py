@@ -237,6 +237,14 @@ class RuntimeExecutionContext:
         return self._heading_cleanup_rules
 
     @property
+    def loss_messages(self) -> dict[str, str]:
+        """Conversion-loss notices follow this request's output language."""
+        from docwen_runtime.config.task_language import configured_output_locale, output_loss_messages
+
+        locale = self._request.options.get("locale") or configured_output_locale(self._request.config_snapshot)
+        return output_loss_messages(str(locale))
+
+    @property
     def yaml_key_labels(self) -> dict[str, str]:
         """Generated labels follow the request's output locale, never UI state."""
         from docwen_runtime.config.task_language import configured_output_locale, output_yaml_labels

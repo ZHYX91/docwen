@@ -19,12 +19,14 @@ import re
 import time
 import uuid
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, Any
 
 from docx.oxml.ns import qn
 
+from docwen_core.conversion_loss import ConversionLoss, LossCollector, loss_text
 from docwen_core.errors import CancellationRequested
 from docwen_core.text.ocr import report_ocr_outcome
 from docwen_plugin_document.to_markdown.metadata import build_yaml_header, extract_title_metadata
@@ -151,6 +153,8 @@ class DocxToMarkdownConverter:
         self._ordinary_container_list_bindings: frozenset[tuple[str, str]] = frozenset()
         self._resolved_v4_diagnostics: list[tuple[str, str, str]] = []
         self._table_role_diagnostics: list[str] = []
+        self._formula_diagnostics: list[ConversionLoss] = []
+        self._loss_messages: dict[str, str] = {}
         self._table_role_overrides: dict[Any, tuple[int, int]] = {}
         self._pending_artifacts: list[Any] = []
         self._pending_primary_path: str | None = None
@@ -199,6 +203,8 @@ class DocxToMarkdownConverter:
         """
         self._resolved_v4_diagnostics.clear()
         self._table_role_diagnostics.clear()
+        self._formula_diagnostics.clear()
+        self._loss_messages = getattr(context, "loss_messages", {})
         self._table_role_overrides.clear()
         from docwen_core.models.result import (
             ConversionDiagnostic,
@@ -385,27 +391,39 @@ class DocxToMarkdownConverter:
                 code="DOCX2MD-OK",
             ),
         ]
-        if note_definition_loss_count:
+        losses = LossCollector()
+        for loss in self._formula_diagnostics:
+            losses.add(loss)
+        if note_definition_loss_count and self._note_extractor is not None:
             footnote_loss_count = stats.get("footnote_definition_loss_count", 0)
             endnote_loss_count = stats.get("endnote_definition_loss_count", 0)
-            all_diagnostics.append(
-                ConversionDiagnostic(
-                    level="warning",
-                    message=(
-                        "Some referenced note definitions could not be read from the DOCX "
-                        f"(footnotes={footnote_loss_count}, endnotes={endnote_loss_count}). "
-                        "The Markdown body was preserved, but those definitions are missing."
-                    ),
+            for kind, note_id in self._note_extractor.missing_definitions():
+                loss = ConversionLoss(
                     code="DOCX2MD-NOTE-DEFINITION-LOSS",
-                    location="word/footnotes.xml or word/endnotes.xml",
+                    reason=loss_text(
+                        self._loss_messages, "note_unreadable_reason", "The referenced note could not be read."
+                    )
+                    + f" (footnotes={footnote_loss_count}, endnotes={endnote_loss_count})",
+                    change=loss_text(
+                        self._loss_messages,
+                        "note_placeholder",
+                        "A visible placeholder definition was retained; check the source document.",
+                    ),
+                    source_location=f"word/{kind}s.xml:note {note_id}",
+                    output_location=f"Markdown {kind} definition",
                 )
-            )
+                losses.add(loss)
+                all_diagnostics.append(loss.to_diagnostic(self._loss_messages))
+        summary = losses.summary(self._loss_messages)
+        if summary is not None:
+            all_diagnostics.append(summary)
         all_diagnostics.extend(
             ConversionDiagnostic(
                 level="warning", message=message, code="DOCX2MD-TABLE-ROLES-STALE", location="word/document.xml"
             )
             for message in self._table_role_diagnostics
         )
+        all_diagnostics.extend(loss.to_diagnostic(self._loss_messages) for loss in self._formula_diagnostics)
         all_diagnostics.extend(
             ConversionDiagnostic(
                 level="warning",
@@ -550,6 +568,10 @@ class DocxToMarkdownConverter:
             preserve_formatting=self._preserve_formatting,
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=self._request_policy.style_detector,
+            math_renderer=self._render_formula,
+            missing_placeholder=loss_text(
+                self._loss_messages, "note_placeholder", "[Note could not be read; check the source document]"
+            ),
         )
         if self._note_extractor.endnotes and not self._extensions.typed_endnotes:
             self._record_extension_loss("typed_endnotes", "Endnotes were exported as ordinary Markdown footnotes.")
@@ -1048,30 +1070,23 @@ class DocxToMarkdownConverter:
             lines.append(final_sep)
             lines.append("")
 
-        # Normalize: smart content joining (M3)
+        # Normalize native block boundaries without merging quote paragraphs.
         #  - Consecutive list items → single newline (no blank)
-        #  - Consecutive blockquotes → single newline (no blank)
-        #  - Different block types → blank line separator
+        #  - Consecutive quotes → an empty line at their common quote depth.
+        #    This ends the native paragraph without closing a shared container
+        #    or treating a shallower quote as lazy continuation of a deeper one.
+        #  - Other block boundaries → blank line separator
         import re as _re
 
-        def _detect_block_type(ln: str) -> str | None:
-            """Return ``"list"``, ``"quote"``, ``"other"``, or ``None`` (blank)."""
-            stripped = ln.strip()
-            if not stripped:
-                return None
-            authored_fence = exact_fenced_fragments.get(ln)
-            if authored_fence is not None:
-                first_line = authored_fence.splitlines()[0].strip()
-                if first_line.startswith(">"):
-                    return "quote"
-                if _re.match(r"^(?:[-*+] |\d+[.)] )", first_line):
-                    return "list"
-                return "other"
-            if stripped.startswith(">"):
-                return "quote"
-            if _re.match(r"^(\s*[-*+] |\s*\d+[.)] )", stripped):
-                return "list"
-            return "other"
+        def _first_fragment_line(fragment: str) -> str:
+            return exact_fenced_fragments.get(fragment, fragment).splitlines()[0]
+
+        def _is_list_fragment(fragment: str) -> bool:
+            return _re.match(r"^(?:[-*+] |\d+[.)] )", _first_fragment_line(fragment).strip()) is not None
+
+        def _quote_prefix(fragment: str) -> tuple[str, int] | None:
+            match = _re.match(r"^([ \t]*)(?:>[ \t]*)+", _first_fragment_line(fragment))
+            return (match[1], match[0].count(">")) if match is not None else None
 
         normalized: list[str] = []
         prev_blank = False
@@ -1082,14 +1097,17 @@ class DocxToMarkdownConverter:
                 prev_blank = True
                 continue  # defer blank — decide when next non-blank arrives
 
-            # Non-blank line
-            block_type = _detect_block_type(line)
-
             if prev_blank and normalized:
-                # Get the type of the last emitted non-blank line
-                last_type = _detect_block_type(normalized[-1])
-                if last_type != block_type or block_type not in ("list", "quote"):
-                    normalized.append("")  # different types → blank separator
+                previous = normalized[-1]
+                previous_quote, current_quote = _quote_prefix(previous), _quote_prefix(line)
+                if previous_quote is not None and current_quote is not None and previous_quote[0] == current_quote[0]:
+                    common_prefix = current_quote[0] + ">" * min(previous_quote[1], current_quote[1])
+                    # A structural quote-blank already supplied by the native
+                    # container/anchor walker provides the same boundary.
+                    if previous.strip() != common_prefix.strip() and line.strip() != common_prefix.strip():
+                        normalized.append(common_prefix)
+                elif not (_is_list_fragment(previous) and _is_list_fragment(line)):
+                    normalized.append("")
 
             normalized.append(line)
             prev_blank = False
@@ -1293,6 +1311,7 @@ class DocxToMarkdownConverter:
         # ── 0. Page/section break detection ─────────────────────────
         from docwen_core.docx_parsing.break_utils import (
             detect_all_breaks,
+            detect_horizontal_rule,
             extract_paragraph_border_info,
         )
 
@@ -1305,8 +1324,14 @@ class DocxToMarkdownConverter:
         # ── 1. Border group tracking ────────────────────────────────
         if para is not None and border_tracker is not None:
             border_info = extract_paragraph_border_info(para)
-            for sep in border_tracker.process_paragraph(border_info):
+            standalone_rule = detect_horizontal_rule(para)
+            for sep in border_tracker.process_paragraph({} if standalone_rule else border_info):
                 lines.append(sep)
+                lines.append("")
+            if standalone_rule and self._horizontal_rule_separator:
+                # The current native paragraph owns this rule's position,
+                # including immediately before a table or at document end.
+                lines.append(self._horizontal_rule_separator)
                 lines.append("")
 
         # ── 2. Get paragraph style name ─────────────────────────────
@@ -2034,22 +2059,13 @@ class DocxToMarkdownConverter:
             render_paragraph_runs_split_on_page_breaks,
         )
 
-        standalone_formula = not (getattr(para, "text", "") or "").strip()
-
-        def _render_formula(child: Any) -> str | None:
-            tag = child.tag.split("}")[-1] if "}" in (child.tag or "") else (child.tag or "")
-            return extract_formula_from_element(
-                child,
-                block=(tag == "oMathPara" or standalone_formula),
-            )
-
         segments = render_paragraph_runs_split_on_page_breaks(
             para,
             note_extractor=self._note_extractor,
             preserve_formatting=(self._preserve_formatting if preserve_formatting is None else preserve_formatting),
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
-            math_renderer=_render_formula,
+            math_renderer=self._render_formula,
             image_renderer=self._render_inline_images,
             line_break_text=line_break_text,
             text_transform=text_transform,
@@ -2139,6 +2155,17 @@ class DocxToMarkdownConverter:
         text = tb_para.text.strip() if tb_para.text else ""
         return text
 
+    def _render_formula(self, element: Any, source_part: str = "word/document.xml") -> str:
+        """Use explicit Office math identity and report this XML occurrence."""
+
+        def report_failure(loss: ConversionLoss) -> None:
+            location = source_part + ":" + element.getroottree().getpath(element)
+            diagnostic = replace(loss, source_location=location, output_location="")
+            if diagnostic not in self._formula_diagnostics:
+                self._formula_diagnostics.append(diagnostic)
+
+        return extract_formula_from_element(element, messages=self._loss_messages, on_failure=report_failure)
+
     def _build_paragraph_text_with_formulas(
         self,
         para_element: Any,
@@ -2151,28 +2178,13 @@ class DocxToMarkdownConverter:
         """Render formulas and surrounding text through the shared run walker."""
         from docwen_plugin_document.shared.markdown_runs import render_paragraph_runs
 
-        # The shared renderer owns the visible XML projection. An empty
-        # projection is a valid result (for example an all-hidden paragraph).
-        visible_paragraph_text = self._extract_paragraph_text_formatted(
-            para if para is not None else para_element,
-            preserve_formatting=False,
-            style_detector_config=style_detector_config,
-            escape_literal_text=False,
-        )
-        paragraph_text = visible_paragraph_text.strip()
-        standalone_formula = not paragraph_text
-
-        def render_formula(child: Any) -> str | None:
-            tag = child.tag.split("}")[-1] if "}" in (child.tag or "") else (child.tag or "")
-            return extract_formula_from_element(child, block=(tag == "oMathPara" or standalone_formula))
-
         return render_paragraph_runs(
             para if para is not None else para_element,
             note_extractor=self._note_extractor,
             preserve_formatting=preserve_formatting,
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=style_detector_config,
-            math_renderer=render_formula,
+            math_renderer=self._render_formula,
             text_transform=text_transform,
             image_renderer=self._render_inline_images,
             reference_spans=self._paragraph_reference_spans(para_element),

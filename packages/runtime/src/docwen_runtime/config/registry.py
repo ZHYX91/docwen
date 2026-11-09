@@ -113,6 +113,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "gui.transparency",
         "gui.language",
         "conversion.output_locale",
+        "conversion.loss_comments",
     ),
     "text": (
         "conversion.md_to_docx.formatting_mode",

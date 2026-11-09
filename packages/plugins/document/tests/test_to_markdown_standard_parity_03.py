@@ -229,7 +229,7 @@ def test_paragraph_section_break_emits_separator():
     para = doc.add_paragraph("section-end paragraph")
     # Inject sectPr
     sect_pr = OxmlElement("w:sectPr")
-    para._p.append(sect_pr)
+    para._p.get_or_add_pPr().append(sect_pr)
 
     converter = DocxToMarkdownConverter()
     lines, _stats = converter._process_paragraph(
@@ -245,7 +245,7 @@ def test_paragraph_section_break_ignore_omits_separator():
     doc = Document()
     para = doc.add_paragraph("section-end paragraph")
     sect_pr = OxmlElement("w:sectPr")
-    para._p.append(sect_pr)
+    para._p.get_or_add_pPr().append(sect_pr)
 
     converter = DocxToMarkdownConverter()
     converter._section_break_separator = ""
@@ -340,8 +340,8 @@ def test_docx_to_md_convert_consumes_request_break_separator_config(tmp_path):
     assert "___" in content
 
 
-def test_standalone_omath_paragraph_without_omathpara_emits_block_formula():
-    """Legacy Word producers may store a display formula as a bare oMath paragraph."""
+def test_standalone_omath_keeps_explicit_inline_identity():
+    """Having no ordinary text does not change an inline math node's type."""
     doc = Document()
     para = doc.add_paragraph()
     omath = OxmlElement("m:oMath")
@@ -355,7 +355,7 @@ def test_standalone_omath_paragraph_without_omathpara_emits_block_formula():
     converter = DocxToMarkdownConverter()
     output = converter._build_paragraph_text_with_formulas(para._element, para)
 
-    assert output == "$$x$$"
+    assert output == "$x$"
 
 
 def test_mixed_text_and_omath_paragraph_remains_inline_formula():
@@ -374,6 +374,15 @@ def test_mixed_text_and_omath_paragraph_remains_inline_formula():
     output = converter._build_paragraph_text_with_formulas(para._element, para)
 
     assert output == "before $x$ after"
+
+
+@pytest.mark.parametrize(("bold", "expected"), [(False, "$x$ 2"), (True, "$x$**2**")])
+def test_math_join_uses_the_final_formatted_digit_boundary(bold: bool, expected: str):
+    doc = Document()
+    para = doc.add_paragraph()
+    _append_formula(para._p, "x")
+    para.add_run("2").bold = bold
+    assert DocxToMarkdownConverter()._build_paragraph_text_with_formulas(para._element, para) == expected
 
 
 def test_formula_paragraph_preserves_character_code_and_text_around_run_breaks():
@@ -399,7 +408,7 @@ def test_formula_paragraph_preserves_character_code_and_text_around_run_breaks()
         para,
         style_detector_config=StyleDetectorConfig(code_character_style_names=frozenset({"Custom Literal"})),
     )
-    assert output == "before `<br>`\n`after-break`\t`after-tab`$x$** end**"
+    assert output == "before `<br>`\n`after-break`\t`after-tab`$x$<strong> end</strong>"
     plain = converter._build_paragraph_text_with_formulas(para._element, para, preserve_formatting=False)
     assert plain == "before \\<br\\>\nafter-break\tafter-tab$x$ end"
 
@@ -416,8 +425,8 @@ def test_alternate_content_formula_prefers_choice_without_duplicate_fallback():
 
     output = DocxToMarkdownConverter()._build_paragraph_text_with_formulas(para._element, para)
 
-    assert output == "before $CHOICE_SENTINEL$ after"
-    assert "FALLBACK_SENTINEL" not in output
+    assert output == r"before $CHOICE\_SENTINEL$ after"
+    assert r"FALLBACK\_SENTINEL" not in output
 
 
 def test_alternate_content_formula_uses_fallback_when_choice_is_not_renderable():
@@ -432,7 +441,7 @@ def test_alternate_content_formula_uses_fallback_when_choice_is_not_renderable()
 
     output = DocxToMarkdownConverter()._build_paragraph_text_with_formulas(para._element, para)
 
-    assert output == "before $FALLBACK_SENTINEL$ after"
+    assert output == r"before $FALLBACK\_SENTINEL$ after"
 
 
 def test_alternate_content_formula_uses_fallback_for_empty_choice_hyperlink():
@@ -456,7 +465,7 @@ def test_alternate_content_formula_uses_fallback_for_empty_choice_hyperlink():
 
     output = DocxToMarkdownConverter()._build_paragraph_text_with_formulas(para._element, para)
 
-    assert output == "before $FALLBACK_SENTINEL$ after"
+    assert output == r"before $FALLBACK\_SENTINEL$ after"
     assert "empty-choice" not in output
 
 
@@ -475,11 +484,11 @@ def test_page_break_renderer_keeps_selected_alternate_content_formula():
     parts = DocxToMarkdownConverter()._render_page_break_parts(para)
 
     assert parts == [
-        ("text", "before $CHOICE_SENTINEL$"),
+        ("text", r"before $CHOICE\_SENTINEL$"),
         ("separator", "---"),
         ("text", "after"),
     ]
-    assert "FALLBACK_SENTINEL" not in repr(parts)
+    assert all(r"FALLBACK\_SENTINEL" not in text for _kind, text in parts)
 
 
 def test_full_convert_preserves_one_effective_alternate_content_formula(tmp_path: Path) -> None:
@@ -525,9 +534,10 @@ def test_full_convert_preserves_one_effective_alternate_content_formula(tmp_path
 
     assert result.success, result.error
     markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
-    assert markdown.count("DIRECT_SENTINEL") == 1
-    assert markdown.count("CHOICE_SENTINEL") == 1
-    assert "FALLBACK_SENTINEL" not in markdown
+    assert markdown.count(r"DIRECT\_SENTINEL") == 1
+    assert markdown.count(r"CHOICE\_SENTINEL") == 1
+    assert r"FALLBACK\_SENTINEL" not in markdown
+    assert r"$DIRECT\_SENTINEL$ $CHOICE\_SENTINEL$" in markdown
 
 
 def test_code_block_style_accumulates_lines():

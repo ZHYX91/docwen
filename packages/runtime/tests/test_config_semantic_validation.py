@@ -14,6 +14,8 @@ PROJECT_CONFIGS = Path(__file__).resolve().parents[3] / "configs"
 @pytest.mark.parametrize(
     ("rel_path", "invalid_text"),
     (
+        ("conversion.toml", 'loss_comments = "false"\n'),
+        ("conversion.toml", "loss_comments = 1\n"),
         ("gui.toml", '[history]\nrecent_files = ["ok.docx", 7]\n'),
         (
             "conversion.toml",

@@ -90,6 +90,7 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
     "general": (
         ("gui", "language"),
         ("gui", "output_language"),
+        ("gui", "loss_comments"),
         ("gui", "theme"),
         ("gui", "font_size_preset"),
         ("gui", "scale_percent"),
@@ -968,12 +969,14 @@ class SettingsViewModel(QObject):
         conversion = raw.get("conversion", {})
         if isinstance(conversion, dict):
             config.gui.output_language = str(conversion.get("output_locale") or "zh_CN")
+            config.gui.loss_comments = bool(conversion.get("loss_comments", True))
 
         # gui section
         gui = raw.get("gui", {})
         if isinstance(gui, dict):
             config.gui = GUIConfig(
                 output_language=config.gui.output_language,
+                loss_comments=config.gui.loss_comments,
                 language=gui.get("language", {}).get("locale", "zh_CN")
                 if isinstance(gui.get("language"), dict)
                 else "zh_CN",
@@ -1031,7 +1034,7 @@ class SettingsViewModel(QObject):
             template_fill.get("gongwen_fields_enabled", True) if isinstance(template_fill, dict) else True
         )
         config.text.gongwen_numbering_comments = (
-            template_fill.get("gongwen_numbering_comments", True) if isinstance(template_fill, dict) else True
+            template_fill.get("gongwen_numbering_comments", False) if isinstance(template_fill, dict) else False
         )
         config.text.gongwen_numbering_text = (
             template_fill.get("gongwen_numbering_text", True) if isinstance(template_fill, dict) else True
@@ -1393,6 +1396,7 @@ class SettingsViewModel(QObject):
         gui = config.gui
         put("gui.language.locale", gui.language)
         put("conversion.output_locale", gui.output_language)
+        put("conversion.loss_comments", bool(gui.loss_comments))
         put("gui.theme.default_theme", gui.theme)
         put("gui.font.size_preset", gui.font_size_preset)
         put("gui.appearance.scale_percent", gui.scale_percent)

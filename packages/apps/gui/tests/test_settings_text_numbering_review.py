@@ -32,7 +32,7 @@ def test_numbering_review_is_general_and_preserves_saved_mode_and_cancel(qapp, l
         assert card.isAncestorOf(tab._numbering_text)
         assert card.isAncestorOf(tab._numbering_comments)
         assert tab._numbering_text.isChecked()
-        assert tab._numbering_comments.isChecked()
+        assert not tab._numbering_comments.isChecked()
         assert tab._numbering_comments.isEnabled()
         assert tab._numbering_text.toolTip() == t("settings.text.numbering_text_help")
         assert tab._numbering_comments.toolTip() == t("settings.text.numbering_comments_help")
@@ -53,7 +53,7 @@ def test_numbering_review_is_general_and_preserves_saved_mode_and_cancel(qapp, l
         tab._numbering_text.setChecked(False)
         vm.cancel()
         assert tab._numbering_text.isChecked()
-        assert tab._numbering_comments.isChecked()
+        assert not tab._numbering_comments.isChecked()
         assert tab._render_mode_combo.currentData() == "word_native"
         assert not vm.is_dirty
     finally:

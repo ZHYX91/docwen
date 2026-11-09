@@ -27,6 +27,7 @@ class GUIConfig:
 
     language: str = "zh_CN"
     output_language: str = "zh_CN"
+    loss_comments: bool = True
     theme: str = "light"  # light / dark / system
     font_size_preset: str = "default"
     scale_percent: int = 100
@@ -54,7 +55,7 @@ class TextConfig:
     list_separator: str = ", "
     gongwen_fields_enabled: bool = True
     gongwen_numbering_text: bool = True
-    gongwen_numbering_comments: bool = True
+    gongwen_numbering_comments: bool = False
     attachment_alignment: str = "tab"
     table_style_mode: str = "builtin"
     builtin_table_style: str = "three_line_table"

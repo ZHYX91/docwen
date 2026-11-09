@@ -135,11 +135,14 @@ def test_empty_atx_counts_once_and_disabled_formatting_preserves_bytes(prefix: s
         ("- $$\n# Real\n$$\n", []),
         ("- $$\nbody\n$$\n", ["body"]),
         ("- $$\n  body\n\n# Real\n$$\n", []),
-        ("- $$\n  body\n  - $$\n", []),
-        ("$$\n$$\n", []),
+        ("- $$\n  body\n  - $$\n", ["body\n-"]),
+        ("$$\n$$\n", [""]),
         ("$$\n\n$$\n", [""]),
         ("$$$$\n", [""]),
-        ("$$\nbody\n $$\n", []),
+        ("$$\nbody\n $$\n", ["body"]),
+        ("$$x\n=\ny$$\n", ["x\n=\ny"]),
+        ("> $$x\n> =\n> y$$\n", ["x\n=\ny"]),
+        ("1. $$x\n   =\n   y$$\n", ["x\n=\ny"]),
     ],
 )
 def test_display_math_inventory_matches_actual_block_parser_container_scope(

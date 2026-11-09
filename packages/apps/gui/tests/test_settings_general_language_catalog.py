@@ -98,3 +98,55 @@ def test_general_language_user_selection_persists_through_apply(qapp, tmp_path: 
 
     reloaded = _new_tab(user_dir)
     assert reloaded._language_combo.currentData() == target  # pyright: ignore[reportPrivateUsage]
+
+
+def test_loss_comments_default_save_cancel_and_reset(qapp, tmp_path):
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+
+    tab, vm, port = _new_tab_context(tmp_path / "user")
+    try:
+        assert tab._loss_comments.isChecked()
+        assert not vm.config.text.gongwen_numbering_comments
+        vm.begin_session()
+        tab._loss_comments.setChecked(False)
+        assert vm.apply_changes()
+        assert port.get("conversion.loss_comments") is False
+        reopened = SettingsViewModel(controller=vm._controller)
+        assert reopened.config.gui.loss_comments is False
+        tab._loss_comments.setChecked(True)
+        vm.cancel()
+        tab.reload_from_config()
+        assert not tab._loss_comments.isChecked()
+        assert vm.reset_group("general")
+        tab.reload_from_config()
+        assert tab._loss_comments.isChecked()
+        assert port.get("conversion.loss_comments") is True
+        assert not vm.config.text.gongwen_numbering_comments
+    finally:
+        tab.close()
+
+
+def test_loss_comment_locale_keys_and_placeholders():
+    import string
+    import tomllib
+
+    reference = tomllib.loads((LOCALES_DIR / "en_US.toml").read_text(encoding="utf-8"))["conversion_loss"]
+    formatter = string.Formatter()
+    for locale in PACKAGED_LOCALES:
+        messages = tomllib.loads((LOCALES_DIR / f"{locale}.toml").read_text(encoding="utf-8"))["conversion_loss"]
+        assert messages.keys() == reference.keys()
+        for key, value in messages.items():
+            assert value.strip()
+            fields = {field for _, field, _, _ in formatter.parse(value) if field is not None}
+            expected = {field for _, field, _, _ in formatter.parse(reference[key]) if field is not None}
+            assert fields == expected, (locale, key)
+
+
+def test_loss_comments_missing_key_defaults_independently():
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+
+    config = SettingsViewModel._map_raw_to_config({})
+    assert config.gui.loss_comments is True
+    assert config.text.gongwen_numbering_comments is False
+    configured = SettingsViewModel._map_raw_to_config({"conversion": {"loss_comments": False}})
+    assert configured.gui.loss_comments is False

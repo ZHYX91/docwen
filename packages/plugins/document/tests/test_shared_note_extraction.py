@@ -41,7 +41,7 @@ def test_note_content_removes_only_structural_reference_separator(ref_tag: str):
     continuation.text = " Continuation leading whitespace"
 
     assert _extract_note_content(note, WML_NS, ref_tag) == (
-        "  Authored leading whitespace\n Continuation leading whitespace"
+        "  Authored leading whitespace\n\n Continuation leading whitespace"
     )
 
 
@@ -61,6 +61,17 @@ def test_note_content_preserves_breaks_and_basic_inline_formatting():
     etree.SubElement(bold_run, f"{{{WML_NS}}}t").text = "Bold line"
 
     assert _extract_note_content(note, WML_NS, "footnoteRef") == "First line\n**Bold line**"
+
+
+@pytest.mark.parametrize("ref_tag", ["footnoteRef", "endnoteRef"])
+def test_note_content_reads_accepted_revisions_only(ref_tag):
+    note = etree.Element(f"{{{WML_NS}}}note")
+    paragraph = etree.SubElement(note, f"{{{WML_NS}}}p")
+    for kind, text in (("moveFrom", "removed move"), ("del", "deleted"), ("ins", "accepted"), ("moveTo", " move")):
+        revision = etree.SubElement(paragraph, f"{{{WML_NS}}}{kind}")
+        run = etree.SubElement(revision, f"{{{WML_NS}}}r")
+        etree.SubElement(run, f"{{{WML_NS}}}t").text = text
+    assert _extract_note_content(note, WML_NS, ref_tag) == "accepted move"
 
 
 def test_note_content_preserves_codespan_with_embedded_backtick():
@@ -115,7 +126,7 @@ def test_note_content_uses_selected_formatting_and_syntax(ref_tag, preserve):
         preserve_formatting=preserve,
         syntax_config=DocxMarkdownSyntaxConfig(bold="underscore", italic="underscore", strikethrough="html"),
     )
-    assert actual == ("__Bold___Italic_<del>Strike</del>" if preserve else "BoldItalicStrike")
+    assert actual == ("<strong>Bold</strong><em>Italic</em><del>Strike</del>" if preserve else "BoldItalicStrike")
 
 
 @pytest.mark.parametrize("note_tag", ["footnote", "endnote"])
@@ -159,16 +170,15 @@ def test_endnote_definitions_use_prefix():
     assert build_note_definitions(notes, {9: "endnote:1"}) == "[^endnote:1]: 尾注"
 
 
-def test_note_extractor_footnotes_default_empty():
-    extractor = NoteExtractor.__new__(NoteExtractor)
-    extractor.footnotes = {}
-    extractor.endnotes = {}
-    extractor.footnote_id_map = {1: "1"}
-    extractor.endnote_id_map = {1: "endnote:1"}
-
+def test_note_extractor_missing_referenced_definitions_keep_placeholders():
+    extractor = NoteExtractor(Document())
     assert extractor.get_reference_text("footnote", 1) == "[^1]"
     assert extractor.get_reference_text("endnote", 1) == "[^endnote:1]"
-    assert extractor.build_definitions_block() == ""
+    assert extractor.build_definitions_block() == (
+        "[^1]: [Note could not be read; check the source document]\n"
+        "[^endnote:1]: [Note could not be read; check the source document]"
+    )
+    assert extractor.definition_loss_counts() == {"footnotes": 1, "endnotes": 1}
 
 
 def test_note_extractor_builds_definitions_block():

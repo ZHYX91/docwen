@@ -26,6 +26,7 @@ from docx.oxml.ns import qn
 from docx.shared import Emu, Pt
 from docx.text.run import Run
 
+from docwen_core.markdown_math import serialize_formula
 from docwen_plugin_markdown.renderer_utils import (
     add_word_soft_break,
     apply_run_east_asian_font,
@@ -114,7 +115,7 @@ def render_inlines(
             _render_image(parent, child, renderer_instance)
         elif ctype in ("linebreak", "softbreak"):
             add_word_soft_break(parent)
-        elif ctype in ("inline_math", "inline_latex"):
+        elif ctype in ("inline_math", "block_math"):
             _render_inline_math(parent, child, renderer_instance)
         elif ctype == "inline_html":
             _render_inline_html(parent, child)
@@ -267,6 +268,13 @@ def _render_formatted_container(
     apply_style = not strip_formatting or property_name in {"underline", "superscript", "subscript"}
 
     def apply_property(run: Run) -> None:
+        if (
+            property_name in {"superscript", "subscript"}
+            and run._r.find(qn("w:rPr") + "/" + qn("w:vertAlign")) is not None
+        ):
+            # Nested script containers override their outer script, matching
+            # the inherited format context used by note rendering.
+            return
         if property_name in {"strike", "superscript", "subscript"}:
             setattr(run.font, property_name, True)
         elif property_name == "highlight":
@@ -384,17 +392,21 @@ def _parse_docwen_image_size(title: str) -> tuple[int | None, int | None]:
 
 
 def _render_inline_math(parent, child: dict[str, Any], renderer_instance: Any) -> None:
-    """Render inline math as OMML."""
-    from docwen_plugin_markdown.to_docx.formula_renderer import render_inline_formula
+    """Render either math identity in an inline owner, including a cell."""
+    from docwen_plugin_markdown.to_docx.formula_renderer import append_formula
 
     raw = child.get("raw", "") or child.get("text", "")
-    if raw.strip():
-        style_reference = getattr(renderer_instance, "inline_formula_style_reference", None)
-        native = render_inline_formula(parent, raw.strip(), style_reference=style_reference)
-        if not native and renderer_instance is not None:
-            renderer_instance._warnings.append(
-                ("MD2DOCX-FORMULA-TEXT-FALLBACK", "An unsupported formula was preserved as its original LaTeX text.")
-            )
+    style_reference = getattr(renderer_instance, "inline_formula_style_reference", None)
+
+    append_formula(
+        parent,
+        raw,
+        block=child["type"] == "block_math",
+        style_reference=style_reference,
+        source=child.get("_math_source"),
+        on_loss=getattr(renderer_instance, "record_loss", None),
+        loss_messages=getattr(renderer_instance, "_loss_messages", None),
+    )
 
 
 def _render_inline_html(parent, child: dict[str, Any]) -> None:
@@ -417,17 +429,27 @@ def _render_footnote_ref(parent, child: dict[str, Any], renderer_instance: Any) 
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def render_formula(doc, node: dict[str, Any], *, block_style=None) -> bool:
+def render_formula(
+    doc, node: dict[str, Any], *, block_style=None, in_list=False, on_loss=None, loss_messages=None
+) -> bool:
     """Render a block-level formula as OMML in a new paragraph.
 
     Args:
         doc: python-docx ``Document``.
-        node: Mistune AST node for block_latex or block_math.
+        node: Mistune AST node for block_math.
     """
     from docwen_plugin_markdown.to_docx.formula_renderer import render_block_formula
 
     raw = node.get("text", "") or node.get("raw", "")
-    return render_block_formula(doc, raw.strip(), block_style=block_style)
+    return render_block_formula(
+        doc,
+        raw,
+        block_style=block_style,
+        in_list=in_list,
+        source=node.get("_math_source"),
+        on_loss=on_loss,
+        loss_messages=loss_messages,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -626,8 +648,7 @@ def _link_segments(
         else:
             value = child.get("raw", "") or child.get("text", "")
             if child_type in {"inline_math", "block_math"}:
-                delimiter = "$$" if child_type == "block_math" else "$"
-                value = f"{delimiter}{value}{delimiter}"
+                value = serialize_formula(value, block=child_type == "block_math", compact=True)
             segments.append(
                 _LinkSegment(
                     str(value),
@@ -1210,8 +1231,8 @@ def serialize_inlines_to_markdown(children: list[dict[str, Any]]) -> str:
             parts.append(f"![{alt}]({url})")
         elif ctype in ("linebreak", "softbreak"):
             parts.append("\n")
-        elif ctype in ("inline_math", "inline_latex"):
-            parts.append(f"${text}$")
+        elif ctype in ("inline_math", "block_math"):
+            parts.append(serialize_formula(text, block=ctype == "block_math", compact=True))
         elif ctype == "inline_html":
             parts.append(text)
         elif ctype in ("highlight", "mark"):

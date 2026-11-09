@@ -153,15 +153,14 @@ def test_render_paragraph_runs_coalesces_adjacent_runs_through_shared_helper():
 
 
 @pytest.mark.parametrize("marker", ["asterisk", "underscore"])
-def test_adjacent_different_run_formats_keep_their_own_markers(marker):
+def test_adjacent_different_run_formats_use_unambiguous_boundaries(marker):
     doc = Document()
     paragraph = doc.add_paragraph()
     paragraph.add_run("Bold").bold = True
     paragraph.add_run("Italic").italic = True
     syntax = DocxMarkdownSyntaxConfig(bold=marker, italic=marker)
     actual = render_paragraph_runs(paragraph, syntax_config=syntax)
-    token = "_" if marker == "underscore" else "*"
-    assert actual == f"{token * 2}Bold{token * 2}{token}Italic{token}"
+    assert actual == "<strong>Bold</strong><em>Italic</em>"
 
 
 def test_literal_code_like_text_does_not_coalesce_with_a_styled_code_run():
@@ -172,6 +171,25 @@ def test_literal_code_like_text_does_not_coalesce_with_a_styled_code_run():
     shading.set(qn("w:fill"), "D9D9D9")
     run._r.get_or_add_rPr().append(shading)
     assert render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig()) == r"\`literal\``actual code`"
+
+
+def test_page_walker_keeps_text_and_soft_breaks_around_multiple_breaks_in_one_run():
+    doc = Document()
+    paragraph = doc.add_paragraph()
+    run = paragraph.add_run("first")
+    run.bold = True
+    run.add_break()
+    run.add_text("second")
+    run.add_break(WD_BREAK.PAGE)
+    run.add_text("third")
+    run.add_break(WD_BREAK.PAGE)
+    run.add_text("fourth")
+
+    assert render_paragraph_runs_split_on_page_breaks(paragraph, syntax_config=DocxMarkdownSyntaxConfig()) == [
+        "**first**\n**second**",
+        "**third**",
+        "**fourth**",
+    ]
 
 
 def test_page_break_segments_preserve_formatting_inside_the_same_run():
