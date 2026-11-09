@@ -105,6 +105,7 @@ def _fake_doctor_payload() -> dict[str, object]:
         "data": {
             "checks": [
                 {"id": "path.temp_directory", "kind": "path", "status": "ok", "reason": None},
+                {"id": "path.runtime_directory", "kind": "path", "status": "ok", "reason": None},
                 {"id": "config.load", "kind": "config", "status": "ok", "reason": None},
                 {
                     "id": "security.dependency_egress_guard",

@@ -45,6 +45,13 @@ def _fake_doctor_payload() -> dict[str, object]:
                     "reason": None,
                 },
                 {
+                    "id": "path.runtime_directory",
+                    "kind": "path",
+                    "label": "Runtime work directory",
+                    "status": "ok",
+                    "reason": None,
+                },
+                {
                     "id": "config.load",
                     "kind": "config",
                     "label": "Configuration",
