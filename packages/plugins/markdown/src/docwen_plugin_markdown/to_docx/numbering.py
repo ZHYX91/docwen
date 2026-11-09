@@ -18,6 +18,8 @@ import lxml.etree as etree
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docwen_core.tempfiles import TemporaryDirectory
+
 logger = logging.getLogger(__name__)
 
 # ── OOXML constants ───────────────────────────────────────────────────────
@@ -360,7 +362,6 @@ def write_numbering_to_docx(
     Must be called **after** ``Document.save()`` so the ZIP contains
     all body content.
     """
-    import tempfile
     import zipfile
     from pathlib import Path
 
@@ -370,7 +371,7 @@ def write_numbering_to_docx(
     abstract_elems, num_elems = numbering._get_elements()
     original = Path(docx_path)
 
-    with tempfile.TemporaryDirectory(prefix=".dw-numbering-", dir=original.parent) as tmpdir:
+    with TemporaryDirectory(prefix=".dw-numbering-", dir=original.parent) as tmpdir:
         tmp_path = Path(tmpdir) / "numbering_writeback.docx"
 
         with (

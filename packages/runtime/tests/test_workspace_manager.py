@@ -468,3 +468,91 @@ class TestWorkspaceManager:
             # returns paths within staging_dir.
             path = handle.create_artifact_path("primary", ".docx")
             assert path.startswith(handle.staging_dir)
+
+
+def test_workspace_permission_denial_is_bounded_and_does_not_register_task(tmp_path, monkeypatch):
+    from docwen_core import tempfiles
+    from docwen_runtime.workspace.manager import WorkspaceRootUnavailable
+
+    root = tmp_path / "runtime"
+    root.mkdir()
+    attempts = []
+
+    original_mkdir = tempfiles.os.mkdir
+
+    def deny(path, mode=0o777):
+        if Path(path).name.startswith("dw-"):
+            attempts.append(Path(path))
+            raise PermissionError(13, "Access denied", str(path))
+        return original_mkdir(path, mode)
+
+    monkeypatch.setattr(tempfiles.os, "mkdir", deny)
+    manager = WorkspaceManager(root)
+    with pytest.raises(WorkspaceRootUnavailable, match="temporary work folder"):
+        manager.create("blocked", str(tmp_path / "source.md"))
+    assert len(attempts) == 1
+    assert manager.get("blocked") is None
+
+
+def test_workspace_name_collision_is_bounded_and_cancelled_before_retry(tmp_path, monkeypatch):
+    from docwen_core import tempfiles
+    from docwen_core.cancellation import CancellationToken
+    from docwen_core.errors import CancellationRequested
+    from docwen_core.tempfiles import TemporaryDirectoryError, make_temp_dir
+
+    root = tmp_path / "runtime"
+    root.mkdir()
+    token = CancellationToken()
+    attempts = []
+
+    def conflict(path, mode=0o777):
+        attempts.append(Path(path))
+        if len(attempts) == 3:
+            token.cancel("user_cancelled")
+        raise FileExistsError(17, "occupied", str(path))
+
+    monkeypatch.setattr(tempfiles.os, "mkdir", conflict)
+    with pytest.raises(CancellationRequested):
+        make_temp_dir(dir=root, prefix="dw-", cancellation_check=token.check)
+    assert len(attempts) == 3
+    with pytest.raises(TemporaryDirectoryError, match="unique temporary"):
+        make_temp_dir(dir=root, prefix="dw-", attempts=4)
+    assert len(attempts) == 7
+
+
+def test_workspace_materialization_checks_cancellation_between_inputs(tmp_path):
+    from docwen_core.cancellation import CancellationToken
+    from docwen_core.errors import CancellationRequested
+    from docwen_core.models.file_ref import FileRef
+
+    first = tmp_path / "first.md"
+    second = tmp_path / "second.md"
+    first.write_text("first", encoding="utf-8")
+    second.write_text("second", encoding="utf-8")
+    refs = (
+        FileRef(path=str(first), format="markdown", category="markdown", input_role="source", logical_path="first.md"),
+        FileRef(
+            path=str(second), format="markdown", category="markdown", input_role="attachment", logical_path="second.md"
+        ),
+    )
+    token = CancellationToken()
+    calls = 0
+
+    class CancelAfterFirst:
+        @property
+        def is_cancelled(self) -> bool:
+            return token.is_cancelled
+
+        def check(self) -> None:
+            nonlocal calls
+            calls += 1
+            if calls >= 3:
+                token.cancel("user_cancelled")
+                raise CancellationRequested("cancelled during materialization")
+
+    root = tmp_path / "workspace"
+    root.mkdir()
+    with pytest.raises(CancellationRequested, match="materialization"):
+        WorkspaceManager._materialize_declared_inputs(str(root), refs, cancellation=CancelAfterFirst())
+    assert (root / "inputs" / "input-0000.md").read_text(encoding="utf-8") == "first"
+    assert not (root / "inputs" / "input-0001.md").exists()

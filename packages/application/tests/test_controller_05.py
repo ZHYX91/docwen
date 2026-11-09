@@ -122,7 +122,9 @@ class TestExecuteMethods:
             def __deepcopy__(self, _memo):
                 raise RuntimeError("options deepcopy exploded")
 
-        real_temporary_directory = tempfile.TemporaryDirectory
+        from docwen_core.tempfiles import TemporaryDirectory
+
+        real_temporary_directory = TemporaryDirectory
         owners = []
 
         class TrackingTemporaryDirectory:
@@ -165,7 +167,7 @@ class TestExecuteMethods:
                     side_effect=fake_pre_convert,
                 ),
                 patch(
-                    "docwen_application.controller.tempfile.TemporaryDirectory",
+                    "docwen_application.controller.TemporaryDirectory",
                     side_effect=TrackingTemporaryDirectory,
                 ),
                 pytest.raises(RuntimeError, match="options deepcopy exploded"),
