@@ -66,7 +66,7 @@ _PROOFREAD_LOCATION_CONTRACT = {
     "range_end": "exclusive",
 }
 _DOCTOR_BASE_CHECK_IDS = frozenset(
-    {"config.load", "path.temp_directory", "security.dependency_egress_guard"},
+    {"config.load", "path.runtime_directory", "path.temp_directory", "security.dependency_egress_guard"},
 )
 _WORDPROCESSINGML_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _WORD_TAG = f"{{{_WORDPROCESSINGML_NAMESPACE}}}"

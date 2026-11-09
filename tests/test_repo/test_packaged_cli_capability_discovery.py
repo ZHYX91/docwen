@@ -118,6 +118,13 @@ def _doctor_payload(
                     "reason": None if base_check_status == "ok" else "not_writable",
                 },
                 {
+                    "id": "path.runtime_directory",
+                    "kind": "path",
+                    "label": "Runtime work directory",
+                    "status": base_check_status,
+                    "reason": None if base_check_status == "ok" else "not_writable",
+                },
+                {
                     "id": "config.load",
                     "kind": "config",
                     "label": "Configuration",
@@ -452,6 +459,45 @@ def test_packaged_cli_doctor_does_not_require_unrelated_host_capabilities() -> N
     from scripts.release import verify_packaged_cli
 
     verify_packaged_cli._verify_doctor_payload(_doctor_payload(unrelated_gate_available=False))
+
+
+@pytest.mark.parametrize(
+    ("runtime_checks", "expected_error"),
+    [
+        pytest.param((), "base check set mismatch", id="missing"),
+        pytest.param(
+            (("path.runtime_directory", "fail"),),
+            r"base check unavailable: path\.runtime_directory",
+            id="failed",
+        ),
+        pytest.param(
+            (("path.runtime_directory", "ok"), ("path.runtime_directory", "ok")),
+            "base check set mismatch",
+            id="duplicate",
+        ),
+        pytest.param(
+            (("path.runtime_directory", "ok"), ("path.output_directory", "ok")),
+            "base check set mismatch",
+            id="unexpected",
+        ),
+    ],
+)
+def test_packaged_cli_doctor_requires_one_healthy_runtime_directory_check(
+    runtime_checks: tuple[tuple[str, str], ...],
+    expected_error: str,
+) -> None:
+    from scripts.release import verify_packaged_cli
+
+    payload = _doctor_payload()
+    data = payload["data"]
+    assert isinstance(data, dict)
+    checks = data["checks"]
+    assert isinstance(checks, list)
+    checks[:] = [check for check in checks if check["id"] != "path.runtime_directory"]
+    checks.extend({"id": check_id, "status": status} for check_id, status in runtime_checks)
+
+    with pytest.raises(RuntimeError, match=expected_error):
+        verify_packaged_cli._verify_doctor_payload(payload)
 
 
 def test_packaged_cli_doctor_decodes_unhealthy_nonzero_payload_before_process_status() -> None:
