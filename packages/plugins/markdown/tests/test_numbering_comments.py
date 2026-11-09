@@ -213,9 +213,20 @@ def test_text_policy_overrides_only_new_native_numbers_and_enforces_comment_depe
             assert b"20000" in package.read("word/numbering.xml")
 
 
-def test_missing_old_comment_key_now_defaults_on_without_enabling_numbering(tmp_path):
-    _result, _original, output_path = _convert(tmp_path, enabled=None)
-    assert len([c for c in Document(str(output_path)).comments if c.text == NUMBERING_REVIEW_TEXT]) == 2
+@pytest.mark.parametrize("mode", ["text", "word_native"])
+@pytest.mark.parametrize("add", [False, True])
+@pytest.mark.parametrize("enabled", [None, True])
+def test_numbering_comments_default_off_and_saved_opt_in_does_not_enable_numbering(tmp_path, mode, add, enabled):
+    _result, _original, output_path = _convert(tmp_path, enabled=enabled, add=add, mode=mode, source="# Title\n")
+    document = Document(str(output_path))
+    reviews = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]
+    assert len(reviews) == int(add and enabled is True)
+    original_comment = next(iter(document.comments))
+    assert original_comment.text == "Original review"
+    assert original_comment.author == "Original author"
+    assert any(paragraph.text == ("一、Title" if add else "Title") for paragraph in document.paragraphs)
+    if reviews:
+        assert _anchors(document)[str(reviews[0].comment_id)] == "一、"
 
 
 @pytest.mark.parametrize(

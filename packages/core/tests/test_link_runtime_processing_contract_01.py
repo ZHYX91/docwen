@@ -233,7 +233,7 @@ def test_wiki_hyperlink_is_not_reprocessed_by_markdown_keep(tmp_path: Path) -> N
     assert result == ("[Page](<page.md>) and " + escape_markdown_source_literal("[Literal](https://example.com)"))
 
 
-def test_fragment_only_wiki_hyperlink_downgrades_to_display_text(tmp_path: Path) -> None:
+def test_fragment_only_wiki_hyperlink_defaults_to_literal_fallback(tmp_path: Path) -> None:
     source = _write(tmp_path / "source.md")
     config = replace(LinkRuntimeConfig(), non_embed_wiki_mode="hyperlink")
 
@@ -244,7 +244,7 @@ def test_fragment_only_wiki_hyperlink_downgrades_to_display_text(tmp_path: Path)
         target_format="docx",
     )
 
-    assert result == "Jump to Section."
+    assert result == "Jump to " + escape_markdown_source_literal("[[#section-name|Section]]") + "."
 
 
 @pytest.mark.parametrize(
@@ -254,11 +254,11 @@ def test_fragment_only_wiki_hyperlink_downgrades_to_display_text(tmp_path: Path)
             "keep",
             escape_markdown_source_literal("[[missing.md#Part|Shown]]"),
         ),
-        ("ignore", ""),
-        ("placeholder", r"\[File not found\: missing\.md\#Part\]"),
+        ("ignore", escape_markdown_source_literal("[[missing.md#Part|Shown]]")),
+        ("placeholder", escape_markdown_source_literal("[[missing.md#Part|Shown]]")),
     ],
 )
-def test_wiki_hyperlink_missing_target_consumes_error_policy(
+def test_wiki_hyperlink_missing_target_uses_independent_default_fallback(
     tmp_path: Path,
     mode: str,
     expected: str,

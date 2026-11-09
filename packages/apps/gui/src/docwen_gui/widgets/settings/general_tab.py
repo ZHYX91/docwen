@@ -43,6 +43,7 @@ class GeneralTab(BaseSettingsTab):
         self._vm = view_model
         self._language_combo: QComboBox = _cast(QComboBox, None)
         self._output_language_combo: QComboBox = _cast(QComboBox, None)
+        self._loss_comments: QCheckBox = _cast(QCheckBox, None)
         self._theme_combo: QComboBox = _cast(QComboBox, None)
         self._transparency_enabled: QCheckBox = _cast(QCheckBox, None)
         self._transparency_value: QDoubleSpinBox = _cast(QDoubleSpinBox, None)
@@ -116,6 +117,19 @@ class GeneralTab(BaseSettingsTab):
             ),
         )
         output_combo.currentIndexChanged.connect(self._on_output_language_changed)
+
+        _loss_card, loss_form = self.add_settings_card(
+            t("conversion_loss.settings_section"),
+            t("conversion_loss.settings_help"),
+            object_name="generalLossCommentsCard",
+        )
+        self._loss_comments = self.create_settings_toggle(
+            t("conversion_loss.settings_label"), t("conversion_loss.settings_help")
+        )
+        self._loss_comments.setObjectName("generalLossComments")
+        self._loss_comments.setToolTip(t("conversion_loss.settings_help"))
+        loss_form.addRow(self._loss_comments)
+        self._loss_comments.toggled.connect(lambda enabled: self._vm.set_field(SECTION_GUI, "loss_comments", enabled))
 
         # ── Theme card ──────────────────────────────────────────────────
         theme_card, theme_form = self.add_settings_card(
@@ -325,6 +339,7 @@ class GeneralTab(BaseSettingsTab):
             self._scale_combo,
             self._language_combo,
             self._output_language_combo,
+            self._loss_comments,
             self._theme_combo,
             self._transparency_enabled,
             self._transparency_value,
@@ -343,6 +358,7 @@ class GeneralTab(BaseSettingsTab):
             if self._language_combo is not None:
                 self.set_combo_data(self._language_combo, gui.language)
             self.set_combo_data(self._output_language_combo, gui.output_language)
+            self._loss_comments.setChecked(gui.loss_comments)
             if self._theme_combo is not None:
                 self.set_combo_data(self._theme_combo, gui.theme)
             if self._transparency_enabled is not None:

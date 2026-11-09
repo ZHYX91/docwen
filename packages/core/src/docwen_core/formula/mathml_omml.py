@@ -275,6 +275,17 @@ def mathml_to_omml(mathml_str: str) -> str | None:
     """Convert a supported complete expression; refuse partial conversion."""
     try:
         tree = etree.fromstring(mathml_str.encode("utf-8"))
+        # Inspect every node before operator/delimiter optimizations skip it.
+        # Unsupported inherited/token styles must not silently look successful.
+        for node in tree.iter():
+            variant = node.get("mathvariant")
+            if variant is None:
+                continue
+            tag = _tag(node)
+            if tag not in {"mi", "mn", "mo"} or variant not in {"normal", "bold", "italic", "bold-italic"}:
+                if tag == "mtext" and variant == "normal":
+                    continue
+                raise ValueError(f"unsupported mathvariant on {tag}: {variant}")
         native = etree.Element(_mk_omml("oMath"), nsmap={"m": M_NS})
         _convert_mathml_to_omml_node(tree, native)
         if not len(native):

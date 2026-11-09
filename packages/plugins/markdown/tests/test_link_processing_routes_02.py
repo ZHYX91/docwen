@@ -493,7 +493,7 @@ def test_xlsx_template_origin_image_marker_accepts_braced_filename(
         output.close()
 
 
-def test_xlsx_yaml_front_matter_is_not_link_processed_before_template_fill(
+def test_xlsx_yaml_front_matter_applies_ordinary_link_policy_only(
     tmp_path: Path,
 ) -> None:
     image = tmp_path / "logo.png"
@@ -537,7 +537,7 @@ def test_xlsx_yaml_front_matter_is_not_link_processed_before_template_fill(
         sheet = output.active
         assert sheet is not None
         assert sheet["A1"].value == "![logo](logo.png)"
-        assert sheet["B1"].value == "[drop](https://drop.example)"
+        assert sheet["B1"].value is None
         images = vars(sheet).get("_images")
         assert isinstance(images, list)
         assert not images

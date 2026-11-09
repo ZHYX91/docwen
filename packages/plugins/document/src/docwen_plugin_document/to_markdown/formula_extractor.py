@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import logging
-import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 
+from docwen_core.conversion_loss import ConversionLoss, loss_text
 from docwen_core.formula import mathml_to_latex, omml_to_mathml
 from docwen_core.markdown_math import serialize_formula
 
@@ -18,7 +17,8 @@ def omml_to_markdown(
     *,
     block: bool,
     compact: bool = False,
-    on_failure: Callable[[str], None] | None = None,
+    messages: Mapping[str, str] | None = None,
+    on_failure: Callable[[ConversionLoss], None] | None = None,
 ) -> str:
     """Convert OMML XML to ``$...$`` or ``$$...$$`` Markdown."""
     if not omml_xml.strip():
@@ -30,24 +30,29 @@ def omml_to_markdown(
     reason = (
         "OMML contains an unsupported or invalid structure" if not mathml else "MathML cannot be represented as LaTeX"
     )
-    message = f"{reason}; the complete original OMML was preserved as a JSON string in a code span."
+    loss = ConversionLoss(
+        code="DOCX2MD-FORMULA-SOURCE-FALLBACK",
+        reason=loss_text(messages, "formula_reason", reason),
+        change=loss_text(
+            messages,
+            "formula_change",
+            "The formula could not be converted; a visible placeholder was retained. Check the source formula.",
+        ),
+    )
     if on_failure is not None:
-        on_failure(message)
+        on_failure(loss)
     else:
-        logger.warning(message)
-    # JSON retains original newlines and quotes inside a single physical
-    # Markdown line, including in tables and list items. Nothing is silently
-    # discarded, and no invented LaTeX is presented as the original formula.
-    literal = "OMML " + json.dumps(omml_xml, ensure_ascii=False)
-    marker = "`" * (max((len(item) for item in re.findall(r"`+", literal)), default=0) + 1)
-    return f"{marker}{literal}{marker}"
+        logger.warning(loss.message())
+    return loss_text(messages, "formula_placeholder", "[Formula could not be converted]")
 
 
-def extract_formula_from_element(element, *, on_failure: Callable[[str], None] | None = None) -> str:
+def extract_formula_from_element(
+    element, *, messages: Mapping[str, str] | None = None, on_failure: Callable[[ConversionLoss], None] | None = None
+) -> str:
     """Convert a DOCX XML math element to Markdown formula text."""
     import lxml.etree as etree
 
     xml = etree.tostring(element, encoding="unicode")
     block = etree.QName(element).localname == "oMathPara"
     in_cell = any(etree.QName(ancestor).localname == "tc" for ancestor in element.iterancestors())
-    return omml_to_markdown(xml, block=block, compact=in_cell, on_failure=on_failure)
+    return omml_to_markdown(xml, block=block, compact=in_cell, messages=messages, on_failure=on_failure)

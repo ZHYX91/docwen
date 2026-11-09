@@ -12,7 +12,7 @@ from lxml import etree
 from openpyxl.utils.cell import range_boundaries
 
 from docwen_core.export_semantics import TableMergeRegion, build_table_semantic_grid, render_table_semantic_grid
-from docwen_core.markdown_utils import encode_markdown_table_cell
+from docwen_plugin_spreadsheet.native_links import native_cell_markdown
 from docwen_plugin_spreadsheet.worksheets import NoOrdinaryWorksheetsError, ordinary_worksheet_parts
 
 MAX_SPREADSHEET_PROJECTION_CELLS = 1_000_000
@@ -120,7 +120,7 @@ def worksheet_blocks(
             cancel_check()
         value = cell.value
         if value is not None and (not isinstance(value, str) or value.strip()):
-            raw[(cell.row - 1, cell.column - 1)] = encode_markdown_table_cell(str(value))
+            raw[(cell.row - 1, cell.column - 1)] = native_cell_markdown(cell)
     positions = set(raw)
     positions.update(position for position, parts in generated.items() if any(parts))
     merges: list[TableMergeRegion] = []

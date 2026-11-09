@@ -108,9 +108,11 @@ def test_failed_formula_retains_delimiters_and_reports_its_occurrence(source: st
     renderer = MdToDocxRenderer(document)
     renderer.render(parse_markdown_text(source))
     assert document._element.xpath(".//m:oMath") == []
-    [diagnostic] = renderer.warnings
-    assert diagnostic[0] == "MD2DOCX-FORMULA-TEXT-FALLBACK"
-    assert "/w:document/w:body/" in diagnostic[1]
-    assert "preserved source" in diagnostic[1]
+    [loss] = renderer.losses.records
+    assert loss.code == "CONVERSION-LOSS-FORMULA"
+    assert "paragraph" in loss.output_location.lower()
+    assert loss.original == preserved
     text = "".join(document._element.xpath(".//w:t/text()"))
-    assert preserved in text
+    assert preserved not in text
+    assert "Formula could not be converted" in text
+    assert preserved in "".join(str(text) for text in document.comments._comments_elm.itertext())

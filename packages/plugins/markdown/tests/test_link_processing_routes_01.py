@@ -201,8 +201,8 @@ def test_docx_consumes_request_scoped_non_embed_link_modes(
         _assert_target(observation, target)
 
 
-def test_xlsx_hyperlink_mode_preserves_source_syntax_in_cells(tmp_path: Path) -> None:
-    """Spreadsheet targets have no DOCX relationship sink, so hyperlink mode keeps syntax."""
+def test_xlsx_hyperlink_mode_materializes_supported_single_link_cells(tmp_path: Path) -> None:
+    """Only supported pure single-link cells receive native hyperlinks."""
     source = tmp_path / "spreadsheet-links.md"
     source.write_text(
         "| Wiki | Markdown |\n| --- | --- |\n| [[guide]] | [Markdown Label](https://example.com/markdown) |\n",
@@ -222,7 +222,8 @@ def test_xlsx_hyperlink_mode_preserves_source_syntax_in_cells(tmp_path: Path) ->
         worksheet = workbook.active
         assert worksheet is not None
         assert worksheet["A2"].value == "[[guide]]"
-        assert worksheet["B2"].value == "[Markdown Label](https://example.com/markdown)"
+        assert worksheet["B2"].value == "Markdown Label"
+        assert worksheet["B2"].hyperlink.target == "https://example.com/markdown"
     finally:
         workbook.close()
 
@@ -384,11 +385,11 @@ def test_docx_embeds_relative_image_inside_table_without_pipe_corruption(
     ("mode", "expected_text"),
     [
         ("keep", "[[missing.md|Shown]]"),
-        ("ignore", "Before  After"),
-        ("placeholder", "[File not found: missing.md]"),
+        ("ignore", "[[missing.md|Shown]]"),
+        ("placeholder", "[[missing.md|Shown]]"),
     ],
 )
-def test_docx_missing_wiki_hyperlink_consumes_request_error_policy(
+def test_docx_missing_wiki_hyperlink_uses_independent_default_fallback(
     tmp_path: Path,
     mode: str,
     expected_text: str,
@@ -441,7 +442,7 @@ def test_docx_fragment_only_wiki_link_has_no_false_hyperlink_affordance(
 
     observation = _convert_docx(source, _link_config(wiki_mode="hyperlink"))
 
-    assert observation.text == "Section"
+    assert observation.text == "[[#section-name|Section]]"
     assert not observation.hyperlink_targets
     assert "<w:hyperlink" not in observation.document_xml
     assert "<w:bookmarkStart" not in observation.document_xml
@@ -459,7 +460,7 @@ def test_docx_fragment_only_standard_link_has_no_false_hyperlink_affordance(
         _link_config(markdown_mode="hyperlink"),
     )
 
-    assert observation.text == "Section"
+    assert observation.text == "[Section](#section-name)"
     assert not observation.hyperlink_targets
     assert "<w:hyperlink" not in observation.document_xml
     assert "<w:u" not in observation.document_xml
@@ -518,7 +519,7 @@ def test_docx_protocol_relative_link_does_not_become_a_local_file(
 
     observation = _convert_docx(source, _link_config())
 
-    assert observation.text == "Target"
+    assert observation.text == "[Target](//example.com/path)"
     assert not observation.hyperlink_targets
 
 

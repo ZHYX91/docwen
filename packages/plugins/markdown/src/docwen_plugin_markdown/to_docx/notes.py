@@ -363,6 +363,17 @@ def extract_notes_from_ast(
                     continue
                 para_children = _extract_inline_children_per_para(item.get("children", []))
                 decoded = decode_internal_note_key(key)
+                sources: list[str] = []
+
+                def collect_formulas(node: dict[str, Any], collected: list[str]) -> None:
+                    if node.get("type") in {"inline_math", "block_math"}:
+                        collected.append(_extract_plain_text(node))
+                    else:
+                        for child in node.get("children", []):
+                            collect_formulas(child, collected)
+
+                collect_formulas(item, sources)
+                note_ctx._formula_sources[decoded or ("footnote", key)] = tuple(sources)
                 if _has_callout(item):
                     note_ctx.callout_fallback_keys.append(decoded[1] if decoded is not None else key)
                 if decoded is not None:
@@ -456,6 +467,7 @@ class NoteContext:
         self._footnote_children: dict[str, list[list[dict[str, Any]]]] = {}
         self._endnote_children: dict[str, list[list[dict[str, Any]]]] = {}
         self.callout_fallback_keys: list[str] = []
+        self._formula_sources: dict[tuple[str, str], tuple[str, ...]] = {}
 
         # Markdown key → Word ID
         self._footnote_id_map: dict[str, int] = {}
@@ -476,6 +488,10 @@ class NoteContext:
         self.footnote_ref_style: str = "FootnoteReference"
         self.endnote_text_style: str = "EndnoteText"
         self.endnote_ref_style: str = "EndnoteReference"
+
+    def formula_sources(self, kind: str, key: str) -> tuple[str, ...]:
+        """Return actual formula leaves that the note writer renders as text."""
+        return self._formula_sources.get((kind, key), ())
 
     def resolve_note_styles(self, doc) -> None:
         """Resolve footnote/endnote style IDs from *doc*'s styles part.

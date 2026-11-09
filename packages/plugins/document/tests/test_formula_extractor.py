@@ -33,12 +33,9 @@ class TestFormulaExtractor:
 
         assert omml_to_markdown("", block=True) == ""
 
-    def test_unknown_native_operator_keeps_complete_source_and_location(self):
-        import json
-
+    def test_unknown_native_operator_retains_visible_placeholder_and_location(self):
         from docx import Document
         from docx.oxml import parse_xml
-        from lxml import etree
 
         from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 
@@ -49,11 +46,10 @@ class TestFormulaExtractor:
             "<m:acc><m:e><m:r><m:t>x</m:t></m:r></m:e></m:acc></m:oMath>"
         )
         paragraph._p.append(native)
-        original = etree.tostring(native, encoding="unicode")
         converter = DocxToMarkdownConverter()
         output = converter._build_paragraph_text_with_formulas(paragraph._p, paragraph)
-        assert output.startswith("`OMML ") and output.endswith("`")
-        assert json.loads(output[len("`OMML ") : -1]) == original
+        assert output == "[Formula could not be converted]"
+        assert "<m:" not in output
         [diagnostic] = converter._formula_diagnostics
-        assert "unsupported" in diagnostic[0]
-        assert diagnostic[1] == "word/document.xml:/w:document/w:body/w:p/m:oMath"
+        assert "unsupported" in diagnostic.reason
+        assert diagnostic.source_location == "word/document.xml:/w:document/w:body/w:p/m:oMath"

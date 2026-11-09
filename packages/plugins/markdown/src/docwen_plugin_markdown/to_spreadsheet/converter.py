@@ -33,8 +33,11 @@ from docwen_plugin_markdown.common_utils import (
     read_input_markdown,
     write_table_to_csv,
 )
+from docwen_plugin_markdown.renderer_inlines import plain_link_label
 from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.to_spreadsheet.image_plan import XlsxImageTextPlan, image_scope_without_literal_collision
+from docwen_plugin_markdown.to_spreadsheet.links import SpreadsheetLinks
+from docwen_plugin_markdown.to_spreadsheet.losses import SpreadsheetLosses
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
     _plain_text_from_markup,
     _plan_rectangular_merges,
@@ -120,6 +123,10 @@ class MdToXlsxConverter:
         logger = context.logger
         progress = context.progress
         workspace = context.workspace
+        losses = SpreadsheetLosses(
+            comments=bool(context.config.get("conversion.loss_comments", True)),
+            messages=getattr(context, "loss_messages", {}),
+        )
 
         try:
             cancellable.check()
@@ -133,11 +140,19 @@ class MdToXlsxConverter:
             structural_tables = extensions.structural_tables
             image_scope = secrets.token_urlsafe(24)
             image_scope = image_scope_without_literal_collision(image_scope, content + _plain_text_from_markup(content))
+            links = SpreadsheetLinks(
+                link_source_path(context.request, input_path),
+                _request_link_config(context),
+                native=True,
+            )
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),
                 link_config=_request_link_config(context),
                 target_format="xlsx",
+                literal_projection=links.issue_literal,
+                markdown_text_renderer=plain_link_label,
+                hyperlink_projection=links.issue,
                 table_safe=True,
                 temp_dir=str(workspace.staging_dir),
                 image_scope=image_scope,
@@ -152,7 +167,6 @@ class MdToXlsxConverter:
 
             template_name = str(getattr(context.request, "options", {}).get("template_name", "") or "").strip()
             template_stats: dict[str, int] = {}
-            structural_merge_warnings = 0
             if template_name:
                 template_path = Path(template_name)
                 if not template_path.is_file():
@@ -181,6 +195,11 @@ class MdToXlsxConverter:
                     source_stem=_source_stem(context),
                     image_scope=image_scope,
                     list_separator=template_list_separator(context.config),
+                    yaml_value_projector=links.project,
+                    cell_value_writer=losses.writer(links.write_cell, links.loss_projection),
+                    header_value_projector=links.restore,
+                    protected_cell_handler=losses.protected,
+                    merge_loss_handler=losses.merge_failed,
                     structural_tables=structural_tables,
                 )
                 actual_table_count = template_stats.get("table_count", 0)
@@ -201,7 +220,7 @@ class MdToXlsxConverter:
                 else:
                     actual_table_count = len(tables)
 
-                image_plan = XlsxImageTextPlan()
+                image_plan = XlsxImageTextPlan(losses.writer(links.write_cell, links.loss_projection))
                 wb = Workbook()
                 # Remove default sheet
                 wb.remove(wb.active)  # pyright: ignore[reportArgumentType]
@@ -225,10 +244,12 @@ class MdToXlsxConverter:
                             image_plan.assign(ws.cell(row=row_idx, column=col_idx), value)
 
                     if structural_tables and bool(table.get("structural")):
-                        merge_regions, merge_warnings = _plan_rectangular_merges(
-                            [[str(value) for value in row] for row in source_rows]
+                        merge_regions, _ = _plan_rectangular_merges(
+                            [[str(value) for value in row] for row in source_rows],
+                            on_invalid=lambda row, col, ws=ws, source_rows=source_rows: losses.merge_failed(
+                                ws.cell(row + 1, col + 1), str(source_rows[row][col])
+                            ),
                         )
-                        structural_merge_warnings += merge_warnings
                         for start_row, start_col, end_row, end_col in merge_regions:
                             ws.merge_cells(
                                 start_row=start_row + 1,
@@ -252,6 +273,8 @@ class MdToXlsxConverter:
             input_stem = _source_stem(context)
             suggested_name = f"{input_stem}.xlsx"
 
+            links.materialize(wb)
+            losses.record_written_formulas()
             check_workbook_text_capacity(wb)
             wb.save(output_path)
 
@@ -290,17 +313,7 @@ class MdToXlsxConverter:
                     output_bytes=output_bytes,
                 ),
                 diagnostics=[
-                    *(
-                        [
-                            ConversionDiagnostic(
-                                level="warning",
-                                message="One or more Structural Tables merge marker groups were not rectangular.",
-                                code="MD2XLSX-STRUCTURAL-MERGE-INVALID",
-                            )
-                        ]
-                        if structural_merge_warnings
-                        else []
-                    ),
+                    *losses.diagnostics,
                     ConversionDiagnostic(
                         level="info",
                         message=(f"MD→XLSX conversion successful ({actual_table_count} table(s))"),
@@ -367,6 +380,7 @@ class MdToCsvConverter:
         logger = context.logger
         progress = context.progress
         workspace = context.workspace
+        losses = SpreadsheetLosses(comments=False, messages=getattr(context, "loss_messages", {}))
 
         try:
             cancellable.check()
@@ -380,11 +394,18 @@ class MdToCsvConverter:
             structural_tables = extensions.structural_tables
             image_scope = secrets.token_urlsafe(24)
             image_scope = image_scope_without_literal_collision(image_scope, content + _plain_text_from_markup(content))
+            links = SpreadsheetLinks(
+                link_source_path(context.request, input_path),
+                _request_link_config(context),
+                native=False,
+            )
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),
                 link_config=_request_link_config(context),
                 target_format="csv",
+                literal_projection=links.issue_literal,
+                markdown_text_renderer=plain_link_label,
                 table_safe=True,
                 temp_dir=str(workspace.staging_dir),
                 image_scope=image_scope,
@@ -429,8 +450,15 @@ class MdToCsvConverter:
                     source_stem=_source_stem(context),
                     image_scope=image_scope,
                     list_separator=template_list_separator(context.config),
+                    yaml_value_projector=links.project,
+                    cell_value_writer=losses.writer(links.write_cell, links.loss_projection),
+                    header_value_projector=links.restore,
+                    protected_cell_handler=losses.protected,
+                    merge_loss_handler=losses.merge_failed,
                     structural_tables=structural_tables,
                 )
+                links.materialize(workbook)
+                losses.record_written_formulas()
                 return self._convert_template_workbook_to_csv_artifacts(
                     workbook=workbook,
                     template_stats=template_stats,
@@ -439,6 +467,7 @@ class MdToCsvConverter:
                     input_bytes=input_bytes,
                     t_start=t_start,
                     template_name=template_name,
+                    losses=losses,
                 )
 
             # ── Parse tables ────────────────────────────────────────
@@ -482,6 +511,22 @@ class MdToCsvConverter:
                 csv_path = workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, suffix)
                 suggested = f"{input_stem}_{idx + 1}.csv" if idx > 0 else f"{input_stem}.csv"
 
+                if structural_tables and table.get("structural"):
+                    merge_rows = table.get("all_rows") or []
+                    regions, _ = _plan_rectangular_merges(merge_rows)
+                    for r1, c1, r2, c2 in regions:
+                        losses.merge_to_csv(f"{suggested}!R{r1 + 1}C{c1 + 1}:R{r2 + 1}C{c2 + 1}")
+                rows = table.get("all_rows") or ([table["headers"]] + table["rows"])
+                for row_index, row in enumerate(rows, 1):
+                    for column_index, value in enumerate(row, 1):
+                        losses.formulas(links.loss_projection(value), f"{suggested}!R{row_index}C{column_index}")
+                table = {
+                    key: [links.restore(value) for value in values]
+                    if key == "headers"
+                    else [[links.restore(value) for value in row] for row in values]
+                    for key, values in table.items()
+                    if key in ("headers", "rows", "all_rows")
+                }
                 write_table_to_csv(table, csv_path)
 
                 file_bytes = Path(csv_path).stat().st_size
@@ -520,11 +565,12 @@ class MdToCsvConverter:
                     output_bytes=total_output_bytes,
                 ),
                 diagnostics=[
+                    *losses.diagnostics,
                     ConversionDiagnostic(
                         level="info",
                         message=(f"MD→CSV conversion successful ({len(tables)} table(s))"),
                         code="MD2CSV-OK",
-                    )
+                    ),
                 ],
             )
 
@@ -560,6 +606,7 @@ class MdToCsvConverter:
         input_bytes: int,
         t_start: float,
         template_name: str,
+        losses: SpreadsheetLosses,
     ) -> ConversionResult:
         task_id = context.request.request_id
         cancellable = context.cancellation
@@ -581,6 +628,8 @@ class MdToCsvConverter:
             safe_sheet = _csv_safe_sheet_name(sheet_name)
             suggested = f"{input_stem}_{safe_sheet}.csv"
 
+            for merged_range in worksheet.merged_cells.ranges:
+                losses.merge_to_csv(f"{suggested}!{merged_range}")
             _write_worksheet_to_csv(worksheet, csv_path)
 
             file_bytes = Path(csv_path).stat().st_size
@@ -619,10 +668,11 @@ class MdToCsvConverter:
                 output_bytes=total_output_bytes,
             ),
             diagnostics=[
+                *losses.diagnostics,
                 ConversionDiagnostic(
                     level="info",
                     message=(f"MD→CSV template conversion successful ({len(artifacts)} sheet(s))"),
                     code="MD2CSV-TEMPLATE-OK",
-                )
+                ),
             ],
         )

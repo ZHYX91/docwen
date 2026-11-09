@@ -42,6 +42,7 @@ from docwen_core.links._error_semantics import (
 )
 from docwen_core.links._markdown_inline import (
     MarkdownInlineSourceOwner,
+    encode_markdown_angle_destination,
     escape_unescaped_pipes,
 )
 from docwen_core.links._markdown_inline import (
@@ -103,6 +104,7 @@ __all__ = [
     "bind_declared_markdown_images",
     "decode_data_uri_image",
     "dispatch_error_output",
+    "encode_markdown_angle_destination",
     "escape_unescaped_pipes",
     "extract_block_by_id",
     "extract_section_by_heading",

@@ -206,3 +206,18 @@ class TestKeyNaming:
         nested = misplaced & set(table)
         assert not missing, f"{locale} missing settings.general theme keys: {sorted(missing)}"
         assert not nested, f"{locale} has theme keys nested under settings.general.languages: {sorted(nested)}"
+
+
+@pytest.mark.parametrize("locale", ALL_LOCALES)
+def test_link_mode_help_is_multiline_and_covers_all_choices(locale: str) -> None:
+    table = _load_locale(locale)
+    for kind in ("wiki", "markdown"):
+        main_help = table[f"settings.link.{kind}_link_tooltip"]
+        fallback_help = table[f"settings.link.{kind}_hyperlink_fallback_tooltip"]
+        assert table[f"settings.link.{kind}_hyperlink_fallback"].strip()
+        assert len(main_help.splitlines()) >= 7
+        assert len(fallback_help.splitlines()) >= 6
+        for mode in ("keep", "extract_text", "extract_address", "remove", "hyperlink"):
+            assert table[f"settings.link.modes.{mode}"] in main_help
+        for mode in ("keep", "extract_text", "extract_address"):
+            assert table[f"settings.link.modes.{mode}"] in fallback_help

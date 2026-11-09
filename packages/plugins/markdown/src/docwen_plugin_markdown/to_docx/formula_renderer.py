@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from docx.enum.style import WD_STYLE_TYPE
@@ -10,6 +10,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docwen_core.conversion_loss import ConversionLoss, loss_text
 from docwen_core.markdown_math import serialize_formula
 
 
@@ -37,7 +38,8 @@ def render_block_formula(
     block_style=None,
     in_list: bool = False,
     source: str | None = None,
-    on_failure: Callable[[str], None] | None = None,
+    on_loss: Callable[[ConversionLoss, Any], None] | None = None,
+    loss_messages: Mapping[str, str] | None = None,
 ) -> bool:
     """Insert explicit display math; list content and its marker stay left."""
     p = document.add_paragraph(style=block_style)
@@ -47,7 +49,9 @@ def render_block_formula(
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     alignment = p.alignment if p.alignment is not None else p.style.paragraph_format.alignment
     math_alignment = {WD_ALIGN_PARAGRAPH.LEFT: "left", WD_ALIGN_PARAGRAPH.RIGHT: "right"}.get(alignment, "center")
-    return append_formula(p, latex, block=True, source=source, alignment=math_alignment, on_failure=on_failure)
+    return append_formula(
+        p, latex, block=True, source=source, alignment=math_alignment, on_loss=on_loss, loss_messages=loss_messages
+    )
 
 
 def _apply_character_style(omml: Any, style_reference: str | None) -> None:
@@ -73,6 +77,30 @@ def _apply_character_style(omml: Any, style_reference: str | None) -> None:
         r_style.set(qn("w:val"), style_reference)
 
 
+def formula_loss_location(paragraph: Any, run: Any, messages: Mapping[str, str] | None) -> str:
+    """Use visible document coordinates rather than an internal XML path."""
+    root = paragraph._p.getroottree().getroot()
+    paragraphs = list(root.iter(qn("w:p")))
+    paragraph_number = paragraphs.index(paragraph._p) + 1
+    item = list(paragraph._p.iter(qn("w:r"))).index(run._r) + 1
+    cell = next((node for node in paragraph._p.iterancestors() if node.tag == qn("w:tc")), None)
+    if cell is None:
+        return loss_text(messages, "docx_paragraph", "Paragraph {paragraph}, item {item}").format(
+            paragraph=paragraph_number, item=item
+        )
+    row = cell.getparent()
+    table = row.getparent()
+    return loss_text(
+        messages, "docx_cell", "Table {table}, row {row}, column {column}, paragraph {paragraph}, item {item}"
+    ).format(
+        table=list(root.iter(qn("w:tbl"))).index(table) + 1,
+        row=list(table.iterchildren(qn("w:tr"))).index(row) + 1,
+        column=list(row.iterchildren(qn("w:tc"))).index(cell) + 1,
+        paragraph=list(cell.iter(qn("w:p"))).index(paragraph._p) + 1,
+        item=item,
+    )
+
+
 def append_formula(
     paragraph,
     latex: str,
@@ -81,24 +109,40 @@ def append_formula(
     style_reference: str | None = None,
     source: str | None = None,
     alignment: str = "left",
-    on_failure: Callable[[str], None] | None = None,
+    on_loss: Callable[[ConversionLoss, Any], None] | None = None,
+    loss_messages: Mapping[str, str] | None = None,
 ) -> bool:
     """Write a math node in any paragraph, including lists and table cells.
 
     The OOXML wrapper carries display identity. Alignment belongs to the
     container and never changes that identity. A failed conversion keeps the
-    complete authored delimiters and body, with an occurrence diagnostic.
+    original formula in a loss comment, with a visible occurrence marker.
     """
     try:
         omml = _latex_to_omml(latex)
-    except ValueError as exc:
+    except ValueError:
         original = source if source is not None else serialize_formula(latex, block=block)
-        run = paragraph.add_run(original)
+        run = paragraph.add_run(loss_text(loss_messages, "formula_unconverted", "[Formula could not be converted]"))
         if style_reference:
             run.style = paragraph.part.document.styles.get_by_id(style_reference, WD_STYLE_TYPE.CHARACTER)
-        if on_failure is not None:
-            location = paragraph._p.getroottree().getpath(paragraph._p)
-            on_failure(f"Formula at {location}: {exc}; preserved source {original!r}.")
+        location = formula_loss_location(paragraph, run, loss_messages)
+        loss = ConversionLoss(
+            code="CONVERSION-LOSS-FORMULA",
+            reason=loss_text(
+                loss_messages, "formula_reason", "This formula could not be represented as a Word equation."
+            ),
+            change=loss_text(
+                loss_messages, "formula_change", "A placeholder was inserted; check the original formula."
+            ),
+            output_location=location,
+            original=original,
+        )
+        if on_loss is not None:
+            on_loss(loss, run)
+        else:
+            from docwen_core.docx_comments import append_docx_comment
+
+            append_docx_comment(paragraph.part.document, [run], text=loss.message(loss_messages))
         return False
     _apply_character_style(omml, style_reference)
     if block:

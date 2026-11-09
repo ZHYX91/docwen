@@ -175,6 +175,7 @@ def test_actual_docx_preserves_metadata_following_refs_and_typed_notes(literal: 
     context, _workspace = make_context(
         str(source),
         options={"markdown_extensions": {"input": {"captions_references": True, "typed_endnotes": True}}},
+        config_values={"link": {"error_handling": {"file_not_found": "keep"}}},
     )
     result = MdToDocxConverter().convert(context)
     assert result.success, result.error
@@ -184,7 +185,8 @@ def test_actual_docx_preserves_metadata_following_refs_and_typed_notes(literal: 
         visible = "".join(node.text or "" for node in document.findall(".//w:t", ns))
         for target in ("Chapter%%Draft", "Chapter<!--Draft"):
             if target in literal:
-                assert f"[File not found: {target}]" in visible
+                expected = literal if literal.startswith("![[") else f"[[{target}]]"
+                assert expected in visible
         assert len(document.findall(".//w:footnoteReference", ns)) == 1
         assert len(document.findall(".//w:endnoteReference", ns)) == 1
         instructions = document.findall(".//w:instrText", ns)

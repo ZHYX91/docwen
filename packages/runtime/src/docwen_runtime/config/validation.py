@@ -281,6 +281,8 @@ def _validate_conversion(data: dict[str, Any]) -> None:
     from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
 
     _canonical_choice(data, "output_locale", frozenset(SHIPPED_STYLE_LOCALES), label="conversion.output_locale")
+    if "loss_comments" in data and not isinstance(data["loss_comments"], bool):
+        raise ConfigSemanticError("conversion.loss_comments must be a boolean")
     threshold = _read_path(data, "export.base64_compress_threshold_kb")
     if threshold is not None and (not isinstance(threshold, int) or isinstance(threshold, bool) or threshold <= 0):
         raise ConfigSemanticError("conversion.export.base64_compress_threshold_kb must be a positive integer")
@@ -330,7 +332,7 @@ def _validate_link(data: dict[str, Any]) -> None:
         frozenset({"markdown_link", "wiki_embed", "wiki_link"}),
         label="link.format.md_file_link_style",
     )
-    non_embed_choices = frozenset({"extract_text", "hyperlink", "keep", "remove"})
+    non_embed_choices = frozenset({"extract_address", "extract_text", "hyperlink", "keep", "remove"})
     _canonical_choice(
         data,
         "non_embed_links.wiki_mode",
@@ -343,6 +345,14 @@ def _validate_link(data: dict[str, Any]) -> None:
         non_embed_choices,
         label="link.non_embed_links.markdown_mode",
     )
+    fallback_choices = frozenset({"keep", "extract_text", "extract_address"})
+    for key in ("wiki_hyperlink_fallback", "markdown_hyperlink_fallback"):
+        _canonical_choice(
+            data,
+            f"non_embed_links.{key}",
+            fallback_choices,
+            label=f"link.non_embed_links.{key}",
+        )
     embed_choices = frozenset({"embed", "extract_text", "keep", "remove"})
     for key in ("wiki_image_mode", "markdown_image_mode", "md_file_mode"):
         _canonical_choice(

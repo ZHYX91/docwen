@@ -449,6 +449,7 @@ def test_escaped_literal_backslash_is_percent_protected_in_docx_target(
     tmp_path: Path,
 ) -> None:
     source = _write(tmp_path / "source.md")
+    _write(tmp_path / "foo\\bar")
     config = replace(LinkRuntimeConfig(), non_embed_markdown_mode="hyperlink")
 
     result = process_markdown_links(

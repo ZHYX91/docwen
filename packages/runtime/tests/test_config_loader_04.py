@@ -179,6 +179,8 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "link.format.md_file_link_style",
         "link.non_embed_links.wiki_mode",
         "link.non_embed_links.markdown_mode",
+        "link.non_embed_links.wiki_hyperlink_fallback",
+        "link.non_embed_links.markdown_hyperlink_fallback",
         "link.embed_links.wiki_image_mode",
         "link.embed_links.markdown_image_mode",
         "link.embed_links.md_file_mode",

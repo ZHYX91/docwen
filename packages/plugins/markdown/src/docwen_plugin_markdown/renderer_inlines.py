@@ -398,19 +398,14 @@ def _render_inline_math(parent, child: dict[str, Any], renderer_instance: Any) -
     raw = child.get("raw", "") or child.get("text", "")
     style_reference = getattr(renderer_instance, "inline_formula_style_reference", None)
 
-    def report_failure(message: str) -> None:
-        if renderer_instance is not None:
-            renderer_instance._warnings.append(("MD2DOCX-FORMULA-TEXT-FALLBACK", message))
-        else:
-            logger.warning(message)
-
     append_formula(
         parent,
         raw,
         block=child["type"] == "block_math",
         style_reference=style_reference,
         source=child.get("_math_source"),
-        on_failure=report_failure,
+        on_loss=getattr(renderer_instance, "record_loss", None),
+        loss_messages=getattr(renderer_instance, "_loss_messages", None),
     )
 
 
@@ -434,7 +429,9 @@ def _render_footnote_ref(parent, child: dict[str, Any], renderer_instance: Any) 
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def render_formula(doc, node: dict[str, Any], *, block_style=None, in_list=False, on_failure=None) -> bool:
+def render_formula(
+    doc, node: dict[str, Any], *, block_style=None, in_list=False, on_loss=None, loss_messages=None
+) -> bool:
     """Render a block-level formula as OMML in a new paragraph.
 
     Args:
@@ -445,7 +442,13 @@ def render_formula(doc, node: dict[str, Any], *, block_style=None, in_list=False
 
     raw = node.get("text", "") or node.get("raw", "")
     return render_block_formula(
-        doc, raw, block_style=block_style, in_list=in_list, source=node.get("_math_source"), on_failure=on_failure
+        doc,
+        raw,
+        block_style=block_style,
+        in_list=in_list,
+        source=node.get("_math_source"),
+        on_loss=on_loss,
+        loss_messages=loss_messages,
     )
 
 
@@ -461,6 +464,8 @@ def add_hyperlink(
     *,
     children: list[dict[str, Any]] | None = None,
     source_dir: Path | None = None,
+    internal_anchor: str | None = None,
+    internal_target_hint: str | None = None,
     style_reference: str | None = None,
     override_style: bool = False,
     strip_formatting: bool = False,
@@ -477,8 +482,9 @@ def add_hyperlink(
     """
     link_children = children if children is not None else [{"type": "text", "raw": text or ""}]
     target = _resolve_hyperlink_target(url, source_dir)
-    if not target or not target.lower().startswith(
-        ("http://", "https://", "mailto:", "ftp://", "file://", "obsidian://")
+    if internal_anchor is None and (
+        not target
+        or not target.lower().startswith(("http://", "https://", "mailto:", "ftp://", "file://", "obsidian://"))
     ):
         if fallback_renderer is not None:
             fallback_renderer(paragraph, link_children)
@@ -524,6 +530,15 @@ def add_hyperlink(
                     t.text = segment_text
                     r.append(t)
                 hyperlink.append(r)
+
+        if internal_anchor is not None:
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,39}", internal_anchor) is None:
+                raise ValueError("invalid internal hyperlink bookmark")
+            hyperlink.set(qn("w:anchor"), internal_anchor)
+            if internal_target_hint is not None:
+                hyperlink.set(qn("w:tooltip"), internal_target_hint)
+            paragraph._p.append(hyperlink)
+            return
 
         part = paragraph.part
         existing_relationship_ids = set(part.rels)
@@ -1169,6 +1184,19 @@ def extract_text_content(children: list[dict[str, Any]]) -> str:
             if nested:
                 parts.append(extract_text_content(nested))
     return "".join(parts)
+
+
+def plain_link_label(label: str) -> str:
+    """Use the DOCX hyperlink's readable text projection for every plain label.
+
+    Formatting contributes its text, formulas retain readable LaTeX, breaks
+    become spaces, and other leaves retain their literal payload. Labels use
+    inline parsing so leading ``#``/list markers and U+FEFF stay visible.
+    """
+    from docwen_plugin_markdown.mistune_extensions import create_extended_markdown
+
+    nodes = create_extended_markdown().inline(label, {})
+    return "".join(segment.text for segment in _link_segments(nodes))
 
 
 def serialize_inlines_to_markdown(children: list[dict[str, Any]]) -> str:

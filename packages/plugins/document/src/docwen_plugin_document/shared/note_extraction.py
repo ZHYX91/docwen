@@ -92,7 +92,19 @@ def _extract_notes_with_status(
             math_renderer=math_renderer,
             source_part=source_part,
         )
-        if content.strip():
+        # A present empty definition is not unreadable and has lost no text.
+        # Do not conflate it with an unsupported nontext-only note payload.
+        nontext_payload = any(
+            etree.QName(node).localname in {"drawing", "pict", "object", "tbl", "sym", "oMath", "oMathPara"}
+            for node in note_elem.iter()
+            if isinstance(node.tag, str)
+            and not any(
+                ancestor.tag in {f"{{{w_ns}}}del", f"{{{w_ns}}}moveFrom"}
+                or (ancestor.tag == f"{{{w_ns}}}r" and _run_is_hidden(ancestor, doc))
+                for ancestor in node.iterancestors()
+            )
+        )
+        if content.strip() or not nontext_payload:
             notes[int(w_id_raw)] = content
     return notes, False
 
@@ -301,7 +313,9 @@ class NoteExtractor:
         syntax_config: DocxMarkdownSyntaxConfig | None = None,
         style_detector_config: StyleDetectorConfig | None = None,
         math_renderer: Callable[[Any, str], str] | None = None,
+        missing_placeholder: str = "[Note could not be read; check the source document]",
     ) -> None:
+        self._missing_placeholder = missing_placeholder
         self._endnote_prefix = "endnote:" if typed_endnotes else "endnote-"
         self.footnotes, self.footnote_part_failed = _extract_notes_with_status(
             doc,
@@ -369,15 +383,24 @@ class NoteExtractor:
             display_id = str(word_id)
         return f"[^{display_id}]"
 
+    def missing_definitions(self) -> tuple[tuple[str, int], ...]:
+        """Return referenced source notes whose definitions were unreadable."""
+        return tuple(
+            (kind, note_id)
+            for kind, notes, referenced in (
+                ("footnote", self.footnotes, getattr(self, "_referenced_footnote_ids", set())),
+                ("endnote", self.endnotes, getattr(self, "_referenced_endnote_ids", set())),
+            )
+            for note_id in sorted(referenced - notes.keys())
+        )
+
     def definition_loss_counts(self) -> dict[str, int]:
         """Return referenced note definitions lost because their part failed to load."""
         footnote_ids = getattr(self, "_referenced_footnote_ids", set())
         endnote_ids = getattr(self, "_referenced_endnote_ids", set())
         return {
-            "footnotes": (
-                len(footnote_ids - self.footnotes.keys()) if getattr(self, "footnote_part_failed", False) else 0
-            ),
-            "endnotes": (len(endnote_ids - self.endnotes.keys()) if getattr(self, "endnote_part_failed", False) else 0),
+            "footnotes": len(footnote_ids - self.footnotes.keys()),
+            "endnotes": len(endnote_ids - self.endnotes.keys()),
         }
 
     def build_definitions_block(self) -> str:
@@ -395,4 +418,10 @@ class NoteExtractor:
             parts.append(build_note_definitions(self.footnotes, self.footnote_id_map))
         if self.endnotes:
             parts.append(build_note_definitions(self.endnotes, self.endnote_id_map))
+        for notes, mapping, referenced in (
+            (self.footnotes, self.footnote_id_map, getattr(self, "_referenced_footnote_ids", set())),
+            (self.endnotes, self.endnote_id_map, getattr(self, "_referenced_endnote_ids", set())),
+        ):
+            for word_id in sorted(referenced - notes.keys()):
+                parts.append(f"[^{mapping[word_id]}]: {self._missing_placeholder}")
         return "\n".join(p for p in parts if p)

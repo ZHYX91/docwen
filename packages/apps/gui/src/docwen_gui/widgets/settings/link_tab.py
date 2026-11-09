@@ -1,12 +1,13 @@
 """Link settings tab — link format, non-embed, embed, embedding depth.
 
-Matches old LinkTab (7 QComboBox + 1 QSpinBox, 3 cards).
+Includes independent fallback choices for non-embedded hyperlinks.
 """
 
 from __future__ import annotations
 
 from typing import cast as _cast
 
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QComboBox, QSpinBox
 
 from ...i18n import t
@@ -18,8 +19,17 @@ def _link_modes() -> list[tuple[str, str]]:
     return [
         (t("settings.link.modes.keep", "Keep Original"), "keep"),
         (t("settings.link.modes.extract_text", "Extract Text"), "extract_text"),
+        (t("settings.link.modes.extract_address", "Extract Address"), "extract_address"),
         (t("settings.link.modes.remove", "Remove Link"), "remove"),
         (t("settings.link.modes.hyperlink", "Hyperlink"), "hyperlink"),
+    ]
+
+
+def _hyperlink_fallback_modes() -> list[tuple[str, str]]:
+    return [
+        (t("settings.link.modes.keep", "Keep Original"), "keep"),
+        (t("settings.link.modes.extract_text", "Extract Text"), "extract_text"),
+        (t("settings.link.modes.extract_address", "Extract Address"), "extract_address"),
     ]
 
 
@@ -41,6 +51,8 @@ class LinkTab(BaseSettingsTab):
         self._md_file_link_style: QComboBox = _cast(QComboBox, None)
         self._wiki_link_mode: QComboBox = _cast(QComboBox, None)
         self._md_link_mode: QComboBox = _cast(QComboBox, None)
+        self._wiki_hyperlink_fallback: QComboBox = _cast(QComboBox, None)
+        self._markdown_hyperlink_fallback: QComboBox = _cast(QComboBox, None)
         self._wiki_embed_image_mode: QComboBox = _cast(QComboBox, None)
         self._md_embed_image_mode: QComboBox = _cast(QComboBox, None)
         self._embed_md_file_mode: QComboBox = _cast(QComboBox, None)
@@ -88,11 +100,37 @@ class LinkTab(BaseSettingsTab):
             _link_modes(), t("settings.link.wiki_link_tooltip", "How to process wiki-style links")
         )
         self.add_form_row(f2, t("settings.link.wiki_link_mode", "Wiki Link Mode:"), self._wiki_link_mode)
+        self._wiki_hyperlink_fallback = self.create_combobox(
+            _hyperlink_fallback_modes(),
+            t(
+                "settings.link.wiki_hyperlink_fallback_tooltip",
+                "When a Wiki hyperlink cannot be created:\nKeep Original preserves the markup.\n"
+                "Extract Text keeps its display text.\nExtract Address keeps its source target.",
+            ),
+        )
+        self.add_form_row(
+            f2,
+            t("settings.link.wiki_hyperlink_fallback", "Wiki Hyperlink Fallback:"),
+            self._wiki_hyperlink_fallback,
+        )
 
         self._md_link_mode = self.create_combobox(
             _link_modes(), t("settings.link.markdown_link_tooltip", "How to process Markdown-style links")
         )
         self.add_form_row(f2, t("settings.link.markdown_link_mode", "Markdown Link Mode:"), self._md_link_mode)
+        self._markdown_hyperlink_fallback = self.create_combobox(
+            _hyperlink_fallback_modes(),
+            t(
+                "settings.link.markdown_hyperlink_fallback_tooltip",
+                "When a Markdown hyperlink cannot be created:\nKeep Original preserves the markup.\n"
+                "Extract Text keeps its display text.\nExtract Address keeps its source target.",
+            ),
+        )
+        self.add_form_row(
+            f2,
+            t("settings.link.markdown_hyperlink_fallback", "Markdown Hyperlink Fallback:"),
+            self._markdown_hyperlink_fallback,
+        )
 
         # ── Embed links card ────────────────────────────────────────────
         _c3, f3 = self.add_settings_card(
@@ -129,6 +167,10 @@ class LinkTab(BaseSettingsTab):
         self._md_file_link_style.currentIndexChanged.connect(lambda _: self._on_change("md_file_link_style"))
         self._wiki_link_mode.currentIndexChanged.connect(lambda _: self._on_change("wiki_link_mode"))
         self._md_link_mode.currentIndexChanged.connect(lambda _: self._on_change("markdown_link_mode"))
+        self._wiki_hyperlink_fallback.currentIndexChanged.connect(lambda _: self._on_change("wiki_hyperlink_fallback"))
+        self._markdown_hyperlink_fallback.currentIndexChanged.connect(
+            lambda _: self._on_change("markdown_hyperlink_fallback")
+        )
         self._wiki_embed_image_mode.currentIndexChanged.connect(lambda _: self._on_change("wiki_embed_image_mode"))
         self._md_embed_image_mode.currentIndexChanged.connect(lambda _: self._on_change("markdown_embed_image_mode"))
         self._embed_md_file_mode.currentIndexChanged.connect(lambda _: self._on_change("embed_md_file_mode"))
@@ -140,6 +182,8 @@ class LinkTab(BaseSettingsTab):
             "md_file_link_style": self._md_file_link_style,
             "wiki_link_mode": self._wiki_link_mode,
             "markdown_link_mode": self._md_link_mode,
+            "wiki_hyperlink_fallback": self._wiki_hyperlink_fallback,
+            "markdown_hyperlink_fallback": self._markdown_hyperlink_fallback,
             "wiki_embed_image_mode": self._wiki_embed_image_mode,
             "markdown_embed_image_mode": self._md_embed_image_mode,
             "embed_md_file_mode": self._embed_md_file_mode,
@@ -147,17 +191,31 @@ class LinkTab(BaseSettingsTab):
         combo = combo_map.get(key)
         if combo:
             self._vm.set_field(SECTION_LINK, key, self.get_combo_data(combo))
+            self._sync_hyperlink_fallback_state()
+
+    def _sync_hyperlink_fallback_state(self) -> None:
+        self._wiki_hyperlink_fallback.setEnabled(self.get_combo_data(self._wiki_link_mode) == "hyperlink")
+        self._markdown_hyperlink_fallback.setEnabled(self.get_combo_data(self._md_link_mode) == "hyperlink")
 
     def _load_values(self) -> None:
         link = self._vm.config.link
-        self.set_combo_data(self._image_link_style, link.image_link_style)
-        self.set_combo_data(self._md_file_link_style, link.md_file_link_style)
-        self.set_combo_data(self._wiki_link_mode, link.wiki_link_mode)
-        self.set_combo_data(self._md_link_mode, link.markdown_link_mode)
-        self.set_combo_data(self._wiki_embed_image_mode, link.wiki_embed_image_mode)
-        self.set_combo_data(self._md_embed_image_mode, link.markdown_embed_image_mode)
-        self.set_combo_data(self._embed_md_file_mode, link.embed_md_file_mode)
-        self._max_depth.setValue(link.max_depth)
+        values = (
+            (self._image_link_style, link.image_link_style),
+            (self._md_file_link_style, link.md_file_link_style),
+            (self._wiki_link_mode, link.wiki_link_mode),
+            (self._md_link_mode, link.markdown_link_mode),
+            (self._wiki_hyperlink_fallback, link.wiki_hyperlink_fallback),
+            (self._markdown_hyperlink_fallback, link.markdown_hyperlink_fallback),
+            (self._wiki_embed_image_mode, link.wiki_embed_image_mode),
+            (self._md_embed_image_mode, link.markdown_embed_image_mode),
+            (self._embed_md_file_mode, link.embed_md_file_mode),
+        )
+        for combo, value in values:
+            with QSignalBlocker(combo):
+                self.set_combo_data(combo, value)
+        with QSignalBlocker(self._max_depth):
+            self._max_depth.setValue(link.max_depth)
+        self._sync_hyperlink_fallback_state()
 
     def reload_from_config(self) -> None:
         self._load_values()

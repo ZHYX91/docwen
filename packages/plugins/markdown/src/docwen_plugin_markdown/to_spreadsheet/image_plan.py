@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 from docwen_core.text.placeholders import placeholder_namespace, restore_placeholders
@@ -12,7 +13,8 @@ from docwen_plugin_markdown.xlsx_text import assign_bounded_xlsx_value, existing
 class XlsxImageTextPlan:
     """Track cell objects so overwritten or merged-away drafts do not survive."""
 
-    def __init__(self) -> None:
+    def __init__(self, value_writer: Callable[[Any, Any], None] | None = None) -> None:
+        self._value_writer = value_writer
         self._values: dict[Any, Any] = {}
         self._literals: dict[str, str] = {}
         self._template_images: dict[str, str] = {}
@@ -85,7 +87,10 @@ class XlsxImageTextPlan:
 
     def commit(self, cell: Any, value: Any) -> None:
         if cell in self._values or value != cell.value:
-            assign_bounded_xlsx_value(cell, value)
+            if self._value_writer is None:
+                assign_bounded_xlsx_value(cell, value)
+            else:
+                self._value_writer(cell, value)
         self._values.pop(cell, None)
 
 

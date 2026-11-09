@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from collections.abc import Mapping
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -24,6 +26,8 @@ from docx.image.image import Image as DocxImage
 from docx.oxml.ns import qn
 from docx.shared import Pt
 
+from docwen_core.conversion_loss import ConversionLoss, LossCollector, loss_text
+from docwen_core.docx_comments import append_docx_comment
 from docwen_core.docx_semantics import (
     DocxSemanticRenderer,
     apply_semantic_table_roles,
@@ -133,6 +137,9 @@ class MdToDocxRenderer:
         template_style_keys: dict[str, str] | None = None,
         cancellation=None,
         note_ctx: Any = None,
+        loss_comments: bool = True,
+        defer_loss_comments: bool = False,
+        loss_messages: Mapping[str, str] | None = None,
         formatting_mode: str = "full",
         hr_mapping: str | None = None,
         hr_actions: dict[str, str] | None = None,
@@ -142,6 +149,7 @@ class MdToDocxRenderer:
         semantic_v3_session: DocxSemanticsV3Session | None = None,
         resolved_numbering_session: ResolvedNumberingDocxSession | None = None,
         resolved_image_urls: tuple[str, ...] | None = None,
+        navigation_links: Any = None,
         mermaid_mode: str = "code",
         mermaid_cli_path: str = "",
         mermaid_work_dir: str | None = None,
@@ -294,6 +302,7 @@ class MdToDocxRenderer:
         self._hr_actions = hr_actions or {}
         self._source_dir = Path(source_file_path).resolve().parent if source_file_path else None
         self._declared_resource_resolver = declared_resource_resolver
+        self._navigation_links = navigation_links
         self._semantic_v3_session = semantic_v3_session
         self._resolved_numbering_session = resolved_numbering_session
         self._pending_resolved_captions: list[tuple[Any, tuple[Any, ...], ResolvedDocumentTarget, bool]] = []
@@ -312,6 +321,13 @@ class MdToDocxRenderer:
         self._mermaid_work_dir = mermaid_work_dir
         self._mermaid_render = mermaid_render
         self._warnings: list[tuple[str, str]] = []
+        self._loss_comments = loss_comments
+        self._defer_loss_comments = defer_loss_comments
+        self._pending_losses: list[tuple[ConversionLoss, Any]] = []
+        self._loss_messages = loss_messages
+        self.losses = LossCollector()
+        self.loss_comments_added = 0
+        self._annotated_notes: set[tuple[str, str]] = set()
         if note_ctx is not None and getattr(note_ctx, "callout_fallback_keys", ()):
             keys = ", ".join(note_ctx.callout_fallback_keys)
             self._warnings.append(
@@ -349,6 +365,55 @@ class MdToDocxRenderer:
     def warnings(self) -> tuple[tuple[str, str], ...]:
         """Return non-fatal renderer warnings collected for the request."""
         return tuple(self._warnings)
+
+    def record_loss(self, loss: ConversionLoss, run: Any) -> None:
+        """Retain diagnostics even if comments are disabled or cannot be written."""
+        if not self.losses.add(loss):
+            return
+        if self._defer_loss_comments:
+            self._pending_losses.append((loss, run))
+            return
+        self._annotate_loss(loss, run)
+
+    def finalize_loss_comments(self) -> None:
+        """Resolve coordinates after template relocation, then annotate once."""
+        from docwen_plugin_markdown.to_docx.formula_renderer import formula_loss_location
+
+        replacements: dict[ConversionLoss, ConversionLoss] = {}
+        pending = self._pending_losses
+        self._pending_losses = []
+        for loss, run in pending:
+            finalized = loss
+            if loss.code == "CONVERSION-LOSS-FORMULA":
+                finalized = replace(loss, output_location=formula_loss_location(run._parent, run, self._loss_messages))
+            replacements[loss] = finalized
+            self._annotate_loss(finalized, run)
+        finalized_losses = LossCollector()
+        for loss in self.losses.records:
+            finalized_losses.add(replacements.get(loss, loss))
+        self.losses = finalized_losses
+
+    def _annotate_loss(self, loss: ConversionLoss, run: Any) -> None:
+        if not self._loss_comments:
+            return
+        try:
+            append_docx_comment(self._doc, [run], text=loss.message(self._loss_messages))
+        except Exception:
+            logger.warning("Could not annotate conversion loss at %s", loss.output_location, exc_info=True)
+            self._warnings.append(
+                (
+                    "CONVERSION-LOSS-COMMENT-FAILED",
+                    loss_text(
+                        self._loss_messages,
+                        "comment_failed",
+                        "The loss comment could not be added; check the conversion details.",
+                    )
+                    + " "
+                    + loss.output_location,
+                )
+            )
+        else:
+            self.loss_comments_added += 1
 
     @property
     def list_numbering(self) -> DocxListNumbering:
@@ -390,6 +455,8 @@ class MdToDocxRenderer:
             else:
                 self._note_ctx.resolve_note_styles(self._doc)
 
+        if self._navigation_links is not None and self._source_carrier_session is not None:
+            self._navigation_links.prepare(ast_nodes, self._source_carrier_session.bookmark_allocator)
         paragraphs: list = []
         skip_merged = False
         for i, node in enumerate(ast_nodes):
@@ -687,6 +754,9 @@ class MdToDocxRenderer:
                     start_index=body_run_start,
                     reset_inherited_emphasis=True,
                 )
+
+        if self._navigation_links is not None:
+            self._navigation_links.bind(node, heading)
 
         resolved_target = self._resolved_target(node, "heading")
         if resolved_target is not None:
@@ -1275,7 +1345,8 @@ class MdToDocxRenderer:
             node,
             block_style=self._formula_block_style,
             in_list=self._list_depth > 0,
-            on_failure=lambda message: self._warnings.append(("MD2DOCX-FORMULA-TEXT-FALLBACK", message)),
+            on_loss=self.record_loss,
+            loss_messages=self._loss_messages,
         )
         # Return the last paragraph (created by render_formula)
         paragraph = self._doc.paragraphs[-1] if self._doc.paragraphs else None
@@ -1821,9 +1892,19 @@ class MdToDocxRenderer:
                 renderer_instance=self,
             )
 
+        anchor = None
+        if self._navigation_links is not None:
+            navigation = self._navigation_links.resolve(url)
+            if navigation is not None:
+                anchor, fallback = navigation
+                if anchor is None:
+                    paragraph.add_run(fallback)
+                    return
         add_hyperlink(
             paragraph,
             url,
+            internal_anchor=anchor,
+            internal_target_hint=self._navigation_links.hints.get(url) if self._navigation_links is not None else None,
             children=link_children,
             source_dir=self._source_dir,
             style_reference=self._hyperlink_style_id,
@@ -1888,10 +1969,36 @@ class MdToDocxRenderer:
                 else self._note_ctx.create_footnote_ref_run(clean_key)
             )
         else:
+            note_kind, clean_key = "footnote", key
             ref_run = self._note_ctx.create_footnote_ref_run(key)
 
         if ref_run is not None:
             parent._p.append(ref_run)
+            identity = (note_kind, clean_key)
+            if identity not in self._annotated_notes:
+                self._annotated_notes.add(identity)
+                from docx.text.run import Run
+
+                for ordinal, original in enumerate(self._note_ctx.formula_sources(note_kind, clean_key), 1):
+                    self.record_loss(
+                        ConversionLoss(
+                            code="CONVERSION-LOSS-NOTE-FORMULA",
+                            reason=loss_text(
+                                self._loss_messages,
+                                "note_formula_reason",
+                                "Equations in this note cannot be written as native Word equations.",
+                            ),
+                            change=loss_text(
+                                self._loss_messages,
+                                "note_formula_change",
+                                "The formula was preserved as readable LaTeX text.",
+                            ),
+                            source_location=f"{note_kind} {clean_key}, formula {ordinal}",
+                            output_location=f"{note_kind} {clean_key}, formula {ordinal}; first body reference",
+                            original=original,
+                        ),
+                        Run(ref_run, parent),
+                    )
         else:
             parent.add_run(f"[^{key}]")
 

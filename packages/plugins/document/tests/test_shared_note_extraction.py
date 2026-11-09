@@ -170,16 +170,15 @@ def test_endnote_definitions_use_prefix():
     assert build_note_definitions(notes, {9: "endnote:1"}) == "[^endnote:1]: 尾注"
 
 
-def test_note_extractor_footnotes_default_empty():
-    extractor = NoteExtractor.__new__(NoteExtractor)
-    extractor.footnotes = {}
-    extractor.endnotes = {}
-    extractor.footnote_id_map = {1: "1"}
-    extractor.endnote_id_map = {1: "endnote:1"}
-
+def test_note_extractor_missing_referenced_definitions_keep_placeholders():
+    extractor = NoteExtractor(Document())
     assert extractor.get_reference_text("footnote", 1) == "[^1]"
     assert extractor.get_reference_text("endnote", 1) == "[^endnote:1]"
-    assert extractor.build_definitions_block() == ""
+    assert extractor.build_definitions_block() == (
+        "[^1]: [Note could not be read; check the source document]\n"
+        "[^endnote:1]: [Note could not be read; check the source document]"
+    )
+    assert extractor.definition_loss_counts() == {"footnotes": 1, "endnotes": 1}
 
 
 def test_note_extractor_builds_definitions_block():

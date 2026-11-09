@@ -20,6 +20,79 @@ Markdown-to-XLSX treats template-declared images and images produced by the acti
 
 Markdown→XLSX 将模板自身声明的图片及当前链接策略生成的图片作为独立 drawing 处理。YAML、纵横填充及合并阶段的临时图片标记保存在工作簿外；只处理最终仍存在的单元格草稿，再对实际文本执行赋值前和保存前的 32767 UTF-16 单元检查。内部标记长度不挤占正文容量，真实超限仍明确失败并保留既有产物。正文中的字面标记不获得读图权限，重复的受信任图片分别保留 drawing。
 
+## Ordinary links and heading navigation / 普通链接与标题导航
+
+Authored ordinary Wiki and Markdown links independently support `keep`, `extract_text`, `extract_address`,
+`remove` and `hyperlink`. The main mode defaults to `hyperlink`; each syntax has its own fallback setting,
+`wiki_hyperlink_fallback` or `markdown_hyperlink_fallback`, defaulting to `keep`. Fallback choices are limited to
+`keep`, `extract_text` and `extract_address`. Keeping preserves the whole original syntax, extracting an address
+keeps the source destination and fragment rather than a resolved absolute path, and removal includes the display
+text. Unsupported or unresolved hyperlink destinations use the selected fallback, not an implicit removal.
+These policies cover the existing parser-owned ordinary inline Wiki/Markdown constructs. Reference-definition
+and autolink syntax keep their existing handling; bare-URL conversion remains a separate default-off option.
+Text extraction in used YAML fields and spreadsheet cells projects Markdown label formatting as visible text,
+while kept source syntax and literal Wiki alias punctuation remain unchanged.
+Plain labels in fields, cells and heading-link fallbacks use the same inline text rules as DOCX hyperlinks:
+formulas retain readable LaTeX, line breaks become spaces, and unhandled inline syntax stays literal. Leading heading
+or list markers within a label remain part of its text.
+
+For authored Markdown-to-DOCX, an ordinary same-document fragment can target a unique rendered heading. The
+decoded fragment must match its visible title exactly or its simple lowercase slug: punctuation is removed and
+spaces become hyphens. A matched heading receives a separate Word bookmark and links use a native internal
+anchor, preserved through DOCX save/reopen. Missing and ambiguous matches fall back; no duplicate heading wins
+by order. The converter does not search other documents to invent an internal destination.
+
+The current embedded-source guard is deliberately conservative: a source body containing Wiki embed syntax
+(`![[`) uses the selected fallback for ordinary internal-heading jumps throughout that conversion. This also
+covers Wiki image spellings and literal occurrences of that spelling. Without a proven source-origin map, an
+embedded heading must not silently become the target of a root-document fragment. Ordinary links to `^block`
+IDs remain non-navigable and use the fallback. Existing source block-ID recovery, semantic `@[[...]]` references,
+frozen v3 behavior and the separately validated resolved-v4 input contract are unchanged. This is not complete
+heading/block navigation across embedded files, nor a new lossless ordinary-link Markdown round-trip contract.
+Generated ordinary navigation links carry their original fragment as a standard Word tooltip. On DOCX-to-Markdown,
+that untrusted hint is used only for a readable ordinary-link projection after proving a unique, balanced whole-heading
+bookmark and a unique visible heading matching the hint. It is not authentication or frozen recovery metadata.
+Foreign/missing hints, ambiguous or changed headings, partial/crossing ranges and unsupported title structures fall
+back to visible text. External relationship links retain their existing import route; no ordinary block anchor is promoted.
+
+For XLSX, only a final cell consisting entirely of one supported hyperlink receives a native cell hyperlink.
+Any surrounding text or multiple links uses each occurrence's fallback, preserving text and order rather than
+choosing the first target, making unrelated text clickable, or splitting the workbook structure. CSV has no
+native hyperlink representation and uses the fallback for every hyperlink-mode occurrence. Links are not emitted
+as `HYPERLINK` formulas. Final restored text still passes the existing Excel capacity checks before publication.
+YAML values used in templates follow the same independent policies and the same final-cell rule; existing template
+text is not reparsed as Markdown. Conversion does not rewrite the source files or fetch link destinations.
+XLSX-to-Markdown also retains display text and allowed external native hyperlink destinations with escaped labels
+and URI targets. It does not evaluate `HYPERLINK` formulas or guess worksheet-location/relative targets; unsupported
+native destinations remain visible text. This does not promise lossless import of every foreign Office link form.
+
+普通 Wiki 与 Markdown 链接各自支持 `keep`（保留原样）、`extract_text`（提取文字）、`extract_address`
+（提取地址）、`remove`（连同显示文字删除）和 `hyperlink`（生成超链接）。主模式默认 `hyperlink`；
+`wiki_hyperlink_fallback` 与 `markdown_hyperlink_fallback` 各自默认 `keep`，可选值仅为 `keep`、
+`extract_text`、`extract_address`。保留原样保存完整源语法；提取地址保留源目标和锚点，不替换为解析后的
+绝对路径。无法生成超链接时遵守对应回退，不隐式删除链接。
+字段、单元格和标题链接回退中的纯文本标签使用与 DOCX 超链接一致的行内文字规则：公式保留可读的
+LaTeX，换行转为空格，未解析的行内语法保留原文。标签开头的井号或列表标记仍是标签文字的一部分。
+
+源 Markdown→DOCX 的同文档片段可跳转至唯一已渲染标题：解码后的片段须精确匹配可见标题，或匹配简单
+slug（转为小写、去除标点、空格换为连字符）。输出使用独立的 Word 书签和原生内部链接，保存并重开后仍
+有效；缺失或重名目标按回退方式处理，不按出现顺序猜选，也不搜索其他文件制造文内目标。
+
+当前嵌入来源保护采用保守策略：正文含 Wiki 嵌入拼写 `![[` 时，本次转换的普通标题内部跳转均使用回退，
+包括 Wiki 图片和字面示例中的该拼写。在来源身份未得到证明前，不将嵌入文档中的标题误作根文档片段的目标。
+普通 `^block` 链接仍不可导航；已有块 ID 恢复、语义 `@[[...]]`、冻结 v3 以及独立验证的 resolved-v4
+输入合同不变。因此尚不支持完整的跨嵌入标题／块导航，也不新增普通链接 Markdown 无损往返承诺。
+生成的普通导航链接以标准 Word tooltip 保留原始片段；反向导入只在书签完整唯一、实际可见标题唯一且与提示
+匹配时投影回 Markdown 链接。提示及书签均是不可信文档内容，不是认证或冻结恢复证据；外来、缺失、含糊、
+已改写或无法证明的结构仅保留可见文字。XLSX 反向转换也保留受支持的原生外链文字和目标，但不执行
+`HYPERLINK` 公式，不猜工作表内部位置或相对目标；不承诺任意外来 Office 链接无损往返。
+
+XLSX 只为最终完整单元格中的一个受支持链接生成原生超链接；混合正文或多个链接时逐个采用回退，保留
+文字和顺序，不选取首个目标、不让无关文字可点击，也不拆分工作簿结构。CSV 没有原生超链接，始终采用
+回退；不生成 `HYPERLINK` 公式。恢复后的最终文字仍须通过既有 Excel 容量检查。模板实际使用的 YAML
+值遵守同一独立策略和最终单元格规则，模板原有正文不作为 Markdown 重解析。转换不改写源文件，也不访问
+链接目标内容。
+
 ## Supported structures / 支持结构
 
 - headings, paragraphs, emphasis, code, quotes and horizontal rules;
@@ -1409,9 +1482,9 @@ DOCX 的标题、副标题、别名以及发票元数据均按字符串字段输
 
 ## YAML field links
 
-Authored Markdown-to-DOCX applies ordinary Wiki and Markdown link policies independently to string leaves used by template fields, before field-specific list/punctuation formatting. `keep` retains literal syntax, `extract_text` inserts display text, `remove` removes the link, and `hyperlink` produces a real DOCX relationship where the ordinary-link contract provides a navigable target. Numbers, booleans, dates, keys and container structure are preserved; embedded resources are not expanded from YAML.
+Authored Markdown-to-DOCX applies ordinary Wiki and Markdown link policies independently to string leaves used by template fields, before field-specific list/punctuation formatting. `keep` retains literal syntax, `extract_text` inserts display text, `extract_address` inserts the source target, `remove` removes the whole link, and `hyperlink` produces a real DOCX relationship or a proven ordinary heading anchor. When a hyperlink cannot be produced, the syntax-specific fallback applies. Numbers, booleans, dates, keys and container structure are preserved; embedded resources are not expanded from YAML.
 
-Only links explicitly selected by the policy are materialized. Existing template text is not reparsed as Markdown. Split text runs, run breaks and special attachment fields retain their surrounding structure and formatting. An inserted hyperlink inside an existing hyperlink is rejected rather than nesting invalid OOXML. Declared-input requests retain their no-local-lookup boundary; unused fields do not trigger resolution. DOCX metadata receives display text, never internal projection markers. Spreadsheet YAML behavior is unchanged by this DOCX change.
+Only links explicitly selected by the policy are materialized. Existing template text is not reparsed as Markdown. Split text runs, run breaks and special attachment fields retain their surrounding structure and formatting. An inserted hyperlink inside an existing hyperlink is rejected rather than nesting invalid OOXML. Declared-input requests retain their no-local-lookup boundary; unused fields do not trigger resolution. DOCX metadata receives display text, never internal projection markers. Spreadsheet YAML uses the same ordinary-link modes and independent fallbacks. XLSX materializes a native link only when the final cell contains exactly one complete supported link; mixed/multiple content and CSV use the selected fallback.
 
 
 ## Native resource and table text export / 原生资源与表格文本导出

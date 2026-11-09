@@ -19,12 +19,14 @@ import re
 import time
 import uuid
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, Any
 
 from docx.oxml.ns import qn
 
+from docwen_core.conversion_loss import ConversionLoss, LossCollector, loss_text
 from docwen_core.errors import CancellationRequested
 from docwen_core.text.ocr import report_ocr_outcome
 from docwen_plugin_document.to_markdown.metadata import build_yaml_header, extract_title_metadata
@@ -151,7 +153,8 @@ class DocxToMarkdownConverter:
         self._ordinary_container_list_bindings: frozenset[tuple[str, str]] = frozenset()
         self._resolved_v4_diagnostics: list[tuple[str, str, str]] = []
         self._table_role_diagnostics: list[str] = []
-        self._formula_diagnostics: list[tuple[str, str]] = []
+        self._formula_diagnostics: list[ConversionLoss] = []
+        self._loss_messages: dict[str, str] = {}
         self._table_role_overrides: dict[Any, tuple[int, int]] = {}
         self._pending_artifacts: list[Any] = []
         self._pending_primary_path: str | None = None
@@ -201,6 +204,7 @@ class DocxToMarkdownConverter:
         self._resolved_v4_diagnostics.clear()
         self._table_role_diagnostics.clear()
         self._formula_diagnostics.clear()
+        self._loss_messages = getattr(context, "loss_messages", {})
         self._table_role_overrides.clear()
         from docwen_core.models.result import (
             ConversionDiagnostic,
@@ -387,33 +391,39 @@ class DocxToMarkdownConverter:
                 code="DOCX2MD-OK",
             ),
         ]
-        if note_definition_loss_count:
+        losses = LossCollector()
+        for loss in self._formula_diagnostics:
+            losses.add(loss)
+        if note_definition_loss_count and self._note_extractor is not None:
             footnote_loss_count = stats.get("footnote_definition_loss_count", 0)
             endnote_loss_count = stats.get("endnote_definition_loss_count", 0)
-            all_diagnostics.append(
-                ConversionDiagnostic(
-                    level="warning",
-                    message=(
-                        "Some referenced note definitions could not be read from the DOCX "
-                        f"(footnotes={footnote_loss_count}, endnotes={endnote_loss_count}). "
-                        "The Markdown body was preserved, but those definitions are missing."
-                    ),
+            for kind, note_id in self._note_extractor.missing_definitions():
+                loss = ConversionLoss(
                     code="DOCX2MD-NOTE-DEFINITION-LOSS",
-                    location="word/footnotes.xml or word/endnotes.xml",
+                    reason=loss_text(
+                        self._loss_messages, "note_unreadable_reason", "The referenced note could not be read."
+                    )
+                    + f" (footnotes={footnote_loss_count}, endnotes={endnote_loss_count})",
+                    change=loss_text(
+                        self._loss_messages,
+                        "note_placeholder",
+                        "A visible placeholder definition was retained; check the source document.",
+                    ),
+                    source_location=f"word/{kind}s.xml:note {note_id}",
+                    output_location=f"Markdown {kind} definition",
                 )
-            )
+                losses.add(loss)
+                all_diagnostics.append(loss.to_diagnostic(self._loss_messages))
+        summary = losses.summary(self._loss_messages)
+        if summary is not None:
+            all_diagnostics.append(summary)
         all_diagnostics.extend(
             ConversionDiagnostic(
                 level="warning", message=message, code="DOCX2MD-TABLE-ROLES-STALE", location="word/document.xml"
             )
             for message in self._table_role_diagnostics
         )
-        all_diagnostics.extend(
-            ConversionDiagnostic(
-                level="warning", message=message, code="DOCX2MD-FORMULA-SOURCE-FALLBACK", location=location
-            )
-            for message, location in self._formula_diagnostics
-        )
+        all_diagnostics.extend(loss.to_diagnostic(self._loss_messages) for loss in self._formula_diagnostics)
         all_diagnostics.extend(
             ConversionDiagnostic(
                 level="warning",
@@ -559,6 +569,9 @@ class DocxToMarkdownConverter:
             syntax_config=self._syntax_for_rendering(),
             style_detector_config=self._request_policy.style_detector,
             math_renderer=self._render_formula,
+            missing_placeholder=loss_text(
+                self._loss_messages, "note_placeholder", "[Note could not be read; check the source document]"
+            ),
         )
         if self._note_extractor.endnotes and not self._extensions.typed_endnotes:
             self._record_extension_loss("typed_endnotes", "Endnotes were exported as ordinary Markdown footnotes.")
@@ -2145,13 +2158,13 @@ class DocxToMarkdownConverter:
     def _render_formula(self, element: Any, source_part: str = "word/document.xml") -> str:
         """Use explicit Office math identity and report this XML occurrence."""
 
-        def report_failure(message: str) -> None:
+        def report_failure(loss: ConversionLoss) -> None:
             location = source_part + ":" + element.getroottree().getpath(element)
-            diagnostic = (message, location)
+            diagnostic = replace(loss, source_location=location, output_location="")
             if diagnostic not in self._formula_diagnostics:
                 self._formula_diagnostics.append(diagnostic)
 
-        return extract_formula_from_element(element, on_failure=report_failure)
+        return extract_formula_from_element(element, messages=self._loss_messages, on_failure=report_failure)
 
     def _build_paragraph_text_with_formulas(
         self,

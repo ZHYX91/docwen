@@ -33,8 +33,8 @@ def _assert_stacked_fraction(native: etree._Element, numerator: str, denominator
     [fraction] = native.findall(".//m:f", _NS)
     fraction_type = fraction.find("m:fPr/m:type", _NS)
     assert fraction_type is not None and fraction_type.get(_VAL) == "noBar"
-    assert "".join(fraction.xpath("m:num//m:t/text()", namespaces=_NS)) == numerator
-    assert "".join(fraction.xpath("m:den//m:t/text()", namespaces=_NS)) == denominator
+    assert "".join(node.text or "" for node in fraction.findall("m:num//m:t", _NS)) == numerator
+    assert "".join(node.text or "" for node in fraction.findall("m:den//m:t", _NS)) == denominator
 
 
 @pytest.mark.parametrize("latex", [r"\binom{n+1}{k-1}", r"{n+1 \choose k-1}"])
@@ -44,8 +44,10 @@ def test_binomial_keeps_delimiters_and_operands_across_two_round_trips(latex: st
         _assert_stacked_fraction(native, "n+1", "k−1")
         delimiter = native.find("m:d", _NS)
         assert delimiter is not None and len(native) == 1
-        assert delimiter.find("m:dPr/m:begChr", _NS).get(_VAL) == "("
-        assert delimiter.find("m:dPr/m:endChr", _NS).get(_VAL) == ")"
+        begin = delimiter.find("m:dPr/m:begChr", _NS)
+        end = delimiter.find("m:dPr/m:endChr", _NS)
+        assert begin is not None and begin.get(_VAL) == "("
+        assert end is not None and end.get(_VAL) == ")"
         latex = _latex(native)
         assert r"\frac" not in latex
 
