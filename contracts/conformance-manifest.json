@@ -667,6 +667,12 @@
       "schema": "machine",
       "document_type": "message",
       "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/valid/machine.source-proofread-capability.response.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "valid"
     }
   ]
 }

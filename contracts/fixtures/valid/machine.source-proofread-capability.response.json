@@ -1,0 +1,237 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "capabilities": [
+      {
+        "capability_id": "convert.markdown_source.to_docx",
+        "operation": "convert",
+        "input_shape": {
+          "slots": [
+            {
+              "role": "source",
+              "kind": "document",
+              "media_types": [
+                "text/markdown"
+              ],
+              "min_items": 1,
+              "max_items": 1
+            },
+            {
+              "role": "linked_resource",
+              "kind": "resource",
+              "media_types": [
+                "image/png",
+                "image/jpeg",
+                "image/gif",
+                "image/bmp",
+                "image/webp"
+              ],
+              "min_items": 0
+            }
+          ],
+          "undeclared_roles": "reject"
+        },
+        "output_media_types": [
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ],
+        "output_shape": {
+          "cardinality": "one",
+          "artifact_kinds": [
+            "document"
+          ],
+          "relation_types": [],
+          "atomic_bundle": true
+        },
+        "options_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "markdown_extensions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "input": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "structural_tables": {
+                      "type": "boolean"
+                    },
+                    "captions_references": {
+                      "type": "boolean"
+                    },
+                    "extended_headings": {
+                      "type": "boolean"
+                    },
+                    "typed_endnotes": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "output": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "structural_tables": {
+                      "type": "boolean"
+                    },
+                    "captions_references": {
+                      "type": "boolean"
+                    },
+                    "extended_headings": {
+                      "type": "boolean"
+                    },
+                    "typed_endnotes": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            },
+            "locale": {
+              "type": "string",
+              "enum": [
+                "zh_CN",
+                "en_US",
+                "de_DE",
+                "es_ES",
+                "fr_FR",
+                "ja_JP",
+                "ko_KR",
+                "pt_BR",
+                "ru_RU",
+                "vi_VN",
+                "zh_TW",
+                "ar_SA"
+              ]
+            },
+            "template_name": {
+              "type": "string",
+              "pattern": "^template\\.docx\\.[0-9a-f]{64}$",
+              "x-docwen-resource-kind": "templates",
+              "x-docwen-resource-target": "docx"
+            },
+            "heading_merge_mode": {
+              "type": "string",
+              "enum": [
+                "punct_required",
+                "never",
+                "always"
+              ],
+              "default": "punct_required"
+            },
+            "markdown_resource_bindings": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "authored_sha256",
+                "images"
+              ],
+              "properties": {
+                "authored_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "authored_token",
+                      "logical_path"
+                    ],
+                    "properties": {
+                      "authored_token": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "logical_path": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  }
+                },
+                "wiki_links": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "authored_token",
+                      "href"
+                    ],
+                    "properties": {
+                      "authored_token": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "href": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "proofread": {
+              "type": "object",
+              "properties": {
+                "enable_symbol_pairing": {
+                  "type": "boolean"
+                },
+                "enable_symbol_correction": {
+                  "type": "boolean"
+                },
+                "enable_typos_rule": {
+                  "type": "boolean"
+                },
+                "enable_sensitive_word": {
+                  "type": "boolean"
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "remove_numbering": {
+              "type": "boolean"
+            },
+            "add_numbering": {
+              "type": "boolean"
+            },
+            "numbering_scheme": {
+              "type": "string",
+              "x-docwen-resource-kind": "numbering-schemes"
+            },
+            "heading_numbering_render_mode": {
+              "type": "string",
+              "enum": [
+                "text",
+                "word_native"
+              ]
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "availability": "available",
+        "dependencies": [],
+        "limitations": [
+          {
+            "severity": "warning",
+            "code": "document_semantics.citation_processor_unavailable",
+            "message": "DocWen does not run a CSL citation processor or accept citation_style inputs in Machine v2; Markdown citation keys remain literal."
+          },
+          {
+            "severity": "warning",
+            "code": "document_semantics.v1_scope",
+            "message": "Document semantics v1 excludes CSL processing, composite or range citation semantics, custom citation display, and PDF semantic round trips."
+          }
+        ]
+      }
+    ]
+  }
+}
