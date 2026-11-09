@@ -99,7 +99,9 @@ class TestConfigSnapshotProjectsExportSemantics:
             assert isinstance(link_cfg.search_dirs, tuple)
             assert "." in link_cfg.search_dirs
             assert link_cfg.detect_circular is True
-            assert link_cfg.file_not_found_mode == "placeholder"
+            assert link_cfg.file_not_found_mode == "keep"
+            assert link_cfg.wiki_hyperlink_fallback == "keep"
+            assert link_cfg.markdown_hyperlink_fallback == "keep"
 
     def test_docx_style_detector_config_matches_document_toml_defaults(self) -> None:
         """Document style aliases project from the loader snapshot."""

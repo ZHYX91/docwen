@@ -230,6 +230,19 @@ def test_missing_comment_key_defaults_off_without_disabling_numbering(tmp_path, 
         assert NumberingIndex(document).lookup_by_style_id(heading.style.style_id) is not None
 
 
+def test_native_numbering_review_preserves_formula_loss_comment_range(tmp_path):
+    source = "# $x\\hspace{1em}y$\n"
+    result, _original, output_path = _convert(tmp_path, mode="word_native", source=source)
+    document = Document(str(output_path))
+    [loss] = [item for item in result.diagnostics if item.code == "CONVERSION-LOSS-FORMULA"]
+    [review] = [comment for comment in document.comments if comment.text == NUMBERING_REVIEW_TEXT]
+    [notice] = [comment for comment in document.comments if r"$x\hspace{1em}y$" in comment.text]
+    anchors = _anchors(document)
+    assert loss.location in notice.text
+    assert anchors[str(review.comment_id)] == "["
+    assert anchors[str(notice.comment_id)] == "[Formula could not be converted]"
+
+
 @pytest.mark.parametrize(
     "source,expected,captions",
     [

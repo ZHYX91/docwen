@@ -110,6 +110,8 @@ def test_inherited_outline_and_formatted_heading_text_are_supported() -> None:
         "nested_navigation",
         "malformed_marker",
         "malformed_text",
+        "malformed_comment_marker",
+        "mixed_comment_run_outside_bookmark",
         "reversed_range",
         "partial_range",
         "body_style",
@@ -182,6 +184,16 @@ def test_ambiguous_or_modified_target_keeps_plain_readable_label(damage: str) ->
         start.text = "not a bookmark child"
     elif damage == "malformed_text":
         heading._p[0].tail = "not a paragraph child"
+    elif damage == "malformed_comment_marker":
+        marker = OxmlElement("w:commentRangeStart")
+        marker.set(qn("w:id"), "0")
+        marker.text = "Unexpected text"
+        start.addnext(marker)
+    elif damage == "mixed_comment_run_outside_bookmark":
+        run = heading.add_run("Extra text")
+        reference = OxmlElement("w:commentReference")
+        reference.set(qn("w:id"), "0")
+        run._r.append(reference)
     elif damage == "reversed_range":
         heading._p.remove(end)
         heading._p.insert(1, end)

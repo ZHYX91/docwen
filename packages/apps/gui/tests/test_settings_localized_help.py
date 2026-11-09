@@ -168,9 +168,8 @@ INFO_HELP_KEYS = (
     "settings.spreadsheet.merge_mode_help",
     "settings.table_export.merge_strategy_help",
     "settings.text.numbering_comments_help",
-    "settings.text.numbering_text_help",
     "settings.text.output_format_hint",
-    "settings.text.render_mode_tooltip",
+    "settings.text.render_mode_hint",
     "settings.text.scheme_tooltip",
 )
 

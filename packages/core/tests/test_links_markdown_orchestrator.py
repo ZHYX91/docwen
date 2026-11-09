@@ -289,7 +289,9 @@ class TestProcessMarkdownLinksOrchestrator:
         """Missing embedded file produces a placeholder in orchestrator mode."""
         src = _write(tmp_path / "doc.md", "")
         text = "![[missing.md]]"
-        result = process_markdown_links(text, src, link_config=_ORCHESTRATOR_POLICY)
+        result = process_markdown_links(
+            text, src, link_config=replace(_ORCHESTRATOR_POLICY, file_not_found_mode="placeholder")
+        )
         assert "File not found" in result
 
     def test_wiki_mode_keep(self, tmp_path: Path) -> None:
@@ -653,7 +655,7 @@ class TestOrchestratorUserPath:
 
     def test_no_files_no_crash(self, tmp_path: Path) -> None:
         """When no referenced files exist on disk, the orchestrator does not
-        crash and produces placeholders (or keeps links depending on mode)."""
+        crash and retains unresolved embeds under the default keep policy."""
         src = _write(tmp_path / "doc.md", "")
         text = "![[missing_embed.md]]\n[[missing_link.md|Missing]]\n[example](https://example.com)\n"
         result = process_markdown_links(
@@ -664,8 +666,8 @@ class TestOrchestratorUserPath:
                 non_embed_wiki_mode="extract_text",
             ),
         )
-        # Embed missing → placeholder
-        assert "File not found" in result
+        assert "![[missing_embed.md]]" in result
+        assert "File not found" not in result
         # Wiki non-embed extract_text works regardless of file existence
         assert "Missing" in result
         # Markdown link kept

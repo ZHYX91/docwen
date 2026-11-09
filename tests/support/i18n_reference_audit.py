@@ -605,8 +605,10 @@ def _product_source_files(project_root: Path) -> tuple[tuple[str, ...], tuple[Pa
     return relative_roots, tuple(sorted(files))
 
 
-def _translator_aliases(tree: ast.AST, relative_path: str) -> set[str]:
-    aliases: set[str] = set()
+def _translator_aliases(tree: ast.AST, relative_path: str) -> dict[str, str]:
+    aliases = {}
+    if relative_path == "packages/core/src/docwen_core/conversion_loss.py":
+        aliases["loss_text"] = "conversion_loss."
     is_gui_source = "/apps/gui/src/" in f"/{relative_path}"
     for node in ast.walk(tree):
         if not isinstance(node, ast.ImportFrom):
@@ -618,7 +620,9 @@ def _translator_aliases(tree: ast.AST, relative_path: str) -> set[str]:
             is_gui = canonical == ("docwen_gui.i18n", "t")
             is_relative_gui = is_gui_source and node.level > 0 and canonical == ("i18n", "t")
             if is_cli or is_gui or is_relative_gui:
-                aliases.add(imported.asname or imported.name)
+                aliases[imported.asname or imported.name] = ""
+            elif canonical == ("docwen_core.conversion_loss", "loss_text"):
+                aliases[imported.asname or imported.name] = "conversion_loss."
     return aliases
 
 
@@ -691,16 +695,23 @@ def audit_locale_references(
                 continue
             if not isinstance(node.func, ast.Name) or node.func.id not in aliases:
                 continue
+            prefix = aliases[node.func.id]
+            if prefix and (
+                len(node.args) != 3 or node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args)
+            ):
+                unresolved.append(f"{relative_path}:{node.lineno}: invalid loss_text binding: {ast.unparse(node)}")
+                continue
+            positional = node.args[1:] if prefix else node.args
             key_keywords = [keyword.value for keyword in node.keywords if keyword.arg == "key"]
             default_keywords = [keyword.value for keyword in node.keywords if keyword.arg == "default"]
             binding_errors: list[str] = []
-            if len(node.args) > 2:
+            if len(positional) > 2:
                 binding_errors.append("more than two positional arguments")
-            if any(isinstance(argument, ast.Starred) for argument in node.args):
+            if any(isinstance(argument, ast.Starred) for argument in positional):
                 binding_errors.append("starred positional arguments")
-            if len(key_keywords) > 1 or (node.args and key_keywords):
+            if len(key_keywords) > 1 or (positional and key_keywords):
                 binding_errors.append("multiple values for key")
-            if len(default_keywords) > 1 or (len(node.args) > 1 and default_keywords):
+            if len(default_keywords) > 1 or (len(positional) > 1 and default_keywords):
                 binding_errors.append("multiple values for default")
             if binding_errors:
                 unresolved.append(
@@ -708,7 +719,7 @@ def audit_locale_references(
                     f"({', '.join(binding_errors)}): {ast.unparse(node)}"
                 )
                 continue
-            key_arguments = ([node.args[0]] if node.args else []) + key_keywords
+            key_arguments = ([positional[0]] if positional else []) + key_keywords
             if len(key_arguments) != 1:
                 unresolved.append(
                     f"{relative_path}:{node.lineno}: {node.func.id} call must provide "
@@ -717,14 +728,15 @@ def audit_locale_references(
                 continue
             argument = key_arguments[0]
             if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
-                if argument.value in defined:
-                    used.add(argument.value)
+                literal = prefix + argument.value
+                if literal in defined:
+                    used.add(literal)
                     continue
-                if argument.value in available:
+                if literal in available:
                     continue
-                signature = (relative_path, argument.value)
+                signature = (relative_path, literal)
                 contract = active_literal_contracts.get(signature)
-                default_arguments = ([node.args[1]] if len(node.args) > 1 else []) + default_keywords
+                default_arguments = ([positional[1]] if len(positional) > 1 else []) + default_keywords
                 default = None
                 if len(default_arguments) == 1:
                     default_argument = default_arguments[0]
@@ -733,7 +745,7 @@ def audit_locale_references(
                 if contract is not None and default == contract.default:
                     seen_literal_fallback[signature] += 1
                     continue
-                undefined_literal_keys.append(f"{relative_path}:{node.lineno}: {argument.value}")
+                undefined_literal_keys.append(f"{relative_path}:{node.lineno}: {literal}")
                 continue
             expression = ast.unparse(argument)
             signature = (relative_path, expression)

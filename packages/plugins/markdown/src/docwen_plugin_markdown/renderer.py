@@ -324,7 +324,7 @@ class MdToDocxRenderer:
         self._warnings: list[tuple[str, str]] = []
         self._loss_comments = loss_comments
         self._defer_loss_comments = defer_loss_comments
-        self._pending_losses: list[tuple[ConversionLoss, Any]] = []
+        self._pending_losses: list[tuple[ConversionLoss, tuple[Any, ...]]] = []
         self._loss_messages = loss_messages
         self.losses = LossCollector()
         self.loss_comments_added = 0
@@ -372,9 +372,9 @@ class MdToDocxRenderer:
         if not self.losses.add(loss):
             return
         if self._defer_loss_comments:
-            self._pending_losses.append((loss, run))
+            self._pending_losses.append((loss, (run,)))
             return
-        self._annotate_loss(loss, run)
+        self._annotate_loss(loss, (run,))
 
     def finalize_loss_comments(self) -> None:
         """Resolve coordinates after template relocation, then annotate once."""
@@ -383,24 +383,25 @@ class MdToDocxRenderer:
         replacements: dict[ConversionLoss, ConversionLoss] = {}
         pending = self._pending_losses
         self._pending_losses = []
-        for loss, run in pending:
+        for loss, runs in pending:
             finalized = loss
             if loss.code == "CONVERSION-LOSS-FORMULA":
+                run = runs[0]
                 finalized = replace(loss, output_location=formula_loss_location(run._parent, run, self._loss_messages))
             replacements[loss] = finalized
-            self._annotate_loss(finalized, run)
+            self._annotate_loss(finalized, runs)
         finalized_losses = LossCollector()
         for loss in self.losses.records:
             finalized_losses.add(replacements.get(loss, loss))
         self.losses = finalized_losses
 
-    def _annotate_loss(self, loss: ConversionLoss, run: Any) -> None:
+    def _annotate_loss(self, loss: ConversionLoss, runs: tuple[Any, ...]) -> None:
         if not self._loss_comments:
             return
         try:
-            append_docx_comment(self._doc, [run], text=loss.message(self._loss_messages))
-        except Exception:
-            logger.warning("Could not annotate conversion loss at %s", loss.output_location, exc_info=True)
+            append_docx_comment(self._doc, runs, text=loss.message(self._loss_messages))
+        except Exception as exc:
+            logger.warning("Could not annotate conversion loss (%s)", type(exc).__name__)
             self._warnings.append(
                 (
                     "CONVERSION-LOSS-COMMENT-FAILED",
@@ -408,9 +409,7 @@ class MdToDocxRenderer:
                         self._loss_messages,
                         "comment_failed",
                         "The loss comment could not be added; check the conversion details.",
-                    )
-                    + " "
-                    + loss.output_location,
+                    ),
                 )
             )
         else:
@@ -696,6 +695,7 @@ class MdToDocxRenderer:
             children = [dict(child) for child in children]
             children[0]["raw"] = children[0]["raw"][len(number) :]
 
+        heading_loss_start = len(self._pending_losses)
         hmode = self._heading_formatting_mode
         if hmode == "remove":
             render_inlines(
@@ -739,7 +739,13 @@ class MdToDocxRenderer:
             )
 
         if node.get("_docwen_native_number_review"):
-            add_native_numbering_review(self._doc, heading)
+            span = add_native_numbering_review(self._doc, heading)
+            if span is not None:
+                first, _last = span
+                for index in range(heading_loss_start, len(self._pending_losses)):
+                    loss, runs = self._pending_losses[index]
+                    if runs[0]._r is first._r:
+                        self._pending_losses[index] = (loss, span)
 
         # ── Heading merge: append body runs to this heading paragraph ──
         if next_node and next_node.get("_merged_into_heading"):

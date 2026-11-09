@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from docwen_core.models.result import ConversionDiagnostic
 
@@ -37,12 +37,15 @@ class ConversionLoss:
             .strip()
         )
 
-    def to_diagnostic(self, messages: Mapping[str, str] | None = None) -> ConversionDiagnostic:
+    def to_diagnostic(
+        self, messages: Mapping[str, str] | None = None, *, include_source_content: bool = True
+    ) -> ConversionDiagnostic:
+        loss = self if include_source_content else replace(self, original="", source_location="", output_location="")
         return ConversionDiagnostic(
             level="warning",
             code=self.code,
-            message=self.message(messages),
-            location=self.output_location or self.source_location,
+            message=loss.message(messages),
+            location=loss.output_location or loss.source_location,
         )
 
 
@@ -72,13 +75,16 @@ class LossCollector:
         count = len(self._records)
         if not count:
             return None
-        annotated = annotated_count == count
-        key = "summary_annotated" if annotated else "summary"
-        fallback = "Conversion completed with {count} items not fully preserved."
-        if annotated:
-            fallback += " Comments were added."
+        if annotated_count == count:
+            message = loss_text(
+                messages,
+                "summary_annotated",
+                "Conversion completed with {count} items not fully preserved. Comments were added.",
+            )
+        else:
+            message = loss_text(messages, "summary", "Conversion completed with {count} items not fully preserved.")
         return ConversionDiagnostic(
             level="warning",
             code="CONVERSION-LOSS-SUMMARY",
-            message=loss_text(messages, key, fallback).format(count=count),
+            message=message.format(count=count),
         )

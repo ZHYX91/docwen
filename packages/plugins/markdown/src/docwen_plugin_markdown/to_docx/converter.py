@@ -59,6 +59,7 @@ from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges, spli
 from docwen_plugin_markdown.common_utils import (
     add_md_numbering,
     conversion_error_text,
+    has_synthetic_source,
     link_source_path,
     read_input_markdown,
     remove_md_numbering,
@@ -445,6 +446,7 @@ def _success_diagnostics(
     style_conflicts: Iterable[ManagedStyleConflict],
     renderer: MdToDocxRenderer | None,
     messages: Mapping[str, str],
+    include_source_content: bool,
     missing_embedded_sources: bool,
     unanchored_number_comments: int,
     approximate_warning: str | None,
@@ -478,7 +480,7 @@ def _success_diagnostics(
         )
         for item in style_conflicts
     ]
-    _append_renderer_diagnostics(diagnostics, renderer, messages)
+    _append_renderer_diagnostics(diagnostics, renderer, messages, include_source_content=include_source_content)
     if missing_embedded_sources:
         diagnostics.append(
             ConversionDiagnostic(
@@ -532,6 +534,8 @@ def _append_renderer_diagnostics(
     diagnostics: list[ConversionDiagnostic],
     renderer: MdToDocxRenderer | None,
     messages: Mapping[str, str],
+    *,
+    include_source_content: bool,
 ) -> None:
     """Compose loss notices outside the conversion transaction's control flow."""
     if renderer is None:
@@ -539,7 +543,9 @@ def _append_renderer_diagnostics(
     diagnostics[0:0] = [
         ConversionDiagnostic(level="warning", message=message, code=code) for code, message in renderer.warnings
     ]
-    diagnostics[0:0] = [loss.to_diagnostic(messages) for loss in renderer.losses.records]
+    diagnostics[0:0] = [
+        loss.to_diagnostic(messages, include_source_content=include_source_content) for loss in renderer.losses.records
+    ]
     summary = renderer.losses.summary(messages, annotated_count=renderer.loss_comments_added)
     if summary is not None:
         diagnostics.append(summary)
@@ -1456,6 +1462,7 @@ class MdToDocxConverter:
                 style_conflicts=managed_styles.conflicts,
                 renderer=renderer,
                 messages=getattr(context, "loss_messages", {}),
+                include_source_content=not has_synthetic_source(context.request),
                 missing_embedded_sources=bool(missing_embedded_sources),
                 unanchored_number_comments=unanchored_number_comments,
                 approximate_warning=approximate_warning,

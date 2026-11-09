@@ -27,6 +27,7 @@ from docwen_core.models.result import (
 )
 from docwen_plugin_markdown.common_utils import (
     conversion_error_text,
+    has_synthetic_source,
     link_source_path,
     parse_md_tables,
     parse_raw_md_tables,
@@ -126,6 +127,7 @@ class MdToXlsxConverter:
         losses = SpreadsheetLosses(
             comments=bool(context.config.get("conversion.loss_comments", True)),
             messages=getattr(context, "loss_messages", {}),
+            include_source_content=not has_synthetic_source(context.request),
         )
 
         try:
@@ -380,7 +382,11 @@ class MdToCsvConverter:
         logger = context.logger
         progress = context.progress
         workspace = context.workspace
-        losses = SpreadsheetLosses(comments=False, messages=getattr(context, "loss_messages", {}))
+        losses = SpreadsheetLosses(
+            comments=False,
+            messages=getattr(context, "loss_messages", {}),
+            include_source_content=not has_synthetic_source(context.request),
+        )
 
         try:
             cancellable.check()

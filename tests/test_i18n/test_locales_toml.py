@@ -196,6 +196,7 @@ def test_arabic_locale_has_no_copied_english_ui_prose() -> None:
         "conversion_panel.layout.page_range_placeholder",
         "placeholders.title",
         "placeholders.body",
+        "conversion_loss.comment",  # Assembles separately localized text with no literal prose.
         "yaml_keys.title",
         "yaml_keys.subtitle",
     }

@@ -12,9 +12,12 @@ from docwen_plugin_markdown.mistune_extensions import create_extended_markdown
 
 
 class SpreadsheetLosses:
-    def __init__(self, *, comments: bool, messages: dict[str, str] | None = None) -> None:
+    def __init__(
+        self, *, comments: bool, messages: dict[str, str] | None = None, include_source_content: bool = True
+    ) -> None:
         self.comments = comments
         self.messages = messages or {}
+        self.include_source_content = include_source_content
         self.collector = LossCollector()
         self.annotated_count = 0
         self.annotation_failures: list[ConversionDiagnostic] = []
@@ -24,7 +27,10 @@ class SpreadsheetLosses:
     @property
     def diagnostics(self):
         details = (
-            *tuple(loss.to_diagnostic(self.messages) for loss in self.collector.records),
+            *(
+                loss.to_diagnostic(self.messages, include_source_content=self.include_source_content)
+                for loss in self.collector.records
+            ),
             *self.annotation_failures,
         )
         summary = self.collector.summary(self.messages, annotated_count=self.annotated_count)
@@ -68,7 +74,7 @@ class SpreadsheetLosses:
                         "The conversion loss remains available in conversion details.",
                     ),
                     output_location=loss.output_location,
-                ).to_diagnostic(self.messages)
+                ).to_diagnostic(self.messages, include_source_content=self.include_source_content)
             )
 
     def protected(self, cell: Any, original: str) -> None:

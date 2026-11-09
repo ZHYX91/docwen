@@ -35,14 +35,12 @@ if TYPE_CHECKING:
 
 def _localized_progress_stage(message: str) -> str:
     """Render only declared progress states, never internal paths or plugin IDs."""
-    stages = {
-        "Preparing output folder": ("info_area.phase_checking_output", "Checking save folder…"),
-        "Preparing temporary workspace": ("info_area.phase_preparing_workspace", "Preparing temporary workspace…"),
-        "Finalizing output": ("info_area.phase_saving", "Saving the result…"),
-    }
-    if message in stages:
-        key, default = stages[message]
-        return _t(key, default)
+    if message == "Preparing output folder":
+        return _t("info_area.phase_checking_output", "Checking save folder…")
+    if message == "Preparing temporary workspace":
+        return _t("info_area.phase_preparing_workspace", "Preparing temporary workspace…")
+    if message == "Finalizing output":
+        return _t("info_area.phase_saving", "Saving the result…")
     if message:
         return _t("info_area.phase_converting", "Converting document…")
     return ""

@@ -144,12 +144,13 @@ def annotate_native_numbering(nodes: list[dict[str, Any]], supported_levels: set
             annotate_native_numbering(node.get("children", []), supported_levels)
 
 
-def add_native_numbering_review(document: Any, paragraph: Any) -> bool:
+def add_native_numbering_review(document: Any, paragraph: Any) -> tuple[Run, Run] | None:
     """Anchor native-number reviews to the first visible title character.
 
     Word-generated labels are not runs. Split only the selected text node,
     retaining hyperlinks, run formatting and other run children unchanged.
     Call before merging body text so an empty heading cannot borrow its anchor.
+    Return the bounds of the split run so other annotations can retain its span.
     """
     for text in paragraph._p.iter(qn("w:t")):
         value = text.text or ""
@@ -186,8 +187,8 @@ def add_native_numbering_review(document: Any, paragraph: Any) -> bool:
         run.addnext(anchor)
         anchor.addnext(suffix)
         add_numbering_review(document, Run(anchor, paragraph))
-        return True
-    return False
+        return Run(run, paragraph), Run(suffix, paragraph)
+    return None
 
 
 def _run_is_hidden(run: Any, paragraph: Any) -> bool:

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from docx import Document
 
 from docwen_application.controller import ApplicationController
 from docwen_core.detection import inspect_utf8_markdown_snapshot
@@ -66,6 +67,9 @@ def test_real_clipboard_failures_do_not_log_authored_content(
         else:
             assert result.success, result.error
             assert "LaTeX to MathML failed" in caplog.text
+            [output] = result.artifacts
+            assert any(sentinel in comment.text for comment in Document(output.staging_path).comments)
+            assert any(item.code == "CONVERSION-LOSS-FORMULA" for item in result.diagnostics)
         assert loggers, "The actual Runtime logger must be observed"
         assert sentinel not in caplog.text
         assert sentinel not in repr([logger.messages for logger in loggers])

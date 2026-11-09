@@ -155,8 +155,8 @@ class TestDocxToMdGolden:
             assert project["success"] is True
             assert project["markdown_contains_all_expected_semantics"] is True
 
-    def test_old_system_comprehensive_docx_preserves_rules_and_formula_block(self, pipeline, tmp_path) -> None:
-        """The checked-in old DOCX artifact keeps its Word rules and display math."""
+    def test_old_system_comprehensive_docx_preserves_rules_and_standalone_inline_math(self, pipeline, tmp_path) -> None:
+        """The old fixture stores the standalone equation as m:oMath, without m:oMathPara."""
         _plugin, task_mgr, _ws_mgr = pipeline
         output_dir = tmp_path / "old_system_comprehensive"
         output_dir.mkdir()
@@ -173,8 +173,8 @@ class TestDocxToMdGolden:
         assert any(item.code == "FINALIZER_DONE" for item in result.diagnostics)
         content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
         assert content.splitlines().count("___") == 3
-        assert "$$a^{2}+b^{2}=c^{2}$$" in content
-        assert "$a^{2}+b^{2}=c^{2}$" not in content.splitlines()
+        assert "$a^{2}+b^{2}=c^{2}$" in content.splitlines()
+        assert "$$a^{2}+b^{2}=c^{2}$$" not in content
 
     def test_body_text_outline_sentinel_stays_body_through_finalizer(self, pipeline, tmp_path) -> None:
         """Word outlineLvl=9 must not turn every Normal paragraph into an H6."""

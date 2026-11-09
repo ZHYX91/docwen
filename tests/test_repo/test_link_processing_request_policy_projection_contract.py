@@ -26,7 +26,7 @@ def _calls(tree: ast.AST, name: str) -> list[ast.Call]:
     ]
 
 
-def test_link_runtime_is_a_twelve_field_request_snapshot_without_global_fallback() -> None:
+def test_link_runtime_is_a_complete_request_snapshot_without_global_fallback() -> None:
     from docwen_core.export_semantics import LinkRuntimeConfig
 
     assert tuple(field.name for field in fields(LinkRuntimeConfig)) == (
@@ -42,6 +42,8 @@ def test_link_runtime_is_a_twelve_field_request_snapshot_without_global_fallback
         "circular_reference_mode",
         "max_depth_reached_mode",
         "auto_link_bare_url",
+        "wiki_hyperlink_fallback",
+        "markdown_hyperlink_fallback",
     )
     assert LinkRuntimeConfig().auto_link_bare_url is False
 

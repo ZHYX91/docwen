@@ -78,6 +78,39 @@ def test_embedded_provenance_guard_preserves_original_root_anchor_recovery(tmp_p
     assert child.read_bytes() == child_bytes
 
 
+def test_ordinary_navigation_survives_native_numbering_review(tmp_path: Path) -> None:
+    from docwen_bundle.runtime_factory import create_runtime_port
+    from docwen_runtime.config import ConfigLoader
+
+    config = ConfigLoader(user_dir=tmp_path / "configs")
+    assert config.set_value("template_fill.gongwen_numbering_comments", True)
+    runtime = create_runtime_port(config_loader=config)
+    source = tmp_path / "reviewed.md"
+    original = b"[Jump](#intro)\n\n# Intro\n"
+    source.write_bytes(original)
+    output = md_to_docx(
+        runtime,
+        source,
+        tmp_path / "forward",
+        options={"add_numbering": True, "heading_numbering_render_mode": "word_native"},
+    )
+    document = Document(str(output))
+    [link] = [node for node in document.element.iter(qn("w:hyperlink")) if node.get(qn("w:anchor"))]
+    assert link.get(qn("w:anchor")).startswith("DWNav_")
+    heading = next(paragraph for paragraph in document.paragraphs if paragraph.text == "Intro")
+    assert list(heading._p.iter(qn("w:commentRangeStart")))
+    assert len(document.comments) == 1
+
+    recovered = docx_to_md(
+        runtime,
+        output,
+        tmp_path / "reverse",
+        options={"to_md_keep_images": False, "to_md_enable_ocr": False},
+    )
+    assert "[Jump](#intro)" in recovered
+    assert source.read_bytes() == original
+
+
 @pytest.mark.parametrize("tamper", ["hint", "anchor", "duplicate_heading"])
 def test_untrusted_navigation_changes_import_as_plain_text(tmp_path: Path, round_trip_runtime, tamper: str) -> None:
     source = tmp_path / "navigation.md"

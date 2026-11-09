@@ -14,9 +14,30 @@ from urllib.parse import quote, unquote
 from docx.oxml.ns import qn
 
 from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_bookmark_name
+from docwen_core.docx_xml import parse_word_xml_int
 
 _NAVIGATION_NAME = re.compile(r"DWNav_[0-9a-f]{32}")
 _IGNORABLE = frozenset(qn(tag) for tag in ("w:pPr", "w:bookmarkStart", "w:bookmarkEnd", "w:proofErr"))
+_COMMENT_RANGES = frozenset(qn(tag) for tag in ("w:commentRangeStart", "w:commentRangeEnd"))
+_COMMENT_REFERENCE = qn("w:commentReference")
+
+
+def _empty_comment_marker(element: Any) -> bool:
+    return (
+        set(element.attrib) == {qn("w:id")}
+        and parse_word_xml_int(element.get(qn("w:id"))) is not None
+        and not len(element)
+        and not element.text
+    )
+
+
+def _comment_reference_run(element: Any) -> bool:
+    if element.tag != qn("w:r") or any(text.strip() for text in element.xpath("text()")):
+        return False
+    children = list(element)
+    if children and children[0].tag == qn("w:rPr"):
+        children = children[1:]
+    return len(children) == 1 and children[0].tag == _COMMENT_REFERENCE and _empty_comment_marker(children[0])
 
 
 def _heading_level(element: Any, styles: dict[str, list[Any]]) -> int | None:
@@ -55,6 +76,10 @@ def _heading_text(element: Any) -> str | None:
     parts: list[str] = []
     for child in element:
         if child.tag in _IGNORABLE or child.tag == qn("w:rPr"):
+            continue
+        if child.tag in _COMMENT_RANGES or (child.tag == _COMMENT_REFERENCE and element.tag == qn("w:r")):
+            if not _empty_comment_marker(child):
+                return None
             continue
         if child.tag == qn("w:r"):
             properties = child.find(qn("w:rPr"))
@@ -117,7 +142,12 @@ def _style_may_hide_text(style_id: str, styles: dict[str, list[Any]]) -> bool:
 def _heading_may_hide_text(element: Any, styles: dict[str, list[Any]]) -> bool:
     # Hidden style inheritance is not private recovery evidence. Reject any
     # uncertain visibility rather than matching text that Word may not show.
-    references = list(element.iter(qn("w:pStyle"))) + list(element.iter(qn("w:rStyle")))
+    run_properties = [
+        properties for properties in element.iter(qn("w:rPr")) if not _comment_reference_run(properties.getparent())
+    ]
+    references = list(element.iter(qn("w:pStyle"))) + [
+        style for properties in run_properties for style in properties.iter(qn("w:rStyle"))
+    ]
     if any(_style_may_hide_text(item.get(qn("w:val"), ""), styles) for item in references):
         return True
     if not element.findall(f"{qn('w:pPr')}/{qn('w:pStyle')}"):
@@ -129,7 +159,7 @@ def _heading_may_hide_text(element: Any, styles: dict[str, list[Any]]) -> bool:
                     and _style_may_hide_text(style.get(qn("w:styleId"), ""), styles)
                 ):
                     return True
-    return any(_properties_hide_text(properties) for properties in element.iter(qn("w:rPr")))
+    return any(_properties_hide_text(properties) for properties in run_properties)
 
 
 def _matches_heading(title: str, fragment: str) -> bool:
@@ -184,7 +214,12 @@ def resolve_ordinary_heading_target(paragraph: Any, hyperlink: Any) -> str | Non
         # A moved or partial range cannot stand in for a whole heading.
         children = list(target)
         first, last = children.index(start), children.index(end)
-        if any(child.tag not in _IGNORABLE for child in children[:first] + children[last + 1 :]):
+        if any(
+            child.tag not in _IGNORABLE
+            and not (child.tag in _COMMENT_RANGES and _empty_comment_marker(child))
+            and not _comment_reference_run(child)
+            for child in children[:first] + children[last + 1 :]
+        ):
             return None
         # Only the main story may supply targets, never textboxes or deleted text.
         owner = target.getparent()

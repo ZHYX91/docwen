@@ -62,9 +62,14 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
     assert "document.export_numbering_markers" in document_plan.dotted_keys
     assert "document.to_md_image_extraction_mode" not in document_plan.dotted_keys
     assert "document.to_md_ocr_placement_mode" not in document_plan.dotted_keys
+    assert "conversion.loss_comments" in reset_plan_for_group("general").dotted_keys
+    assert {
+        "link.non_embed_links.wiki_hyperlink_fallback",
+        "link.non_embed_links.markdown_hyperlink_fallback",
+    } <= set(reset_plan_for_group("link").dotted_keys)
 
     precise_counts = {
-        "general": 7,
+        "general": 8,
         "text": 17,
         "proofread": 6,
         "formatting": 15,
@@ -75,7 +80,7 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "image": 7,
         "gongwen": 2,
         "invoice": 0,
-        "link": 8,
+        "link": 10,
         "other": 2,
         "output": 6,
         "logging": 10,

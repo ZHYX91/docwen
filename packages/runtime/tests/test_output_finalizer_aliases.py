@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from tests.support.subprocess_runner import run_subprocess
 
+from docwen_core import file_io
+
 from ._output_finalizer_support import (
     ARTIFACT_KIND_PRIMARY,
     ArtifactManifest,
@@ -29,6 +31,56 @@ def _directory_alias(link: Path, target: Path) -> None:
 
 
 class TestOutputFinalizerAliases:
+    def test_overwrite_retry_refuses_directory_retargeted_outside_output(
+        self, finalizer: OutputFinalizer, tmp_path: Path, monkeypatch
+    ) -> None:
+        output = tmp_path / "output"
+        subdirectory = output / "subdirectory"
+        subdirectory.mkdir(parents=True)
+        destination = subdirectory / "report.docx"
+        destination.write_bytes(b"existing output")
+        outside = tmp_path / "outside"
+        staged = tmp_path / "staged.docx"
+        staged.write_bytes(b"converted bytes")
+        artifact = ArtifactManifest(
+            artifact_id="primary",
+            kind=ARTIFACT_KIND_PRIMARY,
+            staging_path=str(staged),
+            suggested_name=str(Path("subdirectory") / destination.name),
+            is_primary=True,
+        )
+
+        class SharingViolation(PermissionError):
+            winerror = 32
+
+        original_replace = file_io.os.replace
+        attempts: list[str] = []
+
+        def replace_then_retarget(source, target):
+            if Path(target).name != destination.name:
+                return original_replace(source, target)
+            attempts.append(Path(source).name)
+            if len(attempts) == 1:
+                subdirectory.rename(outside)
+                _directory_alias(subdirectory, outside)
+                raise SharingViolation("transient sharing violation")
+            return original_replace(source, target)
+
+        monkeypatch.setattr(file_io, "_is_windows", lambda: True)
+        monkeypatch.setattr(file_io.os, "replace", replace_then_retarget)
+        result = finalizer.finalize(
+            task_id="retarget-during-retry",
+            artifacts=[artifact],
+            policy=OutputPolicy(output_dir=str(output), overwrite_mode="overwrite"),
+        )
+
+        assert not result.success
+        assert result.artifacts == []
+        [prepared_name] = attempts
+        assert (outside / destination.name).read_bytes() == b"existing output"
+        assert (outside / prepared_name).read_bytes() == b"converted bytes"
+        assert {item.code for item in result.diagnostics} >= {"FINALIZER_PLACE_ERROR", "FINALIZER_CLEANUP_FAILED"}
+
     @pytest.mark.parametrize("alias_input", [False, True])
     def test_implicit_output_refuses_directory_alias_of_input(
         self,

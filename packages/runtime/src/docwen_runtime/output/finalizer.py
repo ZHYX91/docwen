@@ -309,6 +309,7 @@ class OutputFinalizer:
         """Finalize one artifact batch while all concrete parent locks are held."""
         self._check_cancellation(cancellation)
         filesystem_path(output_dir, force_extended=sys.platform == "win32").mkdir(parents=True, exist_ok=True)
+        containment_root = self._lock_key(output_dir)
 
         diagnostics: list[ConversionDiagnostic] = []
         final_artifacts: list[ArtifactManifest] = []
@@ -357,7 +358,7 @@ class OutputFinalizer:
             self._check_cancellation(cancellation)
             for index, item in enumerate(prepared):
                 try:
-                    final_artifact, written_bytes = self._commit_prepared(item, output_dir, policy.overwrite_mode)
+                    final_artifact, written_bytes = self._commit_prepared(item, containment_root, policy.overwrite_mode)
                     final_artifacts.append(final_artifact)
                     total_output_bytes += written_bytes
                 except CancellationRequested:
@@ -391,10 +392,11 @@ class OutputFinalizer:
             for item in prepared:
                 if item.temp_path:
                     try:
+                        self._ensure_contained(containment_root, item.temp_path)
                         self._io_path(item.temp_path).unlink()
                     except FileNotFoundError:
                         pass
-                    except OSError as exc:
+                    except (OSError, ValueError) as exc:
                         diagnostics.append(
                             ConversionDiagnostic(
                                 level="warning",
@@ -1006,7 +1008,8 @@ class OutputFinalizer:
             size_bytes, sha256 = cls._file_integrity(item.destination, None)
             item.artifact = replace(item.artifact, size_bytes=size_bytes, sha256=sha256)
             return cls._placed_manifest(item, item.destination, skipped=True), 0
-        if item.temp_path is None:
+        temp_path = item.temp_path
+        if temp_path is None:
             raise RuntimeError("Prepared artifact has no commit source")
 
         destination = item.destination
@@ -1015,9 +1018,11 @@ class OutputFinalizer:
             def check_before_replace() -> None:
                 cls._check_cancellation(item.cancellation)
                 cls._check_prepared_destination(item, destination)
+                cls._ensure_contained(output_dir, temp_path)
+                cls._ensure_contained(output_dir, destination)
 
             replace_authorized_file(
-                cls._io_path(item.temp_path),
+                cls._io_path(temp_path),
                 cls._io_path(destination),
                 before_attempt=check_before_replace,
             )
@@ -1028,7 +1033,7 @@ class OutputFinalizer:
                     cls._check_cancellation(item.cancellation)
                 try:
                     cls._check_prepared_destination(item, destination)
-                    cls._publish_no_clobber(item.temp_path, destination)
+                    cls._publish_no_clobber(temp_path, destination)
                     break
                 except FileExistsError:
                     if overwrite_mode != "rename":
@@ -1040,7 +1045,7 @@ class OutputFinalizer:
                         cancellation=item.cancellation,
                     )
                     cls._ensure_contained(output_dir, destination)
-        if not cls._io_path(item.temp_path).exists():
+        if not cls._io_path(temp_path).exists():
             item.temp_path = None
         return cls._placed_manifest(item, destination), item.artifact.size_bytes or 0
 
