@@ -11,6 +11,8 @@ template_name = "Modèle Général Français"
 # 通用文本
 # =============================================================================
 [main_window]
+runtime_folder_unavailable = "Impossible de créer le dossier de travail temporaire. Vérifiez les autorisations ou le logiciel de sécurité, puis réessayez."
+output_folder_unavailable = "Impossible d’utiliser le dossier de destination en toute sécurité. Vérifiez les autorisations ou choisissez un autre dossier."
 numbering_comments_unanchored = "Certains numéros ajoutés ne peuvent pas être isolés comme texte avec ce schéma. Leurs commentaires ont été ignorés ; les titres sont conservés."
 conversion_failed_detail = "Échec de la conversion."
 note_syntax_invalid = "La syntaxe des notes est incorrecte. Vérifiez les références et les définitions."
@@ -94,6 +96,11 @@ save_failed = "Échec de l'enregistrement des paramètres"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Enregistrement du résultat…"
+phase_checking_output = "Vérification du dossier de destination…"
+phase_preparing_workspace = "Préparation du dossier de travail temporaire…"
+phase_converting = "Conversion du fichier…"
+phase_cancelling_hint = "Annulation demandée. Fin de l’étape en cours en toute sécurité…"
 output_each_source = "Enregistrer chaque résultat à côté de son fichier source"
 output_date_subfolder = "Enregistrer dans un sous-dossier daté"
 task_warning_count = "{count} avis de conversion. Développez l’historique pour les consulter."
@@ -137,6 +144,7 @@ example = "Exemple"
 # CLI帮助文本
 [cli.help]
 lang = "Choisit la langue des messages traduits de la CLI et des résultats des tâches compatibles. Ne traduit pas le texte du document. En mode auto, l’OCR utilise aussi ce choix pour sélectionner le modèle de reconnaissance."
+doctor_output_dir = "Vérifier si le dossier de sortie permet un enregistrement sûr"
 settings = "Gestion des paramètres"
 settings_reset = "Rétablir les paramètres par défaut"
 files = "Chemin du fichier d'entrée (prend en charge les caractères génériques, ex: *.docx)"

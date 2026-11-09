@@ -15,6 +15,8 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+runtime_folder_unavailable = "No se pudo crear la carpeta temporal de trabajo. Compruebe los permisos o el software de seguridad e inténtelo de nuevo."
+output_folder_unavailable = "No se puede usar con seguridad la carpeta de destino. Compruebe los permisos o elija otra carpeta."
 numbering_comments_unanchored = "Algunos números añadidos no se pueden aislar como texto con este esquema. Se omitieron sus comentarios y se conservaron los títulos."
 conversion_failed_detail = "Error de conversión."
 note_syntax_invalid = "La sintaxis de las notas no es válida. Revise las referencias y definiciones."
@@ -98,6 +100,11 @@ save_failed = "Error al guardar la configuración"
 # 状态栏
 # =============================================================================
 [info_area]
+phase_saving = "Guardando el resultado…"
+phase_checking_output = "Comprobando la carpeta de destino…"
+phase_preparing_workspace = "Preparando la carpeta temporal…"
+phase_converting = "Convirtiendo el archivo…"
+phase_cancelling_hint = "Cancelación solicitada. Terminando de forma segura el paso actual…"
 output_each_source = "Guardar cada resultado junto a su archivo de origen"
 output_date_subfolder = "Guardar en una subcarpeta con fecha"
 task_warning_count = "{count} avisos de conversión. Despliegue el historial de actividad para ver los detalles."
@@ -141,6 +148,7 @@ example = "Ejemplo"
 # CLI帮助文本
 [cli.help]
 lang = "Elige el idioma de los mensajes traducidos de la CLI y de la salida de las tareas compatibles. No traduce el texto del documento. El OCR en modo auto también usa esta elección para seleccionar el modelo de reconocimiento."
+doctor_output_dir = "Comprobar si la carpeta de salida permite guardar de forma segura"
 settings = "Gestionar la configuración"
 settings_reset = "Restablecer la configuración predeterminada"
 files = "Ruta(s) de archivo de entrada (admite comodines como *.docx)"
