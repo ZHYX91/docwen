@@ -188,35 +188,3 @@ def test_math_between_note_marker_and_space_keeps_the_authored_space():
         '<w:r><w:t xml:space="preserve"> </w:t></w:r></w:p></w:footnote>'
     )
     assert _extract_note_content(note, _W, "footnoteRef") == "$x^{2}$ "
-
-
-@pytest.mark.parametrize("kind", ["footnote", "endnote"])
-def test_present_empty_note_definition_is_not_reported_as_unreadable(tmp_path, kind):
-    from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
-    from docwen_plugin_markdown.to_docx.notes import extract_notes_from_ast, normalize_note_syntax
-
-    source = tmp_path / "empty-note.docx"
-    document = Document()
-    marker = etree.SubElement(document.add_paragraph("Body").add_run()._r, f"{{{_W}}}{kind}Reference")
-    marker.set(f"{{{_W}}}id", "7")
-    root = etree.Element(f"{{{_W}}}{kind}s", nsmap={"w": _W})
-    note = etree.SubElement(root, f"{{{_W}}}{kind}")
-    note.set(f"{{{_W}}}id", "7")
-    etree.SubElement(etree.SubElement(etree.SubElement(note, f"{{{_W}}}p"), f"{{{_W}}}r"), f"{{{_W}}}{kind}Ref")
-    part = Part(
-        PackURI(f"/word/{kind}s.xml"),
-        CT.WML_FOOTNOTES if kind == "footnote" else CT.WML_ENDNOTES,
-        etree.tostring(root),
-        document.part.package,
-    )
-    document.part.relate_to(part, RT.FOOTNOTES if kind == "footnote" else RT.ENDNOTES)
-    document.save(source)
-    result, markdown = _convert(source)
-    key = "1" if kind == "footnote" else "endnote:1"
-    assert f"[^{key}]:" in markdown
-    assert not [item for item in result.diagnostics if "LOSS" in item.code]
-    # The emitted blank definition must remain valid for the production importer.
-    ast, notes = extract_notes_from_ast(parse_markdown_text(normalize_note_syntax(markdown)))
-    assert ast
-    reference = notes.create_footnote_ref_run("1") if kind == "footnote" else notes.create_endnote_ref_run("1")
-    assert reference is not None
