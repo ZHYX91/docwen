@@ -25,7 +25,8 @@ def _latex_to_omml(latex: str) -> Any:
     mathml = latex_to_mathml(latex)
     if not mathml:
         raise ValueError("LaTeX could not be parsed as MathML")
-    omml = mathml_to_omml(mathml)
+    # Conversion exceptions can contain the authored formula, including clipboard input.
+    omml = mathml_to_omml(mathml, log_source_details=False)
     if not omml:
         raise ValueError("MathML contains an unsupported or invalid mathematical structure")
     return etree.fromstring(omml.encode("utf-8"))

@@ -18,7 +18,7 @@ from docwen_runtime._execution_context import _RuntimePluginLogger
 pytestmark = [pytest.mark.integration, pytest.mark.pr_gate, pytest.mark.release_gate]
 
 
-@pytest.mark.parametrize("failure", ["malformed-url", "invalid-formula"])
+@pytest.mark.parametrize("failure", ["malformed-url", "invalid-formula", "unknown-formula-command"])
 def test_real_clipboard_failures_do_not_log_authored_content(
     tmp_path: Path,
     round_trip_runtime: Any,
@@ -26,12 +26,12 @@ def test_real_clipboard_failures_do_not_log_authored_content(
     caplog: pytest.LogCaptureFixture,
     failure: str,
 ) -> None:
-    sentinel = "CLIPBOARD_SENTINEL_9f6d"
-    text = (
-        f"# Invalid link\n\n![x](https://[{sentinel}]/private.png)\n"
-        if failure == "malformed-url"
-        else "# Invalid formula\n\n$\\begin{" + sentinel + "}$\n"
-    )
+    sentinel = "ClipboardSentinelAbc" if failure == "unknown-formula-command" else "CLIPBOARD_SENTINEL_9f6d"
+    text = {
+        "malformed-url": f"# Invalid link\n\n![x](https://[{sentinel}]/private.png)\n",
+        "invalid-formula": f"# Invalid formula\n\n$\\begin{{{sentinel}}}$\n",
+        "unknown-formula-command": f"# Unknown formula command\n\n$\\{sentinel}$\n",
+    }[failure]
     loggers: list[_RuntimePluginLogger] = []
     original_init = _RuntimePluginLogger.__init__
 
@@ -66,7 +66,8 @@ def test_real_clipboard_failures_do_not_log_authored_content(
             assert any(item["level"] == "error" for logger in loggers for item in logger.messages)
         else:
             assert result.success, result.error
-            assert "LaTeX to MathML failed" in caplog.text
+            stage = "LaTeX to MathML" if failure == "invalid-formula" else "MathML to OMML"
+            assert f"{stage} failed" in caplog.text
             [output] = result.artifacts
             assert any(sentinel in comment.text for comment in Document(output.staging_path).comments)
             assert any(item.code == "CONVERSION-LOSS-FORMULA" for item in result.diagnostics)

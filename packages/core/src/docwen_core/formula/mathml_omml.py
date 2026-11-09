@@ -271,8 +271,8 @@ def _process_children_to_omml(children: list, parent) -> None:
         index += 1
 
 
-def mathml_to_omml(mathml_str: str) -> str | None:
-    """Convert a supported complete expression; refuse partial conversion."""
+def mathml_to_omml(mathml_str: str, *, log_source_details: bool = True) -> str | None:
+    """Convert a complete expression, with optional source details in failure logs."""
     try:
         tree = etree.fromstring(mathml_str.encode("utf-8"))
         # Inspect every node before operator/delimiter optimizations skip it.
@@ -292,5 +292,6 @@ def mathml_to_omml(mathml_str: str) -> str | None:
             raise ValueError("empty MathML expression")
         return etree.tostring(native, encoding="unicode")
     except Exception as exc:
-        logger.error("MathML to OMML failed: %s", exc)
+        detail = str(exc) if log_source_details else type(exc).__name__
+        logger.error("MathML to OMML failed: %s", detail)
         return None
