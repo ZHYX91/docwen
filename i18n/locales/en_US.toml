@@ -687,7 +687,7 @@ md_body_format_tooltip = "Apply format: convert **Bold** to actual bold formatti
 md_heading_format_label = "Heading format markup handling:"
 md_heading_format_tooltip = "Apply format: override the heading style where source markup requests it.\nKeep markup: display source markers literally.\nClean markup: remove Markdown markers and let the DOCX heading style apply naturally.\nNote: when the heading style is already bold, Apply format can still preserve local formatting differences."
 md_table_header_format_label = "Table header format markup handling:"
-md_table_header_format_tooltip = "Apply formatting: turn **bold** into actual bold (which can overlap the table style). Keep markup: show the markup literally. Clean markup: remove Markdown markers and let the table style’s header-row formatting apply. Table styles commonly format the first row, so Clean markup is usually preferable."
+md_table_header_format_tooltip = "Apply format: turn **bold** into actual bold (which can overlap the table style).\nKeep markup: show the markup literally.\nClean markup: remove Markdown markers and let the table style’s header-row formatting apply.\nTable styles commonly format the first row, so Clean markup is usually preferable."
 heading_merge_mode_label = "Heading + body merge mode:"
 heading_merge_mode_tooltip = "Controls whether a heading and the adjacent next line of plain body text are merged into one paragraph\nPunctuation required: Merge only when heading ends with a sentence-ending punctuation and next line is plain body text (default)\nAlways merge: Merge when next line is plain body text (punctuation not required)\nNever merge: Never merge; parse heading/body as separate paragraphs\nNote: Lists/code blocks/tables/quotes/separators are not merged"
 heading_merge_punctuation_label = "Merge punctuation:"
@@ -799,6 +799,7 @@ section = "Date Subfolder"
 create_label = "Create date subfolder"
 create_tooltip = "Create a date subfolder in the output directory\nExample: Output Directory/2025-01-06/file.pdf\nThis option works for both output modes"
 format_label = "Date format:"
+format_tooltip = "Choose the date format used to name output subfolders.\nThis applies when date subfolders are enabled."
 
 # 日期格式选项
 [settings.output.date_formats]

@@ -687,7 +687,7 @@ md_body_format_tooltip = "应用格式：将 **粗体** 转为真正的粗体格
 md_heading_format_label = "小标题格式标记处理:"
 md_heading_format_tooltip = "应用格式：覆盖标题样式默认格式，可实现部分加粗效果。\n保留标记：保留标记原样显示。\n清理标记：去掉 Markdown 标记，让 DOCX 标题样式自然生效。\n注意：当标题样式本身为加粗时，“应用格式”可实现局部格式差异。"
 md_table_header_format_label = "表头格式标记处理:"
-md_table_header_format_tooltip = "应用格式：把 **粗体** 转为真正的粗体（可能与表格样式重叠）。保留标记：原样显示标记。清理标记：移除 Markdown 标记，让表格样式的首行格式自然生效。表格样式通常会设置首行格式，因此一般更适合使用“清理标记”。"
+md_table_header_format_tooltip = "应用格式：把 **粗体** 转为真正的粗体（可能与表格样式重叠）。\n保留标记：原样显示标记。\n清理标记：移除 Markdown 标记，让表格样式的首行格式自然生效。\n表格样式通常会设置首行格式，因此一般更适合使用“清理标记”。"
 heading_merge_mode_label = "标题+正文合并模式:"
 heading_merge_mode_tooltip = "控制小标题与紧邻下一行普通正文是否合并为同一段落\n有标点才合并：标题末尾有结束标点且下一行是普通正文时合并（默认）\n紧邻正文就合并：下一行是普通正文时合并（不要求结束标点）\n永不合并：标题与正文按普通解析分段\n注：列表/代码块/表格/引用/分隔线等不会被合并"
 heading_merge_punctuation_label = "合并触发标点:"
@@ -799,6 +799,7 @@ section = "日期子文件夹"
 create_label = "创建日期子文件夹"
 create_tooltip = "在输出目录下创建日期子文件夹\n例如: 输出目录/2025-01-06/文件.pdf\n此选项对两种输出模式都有效"
 format_label = "日期格式:"
+format_tooltip = "选择输出日期子文件夹的名称格式。\n仅在开启日期子文件夹时生效。"
 
 # 日期格式选项
 [settings.output.date_formats]

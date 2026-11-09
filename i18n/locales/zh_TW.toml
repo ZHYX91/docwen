@@ -620,7 +620,7 @@ md_body_format_tooltip = "應用格式：將 **粗體** 轉為真正的粗體格
 md_heading_format_label = "小標題格式標記處理:"
 md_heading_format_tooltip = "應用格式：覆蓋標題樣式預設格式，可實現部分粗體效果。\n保留標記：保留標記原樣顯示。\n清理標記：去掉 Markdown 標記，讓 DOCX 標題樣式自然生效。\n注意：當標題樣式本身為粗體時，「應用格式」可實現局部格式差異。"
 md_table_header_format_label = "表頭格式標記處理:"
-md_table_header_format_tooltip = "套用格式：把 **粗體** 轉為真正粗體（可能與表格樣式重疊）。保留標記：原樣顯示標記。清理標記：移除 Markdown 標記，讓表格樣式的首列格式自然生效。表格樣式通常會設定首列格式，因此一般較適合使用「清理標記」。"
+md_table_header_format_tooltip = "應用格式：把 **粗體** 轉為真正粗體（可能與表格樣式重疊）。\n保留標記：原樣顯示標記。\n清理標記：移除 Markdown 標記，讓表格樣式的首列格式自然生效。\n表格樣式通常會設定首列格式，因此一般較適合使用「清理標記」。"
 heading_merge_mode_label = "標題+正文合併模式:"
 heading_merge_mode_tooltip = "控制小標題與緊鄰下一行普通正文是否合併為同一段落\n有標點才合併：標題末尾有句末標點且下一行是普通正文時才合併（預設）\n緊鄰正文就合併：下一行是普通正文時就合併（不要求句末標點）\n永不合併：標題與正文始終分段解析\n註：列表/程式碼區塊/表格/引用/分隔線等不會被合併"
 heading_merge_punctuation_label = "合併觸發標點:"
@@ -732,6 +732,7 @@ section = "日期子文件夾"
 create_label = "創建日期子文件夾"
 create_tooltip = "在輸出目錄下創建日期子文件夾\n例如: 輸出目錄/2025-01-06/文件.pdf\n此選項對兩種輸出模式都有效"
 format_label = "日期格式:"
+format_tooltip = "選擇輸出日期子資料夾的名稱格式。\n僅在啟用日期子資料夾時生效。"
 
 # 日期格式选项
 [settings.output.date_formats]
@@ -1870,7 +1871,7 @@ document_settings = "文件擷取、編號與表格設定"
 from_markdown_title = "Markdown → DOCX"
 title = "公文"
 fields_label = "格式化公文欄位"
-fields_help = "填入 DOCX 範本時，處理附件說明、抄送機關、成文日期、印發日期和附註，並清理符合規則的空欄位。\n\n附件說明須獨占本文或表格儲存格中的段落；頁首、頁尾、文字方塊和行內位置不支援。\n\n關閉後依一般欄位規則填入，清單使用通用分隔符。"
+fields_help = "填入 DOCX 範本時，處理附件說明、抄送機關、成文日期、印發日期和附註，並清理符合規則的空欄位。\n\n簽發人、主送機關及抄送機關若為多項清單，會暫用頓號連接，並加入 DOCX 核對註解，提醒您檢查排版或標點。已寫好標點的字串會原樣保留。\n\n附件說明須獨占本文或表格儲存格中的段落；頁首、頁尾、文字方塊和行內位置不支援。\n\n關閉後依一般欄位規則填入，清單使用通用分隔符。"
 
 attachment_alignment_label = "附件說明對齊方式"
 attachment_alignment_spaces = "空格＋凸排縮排"
