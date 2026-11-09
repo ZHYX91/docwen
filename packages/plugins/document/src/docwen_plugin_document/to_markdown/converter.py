@@ -18,7 +18,7 @@ import os
 import re
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
 from threading import RLock
@@ -58,6 +58,8 @@ from docwen_core.markdown_extensions import MarkdownExtensions, resolve_markdown
 from docwen_core.text.heading_numbering import (
     HeadingFormatter,
     NumberingSchemeResolutionError,
+    has_incomplete_numbering_marker,
+    marked_heading_prefix,
     resolve_heading_numbering_scheme,
 )
 from docwen_core.text.image_markdown import build_image_ocr_sidecar
@@ -266,7 +268,16 @@ class DocxToMarkdownConverter:
                         duration_ms=(time.monotonic() - t_start) * 1000.0,
                     ),
                 )
-            heading_formatter = HeadingFormatter(scheme_config)
+            document_config = context.config.get("document", {})
+            marker_default = (
+                document_config.get("export_numbering_markers", False)
+                if isinstance(document_config, Mapping)
+                else False
+            )
+            heading_formatter = HeadingFormatter(
+                scheme_config,
+                mark_generated_numbers=bool(options.get("export_numbering_markers", marker_default)),
+            )
 
         # 4. Parse the DOCX (standard path)
         context.cancellation.check()
@@ -1839,7 +1850,15 @@ class DocxToMarkdownConverter:
                 # Add new numbering after potential removal on the isolated
                 # historical route only.
                 if heading_formatter is not None:
-                    display_text = heading_formatter.format_heading(display_text, heading_level)
+                    protected_marker = has_incomplete_numbering_marker(text) or (
+                        not remove_numbering and marked_heading_prefix(text) is not None
+                    )
+                    if protected_marker:
+                        # Inspect authored text rather than Markdown styling
+                        # around its runs, while still advancing the counter.
+                        heading_formatter.format_heading(text, heading_level)
+                    else:
+                        display_text = heading_formatter.format_heading(display_text, heading_level)
 
             structural_owner = (
                 source_anchor is not None

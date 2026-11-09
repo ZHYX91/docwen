@@ -117,6 +117,7 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "conversion.docx_to_md.preserve_formatting",
         "conversion.docx_to_md.preserve_heading_formatting",
         "conversion.docx_to_md.preserve_table_header_formatting",
+        "document.export_numbering_markers",
         "document.to_md_keep_images",
         "document.to_md_enable_ocr",
         "document.to_md_table_merge_export_strategy",

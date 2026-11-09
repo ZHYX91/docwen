@@ -287,10 +287,8 @@ batch_mode = "バッチモード"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "新しく追加する見出し番号をテキストにする"
-numbering_text_help = "選択した方式で追加する見出し番号を文字として出力し、今回の変換では上の番号出力方式より優先します。番号付けを有効にせず、保存済みの出力方式やテンプレートの既存番号も変更しません。既定でオンです。"
-numbering_comments_label = "新しく追加した文字の見出し番号にコメントを付ける"
-numbering_comments_help = "今回実際に追加した文字の見出し番号だけに確認用コメントを付け、既存の手入力番号は対象にしません。既定でオンです。テキスト番号をオフにすると選択が解除され無効になります。再度オンにした後は必要に応じて選択してください。正確に特定できない独自の Markdown 番号は警告してスキップします。"
+numbering_comments_label = "新しい見出し番号にコメントを追加"
+numbering_comments_help = "新しく生成した番号のみが対象です。テキストモードでは番号、DOCX ネイティブモードでは見出しの最初の可視文字にコメントします。既存の手入力番号は対象外です。"
 output_format = "優先テンプレート種類"
 output_format_hint = "Markdown を追加したとき、この種類のテンプレートを優先表示します。この設定だけで変換の出力形式が変わるわけではありません。"
 # MD转文档序号设置
@@ -302,7 +300,6 @@ add_numbering_tooltip = "出力する DOCX の見出しに階層番号を追加�
 scheme_label = "デフォルトの番号付けスキーム："
 scheme_tooltip = "見出し番号に使用する番号体系を選択します"
 render_mode_label = "見出し番号の出力方式："
-render_mode_tooltip = "見出し番号をテキストに書き込むか、DOCX のネイティブ番号機能で生成するかを選択します"
 render_mode_text = "テキスト"
 render_mode_word_native = "DOCX ネイティブ"
 render_mode_hint = "テキスト = 見出しに番号を書き込む；DOCX ネイティブ = DOCX のアウトライン番号を使用する"
@@ -415,6 +412,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "新しい番号にゼロ幅文字マーカーを追加"
+markers_tooltip = "新しい見出し番号を目に見えないマーカーのペアで囲み、Number Suite が識別できるようにします。既定ではオフです。既存の番号は変更しません。"
 section = "見出し番号付け (ドキュメントからMarkdown)"
 remove = "デフォルトで元のドキュメント見出し番号を削除"
 remove_tooltip = "DOCXをMDに変換する際、既存の見出し番号を削除します"

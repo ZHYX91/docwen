@@ -16,6 +16,8 @@ to_md_table_merge_export_strategy = "empty"
 to_md_remove_numbering = true
 # 默认不添加新序号到Markdown
 to_md_add_numbering = false
+# 为新生成的标题序号添加成对 U+2060 标记，兼容 Number Suite；默认关闭
+export_numbering_markers = false
 # 默认使用的序号方案
 to_md_default_scheme = "hierarchical_standard"
 # 默认内容优化：none（不预选）或运行时提供的优化资源 ID（如 gongwen）

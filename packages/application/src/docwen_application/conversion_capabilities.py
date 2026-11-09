@@ -310,6 +310,8 @@ _DOCX_TO_MARKDOWN_OPTIONS = _strict_options(
         },
         "remove_numbering": {"type": "boolean", "default": True},
         "add_numbering": {"type": "boolean", "default": False},
+        # Omission inherits the request config; a schema default would mask it.
+        "export_numbering_markers": {"type": "boolean"},
         "numbering_scheme": {
             "type": "string",
             "default": "gongwen_standard",

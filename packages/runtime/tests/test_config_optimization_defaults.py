@@ -148,7 +148,7 @@ def test_text_reset_owns_numbering_review_and_preserves_gongwen_field_switch(tmp
             "template_fill.list_separator": " / ",
             "template_fill.gongwen_fields_enabled": False,
             "template_fill.gongwen_numbering_text": False,
-            "template_fill.gongwen_numbering_comments": False,
+            "template_fill.gongwen_numbering_comments": True,
             "template_fill.attachment_alignment": "tab",
         }
     )

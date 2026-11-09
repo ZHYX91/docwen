@@ -75,6 +75,17 @@ class DocumentTab(DynamicSettingsTab):
                         ),
                     },
                     {
+                        "key": "export_numbering_markers",
+                        "type": "checkbox",
+                        "text": t(
+                            "settings.document.numbering.markers", "Mark newly added numbers with zero-width characters"
+                        ),
+                        "tooltip": t(
+                            "settings.document.numbering.markers_tooltip",
+                            "Wrap newly generated heading numbers in paired U+2060 markers compatible with Number Suite. Off by default; existing numbering and resolved-v4 recovery stay unchanged.",
+                        ),
+                    },
+                    {
                         "key": "to_md_default_scheme",
                         "type": "combobox",
                         "label": t("settings.document.numbering.scheme_label", "Default numbering scheme:"),
@@ -149,6 +160,9 @@ class DocumentTab(DynamicSettingsTab):
         scheme = self._widgets.get("to_md_default_scheme")
         if isinstance(add_numbering, QCheckBox) and isinstance(scheme, QComboBox):
             add_numbering.toggled.connect(scheme.setEnabled)
+        markers = self._widgets.get("export_numbering_markers")
+        if isinstance(add_numbering, QCheckBox) and isinstance(markers, QCheckBox):
+            add_numbering.toggled.connect(markers.setEnabled)
         self._sync_numbering_controls()
 
     def _sync_numbering_controls(self) -> None:
@@ -156,3 +170,6 @@ class DocumentTab(DynamicSettingsTab):
         scheme = self._widgets.get("to_md_default_scheme")
         if isinstance(add_numbering, QCheckBox) and isinstance(scheme, QComboBox):
             scheme.setEnabled(add_numbering.isChecked())
+        markers = self._widgets.get("export_numbering_markers")
+        if isinstance(add_numbering, QCheckBox) and isinstance(markers, QCheckBox):
+            markers.setEnabled(add_numbering.isChecked())

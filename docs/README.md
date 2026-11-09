@@ -20,6 +20,7 @@ DocWen 文档只描述当前产品、受支持契约和维护门禁。实现与�
 - [Capabilities / 能力矩阵](capabilities.md)
 - [CLI](cli.md)
 - [Configuration / 配置](configuration.md)
+- [Heading numbering and markers / 标题编号与标记](user-guides/heading-numbering.md)
 - [Architecture / 架构](architecture.md)
 - [Runtime artifacts / 运行产物](runtime-artifacts.md)
 - [External dependencies / 外部依赖](external-dependencies.md)

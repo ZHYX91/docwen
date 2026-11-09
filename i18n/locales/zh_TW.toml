@@ -287,10 +287,8 @@ batch_mode = "批量模式"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "新增標題編號使用文字編號"
-numbering_text_help = "將本次依所選方案新增的標題編號寫為文字，優先於上方的標題編號輸出方式。不會啟用自動編號、修改已儲存的輸出方式或範本原有編號。預設開啟。"
-numbering_comments_label = "為新增的文字標題編號加入註解"
-numbering_comments_help = "僅為本次實際新增的文字標題編號加入核對註解，不標記原有手寫編號。預設開啟。關閉文字編號時會取消並停用此選項；重新開啟後可自行勾選。無法精確定位的自訂 Markdown 編號會提示略過註解。"
+numbering_comments_label = "為新增標題序號新增註解"
+numbering_comments_help = "僅為本次實際新增的標題序號新增核對註解。文字模式標記新增序號；DOCX 原生模式標記標題首個可見字元。不標記原有手寫序號。"
 output_format = "優先範本類型"
 output_format_hint = "傳入 Markdown 時優先顯示此類型的範本；此設定本身不會改變轉換輸出格式。"
 # MD转文档序号设置
@@ -302,7 +300,6 @@ add_numbering_tooltip = "為輸出 DOCX 的小標題新增層級序號"
 scheme_label = "默認序號方案:"
 scheme_tooltip = "選擇用於小標題序號的方案"
 render_mode_label = "標題序號輸出方式:"
-render_mode_tooltip = "設定小標題序號寫入文字，還是使用 DOCX 原生多級清單"
 render_mode_text = "文字"
 render_mode_word_native = "DOCX 原生"
 render_mode_hint = "文字 = 將序號寫入標題文字；DOCX 原生 = 使用 DOCX 多級清單自動編號"
@@ -415,6 +412,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "為新增序號新增零寬字元標記"
+markers_tooltip = "為新產生的標題序號加上看不見的成對標記，方便 Number Suite 識別。預設關閉，不變更既有序號。"
 section = "小標題序號設定（文件轉為Markdown）"
 remove = "默認清除原有文件小標題序號"
 remove_tooltip = "DOCX轉MD時默認清除文件中已有的標題序號"

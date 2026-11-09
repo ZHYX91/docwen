@@ -353,10 +353,8 @@ batch_mode = "Par lots"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-numbering_text_label = "Écrire les nouveaux numéros de titre en texte"
-numbering_text_help = "Écrit en texte les numéros de titre ajoutés selon le schéma choisi, en remplaçant pour cette conversion le mode de sortie indiqué ci-dessus. Ne déclenche pas la numérotation et ne modifie ni le mode enregistré ni les numéros existants du modèle. Activé par défaut."
-numbering_comments_label = "Commenter les nouveaux numéros de titre textuels"
-numbering_comments_help = "Commente uniquement les numéros textuels réellement ajoutés, jamais ceux déjà saisis manuellement. Activé par défaut. Désactiver la numérotation textuelle décoche et désactive cette option ; après réactivation, vous pouvez la sélectionner à nouveau. Les numéros Markdown personnalisés impossibles à localiser précisément sont ignorés avec un avertissement."
+numbering_comments_label = "Commenter les nouveaux numéros de titres"
+numbering_comments_help = "Seuls les nouveaux numéros sont commentés. Le mode texte marque le numéro ; le mode natif DOCX marque le premier caractère visible du titre. Les numéros manuels existants sont exclus."
 output_format = "Type de modèle préféré"
 output_format_hint = "Lors de l’ajout de Markdown, les modèles de ce type sont privilégiés. Ce réglage ne change pas à lui seul le format de sortie de conversion."
 # MD转文档序号设置
@@ -368,7 +366,6 @@ add_numbering_tooltip = "Ajouter une numérotation hiérarchique aux titres du D
 scheme_label = "Schéma :"
 scheme_tooltip = "Choisir le schéma de numérotation des titres"
 render_mode_label = "Mode de sortie de la numérotation des titres :"
-render_mode_tooltip = "Choisir si les numéros de titre sont inscrits dans le texte ou générés par la numérotation native de DOCX"
 render_mode_text = "Texte"
 render_mode_word_native = "Natif DOCX"
 render_mode_hint = "Texte = inscrire les numéros dans les titres ; natif DOCX = utiliser les listes à plusieurs niveaux de DOCX"
@@ -481,6 +478,8 @@ libreoffice = "LibreOffice"
 
 # 序号设置
 [settings.document.numbering]
+markers = "Marquer les nouveaux numéros avec des caractères sans largeur"
+markers_tooltip = "Entoure les nouveaux numéros de titres de paires de marqueurs invisibles pour que Number Suite puisse les reconnaître. Désactivé par défaut. Les numéros existants restent inchangés."
 section = "Numérotation (DOCX vers MD)"
 remove = "Supprimer l'ancienne numérotation"
 remove_tooltip = "Supprime la numérotation existante."

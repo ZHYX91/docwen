@@ -197,14 +197,23 @@ can introduce small differences between its calculated indent and rendered name 
 序号每增加一位，前置补位减少半字宽；复杂混排和两端对齐可能使实际名称起点与估算缩进略有差别。
 单附件不编号；字体、两端对齐及其他模板段落格式保持原样。
 
-`template_fill.gongwen_numbering_text` and `template_fill.gongwen_numbering_comments` both default to `true`.
-They belong to Gongwen → Markdown→Document and remain independent of field formatting. The text switch overrides
-only the render mode of heading numbers newly added by the Incoming Text scheme in this source conversion;
-it never enables `add_numbering`, changes the saved global render mode, or rewrites existing template numbering.
-New text-numbered headings locally suppress inherited native numbering with `ilvl=0,numId=0`. Turning text
-numbering off clears and disables comments; turning it back on does not select comments automatically.
-Config validation and runtime projection also force comments off for inconsistent external input.
-Comments cover only the exact newly inserted number, with the fixed review text; custom Markdown prefixes
+`text.heading_numbering_render_mode` is the single renderer choice for newly added heading numbers:
+`text` (default) or `word_native`. It never enables `add_numbering` or rewrites existing template numbering.
+`template_fill.gongwen_numbering_comments` is an independent review preference, off by default. Native numbering does not
+materialize a text-number anchor, so its comments anchor the first visible heading character instead.
+Selecting either mode does not erase the saved comment preference. New text-numbered headings locally
+suppress inherited native numbering with `ilvl=0,numId=0`, retaining inherited numbering indentation on
+the output paragraph.
+
+The retired `template_fill.gongwen_numbering_text` flag no longer overrides request options or clears comments.
+A one-time user-profile migration preserves its old effective output: a legacy native renderer combined with
+an enabled (or absent, historically enabled by default) text flag becomes text mode. A disabled legacy flag
+preserves the selected renderer. The sparse `text.toml` stores `heading_numbering_migration_version = 1`,
+when migrating an existing renderer preference or saving a new renderer choice, so later deliberate native
+choices survive restart. Reading a fresh profile does not create user files. Runtime/request overrides
+remain authoritative and are not persisted. See the [heading numbering guide](../user-guides/heading-numbering.md).
+
+Text-mode comments cover only the exact newly inserted number, with the fixed review text; custom Markdown prefixes
 without an exact text anchor are preserved and reported as skipped comments. Existing comment attributes and
 resources remain untouched. ID reservation shares the note parser's XML integer identity, including XML
 whitespace and arbitrarily long leading zeros, while rejecting Python-only or Unicode digit spellings.

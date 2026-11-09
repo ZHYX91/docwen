@@ -72,11 +72,12 @@ from docwen_plugin_markdown.renderer_utils import (
     set_table_left_indent,
 )
 from docwen_plugin_markdown.template_utils import BodyParagraphFormat, BodyRunFormat
+from docwen_plugin_markdown.to_docx.heading_layout import suppress_heading_numbering
 from docwen_plugin_markdown.to_docx.numbering import (
     DocxListNumbering,
     apply_list_to_paragraph,
 )
-from docwen_plugin_markdown.to_docx.numbering_comments import add_numbering_review
+from docwen_plugin_markdown.to_docx.numbering_comments import add_native_numbering_review, add_numbering_review
 
 if TYPE_CHECKING:
     from docwen_core.docx_resolved_numbering import ResolvedNumberingDocxSession
@@ -687,9 +688,7 @@ class MdToDocxRenderer:
         else:
             heading = self._doc.add_heading(level=level)
         if node.get("_docwen_text_numbering"):
-            num_pr = heading._p.get_or_add_pPr().get_or_add_numPr()
-            num_pr.get_or_add_ilvl().val = 0
-            num_pr.get_or_add_numId().val = 0
+            suppress_heading_numbering(self._doc, heading)
         children = node.get("children", [])
         if number := node.get("_docwen_added_number"):
             number_run = heading.add_run(number)
@@ -738,6 +737,9 @@ class MdToDocxRenderer:
                 override_style=False,
                 renderer_instance=self,
             )
+
+        if node.get("_docwen_native_number_review"):
+            add_native_numbering_review(self._doc, heading)
 
         # ── Heading merge: append body runs to this heading paragraph ──
         if next_node and next_node.get("_merged_into_heading"):

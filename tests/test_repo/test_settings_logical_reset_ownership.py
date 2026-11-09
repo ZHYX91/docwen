@@ -58,7 +58,8 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
     assert "conversion.code_detection.code_font" not in formatting_plan.dotted_keys
     assert "conversion.export.base64_compress_enabled" not in formatting_plan.dotted_keys
     assert document_plan.files == ()
-    assert len(document_plan.dotted_keys) == 9
+    assert len(document_plan.dotted_keys) == 10
+    assert "document.export_numbering_markers" in document_plan.dotted_keys
     assert "document.to_md_image_extraction_mode" not in document_plan.dotted_keys
     assert "document.to_md_ocr_placement_mode" not in document_plan.dotted_keys
 
@@ -68,7 +69,7 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "proofread": 6,
         "formatting": 15,
         "markdown_input": 10,
-        "document": 9,
+        "document": 10,
         "spreadsheet": 4,
         "layout": 6,
         "image": 7,

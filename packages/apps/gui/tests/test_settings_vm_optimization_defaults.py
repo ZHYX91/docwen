@@ -46,23 +46,35 @@ def test_numbering_comments_persist_cancel_and_reset_independently(composition) 
     assert vm.config.text.gongwen_fields_enabled is False
 
 
-def test_numbering_text_dependency_persists_and_does_not_recheck_comments(composition) -> None:
+def test_numbering_comments_are_independent_of_legacy_text_flag(composition) -> None:
     vm, port, controller = composition
-    assert vm.config.text.gongwen_numbering_text is True
-    vm.set_field(SECTION_TEXT, "gongwen_numbering_text", False)
-    assert vm.config.text.gongwen_numbering_comments is False
     vm.set_field(SECTION_TEXT, "gongwen_numbering_comments", True)
-    assert vm.config.text.gongwen_numbering_comments is False
+    vm.set_field(SECTION_TEXT, "gongwen_numbering_text", False)
+    vm.set_field(SECTION_TEXT, "heading_numbering_render_mode", "word_native")
+    assert vm.config.text.gongwen_numbering_comments is True
     assert vm.apply_changes()
     reopened = SettingsViewModel(controller=controller)
-    assert reopened.config.text.gongwen_numbering_text is False
-    assert reopened.config.text.gongwen_numbering_comments is False
-    vm.set_field(SECTION_TEXT, "gongwen_numbering_text", True)
-    assert vm.config.text.gongwen_numbering_comments is False
-    assert vm.reset_group("text")
-    assert vm.config.text.gongwen_numbering_text is True
-    assert vm.config.text.gongwen_numbering_comments is False
-    assert port.get("template_fill.gongwen_numbering_text") is True
+    assert reopened.config.text.gongwen_numbering_comments is True
+    assert reopened.config.text.heading_numbering_render_mode == "word_native"
+    assert port.get("template_fill.gongwen_numbering_comments") is True
+    vm.set_field(SECTION_TEXT, "gongwen_numbering_comments", False)
+    vm.cancel()
+    assert vm.config.text.gongwen_numbering_comments is True
+
+
+def test_document_number_markers_persist_cancel_reset_and_reopen(composition) -> None:
+    vm, port, controller = composition
+    assert vm.config.conversion_defaults.document["export_numbering_markers"] is False
+    vm.set_conversion_default("document", "export_numbering_markers", True)
+    assert vm.apply_changes()
+    assert port.get("document.export_numbering_markers") is True
+    reopened = SettingsViewModel(controller=controller)
+    assert reopened.config.conversion_defaults.document["export_numbering_markers"] is True
+    vm.set_conversion_default("document", "export_numbering_markers", False)
+    vm.cancel()
+    assert vm.config.conversion_defaults.document["export_numbering_markers"] is True
+    assert vm.reset_group("document")
+    assert vm.config.conversion_defaults.document["export_numbering_markers"] is False
 
 
 def test_one_default_per_input_category_persists_and_reopens(composition) -> None:

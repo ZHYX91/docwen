@@ -188,6 +188,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "document.to_md_table_merge_export_strategy",
         "document.to_md_remove_numbering",
         "document.to_md_add_numbering",
+        "document.export_numbering_markers",
         "document.to_md_default_scheme",
     ),
     "spreadsheet": (
