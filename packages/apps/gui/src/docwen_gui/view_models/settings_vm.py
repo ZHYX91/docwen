@@ -1117,6 +1117,12 @@ class SettingsViewModel(QObject):
                 markdown_link_mode=non_embed.get("markdown_mode", "hyperlink")
                 if isinstance(non_embed, dict)
                 else "hyperlink",
+                wiki_hyperlink_fallback=non_embed.get("wiki_hyperlink_fallback", "keep")
+                if isinstance(non_embed, dict)
+                else "keep",
+                markdown_hyperlink_fallback=non_embed.get("markdown_hyperlink_fallback", "keep")
+                if isinstance(non_embed, dict)
+                else "keep",
                 wiki_embed_image_mode=embed.get("wiki_image_mode", "embed") if isinstance(embed, dict) else "embed",
                 markdown_embed_image_mode=embed.get("markdown_image_mode", "embed")
                 if isinstance(embed, dict)
@@ -1403,6 +1409,8 @@ class SettingsViewModel(QObject):
         put("link.format.md_file_link_style", link.md_file_link_style)
         put("link.non_embed_links.wiki_mode", link.wiki_link_mode)
         put("link.non_embed_links.markdown_mode", link.markdown_link_mode)
+        put("link.non_embed_links.wiki_hyperlink_fallback", link.wiki_hyperlink_fallback)
+        put("link.non_embed_links.markdown_hyperlink_fallback", link.markdown_hyperlink_fallback)
         put("link.embed_links.wiki_image_mode", link.wiki_embed_image_mode)
         put("link.embed_links.markdown_image_mode", link.markdown_embed_image_mode)
         put("link.embed_links.md_file_mode", link.embed_md_file_mode)

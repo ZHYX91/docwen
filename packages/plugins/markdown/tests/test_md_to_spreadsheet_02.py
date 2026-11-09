@@ -509,6 +509,7 @@ owner: Finance
             md_path,
             target_format="xlsx",
             options={"template_name": str(template)},
+            config_values={"link": {"non_embed_links": {"wiki_mode": "keep", "markdown_mode": "keep"}}},
         )
 
         converter = MdToXlsxConverter()

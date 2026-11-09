@@ -66,6 +66,7 @@ from docwen_plugin_markdown.common_utils import (
 from docwen_plugin_markdown.document_semantics import analyze_document_semantics
 from docwen_plugin_markdown.gongwen_fields import GongwenFieldPlacementError
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
+from docwen_plugin_markdown.navigation_links import DocxNavigationLinks
 from docwen_plugin_markdown.preprocessor import (
     materialize_image_placeholders,
 )
@@ -805,12 +806,19 @@ class MdToDocxConverter:
             yaml_dict, md_body = extract_yaml_front_matter(content.removeprefix("\ufeff"))
             cancellable.check()
             link_config = _request_link_config(context.config)
+            navigation_links = DocxNavigationLinks(link_config, md_body)
 
             # ── Stage 2: Preprocess & Parse ────────────────────────────
             progress.report_progress(20.0, "Preprocessing Markdown")
 
             cleaned_ast = []
             note_ctx = NoteContext()
+            missing_embedded_sources = 0
+
+            def record_missing_embed() -> None:
+                nonlocal missing_embedded_sources
+                missing_embedded_sources += 1
+
             if render_body:
                 cancellable.check()
 
@@ -831,12 +839,15 @@ class MdToDocxConverter:
                     resource_source_path,
                     link_config=link_config,
                     target_format="docx",
+                    hyperlink_projection=navigation_links.issue,
+                    local_lookup_allowed=declared_resource_resolver is None,
                     temp_dir=str(workspace.staging_dir),
                     image_scope=image_scope,
                     extended_headings=extensions.extended_headings,
                     structural_tables=extensions.structural_tables,
                     protect_source_comments=True,
                     cancellation_check=cancellable.check,
+                    on_missing_embed=record_missing_embed,
                     declared_image=(
                         declared_resource_resolver.resolve_image if declared_resource_resolver is not None else None
                     ),
@@ -1030,7 +1041,10 @@ class MdToDocxConverter:
                 source_stem=context.request.source_stem,
             )
             yaml_links = YamlLinkProjection(
-                resource_source_path, link_config, declared_inputs=declared_resource_resolver is not None
+                resource_source_path,
+                link_config,
+                declared_inputs=declared_resource_resolver is not None,
+                navigation_links=navigation_links,
             )
             for key in placeholder_map:
                 if key in template_yaml:
@@ -1142,6 +1156,7 @@ class MdToDocxConverter:
                     template_style_keys=template_style_keys,
                     managed_styles=managed_styles,
                     semantic_v3_session=semantic_v3_session,
+                    navigation_links=navigation_links,
                     hr_mapping=hr_mapping,
                     hr_actions=hr_actions,
                     cancellation=cancellable,
@@ -1352,6 +1367,17 @@ class MdToDocxConverter:
                 ConversionDiagnostic(level="warning", message=message, code=code)
                 for code, message in (renderer.warnings if renderer is not None else ())
             ]
+            if missing_embedded_sources:
+                diagnostics.append(
+                    ConversionDiagnostic(
+                        level="warning",
+                        code="MD2DOCX-EMBED-SOURCE-MISSING",
+                        message=(
+                            "Some embedded files or images could not be found. "
+                            "Check the source links and the selected missing-file fallback."
+                        ),
+                    )
+                )
             if unanchored_number_comments:
                 diagnostics.append(
                     ConversionDiagnostic(

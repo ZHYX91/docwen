@@ -33,8 +33,10 @@ from docwen_plugin_markdown.common_utils import (
     read_input_markdown,
     write_table_to_csv,
 )
+from docwen_plugin_markdown.renderer_inlines import plain_link_label
 from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.to_spreadsheet.image_plan import XlsxImageTextPlan, image_scope_without_literal_collision
+from docwen_plugin_markdown.to_spreadsheet.links import SpreadsheetLinks
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
     _plain_text_from_markup,
     _plan_rectangular_merges,
@@ -133,11 +135,19 @@ class MdToXlsxConverter:
             structural_tables = extensions.structural_tables
             image_scope = secrets.token_urlsafe(24)
             image_scope = image_scope_without_literal_collision(image_scope, content + _plain_text_from_markup(content))
+            links = SpreadsheetLinks(
+                link_source_path(context.request, input_path),
+                _request_link_config(context),
+                native=True,
+            )
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),
                 link_config=_request_link_config(context),
                 target_format="xlsx",
+                literal_projection=links.issue_literal,
+                markdown_text_renderer=plain_link_label,
+                hyperlink_projection=links.issue,
                 table_safe=True,
                 temp_dir=str(workspace.staging_dir),
                 image_scope=image_scope,
@@ -181,6 +191,9 @@ class MdToXlsxConverter:
                     source_stem=_source_stem(context),
                     image_scope=image_scope,
                     list_separator=template_list_separator(context.config),
+                    yaml_value_projector=links.project,
+                    cell_value_writer=links.write_cell,
+                    header_value_projector=links.restore,
                     structural_tables=structural_tables,
                 )
                 actual_table_count = template_stats.get("table_count", 0)
@@ -201,7 +214,7 @@ class MdToXlsxConverter:
                 else:
                     actual_table_count = len(tables)
 
-                image_plan = XlsxImageTextPlan()
+                image_plan = XlsxImageTextPlan(links.write_cell)
                 wb = Workbook()
                 # Remove default sheet
                 wb.remove(wb.active)  # pyright: ignore[reportArgumentType]
@@ -252,6 +265,7 @@ class MdToXlsxConverter:
             input_stem = _source_stem(context)
             suggested_name = f"{input_stem}.xlsx"
 
+            links.materialize(wb)
             check_workbook_text_capacity(wb)
             wb.save(output_path)
 
@@ -380,11 +394,18 @@ class MdToCsvConverter:
             structural_tables = extensions.structural_tables
             image_scope = secrets.token_urlsafe(24)
             image_scope = image_scope_without_literal_collision(image_scope, content + _plain_text_from_markup(content))
+            links = SpreadsheetLinks(
+                link_source_path(context.request, input_path),
+                _request_link_config(context),
+                native=False,
+            )
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),
                 link_config=_request_link_config(context),
                 target_format="csv",
+                literal_projection=links.issue_literal,
+                markdown_text_renderer=plain_link_label,
                 table_safe=True,
                 temp_dir=str(workspace.staging_dir),
                 image_scope=image_scope,
@@ -429,8 +450,12 @@ class MdToCsvConverter:
                     source_stem=_source_stem(context),
                     image_scope=image_scope,
                     list_separator=template_list_separator(context.config),
+                    yaml_value_projector=links.project,
+                    cell_value_writer=links.write_cell,
+                    header_value_projector=links.restore,
                     structural_tables=structural_tables,
                 )
+                links.materialize(workbook)
                 return self._convert_template_workbook_to_csv_artifacts(
                     workbook=workbook,
                     template_stats=template_stats,
@@ -482,6 +507,13 @@ class MdToCsvConverter:
                 csv_path = workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, suffix)
                 suggested = f"{input_stem}_{idx + 1}.csv" if idx > 0 else f"{input_stem}.csv"
 
+                table = {
+                    key: [links.restore(value) for value in values]
+                    if key == "headers"
+                    else [[links.restore(value) for value in row] for row in values]
+                    for key, values in table.items()
+                    if key in ("headers", "rows", "all_rows")
+                }
                 write_table_to_csv(table, csv_path)
 
                 file_bytes = Path(csv_path).stat().st_size

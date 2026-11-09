@@ -27,6 +27,7 @@ extension_loss_references = "Chú thích và tham chiếu chéo đã được ch
 extension_loss_tables = "Ô gộp và cấu trúc tiêu đề đã được chuyển thành bảng Markdown thông thường."
 route_catalog_failed = "Không thể tải các thao tác khả dụng; yêu cầu chưa được bắt đầu."
 conversion_failed = "Chuyển đổi thất bại. Hãy mở chi tiết lỗi để xem thông tin chẩn đoán."
+missing_embedded_resources = "Không tìm thấy một số tệp hoặc ảnh được nhúng. Hãy kiểm tra liên kết nguồn và thiết lập xử lý tệp bị thiếu."
 conversion_warning = "Chuyển đổi hoàn tất nhưng có cảnh báo."
 ocr_no_text = "OCR không phát hiện văn bản; hãy đối chiếu ảnh này với nguồn."
 ocr_degraded = "OCR không hoàn tất bình thường (trạng thái: {status}); các kết quả dùng được đã được giữ lại."
@@ -580,9 +581,13 @@ md_file_link_style_tooltip = "Đặt định dạng liên kết cho tệp MD tro
 non_embed_section = "Xử lý liên kết không nhúng"
 non_embed_desc = "Chọn cách xử lý liên kết thường trong đầu vào Markdown khi tạo tài liệu hoặc bảng tính."
 wiki_link_mode = "Xử lý liên kết Wiki:"
-wiki_link_tooltip = "Xử lý [[link]] hoặc [[link|text]]. Giữ nguyên giữ markup nguồn; Trích văn bản chỉ giữ văn bản hiển thị; Siêu liên kết giữ văn bản và đích rồi tạo liên kết bấm được nếu định dạng đích hỗ trợ; Xóa sẽ xóa liên kết."
+wiki_link_tooltip = "Xử lý [[link]] / [[link|text]].\n\nGiữ nguyên: giữ nguyên toàn bộ cú pháp gốc.\nTrích văn bản: chỉ giữ văn bản hiển thị.\nTrích xuất địa chỉ: chỉ giữ địa chỉ gốc, bao gồm điểm neo.\nXóa: xóa toàn bộ liên kết, bao gồm văn bản hiển thị.\nSiêu liên kết: tạo liên kết có thể nhấp; nếu không thể, dùng phương án dự phòng."
 markdown_link_mode = "Xử lý liên kết Markdown:"
-markdown_link_tooltip = "Xử lý [text](url). Giữ nguyên giữ markup nguồn; Trích văn bản chỉ giữ text; Siêu liên kết giữ văn bản và đích rồi tạo liên kết bấm được nếu định dạng đích hỗ trợ; Xóa sẽ xóa liên kết."
+markdown_link_tooltip = "Xử lý [text](url).\n\nGiữ nguyên: giữ nguyên toàn bộ cú pháp gốc.\nTrích văn bản: chỉ giữ văn bản hiển thị.\nTrích xuất địa chỉ: chỉ giữ địa chỉ gốc, bao gồm điểm neo.\nXóa: xóa toàn bộ liên kết, bao gồm văn bản hiển thị.\nSiêu liên kết: tạo liên kết có thể nhấp; nếu không thể, dùng phương án dự phòng."
+markdown_hyperlink_fallback_tooltip = "Chỉ dùng trong chế độ Siêu liên kết khi không thể tạo liên kết có thể nhấp, bao gồm đầu ra CSV.\nLựa chọn này được lưu riêng cho liên kết Markdown.\n\nGiữ nguyên: giữ nguyên toàn bộ cú pháp gốc.\nTrích văn bản: chỉ giữ văn bản hiển thị.\nTrích xuất địa chỉ: chỉ giữ địa chỉ gốc, bao gồm điểm neo."
+markdown_hyperlink_fallback = "Phương án dự phòng siêu liên kết Markdown:"
+wiki_hyperlink_fallback_tooltip = "Chỉ dùng trong chế độ Siêu liên kết khi không thể tạo liên kết có thể nhấp, bao gồm đầu ra CSV.\nLựa chọn này được lưu riêng cho liên kết Wiki.\n\nGiữ nguyên: giữ nguyên toàn bộ cú pháp gốc.\nTrích văn bản: chỉ giữ văn bản hiển thị.\nTrích xuất địa chỉ: chỉ giữ địa chỉ gốc, bao gồm điểm neo."
+wiki_hyperlink_fallback = "Phương án dự phòng siêu liên kết Wiki:"
 
 # 嵌入链接处理区域
 embed_section = "Xử lý liên kết nhúng"
@@ -611,6 +616,7 @@ md_link = "Liên kết Markdown"
 
 # 子节点：链接处理模式
 [settings.link.modes]
+extract_address = "Trích xuất địa chỉ"
 keep = "Giữ nguyên"
 extract_text = "Trích văn bản"
 remove = "Xóa"

@@ -12,7 +12,7 @@
 #     - 图片OCR：JPG/PNG → MD（文字识别）
 #     - 图片提取：从各种文件中提取图片到MD
 #
-#  2. 其余 12 个 Link 处理字段在每次请求开始时读取为不可变快照，
+#  2. 其余 14 个 Link 处理字段在每次请求开始时读取为不可变快照，
 #     不使用进程全局回退；它们处理从 MD 转换时的链接：
 #     - MD转文档：MD → DOCX
 #     - MD转表格：MD → XLSX/CSV
@@ -43,17 +43,29 @@ md_file_link_style = "wiki_embed"
 # 可选值：
 #   "keep"         - 保留原样：[[link|text]]
 #   "extract_text" - 提取文本：text（去除链接标记，只保留显示文本）
+#   "extract_address" - 提取地址：link（保留源目标与锚点，不做路径解析）
 #   "remove"       - 完全移除：删除整个链接
-#   "hyperlink"    - DOCX 写入可点击超链接；XLSX/CSV 保留源链接语法
+#   "hyperlink"    - 生成可点击超链接；无法生成时采用各自的回退策略
 wiki_mode = "hyperlink"
+
+# Wiki 超链接无法生成时的回退方式（仅在 wiki_mode = "hyperlink" 时生效）
+# 可选值："keep"（保留原样）、"extract_text"（提取文本）、"extract_address"（提取地址）
+# 默认保留原样，避免目标格式不支持或目标无法解析时丢失链接信息
+wiki_hyperlink_fallback = "keep"
 
 # 普通Markdown链接的处理方式：[text](url)
 # 可选值：
 #   "keep"         - 保留原样：[text](url)
 #   "extract_text" - 提取文本：text（去除链接标记，只保留显示文本）
+#   "extract_address" - 提取地址：url（保留源目标与锚点，不含标题）
 #   "remove"       - 完全移除：删除整个链接
-#   "hyperlink"    - DOCX 写入可点击超链接；XLSX/CSV 保留源链接语法
+#   "hyperlink"    - 生成可点击超链接；无法生成时采用各自的回退策略
 markdown_mode = "hyperlink"
+
+# Markdown 超链接无法生成时的回退方式（仅在 markdown_mode = "hyperlink" 时生效）
+# 可选值："keep"（保留原样）、"extract_text"（提取文本）、"extract_address"（提取地址）
+# 与 Wiki 回退方式独立保存；CSV 不生成原生超链接，使用此回退方式
+markdown_hyperlink_fallback = "keep"
 
 # 是否启用裸 URL 自动链接（例如把 "https://example.com" 识别为可点击链接）
 # 默认关闭，避免误匹配。开启后仅影响 MD→DOCX。
@@ -109,9 +121,9 @@ search_dirs = [".", "assets", "images", "attachments"]
 # 文件未找到时的处理方式
 # 可选值：
 #   "ignore"      - 静默忽略（删除链接，不留痕迹）
-#   "keep"        - 保留原链接标记（如 ![[missing.png]]）
+#   "keep"        - 保留原链接标记（如 ![[missing.png]]），默认避免往文档插入错误文字
 #   "placeholder" - 插入占位文本（使用下面的占位文本）
-file_not_found = "placeholder"
+file_not_found = "keep"
 
 # 是否检测循环引用（A嵌入B，B嵌入A）
 # true:  检测并防止循环嵌入

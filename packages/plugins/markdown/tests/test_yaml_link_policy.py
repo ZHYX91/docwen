@@ -223,3 +223,33 @@ def test_yaml_empty_markdown_label_extracts_plain_destination(tmp_path: Path, ta
     assert f"网站：{target}" in observation.text
     assert "\\" not in observation.text
     assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize("mode", ["extract_text", "hyperlink"])
+def test_yaml_formatted_markdown_label_matches_body_text_projection(tmp_path: Path, mode: str) -> None:
+    source = tmp_path / "formatted-label.md"
+    source.write_text(
+        "---\nsite: '[**Bold** `code`](#missing)'\n---\n\n[**Bold** `code`](#missing)\n", encoding="utf-8"
+    )
+    config = _link_config(markdown_mode=mode)
+    config["link"]["non_embed_links"]["markdown_hyperlink_fallback"] = "extract_text"
+    observation = _convert_docx(source, config, options={"template_name": str(_template(tmp_path))})
+    assert "网站：Bold code" in observation.text
+    assert "**Bold**" not in observation.text
+    assert "`code`" not in observation.text
+
+
+@pytest.mark.parametrize("mode", ["extract_text", "hyperlink"])
+@pytest.mark.parametrize("label", ["Energy $mc^2$ result", "$mc^2$"])
+def test_yaml_formula_link_label_survives_docx_projection(tmp_path: Path, mode: str, label: str) -> None:
+    source = tmp_path / "formula-label.md"
+    original = f"---\nsite: '[{label}](https://example.com)'\n---\n\n正文。\n".encode()
+    source.write_bytes(original)
+    observation = _convert_docx(
+        source,
+        _link_config(markdown_mode=mode),
+        options={"template_name": str(_template(tmp_path))},
+    )
+    assert f"网站：{label}" in observation.text
+    assert observation.hyperlink_targets == ({"https://example.com"} if mode == "hyperlink" else set())
+    assert source.read_bytes() == original
