@@ -5,6 +5,8 @@ This package MUST NOT depend on:
 - docwen_application, docwen_runtime, docwen_gui, docwen_cli, docwen_bundle, docwen_plugin_*
 """
 
+# Load the stdlib-only native opt-out before any product imports.
+from docwen_core import _telemetry as _telemetry
 from docwen_core.cancellation import CancellationToken
 from docwen_core.errors import (
     CancellationRequested,

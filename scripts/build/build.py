@@ -43,6 +43,16 @@ import urllib.request
 from pathlib import Path, PurePosixPath
 from typing import cast
 
+# PyInstaller analysis imports native dependencies in isolated subprocesses,
+# before packaged runtime hooks can run. Force and inherit the native opt-out
+# here without importing product packages into the build bootstrap.
+if sys.platform == "linux":
+    if os.environ.get("ORT_DISABLE_TELEMETRY") != "1" and any(
+        name == "onnxruntime" or name.startswith("onnxruntime.") for name in sys.modules
+    ):
+        raise RuntimeError("onnxruntime_telemetry_bootstrap_started_too_late")
+    os.environ["ORT_DISABLE_TELEMETRY"] = "1"
+
 try:
     from scripts.build.payload_normalization import normalize_base_library_zip, normalize_packaged_record_files
 except ModuleNotFoundError:  # Direct ``python scripts/build/build.py`` execution.

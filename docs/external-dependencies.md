@@ -77,3 +77,28 @@ Windows-only COM routes are unavailable on POSIX. LibreOffice-backed routes requ
 `docwen resources list formats --json` also projects dependency and platform gates onto every loaded
 conversion/action route. Unavailable routes remain visible with `available: false` and typed limitation
 identifiers, so consumers can distinguish an unsupported route from a successful empty composition.
+
+## Linux ONNX Runtime
+
+Linux uses ONNX Runtime 1.31.1; other platforms remain on 1.24.4. The Linux
+release fixes the missing DRM vendor-file warning during import, without
+filtering stderr or weakening the successful Machine-run silence checks.
+ORT Python 3.12 Linux wheels are locked for x86-64 and ARM64 (manylinux 2.28, glibc >= 2.28). This is the ORT wheel floor, not the whole application floor: the existing Qt dependency requires newer glibc (ARM64 wheels require 2.39).
+
+ONNX Runtime 1.31.1 introduces native POSIX telemetry. DocWen forces
+`ORT_DISABLE_TELEMETRY=1` before importing it, including library usage and the
+first frozen runtime hook. This is a dependency-specific initialization setting,
+not protection supplied by the Python network audit hook. A host embedding
+DocWen must not import ONNX Runtime first or later re-enable its telemetry.
+An observably unsafe late bootstrap (ORT already loaded with opt-out missing or changed) fails closed. An already-loaded runtime with the opt-out intact is accepted, but this cannot prove its earlier environment or undo earlier telemetry.
+
+References: [upstream opt-out](https://github.com/microsoft/onnxruntime/blob/v1.31.1/onnxruntime/core/platform/telemetry_environment.h#L258-L267),
+[device discovery fix](https://github.com/microsoft/onnxruntime/pull/29858).
+
+Linux 固定使用 ONNX Runtime 1.31.1，其他平台仍为 1.24.4。新 Linux 版本修复
+导入时缺少 DRM vendor 文件的警告，不过滤 stderr，也不放宽成功 Machine 调用的静默验收。
+锁文件包含 ORT Python 3.12 的 Linux x86-64、ARM64 wheel（manylinux 2.28, glibc >= 2.28）。这只是 ORT 的下限，不是整个程序的下限；既有 Qt 依赖要求更新的 glibc（ARM64 wheel 要求 2.39）。
+
+DocWen 在导入前强制设置 `ORT_DISABLE_TELEMETRY=1`，关闭该版本新增的原生 POSIX 遥测，
+覆盖库调用及冻结程序最早运行时钩子。这依赖上游的初始化开关，并非 Python 审计钩子的保护。
+嵌入 DocWen 的宿主不得先导入 ONNX Runtime 或随后重新启用遥测；检测到 ORT 已加载且开关缺失或被改写时会拒绝继续启动。已加载且开关仍为 1 的运行时可以继续使用，但不能据此证明宿主此前的环境或撤销已发生的遥测。
