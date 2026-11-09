@@ -236,6 +236,60 @@ class TestBatchEntryItemWidget:
         assert entry_widget.retry_button is not None
         assert entry_widget.remove_button is not None
 
+    def test_long_format_notice_stays_inside_a_narrow_batch_card(self, qapp, qtbot) -> None:
+        from docwen_core.models import FILE_INSPECTION_METADATA_KEY
+        from docwen_gui.i18n import get_locale, set_locale
+
+        original_locale = get_locale()
+        set_locale("de_DE")
+        manager = ThemeManager.get_instance()
+        manager.initialize(qapp, "light")
+        manager.apply_font_size_preset("large")
+        entry = BatchFileEntry(
+            file_path="/example/sample.txt",
+            file_name="sample.txt",
+            detected_format="markdown",
+            workflow_category="markdown",
+            metadata={
+                FILE_INSPECTION_METADATA_KEY: {
+                    "declared_format": "txt",
+                    "detected_format": "markdown",
+                    "warning_code": "FILE_FORMAT_COMPATIBLE_TEXT",
+                }
+            },
+        )
+        list_widget = QListWidget()
+        qtbot.addWidget(list_widget)
+        list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        item = QListWidgetItem(list_widget)
+        widget = BatchEntryItemWidget(entry)
+        list_widget.setItemWidget(item, widget)
+        widget.bind_list_item(list_widget, item)
+        badge = widget.format_notice_badge
+
+        def fits() -> None:
+            assert widget.width() <= list_widget.viewport().width()
+            assert widget.badge_strip.rect().contains(badge.geometry())
+            assert badge.heightForWidth(badge.width()) == badge.height()
+            assert widget.badge_strip.geometry().bottom() < widget.body_section.geometry().top()
+            assert "Markdown" in badge.text()
+            assert widget.badge_strip.height() == widget._badge_strip_layout.heightForWidth(widget.badge_strip.width())
+
+        try:
+            list_widget.resize(600, 700)
+            list_widget.show()
+            qtbot.waitUntil(fits)
+            wide_height = badge.height()
+            for width in (260, 360, 600):
+                list_widget.resize(width, 700)
+                widget.resize(list_widget.viewport().width(), widget.height())
+                qtbot.waitUntil(fits)
+            assert badge.height() == wide_height
+        finally:
+            list_widget.close()
+            manager.apply_font_size_preset("default")
+            set_locale(original_locale)
+
     def test_has_badge_strip(self, entry_widget: BatchEntryItemWidget) -> None:
         assert entry_widget.badge_strip is not None
 

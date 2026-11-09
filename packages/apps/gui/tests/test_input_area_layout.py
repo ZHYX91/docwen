@@ -3,17 +3,97 @@
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtCore import QPoint, QPointF, QRect, Qt
+from PySide6.QtGui import QTextLayout, QTextOption
 from PySide6.QtTest import QSignalSpy
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QScrollArea, QVBoxLayout, QWidget
 
-from docwen_core.models import FileRef
+from docwen_core.models import FILE_INSPECTION_METADATA_KEY, FileRef
+from docwen_gui.i18n import get_locale, set_locale
 from docwen_gui.styles.theme_manager import ThemeManager
 from docwen_gui.view_models.input_area_vm import InputAreaViewModel
 from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 from docwen_gui.widgets.input_area import InputArea
 
 pytestmark = pytest.mark.gui
+
+
+@pytest.mark.parametrize(
+    ("locale", "preset", "scale"),
+    [("zh_CN", "small", 100), ("de_DE", "large", 150), ("ar_SA", "large", 150)],
+)
+def test_format_notice_fits_its_feedback_row_after_resizing(qapp, qtbot, locale, preset, scale) -> None:
+    original_locale = get_locale()
+    set_locale(locale)
+    manager = ThemeManager.get_instance()
+    manager.initialize(qapp, "light")
+    manager.apply_font_size_preset(preset)
+    manager.apply_ui_scale(scale)
+    main_vm = MainWindowViewModel(controller=None)
+    widget = InputArea(view_model=InputAreaViewModel(main_vm=main_vm))
+    widget.setLayoutDirection(Qt.LayoutDirection.RightToLeft if locale == "ar_SA" else Qt.LayoutDirection.LeftToRight)
+    selected = FileRef(
+        path="/example/sample.txt",
+        format="markdown",
+        category="markdown",
+        metadata={
+            FILE_INSPECTION_METADATA_KEY: {
+                "declared_format": "txt",
+                "detected_format": "markdown",
+                "warning_code": "FILE_FORMAT_COMPATIBLE_TEXT",
+            }
+        },
+    )
+    main_vm.set_selected_file(selected)
+    widget.view_model.sync_selection([selected], current=True)
+    # Match the main window's scrollable workflow column instead of forcing a
+    # fixed height on a child whose translated content may need more room.
+    scroll = QScrollArea()
+    qtbot.addWidget(scroll)
+    scroll.setWidgetResizable(True)
+    content = QWidget()
+    layout = QVBoxLayout(content)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.addWidget(widget)
+    layout.addStretch(1)
+    scroll.setWidget(content)
+    badge = widget._format_notice_label
+
+    def fits() -> None:
+        assert "Markdown" in badge.text() and "MARKDOWN" not in badge.text()
+        assert widget._feedback_frame.rect().contains(badge.geometry())
+        assert widget.rect().contains(QRect(badge.mapTo(widget, QPoint()), badge.size()))
+        assert badge.height() == badge.heightForWidth(badge.width())
+        detail_top = widget._selection_detail_label.mapTo(widget._feedback_frame, QPoint()).y()
+        assert badge.geometry().bottom() < detail_top
+        text_rect = badge.contentsRect()
+        shaped = QTextLayout(badge.text(), badge.font(), badge)
+        options = QTextOption()
+        options.setWrapMode(QTextOption.WrapMode.WordWrap)
+        shaped.setTextOption(options)
+        shaped.beginLayout()
+        height = 0.0
+        while (line := shaped.createLine()).isValid():
+            line.setLineWidth(text_rect.width() - badge.indent())
+            line.setPosition(QPointF(0, height))
+            height += line.height()
+        shaped.endLayout()
+        assert shaped.boundingRect().height() <= text_rect.height()
+
+    try:
+        scroll.resize(800, 400)
+        scroll.show()
+        qtbot.waitUntil(fits)
+        wide_height = badge.height()
+        for width in (360, 515, 800):
+            scroll.resize(width, 400)
+            qtbot.waitUntil(fits)
+        assert badge.height() == wide_height
+    finally:
+        scroll.close()
+        manager.apply_ui_scale(100)
+        manager.apply_font_size_preset("default")
+        set_locale(original_locale)
 
 
 def test_clear_icon_resets_selection_without_deleting_the_file(qapp: QApplication, qtbot, tmp_path: Path) -> None:
