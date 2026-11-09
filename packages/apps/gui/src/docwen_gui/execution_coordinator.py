@@ -33,19 +33,6 @@ if TYPE_CHECKING:
     from docwen_gui.view_models.task_history import TaskHistory
 
 
-def _localized_progress_stage(message: str) -> str:
-    """Render only declared progress states, never internal paths or plugin IDs."""
-    if message == "Preparing output folder":
-        return _t("info_area.phase_checking_output", "Checking save folder…")
-    if message == "Preparing temporary workspace":
-        return _t("info_area.phase_preparing_workspace", "Preparing temporary workspace…")
-    if message == "Finalizing output":
-        return _t("info_area.phase_saving", "Saving the result…")
-    if message:
-        return _t("info_area.phase_converting", "Converting document…")
-    return ""
-
-
 def _route_operation_label(target_format: str, action_name: str) -> str:
     target = str(target_format or "").strip().upper()
     action = str(action_name or "").strip()
@@ -468,7 +455,7 @@ class ExecutionCoordinator(QObject):
         self._info_area_vm.update_task_progress(
             operation_id,
             current_file=current_file,
-            message=_localized_progress_stage(str(payload.get("message", ""))),
+            message=str(payload.get("message", "")),
             percent=float(percent) if isinstance(percent, (int, float)) else None,
             completed_count=int(payload.get("completed_count", 0)) if not context.get("aggregate") else 0,
         )

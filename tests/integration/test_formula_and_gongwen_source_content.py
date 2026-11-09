@@ -325,14 +325,21 @@ def test_unknown_math_leaf_preserves_source_formula_and_reports_fallback(
         tmp_path / "bundle",
         source_format="markdown",
         capability="convert.markdown_source.to_docx",
+        options={"locale": "en_US"},
     )
     root = _xml(output)
     assert not root.findall(".//m:oMath", _NS)
-    paragraphs = [p.text for p in Document(output).paragraphs]
-    assert paragraphs == (["Before.", f"$$\n{latex}\n$$", "After."] if block else [f"Before ${latex}$ after."])
-    assert sum(d.code == "MD2DOCX-FORMULA-TEXT-FALLBACK" for d in result.diagnostics) == 1
-    diagnostic = next(d for d in result.diagnostics if d.code == "MD2DOCX-FORMULA-TEXT-FALLBACK")
-    assert "/w:document/w:body/w:p" in diagnostic.message
+    document = Document(output)
+    paragraphs = [p.text for p in document.paragraphs]
+    marker = "〔Formula could not be converted〕"
+    assert paragraphs == (["Before.", marker, "After."] if block else [f"Before {marker} after."])
+    [diagnostic] = [d for d in result.diagnostics if d.code == "CONVERSION-LOSS-FORMULA"]
+    [comment] = document.comments
+    location = "Paragraph 2, item 1" if block else "Paragraph 1, item 2"
+    original = f"$$\n{latex}\n$$" if block else f"${latex}$"
+    assert diagnostic.location == location
+    assert location in diagnostic.message and location in comment.text
+    assert original in diagnostic.message and original in comment.text
 
 
 @pytest.mark.parametrize("text", ["001 国发〔2024〕号", "001 国发2024-号"])

@@ -98,25 +98,34 @@ def _inline_characters(inline: Any) -> list[tuple[str, bool, bool, str | None]]:
     strong = italic = 0
     href: str | None = None
     for token in inline.children or []:
-        if token.type == "strong_open":
+        kind = token.type
+        if kind == "html_inline":
+            kind = {
+                "<strong>": "strong_open",
+                "</strong>": "strong_close",
+                "<em>": "em_open",
+                "</em>": "em_close",
+            }.get(token.content, kind)
+        if kind == "strong_open":
             strong += 1
-        elif token.type == "strong_close":
+        elif kind == "strong_close":
             strong -= 1
-        elif token.type == "em_open":
+        elif kind == "em_open":
             italic += 1
-        elif token.type == "em_close":
+        elif kind == "em_close":
             italic -= 1
-        elif token.type == "link_open":
+        elif kind == "link_open":
             assert href is None
             href = token.attrGet("href")
-        elif token.type == "link_close":
+        elif kind == "link_close":
             href = None
-        elif token.type == "text":
+        elif kind == "text":
             characters.extend((char, bool(strong), bool(italic), href) for char in token.content)
-        elif token.type in {"softbreak", "hardbreak"}:
+        elif kind in {"softbreak", "hardbreak"}:
             characters.append(("\n", bool(strong), bool(italic), href))
         else:
             raise AssertionError(f"Unexpected final body token: {token.type}")
+        assert strong >= 0 and italic >= 0
     assert strong == italic == 0 and href is None
     return characters
 

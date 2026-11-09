@@ -1082,7 +1082,7 @@ class DocxToMarkdownConverter:
             lines.append("")
 
         # Normalize native block boundaries without merging quote paragraphs.
-        #  - Consecutive list items → single newline (no blank)
+        #  - Consecutive list items, including those in a quote → single newline.
         #  - Consecutive quotes → an empty line at their common quote depth.
         #    This ends the native paragraph without closing a shared container
         #    or treating a shallower quote as lazy continuation of a deeper one.
@@ -1092,8 +1092,11 @@ class DocxToMarkdownConverter:
         def _first_fragment_line(fragment: str) -> str:
             return exact_fenced_fragments.get(fragment, fragment).splitlines()[0]
 
-        def _is_list_fragment(fragment: str) -> bool:
-            return _re.match(r"^(?:[-*+] |\d+[.)] )", _first_fragment_line(fragment).strip()) is not None
+        def _is_list_fragment(fragment: str, *, quoted: bool = False) -> bool:
+            first_line = _first_fragment_line(fragment).strip()
+            if quoted:
+                first_line = _re.sub(r"^(?:>[ \t]*)+", "", first_line)
+            return _re.match(r"^(?:[-*+] |\d+[.)] )", first_line) is not None
 
         def _quote_prefix(fragment: str) -> tuple[str, int] | None:
             match = _re.match(r"^([ \t]*)(?:>[ \t]*)+", _first_fragment_line(fragment))
@@ -1113,9 +1116,20 @@ class DocxToMarkdownConverter:
                 previous_quote, current_quote = _quote_prefix(previous), _quote_prefix(line)
                 if previous_quote is not None and current_quote is not None and previous_quote[0] == current_quote[0]:
                     common_prefix = current_quote[0] + ">" * min(previous_quote[1], current_quote[1])
+                    # A fenced block establishes its own boundary, and list
+                    # siblings at the same quote depth stay a tight list.
+                    compact = previous_quote == current_quote and (
+                        previous in exact_fenced_fragments
+                        or line in exact_fenced_fragments
+                        or (_is_list_fragment(previous, quoted=True) and _is_list_fragment(line, quoted=True))
+                    )
                     # A structural quote-blank already supplied by the native
                     # container/anchor walker provides the same boundary.
-                    if previous.strip() != common_prefix.strip() and line.strip() != common_prefix.strip():
+                    if (
+                        not compact
+                        and previous.strip() != common_prefix.strip()
+                        and line.strip() != common_prefix.strip()
+                    ):
                         normalized.append(common_prefix)
                 elif not (_is_list_fragment(previous) and _is_list_fragment(line)):
                     normalized.append("")

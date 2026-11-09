@@ -65,6 +65,17 @@ TASK_SUMMARY_STATES = frozenset({"active", "cancelling", "success", "partial", "
 TASK_SUMMARY_TONES = frozenset({"info", "success", "warning", "danger"})
 
 
+def _localized_progress_stage(message: str) -> str:
+    """Render only declared progress states, never internal paths or plugin IDs."""
+    if message == "Preparing output folder":
+        return _t("info_area.phase_checking_output", "Checking save folder…")
+    if message == "Preparing temporary workspace":
+        return _t("info_area.phase_preparing_workspace", "Preparing temporary workspace…")
+    if message == "Finalizing output":
+        return _t("info_area.phase_saving", "Saving the result…")
+    return _t("info_area.phase_converting", "Converting document…")
+
+
 # ── Data classes ──────────────────────────────────────────────────────────
 
 
@@ -905,7 +916,7 @@ class InfoAreaViewModel(QObject):
             if state in {"active", "cancelling"}:
                 progress_lines.insert(0, _t("info_area.task_current_file", "Current: {name}", name=current_file))
             if state == "active" and ts.progress_message:
-                progress_lines.append(ts.progress_message)
+                progress_lines.append(_localized_progress_stage(ts.progress_message))
             elif state == "cancelling":
                 progress_lines.append(
                     _t(
