@@ -130,6 +130,7 @@ def compile_clean_rules_from_data(
 
 
 WORD_JOINER = "\u2060"
+_MARKED_NUMBER_SEPARATORS = " \t\u00a0\u3000"
 
 
 def has_incomplete_numbering_marker(text: str) -> bool:
@@ -141,8 +142,8 @@ def has_incomplete_numbering_marker(text: str) -> bool:
 def marked_heading_prefix(text: str) -> HeadingPrefixInfo | None:
     """Read Number Suite's leading paired U+2060 provenance marker.
 
-    Mirrors src/core/number-parser.ts at 41dd45d58ff8d5c0ab34d37ae6c744fa7272ddd4:
-    a nonblank, single-line label, ASCII separator, and meaningful title.
+    Accepts a nonblank, single-line label, optional spaces or tabs (including
+    the no-break and ideographic spaces used by schemes), and a meaningful title.
     A marker is provenance, not a restriction to a particular number alphabet.
     """
     if not text.startswith(WORD_JOINER):
@@ -154,7 +155,7 @@ def marked_heading_prefix(text: str) -> HeadingPrefixInfo | None:
     if not label.strip() or "\n" in label or "\r" in label:
         return None
     end = closing + 1
-    while end < len(text) and text[end] in " \t":
+    while end < len(text) and text[end] in _MARKED_NUMBER_SEPARATORS:
         end += 1
     if not text[end:].strip():
         return None
@@ -163,8 +164,8 @@ def marked_heading_prefix(text: str) -> HeadingPrefixInfo | None:
 
 def wrap_generated_heading_number(prefix: str) -> str:
     """Wrap the complete generated label, leaving its separator unchanged."""
-    label = prefix.rstrip()
-    if not label or WORD_JOINER in prefix or "\n" in prefix or "\r" in prefix:
+    label = prefix.rstrip(_MARKED_NUMBER_SEPARATORS)
+    if not label.strip() or WORD_JOINER in prefix or "\n" in prefix or "\r" in prefix:
         return prefix
     return WORD_JOINER + label + WORD_JOINER + prefix[len(label) :]
 

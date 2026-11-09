@@ -30,12 +30,14 @@ def test_incomplete_or_unsafe_marker_is_preserved(text):
     assert strip_heading_prefix(text, rules=rules) == ("", text)
 
 
-@pytest.mark.parametrize("separator", ["", " ", "\t", "\u3000", "\u00a0", "  \t"])
+@pytest.mark.parametrize("separator", ["", " ", "\t", "\u3000", "\u00a0", "  \t", "\u3000\u00a0 "])
 def test_generated_marker_wraps_full_label_not_separator(separator):
     formatter = HeadingFormatter(
         {"level_1": {"format": "第{1.chinese_lower}章" + separator}}, mark_generated_numbers=True
     )
-    assert formatter.format_heading("Title", 1) == f"{WJ}第一章{WJ}{separator}Title"
+    text = formatter.format_heading("Title", 1)
+    assert text == f"{WJ}第一章{WJ}{separator}Title"
+    assert strip_heading_prefix(text, rules=()) == (f"{WJ}第一章{WJ}{separator}", "Title")
 
 
 def test_default_off_and_existing_marker_never_duplicated():

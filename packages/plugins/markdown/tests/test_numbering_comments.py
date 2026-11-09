@@ -183,10 +183,12 @@ def test_added_numbers_only_have_comments_and_existing_resources_survive(tmp_pat
 
 
 @pytest.mark.parametrize("enabled,add", [(False, True), (True, False)])
-def test_switch_off_or_numbering_off_never_comments_existing_numbers(tmp_path, enabled, add):
-    _result, _original, output_path = _convert(tmp_path, enabled=enabled, add=add)
+@pytest.mark.parametrize("mode", ["text", "word_native"])
+def test_switch_off_or_numbering_off_never_comments_existing_numbers(tmp_path, enabled, add, mode):
+    _result, _original, output_path = _convert(tmp_path, enabled=enabled, add=add, mode=mode)
     document = Document(str(output_path))
     assert [comment.text for comment in document.comments] == ["Original review"]
+    assert next(iter(document.comments)).author == "Original author"
 
 
 @pytest.mark.parametrize("text_enabled", [None, True, False])
