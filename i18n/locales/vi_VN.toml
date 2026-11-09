@@ -139,6 +139,7 @@ example = "Ví dụ"
 
 # CLI帮助文本
 [cli.help]
+lang = "Chọn ngôn ngữ cho các thông báo CLI đã được dịch và đầu ra của những tác vụ có hỗ trợ. Không dịch nội dung tài liệu. Khi ở chế độ auto, OCR cũng dùng lựa chọn này để chọn mô hình nhận dạng."
 settings = "Quản lý cài đặt"
 settings_reset = "Đặt lại cài đặt về mặc định"
 files = "Đường dẫn tệp đầu vào (hỗ trợ ký tự đại diện như *.docx)"

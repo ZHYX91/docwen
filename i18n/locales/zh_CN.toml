@@ -139,6 +139,7 @@ example = "示例"
 
 # CLI帮助文本
 [cli.help]
+lang = "选择已提供翻译的命令行提示及受支持任务的输出语言；不会翻译文档正文。OCR 设为 auto 时，也按此语言选择识别模型。"
 settings = "设置管理"
 settings_reset = "将设置还原为默认值"
 files = "输入文件路径（支持通配符，如 *.docx）"

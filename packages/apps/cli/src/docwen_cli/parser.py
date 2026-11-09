@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
+from docwen_cli.i18n import cli_t
 from docwen_core.version import PRODUCT_VERSION
 
 # Available locale codes when the runtime locale registry is unavailable.
@@ -92,6 +93,8 @@ def get_common_parser() -> argparse.ArgumentParser:
     """
     global _common_parser
     if _common_parser is not None:
+        # The CLI entry point can be called again with another language.
+        _common_parser._option_string_actions["--lang"].help = cli_t("cli.help.lang")
         return _common_parser
 
     codes = get_available_locale_codes()
@@ -114,7 +117,7 @@ def get_common_parser() -> argparse.ArgumentParser:
     _common_parser.add_argument(
         "--lang",
         choices=codes,
-        help="Override interface language (e.g. zh_CN, en_US).",
+        help=cli_t("cli.help.lang"),
     )
     _common_parser.add_argument(
         "--json",
