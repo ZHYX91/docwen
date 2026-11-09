@@ -221,7 +221,7 @@ def test_missing_comment_key_defaults_off_without_disabling_numbering(tmp_path, 
     _result, _original, output_path = _convert(tmp_path, enabled=None, mode=mode, source="# Title\n")
     document = Document(str(output_path))
     assert [comment.text for comment in document.comments] == ["Original review"]
-    heading = next(p for p in document.paragraphs if p.style.name == "Heading 1")
+    heading = next(p for p in document.paragraphs if (style := p.style) is not None and style.name == "Heading 1")
     if mode == "text":
         assert heading.text == "一、Title"
     else:
