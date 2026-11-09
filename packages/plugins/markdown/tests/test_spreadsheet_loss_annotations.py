@@ -187,3 +187,40 @@ def test_template_merge_conflict_has_retained_anchor_annotation(tmp_path):
     assert any(d.code == "CONVERSION-LOSS-SPREADSHEET-MERGE" for d in result.diagnostics)
     cell = active(load_workbook(result.artifacts[0].staging_path))["A2"]
     assert cell.comment is not None
+
+
+@pytest.mark.parametrize("comments", [True, False])
+@pytest.mark.parametrize(
+    ("label", "visible", "original"),
+    [
+        ("`$x^2$`", "$x^2$", None),
+        (r"\$x^2\$", "$x^2$", None),
+        ("$x^2$", "$x^2$", "x^2"),
+        ("`$x^2$` and $y$", "$x^2$ and $y$", "y"),
+    ],
+)
+def test_native_link_math_losses_follow_source_label(tmp_path, comments, label, visible, original):
+    source = tmp_path / "source.md"
+    source.write_text(f"| Value |\n| --- |\n| [{label}](https://example.com) |\n", encoding="utf-8")
+    context, _ = make_context(
+        str(source),
+        target_format="xlsx",
+        config_values={
+            "conversion": {"loss_comments": comments},
+            "link": {"non_embed_links": {"markdown_mode": "hyperlink"}},
+        },
+    )
+    result = MdToXlsxConverter().convert(context)
+    assert result.success, result.error
+    cell = load_workbook(result.artifacts[0].staging_path)["Sheet1"]["A2"]
+    assert cell.value == visible
+    assert cell.hyperlink.target == "https://example.com"
+    losses = [d for d in result.diagnostics if d.code == "CONVERSION-LOSS-SPREADSHEET-MATH"]
+    assert len(losses) == (original is not None)
+    assert (cell.comment is not None) == (comments and original is not None)
+    if original is not None:
+        assert f"Original: {original}" in losses[0].message
+        if original == "y":
+            assert "x^2" not in losses[0].message
+    else:
+        assert not any(d.code.startswith("CONVERSION-LOSS") for d in result.diagnostics)

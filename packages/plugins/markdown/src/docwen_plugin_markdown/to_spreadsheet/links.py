@@ -21,6 +21,7 @@ class SpreadsheetLinks:
         self.native = native
         self.prefix = "DOCWENSPREADSHEETLINK" + secrets.token_hex(24)
         self.links: dict[str, tuple[str, str, str]] = {}
+        self.source_labels: dict[str, str] = {}
 
     def issue(self, label: str, target: str, original: str, syntax: str) -> str:
         visible = plain_link_label(label)
@@ -46,6 +47,7 @@ class SpreadsheetLinks:
         ):
             resolved = ""
         self.links[token] = (visible or label, resolved, fallback)
+        self.source_labels[token] = label
         return token
 
     def issue_literal(self, value: str) -> str:
@@ -72,7 +74,9 @@ class SpreadsheetLinks:
             return value
         link = self.links.get(value)
         if self.native and link is not None and link[1]:
-            return link[0]
+            # Display projection strips code delimiters and escapes. Reparse
+            # the source label so literal dollars cannot become equations.
+            return self.source_labels[value]
         pattern = re.compile(re.escape(self.prefix) + r"N\d+END")
         return pattern.sub(lambda match: "" if match.group() in self.links else match.group(), value)
 
