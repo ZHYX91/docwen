@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import sys
+import time
 from pathlib import Path
 from textwrap import dedent
 
 import pytest
-from scripts.release.verify_packaged_cli import _run_machine_protocol_smoke
+from scripts.release.verify_packaged_cli import _MACHINE_STDERR_FILENAME, _run_machine_protocol_smoke
+from tests.support.subprocess_runner import append_subprocess_run_record
 
 pytestmark = [
     pytest.mark.e2e,
@@ -39,6 +42,8 @@ def test_source_machine_runs_the_canonical_physical_page_release_corpus(tmp_path
             from pathlib import Path
             from docwen_runtime.workspace.manager import WorkspaceManager
 
+            sys.stderr.buffer.write(b"Synthetic Machine runtime diagnostic\\n")
+            sys.stderr.buffer.flush()
             original_cleanup = WorkspaceManager.cleanup
             delayed = False
 
@@ -56,7 +61,20 @@ def test_source_machine_runs_the_canonical_physical_page_release_corpus(tmp_path
             raise SystemExit(main(sys.argv[1:]))
         """),
     ]
+    started = time.monotonic()
     output = _run_machine_protocol_smoke(command, work_dir=work_dir)
+    stderr = (work_dir / _MACHINE_STDERR_FILENAME).read_bytes()
+    assert stderr.startswith(b"Synthetic Machine runtime diagnostic\n")
+    append_subprocess_run_record(
+        {
+            "command": "docwen serve --stdio (synthetic source physical-page corpus)",
+            "duration_seconds": time.monotonic() - started,
+            "timed_out": False,
+            "returncode": 0,
+            "stderr_bytes": len(stderr),
+            "stderr_base64": base64.b64encode(stderr).decode("ascii"),
+        }
+    )
 
     assert output.is_file()
     assert json.loads((work_dir / "cleanup-delay.json").read_text(encoding="utf-8")) == {"delaySeconds": 1}

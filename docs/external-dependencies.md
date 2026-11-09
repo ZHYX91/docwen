@@ -80,9 +80,14 @@ identifiers, so consumers can distinguish an unsupported route from a successful
 
 ## Linux ONNX Runtime
 
-Linux uses ONNX Runtime 1.31.1; other platforms remain on 1.24.4. The Linux
-release fixes the missing DRM vendor-file warning during import, without
-filtering stderr or weakening the successful Machine-run silence checks.
+Linux uses ONNX Runtime 1.31.1. Other platforms use 1.24.4. The Linux release
+fixes the missing DRM vendor-file warning during import. It can still report
+a PCI device-discovery warning on Hyper-V hosts. The Machine verifier follows
+the v2 transport contract and records bounded stderr diagnostics separately
+from the strictly framed stdout stream. This replaces the earlier requirement
+for empty stderr on successful Machine smoke runs.
+On affected Linux hosts, DocWen Assistant 3.5.2 can reject the warning as a
+protocol error. Use Assistant 3.6.0 or newer with this DocWen build.
 ORT Python 3.12 Linux wheels are locked for x86-64 and ARM64 (manylinux 2.28, glibc >= 2.28). This is the ORT wheel floor, not the whole application floor: the existing Qt dependency requires newer glibc (ARM64 wheels require 2.39).
 
 ONNX Runtime 1.31.1 introduces native POSIX telemetry. DocWen forces
@@ -95,8 +100,12 @@ An observably unsafe late bootstrap (ORT already loaded with opt-out missing or 
 References: [upstream opt-out](https://github.com/microsoft/onnxruntime/blob/v1.31.1/onnxruntime/core/platform/telemetry_environment.h#L258-L267),
 [device discovery fix](https://github.com/microsoft/onnxruntime/pull/29858).
 
-Linux 固定使用 ONNX Runtime 1.31.1，其他平台仍为 1.24.4。新 Linux 版本修复
-导入时缺少 DRM vendor 文件的警告，不过滤 stderr，也不放宽成功 Machine 调用的静默验收。
+Linux 固定使用 ONNX Runtime 1.31.1，其他平台使用 1.24.4。新 Linux 版本修复导入时缺少
+DRM vendor 文件的警告，在 Hyper-V 上仍可能报告 PCI 设备探测警告。Machine 验收遵循 v2
+传输合同，按上限保留 stderr 诊断，stdout 继续严格校验协议帧。这取代此前成功 Machine
+冒烟要求 stderr 为空的验收条件。
+在出现此警告的 Linux 主机上，DocWen Assistant 3.5.2 可能将其判为协议错误。请搭配
+Assistant 3.6.0 或更新版本。
 锁文件包含 ORT Python 3.12 的 Linux x86-64、ARM64 wheel（manylinux 2.28, glibc >= 2.28）。这只是 ORT 的下限，不是整个程序的下限；既有 Qt 依赖要求更新的 glibc（ARM64 wheel 要求 2.39）。
 
 DocWen 在导入前强制设置 `ORT_DISABLE_TELEMETRY=1`，关闭该版本新增的原生 POSIX 遥测，

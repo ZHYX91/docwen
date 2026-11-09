@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import shutil
@@ -51,13 +52,14 @@ print(json.dumps({'ort_version': ort.__version__, 'providers': session.get_provi
 """
 
 FROZEN_TEST = r"""
+import base64
 import json
 import os
 import sys
 from pathlib import Path
 assert os.environ['ORT_DISABLE_TELEMETRY'] == '1'
 sys.path.insert(0, sys.argv[1])
-from scripts.release.verify_packaged_cli import _run_machine_protocol_smoke
+from scripts.release.verify_packaged_cli import _MACHINE_STDERR_FILENAME, _run_machine_protocol_smoke
 work = Path(sys.argv[4])
 work.mkdir()
 (work / 'config_home').mkdir()
@@ -67,7 +69,10 @@ work.mkdir()
 command = ['/usr/bin/env', 'LD_PRELOAD=' + sys.argv[3], sys.argv[2]]
 output = _run_machine_protocol_smoke(command, work_dir=work)
 assert output.is_file()
-print(json.dumps({'frozen_machine_corpus': 'passed', 'output_name': output.name}))
+stderr_path = work / _MACHINE_STDERR_FILENAME
+stderr = stderr_path.read_bytes() if stderr_path.is_file() else b''
+print(json.dumps({'frozen_machine_corpus': 'passed', 'output_name': output.name,
+                  'machine_stderr_base64': base64.b64encode(stderr).decode('ascii')}))
 """
 
 
@@ -119,10 +124,8 @@ def main() -> None:
             env=environment,
             check=True,
             capture_output=True,
-            text=True,
             timeout=90,
         )
-        assert not result.stderr, result.stderr
         events = ort_log.read_text().splitlines()
         assert "probe-loaded" in events, events
         attempts = [event for event in events if event.startswith("network:")]
@@ -132,7 +135,8 @@ def main() -> None:
             native_probe_self_test="passed",
             observed_libc_network_attempts=attempts,
             forced_missing_vendor_reads=events.count("vendor-ENOENT"),
-            stderr=result.stderr,
+            stderr=result.stderr.decode("utf-8", errors="replace"),
+            stderr_base64=base64.b64encode(result.stderr).decode("ascii"),
             scope="Instrumented libc APIs only; not direct-syscall or packet-level coverage.",
         )
         if args.binary_dir is not None:
@@ -147,7 +151,6 @@ def main() -> None:
                 env=frozen_environment,
                 check=True,
                 capture_output=True,
-                text=True,
                 timeout=600,
             )
             frozen_events = frozen_log.read_text().splitlines()
@@ -158,7 +161,8 @@ def main() -> None:
                 json.loads(frozen.stdout),
                 observed_libc_network_attempts=frozen_attempts,
                 forced_missing_vendor_reads=frozen_events.count("vendor-ENOENT"),
-                stderr=frozen.stderr,
+                stderr=frozen.stderr.decode("utf-8", errors="replace"),
+                verifier_stderr_base64=base64.b64encode(frozen.stderr).decode("ascii"),
             )
         print(json.dumps(report, indent=2))
 

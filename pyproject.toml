@@ -62,7 +62,7 @@ docwen-bundle = { workspace = true }
 
 [project]
 name = "docwen"
-version = "0.21.3"
+version = "0.22.0"
 description = "DocWen - 支持 Word/Markdown/Excel 互转"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -119,10 +119,9 @@ dependencies = [
     "pillow-heif>=1.1.1",
     # OCR / table-structure recognition
     "rapidocr_onnxruntime>=1.4.0",
-    # Linux 1.31.1 fixes import-time device-discovery diagnostics. Its POSIX
+    # Linux 1.31.1 fixes the missing DRM vendor-file warning. Its POSIX
     # telemetry must be disabled before import (see DocWen's bootstrap guard).
-    # Keep the established non-Linux release and successful Machine stderr
-    # silence; do not filter native process diagnostics.
+    # Machine keeps native diagnostic stderr separate from framed stdout.
     "onnxruntime==1.31.1; sys_platform == 'linux'",
     "onnxruntime==1.24.4; sys_platform != 'linux'",
     "opencv-python-headless==4.13.0.92",

@@ -3,7 +3,7 @@
 - 本文档只记录版本演进和对外可见变更，不作为当前功能边界、架构约束或规范条款的事实源。
 - 长期有效的项目说明以 README 体系为准，设计与维护边界以 `docs/architecture.md` 为准，强约束规则以 `docs/specs/` 为准。
 
-## Unreleased / 未发布
+## 0.22.0
 
 - Hide start and completion lifecycle events from activity details, keep actionable notices, and label warnings consistently in the interface language; each activity record now selects its own primary output instead of inheriting the previous selection.
 - 活动详情不再显示开始、完成类生命周期事件，保留可操作提示，警告标签统一跟随界面语言；每条活动记录默认选中自己的主产物，不再沿用上一条的选择。
@@ -15,6 +15,21 @@
 - 新增标题序号默认不加核对批注，恢复默认后也保持关闭；已明确保存的选择继续保留。
 - Add the default-off `document.export_numbering_markers` setting (request option `export_numbering_markers`) to wrap newly generated DOCX-to-Markdown heading numbers in paired U+2060 markers that Number Suite can recognize, while protecting incomplete markers and avoiding duplicate numbering for headings that already carry a complete paired marker.
 - 新增默认关闭的 `document.export_numbering_markers` 设置（请求选项 `export_numbering_markers`），为 DOCX 转 Markdown 新生成的标题序号加上成对的 U+2060 标记供 Number Suite 识别；不完整标记保持保护；已有完整成对标记的标题编号不重复添加。
+
+- Choose separate keep, text, address, remove and hyperlink modes for Markdown and wiki links. Use independent fallbacks, and keep native Word heading links and eligible Excel hyperlinks.
+- Markdown 链接与 Wiki 链接可分别选择保留、文本、地址、移除或超链接，并各自设定回退方式；支持 Word 标题跳转与符合条件的 Excel 原生超链接。
+- Preserve more formulas, inline styles, footnotes, endnotes, separators and quote structure across Markdown and Word. Report identified losses with their locations and optional localized Word or Excel comments. For clipboard inputs, the original expression stays in the generated document comment.
+- Markdown 与 Word 往返保留更多公式、行内样式、脚注、尾注、分隔线和引用结构；发生已识别的转换损失时报告位置，并可在 Word 或 Excel 添加本地化批注。剪贴板原文仅随生成文档的批注交付。
+- Let source-native Machine Markdown-to-DOCX requests optionally proofread the generated Word file before publication. Rules can be selected independently.
+- Machine 普通 Markdown 转 DOCX 可在交付前校对生成的 Word 文件，并独立选择校对规则。
+- Bound temporary-folder preparation and transient Windows DOCX replacement retries, and recheck that retried outputs stay inside the selected folder. Show preparation, cancellation and saving progress, and add a CLI doctor check for safe publication to the chosen output folder.
+- 临时目录准备及 Windows DOCX 暂时无法替换时采用有界重试，并在重试时重新核对输出目录边界；界面显示准备、取消与保存进度，CLI doctor 可检查指定目录是否支持安全保存。
+- Keep actual-format notices readable in narrow layouts, clarify Structural Tables precedence and language selection, and explain the GUI language scope of specialized exports in all guides.
+- 修复窄布局下实际格式提示被裁切的问题，明确结构化表格优先级及语言选择的作用，并在各语言指南说明专项导出的界面语言范围。
+- Update ONNX Runtime on Linux and set its telemetry opt-out before initialization.
+- 更新 Linux 上的 ONNX Runtime，并在初始化前关闭遥测。
+- Validate Machine stdout as a framed protocol and retain bounded runtime logs on stderr. On affected Linux hosts, upgrade DocWen Assistant to 3.6.0 or newer before using this build with the plugin.
+- Machine 继续严格校验 stdout 协议帧，并按上限保留 stderr 运行日志。在可能出现 ONNX Runtime 探测警告的 Linux 主机上，搭配本版使用前请先升级到 DocWen Assistant 3.6.0 或更新版本。
 
 ## 0.21.3 (2026-11-02)
 

@@ -2533,9 +2533,23 @@ def verify_machine_note_domains_markdown(markdown: str) -> None:
         raise RuntimeError(f"packaged_machine_note_domains_markdown_missing:{missing}")
 
 
+_MACHINE_FRAME_HEADER = re.compile(rb"Content-Length: ([1-9][0-9]*)\r\n\r\n")
+_MACHINE_FRAME_LIMIT = 16 * 1024 * 1024
+_MACHINE_STDERR_LIMIT = 256 * 1024
+_MACHINE_STDERR_FILENAME = "machine-stderr.bin"
+
+
 def _machine_frame(payload: dict[str, Any]) -> bytes:
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     return f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body
+
+
+def _reject_non_json_constant(value: str) -> None:
+    raise ValueError(f"non-JSON constant: {value}")
+
+
+def _decode_machine_frame_body(body: bytes) -> Any:
+    return json.loads(body.decode("utf-8"), parse_constant=_reject_non_json_constant)
 
 
 def _read_machine_frame(stream: IO[bytes]) -> dict[str, Any]:
@@ -2547,20 +2561,49 @@ def _read_machine_frame(stream: IO[bytes]) -> dict[str, Any]:
         header.extend(byte)
         if len(header) > 64:
             raise RuntimeError("packaged_machine_protocol_invalid_header")
-    match = re.fullmatch(rb"Content-Length: ([1-9][0-9]*)\r\n\r\n", bytes(header))
+    match = _MACHINE_FRAME_HEADER.fullmatch(bytes(header))
     if match is None:
         raise RuntimeError(f"packaged_machine_protocol_invalid_header:{bytes(header)!r}")
     content_length = int(match.group(1))
+    if content_length > _MACHINE_FRAME_LIMIT:
+        raise RuntimeError("packaged_machine_protocol_frame_limit_exceeded")
     body = stream.read(content_length)
     if len(body) != content_length:
         raise RuntimeError("packaged_machine_protocol_length_mismatch")
     try:
-        payload = json.loads(body.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        payload = _decode_machine_frame_body(body)
+    except (ValueError, RecursionError) as exc:
         raise RuntimeError("packaged_machine_protocol_invalid_json") from exc
     if not isinstance(payload, dict):
         raise RuntimeError("packaged_machine_protocol_non_object")
     return payload
+
+
+def _validate_machine_exit(return_code: int, trailing_stdout: bytes, stderr: bytes) -> None:
+    if return_code != 0 or trailing_stdout:
+        raise RuntimeError(f"packaged_machine_protocol_process_failed:{return_code}:{trailing_stdout!r}:{stderr!r}")
+    headers = list(_MACHINE_FRAME_HEADER.finditer(stderr))
+    for index, match in enumerate(headers):
+        if len(match[0]) > 64:
+            continue
+        start = match.end()
+        length = int(match.group(1))
+        # An unescaped canonical header inside a JSON body makes that body invalid.
+        end = headers[index + 1].start() if index + 1 < len(headers) else len(stderr)
+        if length > _MACHINE_FRAME_LIMIT or start + length > end:
+            continue
+        try:
+            payload = json.loads(
+                stderr[start : start + length].decode("utf-8"),
+                parse_constant=_reject_non_json_constant,
+                parse_int=lambda _: None,  # Frame detection needs no integer values.
+            )
+        except RecursionError as exc:
+            raise RuntimeError("packaged_machine_protocol_stderr_frame_unverified") from exc
+        except ValueError:
+            continue
+        if isinstance(payload, dict) and payload.get("jsonrpc") == "2.0":
+            raise RuntimeError("packaged_machine_protocol_frame_on_stderr")
 
 
 class _MachineSmokeResources:
@@ -2569,6 +2612,53 @@ class _MachineSmokeResources:
     def __init__(self) -> None:
         self.process: subprocess.Popen[bytes] | None = None
         self.physical_temp: tempfile.TemporaryDirectory[str] | None = None
+        self._stderr = bytearray()
+        self._stderr_reader: threading.Thread | None = None
+        self._stderr_path: Path | None = None
+        self._stderr_error: str | None = None
+
+    def start_stderr_drain(self, process: subprocess.Popen[bytes], stream: IO[bytes], work_dir: Path) -> None:
+        self._stderr_path = work_dir / _MACHINE_STDERR_FILENAME
+
+        def drain() -> None:
+            try:
+                while True:
+                    remaining = _MACHINE_STDERR_LIMIT - len(self._stderr)
+                    chunk = os.read(stream.fileno(), min(64 * 1024, remaining + 1))
+                    if not chunk:
+                        return
+                    self._stderr.extend(chunk[:remaining])
+                    if len(chunk) > remaining:
+                        self._stderr_error = "packaged_machine_protocol_stderr_limit_exceeded"
+                        break
+            except OSError as exc:
+                self._stderr_error = f"packaged_machine_protocol_stderr_read_failed:{type(exc).__name__}"
+            with contextlib.suppress(OSError):
+                process.kill()
+
+        self._stderr_reader = threading.Thread(target=drain, name="machine-smoke-stderr", daemon=True)
+        self._stderr_reader.start()
+
+    def finish_stderr_drain(self) -> bytes:
+        if self._stderr_reader is None:
+            return b""
+        self._stderr_reader.join(timeout=5)
+        if self._stderr_reader.is_alive():
+            raise RuntimeError("packaged_machine_protocol_stderr_eof_timeout")
+        self._stderr_reader = None
+        stderr = bytes(self._stderr)
+        if stderr:
+            assert self._stderr_path is not None
+            with self._stderr_path.open("xb") as evidence:
+                evidence.write(stderr)
+            # The governed smoke directory can be temporary. Keep a lossless
+            # representation in standalone logs.
+            encoded = base64.b64encode(stderr).decode("ascii")
+            lines = "\n".join(encoded[index : index + 4096] for index in range(0, len(encoded), 4096))
+            print(f"Machine smoke captured {len(stderr)} stderr bytes (base64):\n{lines}", file=sys.stderr, flush=True)
+        if self._stderr_error is not None:
+            raise RuntimeError(self._stderr_error)
+        return stderr
 
     def cleanup(self) -> list[str]:
         errors: list[str] = []
@@ -2594,6 +2684,10 @@ class _MachineSmokeResources:
                             errors.append(f"process_wait:{type(exc).__name__}:{exc}")
                 except OSError as exc:
                     errors.append(f"process_wait:{type(exc).__name__}:{exc}")
+            try:
+                self.finish_stderr_drain()
+            except (OSError, RuntimeError) as exc:
+                errors.append(f"stderr_drain:{exc}")
             for stream in (process.stdout, process.stderr):
                 if stream is not None and not stream.closed:
                     with contextlib.suppress(OSError):
@@ -2717,7 +2811,7 @@ def _run_machine_protocol_smoke_impl(
         raise RuntimeError("packaged_machine_protocol_stdio_unavailable")
     machine_stdin = process.stdin
     machine_stdout = process.stdout
-    machine_stderr = process.stderr
+    resources.start_stderr_drain(process, process.stderr, work_dir)
 
     def exchange(request: dict[str, Any]) -> dict[str, Any]:
         machine_stdin.write(_machine_frame(request))
@@ -3455,10 +3549,8 @@ def _run_machine_protocol_smoke_impl(
 
     machine_stdin.close()
     return_code = process.wait(timeout=120)
-    trailing_stdout = machine_stdout.read()
-    stderr = machine_stderr.read()
-    if return_code != 0 or trailing_stdout or stderr:
-        raise RuntimeError(f"packaged_machine_protocol_process_failed:{return_code}:{trailing_stdout!r}:{stderr!r}")
+    trailing_stdout = machine_stdout.read(64)
+    _validate_machine_exit(return_code, trailing_stdout, resources.finish_stderr_drain())
     for (
         physical_task_id,
         physical_terminal,
