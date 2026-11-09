@@ -1,0 +1,74 @@
+name: ORT Linux x64 wheel feasibility
+
+on:
+  push:
+    branches: [codex/ort-wheel-feasibility-20261109]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ort-linux-wheel-feasibility
+  cancel-in-progress: false
+
+env:
+  ORT_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:9555ba6c479fa69a2aa80ad1dc57154a60d562b19df159361d9379a02beb1e36
+  DOCWEN_NATIVE_PROBE: 41308ea2c3ce54e4d6a67f51f82fbd123f78b5eb
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  wheel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Prepare pinned native probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/ort-wheel-feasibility"
+          mkdir -p "$work/out" "$work/probe/tests/support/native"
+          git fetch --no-tags --depth 1 origin "$DOCWEN_NATIVE_PROBE"
+          test "$(git rev-parse FETCH_HEAD)" = "$DOCWEN_NATIVE_PROBE"
+          for file in ort_optout_probe.c verify_ort_optout.py; do
+            git show "$DOCWEN_NATIVE_PROBE:tests/support/native/$file" > "$work/probe/tests/support/native/$file"
+          done
+          printf '%s\n' "$DOCWEN_NATIVE_PROBE" > "$work/out/docwen-native-probe.commit"
+          printf '%s\n' "$GITHUB_SHA" > "$work/out/docwen-recipe.commit"
+          (cd "$work/probe" && sha256sum tests/support/native/*) > "$work/out/docwen-native-probe.sha256"
+      - name: Build one exact CPU wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/ort-wheel-feasibility"
+          docker pull "$ORT_IMAGE"
+          docker image inspect "$ORT_IMAGE" > "$work/out/container.json"
+          df -h "$work"
+          docker run --rm \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/docwen,readonly" \
+            --mount "type=bind,source=$work,target=/work" \
+            --workdir /work "$ORT_IMAGE" \
+            bash /docwen/scripts/release/probe_ort_linux_wheel.sh build \
+            2>&1 | tee "$work/out/build.log"
+      - name: Run the native probe with no container network
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/ort-wheel-feasibility"
+          docker run --rm --network none \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/docwen,readonly" \
+            --mount "type=bind,source=$work,target=/work" \
+            --workdir /work "$ORT_IMAGE" \
+            bash /docwen/scripts/release/probe_ort_linux_wheel.sh probe \
+            2>&1 | tee "$work/out/probe.log"
+      - name: Upload feasibility evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ort-linux-x64-wheel-feasibility-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ort-wheel-feasibility/out/
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 7
