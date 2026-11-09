@@ -445,7 +445,9 @@ section = "Xuất ô đã hợp nhất"
 desc = "Kiểm soát cách thể hiện ô đã hợp nhất trong đầu ra Markdown."
 merge_strategy_label = "Cách xuất ô đã hợp nhất:"
 
-merge_strategy_help = "Chỉ áp dụng cho Markdown thường: Điền lặp lại văn bản ô neo (ví dụ “Tiêu đề | Tiêu đề”); Trống để các ô bị phủ trống (“Tiêu đề | ”).\n\nKhi bật đầu ra Structural Tables, dùng dấu cấu trúc < và ^ thay thế."
+merge_strategy_help = "Dành cho Markdown thông thường:\nĐiền: lặp lại văn bản ô trên cùng bên trái (Tiêu đề | Tiêu đề).\nĐể trống: để trống các ô bị che (Tiêu đề | ).\n\nKhi bật Structural Tables trong “Tạo Markdown”, < và ^ được dùng thay thế. Lựa chọn tại đây vẫn được lưu.\nNgoại lệ: tối ưu hóa “Công văn” xử lý bảng riêng."
+structural_active = "Xuất tài liệu/bảng tính thông thường: Structural Tables đang bật; Điền/Để trống được giữ lại nhưng không áp dụng."
+ordinary_active = "Xuất tài liệu/bảng tính thông thường: Structural Tables đang tắt; áp dụng Điền/Để trống của từng thẻ đầu vào."
 [settings.table_export.strategies]
 fill = "Điền"
 empty = "Để trống"
@@ -1842,7 +1844,7 @@ extended_headings = "Nhận dạng H7–H9. Khi tắt, 7–9 dấu # đầu dòn
 typed_endnotes = "Dùng nhãn như endnote: để phân biệt chú thích cuối với chú thích chân trang. Khi tắt, các nhãn đó được xử lý như chú thích chân trang thông thường."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Hỗ trợ nhiều hàng tiêu đề, tiêu đề hàng, bảng không có hàng tiêu đề và ô gộp. Xuất dấu và cấu trúc mở rộng của Structural Tables khi cần. Khi tắt, làm phẳng thành bảng Markdown thường và báo mất cấu trúc."
+structural_tables = "Giữ ô gộp, nhiều hàng tiêu đề, tiêu đề hàng và bảng không có tiêu đề.\nBật: dùng < và ^ thay cho Điền/Để trống khi xuất tài liệu và bảng tính thông thường. Lựa chọn đã lưu không đổi.\nTắt: áp dụng lựa chọn của từng thẻ đầu vào và thông báo cấu trúc bảng bị mất.\n\nNgoại lệ: tối ưu hóa “Công văn” xử lý bảng riêng."
 
 captions_references = "Xuất chú thích và tham chiếu chéo Number Suite khi có. Khi tắt, xuất văn bản thường và báo mất tham chiếu."
 extended_headings = "Xuất H7–H9. Khi tắt, các tiêu đề này chuyển thành H6 và báo mất cấp."

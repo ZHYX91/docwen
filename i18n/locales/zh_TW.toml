@@ -378,7 +378,9 @@ section = "合併儲存格匯出"
 desc = "控制合併儲存格在 Markdown 輸出中的表示方式。"
 merge_strategy_label = "合併儲存格匯出策略:"
 
-merge_strategy_help = "僅用於一般 Markdown：填充會重複合併區域左上角文字（例如「標題 | 標題」）；留空會讓被覆蓋儲存格為空（「標題 | 」）。\n\n開啟 Structural Tables 輸出時，合併儲存格改用 <、^ 結構標記。"
+merge_strategy_help = "用於一般 Markdown：\n填充：重複合併區域左上角文字（標題 | 標題）。\n留空：被覆蓋的儲存格保持空白（標題 | ）。\n\n在「產生 Markdown」中開啟 Structural Tables 後，改用 <、^ 標記；這裡的選擇仍會保留。\n例外：「公文」最佳化會另外處理表格，不受此開關控制。"
+structural_active = "一般文件/試算表匯出：Structural Tables 已開啟，填充/留空選擇保留但暫不使用。"
+ordinary_active = "一般文件/試算表匯出：Structural Tables 已關閉，使用各傳入分頁的填充/留空選擇。"
 [settings.table_export.strategies]
 fill = "填充"
 empty = "留空"
@@ -1844,7 +1846,7 @@ extended_headings = "辨識 H7–H9；關閉時開頭七至九個 # 保留為可
 typed_endnotes = "以 endnote: 等註記標籤區分尾註與註腳；關閉時這些標籤按一般註腳處理。"
 
 [settings.markdown_extensions.output_help]
-structural_tables = "支援多列表頭、列標題欄、無表頭及合併儲存格。需要時輸出 Structural Tables 標記與延伸結構；關閉時攤平成一般 Markdown 表格並回報結構損失。"
+structural_tables = "保留合併儲存格、多列表頭、列標題欄及無表頭表格。\n開啟：一般文件和表格匯出改用 <、^ 標記，不使用「填充/留空」，但保留原選擇。\n關閉：使用各傳入分頁的「填充/留空」，並提示遺失的表格結構。\n\n例外：「公文」最佳化會另外處理表格，不受此開關控制。"
 
 captions_references = "將文件中的題註與交互參照轉為 Number Suite 格式；關閉時保留顯示文字，並提示參照關係未保留。"
 extended_headings = "輸出 H7–H9；關閉時這些標題降為 H6，並回報層級損失。"

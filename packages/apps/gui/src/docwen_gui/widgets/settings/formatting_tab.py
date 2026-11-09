@@ -13,6 +13,7 @@ from ...i18n import t
 from ...view_models.settings_vm import SECTION_FORMATTING, SettingsViewModel
 from .base_tab import BaseSettingsTab
 from .mermaid_controls import MermaidControls
+from .table_export_status import TableExportStatus
 
 
 def _sep_options() -> list[tuple[str, str]]:
@@ -83,10 +84,10 @@ _EXTENSION_HELP_FALLBACKS: dict[tuple[str, str], str] = {
         "Recognize Structural Tables markers such as < and ^ and preserve extended table structure. "
         "When disabled, treat them as ordinary Markdown table content."
     ),
-    ("output", "structural_tables"): (
-        "Write Structural Tables markers and extended structure when needed. When disabled, flatten to ordinary "
-        "Markdown tables and report lost structure."
-    ),
+    (
+        "output",
+        "structural_tables",
+    ): "Preserves merged cells, multiple header rows, row headers and tables without headers.\nOn: use < and ^ instead of Fill/Empty for standard document and spreadsheet exports. Saved choices stay unchanged.\nOff: use each input tab’s Fill/Empty choice and report lost table structure.\n\nException: “Official documents” optimization handles tables separately.",
     ("input", "captions_references"): (
         "Recognize Number Suite captions, identifiers and cross-references. When disabled, declarations and @ "
         "references remain visible text."
@@ -345,6 +346,10 @@ class FormattingTab(BaseSettingsTab):
             self._extension_checks[(direction, name)] = checkbox
             form.addRow(help_widget)
             checkbox.toggled.connect(self._save_extensions)
+            if direction == "output" and name == "structural_tables":
+                status = self.add_form_description(form, "")
+                status.setObjectName("tableExportStatus")
+                self._table_export_status = TableExportStatus(status, self._vm)
         preset = QPushButton(t("settings.markdown_extensions.obsidian_preset", "Use Obsidian extensions"))
         preset.setObjectName(f"markdownExtensions{direction.title()}Preset")
         preset.clicked.connect(lambda _checked=False, selected=direction: self._apply_extension_preset(selected))

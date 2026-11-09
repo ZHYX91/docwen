@@ -16,6 +16,7 @@ from ...view_models.settings_vm import (
 from .base_tab import DynamicSettingsTab
 from .content_controls import DocumentContentControls
 from .numbering_editors import NumberingEditors
+from .table_export_status import TableExportStatus
 
 
 class DocumentTab(DynamicSettingsTab):
@@ -95,13 +96,17 @@ class DocumentTab(DynamicSettingsTab):
                         "label": t("settings.table_export.merge_strategy_label", "Merge Cell Export Strategy:"),
                         "tooltip": t(
                             "settings.table_export.merge_strategy_help",
-                            "For ordinary Markdown only: Fill repeats the merged anchor text; Empty leaves covered "
-                            "cells blank. With Structural Tables output enabled, merges use < and ^ structure markers.",
+                            "For ordinary Markdown:\nFill: repeat the top-left cell’s text (Title | Title).\nEmpty: leave covered cells blank (Title | ).\n\nWhen enabled in “Generate Markdown”, Structural Tables uses < and ^ instead. Your choice here stays saved.\nException: “Official documents” optimization handles tables separately.",
                         ),
                         "items": [
                             (t("settings.table_export.strategies.fill", "Fill"), "fill"),
                             (t("settings.table_export.strategies.empty", "Empty"), "empty"),
                         ],
+                    },
+                    {
+                        "key": "table_export_status",
+                        "type": "description",
+                        "object_name": "tableExportStatus",
                     },
                 ],
             },
@@ -109,6 +114,7 @@ class DocumentTab(DynamicSettingsTab):
         self._vm = view_model
         super().__init__(None, "conversion_defaults", "document", schema)
         self._load_values()
+        self._table_export_status = TableExportStatus.attach(self, self._vm)
         self._wire_numbering_controls()
         self._content_controls = DocumentContentControls(self, self._vm)
         self._numbering_editors = NumberingEditors(self, self._vm, self._refresh_scheme_combo_items)

@@ -445,7 +445,9 @@ section = "Exportación de celdas combinadas"
 desc = "Controla cómo se representan las celdas combinadas en la salida Markdown."
 merge_strategy_label = "Estrategia de exportación de celdas combinadas:"
 
-merge_strategy_help = "Solo para Markdown normal: Rellenar repite el texto de la celda ancla (p. ej., «Título | Título»); Vacío deja en blanco las celdas cubiertas («Título | »).\n\nCon la salida Structural Tables activada se usan en su lugar los marcadores < y ^."
+merge_strategy_help = "Para Markdown normal:\nRellenar: repetir el texto de la celda superior izquierda (Título | Título).\nDejar vacío: dejar vacías las celdas cubiertas (Título | ).\n\nSi Structural Tables está activado en «Generar Markdown», se usan < y ^ en su lugar. La selección se conserva.\nExcepción: la optimización «Documentos oficiales» procesa las tablas por separado."
+structural_active = "Exportación normal de documentos/hojas de cálculo: Structural Tables activado; Rellenar/Dejar vacío se conserva pero no se aplica."
+ordinary_active = "Exportación normal de documentos/hojas de cálculo: Structural Tables desactivado; se aplica Rellenar/Dejar vacío de cada pestaña de entrada."
 [settings.table_export.strategies]
 fill = "Rellenar"
 empty = "Dejar vacío"
@@ -1851,7 +1853,7 @@ extended_headings = "Reconoce H7–H9. Desactivado, de siete a nueve # iniciales
 typed_endnotes = "Usa etiquetas como endnote: para distinguir notas finales de notas al pie. Desactivado, esas etiquetas se tratan como notas al pie normales."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Admite varias filas de encabezado, encabezados de fila, tablas sin encabezado y celdas combinadas. Escribe marcadores y estructura ampliada de Structural Tables cuando sea necesario. Desactivado, aplana a tablas Markdown normales e informa de la pérdida de estructura."
+structural_tables = "Conserva celdas combinadas, varias filas de encabezado, encabezados de fila y tablas sin encabezado.\nActivado: < y ^ sustituyen a Rellenar/Dejar vacío al exportar documentos y hojas de cálculo de forma normal. La selección se conserva.\nDesactivado: se aplica la selección de cada pestaña de entrada y se informa de la estructura perdida.\n\nExcepción: la optimización «Documentos oficiales» procesa las tablas por separado."
 
 captions_references = "Genera títulos y referencias cruzadas de Number Suite cuando existan. Desactivado, emite texto normal e informa de referencias perdidas."
 extended_headings = "Genera H7–H9. Desactivado, esos encabezados pasan a H6 y se informa de la pérdida."
