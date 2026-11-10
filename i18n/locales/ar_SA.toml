@@ -5,7 +5,7 @@
 [meta]
 name = "Arabic (Saudi Arabia)"
 native_name = "العربية"
-template_name = "English General Template"
+template_name = "قالب عربي عام"
 
 # =============================================================================
 # Main Window
@@ -1704,7 +1704,7 @@ first_line_indent_cm = 0
 spacing_after_twip = 120
 spacing_before_twip = 0
 bold = false
-justification = "left"
+justification = "right"
 
 # 标题1格式（黑体、三号、2字符）
 [style_formats.heading_1]
@@ -1716,7 +1716,7 @@ first_line_indent_cm = 0
 spacing_after_twip = 120
 spacing_before_twip = 240
 bold = true
-justification = "left"
+justification = "right"
 
 # 标题2格式（楷体_GB2312、三号、2字符）
 [style_formats.heading_2]
@@ -1728,7 +1728,7 @@ first_line_indent_cm = 0
 spacing_after_twip = 120
 spacing_before_twip = 240
 bold = true
-justification = "left"
+justification = "right"
 
 # 标题3-9格式（仿宋_GB2312、三号、2字符）
 [style_formats.heading_3_9]
@@ -1740,15 +1740,15 @@ first_line_indent_cm = 0
 spacing_after_twip = 120
 spacing_before_twip = 240
 bold = true
-justification = "left"
+justification = "right"
 
 # =============================================================================
 # 占位符（用于文档模板）
 # 这些占位符用于 MD → DOCX 转换时的模板填充
 # =============================================================================
 [placeholders]
-title = "title"
-body = "body"
+title = "العنوان"
+body = "المتن"
 
 # =============================================================================
 # YAML 键名（用于元数据）

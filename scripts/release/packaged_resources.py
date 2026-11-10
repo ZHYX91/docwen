@@ -36,6 +36,7 @@ REQUIRED_CONFIG_FILES = (
     "text.toml",
 )
 REQUIRED_TEMPLATE_FILES = (
+    "قالب عربي عام.docx",
     "Deutsche Allgemeine Vorlage.docx",
     "English General Template.docx",
     "English Sample Sheet Template.xlsx",

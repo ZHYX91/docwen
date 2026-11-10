@@ -1,5 +1,13 @@
 # Testing / 测试
 
+`test_shipped_docx_templates.py` checks every locale's actual distributed template, complete style registry,
+localized placeholders and idempotent completion. `test_arabic_style_direction.py` checks preserved custom
+formats, RTL numbering/continuation indentation and table direction without reversing source cells.
+For visual acceptance, convert representative localized Markdown through the application service for all
+twelve templates and render every output page in a native Office renderer. Inspect mixed scripts, lists,
+quotes, tables, code, equations, spacing and pagination; XML assertions alone do not establish visual correctness.
+The July multilingual golden fixture retains its historical hashes rather than pretending they describe current assets.
+
 QA and `tools/run_source.py` prepend the selected checkout's complete `packages/**/src`
 set to child-process imports, including CLI and nested optimizers, ahead of inherited
 PYTHONPATH and editable installs. Caller environments and leased runtime/report/TEMP

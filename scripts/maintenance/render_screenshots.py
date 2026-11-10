@@ -17,7 +17,9 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=tool_repo)
     parser.add_argument("--workspace-root", type=Path)
-    parser.add_argument("locale", choices=("en_US", "zh_CN"))
+    parser.add_argument(
+        "locale", choices=tuple(path.stem for path in sorted((tool_repo / "i18n/locales").glob("*.toml")))
+    )
     parser.add_argument("theme", choices=("light", "dark"))
     parser.add_argument("--scale", type=int, choices=(90, 100, 110, 125, 150), default=100)
     parser.add_argument("--font", choices=("small", "default", "large"), default="default")

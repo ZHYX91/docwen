@@ -1,10 +1,8 @@
-"""Generate localized DOCX templates from the blank template.
+"""Complete localized DOCX distribution templates from their authored assets.
 
-The current workspace no longer has the old monolithic package layout or
-converter API.  This dev-only tool reads locale metadata from
-``i18n/locales/*.toml`` and rewrites the placeholder text in
-``scripts/maintenance/空白模板.docx`` while preserving the blank template's
-paragraph/run formatting.
+Read locale metadata, retain each existing template's typography, complete the
+managed style registry, and apply distribution-owned direction/layout defaults.
+New locales start with the English template, falling back to the blank source.
 """
 
 from __future__ import annotations
@@ -16,6 +14,14 @@ from pathlib import Path
 from typing import Any
 
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Pt
+
+from docwen_core.docx_styles import MANAGED_DOCUMENT_STYLES, DocumentStyleDefinition
+from docwen_plugin_markdown.to_docx.managed_styles import apply_arabic_style_defaults, complete_managed_styles
+from docwen_runtime.config.document_styles import build_document_style_catalog
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -132,15 +138,72 @@ def generate_template(locale: str, output_path: Path) -> None:
         raise FileNotFoundError(f"Blank template not found: {BLANK_TEMPLATE_SRC}")
 
     placeholders = get_locale_placeholders(locale)
-    doc = Document(str(BLANK_TEMPLATE_SRC))
+    template_name = discover_locale_template_names()[locale]
+    existing = TEMPLATES_DIR / f"{template_name}.docx"
+    # Preserve authored layout in shipped templates; only complete missing styles.
+    source = existing if existing.is_file() else TEMPLATES_DIR / "English General Template.docx"
+    doc = Document(str(source if source.is_file() else BLANK_TEMPLATE_SRC))
 
-    title_count = _replace_placeholder_text(doc, "标题", placeholders["title"])
-    body_count = _replace_placeholder_text(doc, "正文", placeholders["body"])
+    source_title, source_body = "标题", "正文"
+    for locale_file in sorted(LOCALES_DIR.glob("*.toml")):
+        data = _read_toml(locale_file)
+        if data.get("meta", {}).get("template_name") == source.stem:
+            tokens = get_locale_placeholders(locale_file.stem)
+            source_title, source_body = tokens["title"], tokens["body"]
+            break
+
+    title_count = _replace_placeholder_text(doc, source_title, placeholders["title"])
+    body_count = _replace_placeholder_text(doc, source_body, placeholders["body"])
 
     if title_count == 0:
-        raise RuntimeError("Blank template does not contain {{标题}}")
+        raise RuntimeError("Source template does not contain its title placeholder")
     if body_count == 0:
-        raise RuntimeError("Blank template does not contain {{正文}}")
+        raise RuntimeError("Source template does not contain its body placeholder")
+
+    catalog = build_document_style_catalog({}, request_options={"locale": locale}, locales_dir=LOCALES_DIR)
+    doc, bindings = complete_managed_styles(doc, catalog)
+    if locale == "ar_SA":
+        for definition in MANAGED_DOCUMENT_STYLES:
+            apply_arabic_style_defaults(bindings.get(definition.semantic_key)._element, definition)
+        for key, style_id in bindings.foundation_style_ids:
+            if key == "normal":
+                apply_arabic_style_defaults(
+                    next(style for style in doc.styles if style.style_id == style_id)._element,
+                    DocumentStyleDefinition("normal", style_id, "paragraph", ""),
+                )
+        for paragraph in doc.paragraphs:
+            is_title = paragraph.text.strip() == f"{{{{{placeholders['title']}}}}}"
+            if is_title:
+                apply_arabic_style_defaults(
+                    paragraph.style._element,
+                    DocumentStyleDefinition("title", paragraph.style.style_id, "paragraph", "Normal"),
+                )
+            p_pr = paragraph._p.get_or_add_pPr()
+            bidi = p_pr.find(qn("w:bidi"))
+            if bidi is None:
+                bidi = OxmlElement("w:bidi")
+                p_pr.insert_element_before(bidi, "w:spacing", "w:ind", "w:jc", "w:rPr")
+            bidi.set(qn("w:val"), "1")
+            # Word's left alignment is the leading edge of an RTL paragraph.
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER if is_title else WD_ALIGN_PARAGRAPH.LEFT
+            paragraph.paragraph_format.first_line_indent = 0
+            for run in paragraph.runs:
+                run._r.get_or_add_rPr().get_or_add_rFonts().set(qn("w:cs"), "Arial")
+
+    for definition in MANAGED_DOCUMENT_STYLES:
+        if definition.semantic_key.startswith("heading_"):
+            heading = bindings.get(definition.semantic_key).paragraph_format
+            heading.keep_with_next = True
+            heading.space_before = Pt(12)
+            heading.space_after = Pt(6)
+
+    if locale not in {"zh_CN", "zh_TW", "ja_JP"}:
+        # The inherited CJK grid can double Korean/Russian line height and
+        # quantize Western heading spacing. Keep it only for CJK grid layouts.
+        for section in doc.sections:
+            grid = section._sectPr.find(qn("w:docGrid"))
+            if grid is not None:
+                grid.set(qn("w:type"), "default")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     doc.save(str(output_path))

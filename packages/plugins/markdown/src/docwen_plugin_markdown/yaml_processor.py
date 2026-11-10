@@ -10,8 +10,8 @@ import yaml
 from docwen_core.links import split_yaml_front_matter_source
 
 # Bundled template placeholder contract.  These values are the title/body
-# translations used by the 11 DOCX templates shared with both reference
-# projects.  Keeping the contract at the plugin boundary avoids importing the
+# translations used by the 12 bundled DOCX templates.
+# Keeping the contract at the plugin boundary avoids importing the
 # runtime i18n service from conversion code.
 TITLE_PLACEHOLDER_ALIASES: frozenset[str] = frozenset(
     {
@@ -26,6 +26,7 @@ TITLE_PLACEHOLDER_ALIASES: frozenset[str] = frozenset(
         "Tiêu đề",
         "标题",
         "標題",
+        "العنوان",
     }
 )
 BODY_PLACEHOLDER_ALIASES: frozenset[str] = frozenset(
@@ -40,6 +41,7 @@ BODY_PLACEHOLDER_ALIASES: frozenset[str] = frozenset(
         "Текст",
         "Nội dung",
         "正文",
+        "المتن",
     }
 )
 

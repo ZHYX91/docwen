@@ -136,7 +136,8 @@ class DocxListNumbering:
     helper owned by the markdown plugin.
     """
 
-    def __init__(self, document: Any | None = None) -> None:
+    def __init__(self, document: Any | None = None, *, right_to_left: bool = False) -> None:
+        self._right_to_left = right_to_left
         # Accumulated OOXML elements — written to ZIP post-save
         self._abstract_num_elements: list[etree._Element] = []
         self._num_elements: list[etree._Element] = []
@@ -178,6 +179,9 @@ class DocxListNumbering:
             type_ = level_types.get(lvl, "ordered")
             fmt = self._unordered_formats[lvl] if type_ == "unordered" else self._ordered_formats[lvl]
             levels.append(dict(fmt))
+            if self._right_to_left:
+                levels[-1]["lvlJc"] = "right"
+                levels[-1]["rtl"] = True
             if start_by_level is not None and lvl in start_by_level:
                 start = start_by_level[lvl]
                 if not 0 <= start <= 999_999_999:
@@ -504,7 +508,7 @@ def _create_lvl(level: int, lvl_def: dict[str, Any]) -> etree._Element:
     pPr = etree.SubElement(lvl, f"{{{WML_NS}}}pPr")
     ind = etree.SubElement(pPr, f"{{{WML_NS}}}ind")
     ind.set(
-        f"{{{WML_NS}}}left",
+        f"{{{WML_NS}}}{'right' if lvl_def.get('rtl') else 'left'}",
         lvl_def.get("ind_left", str(BASE_INDENT + INDENT_INCREMENT * level)),
     )
     ind.set(

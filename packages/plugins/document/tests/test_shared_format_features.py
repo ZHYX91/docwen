@@ -294,7 +294,7 @@ def test_every_bundled_locale_template_style_is_detected_from_real_docx() -> Non
     repo_root = Path(__file__).resolve().parents[4]
     locale_paths = sorted((repo_root / "i18n" / "locales").glob("*.toml"))
     template_paths = sorted((repo_root / "templates").glob("*.docx"))
-    assert len(locale_paths) == 12  # Arabic UI uses the shipped English DOCX template until a dedicated one exists.
+    assert len(locale_paths) == 12
     assert len(template_paths) == 11
 
     template_documents = [(path, Document(str(path))) for path in template_paths]

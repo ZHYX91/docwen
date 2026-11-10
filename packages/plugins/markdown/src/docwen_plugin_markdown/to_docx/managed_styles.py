@@ -13,7 +13,7 @@ import unicodedata
 from collections import Counter
 from dataclasses import dataclass, replace
 from io import BytesIO
-from typing import TYPE_CHECKING, Final, Never
+from typing import TYPE_CHECKING, Any, Final, Never, cast
 from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipFile, ZipFile, ZipInfo
 
 import lxml.etree as etree
@@ -646,7 +646,74 @@ def _new_style(
         code_font=code_font,
         code_background_color=code_background_color,
     )
+    if catalog.locale == "ar_SA":
+        apply_arabic_style_defaults(style, definition)
     return style
+
+
+def apply_arabic_style_defaults(style: etree._Element, definition: DocumentStyleDefinition) -> None:
+    """Set direction for a newly owned Arabic style, never an existing user style."""
+    # python-docx injects these child accessors at runtime; its stubs omit them.
+    typed_style = cast(Any, style)
+    key = definition.semantic_key
+    technical = key in {"code_block", "inline_code", "formula_block", "inline_formula"}
+    if definition.kind == "paragraph":
+        p_pr = typed_style.get_or_add_pPr()
+        bidi = p_pr.find(qn("w:bidi"))
+        if bidi is None:
+            bidi = OxmlElement("w:bidi")
+            p_pr.insert_element_before(
+                bidi,
+                "w:adjustRightInd",
+                "w:snapToGrid",
+                "w:spacing",
+                "w:ind",
+                "w:contextualSpacing",
+                "w:mirrorIndents",
+                "w:suppressOverlap",
+                "w:jc",
+                "w:textDirection",
+                "w:textAlignment",
+                "w:textboxTightWrap",
+                "w:outlineLvl",
+                "w:divId",
+                "w:cnfStyle",
+                "w:rPr",
+                "w:sectPr",
+                "w:pPrChange",
+            )
+        bidi.set(qn("w:val"), "0" if technical else "1")
+        if key not in {"image_paragraph", "table_content", "table_header", "formula_block"}:
+            # Word interprets left/right relative to paragraph bidi: left is
+            # the leading (physical right) edge for Arabic paragraphs.
+            p_pr.get_or_add_jc().set(qn("w:val"), "left")
+        if key.startswith("quote_"):
+            borders = p_pr.find(qn("w:pBdr"))
+            mirrored = False
+            if borders is not None:
+                for border in borders.findall(qn("w:left")):
+                    border.tag = qn("w:right")
+                    mirrored = True
+            indent = p_pr.find(qn("w:ind"))
+            if mirrored and indent is not None:
+                left, right = indent.get(qn("w:left")), indent.get(qn("w:right"))
+                if left is not None and right is not None:
+                    indent.set(qn("w:left"), right)
+                    indent.set(qn("w:right"), left)
+    if definition.kind != "table":
+        r_pr = typed_style.get_or_add_rPr()
+        if technical:
+            r_pr.get_or_add_rtl().set(qn("w:val"), "0")
+        else:
+            fonts = r_pr.get_or_add_rFonts()
+            fonts.set(qn("w:cs"), "Arial")
+            fonts.attrib.pop(qn("w:cstheme"), None)
+            lang = r_pr.find(qn("w:lang"))
+            if lang is None:
+                lang = OxmlElement("w:lang")
+                r_pr.insert_element_before(lang, "w:eastAsianLayout", "w:specVanish", "w:oMath", "w:rPrChange")
+            lang.set(qn("w:bidi"), "ar-SA")
+            # Paragraph bidi handles mixed scripts; do not force Latin runs RTL.
 
 
 def _apply_new_style_defaults(

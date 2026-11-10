@@ -1606,7 +1606,7 @@ horizontal_rule_3 = "Разделительная линия 3"
 
 # 表格样式
 table_content = "Содержимое таблицы"
-table_header = "Заголовок таблицы"
+table_header = "Шапка таблицы"
 three_line_table = "Трехлинейная таблица"
 table_grid = "Таблица-сетка"
 

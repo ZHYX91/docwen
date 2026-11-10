@@ -1673,7 +1673,7 @@ horizontal_rule_3 = "Linha divisória 3"
 table_content = "Conteúdo da tabela"
 table_header = "Cabeçalho da tabela"
 three_line_table = "Tabela de três linhas"
-table_grid = "Tabela grade"
+table_grid = "Tabela em grade"
 
 # 引用样式（9 级）
 quote_1 = "Citação 1"

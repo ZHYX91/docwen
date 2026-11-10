@@ -121,6 +121,12 @@ def _known_cjk_font_files() -> list[Path]:
             windows_fonts / "simhei.ttf",
             windows_fonts / "malgun.ttf",
             windows_fonts / "malgunbd.ttf",
+            # Offscreen Qt may expose no system font database. Register fonts
+            # for Arabic and Latin fallback as well as CJK in that case.
+            windows_fonts / "arial.ttf",
+            windows_fonts / "arialbd.ttf",
+            windows_fonts / "segoeui.ttf",
+            windows_fonts / "segoeuib.ttf",
         ]
     )
     for root in (
@@ -135,6 +141,10 @@ def _known_cjk_font_files() -> list[Path]:
                 "*NotoSansSC*.ttf",
                 "*SourceHanSans*.otf",
                 "*PingFang*.ttc",
+                "*NotoSansArabic*.ttf",
+                "*NotoNaskhArabic*.ttf",
+                "*DejaVuSans.ttf",
+                "*GeezaPro*.ttc",
             ):
                 candidates.extend(root.rglob(pattern))
     return candidates

@@ -14,6 +14,8 @@ import logging
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docwen_plugin_markdown.to_docx.direction import paragraph_is_rtl
+
 logger = logging.getLogger(__name__)
 
 # ── Namespace constants ─────────────────────────────────────────────────
@@ -471,7 +473,8 @@ def apply_list_indent(paragraph, level: int = 0, *, left_twips: int | None = Non
     if marker is not None and marker.get(qn("w:val")) != "0":
         return
     ind = pPr.get_or_add_ind()
-    ind.set(qn("w:left"), str(indent_twips))
+    side = "right" if paragraph_is_rtl(paragraph) else "left"
+    ind.set(qn(f"w:{side}"), str(indent_twips))
     for attribute in ("hanging", "hangingChars", "firstLineChars"):
         ind.attrib.pop(qn(f"w:{attribute}"), None)
     ind.set(qn("w:firstLine"), "0")

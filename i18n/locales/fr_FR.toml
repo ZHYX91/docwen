@@ -1674,7 +1674,7 @@ horizontal_rule_3 = "Ligne de séparation 3"
 table_content = "Contenu du tableau"
 table_header = "En-tête du tableau"
 three_line_table = "Tableau à trois lignes"
-table_grid = "Tableau grille"
+table_grid = "Tableau quadrillé"
 
 # 引用样式（9 级）
 quote_1 = "Citation 1"

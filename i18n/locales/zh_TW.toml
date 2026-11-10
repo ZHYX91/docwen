@@ -1588,15 +1588,15 @@ body_paragraph = "正文段落"
 image_paragraph = "圖片段落"
 
 # 代码样式
-code_block = "代碼塊"
-inline_code = "行內代碼"
+code_block = "程式碼區塊"
+inline_code = "行內程式碼"
 
 # 公式样式
-formula_block = "公式塊"
+formula_block = "公式區塊"
 inline_formula = "行內公式"
 
 # 列表样式
-list_block = "列表塊"
+list_block = "清單區塊"
 
 # 分隔线样式
 horizontal_rule_1 = "分隔線 1"

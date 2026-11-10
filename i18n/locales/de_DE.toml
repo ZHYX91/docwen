@@ -1594,7 +1594,7 @@ inline_code = "Inline-Code"
 
 # 公式样式
 formula_block = "Formelblock"
-inline_formula = "Inline Formel"
+inline_formula = "Inline-Formel"
 
 # 列表样式
 list_block = "Listenblock"
