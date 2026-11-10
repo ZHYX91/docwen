@@ -295,7 +295,7 @@ def test_every_bundled_locale_template_style_is_detected_from_real_docx() -> Non
     locale_paths = sorted((repo_root / "i18n" / "locales").glob("*.toml"))
     template_paths = sorted((repo_root / "templates").glob("*.docx"))
     assert len(locale_paths) == 12
-    assert len(template_paths) == 11
+    assert len(template_paths) == 12
 
     template_documents = [(path, Document(str(path))) for path in template_paths]
     template_style_names = {path: {style.name for style in document.styles} for path, document in template_documents}
@@ -304,21 +304,11 @@ def test_every_bundled_locale_template_style_is_detected_from_real_docx() -> Non
         locale_table = tomllib.loads(locale_path.read_text(encoding="utf-8"))
         styles = locale_table["styles"]
         code_name = styles["code_block"]
-        if locale_path.stem == "ar_SA":
-            # Arabic code/quote styles are recognized in new files even before a localized template ships.
-            assert locale_table["meta"]["template_name"] == "English General Template"
-            template_path = repo_root / "templates" / "English General Template.docx"
-            assert template_path.is_file()
-            document = Document()
-            document.styles.add_style(code_name, WD_STYLE_TYPE.PARAGRAPH)
-            for level in range(1, 10):
-                document.styles.add_style(styles[f"quote_{level}"], WD_STYLE_TYPE.PARAGRAPH)
-        else:
-            matching_templates = [
-                (path, document) for path, document in template_documents if code_name in template_style_names[path]
-            ]
-            assert len(matching_templates) == 1, (locale_path.name, code_name, matching_templates)
-            template_path, document = matching_templates[0]
+        matching_templates = [
+            (path, document) for path, document in template_documents if code_name in template_style_names[path]
+        ]
+        assert len(matching_templates) == 1, (locale_path.name, code_name, matching_templates)
+        template_path, document = matching_templates[0]
 
         localized_names = {style.name for style in document.styles}
         code_paragraph = document.add_paragraph("code", style=code_name)

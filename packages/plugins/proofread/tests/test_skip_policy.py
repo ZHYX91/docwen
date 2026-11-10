@@ -83,7 +83,7 @@ def test_chinese_code_style_paragraph_is_skipped() -> None:
         "Блок кода",
         "Khối mã",
         "代码块",
-        "代碼塊",
+        "程式碼區塊",
     ),
 )
 def test_every_bundled_locale_code_style_is_skipped(style_name: str) -> None:
