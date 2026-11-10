@@ -39,13 +39,12 @@ from docwen_plugin_markdown.to_docx.managed_styles import (
 from docwen_runtime.config.document_styles import build_document_style_catalog
 from docwen_runtime.toml_io import read_toml_file
 
+from ._managed_styles_support import _REF_QNAMES, _use_numeric_custom_style_ids
 from .conftest import PROJECT_ROOT, make_context
 
 pytestmark = pytest.mark.contract
 
 _WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-_REF_TAGS = ("pStyle", "rStyle", "tblStyle", "basedOn", "next", "link", "numStyleLink", "styleLink")
-_REF_QNAMES = tuple(qn(f"w:{name}") for name in _REF_TAGS)
 _KIND_TO_TYPE = {
     "paragraph": WD_STYLE_TYPE.PARAGRAPH,
     "character": WD_STYLE_TYPE.CHARACTER,
@@ -69,20 +68,6 @@ def _template_path(locale: str) -> Path:
 
 def _style_elements(document) -> dict[str, etree._Element]:
     return {style.style_id: style._element for style in document.styles}
-
-
-def _use_numeric_custom_style_ids(document) -> None:
-    """Exercise imported numeric IDs independently of current distribution IDs."""
-    ids = {definition.style_id: str(9000 + index) for index, definition in enumerate(CUSTOM_DOCUMENT_STYLES)}
-    for style in document.styles:
-        if style.style_id in ids:
-            style._element.set(qn("w:styleId"), ids[style.style_id])
-    for root in (document.styles.element, document.element):
-        for tag in _REF_QNAMES:
-            for reference in root.iter(tag):
-                value = reference.get(qn("w:val"))
-                if value in ids:
-                    reference.set(qn("w:val"), ids[value])
 
 
 def _raw_name(element: etree._Element) -> str:
