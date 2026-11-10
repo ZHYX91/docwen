@@ -334,7 +334,7 @@ _LOCALIZED_CODE_BLOCK_STYLE_NAMES = frozenset(
         "Блок кода",
         "Khối mã",
         "代码块",
-        "代碼塊",
+        "程式碼區塊",
         "كتلة كود",
     )
 )
@@ -350,7 +350,7 @@ _LOCALIZED_INLINE_CODE_STYLE_NAMES = frozenset(
         "Встроенный код",
         "Mã nội tuyến",
         "行内代码",
-        "行內代碼",
+        "行內程式碼",
         "كود ضمن النص",
     )
 )

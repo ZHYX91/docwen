@@ -21,6 +21,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from docx.enum.table import WD_TABLE_DIRECTION
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.image.image import Image as DocxImage
 from docx.oxml.ns import qn
@@ -72,6 +73,7 @@ from docwen_plugin_markdown.renderer_utils import (
     set_table_left_indent,
 )
 from docwen_plugin_markdown.template_utils import BodyParagraphFormat, BodyRunFormat
+from docwen_plugin_markdown.to_docx.direction import style_is_rtl
 from docwen_plugin_markdown.to_docx.heading_layout import suppress_heading_numbering
 from docwen_plugin_markdown.to_docx.numbering import (
     DocxListNumbering,
@@ -351,7 +353,8 @@ class MdToDocxRenderer:
         self._merge_indices: set[int] = set()
 
         # Word-native list numbering context (collects definitions during render)
-        self._list_numbering = DocxListNumbering(doc)
+        list_style = managed_styles.get("list_block") if managed_styles is not None else body_style
+        self._list_numbering = DocxListNumbering(doc, right_to_left=style_is_rtl(list_style))
 
         self._semantic_renderer = DocxSemanticRenderer(doc)
 
@@ -1436,6 +1439,11 @@ class MdToDocxRenderer:
         table = self._doc.add_table(rows=rows, cols=cols)
         is_three_line_table = self._is_three_line_table()
         direct_three_line = self._apply_table_style(table)
+        # Word ignores bidiVisual in table styles and can let it cancel the
+        # direct flag. Built-in Arabic styles own direction through their cell
+        # paragraphs; apply it directly to the newly created table.
+        if style_is_rtl(self._table_content_style):
+            table.table_direction = WD_TABLE_DIRECTION.RTL
 
         if self._list_depth > 0:
             indent_twips = 360 * self._list_depth

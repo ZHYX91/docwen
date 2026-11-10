@@ -1673,8 +1673,8 @@ horizontal_rule_3 = "Đường ngang 3"
 
 # 表格样式
 table_content = "Nội dung bảng"
-table_header = "Tiêu đề bảng"
-three_line_table = "Bảng ba dòng"
+table_header = "Hàng tiêu đề bảng"
+three_line_table = "Bảng ba đường kẻ"
 table_grid = "Bảng lưới"
 
 # 引用样式（9 级）

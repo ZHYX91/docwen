@@ -39,13 +39,12 @@ from docwen_plugin_markdown.to_docx.managed_styles import (
 from docwen_runtime.config.document_styles import build_document_style_catalog
 from docwen_runtime.toml_io import read_toml_file
 
+from ._managed_styles_support import _REF_QNAMES, _use_numeric_custom_style_ids
 from .conftest import PROJECT_ROOT, make_context
 
 pytestmark = pytest.mark.contract
 
 _WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-_REF_TAGS = ("pStyle", "rStyle", "tblStyle", "basedOn", "next", "link", "numStyleLink", "styleLink")
-_REF_QNAMES = tuple(qn(f"w:{name}") for name in _REF_TAGS)
 _KIND_TO_TYPE = {
     "paragraph": WD_STYLE_TYPE.PARAGRAPH,
     "character": WD_STYLE_TYPE.CHARACTER,
@@ -264,6 +263,7 @@ def test_shipped_numeric_templates_reuse_builtin_ids_and_migrate_custom_ids_with
     source = _template_path(locale)
     source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     original = Document(str(source))
+    _use_numeric_custom_style_ids(original)
     migration = _legacy_map(original, _catalog(locale))
     managed_ids = {definition.style_id for definition in MANAGED_DOCUMENT_STYLES}
     existing_styles = {
@@ -283,8 +283,8 @@ def test_shipped_numeric_templates_reuse_builtin_ids_and_migrate_custom_ids_with
     reopened = Document(str(output))
     current = _style_elements(reopened)
 
-    assert len(existing_styles) == 39
-    assert set(existing_styles) & managed_ids == existing_custom_ids
+    assert len(existing_styles) == 47
+    assert existing_custom_ids.issubset(set(existing_styles) & managed_ids)
     assert len(reopened.styles) == 47
     for stable_id, fingerprint in existing_styles.items():
         assert _format_fingerprint(current[stable_id], {}) == fingerprint
@@ -329,6 +329,7 @@ def test_cross_locale_recognition_changes_only_visible_identity(tmp_path: Path) 
 def test_generic_footnote_and_story_references_are_migrated(tmp_path: Path) -> None:
     source = _template_path("en_US")
     original = Document(str(source))
+    _use_numeric_custom_style_ids(original)
     catalog = _catalog("en_US")
     migration = _legacy_map(original, catalog)
     legacy_body = next(old for old, new in migration.items() if new == "DocWenBodyParagraph")

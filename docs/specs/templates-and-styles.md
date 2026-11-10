@@ -49,6 +49,16 @@ preserves the current format tab. A missing or disabled default is cleared witho
 
 ## Managed identity / 受管身份
 
+The twelve interface locales each ship a dedicated DOCX template with the complete managed style registry.
+Arabic uses `{{العنوان}}` and `{{المتن}}`, RTL paragraph/list layout and RTL table order; code and formula
+styles retain LTR layout. Title/body remain the two built-in insertion placeholders. Custom templates can
+still omit managed styles: conversion completes missing styles without replacing existing user formatting.
+Corrected translations are the current names, with no additional old-translation aliases.
+
+十二种界面语言各有独立的 DOCX 模板，并预置完整受管样式。阿拉伯语使用 `{{العنوان}}`、`{{المتن}}`，
+段落、列表和表格采用从右到左的布局，代码及公式样式保持从左到右。内置插入占位符仍为标题、正文两个。
+自定义模板缺少样式时仍自动补全，保留已有用户格式；修正后的译名直接作为现行名称，不增加旧译名别名。
+
 ### XLSX image references and protected fills / XLSX 图片引用与保护格填充
 
 XLSX image markers resolve relative files beside the actual selected template (or the source Markdown for an ordinary table export). That neighbor takes priority over a same-named working-directory file, even when the neighbor is not a valid image. Only an absent neighbor permits the legacy CWD fallback; absolute paths keep their own identity. A protected cell consumes its input without overwriting its value or inserting a drawing. Its explanatory comment shows readable image basenames instead of internal transport markers or encoded paths and is limited to 500 characters.
@@ -69,7 +79,7 @@ semantic key -> stable OOXML styleId -> visible w:name
   and recreate the style merely to force the canonical ID. A newly injected built-in uses the canonical ID/name when available; an occupied or ambiguous identity receives
   a request-local collision-free ID while keeping its canonical name.
 - A DocWen style uses the stable `DocWen...` styleId below and a locale-specific `w:name` from the exact output
-  locale. All eleven shipped locales are required.
+  locale. All twelve shipped locales are required.
 - `w:aliases` is never emitted. Import-time aliases are an internal recognition aid, not output identity.
 - An existing style with the same semantic identity and OOXML type is preserved, including user formatting. If a
   managed `styleId` or visible name is occupied by a different identity or OOXML type, DocWen preserves the
@@ -401,10 +411,10 @@ closed shape (all unshown properties are forbidden):
 }
 ```
 
-An explicit `{{ bibliography }}` paragraph is authoritative. Because the eleven shipped 0.9 templates predate this
-typed resource, a non-empty resource may synthesize that paragraph only immediately after one unique direct-body
+An explicit `{{ bibliography }}` paragraph is authoritative. Built-in templates contain title/body placeholders;
+a non-empty resource may synthesize a bibliography paragraph only immediately after one unique direct-body
 body marker from the frozen shipped-locale alias set (`body`, `Inhalt`, `cuerpo`, `Corps`, `本文`, `본문`, `Corpo`,
-`Текст`, `Nội dung`, `正文`) in the request-owned document. If neither marker is unique, conversion fails; no
+`Текст`, `Nội dung`, `正文`, `المتن`) in the request-owned document. If neither marker is unique, conversion fails; no
 template filename, ID, or hash may be used to guess placement. An absent or empty resource with no bibliography
 marker is a no-op. An explicit marker with an absent or empty resource is removed by the bibliography owner.
 
@@ -436,7 +446,7 @@ zero-Markdown-diff operation. Source-mutating add/remove/regex-cleanup controls 
 
 ## Acceptance / 验收
 
-- blank four-style mother template, all eleven shipped templates, and a user template missing managed styles;
+- blank four-style mother template, all twelve shipped templates, and a user template missing managed styles;
 - exactly 43 managed identities, exactly 47 total styles for the blank mother template, correct types and zero
   aliases;
 - localized custom names and canonical built-in names/styleIds;

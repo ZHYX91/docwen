@@ -144,7 +144,7 @@ def test_code_block_accumulator_indents_every_physical_line_in_list_context() ->
         "Блок кода",
         "Khối mã",
         "代码块",
-        "代碼塊",
+        "程式碼區塊",
     ],
 )
 def test_bundled_localized_code_block_style_names_are_detected(style_name: str) -> None:

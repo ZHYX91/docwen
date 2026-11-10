@@ -5,6 +5,12 @@
 
 ## 0.22.0
 
+- Ship twelve complete localized Word templates, including Arabic title/body placeholders, RTL paragraphs, lists and table order. Correct several style translations without adding aliases for former translations; keep stable style IDs and preserve existing custom formatting during missing-style completion.
+- 内置十二种语言的完整 Word 模板，新增阿拉伯语标题／正文占位符及 RTL 段落、列表和表格顺序；修正部分样式译名，不增加旧译名别名，保留稳定样式 ID 及补全缺失样式时的用户格式保护。
+- Improve heading spacing and prevent inherited document grids from doubling Korean and Russian line height in general templates.
+- 改善通用模板的标题间距，避免继承的文档网格导致韩语、俄语行距翻倍。
+- Include available Arabic-capable system fonts in the GUI's fallback registration when Qt cannot enumerate system fonts, avoiding missing-glyph boxes in offscreen rendering.
+- Qt 无法枚举系统字体时，GUI 回退注册包含系统现有的阿拉伯语字体，避免离屏渲染显示缺字方框。
 - Hide start and completion lifecycle events from activity details, keep actionable notices, and label warnings consistently in the interface language; each activity record now selects its own primary output instead of inheriting the previous selection.
 - 活动详情不再显示开始、完成类生命周期事件，保留可操作提示，警告标签统一跟随界面语言；每条活动记录默认选中自己的主产物，不再沿用上一条的选择。
 - Make the heading output mode the single authority: explain it in the info tooltip, remove the redundant text override checkbox, and migrate conflicting saved preferences once without changing the historical actual output.
