@@ -109,9 +109,62 @@ def test_xlsx_to_delimited_propagates_mid_write_cancellation_without_registering
 
     assert cancellation.checks == 1
     assert context.workspace.registered_artifacts == []
-    partials = list(staging.glob(f"*{suffix}"))
-    assert len(partials) == 1
-    assert partials[0].stat().st_size > 0
+    assert not list(staging.glob(f"*{suffix}"))
+
+
+@pytest.mark.parametrize(("converter_type", "target"), [(XlsxToCsvConverter, "csv"), (XlsxToTsvConverter, "tsv")])
+def test_later_sheet_cancellation_cleans_only_this_batch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, converter_type: type, target: str
+) -> None:
+    source = tmp_path / "source.xlsx"
+    workbook = openpyxl.Workbook()
+    workbook.active["A1"] = "first"
+    workbook.create_sheet("Second")["A1"] = "second"
+    workbook.save(source)
+    before = source.read_bytes()
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    unrelated = staging / "unrelated.txt"
+    unrelated.write_bytes(b"keep")
+    context = _build_fake_context(str(source), str(staging), target_format=target)
+    create_path = context.workspace.create_artifact_path
+    created = []
+
+    def allocate(kind, suffix):
+        path = create_path(kind, suffix)
+        created.append(path)
+        if len(created) == 2:
+            context.cancellation.cancel("second sheet")
+        return path
+
+    monkeypatch.setattr(context.workspace, "create_artifact_path", allocate)
+    with pytest.raises(CancellationRequested):
+        converter_type().convert(context)
+    assert len(created) == 2
+    assert context.workspace.registered_artifacts == []
+    assert list(staging.iterdir()) == [unrelated]
+    assert unrelated.read_bytes() == b"keep" and source.read_bytes() == before
+
+
+@pytest.mark.parametrize(("converter_type", "target"), [(XlsxToCsvConverter, "csv"), (XlsxToTsvConverter, "tsv")])
+def test_existing_delimited_staging_file_is_not_overwritten_or_cleaned(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, converter_type: type, target: str
+) -> None:
+    source = tmp_path / "source.xlsx"
+    workbook = openpyxl.Workbook()
+    workbook.active["A1"] = "replacement"
+    workbook.save(source)
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    existing = staging / f"existing.{target}"
+    existing.write_bytes(b"earlier output")
+    context = _build_fake_context(str(source), str(staging), target_format=target)
+    monkeypatch.setattr(context.workspace, "create_artifact_path", lambda _kind, _suffix: str(existing))
+    result = converter_type().convert(context)
+    assert not result.success
+    assert context.workspace.registered_artifacts == []
+    assert existing.read_bytes() == b"earlier output"
+    assert list(staging.iterdir()) == [existing]
 
 
 @pytest.mark.parametrize("sep", [",", "\t"])

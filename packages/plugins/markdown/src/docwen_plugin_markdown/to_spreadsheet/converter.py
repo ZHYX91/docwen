@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-import csv
 import re
 import secrets
 import time
+from contextlib import ExitStack
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
 from openpyxl import Workbook
 
+from docwen_core.errors import CancellationRequested
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import process_markdown_links, split_yaml_front_matter_source
 from docwen_core.markdown_extensions import resolve_markdown_extensions
@@ -24,6 +25,14 @@ from docwen_core.models.result import (
     ConversionErrorInfo,
     ConversionMetrics,
     ConversionResult,
+)
+from docwen_core.spreadsheet_package import preflight_worksheet_allocations
+from docwen_core.spreadsheet_projection import (
+    MAX_SPREADSHEET_PROJECTION_CELLS,
+    WorksheetValueView,
+    ordinary_worksheets,
+    plan_delimited_projection,
+    write_delimited_projection,
 )
 from docwen_plugin_markdown.common_utils import (
     conversion_error_text,
@@ -98,14 +107,6 @@ def _csv_safe_sheet_name(sheet_name: str) -> str:
     cleaned = re.sub(r"[\\/:*?\"<>|]+", "_", sheet_name.strip().replace(" ", "_"))
     cleaned = cleaned.strip("._")
     return cleaned or "Sheet"
-
-
-def _write_worksheet_to_csv(worksheet, output_path: str | Path) -> None:
-    """Write an openpyxl worksheet as UTF-8 CSV with a spreadsheet-friendly BOM."""
-    with Path(output_path).open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.writer(handle)
-        for row in worksheet.iter_rows(values_only=True):
-            writer.writerow(["" if value is None else value for value in row])
 
 
 class MdToXlsxConverter:
@@ -447,6 +448,9 @@ class MdToCsvConverter:
 
                 cancellable.check()
                 progress.report_progress(45.0, "Building XLSX template workbook")
+                preflight_worksheet_allocations(
+                    template_path, cancel_check=cancellable.check, limit=MAX_SPREADSHEET_PROJECTION_CELLS
+                )
                 workbook, template_stats = build_template_workbook(
                     content,
                     template_path,
@@ -460,18 +464,21 @@ class MdToCsvConverter:
                     merge_loss_handler=losses.merge_failed,
                     structural_tables=structural_tables,
                 )
-                links.materialize(workbook)
-                losses.record_written_formulas()
-                return self._convert_template_workbook_to_csv_artifacts(
-                    workbook=workbook,
-                    template_stats=template_stats,
-                    context=context,
-                    input_path=input_path,
-                    input_bytes=input_bytes,
-                    t_start=t_start,
-                    template_name=template_name,
-                    losses=losses,
-                )
+                try:
+                    links.materialize(workbook)
+                    losses.record_written_formulas()
+                    return self._convert_template_workbook_to_csv_artifacts(
+                        workbook=workbook,
+                        template_stats=template_stats,
+                        context=context,
+                        input_path=input_path,
+                        input_bytes=input_bytes,
+                        t_start=t_start,
+                        template_name=template_name,
+                        losses=losses,
+                    )
+                finally:
+                    workbook.close()
 
             # ── Parse tables ────────────────────────────────────────
             cancellable.check()
@@ -577,6 +584,8 @@ class MdToCsvConverter:
                 ],
             )
 
+        except CancellationRequested:
+            raise
         except Exception as exc:
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
             error_text = conversion_error_text(context.request, exc)
@@ -587,14 +596,14 @@ class MdToCsvConverter:
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
                     message=error_text,
-                    diagnostic_code="MD2CSV-ERROR",
+                    diagnostic_code=getattr(exc, "diagnostic_code", "MD2CSV-ERROR"),
                 ),
                 metrics=ConversionMetrics(duration_ms=elapsed_ms),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
                         message=f"MD→CSV conversion failed: {error_text}",
-                        code="MD2CSV-ERROR",
+                        code=getattr(exc, "diagnostic_code", "MD2CSV-ERROR"),
                     )
                 ],
             )
@@ -624,38 +633,52 @@ class MdToCsvConverter:
         cancellable.check()
         progress.report_progress(70.0, "Writing template workbook sheets to CSV")
 
-        for idx, sheet_name in enumerate(workbook.sheetnames):
+        worksheets = ordinary_worksheets(workbook.worksheets)
+        projections = plan_delimited_projection(
+            (WorksheetValueView(ws.title, ws.max_row, ws.max_column, ws._cells) for ws in worksheets),
+            cancel_check=cancellable.check,
+            limit=MAX_SPREADSHEET_PROJECTION_CELLS,
+        )
+        with ExitStack() as pending:
+            for idx, (worksheet, projection) in enumerate(zip(worksheets, projections, strict=True)):
+                cancellable.check()
+                sheet_name = worksheet.title
+                csv_path = workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, f"_{idx}.csv")
+                safe_sheet = _csv_safe_sheet_name(sheet_name)
+                suggested = f"{input_stem}_{safe_sheet}.csv"
+
+                for merged_range in worksheet.merged_cells.ranges:
+                    losses.merge_to_csv(f"{suggested}!{merged_range}")
+                write_delimited_projection(projection, csv_path, cancel_check=cancellable.check)
+                pending.callback(Path(csv_path).unlink, missing_ok=True)
+
+                cancellable.check()
+                file_bytes = Path(csv_path).stat().st_size
+                total_output_bytes += file_bytes
+
+                artifact = ArtifactManifest(
+                    artifact_id=f"{task_id}-csv-template-{idx}",
+                    kind=ARTIFACT_KIND_PRIMARY,
+                    staging_path=csv_path,
+                    suggested_name=suggested,
+                    media_type=MEDIA_TYPE_CSV,
+                    is_primary=(idx == 0),
+                    metadata={
+                        "source_format": "markdown",
+                        "target_format": "csv",
+                        "template_name": template_name,
+                        "sheet_name": sheet_name,
+                        "sheet_index": idx,
+                        "sheet_count": len(worksheets),
+                        **template_stats,
+                    },
+                )
+                artifacts.append(artifact)
+
             cancellable.check()
-            worksheet = workbook[sheet_name]
-            csv_path = workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, f"_{idx}.csv")
-            safe_sheet = _csv_safe_sheet_name(sheet_name)
-            suggested = f"{input_stem}_{safe_sheet}.csv"
-
-            for merged_range in worksheet.merged_cells.ranges:
-                losses.merge_to_csv(f"{suggested}!{merged_range}")
-            _write_worksheet_to_csv(worksheet, csv_path)
-
-            file_bytes = Path(csv_path).stat().st_size
-            total_output_bytes += file_bytes
-
-            artifact = ArtifactManifest(
-                artifact_id=f"{task_id}-csv-template-{idx}",
-                kind=ARTIFACT_KIND_PRIMARY,
-                staging_path=csv_path,
-                suggested_name=suggested,
-                media_type=MEDIA_TYPE_CSV,
-                is_primary=(idx == 0),
-                metadata={
-                    "source_format": "markdown",
-                    "target_format": "csv",
-                    "template_name": template_name,
-                    "sheet_name": sheet_name,
-                    "sheet_index": idx,
-                    **template_stats,
-                },
-            )
-            workspace.add_artifact(artifact)
-            artifacts.append(artifact)
+            for artifact in artifacts:
+                workspace.add_artifact(artifact)
+            pending.pop_all()
 
         elapsed_ms = (time.monotonic() - t_start) * 1000.0
         progress.report_progress(100.0, "Done")
