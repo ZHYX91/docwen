@@ -33,7 +33,7 @@ def _parts(path: Path) -> dict[str, bytes]:
 def test_two_clones_retarget_local_names_and_formulas_to_their_own_tables(tmp_path: Path) -> None:
     source = tmp_path / "source.xlsx"
     workbook = Workbook()
-    sheet = workbook.active
+    sheet = workbook.worksheets[0]
     sheet.title = "Prototype"
     sheet.append(["Label", "Value"])
     sheet.append(["original", 4])
@@ -86,7 +86,7 @@ def test_two_clones_retarget_local_names_and_formulas_to_their_own_tables(tmp_pa
 
 def _range_link_source(path: Path, *, internal: bool, merged: bool = False) -> bytes:
     workbook = Workbook()
-    sheet = workbook.active
+    sheet = workbook.worksheets[0]
     sheet.title = "Prototype"
     for row in range(1, 4):
         for column in range(1, 4):
@@ -153,7 +153,10 @@ def test_range_hyperlink_edits_preserve_only_untouched_cells(
     root = etree.fromstring(parts[part])
     covered: set[str] = set()
     for link in root.findall(f"{{{_S}}}hyperlinks/{{{_S}}}hyperlink"):
-        min_col, min_row, max_col, max_row = range_boundaries(link.get("ref"))
+        reference = link.get("ref")
+        assert reference is not None
+        min_col, min_row, max_col, max_row = range_boundaries(reference)
+        assert min_col is not None and min_row is not None and max_col is not None and max_row is not None
         cells = {
             f"{get_column_letter(column)}{row}"
             for row in range(min_row, max_row + 1)
