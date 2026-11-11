@@ -10,6 +10,7 @@ from docx import Document
 from docx.opc.packuri import PackURI
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from lxml import etree
 
 from docwen_core.models.clipboard_document import (
     ClipboardDocument,
@@ -131,3 +132,40 @@ def test_relocated_story_cannot_hide_reserved_layout_markers(tmp_path: Path, mar
     assert not result.success
     assert result.error is not None and result.error.diagnostic_code == code
     assert not workspace.registered_artifacts
+
+
+@pytest.mark.parametrize("member", ["_rels/.rels", "word/_rels/document.xml.rels"])
+def test_relationship_annotations_do_not_reject_a_valid_template(tmp_path: Path, member: str) -> None:
+    document = Document()
+    document.add_paragraph("{{body}}")
+    header = document.sections[0].header
+    header.part._partname = PackURI("/layout/annotated.xml")
+    header.paragraphs[0].text = "{{name}}"
+    template = tmp_path / "template.docx"
+    document.save(template)
+    with ZipFile(template) as archive:
+        members = {name: archive.read(name) for name in archive.namelist()}
+    relationships = etree.fromstring(members[member])
+    relationships.insert(0, etree.Comment("Legal producer annotation"))
+    relationships.append(etree.ProcessingInstruction("producer", "mode='test'"))
+    members[member] = etree.tostring(relationships)
+    with ZipFile(template, "w") as archive:
+        for name, payload in members.items():
+            archive.writestr(name, payload)
+    original = template.read_bytes()
+    source = tmp_path / "input.md"
+    source.write_text("---\nname: Alice\n---\nBody\n", encoding="utf-8")
+    context, _ = make_context(str(source), options={"template_name": str(template)})
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    output = Document(result.artifacts[0].staging_path)
+    assert output.sections[0].header.paragraphs[0].text == "Alice"
+    assert str(output.sections[0].header.part.partname) == "/layout/annotated.xml"
+    with ZipFile(result.artifacts[0].staging_path) as archive:
+        final = {
+            item.get("Id"): dict(item.attrib)
+            for item in etree.fromstring(archive.read(member))
+            if isinstance(item.tag, str)
+        }
+    assert all(final[item.get("Id")] == dict(item.attrib) for item in relationships if isinstance(item.tag, str))
+    assert template.read_bytes() == original

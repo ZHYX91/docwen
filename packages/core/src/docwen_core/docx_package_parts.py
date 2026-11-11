@@ -145,9 +145,10 @@ class DocxPackageParts:
         if name not in self.members:
             return etree.Element(f"{{{RELS_NS}}}Relationships", nsmap={None: RELS_NS})
         root = _parse(self.members[name], f"{{{RELS_NS}}}Relationships", "relationships")
-        if any(item.tag != f"{{{RELS_NS}}}Relationship" for item in root):
+        elements = [item for item in root if isinstance(item.tag, str)]
+        if any(item.tag != f"{{{RELS_NS}}}Relationship" for item in elements):
             raise DocxPartError("Relationships contain an invalid child")
-        identities = [item.get("Id") for item in root]
+        identities = [item.get("Id") for item in elements]
         if any(not identity for identity in identities) or len(identities) != len(set(identities)):
             raise DocxPartError("Relationships have missing or duplicate IDs")
         return root
