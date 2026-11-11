@@ -3,7 +3,7 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QToolButton, QWidget
 
-from docwen_gui.i18n import t
+from docwen_gui.i18n import isolate_filename, t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.ui_scale import set_metric
 
@@ -38,7 +38,7 @@ class OutputFileRow(QWidget):
     def set_output(self, path: str, count: int) -> None:
         self._path = path
         name = path.replace("\\", "/").rsplit("/", 1)[-1]
-        self.name_label.set_full_text(t("info_area.task_output_file", name=name) if path else "")
+        self.name_label.set_full_text(t("info_area.task_output_file", name=isolate_filename(name)) if path else "")
         self.name_label.setToolTip(path)
         self.location_button.setAccessibleDescription(path)
         self.count_button.setText(t("file_locations.multiple", count=count))

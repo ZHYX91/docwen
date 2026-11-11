@@ -14,12 +14,45 @@ from PySide6.QtWidgets import (
     QApplication,
 )
 
+from docwen_gui.i18n import get_locale, set_locale, t
 from docwen_gui.view_models.info_area_vm import (
     InfoAreaViewModel,
 )
 from docwen_gui.widgets.info_area import InfoArea
 
 pytestmark = pytest.mark.gui
+
+
+@pytest.mark.parametrize(
+    ("locale", "filename", "display_name"),
+    [
+        ("ar_SA", "01-docx_20261111_132959_fromDocx.md", "\u206801-docx_20261111_132959_fromDocx.md\u2069"),
+        ("ar_SA", "01-تقرير.md", "\u206801-تقرير.md\u2069"),
+        ("en_US", "01-docx_20261111_132959_fromDocx.md", "01-docx_20261111_132959_fromDocx.md"),
+    ],
+)
+def test_result_filename_direction_keeps_original_output_location(
+    qtbot, qapp, request, locale, filename, display_name
+) -> None:
+    original_locale = get_locale()
+    request.addfinalizer(lambda: set_locale(original_locale))
+    set_locale(locale)
+    vm = InfoAreaViewModel()
+    request.addfinalizer(vm.stop_all_timers)
+    widget = InfoArea(view_model=vm)
+    qtbot.addWidget(widget)
+    output = "C:/outputs/" + filename
+
+    vm.set_task_summary(current_file="01-docx.docx", output_path=output, state="success")
+
+    expected = t("info_area.task_output_file", name=display_name)
+    assert widget._output_row.name_label.full_text == expected
+    assert widget._output_row.name_label.toolTip() == output
+    assert vm.output_file_text == expected
+    assert vm.task_summary.output_path == output
+    with qtbot.waitSignal(vm.location_requested) as observed:
+        widget._output_row.location_button.click()
+    assert observed.args == [output]
 
 
 def test_result_filename_is_elided_with_full_output_tooltip(qtbot, qapp) -> None:

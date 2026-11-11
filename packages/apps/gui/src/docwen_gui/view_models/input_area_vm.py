@@ -23,6 +23,7 @@ from PySide6.QtCore import QObject, QUrl, Signal
 from docwen_core.paths import scan_input_directory
 from docwen_gui.file_admission_i18n import render_file_format_notice, render_remaining_file_warnings
 from docwen_gui.file_types import FILE_CATEGORY_ORDER, FILE_EXTENSIONS_BY_CATEGORY
+from docwen_gui.i18n import isolate_filename
 from docwen_gui.i18n import t as _t
 
 if TYPE_CHECKING:
@@ -283,7 +284,7 @@ class InputAreaViewModel(QObject):
                 _t(
                     "components.file_drop.unsupported_type_msg",
                     "Unsupported file type: {filename}",
-                    filename=Path(file_path).name,
+                    filename=isolate_filename(Path(file_path).name),
                 ),
                 "danger",
             )
@@ -363,7 +364,7 @@ class InputAreaViewModel(QObject):
                         _t(
                             "components.file_drop.unsupported_type_msg",
                             "Unsupported file type: {filename}",
-                            filename=candidate.name or normalized,
+                            filename=isolate_filename(candidate.name or normalized),
                         )
                     )
                 else:
@@ -404,7 +405,7 @@ class InputAreaViewModel(QObject):
             message = _t(
                 "components.file_drop.file_selected_msg",
                 "Current file: {filename}",
-                filename=presentation.display_name,
+                filename=isolate_filename(presentation.display_name),
             )
             if warning_message:
                 message = f"{message}\n{warning_message}"
@@ -623,7 +624,7 @@ class InputAreaViewModel(QObject):
                 _t(
                     "components.file_drop.unsupported_type_msg",
                     "Unsupported file type: {filename}",
-                    filename=Path(file_path).name,
+                    filename=isolate_filename(Path(file_path).name),
                 ),
                 file_path,
                 "danger",
@@ -631,7 +632,11 @@ class InputAreaViewModel(QObject):
             )
 
         return DragPreview(
-            _t("components.file_drop.drag_preview_single", "Will select: {filename}", filename=Path(file_path).name),
+            _t(
+                "components.file_drop.drag_preview_single",
+                "Will select: {filename}",
+                filename=isolate_filename(Path(file_path).name),
+            ),
             file_path,
             "info",
             added_count=1,
@@ -693,7 +698,7 @@ class InputAreaViewModel(QObject):
                             _t(
                                 "components.file_drop.drag_preview_skipped_unsupported",
                                 "Unsupported: {name}",
-                                name=candidate.name,
+                                name=isolate_filename(candidate.name),
                             )
                         )
 
@@ -762,7 +767,7 @@ class InputAreaViewModel(QObject):
         detail = ""
         if self._mode == "single" and selected is not None:
             presentation = self._presentation(selected.path)
-            current = _t("components.file_drop.file_selected_msg", filename=presentation.display_name)
+            current = _t("components.file_drop.file_selected_msg", filename=isolate_filename(presentation.display_name))
             message = f"{current}\n{message}"
             detail = presentation.detail
         self._emit_message(message, tone, detail=detail)

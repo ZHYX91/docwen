@@ -22,6 +22,7 @@ from datetime import datetime
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from docwen_gui.diagnostics import DiagnosticSummary
+from docwen_gui.i18n import isolate_filename
 from docwen_gui.i18n import t as _t
 
 logger = logging.getLogger(__name__)
@@ -260,7 +261,7 @@ class InfoAreaViewModel(QObject):
         if not path or self._task_summary.state in {"", "active", "cancelling"}:
             return ""
         name = path.replace("\\", "/").rsplit("/", 1)[-1]
-        return _t("info_area.task_output_file", "Output: {name}", name=name)
+        return _t("info_area.task_output_file", "Output: {name}", name=isolate_filename(name))
 
     @property
     def show_output_file(self) -> bool:
@@ -876,7 +877,7 @@ class InfoAreaViewModel(QObject):
 
         if has_task:
             state = ts.state
-            current_file = ts.current_file or _t("common.ready", "Ready")
+            current_file = isolate_filename(ts.current_file) if ts.current_file else _t("common.ready", "Ready")
             overview_meta = _t(
                 f"info_area.task_state_{state}",
                 state.replace("_", " ").title(),

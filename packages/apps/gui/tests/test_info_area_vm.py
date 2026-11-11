@@ -35,6 +35,24 @@ def vm() -> Generator[InfoAreaViewModel, None, None]:
 # ── History: dedup ────────────────────────────────────────────────────────
 
 
+@pytest.mark.parametrize("state", ["active", "cancelling"])
+@pytest.mark.parametrize("filename", ["01-docx.docx", ""])
+def test_arabic_task_filename_is_isolated_while_ready_fallback_stays_plain(vm, request, state, filename):
+    from docwen_gui.i18n import get_locale, set_locale, t
+
+    original_locale = get_locale()
+    request.addfinalizer(lambda: set_locale(original_locale))
+    set_locale("ar_SA")
+
+    vm.set_task_summary(current_file=filename, state=state)
+
+    displayed = f"\u2068{filename}\u2069" if filename else t("common.ready", "Ready")
+    assert vm.status_summary_text.split("\n", 1)[0] == t("info_area.task_current_file", name=displayed)
+    assert vm.task_summary.current_file == filename
+    if not filename:
+        assert "\u2068" not in vm.status_summary_text
+
+
 class TestHistoryDedup:
     def test_counts_consecutive_duplicates(self, vm: InfoAreaViewModel) -> None:
         """Identical consecutive events remain visible as a repeat count."""

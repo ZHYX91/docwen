@@ -24,6 +24,11 @@ def get_locale() -> str:
     return _current_locale
 
 
+def isolate_filename(name: str) -> str:
+    """Keep a filename's direction independent inside an Arabic sentence."""
+    return f"\u2068{name}\u2069" if get_locale() == "ar_SA" else name
+
+
 def _flatten(prefix: str, value: Any, out: dict[str, str]) -> None:
     if isinstance(value, dict):
         for k, v in value.items():
