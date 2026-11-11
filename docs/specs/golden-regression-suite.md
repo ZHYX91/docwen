@@ -22,8 +22,12 @@ Golden fixture 保存稳定的语义投影或产物属性，用于覆盖不适�
 
 Candidate-blocking corpora additionally include:
 
+模板样式回归同时覆盖新增样式的规范身份和模板已有名称、ID、别名、格式及域引用的保留。
+题注绑定按真实 ID 和精确直接名称验证；别名不作为重新绑定依据，本地化 ID 也必须经过同样的完整性检查。
+
 - exactly 43 managed styles in every locale and exactly 47 physical styles in a four-style mother document; canonical
-  built-in names, four distinct caption styles, zero aliases, request-local non-destructive conflict mapping, and
+  names and zero aliases for newly injected styles, preserved template names/IDs/aliases and dependent fields,
+  four distinct caption styles, request-local non-destructive conflict mapping, and
   renderer references through the resolved map. Footnote/endnote fixtures start with colliding positive IDs, reserved
   separator IDs, rich multi-block bodies, hyperlinks/drawings, and existing relationships; they prove atomic new ID
   allocation and independent Word/WPS/LibreOffice save-reopen preservation rather than treating style presence as
@@ -157,10 +161,12 @@ Candidate-blocking corpora additionally include:
 - any caption-bearing DOCX has one independent closed
   `document-caption-style-binding-map/v1` item with exactly four ordered
   `semantic_key,resolved_style_id,visible_name` records. Corpus evidence binds its canonical bytes, deterministic
-  UUID, item/itemProps/relationship/content-type topology, exact unique paragraph style ID, exact direct name, zero
-  aliases, and the exact direct `pStyle` on every addressable and ID-less caption. A real conflicting template proves
+  UUID, item/itemProps/relationship/content-type topology, exact unique paragraph style ID, exact direct name,
+  preserved template aliases and localized IDs, and the exact direct `pStyle` on every addressable and ID-less
+  caption. A real conflicting template proves
   the user style is preserved, the request-local collision-free ID survives save/reopen, and recovery uses that ID.
-  Negatives cover a forged requested-ID prefix, missing map/style/`pStyle`, wrong type/name, alias, cross-kind style,
+  Negatives cover a forged requested-ID prefix, missing map/style/`pStyle`, wrong type/name, alias-only identity,
+  cross-kind style,
   duplicate resolved ID/style ID, non-closed/reordered records, changed bytes/UUID/topology, and map stripping. This
   map is style identity only and must never be counted as caption pairing, a target, an anchor, or a hidden ID;
 - CommonMark fenced-code round trips prove that inner fence-looking lines remain literal and exactly one Code Block:

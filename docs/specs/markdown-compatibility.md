@@ -933,9 +933,30 @@ fails before rendering and creates no `REF`. Ordinary navigation to a semantic I
 paragraph regardless of numbering enablement. A caption or Heading without an ID may still be numbered, but creates
 no bookmark or target-map entry.
 
+#### Heading-style binding map / 标题样式绑定表
+
+Every generated addressable Heading records its source ID, source level (1–9), actual template `styleId`, and
+primary style name in `https://docwen.dev/schema/document-heading-style-binding-map/v1`. The closed
+`documentHeadingStyleBindingMap` root has `version="1"`; its `binding` children are ordered by `source_id`
+and contain exactly `source_id,level,resolved_style_id,visible_name`. The map is present exactly when the
+request generates addressable Headings. The usual owned custom-XML package and deterministic UUID proofs apply.
+The recorded target set must equal the Heading target-map set. Each paragraph retains exactly its recorded
+`pStyle`, which resolves one existing paragraph style with the exact recorded ID and primary name. Duplicate,
+missing or wrong-type styles and missing, extra or changed bindings fail closed. Template aliases remain opaque.
+
+Generated Headings also carry their source level as direct `outlineLvl`, including Headings without an ID.
+This does not change the template's shared style. On Markdown export, an authenticated Heading level or explicit
+direct outline level takes precedence over style-name, quote/code-style and shading heuristics. Original template
+Headings are not registered as new request targets.
+
+每个本次生成且有 ID 的标题都记录源码 ID、1–9 级标题级别、模板的真实 `styleId` 和直接主名称；
+绑定表与目标表的标题集合必须完全一致。实际段落必须引用记录的唯一段落样式，不凭默认 ID、名称前缀或别名猜测。
+本次生成的标题也写入直接 `outlineLvl`，包括无 ID 标题，但不改模板共享样式；回读优先采用已证明的源码级别或
+明确的直接大纲级别，灰底和代码／引用样式启发式不能将其改成其他块。模板原有标题不被认作新生成目标。
+
 DOCX caption/object order is fixed by the declaration's semantic kind and is not selected by a profile or Export
-Style. A Figure-labelled carrier is immediately followed by its `DocWenFigureCaption` paragraph. A
-`DocWenTableCaption`, `DocWenEquationCaption`, or `DocWenCodeBlockCaption` paragraph is immediately followed by its
+Style. A Figure-labelled carrier is immediately followed by its resolved `figure_caption` paragraph. A resolved
+`table_caption`, `equation_caption`, or `code_block_caption` paragraph is immediately followed by its
 one native carrier. Semantic kind and carrier structure are independent: the carrier may be an image paragraph,
 native table, block equation, or fenced code block; Figure plus a native multi-image table therefore remains a
 Figure-labelled native table rather than becoming a Table caption or rasterized image. A fenced Code carrier's
@@ -972,18 +993,24 @@ closed. XML byte framing, escaping, `itemN.xml`/`itemPropsN.xml`/relationships/c
 deterministic UUID use the same rules as the target map, with this caption-style namespace in the UUID preimage.
 
 On import, each binding must select exactly one `w:style` in `word/styles.xml` by exact `w:styleId`; that style must
-be a paragraph style, contain exactly one direct `w:name` equal to `visible_name`, and contain no `w:aliases`.
+be a paragraph style and contain exactly one direct `w:name` equal to `visible_name`. Existing template aliases
+are preserved but never supply identity or fallback authority. A resolved ID may contain any supported nonempty
+OOXML style-ID text, including localized characters; canonical map serialization escapes its XML value.
 Preserving an unrelated conflicting user style may leave the same visible name elsewhere; only the collision-free
 resolved style ID is identity. If the recorded ID is absent after Office renumbers styles, import may rebind it
-only to one style with the exact recorded `visible_name`; duplicate names, aliases, a conflicting existing ID, or
+only to one style with the exact recorded `visible_name`; duplicate names, a conflicting existing ID, or
 duplicate current IDs fail closed. The original custom XML and its UUID remain unchanged. This is an explicit
 name-to-current-ID binding, not localized-name or prefix inference. Every addressable and ID-less caption paragraph must contain exactly one direct
 `w:pPr/w:pStyle`, and its value must equal the binding selected by the caption's structural kind. Prefix matching,
 the canonical requested style ID after it was displaced by a conflict, localized-name guessing, `SEQ`-kind
 guessing, and cross-kind fallback are forbidden. A missing/extra/reordered map record, changed content/UUID/topology,
-missing/duplicate/wrong-type/wrong-name/aliased style, absent/duplicate/mismatched `pStyle`, or style-map stripping
+missing/duplicate/wrong-type/wrong-name style, absent/duplicate/mismatched `pStyle`, or style-map stripping
 fails closed. The renderer binds the same complete four-entry request-local style table before it records any
 caption and proves the reopened map and `styles.xml` before artifact registration.
+
+题注绑定使用真实且唯一的 `styleId` 及精确的直接名称。模板已有别名保留，但别名不提供身份或回退依据；
+非空、受支持的本地化样式 ID 按 XML 值转义保存。宿主重编 ID 后，只允许按唯一的原记录名称重新绑定，
+类型、名称、ID 唯一性、实际段落 `pStyle` 和绑定表的完整性检查保持严格。
 
 #### Disabled ID-less caption occurrence authority / 禁用且无 ID 题注出现权威
 
@@ -1468,13 +1495,24 @@ Layout、presentation 与 markup 路由在 manifest 声明后使用共享的 Mar
 - `packages/plugins/markdown/tests/test_md_to_spreadsheet_*.py`
 - `packages/core/tests/test_links_markdown_orchestrator.py`
 
-## Authored Markdown template body placement
+## Authored Markdown template body placement / Markdown 模板正文插入
 
 Authored Markdown inserts body content only at a single, standalone main-document body placeholder (including the supported localized aliases and markers split across text runs). A custom template with no body marker is metadata-only: YAML fields and explicit bibliography placement remain available, but body links/resources, notes, numbering, semantic body sessions and rendering are not materialized. Existing template notes are preserved; their unrelated defects do not trigger a note-compliance audit. An empty body leaves no visible marker.
 
 Inline markers, table-cell/textbox/header/footer markers and duplicate body markers fail with `MD2DOCX-TEMPLATE-BODY-PLACEMENT`, rather than being mistaken for a metadata-only template. The same rejection applies when XML scanning finds a marker hidden in an unsupported inline content control or split within its alias by a structural break: every accepted marker must also be recognizable by the body-placement finder. Invalid source semantic syntax remains invalid even when the body is omitted. Source and template bytes are never rewritten.
 
 The separately validated resolved-v4 port retains its explicit full-document rendering contract, including its existing append behavior without a body marker; this authored-Markdown rule does not redirect or weaken that port.
+
+Body insertion preserves the anchor's section boundary and range markers; generated breaks inherit the current
+section's complete page and header/footer settings. Field-owned and data-bound-control placeholders are rejected
+before filling. These rules and their formatting precedence are defined by
+[Templates and styles](templates-and-styles.md#body-placement-and-sections--正文插入与分节).
+
+普通 Markdown 只在唯一、独占主文档段落的正文标记处插入正文；没有正文标记的自定义模板仅填充元数据
+及显式参考文献，不渲染正文。空正文清除可见标记并保留原分节和范围标记。行内、表格、文本框、页眉页脚
+或重复正文标记返回 `MD2DOCX-TEMPLATE-BODY-PLACEMENT`。新增分节继承当前位置的完整页面及页眉页脚设置。
+域及绑定数据内容控件内的占位符在填充前拒绝，详细所有权和格式优先级遵守“模板与样式”规范。
+resolved-v4 保持其独立的全文渲染及缺少正文标记时追加规则，不受元数据模式规则改写。
 
 ## Generated YAML strings
 

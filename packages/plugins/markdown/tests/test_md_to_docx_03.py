@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from lxml import etree
 
 from ._md_to_docx_support import (
     FakeConfigView,
@@ -214,7 +215,10 @@ class TestMdToDocxGolden:
         doc = Document(str(Path(result.artifacts[0].staging_path)))
         assert len(doc.tables) == 1
         assert doc.tables[0].style is not None
-        assert doc.tables[0].style.style_id == "DocWenTableGrid"
+        assert doc.tables[0].style.style_id == "TableGrid"
+        assert etree.tostring(doc.tables[0].style.element, method="c14n", exclusive=True) == etree.tostring(
+            Document().styles["Table Grid"].element, method="c14n", exclusive=True
+        )
 
     def test_md_to_docx_consumes_configured_horizontal_rule_marker_actions(self):
         """Configured ---/***/___ marker actions produce distinct Word break elements."""

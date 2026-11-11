@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
@@ -19,6 +20,12 @@ from docwen_core._docx_semantics_v3_fenced import (
     bind_fenced_source_document_v3,
 )
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
+from docwen_core._docx_semantics_v3_heading_styles import (
+    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+    HeadingStyleBindingV3,
+    parse_heading_style_binding_map,
+    prove_heading_style_registry,
+)
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TAG_PREFIX,
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -92,6 +99,63 @@ class ResolvedNumberingDocxError(ResolvedNumberingOoxmlError):
     """The validated port and rendered document no longer agree."""
 
 
+class ResolvedParagraphInventory:
+    """Separate original template paragraphs from this session's bound targets."""
+
+    def __init__(self, document: Any, style_ids: set[str], purpose: str) -> None:
+        self._style_ids = style_ids
+        self._purpose = purpose
+        self._original = tuple(self._paragraphs(document))
+        self._bound: dict[tuple[int, int, str], Any] = {}
+        self._indices: dict[tuple[int, int, str], int] | None = None
+        self._original_snapshots: dict[int, Any] = {}
+
+    def _paragraphs(self, document: Any) -> list[Any]:
+        from docx.oxml.ns import qn
+
+        return [
+            paragraph
+            for paragraph in document.element.body.iter(qn("w:p"))
+            if ResolvedNumberingProofMixin._direct_paragraph_style_id(paragraph) in self._style_ids
+        ]
+
+    def bind(self, key: tuple[int, int, str], paragraph: Any) -> None:
+        if self._indices is not None or key in self._bound:
+            raise ResolvedNumberingDocxError(f"{self._purpose} inventory cannot bind this target")
+        if paragraph in self._original or paragraph in self._bound.values():
+            raise ResolvedNumberingDocxError(f"{self._purpose} target reuses an existing paragraph")
+        self._bound[key] = paragraph
+
+    def capture(self, document: Any) -> None:
+        paragraphs = self._paragraphs(document)
+        present = set(paragraphs)
+        surviving_originals = present.intersection(self._original)
+        expected = surviving_originals.union(self._bound.values())
+        if len(paragraphs) != len(expected) or present != expected:
+            raise ResolvedNumberingDocxError(f"{self._purpose} paragraph inventory differs from bound identities")
+        indices = {paragraph: index for index, paragraph in enumerate(paragraphs)}
+        bound_order = sorted(self._bound, key=lambda key: indices[self._bound[key]])
+        if bound_order != sorted(self._bound):
+            raise ResolvedNumberingDocxError(f"{self._purpose} paragraph order differs from source authority")
+        self._indices = {key: indices[paragraph] for key, paragraph in self._bound.items()}
+        # Template filling may consume body anchors/empty metadata paragraphs
+        # and replace YAML text before finalization. Only surviving identities
+        # gain a template allowance; a replacement copy is a new unbound node.
+        self._original_snapshots = {indices[paragraph]: deepcopy(paragraph) for paragraph in surviving_originals}
+
+    def prove(self, document: Any) -> dict[tuple[int, int, str], Any]:
+        if self._indices is None:
+            raise ResolvedNumberingDocxError(f"{self._purpose} paragraph inventory was not finalized")
+        paragraphs = self._paragraphs(document)
+        if len(paragraphs) != len(self._indices) + len(self._original_snapshots):
+            raise ResolvedNumberingDocxError(f"{self._purpose} paragraph inventory differs after reopen")
+        if any(
+            not _elements_equal(paragraphs[index], original) for index, original in self._original_snapshots.items()
+        ):
+            raise ResolvedNumberingDocxError(f"template {self._purpose} paragraph changed after finalization")
+        return {key: paragraphs[index] for key, index in self._indices.items()}
+
+
 class ResolvedNumberingProofMixin:
     """Authenticate every session-owned physical carrier after package reopen."""
 
@@ -106,6 +170,9 @@ class ResolvedNumberingProofMixin:
     _heading_payload_snapshots: dict[Any, tuple[Any, ...]]
     _heading_style_ids: dict[int, str]
     _heading_style_names: dict[str, str]
+    _heading_style_bindings: list[HeadingStyleBindingV3]
+    _heading_inventory: ResolvedParagraphInventory
+    _caption_inventory: ResolvedParagraphInventory
     _occurrence_bindings: list[Any]
     _standalone_occurrence_bindings: list[Any]
     _ordinary_anchors: list[Any]
@@ -139,6 +206,7 @@ class ResolvedNumberingProofMixin:
             self._prove_soft_reference_map(owned)
             self._prove_reference_occurrence_map(owned)
             self._prove_caption_style_map(package, owned)
+            self._prove_heading_style_map(owned)
             self._prove_numbering_occurrence_map(owned)
             self._prove_standalone_caption_occurrence_map(owned)
             citation_namespaces = {
@@ -163,6 +231,7 @@ class ResolvedNumberingProofMixin:
                 ):
                     raise ResolvedNumberingDocxError("resolved-citation maps differ after reopen")
         reopened = Document(str(package_path))
+        prove_heading_style_registry(reopened, tuple(self._heading_style_bindings))
         prove_heading_numbering_projection(package_path, self._projection)
         bookmark_inventory = build_docx_bookmark_inventory(reopened)
         self._prove_target_sdts(reopened, bookmark_inventory)
@@ -195,6 +264,18 @@ class ResolvedNumberingProofMixin:
         )
         if targets != expected or anchors != expected_anchors:
             raise ResolvedNumberingDocxError("target map differs after reopen")
+
+    def _prove_heading_style_map(self, owned: dict[str, tuple[int, Any]]) -> None:
+        if not self._heading_style_bindings:
+            if HEADING_STYLE_BINDING_MAP_NAMESPACE in owned:
+                raise ResolvedNumberingDocxError("unexpected Heading-style map is present")
+            return
+        if HEADING_STYLE_BINDING_MAP_NAMESPACE not in owned:
+            raise ResolvedNumberingDocxError("Heading-style map is missing")
+        _number, root = owned[HEADING_STYLE_BINDING_MAP_NAMESPACE]
+        expected = tuple(sorted(self._heading_style_bindings, key=lambda item: item.source_id))
+        if parse_heading_style_binding_map(root) != expected:
+            raise ResolvedNumberingDocxError("Heading-style map differs after reopen")
 
     def _prove_anchor_topology_map(self, owned: dict[str, tuple[int, Any]]) -> None:
         if not self._anchor_topology_edges:
@@ -340,16 +421,12 @@ class ResolvedNumberingProofMixin:
             ),
             key=lambda item: (item[0].source_start, item[0].source_end),
         )
-        heading_style_ids = set(self._heading_style_ids.values())
-        paragraphs = [
-            item
-            for item in document.element.body.iter(qn("w:p"))
-            if self._direct_paragraph_style_id(item) in heading_style_ids
-        ]
-        if len(paragraphs) != len(bindings):
+        paragraphs = self._heading_inventory.prove(document)
+        if set(paragraphs) != {target.occurrence_key for target, _plan in bindings}:
             raise ResolvedNumberingDocxError("Heading paragraph inventory differs from the typed snapshot")
         proof_index = HeadingNumberingProofIndex.load(path)
-        for paragraph_element, (document_target, plan_target) in zip(paragraphs, bindings, strict=True):
+        for document_target, plan_target in bindings:
+            paragraph_element = paragraphs[document_target.occurrence_key]
             level = document_target.heading_level
             if level is None or self._direct_paragraph_style_id(paragraph_element) != self._heading_style_ids[level]:
                 raise ResolvedNumberingDocxError("Heading paragraph style differs after reopen")
@@ -378,7 +455,12 @@ class ResolvedNumberingProofMixin:
             proof = proof_index.prove_paragraph(paragraph)
             direct_num_pr = paragraph_element.find(f"{qn('w:pPr')}/{qn('w:numPr')}")
             if not plan_target.enabled:
-                if direct_num_pr is not None or proof is not None:
+                if (
+                    direct_num_pr is None
+                    or [child.tag for child in direct_num_pr] != [qn("w:ilvl"), qn("w:numId")]
+                    or any(child.get(qn("w:val")) != "0" for child in direct_num_pr)
+                    or proof is not None
+                ):
                     raise ResolvedNumberingDocxError("disabled Heading retained effective numbering")
             else:
                 materialization = plan_target.materialization
@@ -388,7 +470,7 @@ class ResolvedNumberingProofMixin:
                     proof.num_id != self._projection.num_id(materialization.instance_id)
                     or proof.abstract_num_id != self._projection.abstract_id(materialization.definition_id)
                     or proof.level != materialization.level
-                    or proof.style_id != self._heading_style_ids[materialization.level]
+                    or proof.style_id is not None
                 ):
                     raise ResolvedNumberingDocxError("Heading list binding differs from its closed plan")
             if document_target.target_id is not None:
@@ -411,17 +493,13 @@ class ResolvedNumberingProofMixin:
             key=lambda item: (item.document_target.source_start, item.document_target.source_end),
         )
         style_by_kind = self._caption_style_ids_by_kind()
-        caption_style_ids = set(style_by_kind.values())
-        paragraphs = [
-            item
-            for item in document.element.body.iter(qn("w:p"))
-            if self._direct_paragraph_style_id(item) in caption_style_ids
-        ]
-        if len(paragraphs) != len(bindings):
+        paragraphs = self._caption_inventory.prove(document)
+        if set(paragraphs) != {binding.document_target.occurrence_key for binding in bindings}:
             raise ResolvedNumberingDocxError("caption paragraph inventory differs from the typed snapshot")
         proven: dict[tuple[int, int, str], Any] = {}
-        for paragraph, binding in zip(paragraphs, bindings, strict=True):
+        for binding in bindings:
             document_target = binding.document_target
+            paragraph = paragraphs[document_target.occurrence_key]
             plan_target = binding.plan_target
             if self._direct_paragraph_style_id(paragraph) != style_by_kind[document_target.kind]:
                 raise ResolvedNumberingDocxError("caption kind/style binding differs after reopen")
@@ -819,25 +897,6 @@ class ResolvedNumberingProofMixin:
             "equation": by_key["equation_caption"],
             "code_block": by_key["code_block_caption"],
         }
-
-    def _require_style_without_numbering(self, style_id: str) -> None:
-        from docx.oxml.ns import qn
-
-        styles = self._document.styles.element.findall(qn("w:style"))
-        by_id = {item.get(qn("w:styleId")): item for item in styles}
-        seen: set[str] = set()
-        current = style_id
-        while current:
-            if current in seen or current not in by_id:
-                raise ResolvedNumberingDocxError("Heading style inheritance is cyclic or unresolved")
-            seen.add(current)
-            style = by_id[current]
-            if style.find(f"{qn('w:pPr')}/{qn('w:numPr')}") is not None:
-                raise ResolvedNumberingDocxError("disabled Heading style has inherited numbering")
-            based_on = style.findall(qn("w:basedOn"))
-            if len(based_on) > 1:
-                raise ResolvedNumberingDocxError("Heading style has duplicate basedOn relationships")
-            current = based_on[0].get(qn("w:val"), "") if based_on else ""
 
     @staticmethod
     def _direct_paragraph_style_id(paragraph: Any) -> str | None:

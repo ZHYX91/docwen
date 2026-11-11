@@ -53,11 +53,13 @@ The twelve interface locales each ship a dedicated DOCX template with the comple
 Arabic uses `{{العنوان}}` and `{{المتن}}`, RTL paragraph/list layout and RTL table order; code and formula
 styles retain LTR layout. Title/body remain the two built-in insertion placeholders. Custom templates can
 still omit managed styles: conversion completes missing styles without replacing existing user formatting.
-Corrected translations are the current names, with no additional old-translation aliases.
+Newly supplied styles use the current translations without additional old-translation aliases. Recognized styles
+already present in a custom template retain their authored identity.
 
 十二种界面语言各有独立的 DOCX 模板，并预置完整受管样式。阿拉伯语使用 `{{العنوان}}`、`{{المتن}}`，
 段落、列表和表格采用从右到左的布局，代码及公式样式保持从左到右。内置插入占位符仍为标题、正文两个。
-自定义模板缺少样式时仍自动补全，保留已有用户格式；修正后的译名直接作为现行名称，不增加旧译名别名。
+自定义模板缺少样式时仍自动补全；已识别的模板样式保留原有身份及格式。新提供的样式使用现行译名，
+不增加旧译名别名。
 
 ### XLSX template preservation / XLSX 模板信息保留
 
@@ -113,22 +115,24 @@ This does not recover precision already lost when YAML parses a floating-point v
 Every managed style has one identity chain:
 
 ```text
-semantic key -> stable OOXML styleId -> visible w:name
+semantic key -> request-resolved OOXML styleId -> exact visible w:name
 ```
 
-- A built-in Word style uses its canonical English `styleId` and canonical English `w:name`; Word/WPS localize its
-  presentation. If a Word/WPS template already represents the same built-in identity and type under a host-specific
-  numeric or localized internal `styleId`, DocWen reuses that actual ID through the resolved map; it does not delete
-  and recreate the style merely to force the canonical ID. A newly injected built-in uses the canonical ID/name when available; an occupied or ambiguous identity receives
-  a request-local collision-free ID while keeping its canonical name.
-- A DocWen style uses the stable `DocWen...` styleId below and a locale-specific `w:name` from the exact output
-  locale. All twelve shipped locales are required.
-- `w:aliases` is never emitted. Import-time aliases are an internal recognition aid, not output identity.
-- An existing style with the same semantic identity and OOXML type is preserved, including user formatting. If a
-  managed `styleId` or visible name is occupied by a different identity or OOXML type, DocWen preserves the
+- An existing style with the same semantic identity and OOXML type retains its actual `styleId`, direct `w:name`,
+  `w:aliases` and formatting. This includes host-specific numeric IDs, localized names, and aliases used to
+  recognize a template style. Completion does not rename that style or rewrite its dependent field instructions.
+- A newly injected built-in Word style uses its canonical English ID/name when available; an occupied identity
+  receives a request-local collision-free ID. A newly injected DocWen style uses the `DocWen...` ID below and the
+  exact request locale's name. New styles have no aliases. All twelve shipped locales are required.
+- If a managed `styleId` or visible name is occupied by a different identity or OOXML type, DocWen preserves the
   user's style and allocates a request-local collision-free `styleId` for the managed identity. The resolved
   semantic-key-to-styleId map is the only map used by renderers and is recorded with a stable conflict diagnostic.
   DocWen never deletes, renames, retypes, or rewrites the conflicting user style.
+
+语义键通过本次请求解析出的真实样式 ID 绑定样式。已识别且类型相符的模板样式保留原 `styleId`、
+`w:name`、`w:aliases` 和格式；本地化名称、宿主生成的数字 ID 及用于识别的别名均不强制规范化。
+这样，页眉、目录等域代码中对原样式名称的引用仍指向同一样式。只有缺失样式才按上述注册表补齐，
+新增样式不带别名。身份或类型冲突时保留用户样式，并为新增受管样式分配请求内不冲突的 ID。
 
 `Normal`, `DefaultParagraphFont` and `TableNormal` are dependencies of the 43 managed entries. Missing definitions
 are completed in the output copy, using a compatible template-owned ID where one exists. Completion preserves an
@@ -136,7 +140,7 @@ existing default style of each OOXML type; an injected foundation becomes the de
 default. Final validation covers these foundation identities in both `styles.xml` and `stylesWithEffects.xml`.
 `Title` and `Subtitle` are optional template styles, not prerequisites or injected dependencies. The shipped blank
 template includes `Title` and therefore produces 47 physical styles after completion; this count is not a requirement
-for other templates. Source template bytes and compatible formatting remain unchanged.
+for other templates. Source template bytes and existing style formatting remain unchanged.
 
 Final style validation is scoped to managed identities and newly written direct references. Missing or duplicate
 unused template style IDs and wrong-type visible-name collisions are preserved; an ambiguous ID is never reused for
@@ -308,6 +312,20 @@ can introduce small differences between its calculated indent and rendered name 
 
 `text.heading_numbering_render_mode` is the single renderer choice for newly added heading numbers:
 `text` (default) or `word_native`. It never enables `add_numbering` or rewrites existing template numbering.
+Native heading numbering writes direct list properties only on headings created by the current render. Its
+numbering definitions do not bind the template's shared Heading styles; existing template headings and their style
+numbering remain unchanged. The saved package is checked against the captured generated paragraphs rather than
+all paragraphs that happen to use the same style.
+
+Numbering parts are selected by the document's unique internal numbering relationship. Existing part paths and
+relationships are preserved rather than assuming `word/numbering.xml`; ambiguous or dangling relationships fail
+before writeback. Generated headings carry their source outline level directly, without changing the template style.
+
+原生标题编号只写入本次渲染生成的标题段落，不把新编号关联到模板共用的标题样式。模板原有标题及其
+样式编号保持不变；保存后的检查定位实际生成的段落，不通过同名样式把模板原有标题算入本次输出。
+编号部件按文档唯一的内部编号关系定位，保留原部件路径及关系，不假定文件一定名为 `word/numbering.xml`；
+歧义或悬空关系在写回前拒绝。新增标题直接记录源标题级别，不修改模板样式的原大纲级别。
+
 `template_fill.gongwen_numbering_comments` is an independent review preference, off by default. Native numbering does not
 materialize a text-number anchor, so its comments anchor the first visible heading character instead.
 Selecting either mode does not erase the saved comment preference. New text-numbered headings locally
@@ -381,7 +399,8 @@ must resolve to a style of the correct type.
   a separate `document-caption-style-binding-map/v1` custom XML item persists exactly four ordered bindings
   (`figure_caption`, `table_caption`, `equation_caption`, `code_block_caption`) with each semantic key, resolved
   style ID, and visible name. This is style identity only, never pairing/target/ID metadata. On save/reopen, every
-  bound style must be one exact paragraph style with one exact direct name and no aliases, and every caption must
+  bound style must be one exact paragraph style with one exact direct name; existing aliases are preserved but
+  never used to rebind its identity. Every caption must
   carry the matching exact direct `pStyle`. A non-destructive collision may therefore use, for example,
   `DocWenTableCaptionDocWen1`; the preserved conflicting `DocWenTableCaption` never regains authority through prefix
   matching or its visible name.
@@ -546,9 +565,10 @@ zero-Markdown-diff operation. Source-mutating add/remove/regex-cleanup controls 
 ## Acceptance / 验收
 
 - blank four-style mother template, all twelve shipped templates, and a user template missing managed styles;
-- exactly 43 managed identities, exactly 47 total styles for the blank mother template, correct types and zero
-  aliases;
-- localized custom names and canonical built-in names/styleIds;
+- exactly 43 managed identities, exactly 47 total styles for the blank mother template, correct types and no
+  aliases on newly injected styles;
+- preserved recognized template IDs, names, aliases, formatting and dependent style fields; canonical IDs/names
+  and exact locale names for newly injected styles;
 - deterministic conflict mapping and diagnostics without deleting or rewriting user formatting;
 - each caption, table header/body, inline formula/code, link, and bibliography run references a real style;
 - enabled semantic caption bookmark/field/`REF` plus its required two-object outer SDT, disabled ID-bearing
@@ -568,10 +588,21 @@ zero-Markdown-diff operation. Source-mutating add/remove/regex-cleanup controls 
 - DOCX-to-neutral separates numbering only from proved list/`SEQ`/`REF`/bookmark semantics. An ambiguous visible
   prefix remains authored text plus diagnostic, and canonical Markdown never receives a materialized number;
 - bibliography empty/non-empty, custom pPr, `sectPr`, bold/italic/link, save/reopen and heading independence;
+- empty/paragraph/table-ending body insertion, original range markers and current-section inheritance, including
+  header/footer references, margins, first-page settings and page-number continuation;
+- direct body paragraph/run formatting and semantic precedence; empty official-field cleanup retains containers
+  with bookmarks, comments, content controls or other non-text structure;
+- ordinary and nested fields, split field instructions, simple fields, data-bound controls, placeholders crossing
+  their boundaries, and unaffected ordinary placeholders; ownership failures produce no document artifact;
 - pre-existing footnote/endnote ID collisions, rich bodies, hyperlinks/drawings/relationships, atomic reference/body
   allocation, and unchanged reserved separator entries;
 - source and packaged conversion, headless OOXML inspection, round-trip, then separately bound Word, WPS, and
   LibreOffice open/save/reopen.
+
+模板保真验收检查最终保存再打开的文档：原样式身份、别名及相关域引用不变，新增标题编号不影响原标题；
+空正文、表格结尾及多次分节均保留页面设置与范围标记；正文直接格式遵守语义优先级；空字段清理保留非文字
+结构；域或绑定控件中的非法占位符明确失败且不生成产物。XML 检查与宿主软件打开、保存、重开分别验收，
+不能用 XML 断言代替视觉与域更新验证。
 
 Template-generation scripts are maintenance tools, not runtime evidence. Any registry, localization, placeholder,
 anchor, bookmark, or rendering change requires focused OOXML tests, packaged-resource verification, and the Word,

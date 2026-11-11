@@ -55,7 +55,8 @@ _KIND_TO_TYPE = {
 @cache
 def _catalog(locale: str) -> DocumentStyleCatalog:
     return build_document_style_catalog(
-        {"gui": {"language": {"locale": locale}}},
+        {},
+        request_options={"locale": locale},
         locales_dir=PROJECT_ROOT / "i18n" / "locales",
     )
 
@@ -256,7 +257,7 @@ def test_v4_registry_is_exact_and_does_not_reserve_listing_or_excluded_word_styl
 
 
 @pytest.mark.parametrize("locale", SHIPPED_STYLE_LOCALES)
-def test_shipped_numeric_templates_reuse_builtin_ids_and_migrate_custom_ids_without_format_loss(
+def test_shipped_numeric_templates_preserve_all_existing_style_identities_and_formatting(
     tmp_path: Path,
     locale: str,
 ) -> None:
@@ -264,17 +265,9 @@ def test_shipped_numeric_templates_reuse_builtin_ids_and_migrate_custom_ids_with
     source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     original = Document(str(source))
     _use_numeric_custom_style_ids(original)
-    migration = _legacy_map(original, _catalog(locale))
-    managed_ids = {definition.style_id for definition in MANAGED_DOCUMENT_STYLES}
     existing_styles = {
-        stable_id: _format_fingerprint(_style_elements(original)[legacy_id], migration)
-        for legacy_id, stable_id in migration.items()
-    }
-    original_names = {_normalized_name(_raw_name(cast(Any, style)._element)) for style in original.styles}
-    existing_custom_ids = {
-        definition.style_id
-        for definition in CUSTOM_DOCUMENT_STYLES
-        if any(_normalized_name(name) in original_names for name in _recognition_names(definition, _catalog(locale)))
+        style_id: etree.tostring(element, method="c14n", exclusive=True)
+        for style_id, element in _style_elements(original).items()
     }
 
     completed, bindings = complete_managed_styles(original, _catalog(locale))
@@ -284,37 +277,31 @@ def test_shipped_numeric_templates_reuse_builtin_ids_and_migrate_custom_ids_with
     current = _style_elements(reopened)
 
     assert len(existing_styles) == 47
-    assert existing_custom_ids.issubset(set(existing_styles) & managed_ids)
     assert len(reopened.styles) == 47
-    for stable_id, fingerprint in existing_styles.items():
-        assert _format_fingerprint(current[stable_id], {}) == fingerprint
+    for style_id, fingerprint in existing_styles.items():
+        assert etree.tostring(current[style_id], method="c14n", exclusive=True) == fingerprint
     original_by_name = {
         _normalized_name(_raw_name(cast(Any, style)._element)): style.style_id for style in original.styles
     }
-    for definition in BUILTIN_DOCUMENT_STYLES:
-        original_id = original_by_name.get(_normalized_name(definition.canonical_name or ""))
-        if original_id is None:
-            assert bindings.style_id(definition.semantic_key) == definition.style_id
-            continue
+    for definition in MANAGED_DOCUMENT_STYLES:
+        original_id = next(
+            original_by_name[_normalized_name(name)]
+            for name in _recognition_names(definition, _catalog(locale))
+            if _normalized_name(name) in original_by_name
+        )
         assert bindings.style_id(definition.semantic_key) == original_id
-        element = current[original_id]
-        assert _raw_name(element) == definition.canonical_name
-        assert element.find(qn("w:aliases")) is None
         if original_id != definition.style_id:
             assert definition.style_id not in current
+    validate_managed_style_package(output.read_bytes(), _catalog(locale), bindings)
     assert hashlib.sha256(source.read_bytes()).hexdigest() == source_hash
     _audit_package(output)
 
 
-def test_cross_locale_recognition_changes_only_visible_identity(tmp_path: Path) -> None:
+def test_cross_locale_recognition_preserves_visible_identity(tmp_path: Path) -> None:
     source = _template_path("de_DE")
     original = Document(str(source))
     catalog = _catalog("zh_CN")
-    migration = _legacy_map(original, catalog)
-    original_body = _format_fingerprint(
-        _style_elements(original)[next(old for old, new in migration.items() if new == "DocWenBodyParagraph")],
-        migration,
-    )
+    original_body = etree.tostring(_style_elements(original)["DocWenBodyParagraph"], method="c14n", exclusive=True)
 
     completed, _bindings = complete_managed_styles(original, catalog)
     output = tmp_path / "de-template-zh-output.docx"
@@ -322,11 +309,11 @@ def test_cross_locale_recognition_changes_only_visible_identity(tmp_path: Path) 
     reopened = Document(str(output))
     body = _style_elements(reopened)["DocWenBodyParagraph"]
 
-    assert _raw_name(body) == catalog.name_for("body_paragraph")
-    assert _format_fingerprint(body, {}) == original_body
+    assert _raw_name(body) == _catalog("de_DE").name_for("body_paragraph")
+    assert etree.tostring(body, method="c14n", exclusive=True) == original_body
 
 
-def test_generic_footnote_and_story_references_are_migrated(tmp_path: Path) -> None:
+def test_generic_footnote_and_story_references_keep_original_identities(tmp_path: Path) -> None:
     source = _template_path("en_US")
     original = Document(str(source))
     _use_numeric_custom_style_ids(original)
@@ -412,10 +399,11 @@ def test_generic_footnote_and_story_references_are_migrated(tmp_path: Path) -> N
         payload=untouched_glossary,
     )
 
-    completed, _bindings = complete_managed_styles(original, catalog)
+    source_blob = _document_bytes(original)
+    completed, bindings = complete_managed_styles(original, catalog)
     output = tmp_path / "all-parts.docx"
     completed.save(str(output))
-    with ZipFile(output) as archive:
+    with ZipFile(output) as archive, ZipFile(BytesIO(source_blob)) as source_archive:
         for name in (
             "word/document.xml",
             "word/header1.xml",
@@ -426,19 +414,19 @@ def test_generic_footnote_and_story_references_are_migrated(tmp_path: Path) -> N
             "word/numbering.xml",
             "word/styles.xml",
         ):
-            root = etree.fromstring(archive.read(name))
-            reference_values = {element.get(qn("w:val"), "") for tag in _REF_QNAMES for element in root.iter(tag)}
-            assert legacy_body not in reference_values
-            assert legacy_inline not in reference_values
-        assert b"DocWenBodyParagraph" in archive.read("word/footnotes.xml")
-        assert b"DocWenInlineCode" in archive.read("word/footnotes.xml")
+            assert etree.tostring(
+                etree.fromstring(archive.read(name)), method="c14n", exclusive=True
+            ) == etree.tostring(etree.fromstring(source_archive.read(name)), method="c14n", exclusive=True)
+        assert legacy_body.encode() in archive.read("word/footnotes.xml")
+        assert legacy_inline.encode() in archive.read("word/footnotes.xml")
         assert archive.read("customXml/item99.xml") == untouched_custom_xml
         assert archive.read("word/glossary/document.xml") == untouched_glossary
     _audit_package(output)
+    validate_managed_style_package(output.read_bytes(), catalog, bindings)
 
 
-def test_default_document_parallel_style_registry_stays_in_sync(tmp_path: Path) -> None:
-    completed, _bindings = complete_managed_styles(Document(), _catalog("en_US"))
+def test_default_document_parallel_style_registry_stays_complete(tmp_path: Path) -> None:
+    completed, bindings = complete_managed_styles(Document(), _catalog("en_US"))
     output = tmp_path / "default.docx"
     completed.save(str(output))
     with ZipFile(output) as archive:
@@ -446,12 +434,14 @@ def test_default_document_parallel_style_registry_stays_in_sync(tmp_path: Path) 
         effects = etree.fromstring(archive.read("word/stylesWithEffects.xml"))
     primary_ids = {element.get(qn("w:styleId")) for element in primary.findall(qn("w:style"))}
     effects_ids = {element.get(qn("w:styleId")) for element in effects.findall(qn("w:style"))}
-    managed_ids = {definition.style_id for definition in MANAGED_DOCUMENT_STYLES}
-    assert managed_ids <= primary_ids
-    assert managed_ids <= effects_ids
+    assert {style_id for _key, style_id in bindings.style_ids} <= primary_ids
+    assert bindings.effects_style_ids is not None
+    assert {style_id for _key, style_id in bindings.effects_style_ids} <= effects_ids
+    assert bindings.style_id("table_grid") == "TableGrid"
+    validate_managed_style_package(output.read_bytes(), _catalog("en_US"), bindings)
 
 
-def test_parallel_style_registry_uses_its_own_legacy_ids_and_rewrites_graph(tmp_path: Path) -> None:
+def test_parallel_style_registry_preserves_its_own_ids_and_reference_graph(tmp_path: Path) -> None:
     legacy_effects_id = "LegacyEffectsHeadingOne"
 
     def mutate_effects(root: etree._Element) -> None:
@@ -474,23 +464,24 @@ def test_parallel_style_registry_uses_its_own_legacy_ids_and_rewrites_graph(tmp_
         for element in source_effects.findall(qn("w:style"))
         if element.get(qn("w:styleId")) == legacy_effects_id
     )
-    source_fingerprint = _format_fingerprint(source_heading, {legacy_effects_id: "Heading1"})
+    source_fingerprint = etree.tostring(source_heading, method="c14n", exclusive=True)
 
-    completed, _bindings = complete_managed_styles(Document(BytesIO(source_blob)), _catalog("en_US"))
+    completed, bindings = complete_managed_styles(Document(BytesIO(source_blob)), _catalog("en_US"))
     output = tmp_path / "independent-effects.docx"
     completed.save(str(output))
     with ZipFile(output) as archive:
         effects = etree.fromstring(archive.read("word/stylesWithEffects.xml"))
     effects_by_id = {element.get(qn("w:styleId"), ""): element for element in effects.findall(qn("w:style"))}
 
-    assert legacy_effects_id not in effects_by_id
-    assert _format_fingerprint(effects_by_id["Heading1"], {}) == source_fingerprint
+    assert "Heading1" not in effects_by_id
+    assert etree.tostring(effects_by_id[legacy_effects_id], method="c14n", exclusive=True) == source_fingerprint
     derived_based_on = effects_by_id["EffectsDerived"].find(qn("w:basedOn"))
     assert derived_based_on is not None
-    assert derived_based_on.get(qn("w:val")) == "Heading1"
+    assert derived_based_on.get(qn("w:val")) == legacy_effects_id
+    validate_managed_style_package(output.read_bytes(), _catalog("en_US"), bindings)
 
 
-def test_parallel_builtin_style_conflict_is_preserved_with_shared_private_managed_id() -> None:
+def test_parallel_builtin_style_conflict_keeps_primary_identity_and_separate_effects_binding() -> None:
     def break_effects(root: etree._Element) -> None:
         heading = next(element for element in root.findall(qn("w:style")) if element.get(qn("w:styleId")) == "Heading1")
         heading.set(qn("w:type"), "character")
@@ -500,7 +491,7 @@ def test_parallel_builtin_style_conflict_is_preserved_with_shared_private_manage
     before = _package_snapshot(document)
     completed, bindings = complete_managed_styles(document, _catalog("en_US"))
     assert _package_snapshot(document) == before
-    assert bindings.style_id("heading_1") == "Heading1DocWen1"
+    assert bindings.style_id("heading_1") == "Heading1"
     with ZipFile(BytesIO(_document_bytes(completed))) as archive:
         effects = etree.fromstring(archive.read("word/stylesWithEffects.xml"))
     original = effects.find(qn("w:style") + "[@" + qn("w:styleId") + "='Heading1']")
@@ -534,8 +525,9 @@ def test_custom_style_conflicts_preserve_user_style_and_allocate_request_local_i
     assert _package_snapshot(document) == before
     assert _format_fingerprint(current["DocWenCodeBlockCaption"], {}) == preserved_fingerprint
     assert current["DocWenCodeBlockCaption"].find(qn("w:aliases")) is None
-    assert bindings.style_id("code_block_caption") == "DocWenCodeBlockCaptionDocWen1"
-    assert current["DocWenCodeBlockCaptionDocWen1"].get(qn("w:type")) == "paragraph"
+    expected_id = "DocWenCodeBlockCaptionDocWen1" if conflict_kind == "wrong_type" else "CodeBlockCaption"
+    assert bindings.style_id("code_block_caption") == expected_id
+    assert current[expected_id].get(qn("w:type")) == "paragraph"
     assert [(item.code, item.semantic_key) for item in bindings.conflicts] == [
         ("MD2DOCX-STYLE-COLLISION-PRESERVED", "code_block_caption")
     ]
@@ -607,7 +599,7 @@ def test_converter_rejects_duplicate_template_zip_members_before_object_model_lo
 @pytest.mark.parametrize("damage", ("duplicate", "missing_ref", "wrong_type_ref", "wrong_name", "aliases"))
 def test_final_package_validator_rejects_post_render_identity_damage(damage: str) -> None:
     catalog = _catalog("en_US")
-    completed, _bindings = complete_managed_styles(Document(), catalog)
+    completed, bindings = complete_managed_styles(Document(), catalog)
     completed.add_paragraph("validation target")
     blob = _document_bytes(completed)
 
@@ -646,7 +638,7 @@ def test_final_package_validator_rejects_post_render_identity_damage(damage: str
         damaged = _rewrite_xml_member(blob, "word/styles.xml", break_styles)
 
     with pytest.raises(ManagedStyleCompletionError) as raised:
-        validate_managed_style_package(damaged, catalog)
+        validate_managed_style_package(damaged, catalog, bindings)
 
     assert raised.value.diagnostic_code == "MD2DOCX-STYLE-COMPLETION-ERROR"
     assert raised.value.error_type == "conversion_failed"

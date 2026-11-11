@@ -149,14 +149,16 @@ levels 1..6 plus DocWen ATX extension levels 7..9, so every used `heading_list` 
 restart/chapter binding are restricted to 1..9 and can bind to the corresponding Word Heading level.
 
 Each definition emits `w:multiLevelType="multilevel"`. Level `start`, mapped `number_format`, translated `display`,
-`suffix`, resolved Heading style, and `restart_after_level` become exact `w:start`, `w:numFmt`, `w:lvlText`, `w:suff`,
-`w:pStyle`, and `w:lvlRestart`; null restart serializes `w:val="0"`, otherwise the exact lower one-based level.
+`suffix`, and `restart_after_level` become exact `w:start`, `w:numFmt`, `w:lvlText`, `w:suff`,
+and `w:lvlRestart`; null restart serializes `w:val="0"`, otherwise the exact lower one-based level.
+The paragraph retains its resolved Heading style, while the new numbering definition has no `w:pStyle` link:
+only generated paragraphs receive the new direct numbering binding, and template styles keep their existing numbering.
 Instance start entries become `w:lvlOverride w:ilvl="N-1"/w:startOverride w:val="V"`. Missing/extra level XML or a
 different effective number is invalid, not an accepted host normalization.
 
 A native list child may also be a Heading paragraph on the source-native route. Its ordinary `numPr` is not by
 itself a resolved-v4 version signal: a unique native hybrid list binding whose levels have no Heading `pStyle`
-ownership remains with the historical semantic reader. The resolved Heading definition's style ownership and
+ownership remains with the historical semantic reader. The resolved Heading definition's `multilevel` shape and
 explicit resolved occurrence/citation signals continue to select the strict v4 proof. Missing, duplicate or
 ambiguous numbering references do not receive the ordinary-list exemption. A valid resolved package containing
 only headings needs no caption-style registry; it still proves its Heading targets and native numbering, while
@@ -166,12 +168,14 @@ pass the recursive style-link, markup-compatibility and modeled-ancestry guard w
 Unrelated unused definitions do not revoke an otherwise proven ordinary binding.
 
 原文路线的原生列表项也可包含 Heading 段落。普通 `numPr` 本身不是 resolved-v4 版本信号：唯一绑定到原生
-hybrid 列表、各级均无 Heading `pStyle` 所有权的段落仍由既有语义 reader 读取。resolved 标题定义的样式
-所有权及显式 resolved occurrence／citation 信号继续选择严格 v4 证明；缺失、重复或有歧义的编号引用
+hybrid 列表、各级均无 Heading `pStyle` 所有权的段落仍由既有语义 reader 读取。resolved 标题定义的
+`multilevel` 结构及显式 resolved occurrence／citation 信号继续选择严格 v4 证明；缺失、重复或有歧义的编号引用
 不享受普通列表的分流。合法的纯标题 resolved 包不需要题注样式注册表，但仍证明标题目标与原生编号；
 含题注的包继续要求其独立认证的题注绑定。
 授予普通列表分流前，被引用的原生实例及抽象定义子树还须通过递归样式链接、markup-compatibility 与已建模
 节点祖先检查，并保留真实父层。无关且未使用的定义不撤销其他已证明的普通绑定。
+生成标题保留其已解析的段落样式，但新增编号定义不含 `w:pStyle` 链接；仅生成段落设置直接编号，
+模板共享样式及其原有编号保持不变。禁用编号的生成标题设置直接 `numId=0`，抑制继承编号。
 
 Every enabled caption materialization has exactly
 `type,counter,number_format,sequence_action,start_value,restart_heading_level,restart_heading_style,chapter_heading_level,chapter_heading_style,chapter_separator,chapter_cached_number,sequence_cached_number,localized_label,label_separator`.
@@ -221,8 +225,8 @@ all three actions, and Update Fields in Word/WPS/LibreOffice so cached success c
 DocWen implements the physical layer independently of any particular DOCX provider:
 
 - enabled Headings use real `word/numbering.xml` abstract-number/number instances and paragraph list semantics that
-  deterministically produce the plan value; disabled or template-empty Headings receive no effective
-  numbering binding from DocWen;
+  deterministically produce the plan value; disabled or template-empty Headings receive a direct `numId=0`
+  suppression so inherited template numbering cannot remain effective;
 - enabled Figure/Table/Equation/Code captions use the existing managed caption styles and matching `SEQ` complex
   or closed `STYLEREF`+separator+`SEQ` fields with exact cached results. Disabled captions retain their declaration
   content and managed style but have no
@@ -237,6 +241,21 @@ DocWen implements the physical layer independently of any particular DOCX provid
   field. An unnumbered semantic reference is rejected before rendering and creates no `REF` occurrence; and
 - style completion remains the 43-style request-local non-destructive operation. Counter rules do not move into the
   style registry, and Export Style never changes numbering identity or value.
+
+The request tracks generated Heading and caption elements separately from original template paragraphs sharing
+those styles. Finalization requires the exact bound element inventory and source order. Reopen proof verifies
+generated semantics and the captured template paragraphs independently; an unbound insertion or replaced original
+paragraph cannot acquire a template allowance merely by sharing its style or text.
+Addressable Headings also carry a per-target style-binding map recording their level, actual style ID and primary
+name. Both direct and resolved readers require this exact binding and its unique paragraph-style definition;
+localized or numeric template style identities do not need renaming. Numbered resolved targets additionally prove
+that the native numbering level agrees with the recorded Heading level.
+
+请求按元素身份区分生成标题／题注与使用相同样式的模板原段落。最终整理要求绑定元素全集及源顺序完全一致；
+保存重开后分别证明生成语义与模板段落快照。未绑定的新增段落或被替换的原段落不能凭相同样式或文本获得豁免。
+可引用标题还携带逐目标样式绑定表，记录层级、真实样式 ID 与主名称；普通及 resolved reader 均要求精确绑定
+及其唯一段落样式定义，无须重命名本地化或数字 ID 的模板样式。已编号 resolved 标题还证明原生编号层级与
+记录的标题层级一致。
 
 Disabled ID-less captions round-trip through the independent closed
 `document-numbering-occurrence-map/v1` and physical two-block occurrence SDT frozen by
