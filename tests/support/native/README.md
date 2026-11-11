@@ -1,5 +1,8 @@
 # Linux ORT opt-out probe
 
+For DOCX caption field acceptance, see [SEQ / REF native acceptance](docx-seq-acceptance.md).
+Its paired fixtures and source regression do not claim Word/WPS field-update acceptance.
+
 Run `ORT_DISABLE_TELEMETRY=1 .venv/bin/python tests/support/native/verify_ort_optout.py`.
 Requires Linux, a C compiler, repository OCR models, and installed project dependencies.
 The helper compiles its fixture into a temporary directory; no telemetry-enabled
