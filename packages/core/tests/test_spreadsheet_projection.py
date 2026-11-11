@@ -165,6 +165,53 @@ def test_unsupported_hardlink_volume_fails_without_partial_output(
     assert list(tmp_path.iterdir()) == []
 
 
+@pytest.mark.parametrize("failure", ["initial_fstat", "fdopen"])
+def test_failure_before_stream_ownership_closes_the_real_raw_descriptor_and_cleans_its_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    view = WorksheetValueView("Data", 1, 1, {(1, 1): _Cell(value="original")})
+    error = OSError("injected before stream ownership")
+    descriptors: list[int] = []
+    injected = False
+    mkstemp, fstat, fdopen = (
+        spreadsheet_projection.tempfile.mkstemp,
+        spreadsheet_projection.os.fstat,
+        spreadsheet_projection.os.fdopen,
+    )
+
+    def create(*args, **kwargs):
+        descriptor, path = mkstemp(*args, **kwargs)
+        descriptors.append(descriptor)
+        return descriptor, path
+
+    def fail_stat(descriptor):
+        nonlocal injected
+        if not injected and descriptor in descriptors:
+            injected = True
+            raise error
+        return fstat(descriptor)
+
+    def fail_open(descriptor, *args, **kwargs):
+        nonlocal injected
+        if descriptor in descriptors:
+            injected = True
+            raise error
+        return fdopen(descriptor, *args, **kwargs)
+
+    monkeypatch.setattr(spreadsheet_projection.tempfile, "mkstemp", create)
+    if failure == "initial_fstat":
+        monkeypatch.setattr(spreadsheet_projection.os, "fstat", fail_stat)
+    else:
+        monkeypatch.setattr(spreadsheet_projection.os, "fdopen", fail_open)
+    with pytest.raises(OSError) as raised:
+        write_delimited_projection(view, tmp_path / "output.csv", cancel_check=lambda: None)
+    assert injected and raised.value is error and len(descriptors) == 1
+    with pytest.raises(OSError) as closed:
+        fstat(descriptors[0])
+    assert closed.value.errno == errno.EBADF
+    assert list(tmp_path.iterdir()) == []
+
+
 @pytest.mark.parametrize("failure", ["temporary_unlink", "receipt_stat", "receipt_construction"])
 def test_failure_before_receipt_returns_removes_the_installed_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
