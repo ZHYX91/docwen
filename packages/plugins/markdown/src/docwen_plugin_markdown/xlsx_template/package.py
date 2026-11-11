@@ -6,6 +6,7 @@ import hashlib
 import posixpath
 import re
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote, unquote, urlsplit
 
@@ -156,6 +157,34 @@ def relocate_formula_references(formula: str, source: str, target: str) -> str:
         return replace_one(reference)
 
     return _rewrite_range_tokens(formula, replace)
+
+
+@dataclass(frozen=True)
+class ImportedGraph:
+    """The identities assigned to one imported graph, including its formulas."""
+
+    root_part: str
+    part_map: Mapping[str, str]
+    table_names: Mapping[str, str]
+    source_sheet_name: str | None = None
+    target_sheet_name: str | None = None
+
+    def rewrite_formula(self, formula: str) -> str:
+        def replace(reference: str) -> str:
+            qualifier, separator, operand = reference.rpartition("!")
+            if separator and any(character in qualifier for character in "[]:"):
+                return reference
+            name, bracket, rest = operand.partition("[")
+            replacement = self.table_names.get(name.casefold())
+            if replacement is None:
+                return reference
+            return (qualifier + separator if separator else "") + replacement + bracket + rest
+
+        if self.table_names:
+            formula = _rewrite_range_tokens(formula, replace)
+        if self.source_sheet_name is not None and self.target_sheet_name is not None:
+            formula = relocate_formula_references(formula, self.source_sheet_name, self.target_sheet_name)
+        return formula
 
 
 def _clear_formula_cache(formula: Any) -> None:
@@ -387,9 +416,16 @@ class PackageEditor:
         return maximum, names
 
     def import_part(self, donor_parts: Mapping[str, bytes], donor_part: str) -> str:
-        return self._import_graph(donor_parts, donor_part)[0]
+        return self._import_graph(donor_parts, donor_part).root_part
 
-    def _import_graph(self, donor_parts: Mapping[str, bytes], donor_part: str) -> tuple[str, set[str]]:
+    def _import_graph(
+        self,
+        donor_parts: Mapping[str, bytes],
+        donor_part: str,
+        *,
+        source_sheet_name: str | None = None,
+        target_sheet_name: str | None = None,
+    ) -> ImportedGraph:
         source = dict(donor_parts)
         source_types = _types_root(source)
         mapping: dict[str, str] = {}
@@ -456,23 +492,10 @@ class PackageEditor:
             self.save_relationships(target_part, root)
             return target_part
 
-        result = copy_part(donor_part)
-        if table_renames:
-            self._rewrite_table_references(set(mapping.values()), table_renames)
-        return result, set(mapping.values())
-
-    def _rewrite_table_references(self, parts: set[str], renames: dict[str, str]) -> None:
-        def replace(reference: str) -> str:
-            name, separator, rest = reference.partition("[")
-            replacement = renames.get(name.casefold())
-            return replacement + separator + rest if replacement else reference
-
-        def rewrite(formula: str) -> str:
-            if not any(name in formula.casefold() for name in renames):
-                return formula
-            return _rewrite_range_tokens(formula, replace)
-
-        self._rewrite_graph_formulas(parts, rewrite)
+        result = ImportedGraph(copy_part(donor_part), mapping, table_renames, source_sheet_name, target_sheet_name)
+        if table_renames or source_sheet_name is not None:
+            self._rewrite_graph_formulas(set(mapping.values()), result.rewrite_formula)
+        return result
 
     def _rewrite_graph_formulas(self, parts: set[str], rewrite: Callable[[str], str]) -> None:
         for part in parts:
@@ -493,16 +516,13 @@ class PackageEditor:
 
     def clone_part(
         self, part: str, *, source_sheet_name: str | None = None, target_sheet_name: str | None = None
-    ) -> str:
+    ) -> ImportedGraph:
         if (source_sheet_name is None) != (target_sheet_name is None):
             raise ValueError("Sheet reference relocation requires both source and target sheet names")
         self.finalize_content_types()
-        result, imported = self._import_graph(self.parts, part)
-        if source_sheet_name is not None and target_sheet_name is not None:
-            self._rewrite_graph_formulas(
-                imported, lambda formula: relocate_formula_references(formula, source_sheet_name, target_sheet_name)
-            )
-        return result
+        return self._import_graph(
+            self.parts, part, source_sheet_name=source_sheet_name, target_sheet_name=target_sheet_name
+        )
 
     def remove_part(self, part: str) -> None:
         """Remove only this part and its override; callers own relationship changes."""

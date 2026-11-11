@@ -443,6 +443,13 @@ Round-two regressions cover final retained template text through real TemplateMa
 
 Markdown XLSX template scans visit existing cells in row/column order rather than materializing their bounding rectangle. A saved sparse template with a last-row/last-column sentinel exercises YAML, row/column and image placeholders, formula preservation and final save/reopen; the guard fails before an accidental dense scan can allocate the empty grid.
 
+`test_xlsx_template_reference_edits.py` independently inspects saved package names and reopens two filled
+clones to check that each local defined name and direct formula uses its own renamed table. Literal and
+external references and original template bytes remain unchanged. Ranged hyperlinks are checked after
+partial replacement, partial clearing and full clearing, for original/cloned sheets, internal/external targets
+and merged anchors; the final XML cannot retain overlapping old and new link definitions. These checks
+establish stored reference identity, not native Excel/WPS formula calculation or interactive link behavior.
+
 `test_xlsx_image_text_plan.py` combines near-limit text with real template/table images and URL-quoted Unicode paths. It checks final ASCII/non-BMP limits, exact drawing bytes, literal marker trust, overwritten/protected cells, placeholder discovery order, duplicate drawings, sparse cells and the internal CSV-template helper. Temporary scope strings never enter openpyxl; output assertions save and reopen real workbooks. `test_mhtml_query_resolution.py` checks actual PNG bytes through Runtime under paired synthetic/absolute bases, empty query/fragment delimiters and relative paths.
 
 

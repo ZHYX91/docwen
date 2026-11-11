@@ -10,50 +10,11 @@ from typing import Any
 from lxml import etree
 from openpyxl.utils.cell import column_index_from_string, coordinate_to_tuple, get_column_letter, range_boundaries
 
+from .sheet_xml import insert_sheet_child
 from .state import CellState, SheetState
 
 _NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 _XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
-_ORDER = (
-    "sheetPr",
-    "dimension",
-    "sheetViews",
-    "sheetFormatPr",
-    "cols",
-    "sheetData",
-    "sheetCalcPr",
-    "sheetProtection",
-    "protectedRanges",
-    "scenarios",
-    "autoFilter",
-    "sortState",
-    "dataConsolidate",
-    "customSheetViews",
-    "mergeCells",
-    "phoneticPr",
-    "conditionalFormatting",
-    "dataValidations",
-    "hyperlinks",
-    "printOptions",
-    "pageMargins",
-    "pageSetup",
-    "headerFooter",
-    "rowBreaks",
-    "colBreaks",
-    "customProperties",
-    "cellWatches",
-    "ignoredErrors",
-    "smartTags",
-    "drawing",
-    "legacyDrawing",
-    "legacyDrawingHF",
-    "picture",
-    "oleObjects",
-    "controls",
-    "webPublishItems",
-    "tableParts",
-    "extLst",
-)
 _PROPERTY_TAGS = {
     "sheet_format": "sheetFormatPr",
     "sheet_properties": "sheetPr",
@@ -81,22 +42,11 @@ def _local(node: Any) -> str:
     return etree.QName(node).localname if isinstance(node.tag, str) else ""
 
 
-def _insert(root: Any, node: Any) -> None:
-    name = _local(node)
-    priority = _ORDER.index(name) if name in _ORDER else len(_ORDER)
-    for index, existing in enumerate(root):
-        other = _local(existing)
-        if other in _ORDER and _ORDER.index(other) > priority:
-            root.insert(index, node)
-            return
-    root.append(node)
-
-
 def _get_or_create(root: Any, name: str) -> Any:
     node = root.find(_tag(name))
     if node is None:
         node = etree.Element(_tag(name))
-        _insert(root, node)
+        insert_sheet_child(root, node)
     return node
 
 

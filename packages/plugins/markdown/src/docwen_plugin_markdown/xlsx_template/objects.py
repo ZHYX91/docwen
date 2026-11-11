@@ -7,9 +7,10 @@ from copy import deepcopy
 from typing import Any
 
 from lxml import etree
-from openpyxl.utils.cell import get_column_letter
+from openpyxl.utils.cell import coordinate_to_tuple, get_column_letter, range_boundaries
 
 from .package import PackageEditor, parse_xml, rels_part, resolve_target, serialize_xml
+from .sheet_xml import insert_sheet_child
 
 _S = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 _R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -21,60 +22,6 @@ _THREADS = "http://schemas.microsoft.com/office/spreadsheetml/2018/threadedcomme
 _DRAWING_CT = "application/vnd.openxmlformats-officedocument.drawing+xml"
 _COMMENT_CT = "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"
 _VML_CT = "application/vnd.openxmlformats-officedocument.vmlDrawing"
-
-# CT_Worksheet order: object carriers must precede extLst.
-_SHEET_ORDER = (
-    "sheetPr",
-    "dimension",
-    "sheetViews",
-    "sheetFormatPr",
-    "cols",
-    "sheetData",
-    "sheetCalcPr",
-    "sheetProtection",
-    "protectedRanges",
-    "scenarios",
-    "autoFilter",
-    "sortState",
-    "dataConsolidate",
-    "customSheetViews",
-    "mergeCells",
-    "phoneticPr",
-    "conditionalFormatting",
-    "dataValidations",
-    "hyperlinks",
-    "printOptions",
-    "pageMargins",
-    "pageSetup",
-    "headerFooter",
-    "rowBreaks",
-    "colBreaks",
-    "customProperties",
-    "cellWatches",
-    "ignoredErrors",
-    "smartTags",
-    "drawing",
-    "legacyDrawing",
-    "legacyDrawingHF",
-    "picture",
-    "oleObjects",
-    "controls",
-    "webPublishItems",
-    "tableParts",
-    "extLst",
-)
-
-
-def _insert_sheet_child(root: Any, child: Any) -> None:
-    order = {name: index for index, name in enumerate(_SHEET_ORDER)}
-    rank = order[etree.QName(child).localname]
-    for index, current in enumerate(root):
-        if not isinstance(current.tag, str):
-            continue
-        if order.get(etree.QName(current).localname, len(order)) > rank:
-            root.insert(index, child)
-            return
-    root.append(child)
 
 
 def _relationships(parts: dict[str, bytes], owner: str) -> dict[str, Any]:
@@ -175,7 +122,7 @@ def _merge_images(
         rid = editor.add_relationship(output_part, _R + "/drawing", drawing_part)
         carrier = etree.Element(f"{{{_S}}}drawing")
         carrier.set(f"{{{_R}}}id", rid)
-        _insert_sheet_child(root, carrier)
+        insert_sheet_child(root, carrier)
     else:
         drawing = parse_xml(editor.parts[drawing_part])
     used_ids = {element.get("id") for element in drawing.iter(f"{{{_D}}}cNvPr")}
@@ -266,7 +213,7 @@ def _merge_note_shapes(
         rid = editor.add_relationship(output_part, _R + "/vmlDrawing", vml_part)
         carrier = etree.Element(f"{{{_S}}}legacyDrawing")
         carrier.set(f"{{{_R}}}id", rid)
-        _insert_sheet_child(root, carrier)
+        insert_sheet_child(root, carrier)
     else:
         vml = parse_xml(editor.parts[vml_part])
     for shape in list(vml.iter(f"{{{_V}}}shape")):
@@ -397,6 +344,39 @@ def _merge_comments(
     return not had_vml_carrier and root.find(f"{{{_S}}}legacyDrawing") is not None
 
 
+def _subtract_hyperlink_cells(reference: str, changes: dict[int, set[int]]) -> tuple[str, ...] | None:
+    """Subtract edited cells without expanding an original hyperlink rectangle."""
+    min_col, min_row, max_col, max_row = range_boundaries(reference)
+    affected = {
+        row: sorted(column for column in columns if min_col <= column <= max_col)
+        for row, columns in changes.items()
+        if min_row <= row <= max_row
+    }
+    affected = {row: columns for row, columns in affected.items() if columns}
+    if not affected:
+        return None
+    ranges: list[str] = []
+
+    def append(left: int, top: int, right: int, bottom: int) -> None:
+        if left > right or top > bottom:
+            return
+        first = f"{get_column_letter(left)}{top}"
+        last = f"{get_column_letter(right)}{bottom}"
+        ranges.append(first if first == last else f"{first}:{last}")
+
+    next_row = min_row
+    for row, columns in sorted(affected.items()):
+        append(min_col, next_row, max_col, row - 1)
+        next_column = min_col
+        for column in columns:
+            append(next_column, row, column - 1, row)
+            next_column = column + 1
+        append(next_column, row, max_col, row)
+        next_row = row + 1
+    append(min_col, next_row, max_col, max_row)
+    return tuple(ranges)
+
+
 def _merge_hyperlinks(
     editor: PackageEditor,
     output_part: str,
@@ -415,15 +395,25 @@ def _merge_hyperlinks(
         if not changes.intersection(donor_map):
             return False
         source_links = etree.Element(f"{{{_S}}}hyperlinks")
-        _insert_sheet_child(root, source_links)
-    source_map = {node.get("ref", ""): node for node in source_links}
+        insert_sheet_child(root, source_links)
+    changed_cells: dict[int, set[int]] = {}
+    for reference in changes:
+        row, column = coordinate_to_tuple(reference)
+        changed_cells.setdefault(row, set()).add(column)
+    for old in list(source_links):
+        remaining = _subtract_hyperlink_cells(old.get("ref", ""), changed_cells)
+        if remaining is None:
+            continue
+        index = source_links.index(old)
+        source_links.remove(old)
+        for offset, reference in enumerate(remaining):
+            retained = deepcopy(old)
+            retained.set("ref", reference)
+            source_links.insert(index + offset, retained)
     imported: dict[str, str] = {}
     relationships: dict[str, str] = {}
     for reference in sorted(changes):
-        old = source_map.get(reference)
         new = donor_map.get(reference)
-        if old is not None:
-            source_links.remove(old)
         if new is not None:
             link = deepcopy(new)
             _copy_relationship_attributes(editor, link, output_part, donor_parts, donor_part, imported, relationships)

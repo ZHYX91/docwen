@@ -18,6 +18,7 @@ from openpyxl.styles.stylesheet import write_stylesheet
 
 from docwen_plugin_markdown.xlsx_text import check_workbook_text_capacity
 
+from .package import ImportedGraph
 from .state import SheetOrigin, SheetState, TemplateSession
 from .styles import StyleMerger, capture_style_state
 
@@ -148,9 +149,9 @@ def _map_sheet_styles(root: Any, styles: StyleMerger) -> None:
             column.set("style", str(styles.map_style(int(column.get("style")))))
 
 
-def _defined_names(root: Any, donor_root: Any, session: TemplateSession, workbook: Any) -> bool:
-    from .package import relocate_formula_references
-
+def _defined_names(
+    root: Any, donor_root: Any, session: TemplateSession, workbook: Any, clones: dict[Any, ImportedGraph]
+) -> bool:
     names = root.find(f"{{{_S}}}definedNames")
     changed = False
     current = list(_ordered_sheets(workbook))
@@ -188,9 +189,7 @@ def _defined_names(root: Any, donor_root: Any, session: TemplateSession, workboo
                 continue
             cloned = deepcopy(original_name)
             cloned.set("localSheetId", str(current.index(target_sheet)))
-            cloned.text = relocate_formula_references(
-                cloned.text or "", session.original_sheet_names[source_sheet], target_sheet.title
-            )
+            cloned.text = clones[target_sheet].rewrite_formula(cloned.text or "")
             key = (cloned.get("name", ""), cloned.get("localSheetId"))
             if key not in keys:
                 names.append(cloned)
@@ -303,6 +302,7 @@ def _template_parts(
     next_id = max((int(node.get("sheetId", "0")) for node in source_nodes.values()), default=0) + 1
     output_nodes = []
     output_parts: set[str] = set()
+    clones: dict[Any, ImportedGraph] = {}
     changed_book = _ordered_sheets(workbook) != session.original_sheets
     calculation_changed = changed_book
 
@@ -339,11 +339,12 @@ def _template_parts(
         else:
             if origin.clone:
                 source_sheet = _source_sheet(session, origin)
-                part = editor.clone_part(
+                clones[sheet] = editor.clone_part(
                     origin.part,
                     source_sheet_name=session.original_sheet_names[source_sheet],
                     target_sheet_name=sheet.title,
                 )
+                part = clones[sheet].root_part
                 root = _parse(editor.parts[part])
                 node = etree.Element(f"{{{_S}}}sheet", name=sheet.title, sheetId=str(next_id))
                 next_id += 1
@@ -397,7 +398,7 @@ def _template_parts(
                 for key in ("activeTab", "firstSheet"):
                     if key in after.attrib:
                         before.set(key, after.get(key))
-    changed_book = _defined_names(original_root, donor_root, session, workbook) or changed_book
+    changed_book = _defined_names(original_root, donor_root, session, workbook, clones) or changed_book
     if calculation_changed:
         _invalidate_calculation(editor, output_parts, original_root)
         changed_book = True
