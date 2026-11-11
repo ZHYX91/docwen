@@ -13,6 +13,7 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 import lxml.etree as etree
 
 from docwen_core.docx_numbering_parts import NumberingPartError, open_numbering_part
+from docwen_core.docx_numbering_structure import append_numbering_definitions
 from docwen_core.file_io import replace_authorized_file
 from docwen_core.models.resolved_numbering import (
     HeadingCounterSegment,
@@ -54,10 +55,6 @@ def write_heading_numbering_projection(path: str | Path, projection: Any) -> Non
         if len({item.filename for item in infos}) != len(infos):
             raise ResolvedNumberingOoxmlError("DOCX contains duplicate ZIP members")
         data = {item.filename: package.read(item.filename) for item in infos}
-    for required in ("word/_rels/document.xml.rels", "[Content_Types].xml"):
-        if required not in data:
-            raise ResolvedNumberingOoxmlError(f"DOCX lacks required part: {required}")
-
     try:
         part = open_numbering_part(data, create=True)
     except NumberingPartError as exc:
@@ -68,10 +65,7 @@ def write_heading_numbering_projection(path: str | Path, projection: Any) -> Non
     projected_abstract, projected_num = _numbering_ids_from_elements(projection)
     if existing_abstract & projected_abstract or existing_num & projected_num:
         raise ResolvedNumberingOoxmlError("resolved Heading numbering IDs collide after save")
-    for element in projection.abstract_nums:
-        _insert_abstract_num(root, element)
-    for element in projection.nums:
-        root.append(element)
+    append_numbering_definitions(root, projection.abstract_nums, projection.nums)
     data[part.name] = etree.tostring(
         root,
         encoding="UTF-8",
@@ -326,14 +320,6 @@ def _insert_num_pr(p_pr: Any, num_pr: Any) -> None:
             p_pr.insert(index, num_pr)
             return
     p_pr.append(num_pr)
-
-
-def _insert_abstract_num(root: Any, element: Any) -> None:
-    first_num = root.find(f"{{{WML_NS}}}num")
-    if first_num is None:
-        root.append(element)
-    else:
-        first_num.addprevious(element)
 
 
 def _numbering_ids(root: Any) -> tuple[set[int], set[int]]:

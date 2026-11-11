@@ -7,14 +7,13 @@ from collections.abc import Iterable
 from typing import Any, Final
 from zipfile import ZipFile
 
-import lxml.etree as etree
-
 from docwen_core._docx_semantics_v3_model import (
     CAPTION_STYLE_BINDING_MAP_NAMESPACE,
     CaptionStyleBindingV3,
     CaptionStyleKeyV3,
     DocxSemanticsV3Error,
 )
+from docwen_core.docx_package_parts import STYLES, DocxPackageParts, DocxPartError
 
 CAPTION_STYLE_KEYS_V3: Final[tuple[CaptionStyleKeyV3, ...]] = (
     "figure_caption",
@@ -118,10 +117,13 @@ def prove_caption_style_registry(
 ) -> tuple[CaptionStyleBindingV3, ...]:
     """Bind saved styles by ID, or an exact unique recorded name after Office renumbers IDs."""
 
-    if "word/styles.xml" not in package.namelist():
-        raise DocxSemanticsV3Error("DOCX package lacks the main styles registry")
-    parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_blank_text=False)
-    root = etree.fromstring(package.read("word/styles.xml"), parser)
+    try:
+        parts = DocxPackageParts.from_package(package)
+        style_part = parts.one(parts.document().name, STYLES, required=True)
+    except DocxPartError as exc:
+        raise DocxSemanticsV3Error(str(exc)) from exc
+    assert style_part is not None
+    root = style_part.element
     style_tag = f"{{{_WORD_NAMESPACE}}}style"
     name_tag = f"{{{_WORD_NAMESPACE}}}name"
     type_attr = f"{{{_WORD_NAMESPACE}}}type"

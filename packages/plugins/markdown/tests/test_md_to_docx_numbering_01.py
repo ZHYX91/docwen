@@ -119,7 +119,7 @@ class TestDocxListNumbering:
         assert int(num_id) > 0
         assert num.has_definitions
 
-        an_elems, num_elems = num._get_elements()
+        an_elems, num_elems = num.definition_elements()
         assert len(an_elems) == 1
         assert len(num_elems) == 1
 
@@ -153,7 +153,7 @@ class TestDocxListNumbering:
         """Nested list definitions use hybridMultilevel."""
         num = DocxListNumbering()
         num.create_list_definition({0: "ordered", 1: "unordered", 2: "ordered"})
-        an_elems, _ = num._get_elements()
+        an_elems, _ = num.definition_elements()
         mlt = an_elems[0].find(f"{{{WML_NS}}}multiLevelType")
         assert mlt is not None
         assert mlt.get(f"{{{WML_NS}}}val") == "hybridMultilevel"
@@ -210,7 +210,7 @@ class TestDocxListNumbering:
 
         numbering = DocxListNumbering(document)
         numbering.create_list_definition({0: "ordered", 1: "unordered", 2: "ordered"})
-        abstract_num = numbering._get_elements()[0][0]
+        abstract_num = numbering.definition_elements()[0][0]
         levels = abstract_num.findall(f"{{{WML_NS}}}lvl")
 
         def value(level: etree._Element, tag: str) -> str | None:
@@ -280,7 +280,7 @@ class TestDocxListNumbering:
     def test_list_nsid_is_stable_for_the_same_abstract_id(self) -> None:
         numbering = DocxListNumbering()
         numbering.create_list_definition({0: "ordered"})
-        abstract_elements, _ = numbering._get_elements()
+        abstract_elements, _ = numbering.definition_elements()
         nsid = abstract_elements[0].find(f"{{{WML_NS}}}nsid")
         assert nsid is not None
         expected = hashlib.sha256(b"docwen-list:10000").hexdigest()[:8].upper()

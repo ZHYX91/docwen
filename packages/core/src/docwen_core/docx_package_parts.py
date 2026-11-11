@@ -7,7 +7,7 @@ adapter creates parts or treats an orphan member as an authenticated document pa
 from __future__ import annotations
 
 import posixpath
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import unquote, urlsplit
@@ -55,6 +55,26 @@ COMMENTS = PartRole("comments", _OFFICE_RELS + "comments", _WORD_TYPE + "comment
 class RelatedPart:
     name: str
     element: etree._Element
+
+
+class _PackageMembers(Mapping[str, bytes]):
+    """Read only selected XML while the caller owns the open ZIP handle."""
+
+    def __init__(self, package: ZipFile, names: tuple[str, ...]) -> None:
+        self._package = package
+        self._names = dict.fromkeys(names)
+
+    def __getitem__(self, name: str) -> bytes:
+        return self._package.read(name)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._names)
+
+    def __len__(self) -> int:
+        return len(self._names)
+
+    def __contains__(self, name: object) -> bool:
+        return name in self._names
 
 
 def relationship_part_name(owner: str) -> str:
@@ -118,7 +138,7 @@ class DocxPackageParts:
         names = package.namelist()
         if len(names) != len(set(names)):
             raise DocxPartError("DOCX contains duplicate ZIP members")
-        return cls({name: package.read(name) for name in names})
+        return cls(_PackageMembers(package, tuple(names)))
 
     def content_type(self, name: str) -> str | None:
         overrides = [
