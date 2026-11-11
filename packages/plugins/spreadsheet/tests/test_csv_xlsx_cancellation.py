@@ -118,7 +118,7 @@ def test_later_sheet_cancellation_cleans_only_this_batch(
 ) -> None:
     source = tmp_path / "source.xlsx"
     workbook = openpyxl.Workbook()
-    workbook.active["A1"] = "first"
+    workbook.worksheets[0]["A1"] = "first"
     workbook.create_sheet("Second")["A1"] = "second"
     workbook.save(source)
     before = source.read_bytes()
@@ -152,7 +152,7 @@ def test_existing_delimited_staging_file_is_not_overwritten_or_cleaned(
 ) -> None:
     source = tmp_path / "source.xlsx"
     workbook = openpyxl.Workbook()
-    workbook.active["A1"] = "replacement"
+    workbook.worksheets[0]["A1"] = "replacement"
     workbook.save(source)
     staging = tmp_path / "staging"
     staging.mkdir()
@@ -176,7 +176,7 @@ def test_replaced_batch_output_is_not_published_or_deleted_and_workbook_views_cl
 
     source = tmp_path / "source.xlsx"
     workbook = openpyxl.Workbook()
-    workbook.active["A1"] = "first"
+    workbook.worksheets[0]["A1"] = "first"
     workbook.create_sheet("Second")["A1"] = "second"
     workbook.create_sheet("Third")["A1"] = "third"
     workbook.save(source)

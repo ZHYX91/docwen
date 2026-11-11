@@ -466,6 +466,9 @@ chart-only refusal, sparse stored cells, exact/cumulative budgets and rejection 
 Real cancellation tokens interrupt both tall and wide output, close the workbook and remove the whole private
 batch. Core projection tests additionally pair early/late destination collisions with exact existing-file bytes,
 refuse unsupported hard-link installation, and preserve replaced inodes, edited files and symlinks during rollback.
+Failures after installation but before returning the write receipt exercise temporary-file removal, receipt stat
+and receipt construction; the writer must remove its installed output itself. Cancellation paired with a replaced
+temporary file retains the original cancellation and records the refused cleanup as an exception note.
 Full Markdown and native CSV/TSV converters also replace an earlier completed sheet while a later sheet is being
 allocated: registration must fail or cancellation must propagate, the replacement survives, other owned outputs
 are removed, and every native workbook view closes. These deterministic boundaries do not establish resistance
