@@ -26,7 +26,7 @@ def test_seq_fixture_separates_generated_ownership_from_native_update_evidence(t
         )
         assert {field["instruction"].strip() for field in sequences} == {"SEQ Table \\* ARABIC"}
         assert [field["cached_result"] for field in references] == ["1", "2"]
-        recovered = DocxSemanticsV3Recovery.load(output, Document(output))
+        recovered = DocxSemanticsV3Recovery.load(output, Document(str(output)))
         assert [(item[0], item[1], item[3]) for item in recovered.caption_signatures] == [
             ("table", "generated-first", "1"),
             ("table", "generated-second", "2"),
