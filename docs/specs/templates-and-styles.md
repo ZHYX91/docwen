@@ -195,6 +195,24 @@ or blank names are contract errors; falling back to another language would chang
 styles are deliberately outside this registry. Visit state, fields/anchors, citation presentation, and bibliography
 headings have separate owners.
 
+## Body placement and sections / 正文插入与分节
+
+Replacing a supported standalone body anchor preserves its section boundary and attached bookmark, comment and
+other range markers, including an empty body or a body ending in a table. The same splice is used for structured
+clipboard DOCX output. Section properties remain attached to the content they describe; deleting the placeholder
+text does not merge its section with the next one.
+
+A generated section break inherits the complete section properties at the insertion position, including header
+and footer references, page size and margins, columns, page borders and first-page settings. It does not copy the
+document's last section as a default. The requested break type belongs to the new section; an explicit page-number
+start remains on the original section and is not duplicated onto its continuation. Repeated breaks apply the same
+rule to the current section.
+
+替换受支持的独立正文占位段时，保留其分节边界以及附着的书签、批注和其他范围标记；正文为空或以表格
+结束也遵守同一规则。结构化剪贴板生成 DOCX 使用相同插入逻辑。删除占位文字不应合并前后两节。
+新增分节从插入位置所在节继承完整节属性，包括页眉页脚引用、纸张、页边距、分栏、页面边框及首页设置，
+不使用文档末节代替。分节类型写在新节上；显式页码起始值保留在原节，不在连续的新节上重复重启。
+
 ## Completion and rendering / 注入与渲染
 
 Ordinary Markdown body paragraphs carry only explicitly authored direct

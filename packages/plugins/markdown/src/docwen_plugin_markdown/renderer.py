@@ -80,6 +80,7 @@ from docwen_plugin_markdown.to_docx.numbering import (
     apply_list_to_paragraph,
 )
 from docwen_plugin_markdown.to_docx.numbering_comments import add_native_numbering_review, add_numbering_review
+from docwen_plugin_markdown.to_docx.sections import SectionBreakContext
 
 if TYPE_CHECKING:
     from docwen_core.docx_resolved_numbering import ResolvedNumberingDocxSession
@@ -159,6 +160,7 @@ class MdToDocxRenderer:
         mermaid_render: Any = None,
         content_extent: tuple[int, int] | None = None,
         body_run_format: BodyRunFormat | None = None,
+        section_context: SectionBreakContext | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -202,6 +204,7 @@ class MdToDocxRenderer:
                 temporary files.
         """
         self._doc = doc
+        self._section_context = section_context
         self._body_font = body_font or {
             "name": "Calibri",
             "east_asia": "宋体",
@@ -1270,7 +1273,7 @@ class MdToDocxRenderer:
         if action == "page_break":
             return insert_page_break(self._doc)
         if action == "section_break":
-            return insert_section_break(self._doc, section_type="next")
+            return insert_section_break(self._doc, section_type="next", context=self._section_context)
         if action.startswith("horizontal_rule_"):
             variant = action.rsplit("_", 1)[-1]
             return insert_horizontal_rule(
@@ -1308,7 +1311,7 @@ class MdToDocxRenderer:
         if action == "page_break":
             append_page_break_to_paragraph(paragraph)
         elif action == "section_break":
-            append_section_break_to_paragraph(paragraph, self._doc, section_type="next")
+            append_section_break_to_paragraph(paragraph, self._doc, section_type="next", context=self._section_context)
         elif action.startswith("horizontal_rule_"):
             append_horizontal_rule_to_paragraph(paragraph, variant=action.rsplit("_", 1)[-1])
         else:

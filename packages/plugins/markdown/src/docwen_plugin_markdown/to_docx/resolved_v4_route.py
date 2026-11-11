@@ -576,6 +576,8 @@ def _renderer(
     code_font: str,
     code_background_color: str,
 ) -> MdToDocxRenderer:
+    from docwen_plugin_markdown.to_docx.sections import SectionBreakContext
+
     table_style_mode = _option_or_config(
         {},
         "table_style_mode",
@@ -602,6 +604,7 @@ def _renderer(
     table_style_key = _normalize_table_style_key(builtin_style_key) if table_style_mode == "builtin" else None
     return MdToDocxRenderer(
         doc=doc,
+        section_context=SectionBreakContext(doc, find_body_placeholder(doc)),
         body_font=extract_body_font(doc),
         body_style=extract_body_style(doc),
         body_paragraph_format=extract_body_paragraph_format(doc),

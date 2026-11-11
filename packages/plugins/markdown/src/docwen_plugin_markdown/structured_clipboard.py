@@ -159,30 +159,15 @@ def _render_docx_table(container: Any, model: ClipboardTable, resources: dict[st
 
 
 def _place_docx_body(document: Any, elements: list[Any], placeholder: Any | None) -> None:
-    body = document.element.body
-    for element in elements:
-        if element.getparent() is body:
-            body.remove(element)
-    if placeholder is not None:
-        placeholder_element = placeholder._element
-        try:
-            index = list(body).index(placeholder_element)
-        except ValueError:
-            index = len(body) - (1 if body.sectPr is not None else 0)
-        for offset, element in enumerate(elements):
-            body.insert(index + offset, element)
-        if placeholder_element.getparent() is body:
-            body.remove(placeholder_element)
-        return
-    section = body.sectPr
-    index = body.index(section) if section is not None else len(body)
-    for offset, element in enumerate(elements):
-        body.insert(index + offset, element)
+    from docwen_plugin_markdown.to_docx.sections import splice_body_elements
+
+    splice_body_elements(document, elements, placeholder)
 
 
 def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
     from docwen_plugin_markdown.template_filler import fill_template
     from docwen_plugin_markdown.template_utils import find_body_placeholder, resolve_template, scan_placeholders
+    from docwen_plugin_markdown.yaml_processor import BODY_PLACEHOLDER_ALIASES
 
     document_model = _load(context)
     resources = resolve_bound_images(context, document_model)
@@ -191,7 +176,9 @@ def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
     placeholder = find_body_placeholder(document)
     # Clear template-only fields before authored clipboard blocks are appended,
     # so authored text resembling {{placeholders}} is never reinterpreted.
-    template_placeholders = scan_placeholders(document)
+    template_placeholders = {
+        key: locations for key, locations in scan_placeholders(document).items() if key not in BODY_PLACEHOLDER_ALIASES
+    }
     fill_template(document, {}, [], None, placeholder_map=template_placeholders)
     elements = _render_docx_blocks(document, document_model.blocks, resources)
     _place_docx_body(document, elements, placeholder)
