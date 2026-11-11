@@ -855,16 +855,20 @@ def _coerce_cell_value(raw_value: Any, *, list_separator: str = ", ") -> tuple[A
             ),
             None,
         )
-    if isinstance(raw_value, (int, float)):
-        text = str(raw_value).replace(".", "").replace("-", "").replace("+", "")
-        return raw_value, numbers.FORMAT_TEXT if len(text) > 15 else None
+    if isinstance(raw_value, bool):
+        return raw_value, None
+    if isinstance(raw_value, int):
+        # Excel numeric cells retain at most fifteen significant decimal digits.
+        # A display format cannot protect an integer after numeric serialization.
+        return (str(raw_value), numbers.FORMAT_TEXT) if abs(raw_value) >= 10**15 else (raw_value, None)
+    if isinstance(raw_value, float):
+        return raw_value, None
 
     text = _plain_text_from_markup(str(raw_value).strip())
     if _is_fraction(text):
         return f"={text}", numbers.FORMAT_NUMBER_00
     if _is_numeric_string(text):
-        digit_count = len(text.replace(".", "").replace("-", "").replace("+", ""))
-        return text, numbers.FORMAT_TEXT if digit_count > 15 or text.isdigit() else None
+        return text, numbers.FORMAT_TEXT
     return text, None
 
 
