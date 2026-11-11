@@ -143,7 +143,7 @@ class DocxPackageParts:
     def relationships(self, owner: str) -> etree._Element:
         name = relationship_part_name(owner)
         if name not in self.members:
-            return etree.Element(f"{{{RELS_NS}}}Relationships", nsmap={None: RELS_NS})
+            return etree.Element(f"{{{RELS_NS}}}Relationships", nsmap={"pr": RELS_NS})
         root = _parse(self.members[name], f"{{{RELS_NS}}}Relationships", "relationships")
         elements = [item for item in root if isinstance(item.tag, str)]
         if any(item.tag != f"{{{RELS_NS}}}Relationship" for item in elements):
