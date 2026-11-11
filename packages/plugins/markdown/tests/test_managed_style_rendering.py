@@ -22,7 +22,6 @@ from docwen_plugin_markdown.renderer_inlines import (
 )
 from docwen_plugin_markdown.template_filler import fill_template
 from docwen_plugin_markdown.template_utils import (
-    BodyParagraphFormat,
     extract_body_paragraph_format,
     extract_body_run_format,
 )
@@ -150,20 +149,13 @@ print('x')
         )
     )
     assert not analysis.has_errors
-    body_format = BodyParagraphFormat(
-        alignment=WD_ALIGN_PARAGRAPH.RIGHT,
-        left_indent=Inches(0.4),
-        right_indent=None,
-        first_line_indent=None,
-        space_before=None,
-        space_after=Pt(19),
-        line_spacing=None,
-        line_spacing_rule=None,
-        keep_with_next=True,
-        keep_together=None,
-        page_break_before=None,
-        widow_control=None,
-    )
+    format_source = Document()
+    anchor = format_source.add_paragraph("{{body}}")
+    anchor.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    anchor.paragraph_format.left_indent = Inches(0.4)
+    anchor.paragraph_format.space_after = Pt(19)
+    anchor.paragraph_format.keep_with_next = True
+    body_format = extract_body_paragraph_format(format_source)
     renderer = MdToDocxRenderer(
         document,
         body_style=document.styles["Normal"],
