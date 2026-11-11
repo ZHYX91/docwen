@@ -31,7 +31,6 @@ from docwen_plugin_markdown.structured_clipboard_images import (
 )
 from docwen_plugin_markdown.structured_clipboard_output_images import (
     add_xlsx_images,
-    deduplicate_xlsx_png_media,
     image_placeholder,
     image_resource_diagnostics,
     markdown_paragraph_blocks,
@@ -440,10 +439,9 @@ def _convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
         )
 
     output = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".xlsx")
-    from docwen_plugin_markdown.structured_clipboard_strings import save_workbook_preserving_empty_strings
+    from docwen_plugin_markdown.xlsx_template import save_xlsx_workbook
 
-    save_workbook_preserving_empty_strings(projection.workbook, output)
-    deduplicate_xlsx_png_media(Path(output))
+    save_xlsx_workbook(projection.workbook, output)
     artifact = ArtifactManifest(
         artifact_id="clipboard-document-xlsx",
         kind=ARTIFACT_KIND_PRIMARY,
