@@ -494,7 +494,8 @@ def test_existing_numbering_part_requires_exact_opc_support(
     _replace_member(output, member, etree.tostring(root, encoding="UTF-8", xml_declaration=True))
     before = output.read_bytes()
 
-    with pytest.raises(ResolvedNumberingOoxmlError, match="lacks its exact"):
+    expected = "lacks its exact relationship" if mutation == "relationship" else "wrong content type"
+    with pytest.raises(ResolvedNumberingOoxmlError, match=expected):
         write_heading_numbering_projection(output, projection)
     assert output.read_bytes() == before
 
