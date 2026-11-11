@@ -31,7 +31,7 @@ These warnings propagate through the ordinary conversion result, CLI JSON warnin
 
 ## Cancellation and performance observations
 
-Parsing and export check cancellation in row batches and within wide rows. Formula XML inspection is also cancellable. XLSX serialization is checked immediately before and after save; the library save itself remains synchronous and is not claimed to be interruptible. Cancellation propagates to the runtime as cancellation, closes workbook views, and does not register the current partial artifact. Workspace cleanup owns intermediate files; the existing finalizer cancellation/commit contract decides whether publication has already completed.
+Parsing and export check cancellation in row batches and within wide rows. Formula XML inspection is also cancellable. XLSX serialization is checked immediately before and after save; the library save itself remains synchronous and is not claimed to be interruptible. Cancellation propagates to the runtime as cancellation and closes workbook views. Native XLSX-to-CSV/TSV and Markdown-template-to-CSV write a complete temporary file before an exclusive, atomic installation in private staging. An existing destination is refused, including a late collision. A failed or cancelled sheet batch removes only the exact files it produced and registers no partial batch. The existing finalizer cancellation/commit contract decides whether publication has already completed.
 
 The opt-in benchmark covers CSV and TSV roundtrips for 50000×8 cells, 2×16000 cells and 64×4 near-limit text cells. It records parse/save/export elapsed time, peak Python-managed allocation (not total process/native RSS), and observed cancellation response. There are no machine-dependent time thresholds. Run through `tools/qa.py` with `DOCWEN_RUN_SPREADSHEET_BENCHMARK=1`, `DOCWEN_PYTEST_XDIST=0` and `PYTEST_ADDOPTS="packages/plugins/spreadsheet/tests/test_spreadsheet_benchmark.py -s"`; select `--suite full` and a new `--report-output` below workspace acceptance. Preserve the emitted `SPREADSHEET_BASELINE` JSON together with the source identity. Inputs and outputs live only in the QA-owned lease and are removed on success.
 
@@ -48,6 +48,16 @@ Markdown/CSV/TSV share the ordered, typed ordinary-worksheet inventory. Chart sh
 
 Markdown/CSV/TSV 共用有序 typed 普通 worksheet 库存；chartsheet 不占普通工作表的序号、计数或首选产物身份。只有 chartsheet 时以 `SPREADSHEET-NO-WORKSHEETS` 失败，不发布空成功。普通源单元格先经过一次字面 table-cell 编码，再附加生成的图片／链接／OCR 片段；两者不重复转义，源反斜线、pipe 与类似行内语法的文字仍是字面值。
 
+The same ordinary-sheet inventory and rectangular writer also serve Markdown exports through an XLSX template.
+That route exports its filled in-memory values, including retained formula text; the native XLSX reader continues
+to export cached values and report unavailable caches. Sharing projection mechanics does not change these value policies.
+An ordinary sheet with no stored cells retains its output identity but contributes zero CSV/TSV rows; the library's
+default A1 extent does not create a synthetic empty record.
+
+Markdown 经 XLSX 模板导出 CSV 也使用同一普通工作表库存与矩形写入器。该路线导出填充后的内存值，包括保留的
+公式文本；原生 XLSX 读取仍导出缓存值并报告缺失缓存。共享投影机制不改变两条路线各自的取值规则。
+没有存储单元格的普通工作表仍保留产物身份，但输出零行，不把库默认的 A1 范围变成虚构的空记录。
+
 The native text encoder uses CommonMark backslash escapes for punctuation, including `&`, `<` and `>`; it does not replace these source characters with HTML entity spellings. A literal `<` cell and a cell whose authored text is `&lt;` remain distinct through Markdown and a subsequent DOCX conversion. Generated in-cell `<br>` breaks and Structural Tables merge carriers retain their own syntax. This transport rule does not add a global entity-unescape step for user-authored Markdown.
 
 原生文字编码对标点（包括 `&`、`<`、`>`）使用 CommonMark 反斜线转义，不把源字符换成 HTML entity 拼写。字面 `<` 单元格与原文就是 `&lt;` 的单元格，经过 Markdown 和后续 DOCX 转换仍是不同文字。生成的单元格内 `<br>` 换行和 Structural Tables 合并载体保留各自语法；本规则不对用户原始 Markdown 增加全局 entity 解码。
@@ -58,9 +68,22 @@ Before openpyxl loads a workbook, typed worksheet XML is scanned for stored-cell
 
 openpyxl 加载前先按真实 worksheet XML 核存储单元格与 merge 覆盖。每个请求阶段分别有 1,000,000 格上限：存储格、merge 覆盖、Markdown 连通组件网格及输出块复制。Markdown 只由真实 scalar／merge／图片坐标规划，内部断开岛只输出一次并保持 row-major 顺序，远端单值不推导 A1 起始矩形。CSV/TSV 保留坐标矩阵，但在写入前累计核输出面积并以有界行缓冲输出，不为遍历创建空白 Cell。超限在相应展开前以 `SPREADSHEET-PROJECTION-LIMIT` 失败。
 
-Source-extent metadata retains its existing meaning; it is not the sum of compacted blocks. Batch cancellation checks cover scans, wide rows, grid construction and block copies; both workbook views close on failure/cancellation. These cell budgets are not a whole-process RSS or arbitrary decompression/text-byte limit. Native library load/save calls remain synchronous.
+Shared Core helpers own these budgets, the typed OOXML inventory and sparse value buffers; Markdown cell rendering,
+formula-cache policy and artifact naming remain in their plugins. The package preflight also limits the ZIP to 10,000
+members, 64 MiB per uncompressed member and 256 MiB in total, with 4 MiB per workbook metadata document. It rejects
+ambiguous member/relationship identities and DTDs before parsing inspected metadata or worksheet content, including
+UTF-16 XML. Worksheet streams check cancellation and actual decompressed bytes without constructing a cell tree.
+These fixed implementation limits require no new option or user action.
 
-源坐标范围 metadata 保持原含义，不改成紧凑输出块之和。扫描、宽行、网格与块复制分批检查取消，失败／取消均关闭两个 workbook views。上述格数预算不是进程 RSS、任意解压或文本总字节上限；原生库 load/save 仍为同步调用。
+Source-extent metadata retains its existing meaning; it is not the sum of compacted blocks. Batch cancellation checks cover scans, wide rows, grid construction and block copies; workbook views close on failure/cancellation. Cell and package-byte budgets are not a whole-process RSS limit. Native library load/save calls remain synchronous.
+
+共享 Core 层只负责预算、typed OOXML 库存与稀疏值缓冲；Markdown 单元格渲染、公式缓存策略和产物命名仍由各插件负责。
+预检同时限制 ZIP 为 10,000 个成员、单成员解压后 64 MiB、累计 256 MiB，工作簿元数据文档分别最多 4 MiB；
+拒绝含糊的成员／关系身份，并在解析所检查的元数据或 worksheet 内容前拒绝 DTD，包括 UTF-16 XML。
+worksheet 流式扫描核实际解压字节并分批检查取消，不构建单元格树。这些固定实现限额不增加用户设置或步骤。
+
+源坐标范围 metadata 保持原含义，不改成紧凑输出块之和。扫描、宽行、网格与块复制分批检查取消，失败／取消均关闭 workbook views。
+格数和包字节预算不是进程 RSS 上限；原生库 load/save 仍为同步调用。
 
 ## Offline XLSX→ODS cached-cell evidence / 离线缓存格交付证明
 
