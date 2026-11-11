@@ -277,7 +277,7 @@ def test_clone_graph_renames_tables_and_keeps_source_parts_untouched() -> None:
     source_table = _target(source, _SHEET, "table")
     editor = PackageEditor(source)
 
-    cloned_sheet = editor.clone_part(_SHEET)
+    cloned_sheet = editor.clone_part(_SHEET).root_part
     editor.finalize_content_types()
 
     cloned_table = _target(editor.parts, cloned_sheet, "table")
@@ -407,7 +407,9 @@ def test_cloned_chart_and_worksheet_reference_the_filled_sheet_only() -> None:
     source[original_chart] = serialize_xml(chart_root)
     editor = PackageEditor(source)
 
-    cloned_sheet = editor.clone_part(_SHEET, source_sheet_name="O'Brien Source", target_sheet_name="Filled report")
+    cloned_sheet = editor.clone_part(
+        _SHEET, source_sheet_name="O'Brien Source", target_sheet_name="Filled report"
+    ).root_part
     editor.finalize_content_types()
 
     clone_drawing = _target(editor.parts, cloned_sheet, "drawing")
