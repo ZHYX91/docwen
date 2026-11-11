@@ -13,13 +13,13 @@ import shutil
 import tempfile
 import time
 from contextlib import suppress
-from copy import deepcopy
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from docx.oxml.ns import qn
 
+from docwen_core.docx_numbering_structure import append_numbering_definitions
 from docwen_core.docx_resolved_numbering import (
     ResolvedNumberingDocxError,
     ResolvedNumberingDocxSession,
@@ -136,7 +136,6 @@ def convert_resolved_v4_to_docx(
     task_id = context.request.request_id
     workspace = context.workspace
     output_path: Path | None = None
-    candidate_path: Path | None = None
     input_bytes = 0
     published = False
     state: dict[str, Any] = {"resource_root": None, "output_path": None}
@@ -144,6 +143,15 @@ def convert_resolved_v4_to_docx(
     def failed_with_resource_cleanup(result: ConversionResult) -> ConversionResult:
         """Preserve the primary failure while reporting an unclean request scope."""
 
+        def record_cleanup_failure(message: str) -> None:
+            result.diagnostics.append(
+                ConversionDiagnostic(level="error", message=message, code="MD2DOCX-RESOLVED-V4-CLEANUP-FAILED")
+            )
+            if result.error is not None:
+                result.error.message = f"{result.error.message}; {message}"
+
+        if state.get("candidate_cleanup_error") is not None:
+            record_cleanup_failure(state["candidate_cleanup_error"])
         resource_root = state["resource_root"]
         if resource_root is None:
             return result
@@ -151,15 +159,7 @@ def convert_resolved_v4_to_docx(
             _remove_request_resource_root(Path(workspace.staging_dir), resource_root)
         except Exception as cleanup_exc:
             cleanup_fact = f"request-private resource cleanup failed ({type(cleanup_exc).__name__})"
-            result.diagnostics.append(
-                ConversionDiagnostic(
-                    level="error",
-                    message=cleanup_fact,
-                    code="MD2DOCX-RESOLVED-V4-CLEANUP-FAILED",
-                )
-            )
-            if result.error is not None:
-                result.error.message = f"{result.error.message}; {cleanup_fact}"
+            record_cleanup_failure(cleanup_fact)
         else:
             state["resource_root"] = None
         return result
@@ -241,8 +241,6 @@ def convert_resolved_v4_to_docx(
             )
         )
     finally:
-        if candidate_path is not None:
-            candidate_path.unlink(missing_ok=True)
         if output_path is not None and not published:
             output_path.unlink(missing_ok=True)
         if state["output_path"] is not None and not published:
@@ -459,13 +457,25 @@ def _render_resolved_v4_docx(
         if note_ctx.has_notes:
             deferred_note_references = write_notes_to_docx(str(path), note_ctx)
 
-    session.write_package(
-        candidate_path,
-        package_transform=write_note_parts,
-    )
-    validate_managed_style_package(candidate_path.read_bytes(), style_catalog, managed_styles)
-    session.prove_package(candidate_path)
-    replace_authorized_file(candidate_path, output_path)
+    candidate_published = False
+    try:
+        session.write_package(
+            candidate_path,
+            package_transform=write_note_parts,
+        )
+        validate_managed_style_package(candidate_path.read_bytes(), style_catalog, managed_styles)
+        session.prove_package(candidate_path)
+        replace_authorized_file(candidate_path, output_path)
+        candidate_published = True
+    finally:
+        try:
+            candidate_path.unlink(missing_ok=True)
+        except OSError as cleanup_exc:
+            # A secondary cleanup failure must not hide the original proof or
+            # publication diagnostic. The caller reports both failures.
+            if candidate_published:
+                raise
+            state["candidate_cleanup_error"] = f"candidate cleanup failed ({type(cleanup_exc).__name__})"
     _remove_request_resource_root(Path(workspace.staging_dir), resource_root)
     state["resource_root"] = None
 
@@ -657,7 +667,7 @@ def _install_list_numbering(document: Any, numbering: Any) -> None:
 
     if not numbering.has_definitions:
         return
-    abstract_elements, num_elements = numbering._get_elements()
+    abstract_elements, num_elements = numbering.definition_elements()
     root = document.part.numbering_part.element
     abstract_attr = qn("w:abstractNumId")
     num_attr = qn("w:numId")
@@ -667,15 +677,7 @@ def _install_list_numbering(document: Any, numbering: Any) -> None:
     generated_num = {item.get(num_attr) for item in num_elements}
     if used_abstract & generated_abstract or used_num & generated_num:
         raise ValueError("ordinary list numbering IDs collide with the resolved template")
-    first_num = root.find(qn("w:num"))
-    for element in abstract_elements:
-        copy = deepcopy(element)
-        if first_num is None:
-            root.append(copy)
-        else:
-            first_num.addprevious(copy)
-    for element in num_elements:
-        root.append(deepcopy(element))
+    append_numbering_definitions(root, abstract_elements, num_elements)
 
 
 def _remove_request_resource_root(staging_dir: Path, resource_root: Path) -> None:

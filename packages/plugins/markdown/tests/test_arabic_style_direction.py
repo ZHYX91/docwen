@@ -47,7 +47,7 @@ def test_arabic_completion_preserves_authored_styles_and_is_idempotent():
 def test_native_list_indent_tracks_paragraph_direction(rtl):
     numbering = DocxListNumbering(Document(), right_to_left=rtl)
     num_id = numbering.create_list_definition({0: "ordered", 1: "unordered"})
-    abstracts, _ = numbering._get_elements()
+    abstracts, _ = numbering.definition_elements()
     levels = abstracts[0].findall(qn("w:lvl"))
     for level, element in enumerate(levels):
         indent = element.find(f"{qn('w:pPr')}/{qn('w:ind')}")

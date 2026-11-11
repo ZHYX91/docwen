@@ -28,22 +28,11 @@ from docwen_core.docx_styles import (
     DocumentStyleDefinition,
     DocumentStyleFormat,
 )
+from docwen_plugin_markdown.to_docx.style_parts import StylePackageParts
 
 if TYPE_CHECKING:
     from docx.document import Document as DocumentObject
 
-_PRIMARY_STYLES_PART: Final = "word/styles.xml"
-_EFFECTS_STYLES_PART: Final = "word/stylesWithEffects.xml"
-_REFERENCE_PART_NAMES: Final = frozenset(
-    {
-        "word/document.xml",
-        "word/comments.xml",
-        "word/footnotes.xml",
-        "word/endnotes.xml",
-        "word/numbering.xml",
-    }
-)
-_REFERENCE_PREFIXES: Final = ("word/header", "word/footer")
 _DIRECT_STYLE_REFERENCE_TYPES: Final = {
     qn("w:pStyle"): "paragraph",
     qn("w:rStyle"): "character",
@@ -227,9 +216,10 @@ def complete_managed_styles(
         effects_identities = None
         if effects_plan is not None:
             with ZipFile(BytesIO(completed_blob)) as archive:
-                effects_identities = _plan_identities(
-                    etree.fromstring(archive.read(_EFFECTS_STYLES_PART)), effects_plan
-                )
+                effects = StylePackageParts.read(archive).effects
+                if effects is None:
+                    _internal("The parallel style registry disappeared after completion.")
+                effects_identities = _plan_identities(effects.element, effects_plan)
         _validate_serialized_package(
             completed_blob,
             catalog,
@@ -526,13 +516,12 @@ def _rewrite_serialized_package(
     source = BytesIO(blob)
     target = BytesIO()
     with ZipFile(source, "r") as archive_in, ZipFile(target, "w", allowZip64=True) as archive_out:
-        names = archive_in.namelist()
-        if _PRIMARY_STYLES_PART not in names:
-            _internal("DOCX package has no primary styles.xml part.")
+        parts = StylePackageParts.read(archive_in)
+        effects_name = parts.effects.name if parts.effects is not None else None
         saw_effects = False
         for item in archive_in.infolist():
             payload = archive_in.read(item.filename)
-            if item.filename == _EFFECTS_STYLES_PART:
+            if item.filename == effects_name:
                 saw_effects = True
                 if effects_plan is None:
                     _internal("The parallel style part appeared after preflight.")
@@ -574,17 +563,8 @@ def _complete_effects_part(
 
 def _preflight_serialized_package(blob: bytes) -> etree._Element | None:
     with ZipFile(BytesIO(blob), "r") as archive:
-        names = archive.namelist()
-        if len(names) != len(set(names)):
-            _internal("DOCX package contains duplicate ZIP members.")
-        if _PRIMARY_STYLES_PART not in names:
-            _internal("DOCX package has no primary styles.xml part.")
-        for name in names:
-            if _is_reference_part(name):
-                etree.fromstring(archive.read(name))
-        if _EFFECTS_STYLES_PART not in names:
-            return None
-        return etree.fromstring(archive.read(_EFFECTS_STYLES_PART))
+        effects = StylePackageParts.read(archive).effects
+        return effects.element if effects is not None else None
 
 
 def _plan_signature(
@@ -982,7 +962,8 @@ def _validate_serialized_package(
         entry_names = [item.filename for item in archive.infolist()]
         if len(entry_names) != len(set(entry_names)):
             _internal("Final DOCX package contains duplicate ZIP member names.")
-        primary = etree.fromstring(archive.read(_PRIMARY_STYLES_PART))
+        parts = StylePackageParts.read(archive)
+        primary = parts.primary.element
         primary_by_id = _style_elements_by_id(primary)
         style_types = {style_id: element.get(qn("w:type"), "") for style_id, element in primary_by_id.items()}
         for definition in _ALL_STYLE_DEFINITIONS:
@@ -992,17 +973,14 @@ def _validate_serialized_package(
                 _internal(f"Managed style {expected_id!r} failed package validation.")
             _validate_identity(element, expected_identities.get(expected_id))
         allowances = Counter(preserved_invalid_references)
-        for item in archive.infolist():
-            if not (_is_reference_part(item.filename) or item.filename == _PRIMARY_STYLES_PART):
-                continue
-            root = etree.fromstring(archive.read(item.filename))
-            _validate_reference_root(root, style_types, item.filename, allowances)
-        if _EFFECTS_STYLES_PART in archive.namelist():
+        for part in (*parts.references, parts.primary):
+            _validate_reference_root(part.element, style_types, part.name, allowances)
+        if parts.effects is not None:
             if effects_expected_ids is None:
                 _internal("Parallel style registry appeared without a resolved identity map.")
             effects_expected_by_key = dict(effects_expected_ids)
             expected_effects_identities = {identity.style_id: identity for identity in effects_identities or ()}
-            effects = etree.fromstring(archive.read(_EFFECTS_STYLES_PART))
+            effects = parts.effects.element
             effects_by_id = _style_elements_by_id(effects)
             effects_types = {style_id: element.get(qn("w:type"), "") for style_id, element in effects_by_id.items()}
             for definition in _ALL_STYLE_DEFINITIONS:
@@ -1011,7 +989,7 @@ def _validate_serialized_package(
                 if element is None or element.get(qn("w:type")) != definition.kind:
                     _internal(f"Parallel style {expected_id!r} is missing or invalid.")
                 _validate_identity(element, expected_effects_identities.get(expected_id))
-            _validate_reference_root(effects, effects_types, _EFFECTS_STYLES_PART, allowances)
+            _validate_reference_root(effects, effects_types, parts.effects.name, allowances)
         elif effects_expected_ids is not None:
             _internal("The parallel style registry disappeared after completion.")
 
@@ -1063,9 +1041,10 @@ def _bind_preserved_references(
     package = document.part.package
     if package is None:
         _internal("Request-owned DOCX has no owning package for style-reference provenance.")
+    baseline_parts = {name for name, _reference in baseline}
     for part in package.parts:
         part_name = str(part.partname).lstrip("/")
-        if not (_is_reference_part(part_name) or part_name in {_PRIMARY_STYLES_PART, _EFFECTS_STYLES_PART}):
+        if part_name not in baseline_parts:
             continue
         root = _part_reference_root(part)
         original_blob = None
@@ -1139,23 +1118,23 @@ def _reference_occurrence(element: etree._Element, part_name: str) -> tuple[str,
 def _invalid_reference_occurrences(blob: bytes) -> tuple[tuple[str, bytes], ...]:
     result: list[tuple[str, bytes]] = []
     with ZipFile(BytesIO(blob)) as archive:
-        primary = etree.fromstring(archive.read(_PRIMARY_STYLES_PART))
+        parts = StylePackageParts.read(archive)
+        primary = parts.primary.element
         style_types = {
             style_id: element.get(qn("w:type"), "") for style_id, element in _style_elements_by_id(primary).items()
         }
-        for name in archive.namelist():
-            if not (_is_reference_part(name) or name in {_PRIMARY_STYLES_PART, _EFFECTS_STYLES_PART}):
-                continue
-            root = etree.fromstring(archive.read(name))
+        references = (*parts.references, parts.primary, *((parts.effects,) if parts.effects is not None else ()))
+        for part in references:
+            root = part.element
             types = style_types
-            if name == _EFFECTS_STYLES_PART:
+            if part is parts.effects:
                 types = {
                     style_id: element.get(qn("w:type"), "") for style_id, element in _style_elements_by_id(root).items()
                 }
             for tag, expected in _DIRECT_STYLE_REFERENCE_TYPES.items():
                 for element in root.iter(tag):
                     if types.get(element.get(qn("w:val"), "")) != expected:
-                        result.append(_reference_occurrence(element, name))
+                        result.append(_reference_occurrence(element, part.name))
     return tuple(result)
 
 
@@ -1234,10 +1213,6 @@ def _unique_elements(elements) -> list[etree._Element]:
             result.append(element)
             seen.add(id(element))
     return result
-
-
-def _is_reference_part(name: str) -> bool:
-    return name in _REFERENCE_PART_NAMES or (name.endswith(".xml") and name.startswith(_REFERENCE_PREFIXES))
 
 
 def _serialize_xml(root: etree._Element) -> bytes:

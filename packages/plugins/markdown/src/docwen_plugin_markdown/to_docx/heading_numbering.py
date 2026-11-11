@@ -19,6 +19,8 @@ from docx.document import Document
 from docx.text.paragraph import Paragraph
 
 from docwen_core.docx_numbering_parts import open_numbering_part
+from docwen_core.docx_numbering_structure import append_numbering_definitions
+from docwen_core.docx_package_parts import DocxPackageParts
 from docwen_core.file_io import replace_authorized_file
 from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.text.numbering_word_adapter import (
@@ -298,36 +300,6 @@ def _allocate_ids(num_root: etree._Element, reference_roots: Iterable[etree._Ele
     return candidate, candidate
 
 
-def _insert_abstract_num(
-    num_root: etree._Element,
-    abstract_num_elem: etree._Element,
-) -> None:
-    """Insert abstractNum before the first num element (OOXML schema order).
-
-    CT_Numbering requires: all ``numPicBullet`` → all ``abstractNum`` → all
-    ``num``.  If ``num`` elements already exist (from template or list
-    numbering writeback), appending an ``abstractNum`` after them is
-    schema-invalid.
-    """
-    for child in num_root:
-        if child.tag in {f"{{{WML_NS}}}num", f"{{{WML_NS}}}numIdMacAtCleanup"}:
-            child.addprevious(abstract_num_elem)
-            return
-    num_root.append(abstract_num_elem)
-
-
-def _insert_num(
-    num_root: etree._Element,
-    num_elem: etree._Element,
-) -> None:
-    """Insert after existing nums, before the optional cleanup marker."""
-    cleanup = num_root.find(f"{{{WML_NS}}}numIdMacAtCleanup")
-    if cleanup is None:
-        num_root.append(num_elem)
-    else:
-        cleanup.addprevious(num_elem)
-
-
 # ═══════════════════════════════════════════════════════════════════════════
 # Post-save ZIP writeback
 # ═══════════════════════════════════════════════════════════════════════════
@@ -364,13 +336,8 @@ def write_heading_numbering_to_docx(
         if len({item.filename for item in infos}) != len(infos):
             raise ValueError("DOCX contains duplicate ZIP members.")
         data = {item.filename: archive.read(item.filename) for item in infos}
-    for name in ("word/document.xml", "word/_rels/document.xml.rels", "[Content_Types].xml"):
-        if name not in data:
-            raise ValueError(f"DOCX missing required heading-numbering part: {name}.")
-
-    document_root = _parse_xml(data["word/document.xml"])
-    if document_root.tag != f"{{{WML_NS}}}document":
-        raise ValueError("DOCX main document root is invalid.")
+    document_part = DocxPackageParts(data).document()
+    document_root = document_part.element
     resolved = _resolve_targets(document_root, targets)
     part = open_numbering_part(data, create=has_supported_targets)
     num_root = part.element if part is not None else etree.Element(f"{{{WML_NS}}}numbering")
@@ -396,8 +363,7 @@ def write_heading_numbering_to_docx(
             translation_result,
             right_to_left_levels=frozenset(level for level, rtl in directions.items() if rtl),
         )
-        _insert_abstract_num(num_root, abstract_num)
-        _insert_num(num_root, create_heading_num(num_id, abstract_num_id))
+        append_numbering_definitions(num_root, (abstract_num,), (create_heading_num(num_id, abstract_num_id),))
         assert part is not None
         data[part.name] = _xml_bytes(num_root)
     for paragraph, level in resolved:
@@ -408,7 +374,7 @@ def write_heading_numbering_to_docx(
             # from a shared template Heading style. numId=0 cancels inheritance.
             _apply_heading_number(paragraph, num_id=0, level=None)
 
-    data["word/document.xml"] = _xml_bytes(document_root)
+    data[document_part.name] = _xml_bytes(document_root)
 
     with TemporaryDirectory(prefix=".dw-heading-numbering-", dir=original.parent) as tmpdir:
         tmp_path = Path(tmpdir) / "heading_numbering_writeback.docx"
