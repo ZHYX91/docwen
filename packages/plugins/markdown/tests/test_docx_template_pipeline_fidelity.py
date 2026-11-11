@@ -47,7 +47,9 @@ def _section_template() -> DocumentObject:
     boundary = boundary_paragraph._p.get_or_add_pPr().find(qn("w:sectPr"))
     assert boundary is not None
     anchor._p.get_or_add_pPr().append(boundary)
-    document.element.body.remove(boundary_paragraph._p)
+    body = document.element.find(qn("w:body"))
+    assert body is not None
+    body.remove(boundary_paragraph._p)
     document.add_paragraph("Fixed after")
     for index, section in enumerate(document.sections):
         section.left_margin = Mm(16 if index == 0 else 26)
@@ -62,7 +64,9 @@ def _section_template() -> DocumentObject:
         page_number = OxmlElement("w:pgNumType")
         page_number.set(qn("w:fmt"), "decimal" if index == 0 else "upperRoman")
         page_number.set(qn("w:start"), "12" if index == 0 else "50")
-        section._sectPr.insert_element_before(page_number, "w:cols")
+        columns = section._sectPr.find(qn("w:cols"))
+        assert columns is not None
+        columns.addprevious(page_number)
         borders = OxmlElement("w:pgBorders")
         borders.set(qn("w:offsetFrom"), "page")
         bottom = OxmlElement("w:bottom")
@@ -70,7 +74,7 @@ def _section_template() -> DocumentObject:
         bottom.set(qn("w:sz"), "8")
         bottom.set(qn("w:space"), "12")
         borders.append(bottom)
-        section._sectPr.insert_element_before(borders, "w:pgNumType")
+        page_number.addprevious(borders)
     return document
 
 
@@ -145,7 +149,10 @@ def test_generated_section_break_inherits_anchor_section_instead_of_last_templat
     assert page_number is not None
     page_number.attrib.pop(qn("w:start"))
     assert _xml(reopened.sections[1]._sectPr) == _xml(continuation)
-    assert [section.left_margin.twips for section in reopened.sections] == [Mm(16).twips, Mm(16).twips, Mm(26).twips]
+    for section, expected_margin in zip(reopened.sections, (Mm(16), Mm(16), Mm(26)), strict=True):
+        margin = section.left_margin
+        assert margin is not None
+        assert margin.twips == expected_margin.twips
 
 
 def _complex_field(paragraph: Paragraph, result: str) -> None:
@@ -188,7 +195,9 @@ def _owned_placeholder(document: DocumentObject, kind: str) -> None:
         paragraph = document.add_paragraph("{{name}}")
         content.append(paragraph._p)
         control.append(content)
-        document.element.body.insert_element_before(control, "w:sectPr")
+        terminal_section = document.element.find(f"{qn('w:body')}/{qn('w:sectPr')}")
+        assert terminal_section is not None
+        terminal_section.addprevious(control)
 
 
 @pytest.mark.parametrize("route", ["ordinary", "resolved", "clipboard"])
