@@ -43,6 +43,9 @@ from docwen_core._docx_numbering_package import (
     write_heading_numbering_projection as _write_heading_numbering_projection,
 )
 from docwen_core._docx_reference_fields import reference_instruction
+from docwen_core.docx_numbering_parts import NumberingPartError, open_numbering_part
+from docwen_core.docx_numbering_structure import validate_numbering_order
+from docwen_core.docx_package_parts import DocxPackageParts
 
 XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
 
@@ -379,13 +382,16 @@ def prove_heading_numbering_projection(path: str | Path, projection: HeadingNumb
 
     if not projection.abstract_nums and not projection.nums:
         return
-    parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_blank_text=False)
     with ZipFile(Path(path)) as package:
-        if "word/numbering.xml" not in package.namelist():
-            raise ResolvedNumberingOoxmlError("resolved Heading numbering part is missing")
-        root = etree.fromstring(package.read("word/numbering.xml"), parser)
-    if root.tag != f"{{{WML_NS}}}numbering":
-        raise ResolvedNumberingOoxmlError("numbering.xml root is invalid")
+        members = dict(DocxPackageParts.from_package(package).members)
+    try:
+        part = open_numbering_part(members)
+    except NumberingPartError as exc:
+        raise ResolvedNumberingOoxmlError(str(exc)) from exc
+    if part is None:
+        raise ResolvedNumberingOoxmlError("resolved Heading numbering part is missing")
+    root = part.element
+    validate_numbering_order(root)
     for expected in projection.abstract_nums:
         identifier = expected.get(f"{{{WML_NS}}}abstractNumId")
         matching = [

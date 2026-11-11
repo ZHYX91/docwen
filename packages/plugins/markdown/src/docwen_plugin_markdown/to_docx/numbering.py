@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import logging
+from collections.abc import Iterable
 from typing import Any
 
 import lxml.etree as etree
@@ -19,6 +20,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 from docwen_core.docx_numbering_parts import open_numbering_part
+from docwen_core.docx_numbering_structure import append_numbering_definitions
 from docwen_core.file_io import replace_authorized_file
 from docwen_core.tempfiles import TemporaryDirectory
 
@@ -47,7 +49,7 @@ UNORDERED_PRESET: dict[str, Any] = {
 }
 
 
-def _element_ids(elements: list[etree._Element], attribute_name: str) -> set[int]:
+def _element_ids(elements: Iterable[etree._Element], attribute_name: str) -> set[int]:
     values: set[int] = set()
     attribute = f"{{{WML_NS}}}{attribute_name}"
     for element in elements:
@@ -67,8 +69,8 @@ def _numbering_ids_from_root(root: etree._Element) -> tuple[set[int], set[int]]:
 
 
 def _numbering_ids_from_elements(
-    abstract_num_elements: list[etree._Element],
-    num_elements: list[etree._Element],
+    abstract_num_elements: Iterable[etree._Element],
+    num_elements: Iterable[etree._Element],
 ) -> tuple[set[int], set[int]]:
     return (
         _element_ids(abstract_num_elements, "abstractNumId"),
@@ -90,17 +92,6 @@ def _numbering_root_from_document(document: Any | None) -> etree._Element | None
         return None
 
 
-def _insert_abstract_num(
-    numbering_root: etree._Element,
-    abstract_num_element: etree._Element,
-) -> None:
-    first_num = numbering_root.find(f"{{{WML_NS}}}num")
-    if first_num is None:
-        numbering_root.append(abstract_num_element)
-    else:
-        first_num.addprevious(abstract_num_element)
-
-
 # ═══════════════════════════════════════════════════════════════════════════
 # Public API
 # ═══════════════════════════════════════════════════════════════════════════
@@ -112,7 +103,7 @@ class DocxListNumbering:
     During MD→DOCX rendering, list numbering definitions (abstractNum
     and num OOXML elements) are accumulated in memory.  After
     ``Document.save()`` they are written into the DOCX ZIP's
-    ``word/numbering.xml`` by :func:`write_numbering_to_docx`.
+    the relationship-owned numbering part by :func:`write_numbering_to_docx`.
 
     This class is **not** a runtime registry; it is a private format
     helper owned by the markdown plugin.
@@ -202,11 +193,9 @@ class DocxListNumbering:
         """``True`` if at least one numbering definition was created."""
         return len(self._num_elements) > 0
 
-    # ── Package-private: used by write_numbering_to_docx ───────────────
-
-    def _get_elements(self) -> tuple[list[etree._Element], list[etree._Element]]:
-        """Return copies of ``(abstract_num_elements, num_elements)``."""
-        return list(self._abstract_num_elements), list(self._num_elements)
+    def definition_elements(self) -> tuple[tuple[etree._Element, ...], tuple[etree._Element, ...]]:
+        """Return the generated projection; writers append independent copies."""
+        return tuple(self._abstract_num_elements), tuple(self._num_elements)
 
     # ── Internal helpers ───────────────────────────────────────────────
 
@@ -349,7 +338,7 @@ def write_numbering_to_docx(
 
     if not numbering.has_definitions:
         return
-    abstract_elems, num_elems = numbering._get_elements()
+    abstract_elems, num_elems = numbering.definition_elements()
     original = Path(docx_path)
     with zipfile.ZipFile(original) as archive:
         infos = archive.infolist()
@@ -368,14 +357,7 @@ def write_numbering_to_docx(
             "Generated list numbering IDs collide with the saved template: "
             f"abstractNumId={sorted(abstract_collisions)}, numId={sorted(num_collisions)}"
         )
-    for element in abstract_elems:
-        _insert_abstract_num(num_root, element)
-    cleanup = num_root.find(f"{{{WML_NS}}}numIdMacAtCleanup")
-    for element in num_elems:
-        if cleanup is None:
-            num_root.append(element)
-        else:
-            cleanup.addprevious(element)
+    append_numbering_definitions(num_root, abstract_elems, num_elems)
     data[part.name] = etree.tostring(num_root, xml_declaration=True, encoding="UTF-8", standalone=True)
     with TemporaryDirectory(prefix=".dw-numbering-", dir=original.parent) as tmpdir:
         temporary = Path(tmpdir) / "numbering_writeback.docx"

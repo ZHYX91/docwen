@@ -138,6 +138,14 @@ semantic key -> request-resolved OOXML styleId -> exact visible w:name
 are completed in the output copy, using a compatible template-owned ID where one exists. Completion preserves an
 existing default style of each OOXML type; an injected foundation becomes the default only when that type has no
 default. Final validation covers these foundation identities in both `styles.xml` and `stylesWithEffects.xml`.
+
+The primary and parallel registries, their reference stories and the numbering registry are selected by OPC
+relationship roles and content types. Completion, saved-package proof and fresh recovery consume the actual part
+names; valid relocated registries do not need renaming. Template-owned style references keep their exact physical
+provenance when the package is completed and reopened.
+
+主样式、并行样式、引用区域及编号注册表按 OPC 关系角色与内容类型定位。补全、保存后证明和独立恢复都使用
+真实部件路径，合法的自定义路径不必改名；模板既有样式引用在补全和重开后仍保持原有物理归属。
 `Title` and `Subtitle` are optional template styles, not prerequisites or injected dependencies. The shipped blank
 template includes `Title` and therefore produces 47 physical styles after completion; this count is not a requirement
 for other templates. Source template bytes and existing style formatting remain unchanged.
@@ -321,10 +329,20 @@ Numbering parts are selected by the document's unique internal numbering relatio
 relationships are preserved rather than assuming `word/numbering.xml`; ambiguous or dangling relationships fail
 before writeback. Generated headings carry their source outline level directly, without changing the template style.
 
+Every list/heading writer uses the same ordered append operation: picture bullets, abstract definitions, instances,
+then the optional `numIdMacAtCleanup`. Existing definitions are preserved. Global package/relationship and numbering
+ID ambiguity checks remain strict; semantic heading proof decodes only the instances and definitions actually
+referenced by the paragraphs being proved. Unrelated valid full level overrides are retained, while an unmodeled
+override in a generated heading's dependency still fails proof before publication.
+
 原生标题编号只写入本次渲染生成的标题段落，不把新编号关联到模板共用的标题样式。模板原有标题及其
 样式编号保持不变；保存后的检查定位实际生成的段落，不通过同名样式把模板原有标题算入本次输出。
 编号部件按文档唯一的内部编号关系定位，保留原部件路径及关系，不假定文件一定名为 `word/numbering.xml`；
 歧义或悬空关系在写回前拒绝。新增标题直接记录源标题级别，不修改模板样式的原大纲级别。
+普通列表和标题写入共用编号子元素顺序规则，保留可选 `numIdMacAtCleanup` 在最后。包、关系和编号 ID
+歧义仍严格拒绝；标题语义证明只解析被证明段落实际依赖的编号实例及定义，不因无关合法模板的完整层级
+覆盖而拒绝转换。生成标题依赖的不受支持覆盖仍须拒绝，不降低为警告。v4 的候选文件由创建作用域在
+校验或发布失败后清理，次级清理失败单独报告且不掩盖原始诊断。
 
 `template_fill.gongwen_numbering_comments` is an independent review preference, off by default. Native numbering does not
 materialize a text-number anchor, so its comments anchor the first visible heading character instead.
