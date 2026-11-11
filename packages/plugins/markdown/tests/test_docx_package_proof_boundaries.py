@@ -11,6 +11,7 @@ from docx import Document
 from docx.opc.packuri import PackURI
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.oxml.text.paragraph import CT_P
 from docx.text.paragraph import Paragraph
 from lxml import etree
 from tests.support.numbering import repository_numbering_registry
@@ -41,9 +42,9 @@ def test_relocated_registries_pass_writing_and_fresh_recovery(tmp_path: Path, ro
         part._partname = PackURI(name)
         relocated.append((role, name))
     template = tmp_path / "template.docx"
-    document.save(template)
+    document.save(str(template))
     original = template.read_bytes()
-    options = {"template_name": str(template), "heading_merge_mode": "never"}
+    options: dict[str, object] = {"template_name": str(template), "heading_merge_mode": "never"}
     if route == "resolved":
         context, _ = _context(tmp_path, _refs(_NEUTRAL, _PLAN), options=options)
     else:
@@ -61,7 +62,7 @@ def test_relocated_registries_pass_writing_and_fresh_recovery(tmp_path: Path, ro
     result = MdToDocxConverter().convert(context)
     assert result.success, result.error
     output = Path(result.artifacts[0].staging_path)
-    reopened = Document(output)
+    reopened = Document(str(output))
     for role, name in relocated:
         assert str(reopened.part.part_related_by(role.relationship_type).partname) == name
     with ZipFile(template) as before, ZipFile(output) as after:
@@ -80,8 +81,9 @@ def test_relocated_registries_pass_writing_and_fresh_recovery(tmp_path: Path, ro
     assert template.read_bytes() == original
 
 
-def _full_override(numbering, instance):
+def _full_override(numbering: etree._Element, instance: etree._Element) -> etree._Element:
     reference = instance.find(qn("w:abstractNumId"))
+    assert reference is not None
     abstract = next(
         node
         for node in numbering.findall(qn("w:abstractNum"))
@@ -89,8 +91,12 @@ def _full_override(numbering, instance):
     )
     override = OxmlElement("w:lvlOverride")
     override.set(qn("w:ilvl"), "0")
-    level = deepcopy(abstract.find(qn("w:lvl")))
-    level.find(qn("w:numFmt")).set(qn("w:val"), "upperRoman")
+    template_level = abstract.find(qn("w:lvl"))
+    assert template_level is not None
+    level = deepcopy(template_level)
+    number_format = level.find(qn("w:numFmt"))
+    assert number_format is not None
+    number_format.set(qn("w:val"), "upperRoman")
     override.append(level)
     instance.append(override)
     return override
@@ -103,17 +109,23 @@ def test_unrelated_full_override_survives_while_owned_heading_proof_stays_strict
     document = Document()
     numbering = document.part.numbering_part.element
     old_instance = numbering.find(qn("w:num"))
+    assert old_instance is not None
     old_id = old_instance.get(qn("w:numId"))
+    assert old_id is not None
     _full_override(numbering, old_instance)
     snapshot = etree.tostring(old_instance, method="c14n", exclusive=True)
     if template_reference:
         fixed = document.add_paragraph("Fixed template item")
-        num_pr = fixed._p.get_or_add_pPr().get_or_add_numPr()
-        num_pr.get_or_add_ilvl().val = 0
-        num_pr.get_or_add_numId().val = int(old_id)
+        num_pr = OxmlElement("w:numPr")
+        level = OxmlElement("w:ilvl")
+        level.set(qn("w:val"), "0")
+        num_id = OxmlElement("w:numId")
+        num_id.set(qn("w:val"), old_id)
+        num_pr.extend((level, num_id))
+        fixed._p.get_or_add_pPr().append(num_pr)
     document.add_paragraph("{{body}}")
     template = tmp_path / "template.docx"
-    document.save(template)
+    document.save(str(template))
     original = template.read_bytes()
     context, _ = _context(
         tmp_path, _refs(_NEUTRAL, _PLAN), options={"template_name": str(template), "heading_merge_mode": "never"}
@@ -121,26 +133,31 @@ def test_unrelated_full_override_survives_while_owned_heading_proof_stays_strict
     result = MdToDocxConverter().convert(context)
     assert result.success, result.error
     output = Path(result.artifacts[0].staging_path)
-    reopened = Document(output)
+    reopened = Document(str(output))
     output_numbering = reopened.part.numbering_part.element
     retained = next(node for node in output_numbering.findall(qn("w:num")) if node.get(qn("w:numId")) == old_id)
     assert etree.tostring(retained, method="c14n", exclusive=True) == snapshot
     assert ResolvedNumberingV4Recovery.load_if_present(output, reopened) is not None
     assert template.read_bytes() == original
 
+    body = reopened.element.find(qn("w:body"))
+    assert body is not None
     generated = next(
         element
-        for element in reopened.element.body.iter(qn("w:p"))
+        for element in body.iter(qn("w:p"))
         if (node := element.find(f"{qn('w:pPr')}/{qn('w:numPr')}/{qn('w:numId')}")) is not None
         and node.get(qn("w:val")) not in {old_id, "0"}
     )
-    generated_id = generated.find(f"{qn('w:pPr')}/{qn('w:numPr')}/{qn('w:numId')}").get(qn("w:val"))
+    assert isinstance(generated, CT_P)
+    generated_reference = generated.find(f"{qn('w:pPr')}/{qn('w:numPr')}/{qn('w:numId')}")
+    assert generated_reference is not None
+    generated_id = generated_reference.get(qn("w:val"))
     generated_instance = next(
         node for node in output_numbering.findall(qn("w:num")) if node.get(qn("w:numId")) == generated_id
     )
     _full_override(output_numbering, generated_instance)
     damaged = tmp_path / "owned-override.docx"
-    reopened.save(damaged)
+    reopened.save(str(damaged))
     index = HeadingNumberingProofIndex.load(damaged)
     with pytest.raises(DocxNumberingImportError, match="exact ancestry"):
         index.prove_paragraph(Paragraph(generated, reopened))
