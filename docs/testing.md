@@ -450,6 +450,11 @@ partial replacement, partial clearing and full clearing, for original/cloned she
 and merged anchors; the final XML cannot retain overlapping old and new link definitions. These checks
 establish stored reference identity, not native Excel/WPS formula calculation or interactive link behavior.
 
+`test_xlsx_template_scalar_types.py` drives the ordinary Markdown converter and independently checks final
+OOXML types and reopened values for positive/negative 15-, 16- and 19-digit YAML integers, quoted numbers,
+leading zeros, booleans, ordinary numbers and intentional formulas. Long integers must be stored as exact
+strings; a numeric cell with the text display format does not satisfy this contract.
+
 `test_xlsx_image_text_plan.py` combines near-limit text with real template/table images and URL-quoted Unicode paths. It checks final ASCII/non-BMP limits, exact drawing bytes, literal marker trust, overwritten/protected cells, placeholder discovery order, duplicate drawings, sparse cells and the internal CSV-template helper. Temporary scope strings never enter openpyxl; output assertions save and reopen real workbooks. `test_mhtml_query_resolution.py` checks actual PNG bytes through Runtime under paired synthetic/absolute bases, empty query/fragment delimiters and relative paths.
 
 
