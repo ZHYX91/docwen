@@ -14,6 +14,11 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import lxml.etree as etree
 
+from docwen_core._docx_semantics_v3_caption_groups import (
+    PAIRED_CAPTION_MAP_NAMESPACE,
+    paired_caption_map_xml,
+    parse_paired_caption_map,
+)
 from docwen_core._docx_semantics_v3_fenced import FENCED_SOURCE_MAP_NAMESPACE, bind_fenced_source_document_v3
 from docwen_core._docx_semantics_v3_fenced_map import fenced_source_map_xml, parse_fenced_source_map
 from docwen_core._docx_semantics_v3_heading_styles import (
@@ -80,6 +85,7 @@ _OWNED_MAP_NAMESPACES = frozenset(
         ANCHOR_TOPOLOGY_MAP_NAMESPACE,
         CAPTION_STYLE_BINDING_MAP_NAMESPACE,
         HEADING_STYLE_BINDING_MAP_NAMESPACE,
+        PAIRED_CAPTION_MAP_NAMESPACE,
         CLIPBOARD_TABLE_ASSOCIATION_MAP_NAMESPACE,
         FENCED_SOURCE_MAP_NAMESPACE,
         CITATION_ITEM_MAP_NAMESPACE,
@@ -581,6 +587,8 @@ def _canonical_owned_map_bytes(namespace: str, root: Any) -> bytes:
         expected = caption_style_binding_map_xml(parse_caption_style_binding_map(root))
     elif namespace == HEADING_STYLE_BINDING_MAP_NAMESPACE:
         expected = heading_style_binding_map_xml(parse_heading_style_binding_map(root))
+    elif namespace == PAIRED_CAPTION_MAP_NAMESPACE:
+        expected = paired_caption_map_xml(parse_paired_caption_map(root))
     elif namespace == FENCED_SOURCE_MAP_NAMESPACE:
         expected = fenced_source_map_xml(parse_fenced_source_map(root))
     elif namespace == CLIPBOARD_TABLE_ASSOCIATION_MAP_NAMESPACE:

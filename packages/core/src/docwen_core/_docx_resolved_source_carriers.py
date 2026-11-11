@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from itertools import combinations, pairwise
 from typing import Any, Literal
 
+from docwen_core._docx_semantics_v3_caption_groups import PAIRED_CAPTION_TAG_PREFIX
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TAG_PREFIX,
     TARGET_TAG_PREFIX,
@@ -33,6 +34,7 @@ _BLOCK_TAG_PREFIXES = (
     ANCHOR_TAG_PREFIX,
     _NUMBERING_OCCURRENCE_TAG_PREFIX,
     STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
+    PAIRED_CAPTION_TAG_PREFIX,
 )
 _CONTAINER_KINDS = frozenset({"list", "list_item", "block_quote", "callout"})
 _SOURCE_BLOCK_KINDS = frozenset(
@@ -58,7 +60,7 @@ _RAW_TARGET_KIND = {
 }
 _POST_BLOCK_GAP_CHARS = frozenset(" \t\r\n>+-*0123456789.)[]xX")
 
-type ResolvedCarrierRole = Literal["anchor", "target", "occurrence", "standalone_occurrence"]
+type ResolvedCarrierRole = Literal["anchor", "target", "occurrence", "standalone_occurrence", "paired_caption"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,7 +193,7 @@ def resolved_anchor_group_v4(binding: ResolvedOrdinaryAnchorBindingV4) -> Resolv
 
 def resolved_semantic_group_v4(
     *,
-    role: Literal["target", "occurrence", "standalone_occurrence"],
+    role: Literal["target", "occurrence", "standalone_occurrence", "paired_caption"],
     tag: str,
     elements: tuple[Any, ...],
     source_start: int,
@@ -205,6 +207,7 @@ def resolved_semantic_group_v4(
         "target": TARGET_TAG_PREFIX,
         "occurrence": _NUMBERING_OCCURRENCE_TAG_PREFIX,
         "standalone_occurrence": STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
+        "paired_caption": PAIRED_CAPTION_TAG_PREFIX,
     }[role]
     if not tag.startswith(expected_prefix):
         raise DocxSemanticsV3Error("resolved semantic carrier tag has the wrong role prefix")
