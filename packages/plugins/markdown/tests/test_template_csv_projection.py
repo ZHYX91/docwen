@@ -51,7 +51,7 @@ def _capture_views(monkeypatch: pytest.MonkeyPatch):
 def test_chartsheet_position_does_not_change_ordinary_csv_identity(tmp_path: Path, chart_index: int) -> None:
     template = tmp_path / "template.xlsx"
     workbook = Workbook()
-    first = workbook.active
+    first = workbook.worksheets[0]
     first.title = "First"
     first.append(["{{name}}", 1])
     workbook.create_sheet("Second")["A1"] = "=1+2"
@@ -82,7 +82,7 @@ def test_chartsheet_position_does_not_change_ordinary_csv_identity(tmp_path: Pat
 def test_chart_only_template_refuses_empty_success(tmp_path: Path) -> None:
     template = tmp_path / "template.xlsx"
     workbook = Workbook()
-    source = workbook.active
+    source = workbook.worksheets[0]
     source["A1"] = 1
     chart = BarChart()
     chart.add_data(Reference(source, min_col=1, min_row=1, max_row=1))
@@ -93,7 +93,9 @@ def test_chart_only_template_refuses_empty_success(tmp_path: Path) -> None:
 
     result = MdToCsvConverter().convert(context)
 
-    assert not result.success and result.error.diagnostic_code == "SPREADSHEET-NO-WORKSHEETS"
+    assert (
+        not result.success and result.error is not None and result.error.diagnostic_code == "SPREADSHEET-NO-WORKSHEETS"
+    )
     assert result.artifacts == workspace.registered_artifacts == []
     assert list(Path(workspace.staging_dir).iterdir()) == []
 
@@ -101,7 +103,7 @@ def test_chart_only_template_refuses_empty_success(tmp_path: Path) -> None:
 def test_saved_sparse_template_does_not_gain_blank_cells(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     template = tmp_path / "template.xlsx"
     workbook = Workbook()
-    workbook.active.cell(101, 100, "last")
+    workbook.worksheets[0].cell(101, 100, "last")
     workbook.save(template)
     before = template.read_bytes()
     loaded, closed = _capture_views(monkeypatch)
@@ -127,7 +129,7 @@ def test_template_output_budget_is_checked_for_all_sheets_before_writing(
     template = tmp_path / "template.xlsx"
     workbook = Workbook()
     for index, (row, column) in enumerate(shapes):
-        sheet = workbook.active if index == 0 else workbook.create_sheet()
+        sheet = workbook.worksheets[0] if index == 0 else workbook.create_sheet()
         sheet.cell(row, column, "last")
     workbook.save(template)
     before = template.read_bytes()
@@ -142,7 +144,7 @@ def test_template_output_budget_is_checked_for_all_sheets_before_writing(
         with Path(result.artifacts[0].staging_path).open(encoding="utf-8-sig", newline="") as handle:
             assert list(csv.reader(handle)) == [["", "", ""], ["", "", "last"]]
     else:
-        assert result.error.diagnostic_code == "SPREADSHEET-PROJECTION-LIMIT"
+        assert result.error is not None and result.error.diagnostic_code == "SPREADSHEET-PROJECTION-LIMIT"
         assert result.artifacts == workspace.registered_artifacts == []
         assert list(Path(workspace.staging_dir).iterdir()) == []
         assert workspace._next_id == 0
@@ -156,7 +158,7 @@ def test_template_allocations_are_rejected_before_the_workbook_library(
 ) -> None:
     template = tmp_path / "template.xlsx"
     workbook = Workbook()
-    sheet = workbook.active
+    sheet = workbook.worksheets[0]
     for index in range(1, 8 if kind == "stored" else 2):
         sheet.cell(index, 1, "value")
     workbook.save(template)
@@ -181,7 +183,11 @@ def test_template_allocations_are_rejected_before_the_workbook_library(
 
     result = MdToCsvConverter().convert(context)
 
-    assert not result.success and result.error.diagnostic_code == "SPREADSHEET-PROJECTION-LIMIT"
+    assert (
+        not result.success
+        and result.error is not None
+        and result.error.diagnostic_code == "SPREADSHEET-PROJECTION-LIMIT"
+    )
     assert result.artifacts == workspace.registered_artifacts == []
     assert list(Path(workspace.staging_dir).iterdir()) == []
     assert template.read_bytes() == before
@@ -193,7 +199,7 @@ def test_template_csv_cancellation_cleans_the_entire_private_batch_and_closes_vi
 ) -> None:
     template = tmp_path / "template.xlsx"
     workbook = Workbook()
-    workbook.active["A1"] = "completed first sheet"
+    workbook.worksheets[0]["A1"] = "completed first sheet"
     workbook.create_sheet("Cancel").cell(rows, columns, "last")
     workbook.save(template)
     before = template.read_bytes()
@@ -235,7 +241,7 @@ def test_existing_staging_path_is_neither_overwritten_nor_owned_for_cleanup(
 ) -> None:
     template = tmp_path / "template.xlsx"
     workbook = Workbook()
-    workbook.active["A1"] = "replacement"
+    workbook.worksheets[0]["A1"] = "replacement"
     workbook.save(template)
     context, workspace = _context(tmp_path, template)
     existing = Path(workspace.staging_dir) / "existing.csv"
@@ -256,7 +262,7 @@ def test_changed_earlier_csv_is_neither_published_nor_deleted_during_batch_rollb
 ) -> None:
     template = tmp_path / "template.xlsx"
     workbook = Workbook()
-    workbook.active["A1"] = "first"
+    workbook.worksheets[0]["A1"] = "first"
     workbook.create_sheet("Second")["A1"] = "second"
     workbook.create_sheet("Third")["A1"] = "third"
     workbook.save(template)
@@ -284,7 +290,7 @@ def test_changed_earlier_csv_is_neither_published_nor_deleted_during_batch_rollb
             MdToCsvConverter().convert(context)
     else:
         result = MdToCsvConverter().convert(context)
-        assert not result.success and "ownership is unconfirmed" in result.error.message
+        assert not result.success and result.error is not None and "ownership is unconfirmed" in result.error.message
     assert len(created) == 3
     assert list(Path(workspace.staging_dir).iterdir()) == [created[0]]
     assert created[0].read_bytes() == b"a later writer owns this path"

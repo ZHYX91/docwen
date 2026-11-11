@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import csv
 import errno
+from dataclasses import dataclass
 from pathlib import Path
-from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -23,10 +24,15 @@ from docwen_core.spreadsheet_projection import (
 pytestmark = pytest.mark.contract
 
 
+@dataclass(frozen=True)
+class _Cell:
+    value: Any
+
+
 def test_rectangular_budget_is_cumulative_and_accepts_its_exact_boundary() -> None:
     views = [
-        WorksheetValueView("First", 2, 3, {(2, 3): SimpleNamespace(value="last")}),
-        WorksheetValueView("Second", 2, 2, {(2, 2): SimpleNamespace(value="last")}),
+        WorksheetValueView("First", 2, 3, {(2, 3): _Cell(value="last")}),
+        WorksheetValueView("Second", 2, 2, {(2, 2): _Cell(value="last")}),
     ]
     assert plan_delimited_projection(views, cancel_check=lambda: None, limit=10) == tuple(views)
     with pytest.raises(SpreadsheetProjectionLimitError, match="Second"):
@@ -46,10 +52,10 @@ def test_empty_ordinary_sheet_keeps_an_empty_artifact_without_an_invented_row(tm
 @pytest.mark.parametrize("delimiter", [",", "\t"])
 def test_saved_sparse_rectangle_retains_values_without_materializing_cells(tmp_path: Path, delimiter: str) -> None:
     cells = {
-        (1, 1): SimpleNamespace(value=0),
-        (1, 2): SimpleNamespace(value=False),
-        (1, 3): SimpleNamespace(value="=1+2"),
-        (101, 100): SimpleNamespace(value="last\nvalue"),
+        (1, 1): _Cell(value=0),
+        (1, 2): _Cell(value=False),
+        (1, 3): _Cell(value="=1+2"),
+        (101, 100): _Cell(value="last\nvalue"),
     }
     before = dict(cells)
     view = plan_delimited_projection([WorksheetValueView("Sparse", 101, 100, cells)], cancel_check=lambda: None)[0]
@@ -81,7 +87,7 @@ def test_cancellation_within_rows_or_one_wide_row_leaves_no_partial_file(
                 token.cancel("during values")
             return super().get(key, default)
 
-    cells = Values({(rows, columns): SimpleNamespace(value="last")})
+    cells = Values({(rows, columns): _Cell(value="last")})
     view = plan_delimited_projection([WorksheetValueView("Sparse", rows, columns, cells)], cancel_check=token.check)[0]
     with pytest.raises(CancellationRequested):
         write_delimited_projection(view, tmp_path / "output.csv", cancel_check=token.check)
@@ -93,7 +99,7 @@ def test_cancellation_within_rows_or_one_wide_row_leaves_no_partial_file(
 def test_existing_output_is_refused_before_reading_values(tmp_path: Path) -> None:
     output = tmp_path / "existing.csv"
     output.write_bytes(b"owned by an earlier conversion")
-    view = WorksheetValueView("Data", 1, 1, {(1, 1): SimpleNamespace(value="new")})
+    view = WorksheetValueView("Data", 1, 1, {(1, 1): _Cell(value="new")})
     with pytest.raises(FileExistsError):
         write_delimited_projection(view, output, cancel_check=lambda: None)
     assert output.read_bytes() == b"owned by an earlier conversion"
@@ -108,7 +114,7 @@ def test_late_destination_collision_never_replaces_or_deletes_the_other_file(tmp
             output.write_bytes(b"other owner won the destination")
             return super().get(key, default)
 
-    view = WorksheetValueView("Data", 1, 1, Values({(1, 1): SimpleNamespace(value="new")}))
+    view = WorksheetValueView("Data", 1, 1, Values({(1, 1): _Cell(value="new")}))
     with pytest.raises(FileExistsError):
         write_delimited_projection(view, output, cancel_check=lambda: None)
     assert output.read_bytes() == b"other owner won the destination"
@@ -118,7 +124,7 @@ def test_late_destination_collision_never_replaces_or_deletes_the_other_file(tmp
 @pytest.mark.parametrize("replacement", ["new_inode", "changed_contents", "symlink"])
 def test_write_receipt_does_not_adopt_or_delete_changed_output(tmp_path: Path, replacement: str) -> None:
     output = tmp_path / "output.csv"
-    view = WorksheetValueView("Data", 1, 1, {(1, 1): SimpleNamespace(value="original")})
+    view = WorksheetValueView("Data", 1, 1, {(1, 1): _Cell(value="original")})
     receipt = write_delimited_projection(view, output, cancel_check=lambda: None)
     receipt.validate()
     other = tmp_path / "other.csv"
@@ -148,7 +154,7 @@ def test_unsupported_hardlink_volume_fails_without_partial_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     output = tmp_path / "output.csv"
-    view = WorksheetValueView("Data", 1, 1, {(1, 1): SimpleNamespace(value="original")})
+    view = WorksheetValueView("Data", 1, 1, {(1, 1): _Cell(value="original")})
 
     def unsupported(_source, _destination):
         raise OSError(errno.ENOTSUP, "Hard links unsupported")
@@ -157,3 +163,71 @@ def test_unsupported_hardlink_volume_fails_without_partial_output(
     with pytest.raises(OSError, match="Hard links unsupported"):
         write_delimited_projection(view, output, cancel_check=lambda: None)
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("failure", ["temporary_unlink", "receipt_stat", "receipt_construction"])
+def test_failure_before_receipt_returns_removes_the_installed_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    output = tmp_path / "output.csv"
+    view = WorksheetValueView("Data", 1, 1, {(1, 1): _Cell(value="original")})
+    error = PermissionError("injected after installation")
+    injected = False
+    unlink, lstat = Path.unlink, Path.lstat
+
+    def fail_once():
+        nonlocal injected
+        assert output.read_bytes() == b"\xef\xbb\xbforiginal\r\n"
+        injected = True
+        raise error
+
+    def fail_unlink(path, *args, **kwargs):
+        if not injected and path.name.startswith("delimited-") and output.exists():
+            fail_once()
+        return unlink(path, *args, **kwargs)
+
+    def fail_stat(path, *args, **kwargs):
+        if not injected and path == output:
+            fail_once()
+        return lstat(path, *args, **kwargs)
+
+    def fail_receipt(*_args, **_kwargs):
+        fail_once()
+
+    if failure == "temporary_unlink":
+        monkeypatch.setattr(Path, "unlink", fail_unlink)
+    elif failure == "receipt_stat":
+        monkeypatch.setattr(Path, "lstat", fail_stat)
+    else:
+        monkeypatch.setattr(spreadsheet_projection, "DelimitedWrite", fail_receipt)
+    with pytest.raises(PermissionError) as raised:
+        write_delimited_projection(view, output, cancel_check=lambda: None)
+    assert injected and raised.value is error
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_cancellation_survives_refused_cleanup_of_a_replaced_temporary_file(tmp_path: Path) -> None:
+    output = tmp_path / "output.csv"
+    error = CancellationRequested("cancel while reading values")
+    replacements: list[Path] = []
+
+    class Values(dict):
+        def get(self, key, default=None):
+            [replacement] = tmp_path.glob("delimited-*.csv")
+            replacements.append(replacement)
+            foreign = tmp_path / "foreign.csv"
+            foreign.write_bytes(b"a different temporary owner")
+            foreign.replace(replacement)
+            return super().get(key, default)
+
+    def cancel_check():
+        if replacements:
+            raise error
+
+    view = WorksheetValueView("Data", 1, 1, Values({(1, 1): _Cell(value="original")}))
+    with pytest.raises(CancellationRequested) as raised:
+        write_delimited_projection(view, output, cancel_check=cancel_check)
+    assert raised.value is error
+    assert any("ownership is unconfirmed" in note for note in error.__notes__)
+    assert len(replacements) == 1 and replacements[0].read_bytes() == b"a different temporary owner"
+    assert list(tmp_path.iterdir()) == replacements
