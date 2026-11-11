@@ -46,10 +46,8 @@ from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
     build_template_workbook,
     process_image_placeholders,
 )
-from docwen_plugin_markdown.xlsx_text import (
-    XlsxCellTextTooLongError,
-    check_workbook_text_capacity,
-)
+from docwen_plugin_markdown.xlsx_template import save_xlsx_workbook
+from docwen_plugin_markdown.xlsx_text import XlsxCellTextTooLongError
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -277,8 +275,7 @@ class MdToXlsxConverter:
 
             links.materialize(wb)
             losses.record_written_formulas()
-            check_workbook_text_capacity(wb)
-            wb.save(output_path)
+            save_xlsx_workbook(wb, output_path)
 
             output_bytes = Path(output_path).stat().st_size
 
