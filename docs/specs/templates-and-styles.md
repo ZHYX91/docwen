@@ -408,13 +408,19 @@ must resolve to a style of the correct type.
   non-target soft-reference SDT/map. It never auto-writes an ID or creates a bookmark/REF. The Alias retains the
   surrounding paragraph's character formatting; no `Cross Reference` named style is injected. If that metadata
   cannot be emitted and recovered exactly, conversion fails rather than flattening the authored token.
-- Ordinary Markdown links use the built-in `Hyperlink` character style while retaining explicit rich-run
-  formatting. Each hyperlink run has exactly one `rStyle=Hyperlink`; code, highlight, superscript, and subscript
-  labels use direct run properties so they do not create competing character-style references. Code properties
-  are projected from the request-owned resolved `DocWenInlineCode` style; configured defaults are used only when
-  no compatible style exists. Until clickable
-  OMML is a separately frozen interoperability contract, inline math inside a link is preserved visibly as
-  `$...$` text rather than silently flattened or emitted as an ambiguous hyperlink/math structure.
+- Ordinary Markdown links use the request-resolved `hyperlink` character style while retaining explicit rich-run
+  formatting. Each hyperlink run has exactly one `rStyle` targeting that style's actual ID, including a preserved
+  template ID or a collision-free injected ID. Code, highlight, superscript, and subscript labels use direct run
+  properties so they do not create competing character-style references. Code properties are projected from the
+  request-resolved `inline_code` style and its inheritance chain; configured defaults are used only when no
+  compatible style exists. Until clickable OMML is a separately frozen interoperability contract, inline math
+  inside a link is preserved visibly as `$...$` text rather than silently flattened or emitted as an ambiguous
+  hyperlink/math structure.
+
+  普通 Markdown 链接使用本次请求解析出的 `hyperlink` 字符样式，保留显式行内格式。每个链接 run 只有一个
+  `rStyle`，指向模板保留或新补齐样式的真实 ID，不要求固定为 `Hyperlink`。代码、高亮、上标和下标通过直接
+  属性呈现，不叠加第二个字符样式；代码属性来自已解析的 `inline_code` 样式及继承链，仅无兼容样式时使用
+  配置默认值。链接内公式保留为可见的 `$...$` 文字，不生成尚无独立互操作合同的可点击 OMML。
 - Table header paragraphs use `DocWenTableHeader`; table body paragraphs use `DocWenTableContent`.
 - Markdown quotes use Quote styles for prose. Heading, Code Block, List Block and Table children retain their
   semantic styles and native numbering; an optional left-border accent on paragraph children follows the
