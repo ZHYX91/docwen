@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from copy import copy
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from openpyxl.utils.cell import range_boundaries
 
+from docwen_plugin_markdown.xlsx_template import load_template_workbook, register_template_clone
 from docwen_plugin_markdown.xlsx_text import assign_bounded_xlsx_value
 
 
@@ -38,7 +38,7 @@ def prepare_projection_workbook(template_path: str | None) -> StructuredProjecti
     """Load a user-selected prototype without deleting its workbook structure."""
 
     template_backed = bool(template_path)
-    workbook = load_workbook(Path(template_path)) if template_backed else Workbook()
+    workbook = load_template_workbook(template_path) if template_path else Workbook()
     prototype = workbook.worksheets[0]
     if not template_backed:
         prototype.title = "Table Prototype"
@@ -102,6 +102,7 @@ def create_table_sheet(
     sheet = projection.workbook.copy_worksheet(projection.prototype)
     sheet.title = unique_sheet_name(projection.workbook, requested_name)
     _copy_prototype_runtime_properties(projection.prototype, sheet)
+    register_template_clone(projection.workbook, sheet, projection.prototype)
     _clear_projection_data_area(sheet, row_count, column_count)
     projection.table_titles[table_id] = sheet.title
     return sheet

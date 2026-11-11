@@ -59,6 +59,34 @@ Corrected translations are the current names, with no additional old-translation
 段落、列表和表格采用从右到左的布局，代码及公式样式保持从左到右。内置插入占位符仍为标题、正文两个。
 自定义模板缺少样式时仍自动补全，保留已有用户格式；修正后的译名直接作为现行名称，不增加旧译名别名。
 
+### XLSX template preservation / XLSX 模板信息保留
+
+XLSX template exports use `docwen_plugin_markdown.xlsx_template` for loading, cloning and saving.
+The original package is the output base. A snapshot taken after loading identifies subsequent
+conversion changes; only those changes are applied to the original worksheet XML. Unchanged
+parts retain their original bytes, including extensions that the workbook library does not model.
+Row height values and their fixed-height flags remain independent. Conditional-format instructions,
+including explicit false values, are retained when the conversion does not change those rules.
+
+The same writer serves ordinary template fills and structured clipboard exports. Filled values,
+number formats, merges, images and comments are explicit changes; original style and relationship
+identities remain stable when new resources are added. Template-derived sheets retain their source
+layout and related parts. Explicit empty strings remain strings; placeholder cleanup explicitly
+clears the cell instead of depending on serialization to discard an empty string.
+Changes that can affect calculation invalidate cached formula and chart reference results and request recalculation
+on opening; an unchanged workbook retains its caches. This behavior uses the existing generation
+action and does not require an additional option or user step.
+
+XLSX 模板导出由 `docwen_plugin_markdown.xlsx_template` 统一读取、复制和保存，以原文件包为输出底稿。
+加载后的对象快照用于识别转换实际修改的内容，仅将这些修改写回原工作表 XML；未修改部件保留原始字节，
+包括工作簿库无法表达的扩展。行高数值与是否固定行高分别保留；未修改的条件格式保留明确的 false 设置。
+
+普通模板填充与结构化剪贴板导出使用同一保存入口。填充值、数字格式、合并、图片和批注属于明确修改，
+添加资源时保持原有样式和关系身份。模板派生工作表保留原型布局及关联部件。明确的空字符串保持为字符串；
+占位符清理明确清空单元格，不再依赖保存器丢弃空字符串。
+可能影响计算的修改会清除旧公式和图表引用结果缓存并请求打开时重算；无修改工作簿保留缓存。用户仍使用原生成操作，
+不增加设置或步骤。
+
 ### XLSX image references and protected fills / XLSX 图片引用与保护格填充
 
 XLSX image markers resolve relative files beside the actual selected template (or the source Markdown for an ordinary table export). That neighbor takes priority over a same-named working-directory file, even when the neighbor is not a valid image. Only an absent neighbor permits the legacy CWD fallback; absolute paths keep their own identity. A protected cell consumes its input without overwriting its value or inserting a drawing. Its explanatory comment shows readable image basenames instead of internal transport markers or encoded paths and is limited to 500 characters.

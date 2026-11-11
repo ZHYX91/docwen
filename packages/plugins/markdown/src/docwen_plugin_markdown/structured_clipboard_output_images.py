@@ -3,16 +3,9 @@
 from __future__ import annotations
 
 import csv
-import hashlib
-import os
-import posixpath
-import tempfile
 from io import BytesIO
 from pathlib import Path
 from typing import Any
-from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
-
-from lxml import etree
 
 from docwen_core.models.clipboard_document import (
     ClipboardDocument,
@@ -28,8 +21,6 @@ from docwen_plugin_markdown.structured_clipboard_images import (
     ClipboardImageOccurrenceInfo,
     MarkdownImagePlan,
 )
-
-_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 
 
 def image_resource_diagnostics(document: ClipboardDocument) -> list[ConversionDiagnostic]:
@@ -287,77 +278,8 @@ def write_csv_image_semantics(
             )
 
 
-def deduplicate_xlsx_png_media(path: Path) -> None:
-    """Point duplicate drawing relationships at one PNG part and remove copies."""
-
-    with ZipFile(path, "r") as archive:
-        infos = archive.infolist()
-        data = {info.filename: archive.read(info.filename) for info in infos if not info.is_dir()}
-
-    media_names = sorted(name for name in data if name.startswith("xl/media/") and name.lower().endswith(".png"))
-    canonical_by_hash: dict[str, str] = {}
-    replacement: dict[str, str] = {}
-    for name in media_names:
-        digest = hashlib.sha256(data[name]).hexdigest()
-        canonical = canonical_by_hash.setdefault(digest, name)
-        if canonical != name:
-            replacement[name] = canonical
-    if not replacement:
-        return
-
-    parser = etree.XMLParser(resolve_entities=False, no_network=True)
-    for name, payload in list(data.items()):
-        if not name.startswith("xl/drawings/_rels/") or not name.endswith(".rels"):
-            continue
-        try:
-            root = etree.fromstring(payload, parser)
-        except etree.XMLSyntaxError as exc:
-            raise ValueError("XLSX drawing relationships are invalid") from exc
-        changed = False
-        drawing_dir = posixpath.dirname(posixpath.dirname(name))
-        for relation in root:
-            if relation.tag != f"{{{_REL_NS}}}Relationship":
-                continue
-            target = relation.get("Target")
-            if not target or relation.get("TargetMode") == "External":
-                continue
-            absolute = (
-                posixpath.normpath(target).lstrip("/")
-                if target.startswith("/")
-                else posixpath.normpath(posixpath.join(drawing_dir, target))
-            )
-            canonical = replacement.get(absolute)
-            if canonical is None:
-                continue
-            relation.set("Target", posixpath.relpath(canonical, drawing_dir))
-            changed = True
-        if changed:
-            data[name] = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
-
-    for duplicate in replacement:
-        data.pop(duplicate, None)
-
-    descriptor, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
-    os.close(descriptor)
-    Path(temp_name).unlink(missing_ok=True)
-    temporary = Path(temp_name)
-    try:
-        original_by_name = {info.filename: info for info in infos}
-        with ZipFile(temporary, "w") as output:
-            for name, payload in data.items():
-                info = original_by_name.get(name)
-                if info is None:
-                    info = ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-                    info.compress_type = ZIP_DEFLATED
-                output.writestr(info, payload)
-        temporary.replace(path)
-    finally:
-        temporary.unlink(missing_ok=True)
-
-
 __all__ = [
     "add_xlsx_images",
-    "deduplicate_xlsx_png_media",
     "image_placeholder",
     "image_resource_diagnostics",
     "markdown_paragraph_blocks",
