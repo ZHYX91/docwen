@@ -6,11 +6,15 @@ import csv
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 from docx import Document
+from lxml import etree
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
+from openpyxl.workbook.defined_name import DefinedName
+from openpyxl.worksheet.table import Table
 
 from docwen_application.controller import ApplicationController
 from docwen_core.clipboard_table_associations import read_clipboard_table_associations
@@ -485,6 +489,88 @@ def test_xlsx_table_sheets_really_derive_selected_template_prototype(
         dict(zip(order_headers, [cell.value for cell in row], strict=True)) for row in order.iter_rows(min_row=2)
     ]
     assert any(row["Kind"] == "table_ref" and row["Sheet"] == generated for row in order_rows)
+
+
+def test_xlsx_publication_retargets_cloned_names_and_clears_only_filled_link_cells(tmp_path: Path) -> None:
+    directory = user_templates_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    template = directory / "clone-reference-identity.xlsx"
+    source = Workbook()
+    prototype = source.active
+    assert prototype is not None
+    prototype.title = "Prototype"
+    prototype.append(["Label", "Value", "Keep link"])
+    prototype.append(["original", 4, "Keep link"])
+    prototype.append(["Keep link", "Keep link", "Keep link"])
+    prototype.add_table(Table(displayName="Items", ref="A1:B2"))
+    prototype.defined_names.add(DefinedName("Rate", attr_text="SUM(Items[Value])"))
+    prototype["D4"] = "=Rate"
+    prototype["D5"] = "=SUM(Items[Value])"
+    prototype["A1"].hyperlink = "https://example.test/template-link"
+    source.create_sheet("Table 1")["A1"] = "Reserved original sheet"
+    source.save(template)
+    with ZipFile(template) as package:
+        parts = {name: package.read(name) for name in package.namelist()}
+    ns = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    root = etree.fromstring(parts["xl/worksheets/sheet1.xml"])
+    link = root.find("s:hyperlinks/s:hyperlink", ns)
+    assert link is not None
+    link.set("ref", "A1:C3")
+    parts["xl/worksheets/sheet1.xml"] = etree.tostring(root)
+    with ZipFile(template, "w") as package:
+        for name, payload in parts.items():
+            package.writestr(name, payload)
+    before = template.read_bytes()
+    template_id = _template_id("xlsx", template.name)
+    html = (
+        b"<table><tr><th>Label</th><th>Value</th></tr><tr><td>first</td><td>999</td></tr></table>"
+        b"<table><tr><th>Label</th><th>Value</th></tr><tr><td>second</td><td>27</td></tr></table>"
+    )
+
+    result = _controller(tmp_path).execute_single(
+        _request(
+            tmp_path,
+            request_id="clone-references",
+            target="xlsx",
+            html=html,
+            options={"template_name": template_id},
+        )
+    )
+
+    output = _primary(result)
+    workbook = load_workbook(output)
+    try:
+        assert workbook["Prototype"]["B2"].value == 4
+        assert workbook["Prototype"].defined_names["Rate"].attr_text == "SUM(Items[Value])"
+        assert workbook["Table 1"]["A1"].value == "Reserved original sheet"
+        for title, table_name, value in (("Table 1 2", "Items_copy1", "999"), ("Table 2", "Items_copy2", "27")):
+            sheet = workbook[title]
+            assert sheet["B2"].value == value
+            assert list(sheet.tables) == [table_name]
+            assert sheet.defined_names["Rate"].attr_text == f"SUM({table_name}[Value])"
+            assert sheet["D4"].value == "=Rate"
+            assert sheet["D5"].value == f"=SUM({table_name}[Value])"
+            for coordinate in ("A1", "B1", "A2", "B2"):
+                assert sheet[coordinate].hyperlink is None
+            for coordinate in ("C1", "C2", "A3", "B3", "C3"):
+                assert sheet[coordinate].hyperlink.target == "https://example.test/template-link"
+    finally:
+        workbook.close()
+    with ZipFile(output) as package:
+        original = etree.fromstring(parts["xl/worksheets/sheet1.xml"])
+        for cell in original.findall("s:sheetData/s:row/s:c", ns):
+            cache = cell.find("s:v", ns)
+            if cell.find("s:f", ns) is not None and cache is not None:
+                cell.remove(cache)
+        final_original = etree.fromstring(package.read("xl/worksheets/sheet1.xml"))
+        assert etree.tostring(final_original, method="c14n") == etree.tostring(original, method="c14n")
+        final_names = etree.fromstring(package.read("xl/workbook.xml")).findall("s:definedNames/s:definedName", ns)
+        assert [name.text for name in final_names if name.get("name") == "Rate"] == [
+            "SUM(Items[Value])",
+            "SUM(Items_copy1[Value])",
+            "SUM(Items_copy2[Value])",
+        ]
+    assert template.read_bytes() == before
 
 
 def test_markdown_output_extension_changes_real_projection_without_reinterpreting_values(tmp_path: Path) -> None:

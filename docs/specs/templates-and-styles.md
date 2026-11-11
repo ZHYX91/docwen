@@ -71,7 +71,9 @@ including explicit false values, are retained when the conversion does not chang
 The same writer serves ordinary template fills and structured clipboard exports. Filled values,
 number formats, merges, images and comments are explicit changes; original style and relationship
 identities remain stable when new resources are added. Template-derived sheets retain their source
-layout and related parts. Explicit empty strings remain strings; placeholder cleanup explicitly
+layout and related parts. Each clone's local defined names and direct formulas use its own cloned table
+identities. Filling cells removes their inherited hyperlinks even when the original link covers a range;
+links on untouched cells retain their original target and attributes. Explicit empty strings remain strings; placeholder cleanup explicitly
 clears the cell instead of depending on serialization to discard an empty string.
 Changes that can affect calculation invalidate cached formula and chart reference results and request recalculation
 on opening; an unchanged workbook retains its caches. This behavior uses the existing generation
@@ -84,6 +86,8 @@ XLSX 模板导出由 `docwen_plugin_markdown.xlsx_template` 统一读取、复�
 普通模板填充与结构化剪贴板导出使用同一保存入口。填充值、数字格式、合并、图片和批注属于明确修改，
 添加资源时保持原有样式和关系身份。模板派生工作表保留原型布局及关联部件。明确的空字符串保持为字符串；
 占位符清理明确清空单元格，不再依赖保存器丢弃空字符串。
+每份派生工作表的局部名称与直接公式共同引用该副本自己的表身份。填充单元格会清除继承的区域超链接，
+区域中未填充单元格的链接目标和属性仍保留。
 可能影响计算的修改会清除旧公式和图表引用结果缓存并请求打开时重算；无修改工作簿保留缓存。用户仍使用原生成操作，
 不增加设置或步骤。
 

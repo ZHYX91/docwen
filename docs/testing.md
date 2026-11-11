@@ -455,6 +455,12 @@ OOXML types and reopened values for positive/negative 15-, 16- and 19-digit YAML
 leading zeros, booleans, ordinary numbers and intentional formulas. Long integers must be stored as exact
 strings; a numeric cell with the text display format does not satisfy this contract.
 
+The structured clipboard integration lane also imports a selected user template through its canonical ID,
+executes Application/Runtime publication and inspects two final table sheets. Its original workbook includes
+a conflicting sheet title, a named table, a table-backed local name and a hyperlink spanning both filled and
+untouched cells. The saved output checks each clone's identities together with source-byte preservation;
+cleared formula caches are the intentional exception to unchanged original worksheet XML.
+
 `test_xlsx_image_text_plan.py` combines near-limit text with real template/table images and URL-quoted Unicode paths. It checks final ASCII/non-BMP limits, exact drawing bytes, literal marker trust, overwritten/protected cells, placeholder discovery order, duplicate drawings, sparse cells and the internal CSV-template helper. Temporary scope strings never enter openpyxl; output assertions save and reopen real workbooks. `test_mhtml_query_resolution.py` checks actual PNG bytes through Runtime under paired synthetic/absolute bases, empty query/fragment delimiters and relative paths.
 
 
