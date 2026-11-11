@@ -23,6 +23,7 @@ from docx.text.run import Run
 from lxml import etree
 
 from docwen_plugin_markdown.template_ownership import iter_paragraph_placeholder_spans
+from docwen_plugin_markdown.template_parts import template_story_parts
 from docwen_plugin_markdown.template_utils import effective_indent_attributes, inherited_indent_attributes
 from docwen_plugin_markdown.yaml_processor import is_empty_field_value
 
@@ -213,12 +214,7 @@ def _validate_reserved_attachment_markers(doc: Any, rendered_elements: Sequence[
     diagnosis. Only the shared span reader defines replaceable template text.
     Rendered Markdown is literal input and must never become a template marker.
     """
-    roots = [doc.element]
-    roots.extend(
-        part.element
-        for part in doc.part.related_parts.values()
-        if hasattr(part, "element") and str(part.partname).startswith(("/word/header", "/word/footer"))
-    )
+    roots = [part.element for part in template_story_parts(doc)]
     ignored = frozenset(rendered_elements)
     for root in roots:
         for paragraph in root.iter(qn("w:p")):

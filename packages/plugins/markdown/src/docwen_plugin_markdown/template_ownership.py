@@ -16,6 +16,7 @@ from typing import Any
 from docx.oxml.ns import qn
 
 from docwen_plugin_markdown.template_errors import TemplatePackageError
+from docwen_plugin_markdown.template_parts import template_story_parts
 
 _PLACEHOLDER = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
 _PARAGRAPH = qn("w:p")
@@ -165,18 +166,8 @@ def validate_template_placeholder_ownership(doc: Any) -> None:
     Related headers and footers are inspected without accessing Section.header,
     which could otherwise create new package parts. No XML is changed.
     """
-    parts = [doc.part]
-    parts.extend(
-        part
-        for part in doc.part.related_parts.values()
-        if hasattr(part, "element") and str(part.partname).startswith(("/word/header", "/word/footer"))
-    )
-    seen: set[str] = set()
-    for part in parts:
-        part_name = str(part.partname)
-        if part_name not in seen:
-            _validate_part(part.element, part_name)
-            seen.add(part_name)
+    for part in template_story_parts(doc):
+        _validate_part(part.element, str(part.partname))
 
 
 def _validate_part(root: Any, part_name: str) -> None:
