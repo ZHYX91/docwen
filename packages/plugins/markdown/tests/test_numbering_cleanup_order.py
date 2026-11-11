@@ -55,9 +55,9 @@ def test_saved_numbering_has_schema_order_and_keeps_template_definitions(
         (child.tag, dict(child.attrib), etree.tostring(child, method="c14n", exclusive=True)) for child in numbering
     ]
     template = tmp_path / "template.docx"
-    document.save(template)
+    document.save(str(template))
     original = template.read_bytes()
-    options = {"template_name": str(template), "heading_merge_mode": "never"}
+    options: dict[str, object] = {"template_name": str(template), "heading_merge_mode": "never"}
     if route.startswith("resolved"):
         neutral_path, plan_path = _NEUTRAL, _PLAN
         if route == "resolved_list":
