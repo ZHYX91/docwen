@@ -126,7 +126,7 @@ def create_fixture(directory: Path) -> dict[str, Path]:
                 caption.add_run(cached)
             template.add_table(rows=1, cols=1).cell(0, 0).text = f"Fixed {position}"
         template_path = directory / f"{name}-template.docx"
-        template.save(template_path)
+        template.save(str(template_path))
         staging = directory / f"{name}-staging"
         staging.mkdir()
         request = ConversionRequest(
