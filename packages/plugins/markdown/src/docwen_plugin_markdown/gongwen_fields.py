@@ -20,12 +20,19 @@ from docx.oxml.xmlchemy import BaseOxmlElement
 from docx.shared import Emu, Pt, Twips
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
+from lxml import etree
 
+from docwen_plugin_markdown.template_ownership import iter_paragraph_placeholder_spans
+from docwen_plugin_markdown.template_parts import template_story_parts
 from docwen_plugin_markdown.template_utils import effective_indent_attributes, inherited_indent_attributes
 from docwen_plugin_markdown.yaml_processor import is_empty_field_value
 
 _PLACEHOLDER = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
 _ATTACHMENT = re.compile(r"\{\{\s*附件说明\s*\}\}")
+_ATTACHMENT_PLACEMENT_MESSAGE = (
+    "附件说明占位符必须独占正文或表格单元格中的普通段落；"
+    "不支持跨换行、制表符或其他内容边界，或放在页眉、页脚、文本框等位置。"
+)
 _ATTACHMENT_NUMBER = re.compile(
     r"^(?:[一二三四五六七八九十百]+[、.]|"
     r"[（(](?:[一二三四五六七八九十百]+|\d+)[）)]|"
@@ -49,22 +56,55 @@ _PARAGRAPH_GROUPS = (
 _ROW_GROUPS = (("抄送机关",), ("印发机关", "印发日期"))
 _LABELS = {"抄送机关": ("抄送",), "印发机关": ("版记",), "附件说明": ("附件",)}
 _DECORATION = re.compile(r"[\s:：;；,，、.。()（）\[\]【】/／—\-]*\Z")
-_NON_TEXT_CONTENT = frozenset(
-    qn(f"w:{name}")
-    for name in (
-        "drawing",
-        "pict",
-        "object",
-        "fldSimple",
-        "fldChar",
-        "sym",
-        "footnoteReference",
-        "endnoteReference",
-        "sectPr",
-        "br",
-        "cr",
-    )
-)
+# Deleting an empty field is a layout operation. Only ordinary text and known
+# formatting may disappear with its container; unknown extensions, revision
+# records and semantic anchors must remain attached even when their text is empty.
+_LAYOUT_CHILDREN = {
+    "p": "pPr r",
+    "r": "rPr t tab",
+    "tr": "trPr tc",
+    "tc": "tcPr p",
+    "tbl": "tblPr tblGrid tr",
+    "tblGrid": "gridCol",
+    "pPr": (
+        "pStyle keepNext keepLines pageBreakBefore framePr widowControl numPr suppressLineNumbers pBdr shd tabs "
+        "suppressAutoHyphens kinsoku wordWrap overflowPunct topLinePunct autoSpaceDE autoSpaceDN bidi adjustRightInd "
+        "snapToGrid spacing ind contextualSpacing mirrorIndents suppressOverlap jc textDirection textAlignment "
+        "textboxTightWrap outlineLvl divId cnfStyle rPr"
+    ),
+    "rPr": (
+        "rStyle rFonts b bCs i iCs caps smallCaps strike dstrike outline shadow emboss imprint noProof snapToGrid "
+        "vanish webHidden color spacing w kern position sz szCs highlight u effect bdr shd fitText vertAlign rtl cs "
+        "em lang eastAsianLayout specVanish oMath"
+    ),
+    "trPr": "cnfStyle divId gridBefore gridAfter wBefore wAfter cantSplit trHeight tblHeader tblCellSpacing jc hidden",
+    "tcPr": "cnfStyle tcW gridSpan tcBorders shd noWrap tcMar textDirection tcFitText vAlign hideMark",
+    "tblPr": (
+        "tblStyle tblpPr tblOverlap bidiVisual tblStyleRowBandSize tblStyleColBandSize tblW jc tblCellSpacing "
+        "tblInd tblBorders shd tblLayout tblCellMar tblLook"
+    ),
+    "numPr": "ilvl numId",
+    "tabs": "tab",
+    "pBdr": "top left bottom right between bar",
+    "tcBorders": "top left bottom right start end insideH insideV tl2br tr2bl",
+    "tblBorders": "top left bottom right start end insideH insideV",
+    "tcMar": "top left bottom right start end",
+    "tblCellMar": "top left bottom right start end",
+}
+_EMPTY_LAYOUT_CHILDREN = {
+    qn(f"w:{name}"): frozenset(qn(f"w:{child}") for child in children.split())
+    for name, children in _LAYOUT_CHILDREN.items()
+}
+for _children in tuple(_EMPTY_LAYOUT_CHILDREN.values()):
+    for _child in _children:
+        _EMPTY_LAYOUT_CHILDREN.setdefault(_child, frozenset())
+del _children, _child
+
+# Core Word attributes describe the recognized layout nodes above. Only the
+# paragraph identity pair is disposable from the Word 2010 extension namespace;
+# other extension attributes can carry semantics even without child elements.
+_WORD_ATTRIBUTE_NAMESPACE = qn("w:val").removesuffix("val")
+_PARAGRAPH_IDENTITY_ATTRIBUTES = frozenset({qn("w14:paraId"), qn("w14:textId")})
 
 
 class GongwenFieldPlacementError(ValueError):
@@ -140,8 +180,14 @@ def validate_review_placeholders(doc: Any, placeholders: Mapping[str, Sequence[A
                 )
 
 
-def validate_attachment_placeholders(doc: Any, placeholders: Mapping[str, Sequence[Any]]) -> None:
+def validate_attachment_placeholders(
+    doc: Any,
+    placeholders: Mapping[str, Sequence[Any]],
+    *,
+    rendered_elements: Sequence[etree._Element] = (),
+) -> None:
     """Accept standalone, ordinary paragraphs in the main body or table cells."""
+    _validate_reserved_attachment_markers(doc, rendered_elements)
     for paragraph in placeholders.get("附件说明", ()):
         element = paragraph._p
         ancestor = element.getparent()
@@ -156,13 +202,53 @@ def validate_attachment_placeholders(doc: Any, placeholders: Mapping[str, Sequen
             not allowed
             or ancestor is not doc.element.body
             or _ATTACHMENT.fullmatch(paragraph.text.strip()) is None
-            or any(child.tag not in {qn("w:pPr"), qn("w:r")} for child in element)
-            or any(node.tag in _NON_TEXT_CONTENT - {qn("w:sectPr")} for node in element.iter())
+            or not _plain_layout_container(element, allow_section=True)
         ):
-            raise GongwenFieldPlacementError(
-                "附件说明占位符必须独占正文或表格单元格中的普通段落；"
-                "不支持与其他内容混排，或放在页眉、页脚、文本框等位置。"
-            )
+            raise GongwenFieldPlacementError(_ATTACHMENT_PLACEMENT_MESSAGE)
+
+
+def _validate_reserved_attachment_markers(doc: Any, rendered_elements: Sequence[etree._Element]) -> None:
+    """Diagnose broken reserved markers without turning them into fill spans.
+
+    This deliberately wider view ignores visible control boundaries solely for
+    diagnosis. Only the shared span reader defines replaceable template text.
+    Rendered Markdown is literal input and must never become a template marker.
+    """
+    roots = [part.element for part in template_story_parts(doc)]
+    ignored = frozenset(rendered_elements)
+    for root in roots:
+        for paragraph in root.iter(qn("w:p")):
+            if paragraph in ignored or any(ancestor in ignored for ancestor in paragraph.iterancestors()):
+                continue
+            valid = {span.locations for span in iter_paragraph_placeholder_spans(paragraph) if span.key == "附件说明"}
+            text, locations = _reserved_marker_text(paragraph)
+            for match in _ATTACHMENT.finditer(text):
+                if tuple(locations[match.start() : match.end()]) not in valid:
+                    raise GongwenFieldPlacementError(_ATTACHMENT_PLACEMENT_MESSAGE)
+
+
+def _reserved_marker_text(element: etree._Element) -> tuple[str, list[tuple[etree._Element, int]]]:
+    """Read the current paragraph's raw text for conservative diagnostics."""
+    inactive = {qn("w:del"), qn("w:moveFrom")}
+    if any(ancestor.tag in inactive for ancestor in element.iterancestors()):
+        return "", []
+    characters: list[str] = []
+    locations: list[tuple[etree._Element, int]] = []
+
+    def visit(node: etree._Element) -> None:
+        if node.tag in inactive or (node is not element and node.tag == qn("w:p")):
+            return
+        if node.tag == qn("w:t"):
+            for offset, character in enumerate(node.text or ""):
+                if character not in "\t\r\n":
+                    characters.append(character)
+                    locations.append((node, offset))
+        else:
+            for child in node:
+                visit(child)
+
+    visit(element)
+    return "".join(characters), locations
 
 
 def remove_empty_gongwen_fields(doc: Any, values: Mapping[str, Any], placeholders: Mapping[str, Sequence[Any]]) -> None:
@@ -173,6 +259,8 @@ def remove_empty_gongwen_fields(doc: Any, values: Mapping[str, Any], placeholder
                 continue
             table = row.getparent()
             if table is None:
+                continue
+            if len(table.findall(qn("w:tr"))) == 1 and not _plain_layout_container(table):
                 continue
             table.remove(row)
             if not table.findall(qn("w:tr")):
@@ -442,7 +530,7 @@ def _matching_containers(placeholders: Mapping[str, Sequence[Any]], group: tuple
 def _removable_container(container: Any, group: tuple[str, ...], values: Mapping[str, Any]) -> bool:
     if any(not is_empty_field_value(values.get(key)) for key in group):
         return False
-    if any(node.tag in _NON_TEXT_CONTENT for node in container.iter()):
+    if not _plain_layout_container(container):
         return False
     # Never delete a containing row because of fields in its nested table.
     if container.tag == qn("w:tr") and any(node.tag == qn("w:tbl") for node in container.iter()):
@@ -461,6 +549,41 @@ def _removable_container(container: Any, group: tuple[str, ...], values: Mapping
         if _DECORATION.fullmatch(remaining) is None:
             return False
     return True
+
+
+def _plain_layout_container(container: Any, *, allow_section: bool = False) -> bool:
+    """Recognize an ordinary text/layout tree, never an unknown semantic tree."""
+    for ancestor in container.iterancestors():
+        if ancestor.tag in {qn("w:body"), qn("w:hdr"), qn("w:ftr")}:
+            break
+        if ancestor.tag not in {qn("w:tbl"), qn("w:tr"), qn("w:tc")} or not _plain_layout_attributes(ancestor):
+            return False
+    else:
+        return False
+    pending = [container]
+    while pending:
+        node = pending.pop()
+        allowed = _EMPTY_LAYOUT_CHILDREN.get(node.tag)
+        if allowed is None or not _plain_layout_attributes(node):
+            return False
+        for child in node:
+            if allow_section and node.tag == qn("w:pPr") and child.tag == qn("w:sectPr"):
+                # Attachment expansion preserves this original section subtree.
+                continue
+            if child.tag not in allowed:
+                return False
+            pending.append(child)
+    return True
+
+
+def _plain_layout_attributes(node: Any) -> bool:
+    """Permit core layout attributes, paragraph identities and text whitespace."""
+    return all(
+        attribute.startswith(_WORD_ATTRIBUTE_NAMESPACE)
+        or (node.tag == qn("w:p") and attribute in _PARAGRAPH_IDENTITY_ATTRIBUTES)
+        or (node.tag == qn("w:t") and attribute == qn("xml:space"))
+        for attribute in node.attrib
+    )
 
 
 def _remove_paragraph(element: Any) -> None:

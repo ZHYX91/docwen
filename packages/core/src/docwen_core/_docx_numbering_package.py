@@ -12,6 +12,8 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import lxml.etree as etree
 
+from docwen_core.docx_numbering_parts import NumberingPartError, open_numbering_part
+from docwen_core.docx_numbering_structure import append_numbering_definitions
 from docwen_core.file_io import replace_authorized_file
 from docwen_core.models.resolved_numbering import (
     HeadingCounterSegment,
@@ -53,50 +55,26 @@ def write_heading_numbering_projection(path: str | Path, projection: Any) -> Non
         if len({item.filename for item in infos}) != len(infos):
             raise ResolvedNumberingOoxmlError("DOCX contains duplicate ZIP members")
         data = {item.filename: package.read(item.filename) for item in infos}
-    for required in ("word/_rels/document.xml.rels", "[Content_Types].xml"):
-        if required not in data:
-            raise ResolvedNumberingOoxmlError(f"DOCX lacks required part: {required}")
-
-    parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_blank_text=False)
-    if "word/numbering.xml" in data:
-        root = etree.fromstring(data["word/numbering.xml"], parser)
-    else:
-        root = etree.Element(f"{{{WML_NS}}}numbering", nsmap={"w": WML_NS})
-    if root.tag != f"{{{WML_NS}}}numbering":
-        raise ResolvedNumberingOoxmlError("numbering.xml root is invalid")
+    try:
+        part = open_numbering_part(data, create=True)
+    except NumberingPartError as exc:
+        raise ResolvedNumberingOoxmlError(str(exc)) from exc
+    assert part is not None
+    root = part.element
     existing_abstract, existing_num = _numbering_ids(root)
     projected_abstract, projected_num = _numbering_ids_from_elements(projection)
     if existing_abstract & projected_abstract or existing_num & projected_num:
         raise ResolvedNumberingOoxmlError("resolved Heading numbering IDs collide after save")
-    for element in projection.abstract_nums:
-        _insert_abstract_num(root, element)
-    for element in projection.nums:
-        root.append(element)
-    data["word/numbering.xml"] = etree.tostring(
+    append_numbering_definitions(root, projection.abstract_nums, projection.nums)
+    data[part.name] = etree.tostring(
         root,
         encoding="UTF-8",
         xml_declaration=True,
         standalone=True,
     )
 
-    rels = etree.fromstring(data["word/_rels/document.xml.rels"], parser)
-    types = etree.fromstring(data["[Content_Types].xml"], parser)
-    numbering_part_existed = "word/numbering.xml" in {item.filename for item in infos}
-    _ensure_numbering_relationship(rels, allow_create=not numbering_part_existed)
-    _ensure_numbering_content_type(types, allow_create=not numbering_part_existed)
-    data["word/_rels/document.xml.rels"] = etree.tostring(rels, encoding="UTF-8", xml_declaration=True, standalone=True)
-    data["[Content_Types].xml"] = etree.tostring(
-        types,
-        encoding="UTF-8",
-        xml_declaration=True,
-        standalone=True,
-    )
-    _rewrite_package(
-        package_path,
-        infos,
-        data,
-        new_names=("word/numbering.xml",) if not numbering_part_existed else (),
-    )
+    existing_names = {item.filename for item in infos}
+    _rewrite_package(package_path, infos, data, new_names=tuple(data.keys() - existing_names))
 
 
 def _heading_abstract_num(
@@ -119,7 +97,6 @@ def _heading_abstract_num(
             ("start", str(level.start)),
             ("numFmt", _NUMBER_FORMATS.get(level.number_format)),
             ("lvlRestart", "0" if level.restart_after_level is None else str(level.restart_after_level)),
-            ("pStyle", style_id),
             ("suff", level.suffix),
             ("lvlText", _level_text(level)),
         ):
@@ -337,20 +314,12 @@ def _require_bookmark_id(bookmark_id: str | None) -> str:
 
 
 def _insert_num_pr(p_pr: Any, num_pr: Any) -> None:
-    before = {"pStyle", "keepNext", "keepLines", "pageBreakBefore", "widowControl"}
+    before = {"pStyle", "keepNext", "keepLines", "pageBreakBefore", "framePr", "widowControl"}
     for index, child in enumerate(p_pr):
         if etree.QName(child).localname not in before:
             p_pr.insert(index, num_pr)
             return
     p_pr.append(num_pr)
-
-
-def _insert_abstract_num(root: Any, element: Any) -> None:
-    first_num = root.find(f"{{{WML_NS}}}num")
-    if first_num is None:
-        root.append(element)
-    else:
-        first_num.addprevious(element)
 
 
 def _numbering_ids(root: Any) -> tuple[set[int], set[int]]:
@@ -382,7 +351,10 @@ def _existing_numbering_ids(document: Any) -> tuple[set[int], set[int]]:
     parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_blank_text=False)
     for part in parts:
         partname = str(getattr(part, "partname", ""))
-        if not partname.startswith("/word/") or not partname.endswith(".xml"):
+        is_word_part = str(getattr(part, "content_type", "")).startswith(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml."
+        )
+        if not is_word_part and not (partname.startswith("/word/") and partname.endswith(".xml")):
             continue
         root = getattr(part, "element", None)
         if root is None:
@@ -426,47 +398,6 @@ def _lowest_unused(values: set[int], *, start: int) -> int:
     while candidate in values:
         candidate += 1
     return candidate
-
-
-def _ensure_numbering_relationship(root: Any, *, allow_create: bool) -> None:
-    if root.tag != f"{{{RELS_NS}}}Relationships":
-        raise ResolvedNumberingOoxmlError("document relationships root is invalid")
-    matches = [item for item in root if item.get("Target") == "numbering.xml" or item.get("Type") == NUMBERING_REL_TYPE]
-    if matches:
-        if (
-            len(matches) != 1
-            or matches[0].get("Type") != NUMBERING_REL_TYPE
-            or matches[0].get("Target") != "numbering.xml"
-        ):
-            raise ResolvedNumberingOoxmlError("numbering relationship conflicts")
-        return
-    if not allow_create:
-        raise ResolvedNumberingOoxmlError("existing numbering part lacks its exact relationship")
-    used: set[int] = set()
-    for item in root:
-        raw = item.get("Id", "")
-        if raw.startswith("rId"):
-            with contextlib.suppress(ValueError):
-                used.add(int(raw[3:]))
-    relation = etree.SubElement(root, f"{{{RELS_NS}}}Relationship")
-    relation.set("Id", f"rId{_lowest_unused(used, start=1)}")
-    relation.set("Type", NUMBERING_REL_TYPE)
-    relation.set("Target", "numbering.xml")
-
-
-def _ensure_numbering_content_type(root: Any, *, allow_create: bool) -> None:
-    if root.tag != f"{{{CONTENT_TYPES_NS}}}Types":
-        raise ResolvedNumberingOoxmlError("content types root is invalid")
-    matches = [item for item in root if item.get("PartName") == "/word/numbering.xml"]
-    if matches:
-        if len(matches) != 1 or matches[0].get("ContentType") != NUMBERING_CONTENT_TYPE:
-            raise ResolvedNumberingOoxmlError("numbering content type conflicts")
-        return
-    if not allow_create:
-        raise ResolvedNumberingOoxmlError("existing numbering part lacks its exact content type")
-    override = etree.SubElement(root, f"{{{CONTENT_TYPES_NS}}}Override")
-    override.set("PartName", "/word/numbering.xml")
-    override.set("ContentType", NUMBERING_CONTENT_TYPE)
 
 
 def _rewrite_package(

@@ -5,6 +5,7 @@ from __future__ import annotations
 from itertools import pairwise
 from typing import Any
 
+from docwen_core._docx_semantics_v3_caption_groups import PAIRED_CAPTION_TAG_PREFIX
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TAG_PREFIX,
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -244,7 +245,7 @@ def prove_owned_block_parent(child: Any, tag: str, body: Any, parent_sdt: Any | 
     if (
         not tag.startswith(ANCHOR_TAG_PREFIX)
         or parent_tag is None
-        or not parent_tag.startswith((ANCHOR_TAG_PREFIX, TARGET_TAG_PREFIX))
+        or not parent_tag.startswith((ANCHOR_TAG_PREFIX, TARGET_TAG_PREFIX, PAIRED_CAPTION_TAG_PREFIX))
         or content is None
         or content.tag != qn("w:sdtContent")
         or content.getparent() is not parent_sdt
@@ -460,18 +461,6 @@ def prove_block_sdt_envelope(sdt: Any, tag: str) -> None:
     content = children[1]
     if content.attrib or content.text is not None or content.tail is not None:
         raise DocxSemanticsV3Error("owned block SDT content is not canonical")
-
-
-def prove_heading_paragraph(paragraph: Any) -> None:
-    """Prove an addressable Heading remains a Heading1..Heading9 paragraph."""
-
-    import re
-
-    from docx.oxml.ns import qn
-
-    style = paragraph.find(f"./{qn('w:pPr')}/{qn('w:pStyle')}")
-    if style is None or re.fullmatch(r"Heading[1-9]", style.get(qn("w:val"), "")) is None:
-        raise DocxSemanticsV3Error("Heading target must retain an exact Heading1..Heading9 style")
 
 
 def prove_source_recovery_records(soft: list[Any], occurrences: list[Any]) -> None:

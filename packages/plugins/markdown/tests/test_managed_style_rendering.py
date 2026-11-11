@@ -22,7 +22,6 @@ from docwen_plugin_markdown.renderer_inlines import (
 )
 from docwen_plugin_markdown.template_filler import fill_template
 from docwen_plugin_markdown.template_utils import (
-    BodyParagraphFormat,
     extract_body_paragraph_format,
     extract_body_run_format,
 )
@@ -39,7 +38,8 @@ pytestmark = pytest.mark.contract
 
 def _catalog():
     return build_document_style_catalog(
-        {"gui": {"language": {"locale": "en_US"}}},
+        {},
+        request_options={"locale": "en_US"},
         locales_dir=PROJECT_ROOT / "i18n" / "locales",
     )
 
@@ -150,20 +150,13 @@ print('x')
         )
     )
     assert not analysis.has_errors
-    body_format = BodyParagraphFormat(
-        alignment=WD_ALIGN_PARAGRAPH.RIGHT,
-        left_indent=Inches(0.4),
-        right_indent=None,
-        first_line_indent=None,
-        space_before=None,
-        space_after=Pt(19),
-        line_spacing=None,
-        line_spacing_rule=None,
-        keep_with_next=True,
-        keep_together=None,
-        page_break_before=None,
-        widow_control=None,
-    )
+    format_source = Document()
+    anchor = format_source.add_paragraph("{{body}}")
+    anchor.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    anchor.paragraph_format.left_indent = Inches(0.4)
+    anchor.paragraph_format.space_after = Pt(19)
+    anchor.paragraph_format.keep_with_next = True
+    body_format = extract_body_paragraph_format(format_source)
     renderer = MdToDocxRenderer(
         document,
         body_style=document.styles["Normal"],
@@ -175,7 +168,7 @@ print('x')
     rendered = renderer.render(analysis.ast)
     fill_template(document, {}, rendered, None)
     path, reopened = _save_reopen(document, tmp_path, "managed-rendering.docx")
-    validate_managed_style_package(path.read_bytes(), _catalog())
+    validate_managed_style_package(path.read_bytes(), _catalog(), bindings)
 
     assert _paragraph_style_id(next(p for p in reopened.paragraphs if p.text.startswith("Body plain"))) == (
         "DocWenBodyParagraph"
@@ -200,7 +193,7 @@ print('x')
     assert "print('x')" in [p.text for p in reopened.paragraphs]
 
     table = reopened.tables[0]
-    assert table.style is not None and table.style.style_id == "DocWenTableGrid"
+    assert table.style is not None and table.style.style_id == bindings.style_id("table_grid")
     for row_index, row in enumerate(table.rows):
         for cell in row.cells:
             expected = "DocWenTableHeader" if row_index == 0 else "DocWenTableContent"
@@ -323,7 +316,7 @@ AFTER
     )
     assert next(index for index, p in enumerate(reopened.paragraphs) if "SEQ Listing" in p._p.xml) < texts.index("code")
     assert texts[-1] == "AFTER"
-    validate_managed_style_package(path.read_bytes(), _catalog())
+    validate_managed_style_package(path.read_bytes(), _catalog(), bindings)
 
     legacy = Document()
     paragraph = legacy.add_paragraph()

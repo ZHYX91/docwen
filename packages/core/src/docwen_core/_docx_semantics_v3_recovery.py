@@ -10,8 +10,21 @@ from zipfile import ZipFile
 
 import docwen_core._docx_semantics_v3_fenced as fenced
 from docwen_core._docx_caption_carrier import captionable_logical_elements
+from docwen_core._docx_semantics_v3_caption_groups import (
+    PAIRED_CAPTION_MAP_NAMESPACE,
+    PAIRED_CAPTION_TAG_PREFIX,
+    PairedCaptionMapV3,
+    parse_paired_caption_map,
+)
 from docwen_core._docx_semantics_v3_fenced import FencedSourceIdentityV3
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
+from docwen_core._docx_semantics_v3_heading_styles import (
+    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+    HeadingStyleBindingV3,
+    parse_heading_style_binding_map,
+    prove_heading_paragraph,
+    prove_heading_style_registry,
+)
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TAG_PREFIX,
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -47,7 +60,6 @@ from docwen_core._docx_semantics_v3_package import (
     verify_custom_xml_support,
 )
 from docwen_core._docx_semantics_v3_styles import (
-    caption_kind_for_paragraph_style,
     parse_caption_style_binding_map,
     prove_caption_paragraph_style,
     prove_caption_style_registry,
@@ -59,7 +71,6 @@ from docwen_core._docx_semantics_v3_topology import (
     prove_anchor_topology_document,
     prove_block_sdt_envelope,
     prove_exact_field_run,
-    prove_heading_paragraph,
     prove_inline_occurrence_envelope,
     prove_ordinary_anchor_group,
     prove_owned_block_parent,
@@ -99,6 +110,8 @@ class DocxSemanticsV3Recovery:
         stable_reference_target_ids: tuple[str, ...] = (),
         recovered_captions: tuple[RecoveredCaptionV3, ...] = (),
         caption_style_bindings: tuple[CaptionStyleBindingV3, ...] = (),
+        heading_style_bindings: tuple[HeadingStyleBindingV3, ...] = (),
+        paired_caption_map: PairedCaptionMapV3 | None = None,
         fenced_source_identities: tuple[FencedSourceIdentityV3, ...] = (),
         fenced_sources_by_paragraph: dict[Any, tuple[FencedSourceIdentityV3, str]] | None = None,
     ) -> None:
@@ -116,6 +129,9 @@ class DocxSemanticsV3Recovery:
         self.stable_reference_target_ids = stable_reference_target_ids
         self.recovered_captions = recovered_captions
         self.caption_style_bindings = caption_style_bindings
+        self.heading_style_bindings = heading_style_bindings
+        self.paired_caption_map = paired_caption_map
+        self._heading_levels_by_source_id = {binding.source_id: binding.level for binding in heading_style_bindings}
         self.fenced_source_identities = fenced_source_identities
         self._fenced_sources_by_paragraph = fenced_sources_by_paragraph or {}
         self.caption_signatures = tuple(
@@ -127,6 +143,8 @@ class DocxSemanticsV3Recovery:
         """Load zero or one strict map of each owned namespace."""
 
         caption_styles: tuple[CaptionStyleBindingV3, ...] = ()
+        heading_styles: tuple[HeadingStyleBindingV3, ...] = ()
+        caption_map = None
         with ZipFile(Path(path)) as package:
             owned = read_owned_map_parts(package)
             for namespace, (item_number, _root) in owned.items():
@@ -135,6 +153,17 @@ class DocxSemanticsV3Recovery:
                 _number, root = owned[CAPTION_STYLE_BINDING_MAP_NAMESPACE]
                 caption_styles = parse_caption_style_binding_map(root)
                 caption_styles = prove_caption_style_registry(package, caption_styles, allow_style_id_rewrite=True)
+            if HEADING_STYLE_BINDING_MAP_NAMESPACE in owned:
+                _number, root = owned[HEADING_STYLE_BINDING_MAP_NAMESPACE]
+                heading_styles = parse_heading_style_binding_map(root)
+                prove_heading_style_registry(document, heading_styles)
+            if PAIRED_CAPTION_MAP_NAMESPACE in owned:
+                _number, root = owned[PAIRED_CAPTION_MAP_NAMESPACE]
+                caption_map = parse_paired_caption_map(root)
+        if caption_map is not None and not caption_styles:
+            raise DocxSemanticsV3Error("caption ownership lacks its authenticated caption-style binding map")
+        if caption_styles and caption_map is None:
+            raise DocxSemanticsV3Error("caption-style registry lacks its generated caption ownership map")
 
         from docwen_core.docx_table_roles import TABLE_ROLES_NAMESPACE, prove_table_role_bookmarks
 
@@ -184,6 +213,8 @@ class DocxSemanticsV3Recovery:
             fenced_sources,
             anchor_topology,
             topology_map_present=ANCHOR_TOPOLOGY_MAP_NAMESPACE in owned,
+            heading_style_bindings=heading_styles,
+            paired_caption_map=caption_map,
             standalone_target_tags=frozenset(addressable_standalone_tags),
             proven_table_role_nodes=role_nodes,
         )
@@ -195,6 +226,7 @@ class DocxSemanticsV3Recovery:
         recovery.caption_signatures = tuple(
             (item.kind, item.source_id, item.title, item.cached_number) for item in recovery.recovered_captions
         )
+        recovery.prove_caption_inventory(document)
         return recovery
 
     @classmethod
@@ -210,6 +242,8 @@ class DocxSemanticsV3Recovery:
         anchor_topology: list[AnchorTopologyEdgeV3],
         *,
         topology_map_present: bool,
+        heading_style_bindings: tuple[HeadingStyleBindingV3, ...] = (),
+        paired_caption_map: PairedCaptionMapV3 | None = None,
         caption_parser: Callable[..., tuple[str, str]] | None = None,
         standalone_target_tags: frozenset[str] = frozenset(),
         proven_table_role_nodes: frozenset[Any] = frozenset(),
@@ -220,6 +254,11 @@ class DocxSemanticsV3Recovery:
         from docx.oxml.ns import qn
 
         target_by_tag = {item.tag: item for item in targets}
+        heading_bindings = {binding.source_id: binding for binding in heading_style_bindings}
+        if len(heading_bindings) != len(heading_style_bindings) or set(heading_bindings) != {
+            target.source_id for target in targets if target.kind == "heading"
+        }:
+            raise DocxSemanticsV3Error("Heading-style bindings differ from the exact target set")
         anchor_by_tag = {item.tag: item for item in anchors}
         block_elements: dict[Any, tuple[Any, ...]] = {}
         block_anchors: dict[Any, SourceAnchorV3] = {}
@@ -230,6 +269,21 @@ class DocxSemanticsV3Recovery:
         anchor_wrappers_by_tag: dict[str, Any] = {}
         anchor_logical_by_tag: dict[str, tuple[Any, ...]] = {}
         body = document.element.body
+        paired_groups = {group.tag: group for group in paired_caption_map.groups} if paired_caption_map else {}
+        paired_wrappers = [
+            child for child in body.iter(qn("w:sdt")) if (sdt_tag(child) or "").startswith(PAIRED_CAPTION_TAG_PREFIX)
+        ]
+        if [sdt_tag(child) for child in paired_wrappers] != list(paired_groups):
+            raise DocxSemanticsV3Error("caption-pair SDT order/cardinality differs from the ownership map")
+        for child in paired_wrappers:
+            if proven_nested_blocks is None and child.getparent() is not body:
+                raise DocxSemanticsV3Error("caption-pair SDT is not a direct main-body group")
+            if proven_nested_blocks is not None and child not in proven_nested_blocks:
+                raise DocxSemanticsV3Error("caption-pair SDT lacks resolved hierarchy evidence")
+            tag = sdt_tag(child)
+            assert tag is not None
+            prove_block_sdt_envelope(child, tag)
+            block_elements[child] = tuple(child.find(qn("w:sdtContent")))
         owned_block_sdts = [
             child
             for child in body.iter(qn("w:sdt"))
@@ -272,7 +326,7 @@ class DocxSemanticsV3Recovery:
                     logical = logical_group_elements(blocks)
                     if len(logical) != 1 or logical[0].tag != qn("w:p"):
                         raise DocxSemanticsV3Error("Heading target SDT must resolve to exactly one paragraph")
-                    prove_heading_paragraph(logical[0])
+                    prove_heading_paragraph(logical[0], heading_bindings[target.source_id])
                     block_anchors[logical[0]] = SourceAnchorV3("semantic_target", target.source_id, target.kind)
                 else:
                     caption, _object_elements = _prove_caption_target_group(
@@ -332,6 +386,7 @@ class DocxSemanticsV3Recovery:
             targets,
             block_elements,
             caption_style_bindings,
+            paired_caption_map=paired_caption_map,
             caption_parser=caption_parser,
             standalone_target_tags=standalone_target_tags,
             proven_nested_blocks=proven_nested_blocks,
@@ -379,6 +434,8 @@ class DocxSemanticsV3Recovery:
             stable_reference_target_ids=tuple(stable_target_ids),
             recovered_captions=tuple(recovered_captions),
             caption_style_bindings=caption_style_bindings,
+            heading_style_bindings=heading_style_bindings,
+            paired_caption_map=paired_caption_map,
             fenced_source_identities=tuple(fenced_sources),
             fenced_sources_by_paragraph=fenced_sources_by_paragraph,
         )
@@ -460,6 +517,25 @@ class DocxSemanticsV3Recovery:
                 raise DocxSemanticsV3Error("direct addressable standalone caption contradicts its authority")
         self.recovered_captions = tuple(recovered)
 
+    def prove_caption_inventory(self, document: Any) -> None:
+        """Require the complete generated inventory, including ID-less groups."""
+        expected = self.paired_caption_map.caption_count if self.paired_caption_map is not None else 0
+        if len(self.recovered_captions) != expected:
+            raise DocxSemanticsV3Error("recovered caption count differs from the generated ownership inventory")
+        order = {element: index for index, element in enumerate(document.element.body.iter())}
+        captions = tuple(sorted(self.recovered_captions, key=lambda item: order[item.caption_element]))
+        if self.paired_caption_map is not None:
+            by_tag = {sdt_tag(outer): outer for outer in self._block_elements}
+            for group in self.paired_caption_map.groups:
+                caption = captions[group.ordinal - 1]
+                outer = by_tag.get(group.tag)
+                if outer is None or outer not in caption.caption_element.iterancestors():
+                    raise DocxSemanticsV3Error("caption-pair ordinal differs from its physical caption position")
+        self.recovered_captions = captions
+        self.caption_signatures = tuple(
+            (item.kind, item.source_id, item.title, item.cached_number) for item in captions
+        )
+
     def logical_body_elements(self, document: Any) -> list[Any]:
         """Flatten only authenticated owned block SDTs for the legacy walker."""
 
@@ -471,6 +547,13 @@ class DocxSemanticsV3Recovery:
             else:
                 output.extend(logical_group_elements(blocks, proven_nested_blocks=self._block_elements))
         return output
+
+    def heading_level(self, paragraph_element: Any) -> int | None:
+        """Return the source level of an authenticated generated Heading."""
+        anchor = self._block_anchors.get(paragraph_element)
+        if anchor is None or anchor.owner_kind != "semantic_target" or anchor.block_kind != "heading":
+            return None
+        return self._heading_levels_by_source_id.get(anchor.source_id)
 
     def source_anchor(self, paragraph_element: Any) -> SourceAnchorV3 | None:
         return self._block_anchors.get(paragraph_element)
@@ -613,6 +696,7 @@ def _recover_captions(
     block_elements: dict[Any, tuple[Any, ...]],
     caption_style_bindings: tuple[CaptionStyleBindingV3, ...],
     *,
+    paired_caption_map: PairedCaptionMapV3 | None = None,
     caption_parser: Callable[..., tuple[str, str]] | None = None,
     standalone_target_tags: frozenset[str] = frozenset(),
     proven_nested_blocks: dict[Any, tuple[Any, ...]] | None = None,
@@ -655,24 +739,21 @@ def _recover_captions(
 
     if not caption_style_bindings:
         return recovered
-    children = (
-        list(body)
-        if proven_nested_blocks is None
-        else list(logical_group_elements(tuple(body), proven_nested_blocks=proven_nested_blocks))
-    )
-    for index, child in enumerate(children):
-        if id(child) in claimed or child in reserved_semantic_elements or child.tag != qn("w:p"):
+    paired_groups = {group.tag: group for group in paired_caption_map.groups} if paired_caption_map else {}
+    for outer, blocks in block_elements.items():
+        group = paired_groups.get(sdt_tag(outer) or "")
+        if group is None:
             continue
-        kind = caption_kind_for_paragraph_style(child, caption_style_bindings)
-        if kind is None:
-            continue
-        object_index = index - 1 if kind == "figure" else index + 1
-        if not 0 <= object_index < len(children):
-            raise DocxSemanticsV3Error("ID-less caption has no directly adjacent object")
-        object_slot = children[object_index]
-        if id(object_slot) in claimed:
+        if len(blocks) != 2:
+            raise DocxSemanticsV3Error("caption-pair SDT must contain one caption and one logical object")
+        kind = group.kind
+        object_slot, child = blocks if kind == "figure" else (blocks[1], blocks[0])
+        if child.tag != qn("w:p"):
+            raise DocxSemanticsV3Error("caption-pair group has no caption paragraph")
+        prove_caption_paragraph_style(child, kind, caption_style_bindings)
+        object_elements = logical_group_elements((object_slot,), proven_nested_blocks=proven_nested_blocks)
+        if id(child) in claimed or any(id(element) in claimed for element in object_elements):
             raise DocxSemanticsV3Error("caption/object participates in multiple pairing claims")
-        object_elements = logical_group_elements((object_slot,))
         _prove_caption_object_kind(kind, object_elements)
         parser = _parse_v3_caption if caption_parser is None else caption_parser
         title, number = parser(child, kind, required_bookmark=None)
@@ -687,6 +768,8 @@ def _recover_captions(
             )
         )
         claimed.update((id(child), *(id(item) for item in object_elements)))
+    order = {element: index for index, element in enumerate(body.iter())}
+    recovered.sort(key=lambda item: order[item.caption_element])
     return recovered
 
 

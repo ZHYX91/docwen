@@ -115,7 +115,7 @@ def test_proven_word_list_is_separate_from_complete_authored_heading(tmp_path: P
     assert imported.numbering.number_format == "decimal"
     assert imported.numbering.level_text == "%1"
     assert imported.numbering.start == 3
-    assert imported.numbering.style_id == "Heading1"
+    assert imported.numbering.style_id is None
 
 
 def test_unproven_visible_prefix_remains_authored_and_gets_stable_diagnostic(
@@ -193,7 +193,7 @@ def test_inline_level_override_never_inherits_abstract_level_semantics(tmp_path:
     paragraph = Document(str(source)).paragraphs[0]
 
     with pytest.raises(DocxNumberingImportError, match="exact ancestry"):
-        HeadingNumberingProofIndex.load(source)
+        HeadingNumberingProofIndex.load(source).prove_paragraph(paragraph)
     assert paragraph.text == "2.3 标题"
 
 
@@ -223,8 +223,9 @@ def test_mc_alternate_content_cannot_hide_an_effective_level_override(tmp_path: 
         etree.tostring(numbering, encoding="UTF-8", xml_declaration=True),
     )
 
+    paragraph = Document(str(source)).paragraphs[0]
     with pytest.raises(DocxNumberingImportError, match="markup-compatibility topology"):
-        HeadingNumberingProofIndex.load(source)
+        HeadingNumberingProofIndex.load(source).prove_paragraph(paragraph)
 
 
 def test_numid_zero_is_explicitly_unnumbered_and_never_changes_text(tmp_path: Path) -> None:

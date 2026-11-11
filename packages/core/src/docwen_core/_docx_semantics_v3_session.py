@@ -10,6 +10,12 @@ from zipfile import BadZipFile
 
 import lxml.etree as etree
 
+from docwen_core._docx_semantics_v3_caption_groups import (
+    PAIRED_CAPTION_MAP_NAMESPACE,
+    PairedCaptionMapV3,
+    derive_paired_caption_group,
+    paired_caption_map_xml,
+)
 from docwen_core._docx_semantics_v3_fenced import (
     FENCED_SOURCE_MAP_NAMESPACE,
     FencedSourceBindingV3,
@@ -22,6 +28,12 @@ from docwen_core._docx_semantics_v3_fenced_map import (
     fenced_source_identity_from_mapping_v3,
     fenced_source_map_xml,
     fenced_source_mapping_v3,
+)
+from docwen_core._docx_semantics_v3_heading_styles import (
+    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+    HeadingStyleBindingV3,
+    capture_heading_style_binding,
+    heading_style_binding_map_xml,
 )
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -64,6 +76,7 @@ from docwen_core._docx_semantics_v3_styles import (
     validate_caption_style_bindings,
 )
 from docwen_core._docx_semantics_v3_topology import anchor_topology_map_xml, order_ordinary_anchor_bindings
+from docwen_core._docx_template_paragraphs import TemplateParagraphInventory
 from docwen_core.docx_bookmarks import (
     DocxBookmarkAllocator,
     build_docx_bookmark_inventory,
@@ -104,7 +117,14 @@ class DocxSemanticsV3Session:
         self._caption_style_bindings = (
             validate_caption_style_bindings(caption_style_bindings) if caption_style_bindings else ()
         )
+        self._caption_inventory = TemplateParagraphInventory(
+            document,
+            {binding.resolved_style_id for binding in self._caption_style_bindings},
+            "caption",
+            error_type=DocxSemanticsV3Error,
+        )
         self._targets: list[TargetBindingV3] = []
+        self._heading_style_bindings: list[HeadingStyleBindingV3] = []
         self._anchors: list[AnchorBindingV3] = []
         self._anchor_topology_edges: tuple[AnchorTopologyEdgeV3, ...] = ()
         self._captions: list[CaptionBindingV3] = []
@@ -159,7 +179,7 @@ class DocxSemanticsV3Session:
         prove_fenced_source_paragraph(paragraph._p, identity)
         self._fenced_sources.append(FencedSourceBindingV3(identity, paragraph._p))
 
-    def bind_heading(self, paragraph: Any, target: dict[str, Any]) -> None:
+    def bind_heading(self, paragraph: Any, target: dict[str, Any], *, heading_level: int | None = None) -> None:
         """Bind one ID-bearing Heading to its deterministic bookmark and map."""
 
         if self._finalized:
@@ -167,6 +187,7 @@ class DocxSemanticsV3Session:
         if target.get("kind") != "heading" or not target.get("id"):
             raise DocxSemanticsV3Error("Heading binding requires one addressable Heading target")
         identity = derive_target_identity_v3("heading", str(target["id"]))
+        binding = capture_heading_style_binding(self._document, paragraph, identity.source_id, heading_level)
         self._claim_source_id(identity.source_id)
         wrap_paragraph_content_with_bookmark(
             paragraph,
@@ -174,6 +195,7 @@ class DocxSemanticsV3Session:
             self._reserve_bookmark(identity.bookmark_name),
         )
         self._targets.append(TargetBindingV3(identity, (paragraph._p,)))
+        self._heading_style_bindings.append(binding)
 
     def bind_paragraph_anchor(
         self,
@@ -246,6 +268,7 @@ class DocxSemanticsV3Session:
         cached_number = str(target.get("number") or "")
         if not cached_number:
             raise DocxSemanticsV3Error("caption target has no cached number")
+        self._caption_inventory.bind((len(self._captions), len(self._captions), kind), caption._p)
         self._captions.append(
             CaptionBindingV3(
                 kind=kind,  # type: ignore[arg-type]
@@ -360,6 +383,7 @@ class DocxSemanticsV3Session:
 
         if self._finalized:
             return
+        self._caption_inventory.capture(self._document)
         # An object's ordinary-anchor wrapper is the inner logical object;
         # addressable caption target wrappers then own caption + that object.
         body = self._document.element.body
@@ -370,11 +394,32 @@ class DocxSemanticsV3Session:
         for binding in self._standalone_captions:
             if binding.identity.target_id is None:
                 wrap_standalone_caption_occurrence(binding.caption_element, binding.identity)
+        caption_map = self._paired_caption_map()
+        if caption_map is not None:
+            for group in caption_map.groups:
+                caption = self._captions[group.ordinal - 1]
+                elements = (
+                    (*caption.object_elements, caption.caption_element)
+                    if caption.kind == "figure"
+                    else (caption.caption_element, *caption.object_elements)
+                )
+                owners = tuple(dict.fromkeys(self._direct_body_owner(element) for element in elements))
+                wrap_direct_body_group(owners, group.tag)
         for binding in self._targets:
             elements = tuple(self._direct_body_owner(element) for element in binding.elements)
             unique = tuple(dict.fromkeys(elements))
             wrap_direct_body_group(unique, binding.identity.tag)
         self._finalized = True
+
+    def _paired_caption_map(self) -> PairedCaptionMapV3 | None:
+        if not self._captions:
+            return None
+        groups = tuple(
+            derive_paired_caption_group(self._source_sha256, ordinal, binding.kind)
+            for ordinal, binding in enumerate(self._captions, 1)
+            if binding.source_id is None and binding.object_elements
+        )
+        return PairedCaptionMapV3(self._source_sha256, len(self._captions), groups)
 
     def _direct_body_owner(self, element: Any) -> Any:
         body = self._document.element.body
@@ -391,6 +436,16 @@ class DocxSemanticsV3Session:
         if not self._finalized:
             raise DocxSemanticsV3Error("semantic session must be finalized before package write")
         parts: list[tuple[str, bytes]] = []
+        caption_map = self._paired_caption_map()
+        if caption_map is not None:
+            parts.append((PAIRED_CAPTION_MAP_NAMESPACE, paired_caption_map_xml(caption_map)))
+        if self._heading_style_bindings:
+            parts.append(
+                (
+                    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+                    heading_style_binding_map_xml(tuple(self._heading_style_bindings)),
+                )
+            )
         if self._targets or self._anchors:
             parts.append(
                 (
@@ -456,7 +511,9 @@ class DocxSemanticsV3Session:
             from docx import Document
             from docx.opc.exceptions import OpcError
 
-            recovery = DocxSemanticsV3Recovery.load(package_path, Document(str(package_path)))
+            reopened = Document(str(package_path))
+            self._caption_inventory.prove(reopened)
+            recovery = DocxSemanticsV3Recovery.load(package_path, reopened)
         except DocxSemanticsV3Error:
             raise
         except (BadZipFile, KeyError, OSError, OpcError, etree.XMLSyntaxError) as exc:
@@ -487,6 +544,9 @@ class DocxSemanticsV3Session:
         )
         if (
             recovery.target_identities != expected_targets
+            or recovery.paired_caption_map != self._paired_caption_map()
+            or recovery.heading_style_bindings
+            != tuple(sorted(self._heading_style_bindings, key=lambda item: item.source_id))
             or recovery.anchor_identities != expected_anchors
             or recovery.anchor_topology_edges != self._anchor_topology_edges
             or recovery.soft_reference_identities != expected_soft

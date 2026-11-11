@@ -8,20 +8,17 @@ parses, strips, or rewrites a number-looking text prefix.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
 
-import lxml.etree as etree
+from lxml import etree
 
-from docwen_core.docx_numbering_ooxml import (
-    CONTENT_TYPES_NS,
-    NUMBERING_CONTENT_TYPE,
-    NUMBERING_REL_TYPE,
-    RELS_NS,
-    WML_NS,
-)
+from docwen_core.docx_numbering_ooxml import WML_NS
+from docwen_core.docx_numbering_parts import NumberingPartError, open_numbering_part
+from docwen_core.docx_numbering_structure import validate_numbering_order
 
 AMBIGUOUS_VISIBLE_PREFIX_DIAGNOSTIC = "docwen.docx.numbering.ambiguous_number_prefix"
 _MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -90,36 +87,68 @@ class _Instance:
 class HeadingNumberingProofIndex:
     """Strict index over one authenticated package numbering part."""
 
-    def __init__(
-        self,
-        *,
-        levels: dict[tuple[int, int], _Level] | None = None,
-        instances: dict[int, _Instance] | None = None,
-    ) -> None:
-        self._levels = levels or {}
-        self._instances = instances or {}
+    def __init__(self, numbering: Any | None = None) -> None:
+        self._abstracts: dict[int, Any] = {}
+        self._nodes: dict[int, Any] = {}
+        self._levels: dict[tuple[int, int], _Level] = {}
+        self._instances: dict[int, _Instance] = {}
+        if numbering is None:
+            return
+        # IDs identify package objects globally. Unsupported template semantics
+        # are decoded only when a proved paragraph actually depends on them.
+        for tag, attribute, minimum, index in (
+            ("abstractNum", "abstractNumId", 0, self._abstracts),
+            ("num", "numId", 1, self._nodes),
+        ):
+            for node in numbering.iter(f"{{{WML_NS}}}{tag}"):
+                identity = _integer_attribute(node, attribute, minimum=minimum)
+                if identity in index:
+                    article = "an" if attribute == "abstractNumId" else "a"
+                    raise DocxNumberingImportError(f"numbering.xml repeats {article} {attribute}")
+                index[identity] = node
+        try:
+            validate_numbering_order(numbering)
+        except ValueError as exc:
+            raise DocxNumberingImportError(str(exc)) from exc
+
+    def _prove_instance(self, num_id: int) -> _Instance:
+        if num_id in self._instances:
+            return self._instances[num_id]
+        node = self._nodes.get(num_id)
+        if node is None:
+            raise DocxNumberingImportError("Heading numPr references a missing numbering instance")
+        references = node.findall(f"{{{WML_NS}}}abstractNumId")
+        if len(references) != 1:
+            raise DocxNumberingImportError("numbering instance lacks one abstractNumId")
+        abstract_id = _integer_attribute(references[0], "val", minimum=0)
+        abstract = self._abstracts.get(abstract_id)
+        if abstract is None:
+            raise DocxNumberingImportError("numbering instance references a missing abstractNum")
+        # Check the original parents before copying the exact dependency closure.
+        _reject_unmodeled_numbering_topology(abstract)
+        _reject_unmodeled_numbering_topology(node)
+        closure = etree.Element(f"{{{WML_NS}}}numbering")
+        closure.extend((deepcopy(abstract), deepcopy(node)))
+        levels, instances = _parse_numbering_part(closure)
+        self._levels.update(levels)
+        self._instances.update(instances)
+        return self._instances[num_id]
 
     @classmethod
     def load(cls, path: str | Path) -> HeadingNumberingProofIndex:
         package_path = Path(path)
-        parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_blank_text=False)
         with ZipFile(package_path) as package:
             infos = package.infolist()
             if len({item.filename for item in infos}) != len(infos):
                 raise DocxNumberingImportError("DOCX contains duplicate ZIP members")
-            names = {item.filename for item in infos}
-            required = {"word/_rels/document.xml.rels", "[Content_Types].xml"}
-            if not required <= names:
-                raise DocxNumberingImportError("DOCX lacks required OPC support parts")
-            rels = etree.fromstring(package.read("word/_rels/document.xml.rels"), parser)
-            content_types = etree.fromstring(package.read("[Content_Types].xml"), parser)
-            if "word/numbering.xml" not in names:
-                _prove_numbering_opc_support(rels, content_types, present=False)
-                return cls()
-            _prove_numbering_opc_support(rels, content_types, present=True)
-            numbering = etree.fromstring(package.read("word/numbering.xml"), parser)
-        levels, instances = _parse_numbering_part(numbering)
-        return cls(levels=levels, instances=instances)
+            data = {item.filename: package.read(item.filename) for item in infos}
+        try:
+            part = open_numbering_part(data)
+        except NumberingPartError as exc:
+            raise DocxNumberingImportError(str(exc)) from exc
+        if part is None:
+            return cls()
+        return cls(part.element)
 
     def prove_paragraph(self, paragraph: Any) -> ProvenHeadingNumbering | None:
         """Return one proven direct binding, or ``None`` for no numbering."""
@@ -141,9 +170,7 @@ class HeadingNumberingProofIndex:
         ilvl = _integer_attribute(levels[0], "val", minimum=0, maximum=8)
         if num_id == 0:
             return None
-        instance = self._instances.get(num_id)
-        if instance is None:
-            raise DocxNumberingImportError("Heading numPr references a missing numbering instance")
+        instance = self._prove_instance(num_id)
         definition = self._levels.get((instance.abstract_num_id, ilvl))
         if definition is None:
             raise DocxNumberingImportError("Heading numPr references a missing numbering level")
@@ -185,27 +212,6 @@ def import_heading_without_source_mutation(
             ),
         )
     return ProofOnlyHeadingImport(authored, numbering, diagnostics)
-
-
-def _prove_numbering_opc_support(rels: Any, content_types: Any, *, present: bool) -> None:
-    if rels.tag != f"{{{RELS_NS}}}Relationships" or content_types.tag != f"{{{CONTENT_TYPES_NS}}}Types":
-        raise DocxNumberingImportError("DOCX OPC support roots are invalid")
-    relationships = [
-        item for item in rels if item.get("Type") == NUMBERING_REL_TYPE or item.get("Target") == "numbering.xml"
-    ]
-    overrides = [item for item in content_types if item.get("PartName") == "/word/numbering.xml"]
-    if not present:
-        if relationships or overrides:
-            raise DocxNumberingImportError("DOCX advertises an absent numbering part")
-        return
-    if (
-        len(relationships) != 1
-        or relationships[0].get("Type") != NUMBERING_REL_TYPE
-        or relationships[0].get("Target") != "numbering.xml"
-        or len(overrides) != 1
-        or overrides[0].get("ContentType") != NUMBERING_CONTENT_TYPE
-    ):
-        raise DocxNumberingImportError("numbering part lacks exact OPC support")
 
 
 def _parse_numbering_part(root: Any) -> tuple[dict[tuple[int, int], _Level], dict[int, _Instance]]:

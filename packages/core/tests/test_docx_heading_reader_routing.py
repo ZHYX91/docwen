@@ -31,7 +31,7 @@ from docwen_core.models.resolved_numbering import (
     load_resolved_numbering_bytes,
 )
 
-from .test_docx_resolved_numbering_v4 import _caption_bindings
+from ._docx_resolved_numbering_support import _caption_bindings
 
 pytestmark = pytest.mark.contract
 
@@ -234,9 +234,8 @@ def test_heading_only_v4_with_no_caption_registry_proves_real_numbering(tmp_path
     [definition] = numbering.findall(qn("w:abstractNum"))
     assert definition.find(qn("w:multiLevelType")).get(qn("w:val")) == "multilevel"
     levels = definition.findall(qn("w:lvl"))
-    assert [item.find(qn("w:pStyle")).get(qn("w:val")) for item in levels] == [
-        f"Heading{index}" for index in range(1, 10)
-    ]
+    assert len(levels) == 9
+    assert not list(definition.iter(qn("w:pStyle")))
     paragraph = _heading_element(document)
     num_pr = paragraph.find(f"{qn('w:pPr')}/{qn('w:numPr')}")
     assert num_pr.find(qn("w:numId")).get(qn("w:val")) == "4"
@@ -252,7 +251,7 @@ def test_heading_only_v4_with_no_caption_registry_proves_real_numbering(tmp_path
     assert imported.numbering is not None
     fact = imported.numbering
     assert (fact.num_id, fact.abstract_num_id, fact.level, fact.number_format) == (4, 0, level, "decimal")
-    assert (fact.level_text, fact.start, fact.suffix, fact.style_id) == (f"%{level}", 1, "space", f"Heading{level}")
+    assert (fact.level_text, fact.start, fact.suffix, fact.style_id) == (f"%{level}", 1, "space", None)
     assert recovery.recovered_captions == ()
 
 

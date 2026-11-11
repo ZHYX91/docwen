@@ -5,7 +5,7 @@ from inspect import Parameter, signature
 
 import pytest
 
-from docwen_application.controller import ApplicationController
+from docwen_application.controller import ApplicationController, CancellationScopeConflictError
 from docwen_application.ports.runtime import CancellationReservationPort, RuntimePort
 from docwen_application.preconversion.pre_converter import PreConversionFailure
 from docwen_core.models.request import ConversionRequest, FileRef
@@ -48,7 +48,7 @@ def test_application_and_runtime_expose_the_cancellation_ownership_contract() ->
     assert _parameter_names(TaskManager, "release_cancellation") == ["self", "task_id"]
 
 
-def test_optional_capture_and_precise_cancel_preserve_legacy_and_exact_identity() -> None:
+def test_optional_capture_and_precise_cancel_preserve_exclusive_identity() -> None:
     """Exercise the real in-memory owner; this is not Runtime publication evidence."""
     request = ConversionRequest(
         request_id="projection-cancellation-owner",
@@ -57,7 +57,8 @@ def test_optional_capture_and_precise_cancel_preserve_legacy_and_exact_identity(
     )
     controller = ApplicationController()
     previous = controller.prepare_execution_cancellation(request)
-    assert controller.prepare_execution_cancellation(request) is previous
+    with pytest.raises(CancellationScopeConflictError, match="already owned"):
+        controller.prepare_execution_cancellation(request)
     controller.cancel(request.request_id)
     assert previous.token.is_cancelled
     controller.release_execution_cancellation(request.request_id, previous)

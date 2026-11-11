@@ -79,14 +79,15 @@ from docwen_plugin_markdown.runtime_semantics_v3 import (
     apply_runtime_semantics_v3,
     prepare_runtime_semantics_v3,
 )
+from docwen_plugin_markdown.template_errors import TemplatePackageError
 from docwen_plugin_markdown.template_filler import fill_template
+from docwen_plugin_markdown.template_ownership import validate_template_placeholder_ownership
 from docwen_plugin_markdown.template_policy import (
     template_attachment_alignment,
     template_gongwen_fields_enabled,
     template_list_separator,
 )
 from docwen_plugin_markdown.template_utils import (
-    TemplatePackageError,
     body_content_extent,
     extract_body_font,
     extract_body_paragraph_format,
@@ -123,6 +124,7 @@ from docwen_plugin_markdown.to_docx.numbering_comments import (
     annotate_native_numbering,
     annotate_numbering_prefixes,
 )
+from docwen_plugin_markdown.to_docx.sections import SectionBreakContext
 from docwen_plugin_markdown.yaml_links import YamlLinkProjection
 from docwen_plugin_markdown.yaml_processor import (
     TITLE_PLACEHOLDER_ALIASES,
@@ -134,6 +136,7 @@ if TYPE_CHECKING:
     from docx.document import Document
 
     from docwen_core.protocols.execution_context import DocumentStyleConverterContext
+    from docwen_plugin_markdown.to_docx.heading_numbering import HeadingNumberingTargets
 
 # ── Media types ─────────────────────────────────────────────────────────
 MEDIA_TYPE_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -630,6 +633,25 @@ def _semantic_v3_package_diagnostic(message: str) -> ConversionDiagnostic:
     )
 
 
+def _save_rendered_document(
+    doc: Document,
+    output_path: str,
+    renderer: MdToDocxRenderer | None,
+    *,
+    native_headings: bool,
+) -> HeadingNumberingTargets | None:
+    """Capture generated heading identities at the final document-save boundary."""
+    targets = None
+    if renderer is not None:
+        renderer.finalize_loss_comments()
+        if native_headings:
+            from docwen_plugin_markdown.to_docx.heading_numbering import capture_heading_numbering_targets
+
+            targets = capture_heading_numbering_targets(doc, renderer.generated_headings)
+    doc.save(output_path)
+    return targets
+
+
 class MdToDocxConverter:
     """Convert Markdown to DOCX using the 5-stage template-driven pipeline.
 
@@ -727,6 +749,7 @@ class MdToDocxConverter:
 
             try:
                 doc = resolve_template(options.get("template_name"))
+                validate_template_placeholder_ownership(doc)
                 validate_body_placeholder_placement(doc)
                 render_body = find_body_placeholder(doc) is not None
             except TemplatePackageError as exc:
@@ -1257,6 +1280,7 @@ class MdToDocxConverter:
                 # Create renderer with explicit doc object (does NOT create its own Document)
                 renderer = MdToDocxRenderer(
                     doc=doc,
+                    section_context=SectionBreakContext(doc, placeholder_para),
                     body_font=body_font,
                     body_style=body_style,
                     body_paragraph_format=body_paragraph_format,
@@ -1356,9 +1380,9 @@ class MdToDocxConverter:
             from docwen_core.docx_table_roles import inject_table_roles, prepare_table_roles
 
             table_roles = prepare_table_roles(doc)
-            if renderer is not None:
-                renderer.finalize_loss_comments()
-            doc.save(output_path)
+            heading_targets = _save_rendered_document(
+                doc, output_path, renderer, native_headings=word_native_translation is not None
+            )
 
             # Write footnote/endnote body elements into the DOCX ZIP parts
             deferred_note_references = 0
@@ -1377,7 +1401,7 @@ class MdToDocxConverter:
                 write_numbering_to_docx(output_path, renderer.list_numbering)
 
             # Write Word-native heading numbering definitions
-            if render_body and word_native_translation is not None:
+            if heading_targets is not None and word_native_translation is not None:
                 from docwen_plugin_markdown.to_docx.heading_numbering import (
                     write_heading_numbering_to_docx,
                 )
@@ -1385,7 +1409,7 @@ class MdToDocxConverter:
                 write_heading_numbering_to_docx(
                     output_path,
                     word_native_translation,
-                    heading_style_ids={level: managed_styles.style_id(f"heading_{level}") for level in range(1, 10)},
+                    targets=heading_targets,
                 )
 
             if semantic_v3_session is not None:

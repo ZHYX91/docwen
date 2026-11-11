@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal
@@ -231,9 +232,14 @@ class _Controller:
         self.released: list[str] = []
         self.requests: list[Any] = []
 
-    def prepare_execution_cancellation(self, request: Any, *, batch: bool = False) -> object:
+    def prepare_execution_cancellation(
+        self, request: Any, *, batch: bool = False, on_reserved: Callable[[object], None] | None = None
+    ) -> object:
         assert batch is False
-        return object()
+        reservation = object()
+        if on_reserved is not None:
+            on_reserved(reservation)
+        return reservation
 
     def describe_runtime_capabilities(self) -> dict[str, Any]:
         return _canonical_runtime_projection(
@@ -297,7 +303,7 @@ class _Controller:
         assert action_name in {"merge_pdfs", "merge_tables", "merge_images_to_tiff"}
         return self.execute_single(request)
 
-    def cancel(self, task_id: str) -> None:
+    def cancel(self, task_id: str, *, reservation: object | None = None) -> None:
         self.cancelled.append(task_id)
 
 

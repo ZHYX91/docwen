@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from pathlib import Path
 
 import lxml.etree as etree
@@ -272,7 +271,7 @@ def test_unmapped_body_keeps_document_defaults_inherited() -> None:
     assert etree.tostring(defaults) == defaults_before
 
 
-def test_length_api_projection_preserves_explicit_zero_and_bounds_cyclic_style_lookup() -> None:
+def test_direct_projection_preserves_explicit_zero_and_bounds_cyclic_style_lookup() -> None:
     template = Document()
     first = template.styles.add_style("FirstCycleStyle", WD_STYLE_TYPE.PARAGRAPH)
     second = template.styles.add_style("SecondCycleStyle", WD_STYLE_TYPE.PARAGRAPH)
@@ -284,11 +283,14 @@ def test_length_api_projection_preserves_explicit_zero_and_bounds_cyclic_style_l
     inherited = second_element.get_or_add_pPr().get_or_add_ind()
     inherited.set(qn("w:firstLineChars"), "200")
     inherited.set(qn("w:leftChars"), "300")
-    template.add_paragraph("{{body}}", style=first)
+    anchor = template.add_paragraph("{{body}}", style=first)
     body_format = extract_body_paragraph_format(template)
     assert body_format is not None
     assert not body_format.indent_attributes
-    body_format = replace(body_format, left_indent=Pt(0), first_line_indent=Pt(0))
+    anchor.paragraph_format.left_indent = Pt(0)
+    anchor.paragraph_format.first_line_indent = Pt(0)
+    body_format = extract_body_paragraph_format(template)
+    assert body_format is not None
     body = template.add_paragraph("Projected", style=first)
     body_format.apply_to(body)
     assert dict(body._p.get_or_add_pPr().get_or_add_ind().attrib) == {

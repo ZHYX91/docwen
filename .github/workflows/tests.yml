@@ -4,7 +4,7 @@ on:
   workflow_call:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, verify/docwen-20261111-combined]
   pull_request:
 
 permissions:

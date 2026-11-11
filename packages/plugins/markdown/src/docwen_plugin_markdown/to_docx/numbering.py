@@ -12,12 +12,15 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import logging
+from collections.abc import Iterable
 from typing import Any
 
 import lxml.etree as etree
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docwen_core.docx_numbering_parts import open_numbering_part
+from docwen_core.docx_numbering_structure import append_numbering_definitions
 from docwen_core.file_io import replace_authorized_file
 from docwen_core.tempfiles import TemporaryDirectory
 
@@ -26,25 +29,6 @@ logger = logging.getLogger(__name__)
 # ── OOXML constants ───────────────────────────────────────────────────────
 
 WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-_RELS_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
-_CT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
-
-NUMBERING_REL_TYPE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering"
-NUMBERING_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"
-
-# Template for an empty numbering.xml
-_NUMBERING_XML_TEMPLATE = (
-    b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    b'<w:numbering xmlns:w="http://schemas.openxmlformats.org/'
-    b'wordprocessingml/2006/main"'
-    b' xmlns:wpc="http://schemas.microsoft.com/office/word/2010/'
-    b'wordprocessingCanvas"'
-    b' xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'
-    b' xmlns:r="http://schemas.openxmlformats.org/officeDocument/'
-    b'2006/relationships">'
-    b"</w:numbering>"
-)
-
 # ── Presets ────────────────────────────────────────────────────────────────
 
 BASE_INDENT = 420  # twips (~0.29 inch)
@@ -65,7 +49,7 @@ UNORDERED_PRESET: dict[str, Any] = {
 }
 
 
-def _element_ids(elements: list[etree._Element], attribute_name: str) -> set[int]:
+def _element_ids(elements: Iterable[etree._Element], attribute_name: str) -> set[int]:
     values: set[int] = set()
     attribute = f"{{{WML_NS}}}{attribute_name}"
     for element in elements:
@@ -85,8 +69,8 @@ def _numbering_ids_from_root(root: etree._Element) -> tuple[set[int], set[int]]:
 
 
 def _numbering_ids_from_elements(
-    abstract_num_elements: list[etree._Element],
-    num_elements: list[etree._Element],
+    abstract_num_elements: Iterable[etree._Element],
+    num_elements: Iterable[etree._Element],
 ) -> tuple[set[int], set[int]]:
     return (
         _element_ids(abstract_num_elements, "abstractNumId"),
@@ -108,17 +92,6 @@ def _numbering_root_from_document(document: Any | None) -> etree._Element | None
         return None
 
 
-def _insert_abstract_num(
-    numbering_root: etree._Element,
-    abstract_num_element: etree._Element,
-) -> None:
-    first_num = numbering_root.find(f"{{{WML_NS}}}num")
-    if first_num is None:
-        numbering_root.append(abstract_num_element)
-    else:
-        first_num.addprevious(abstract_num_element)
-
-
 # ═══════════════════════════════════════════════════════════════════════════
 # Public API
 # ═══════════════════════════════════════════════════════════════════════════
@@ -130,7 +103,7 @@ class DocxListNumbering:
     During MD→DOCX rendering, list numbering definitions (abstractNum
     and num OOXML elements) are accumulated in memory.  After
     ``Document.save()`` they are written into the DOCX ZIP's
-    ``word/numbering.xml`` by :func:`write_numbering_to_docx`.
+    the relationship-owned numbering part by :func:`write_numbering_to_docx`.
 
     This class is **not** a runtime registry; it is a private format
     helper owned by the markdown plugin.
@@ -220,11 +193,9 @@ class DocxListNumbering:
         """``True`` if at least one numbering definition was created."""
         return len(self._num_elements) > 0
 
-    # ── Package-private: used by write_numbering_to_docx ───────────────
-
-    def _get_elements(self) -> tuple[list[etree._Element], list[etree._Element]]:
-        """Return copies of ``(abstract_num_elements, num_elements)``."""
-        return list(self._abstract_num_elements), list(self._num_elements)
+    def definition_elements(self) -> tuple[tuple[etree._Element, ...], tuple[etree._Element, ...]]:
+        """Return the generated projection; writers append independent copies."""
+        return tuple(self._abstract_num_elements), tuple(self._num_elements)
 
     # ── Internal helpers ───────────────────────────────────────────────
 
@@ -357,106 +328,46 @@ def write_numbering_to_docx(
     docx_path: str,
     numbering: DocxListNumbering,
 ) -> None:
-    """Write accumulated numbering definitions into a saved DOCX file.
+    """Append request list definitions to the relationship-owned numbering part.
 
-    Opens *docx_path* as a ZIP, ensures ``word/numbering.xml`` exists,
-    appends the ``abstractNum`` and ``num`` elements collected by
-    *numbering* during rendering, updates relationships and content types,
-    then writes back.
-
-    Must be called **after** ``Document.save()`` so the ZIP contains
-    all body content.
+    Run after Document.save(). All checks precede the atomic replacement;
+    unrelated members and existing OPC support bytes are retained.
     """
     import zipfile
     from pathlib import Path
 
     if not numbering.has_definitions:
         return
-
-    abstract_elems, num_elems = numbering._get_elements()
+    abstract_elems, num_elems = numbering.definition_elements()
     original = Path(docx_path)
-
+    with zipfile.ZipFile(original) as archive:
+        infos = archive.infolist()
+        if len({item.filename for item in infos}) != len(infos):
+            raise ValueError("DOCX contains duplicate ZIP members")
+        data = {item.filename: archive.read(item.filename) for item in infos}
+    part = open_numbering_part(data, create=True)
+    assert part is not None
+    num_root = part.element
+    existing_abstract_num_ids, existing_num_ids = _numbering_ids_from_root(num_root)
+    generated_abstract_num_ids, generated_num_ids = _numbering_ids_from_elements(abstract_elems, num_elems)
+    abstract_collisions = existing_abstract_num_ids & generated_abstract_num_ids
+    num_collisions = existing_num_ids & generated_num_ids
+    if abstract_collisions or num_collisions:
+        raise ValueError(
+            "Generated list numbering IDs collide with the saved template: "
+            f"abstractNumId={sorted(abstract_collisions)}, numId={sorted(num_collisions)}"
+        )
+    append_numbering_definitions(num_root, abstract_elems, num_elems)
+    data[part.name] = etree.tostring(num_root, xml_declaration=True, encoding="UTF-8", standalone=True)
     with TemporaryDirectory(prefix=".dw-numbering-", dir=original.parent) as tmpdir:
-        tmp_path = Path(tmpdir) / "numbering_writeback.docx"
-
-        with (
-            zipfile.ZipFile(str(original), "r") as zf_in,
-            zipfile.ZipFile(str(tmp_path), "w", zipfile.ZIP_DEFLATED) as zf_out,
-        ):
-            names = set(zf_in.namelist())
-
-            # Read relationships and content types once
-            rels_raw = zf_in.read("word/_rels/document.xml.rels")
-            ct_raw = zf_in.read("[Content_Types].xml")
-            rels_root = etree.fromstring(rels_raw)
-            ct_root = etree.fromstring(ct_raw)
-
-            has_numbering = "word/numbering.xml" in names
-
-            if has_numbering:
-                raw = zf_in.read("word/numbering.xml")
-                num_root = etree.fromstring(raw)
-            else:
-                num_root = etree.fromstring(_NUMBERING_XML_TEMPLATE)
-
-            existing_abstract_num_ids, existing_num_ids = _numbering_ids_from_root(num_root)
-            generated_abstract_num_ids, generated_num_ids = _numbering_ids_from_elements(
-                abstract_elems,
-                num_elems,
-            )
-            abstract_collisions = existing_abstract_num_ids & generated_abstract_num_ids
-            num_collisions = existing_num_ids & generated_num_ids
-            if abstract_collisions or num_collisions:
-                raise ValueError(
-                    "Generated list numbering IDs collide with the saved template: "
-                    f"abstractNumId={sorted(abstract_collisions)}, numId={sorted(num_collisions)}"
-                )
-
-            # CT_Numbering schema order is numPicBullet*, abstractNum*, num*.
-            for elem in abstract_elems:
-                _insert_abstract_num(num_root, elem)
-            for elem in num_elems:
-                num_root.append(elem)
-
-            num_bytes = etree.tostring(
-                num_root,
-                xml_declaration=True,
-                encoding="UTF-8",
-                standalone=True,
-            )
-
-            if not has_numbering:
-                _ensure_relationship(rels_root, "numbering.xml", NUMBERING_REL_TYPE)
-                _ensure_content_type(ct_root, "/word/numbering.xml", NUMBERING_CONTENT_TYPE)
-
-            modified_rels = etree.tostring(
-                rels_root,
-                xml_declaration=True,
-                encoding="UTF-8",
-                standalone=True,
-            )
-            modified_ct = etree.tostring(
-                ct_root,
-                xml_declaration=True,
-                encoding="UTF-8",
-                standalone=True,
-            )
-
-            # Rebuild ZIP
-            for item in zf_in.infolist():
-                if item.filename == "word/numbering.xml":
-                    zf_out.writestr(item, num_bytes)
-                elif item.filename == "word/_rels/document.xml.rels":
-                    zf_out.writestr(item, modified_rels)
-                elif item.filename == "[Content_Types].xml":
-                    zf_out.writestr(item, modified_ct)
-                else:
-                    zf_out.writestr(item, zf_in.read(item.filename))
-
-            if not has_numbering:
-                zf_out.writestr("word/numbering.xml", num_bytes)
-
-        replace_authorized_file(tmp_path, original)
+        temporary = Path(tmpdir) / "numbering_writeback.docx"
+        with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as archive:
+            for info in infos:
+                archive.writestr(info, data[info.filename])
+            existing = {info.filename for info in infos}
+            for name in data.keys() - existing:
+                archive.writestr(name, data[name])
+        replace_authorized_file(temporary, original)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -538,43 +449,3 @@ def _create_num(num_id: int, abstract_num_id: int) -> etree._Element:
     an_ref.set(f"{{{WML_NS}}}val", str(abstract_num_id))
 
     return num
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Relationship / content-type helpers  (private)
-# ═══════════════════════════════════════════════════════════════════════════
-
-
-def _ensure_relationship(
-    rels_root: etree._Element,
-    target: str,
-    rel_type: str,
-) -> None:
-    """Add a ``<Relationship>`` for *target* if none exists."""
-    for rel in rels_root.findall(f"{{{_RELS_NS}}}Relationship"):
-        if rel.get("Target") == target:
-            return
-    max_id = 0
-    for rel in rels_root.findall(f"{{{_RELS_NS}}}Relationship"):
-        rid = rel.get("Id", "")
-        if rid.startswith("rId"):
-            with contextlib.suppress(ValueError):
-                max_id = max(max_id, int(rid[3:]))
-    elem = etree.SubElement(rels_root, f"{{{_RELS_NS}}}Relationship")
-    elem.set("Id", f"rId{max_id + 1}")
-    elem.set("Type", rel_type)
-    elem.set("Target", target)
-
-
-def _ensure_content_type(
-    ct_root: etree._Element,
-    part_name: str,
-    content_type: str,
-) -> None:
-    """Add an ``<Override>`` for *part_name* if none exists."""
-    for override in ct_root.findall(f"{{{_CT_NS}}}Override"):
-        if override.get("PartName") == part_name:
-            return
-    elem = etree.SubElement(ct_root, f"{{{_CT_NS}}}Override")
-    elem.set("PartName", part_name)
-    elem.set("ContentType", content_type)

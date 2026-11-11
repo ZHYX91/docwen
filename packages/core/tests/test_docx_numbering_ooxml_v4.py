@@ -494,12 +494,13 @@ def test_existing_numbering_part_requires_exact_opc_support(
     _replace_member(output, member, etree.tostring(root, encoding="UTF-8", xml_declaration=True))
     before = output.read_bytes()
 
-    with pytest.raises(ResolvedNumberingOoxmlError, match="lacks its exact"):
+    expected = "lacks its exact relationship" if mutation == "relationship" else "wrong content type"
+    with pytest.raises(ResolvedNumberingOoxmlError, match=expected):
         write_heading_numbering_projection(output, projection)
     assert output.read_bytes() == before
 
 
-def test_disabled_heading_removes_numpr_without_touching_authored_text() -> None:
+def test_disabled_heading_suppresses_numbering_without_touching_authored_text() -> None:
     document = Document()
     paragraph = document.add_heading("第二章 概述", level=1)
     p_pr = paragraph._p.get_or_add_pPr()
@@ -514,5 +515,22 @@ def test_disabled_heading_removes_numpr_without_touching_authored_text() -> None
         heading_style_ids={1: "Heading1"},
     )
 
-    assert paragraph._p.find(f"{{{WML_NS}}}pPr/{{{WML_NS}}}numPr") is None
+    suppression = paragraph._p.find(f"{qn('w:pPr')}/{qn('w:numPr')}/{qn('w:numId')}")
+    assert suppression is not None and suppression.get(qn("w:val")) == "0"
     assert paragraph.text == "第二章 概述"
+
+
+def test_heading_suppression_keeps_frame_before_numpr() -> None:
+    document = Document()
+    paragraph = document.add_heading("Framed title", level=1)
+    properties = paragraph._p.get_or_add_pPr()
+    frame = etree.SubElement(properties, qn("w:framePr"))
+    frame.set(qn("w:w"), "720")
+    etree.SubElement(properties, qn("w:spacing"))
+    apply_heading_numbering(
+        paragraph,
+        _heading_target(enabled=False),
+        SimpleNamespace(),  # type: ignore[arg-type]
+        heading_style_ids={1: "Heading1"},
+    )
+    assert [etree.QName(child).localname for child in properties] == ["pStyle", "framePr", "numPr", "spacing"]

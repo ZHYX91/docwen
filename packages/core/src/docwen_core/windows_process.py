@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import ctypes
+import subprocess
 import sys
 from ctypes import wintypes
 from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import Any
 
 
@@ -71,3 +73,138 @@ class WindowsProcessIdentity:
                 library.TerminateProcess(handle, 1)
         finally:
             library.CloseHandle(handle)
+
+
+def _windows_job_api() -> Any:
+    """Keep the CPython handle-list launch and public Job APIs in one adapter."""
+    if sys.platform != "win32":
+        raise OSError("Windows Job ownership requires Windows")
+    import _winapi
+    import msvcrt
+
+    import win32job
+    import win32process
+
+    # CPython's CreateProcess adapter consumes STARTUPINFO.lpAttributeList, as
+    # Popen does, while retaining the initial thread handle needed to resume a
+    # CREATE_SUSPENDED launch. Popen closes that handle before returning.
+    return SimpleNamespace(
+        kernel=_winapi,
+        jobs=win32job,
+        threads=win32process,
+        os_handle=msvcrt.get_osfhandle,
+        startup_info=subprocess.STARTUPINFO,
+    )
+
+
+class WindowsJobProcess:
+    """A process starts suspended and cannot spawn before entering its Job.
+
+    No breakaway flags are enabled. Kernel handles and Job membership, rather
+    than process names or PID snapshots, establish signal and cleanup authority.
+    """
+
+    def __init__(self) -> None:
+        self.api = _windows_job_api()
+        self.pid = 0
+        self.process: Any = None
+        self.thread: Any = None
+        self.assigned = False
+        self.job = self.api.jobs.CreateJobObject(None, "")
+        try:
+            limits = self.api.jobs.QueryInformationJobObject(self.job, self.api.jobs.JobObjectExtendedLimitInformation)
+            limits["BasicLimitInformation"]["LimitFlags"] |= self.api.jobs.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+            self.api.jobs.SetInformationJobObject(self.job, self.api.jobs.JobObjectExtendedLimitInformation, limits)
+        except BaseException:
+            self.job.Close()
+            raise
+
+    def start(
+        self,
+        command: list[str],
+        *,
+        stdin: int,
+        stdout: int,
+        cwd: str | None,
+        environment: dict[str, str] | None,
+    ) -> None:
+        kernel = self.api.kernel
+        current = kernel.GetCurrentProcess()
+        inherited: list[int] = []
+        try:
+            for stream in (stdin, stdout):
+                inherited.append(
+                    kernel.DuplicateHandle(
+                        current, self.api.os_handle(stream), current, 0, True, kernel.DUPLICATE_SAME_ACCESS
+                    )
+                )
+            startup = self.api.startup_info()
+            startup.dwFlags |= 0x100  # STARTF_USESTDHANDLES
+            startup.hStdInput, startup.hStdOutput = inherited
+            startup.hStdError = startup.hStdOutput
+            # Do not leak the owner's IPC or any unrelated inherited handle to
+            # Office. Only the explicit file-backed standard streams cross.
+            startup.lpAttributeList = {"handle_list": inherited}
+            self.process, self.thread, self.pid, _thread_id = kernel.CreateProcess(
+                None,
+                subprocess.list2cmdline(command),
+                None,
+                None,
+                True,
+                0x4 | 0x08000000,  # CREATE_SUSPENDED | CREATE_NO_WINDOW
+                environment,
+                cwd,
+                startup,
+            )
+            self.api.jobs.AssignProcessToJobObject(self.job, self.process)
+            self.assigned = True
+            if self.api.threads.ResumeThread(self.thread) != 1:
+                raise OSError("Office primary thread did not have its expected suspended state")
+        finally:
+            for handle in inherited:
+                kernel.CloseHandle(handle)
+
+    def exited(self) -> bool:
+        if self.process is None:
+            return True
+        if self.assigned:
+            accounting = self.api.jobs.QueryInformationJobObject(
+                self.job, self.api.jobs.JobObjectBasicAccountingInformation
+            )
+            if accounting["ActiveProcesses"]:
+                return False
+        state = self.api.kernel.WaitForSingleObject(self.process, 0)
+        if state == 258:  # WAIT_TIMEOUT
+            return False
+        if state != 0:  # WAIT_OBJECT_0
+            raise OSError("Cannot establish Office launcher handle exit")
+        return True
+
+    def terminate(self, *, force: bool) -> None:
+        del force  # A headless Windows process has no safe generic soft signal.
+        if self.process is None:
+            return
+        if self.assigned:
+            self.api.jobs.TerminateJobObject(self.job, 1)
+        elif self.api.kernel.WaitForSingleObject(self.process, 0) == 258:
+            # Assignment failed before ResumeThread. No Office code, and hence
+            # no Office child, has run; terminate only this retained handle.
+            self.api.kernel.TerminateProcess(self.process, 1)
+
+    def reap(self) -> int:
+        if self.process is None:
+            return -1
+        if not self.exited():
+            raise OSError("Office Job is still active")
+        return int(self.api.kernel.GetExitCodeProcess(self.process))
+
+    def close(self) -> None:
+        try:
+            self.job.Close()
+        finally:
+            try:
+                if self.thread is not None:
+                    self.api.kernel.CloseHandle(self.thread)
+            finally:
+                if self.process is not None:
+                    self.api.kernel.CloseHandle(self.process)

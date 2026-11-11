@@ -1,10 +1,9 @@
 """Complete the request-owned DOCX style registry before rendering.
 
 The public identity contract lives in :mod:`docwen_core.docx_styles`. This
-module owns only OOXML mechanics: recognize legacy localized styles, complete
-DocWen-owned dependencies in the output copy, resolve host and DocWen IDs
-without losing user formatting, update the main-document style domain, and
-keep Word's optional ``stylesWithEffects`` copy in sync.
+module owns only OOXML mechanics: recognize existing localized styles without
+changing their identities, complete missing dependencies in the output copy,
+and complete Word's optional ``stylesWithEffects`` registry independently.
 """
 
 from __future__ import annotations
@@ -29,33 +28,11 @@ from docwen_core.docx_styles import (
     DocumentStyleDefinition,
     DocumentStyleFormat,
 )
+from docwen_plugin_markdown.to_docx.style_parts import StylePackageParts
 
 if TYPE_CHECKING:
     from docx.document import Document as DocumentObject
 
-_PRIMARY_STYLES_PART: Final = "word/styles.xml"
-_EFFECTS_STYLES_PART: Final = "word/stylesWithEffects.xml"
-_REFERENCE_PART_NAMES: Final = frozenset(
-    {
-        "word/document.xml",
-        "word/comments.xml",
-        "word/footnotes.xml",
-        "word/endnotes.xml",
-        "word/numbering.xml",
-    }
-)
-_REFERENCE_PREFIXES: Final = ("word/header", "word/footer")
-_REFERENCE_TAGS: Final = (
-    "pStyle",
-    "rStyle",
-    "tblStyle",
-    "basedOn",
-    "next",
-    "link",
-    "numStyleLink",
-    "styleLink",
-)
-_REFERENCE_QNAMES: Final = tuple(qn(f"w:{tag}") for tag in _REFERENCE_TAGS)
 _DIRECT_STYLE_REFERENCE_TYPES: Final = {
     qn("w:pStyle"): "paragraph",
     qn("w:rStyle"): "character",
@@ -133,6 +110,13 @@ class _PreservedStyleReference:
 
 
 @dataclass(frozen=True, slots=True)
+class _StyleIdentity:
+    style_id: str
+    names: tuple[bytes, ...]
+    aliases: tuple[bytes, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class ManagedStyleBindings:
     """Request-owned stable styles, rebound after any save/reopen cycle."""
 
@@ -140,6 +124,9 @@ class ManagedStyleBindings:
     foundation_style_ids: tuple[tuple[str, str], ...]
     conflicts: tuple[ManagedStyleConflict, ...] = ()
     preserved_invalid_references: tuple[_PreservedStyleReference, ...] = ()
+    identities: tuple[_StyleIdentity, ...] = ()
+    effects_style_ids: tuple[tuple[str, str], ...] | None = None
+    effects_identities: tuple[_StyleIdentity, ...] | None = None
 
     def get(self, semantic_key: str) -> BaseStyle:
         for key, style in self.styles:
@@ -166,7 +153,6 @@ class _StyleMatch:
 @dataclass(frozen=True, slots=True)
 class _CompletionPlan:
     matches: tuple[_StyleMatch, ...]
-    migrations: tuple[tuple[str, str], ...]
     conflicts: tuple[ManagedStyleConflict, ...] = ()
 
 
@@ -182,9 +168,9 @@ def complete_managed_styles(
     All identity/type conflicts are detected before the supplied document is
     mutated. Missing DocWen-managed styles and their three foundation
     dependencies are then synthesized in the request-owned copy. A save/ZIP/
-    reopen round-trip updates generic OOXML parts and Word's parallel
-    ``stylesWithEffects`` registry. Callers must discard proxies obtained from
-    the input document.
+    reopen round-trip completes Word's parallel ``stylesWithEffects`` registry.
+    Existing names, aliases, IDs and their dependent fields remain unchanged.
+    Callers must discard proxies obtained from the input document.
     """
 
     try:
@@ -209,7 +195,6 @@ def complete_managed_styles(
         working.save(serialized)
         completed_blob = _rewrite_serialized_package(
             serialized.getvalue(),
-            plan,
             effects_plan,
             catalog,
             code_font=code_font,
@@ -219,22 +204,38 @@ def complete_managed_styles(
         conflicts = _dedupe_conflicts(
             (*resolution_conflicts, *plan.conflicts, *(effects_plan.conflicts if effects_plan is not None else ()))
         )
-        baseline = _invalid_reference_occurrences(source_blob, dict(plan.migrations))
-        bindings = _bind_and_validate(completed, catalog, plan, conflicts)
+        baseline = _invalid_reference_occurrences(source_blob)
+        bindings = _bind_and_validate(completed, plan, conflicts)
         expected_ids = tuple((match.definition.semantic_key, match.output_style_id) for match in plan.matches)
         effects_expected_ids = (
             tuple((match.definition.semantic_key, match.output_style_id) for match in effects_plan.matches)
             if effects_plan is not None
             else None
         )
+        identities = _plan_identities(primary_root, plan)
+        effects_identities = None
+        if effects_plan is not None:
+            with ZipFile(BytesIO(completed_blob)) as archive:
+                effects = StylePackageParts.read(archive).effects
+                if effects is None:
+                    _internal("The parallel style registry disappeared after completion.")
+                effects_identities = _plan_identities(effects.element, effects_plan)
         _validate_serialized_package(
             completed_blob,
             catalog,
             expected_ids=expected_ids,
             effects_expected_ids=effects_expected_ids,
             preserved_invalid_references=baseline,
+            identities=identities,
+            effects_identities=effects_identities,
         )
-        bindings = replace(bindings, preserved_invalid_references=_bind_preserved_references(completed, baseline))
+        bindings = replace(
+            bindings,
+            preserved_invalid_references=_bind_preserved_references(completed, baseline),
+            identities=identities,
+            effects_style_ids=effects_expected_ids,
+            effects_identities=effects_identities,
+        )
         return completed, bindings
     except ManagedStyleCompletionError:
         raise
@@ -262,8 +263,8 @@ def _preflight(
 
     claimed: dict[int, str] = {}
     matches: list[_StyleMatch] = []
-    migrations: list[tuple[str, str]] = []
     conflicts: list[ManagedStyleConflict] = []
+    occupied_ids = {style.get(qn("w:styleId"), "") for style in styles} | set(resolved_by_key.values())
     for definition in _ALL_STYLE_DEFINITIONS:
         output_name = _output_name(definition, catalog)
         output_style_id = resolved_by_key[definition.semantic_key]
@@ -285,6 +286,19 @@ def _preflight(
         ]
         candidates = _unique_elements((*id_hits, *name_hits))
         candidate = _select_candidate(candidates, definition, output_style_id)
+        if candidate is not None:
+            _require_type(candidate, definition)
+            owner = claimed.setdefault(id(candidate), definition.semantic_key)
+            if owner != definition.semantic_key:
+                _conflict(f"One physical style matches both {owner!r} and {definition.semantic_key!r}.")
+            output_style_id = candidate.get(qn("w:styleId"), "")
+            output_name = _style_name(candidate)
+        elif _styles_by_id(root, output_style_id):
+            output_style_id = _allocate_collision_free_style_id(definition.style_id, occupied_ids)
+            occupied_ids.add(output_style_id)
+            conflicts.append(
+                _preserved_collision(definition, output_style_id, "An existing parallel style identity was preserved.")
+            )
         if len(candidates) > 1 or len(all_name_hits) != len(name_hits):
             conflicts.append(
                 _preserved_collision(
@@ -294,23 +308,12 @@ def _preflight(
                     "all non-selected styles were preserved.",
                 )
             )
-        if candidate is not None:
-            _require_type(candidate, definition)
-            owner = claimed.setdefault(id(candidate), definition.semantic_key)
-            if owner != definition.semantic_key:
-                _conflict(f"One physical style matches both {owner!r} and {definition.semantic_key!r}.")
-            old_id = candidate.get(qn("w:styleId"), "")
-            if old_id != output_style_id:
-                migrations.append((old_id, output_style_id))
         matches.append(_StyleMatch(definition, candidate, output_name, output_style_id))
 
     target_ids = [match.output_style_id for match in matches]
     if len(target_ids) != len(set(target_ids)):
         _internal("The managed style registry contains duplicate stable IDs.")
-    migration_targets = {target for _source, target in migrations}
-    if len(migration_targets) != len(migrations):
-        _conflict("Multiple legacy styles would migrate to the same stable styleId.")
-    return _CompletionPlan(tuple(matches), tuple(migrations), _dedupe_conflicts(conflicts))
+    return _CompletionPlan(tuple(matches), _dedupe_conflicts(conflicts))
 
 
 def _resolve_output_style_ids(
@@ -318,7 +321,7 @@ def _resolve_output_style_ids(
     effects_root: etree._Element | None,
     catalog: DocumentStyleCatalog,
 ) -> tuple[tuple[tuple[str, str], ...], tuple[ManagedStyleConflict, ...]]:
-    """Choose one collision-free managed ID shared by both Word style parts."""
+    """Prefer primary identities and reserve safe IDs for missing styles."""
 
     roots = (primary_root,) if effects_root is None else (primary_root, effects_root)
     used_ids = {
@@ -330,11 +333,7 @@ def _resolve_output_style_ids(
     resolved: list[tuple[str, str]] = []
     conflicts: list[ManagedStyleConflict] = []
     for definition in _ALL_STYLE_DEFINITIONS:
-        preferred_id = (
-            _resolve_builtin_style_id(primary_root, definition, catalog)
-            if definition in _FOUNDATION_STYLE_DEFINITIONS or definition.is_builtin
-            else definition.style_id
-        )
+        preferred_id = _resolve_existing_style_id(primary_root, definition, catalog)
         recognition_names = _recognition_names(definition, catalog)
         recognition_identities = {_normalize_name(name) for name in recognition_names}
         visible_identity_conflict = any(
@@ -343,6 +342,21 @@ def _resolve_output_style_ids(
             for root in roots
             for candidate in root.findall(qn("w:style"))
         )
+        existing = _style_by_id(primary_root, preferred_id)
+        if existing is not None and _compatible_identity(existing, definition, recognition_names):
+            # Template identities are opaque to us: names/IDs may also occur
+            # inside fields, unknown extensions and other package parts.
+            resolved.append((definition.semantic_key, preferred_id))
+            if preferred_id != definition.style_id and _styles_by_id(primary_root, definition.style_id):
+                conflicts.append(
+                    _preserved_collision(
+                        definition,
+                        preferred_id,
+                        "The canonical styleId belongs to another template identity; "
+                        "the existing recognized style was reused without renaming either style.",
+                    )
+                )
+            continue
         stable_is_safe = (
             all(
                 not (candidates := _styles_by_id(root, preferred_id))
@@ -368,20 +382,17 @@ def _resolve_output_style_ids(
     return tuple(resolved), tuple(conflicts)
 
 
-def _resolve_builtin_style_id(
+def _resolve_existing_style_id(
     primary_root: etree._Element,
     definition: DocumentStyleDefinition,
     catalog: DocumentStyleCatalog,
 ) -> str:
-    """Reuse one compatible host ID; newly injected built-ins stay canonical."""
+    """Reuse an unambiguous template identity; newly injected styles stay canonical."""
 
     recognition_names = _recognition_names(definition, catalog)
     stable = _style_by_id(primary_root, definition.style_id)
-    if stable is not None:
-        if _compatible_identity(stable, definition, recognition_names):
-            return definition.style_id
+    if stable is not None and _compatible_identity(stable, definition, recognition_names):
         return definition.style_id
-
     candidates = _unique_elements(
         candidate
         for candidate in primary_root.findall(qn("w:style"))
@@ -470,7 +481,6 @@ def _apply_primary_plan(
     code_font: str | None,
     code_background_color: str | None,
 ) -> None:
-    migration = dict(plan.migrations)
     resolved_by_stable_id = {match.definition.style_id: match.output_style_id for match in plan.matches}
     for match in plan.matches:
         definition = match.definition
@@ -493,39 +503,25 @@ def _apply_primary_plan(
                 # default for unstyled paragraphs, runs or tables.
                 del style.attrib[qn("w:default")]
             root.append(style)
-        else:
-            style.set(qn("w:styleId"), match.output_style_id)
-            _set_style_name(style, match.output_name)
-            _remove_children(style, "aliases")
-            if definition.semantic_key in _CUSTOM_KEYS:
-                style.set(qn("w:customStyle"), "1")
-            else:
-                custom_style = qn("w:customStyle")
-                if custom_style in style.attrib:
-                    del style.attrib[custom_style]
-    rewrite_style_refs_in_element(root, migration)
 
 
 def _rewrite_serialized_package(
     blob: bytes,
-    plan: _CompletionPlan,
     effects_plan: _CompletionPlan | None,
     catalog: DocumentStyleCatalog,
     *,
     code_font: str | None,
     code_background_color: str | None,
 ) -> bytes:
-    migration = dict(plan.migrations)
     source = BytesIO(blob)
     target = BytesIO()
     with ZipFile(source, "r") as archive_in, ZipFile(target, "w", allowZip64=True) as archive_out:
-        names = archive_in.namelist()
-        if _PRIMARY_STYLES_PART not in names:
-            _internal("DOCX package has no primary styles.xml part.")
+        parts = StylePackageParts.read(archive_in)
+        effects_name = parts.effects.name if parts.effects is not None else None
         saw_effects = False
         for item in archive_in.infolist():
             payload = archive_in.read(item.filename)
-            if item.filename == _EFFECTS_STYLES_PART:
+            if item.filename == effects_name:
                 saw_effects = True
                 if effects_plan is None:
                     _internal("The parallel style part appeared after preflight.")
@@ -536,10 +532,6 @@ def _rewrite_serialized_package(
                     code_font=code_font,
                     code_background_color=code_background_color,
                 )
-            elif _is_reference_part(item.filename):
-                root = etree.fromstring(payload)
-                rewrite_style_refs_in_element(root, migration)
-                payload = _serialize_xml(root)
             _write_zip_member(archive_out, item, payload)
         if effects_plan is not None and not saw_effects:
             _internal("The parallel style registry disappeared after preflight.")
@@ -571,49 +563,21 @@ def _complete_effects_part(
 
 def _preflight_serialized_package(blob: bytes) -> etree._Element | None:
     with ZipFile(BytesIO(blob), "r") as archive:
-        names = archive.namelist()
-        if len(names) != len(set(names)):
-            _internal("DOCX package contains duplicate ZIP members.")
-        if _PRIMARY_STYLES_PART not in names:
-            _internal("DOCX package has no primary styles.xml part.")
-        for name in names:
-            if _is_reference_part(name):
-                etree.fromstring(archive.read(name))
-        if _EFFECTS_STYLES_PART not in names:
-            return None
-        return etree.fromstring(archive.read(_EFFECTS_STYLES_PART))
-
-
-def rewrite_style_refs_in_element(root: etree._Element, old_to_new: dict[str, str]) -> int:
-    """Rewrite the frozen set of WordprocessingML style-reference values."""
-
-    changed = 0
-    if not old_to_new:
-        return changed
-    for tag in _REFERENCE_QNAMES:
-        for element in root.iter(tag):
-            current = element.get(qn("w:val"))
-            replacement = old_to_new.get(current or "")
-            if replacement is not None:
-                element.set(qn("w:val"), replacement)
-                changed += 1
-    return changed
+        effects = StylePackageParts.read(archive).effects
+        return effects.element if effects is not None else None
 
 
 def _plan_signature(
     plan: _CompletionPlan,
-) -> tuple[tuple[tuple[str, str | None, str, str], ...], tuple[tuple[str, str], ...]]:
-    return (
-        tuple(
-            (
-                match.definition.semantic_key,
-                match.candidate.get(qn("w:styleId")) if match.candidate is not None else None,
-                match.output_name,
-                match.output_style_id,
-            )
-            for match in plan.matches
-        ),
-        plan.migrations,
+) -> tuple[tuple[str, str | None, str, str], ...]:
+    return tuple(
+        (
+            match.definition.semantic_key,
+            match.candidate.get(qn("w:styleId")) if match.candidate is not None else None,
+            match.output_name,
+            match.output_style_id,
+        )
+        for match in plan.matches
     )
 
 
@@ -927,7 +891,6 @@ def _heading_level(semantic_key: str) -> int | None:
 
 def _bind_and_validate(
     document: DocumentObject,
-    catalog: DocumentStyleCatalog,
     plan: _CompletionPlan,
     conflicts: tuple[ManagedStyleConflict, ...],
 ) -> ManagedStyleBindings:
@@ -945,10 +908,8 @@ def _bind_and_validate(
         if style_element is None:
             _internal(f"Managed style {match.output_style_id!r} has no OOXML definition.")
         _require_type(style_element, definition)
-        if _style_name(style_element) != _output_name(definition, catalog):
+        if _style_name(style_element) != match.output_name:
             _internal(f"Managed style {match.output_style_id!r} has the wrong output name.")
-        if style_element.find(qn("w:aliases")) is not None:
-            _internal(f"Managed style {match.output_style_id!r} still has aliases.")
         bindings.append((definition.semantic_key, style))
     foundation_ids = tuple(
         (match.definition.semantic_key, match.output_style_id)
@@ -958,6 +919,33 @@ def _bind_and_validate(
     return ManagedStyleBindings(tuple(bindings), foundation_ids, conflicts)
 
 
+def _style_identity(element: etree._Element) -> _StyleIdentity:
+    return _StyleIdentity(
+        element.get(qn("w:styleId"), ""),
+        tuple(_reference_xml(name) for name in element.findall(qn("w:name"))),
+        tuple(_reference_xml(alias) for alias in element.findall(qn("w:aliases"))),
+    )
+
+
+def _plan_identities(root: etree._Element, plan: _CompletionPlan) -> tuple[_StyleIdentity, ...]:
+    identities: list[_StyleIdentity] = []
+    for match in plan.matches:
+        element = _style_by_id(root, match.output_style_id)
+        if element is None:
+            _internal(f"Managed style {match.output_style_id!r} has no unique identity.")
+        identities.append(_style_identity(element))
+    return tuple(identities)
+
+
+def _validate_identity(
+    element: etree._Element,
+    expected: _StyleIdentity | None,
+) -> None:
+    actual = _style_identity(element)
+    if actual != expected:
+        _internal(f"Managed style {actual.style_id!r} changed its completed identity after rendering.")
+
+
 def _validate_serialized_package(
     blob: bytes,
     catalog: DocumentStyleCatalog,
@@ -965,13 +953,17 @@ def _validate_serialized_package(
     expected_ids: tuple[tuple[str, str], ...],
     effects_expected_ids: tuple[tuple[str, str], ...] | None,
     preserved_invalid_references: tuple[tuple[str, bytes], ...] = (),
+    identities: tuple[_StyleIdentity, ...] = (),
+    effects_identities: tuple[_StyleIdentity, ...] | None = None,
 ) -> None:
     expected_by_key = dict(expected_ids)
+    expected_identities = {identity.style_id: identity for identity in identities}
     with ZipFile(BytesIO(blob), "r") as archive:
         entry_names = [item.filename for item in archive.infolist()]
         if len(entry_names) != len(set(entry_names)):
             _internal("Final DOCX package contains duplicate ZIP member names.")
-        primary = etree.fromstring(archive.read(_PRIMARY_STYLES_PART))
+        parts = StylePackageParts.read(archive)
+        primary = parts.primary.element
         primary_by_id = _style_elements_by_id(primary)
         style_types = {style_id: element.get(qn("w:type"), "") for style_id, element in primary_by_id.items()}
         for definition in _ALL_STYLE_DEFINITIONS:
@@ -979,21 +971,16 @@ def _validate_serialized_package(
             element = primary_by_id.get(expected_id)
             if element is None or style_types.get(expected_id) != definition.kind:
                 _internal(f"Managed style {expected_id!r} failed package validation.")
-            if _style_name(element) != _output_name(definition, catalog):
-                _internal(f"Managed style {expected_id!r} has the wrong final output name.")
-            if element.find(qn("w:aliases")) is not None:
-                _internal(f"Managed style {expected_id!r} regained aliases after rendering.")
+            _validate_identity(element, expected_identities.get(expected_id))
         allowances = Counter(preserved_invalid_references)
-        for item in archive.infolist():
-            if not (_is_reference_part(item.filename) or item.filename == _PRIMARY_STYLES_PART):
-                continue
-            root = etree.fromstring(archive.read(item.filename))
-            _validate_reference_root(root, style_types, item.filename, allowances)
-        if _EFFECTS_STYLES_PART in archive.namelist():
+        for part in (*parts.references, parts.primary):
+            _validate_reference_root(part.element, style_types, part.name, allowances)
+        if parts.effects is not None:
             if effects_expected_ids is None:
                 _internal("Parallel style registry appeared without a resolved identity map.")
             effects_expected_by_key = dict(effects_expected_ids)
-            effects = etree.fromstring(archive.read(_EFFECTS_STYLES_PART))
+            expected_effects_identities = {identity.style_id: identity for identity in effects_identities or ()}
+            effects = parts.effects.element
             effects_by_id = _style_elements_by_id(effects)
             effects_types = {style_id: element.get(qn("w:type"), "") for style_id, element in effects_by_id.items()}
             for definition in _ALL_STYLE_DEFINITIONS:
@@ -1001,32 +988,29 @@ def _validate_serialized_package(
                 element = effects_by_id.get(expected_id)
                 if element is None or element.get(qn("w:type")) != definition.kind:
                     _internal(f"Parallel style {expected_id!r} is missing or invalid.")
-                if _style_name(element) != _output_name(definition, catalog):
-                    _internal(f"Parallel style {expected_id!r} has the wrong output name.")
-                if element.find(qn("w:aliases")) is not None:
-                    _internal(f"Parallel style {expected_id!r} regained aliases after rendering.")
-            _validate_reference_root(effects, effects_types, _EFFECTS_STYLES_PART, allowances)
+                _validate_identity(element, expected_effects_identities.get(expected_id))
+            _validate_reference_root(effects, effects_types, parts.effects.name, allowances)
+        elif effects_expected_ids is not None:
+            _internal("The parallel style registry disappeared after completion.")
 
 
 def validate_managed_style_package(
     blob: bytes,
     catalog: DocumentStyleCatalog,
-    bindings: ManagedStyleBindings | None = None,
+    bindings: ManagedStyleBindings,
 ) -> None:
     """Validate final DOCX managed identities and direct style references."""
 
     try:
-        expected_ids = (
-            (*bindings.foundation_style_ids, *bindings.style_ids)
-            if bindings is not None
-            else tuple((definition.semantic_key, definition.style_id) for definition in _ALL_STYLE_DEFINITIONS)
-        )
+        expected_ids = (*bindings.foundation_style_ids, *bindings.style_ids)
         _validate_serialized_package(
             blob,
             catalog,
             expected_ids=expected_ids,
-            effects_expected_ids=expected_ids,
-            preserved_invalid_references=_current_preserved_occurrences(bindings) if bindings else (),
+            effects_expected_ids=bindings.effects_style_ids,
+            preserved_invalid_references=_current_preserved_occurrences(bindings),
+            identities=bindings.identities,
+            effects_identities=bindings.effects_identities,
         )
     except ManagedStyleCompletionError:
         raise
@@ -1057,9 +1041,10 @@ def _bind_preserved_references(
     package = document.part.package
     if package is None:
         _internal("Request-owned DOCX has no owning package for style-reference provenance.")
+    baseline_parts = {name for name, _reference in baseline}
     for part in package.parts:
         part_name = str(part.partname).lstrip("/")
-        if not (_is_reference_part(part_name) or part_name in {_PRIMARY_STYLES_PART, _EFFECTS_STYLES_PART}):
+        if part_name not in baseline_parts:
             continue
         root = _part_reference_root(part)
         original_blob = None
@@ -1130,29 +1115,26 @@ def _reference_occurrence(element: etree._Element, part_name: str) -> tuple[str,
     return part_name, _reference_xml(element) + b"\0" + etree.tostring(owner, method="c14n", exclusive=True)
 
 
-def _invalid_reference_occurrences(blob: bytes, migrations: dict[str, str]) -> tuple[tuple[str, bytes], ...]:
+def _invalid_reference_occurrences(blob: bytes) -> tuple[tuple[str, bytes], ...]:
     result: list[tuple[str, bytes]] = []
     with ZipFile(BytesIO(blob)) as archive:
-        primary = etree.fromstring(archive.read(_PRIMARY_STYLES_PART))
-        rewrite_style_refs_in_element(primary, migrations)
+        parts = StylePackageParts.read(archive)
+        primary = parts.primary.element
         style_types = {
-            migrations.get(style_id, style_id): element.get(qn("w:type"), "")
-            for style_id, element in _style_elements_by_id(primary).items()
+            style_id: element.get(qn("w:type"), "") for style_id, element in _style_elements_by_id(primary).items()
         }
-        for name in archive.namelist():
-            if not (_is_reference_part(name) or name in {_PRIMARY_STYLES_PART, _EFFECTS_STYLES_PART}):
-                continue
-            root = etree.fromstring(archive.read(name))
-            rewrite_style_refs_in_element(root, migrations)
+        references = (*parts.references, parts.primary, *((parts.effects,) if parts.effects is not None else ()))
+        for part in references:
+            root = part.element
             types = style_types
-            if name == _EFFECTS_STYLES_PART:
+            if part is parts.effects:
                 types = {
                     style_id: element.get(qn("w:type"), "") for style_id, element in _style_elements_by_id(root).items()
                 }
             for tag, expected in _DIRECT_STYLE_REFERENCE_TYPES.items():
                 for element in root.iter(tag):
                     if types.get(element.get(qn("w:val"), "")) != expected:
-                        result.append(_reference_occurrence(element, name))
+                        result.append(_reference_occurrence(element, part.name))
     return tuple(result)
 
 
@@ -1202,19 +1184,6 @@ def _style_name(style: etree._Element) -> str:
     return name.get(qn("w:val"), "") if name is not None else ""
 
 
-def _set_style_name(style: etree._Element, value: str) -> None:
-    name = style.find(qn("w:name"))
-    if name is None:
-        name = OxmlElement("w:name")
-        style.insert(0, name)
-    name.set(qn("w:val"), value)
-
-
-def _remove_children(style: etree._Element, child_name: str) -> None:
-    for child in style.findall(qn(f"w:{child_name}")):
-        style.remove(child)
-
-
 def _require_type(element: etree._Element, definition: DocumentStyleDefinition) -> None:
     actual = element.get(qn("w:type"), "")
     if actual != definition.kind:
@@ -1244,10 +1213,6 @@ def _unique_elements(elements) -> list[etree._Element]:
             result.append(element)
             seen.add(id(element))
     return result
-
-
-def _is_reference_part(name: str) -> bool:
-    return name in _REFERENCE_PART_NAMES or (name.endswith(".xml") and name.startswith(_REFERENCE_PREFIXES))
 
 
 def _serialize_xml(root: etree._Element) -> bytes:
@@ -1282,6 +1247,5 @@ __all__ = [
     "ManagedStyleCompletionError",
     "ManagedStyleConflict",
     "complete_managed_styles",
-    "rewrite_style_refs_in_element",
     "validate_managed_style_package",
 ]

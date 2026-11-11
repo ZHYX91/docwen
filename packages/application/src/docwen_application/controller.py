@@ -32,6 +32,10 @@ class ControllerError(DocWenError):
     """Raised when the controller encounters an error."""
 
 
+class CancellationScopeConflictError(ControllerError):
+    """The requested cancellation identity is already owned by another caller."""
+
+
 class CapabilityUnavailableError(ControllerError):
     """Raised when the injected runtime cannot reflect its capabilities."""
 
@@ -203,8 +207,9 @@ class ApplicationController:
 
         ``on_reserved`` captures the exact release handle before any alias is
         published. It must only record that handle: it runs under the scope
-        lock. This exclusive capture mode refuses an already owned task ID;
-        callers without the callback retain their existing reuse semantics.
+        lock. Preparation always reserves a new owner and refuses an already
+        owned task ID. Execution subsequently claims that retained scope;
+        preparing it a second time cannot acquire another caller's handle.
         """
         return self._obtain_cancellation_scope(request, batch=batch, claim=False, retain=True, on_reserved=on_reserved)
 
@@ -300,28 +305,30 @@ class ApplicationController:
         canonical_task_id, aliases, runtime_task_ids = self._cancellation_scope_shape(request, batch=batch)
         with self._cancellation_lock:
             existing = self._cancellation_scopes.get(canonical_task_id)
-            if existing is not None and on_reserved is not None:
-                # A failed capture must never acquire or release another
-                # presentation owner's retained scope, even for the same ID.
-                raise ControllerError(f"Cancellation scope is already owned: {canonical_task_id!r}")
+            if existing is not None and retain:
+                # Only execution may claim a prepared scope. A second
+                # preparation must never acquire its existing release handle.
+                state = "awaiting release" if existing.phase == "committed" else "already owned"
+                raise CancellationScopeConflictError(f"Cancellation scope is {state}: {canonical_task_id!r}")
             if existing is not None and existing.phase == "committed":
                 if existing.retain_until_release:
-                    raise ControllerError(f"Cancellation scope is awaiting release: {canonical_task_id!r}")
+                    raise CancellationScopeConflictError(
+                        f"Cancellation scope is awaiting release: {canonical_task_id!r}"
+                    )
                 self._remove_cancellation_scope_locked(existing)
                 existing = None
             if existing is not None:
                 if existing.aliases != aliases or existing.runtime_task_ids != runtime_task_ids:
-                    raise ControllerError(f"Cancellation scope shape changed for {canonical_task_id!r}")
+                    raise CancellationScopeConflictError(f"Cancellation scope shape changed for {canonical_task_id!r}")
                 if claim and existing.claimed:
-                    raise ControllerError(f"Execution is already active for {canonical_task_id!r}")
-                existing.retain_until_release = existing.retain_until_release or retain
+                    raise CancellationScopeConflictError(f"Execution is already active for {canonical_task_id!r}")
                 if claim:
                     existing.claimed = True
                 return existing
 
             for alias in aliases:
                 if alias in self._cancellation_scopes:
-                    raise ControllerError(f"Cancellation task id is already active: {alias!r}")
+                    raise CancellationScopeConflictError(f"Cancellation task id is already active: {alias!r}")
             scope = _ExecutionCancellationScope(
                 canonical_task_id=canonical_task_id,
                 aliases=aliases,

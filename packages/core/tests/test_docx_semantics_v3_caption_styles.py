@@ -13,7 +13,6 @@ import lxml.etree as etree
 import pytest
 from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 from docwen_core._docx_semantics_v3_styles import caption_style_binding_map_xml
@@ -73,16 +72,16 @@ def test_addressable_standalone_caption_uses_authenticated_caption_only_target(t
     source = "Figure: Planned architecture ^Plan"
     document = Document()
     bindings, styles = _add_caption_styles(document)
-    caption = document.add_paragraph(style=styles["figure_caption"])
-    caption.add_run("Figure ")
-    append_complex_field(caption, instruction=" SEQ Figure \\* ARABIC ", cached_result="1")
-    caption.add_run(": Planned architecture")
     session = DocxSemanticsV3Session(
         document,
         source_sha256=hashlib.sha256(source.encode()).hexdigest(),
         caption_style_bindings=bindings,
         standalone_caption_authority=True,
     )
+    caption = document.add_paragraph(style=styles["figure_caption"])
+    caption.add_run("Figure ")
+    append_complex_field(caption, instruction=" SEQ Figure \\* ARABIC ", cached_result="1")
+    caption.add_run(": Planned architecture")
     session.bind_caption(
         caption,
         (),
@@ -148,7 +147,6 @@ def test_recovery_rejects_missing_caption_style_map(tmp_path: Path) -> None:
         ("missing", "does not resolve one exact"),
         ("type", "does not resolve one exact"),
         ("name", "visible name is not exact"),
-        ("alias", "must not use aliases"),
         ("duplicate_id", "does not resolve one exact"),
     ),
 )
@@ -163,10 +161,6 @@ def test_styles_registry_damage_fails_closed(tmp_path: Path, damage: str, messag
             style.set(qn("w:type"), "character")
         elif damage == "name":
             style.find(qn("w:name")).set(qn("w:val"), "Not Table Caption")
-        elif damage == "alias":
-            alias = OxmlElement("w:aliases")
-            alias.set(qn("w:val"), "Alias")
-            style.append(alias)
         else:
             duplicate = deepcopy(style)
             root.append(duplicate)

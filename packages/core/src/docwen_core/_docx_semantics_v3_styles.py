@@ -7,14 +7,13 @@ from collections.abc import Iterable
 from typing import Any, Final
 from zipfile import ZipFile
 
-import lxml.etree as etree
-
 from docwen_core._docx_semantics_v3_model import (
     CAPTION_STYLE_BINDING_MAP_NAMESPACE,
     CaptionStyleBindingV3,
     CaptionStyleKeyV3,
     DocxSemanticsV3Error,
 )
+from docwen_core.docx_package_parts import STYLES, DocxPackageParts, DocxPartError
 
 CAPTION_STYLE_KEYS_V3: Final[tuple[CaptionStyleKeyV3, ...]] = (
     "figure_caption",
@@ -30,6 +29,9 @@ _KIND_TO_KEY: Final = {
 }
 _XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
 _WORD_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+# Word's styleId is ST_String, not an XML name or a DocWen-generated identifier.
+# XML 1.0 Char excludes surrogate code points and non-XML control characters.
+_XML_STRING = re.compile(r"[\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD\U00010000-\U0010FFFF]+")
 
 
 def validate_caption_style_bindings(
@@ -42,9 +44,13 @@ def validate_caption_style_bindings(
     for item in values:
         if item.semantic_key not in CAPTION_STYLE_KEYS_V3 or item.semantic_key in by_key:
             raise DocxSemanticsV3Error("caption-style map semantic keys are not the exact closed set")
-        if re.fullmatch(r"[A-Za-z][A-Za-z0-9]{0,252}", item.resolved_style_id) is None:
-            raise DocxSemanticsV3Error("caption-style resolved style ID is not canonical")
-        if not item.visible_name or item.visible_name != item.visible_name.strip() or len(item.visible_name) > 255:
+        if _XML_STRING.fullmatch(item.resolved_style_id) is None:
+            raise DocxSemanticsV3Error("caption-style resolved style ID is not a nonempty XML string")
+        if (
+            _XML_STRING.fullmatch(item.visible_name) is None
+            or item.visible_name != item.visible_name.strip()
+            or len(item.visible_name) > 255
+        ):
             raise DocxSemanticsV3Error("caption-style visible name is not canonical")
         by_key[item.semantic_key] = item
     if set(by_key) != set(CAPTION_STYLE_KEYS_V3):
@@ -60,7 +66,7 @@ def validate_caption_style_bindings(
 def caption_style_binding_map_xml(bindings: Iterable[CaptionStyleBindingV3]) -> bytes:
     ordered = validate_caption_style_bindings(bindings)
     entries = "".join(
-        f'<binding semantic_key="{item.semantic_key}" resolved_style_id="{item.resolved_style_id}" '
+        f'<binding semantic_key="{item.semantic_key}" resolved_style_id="{_xml_attr(item.resolved_style_id)}" '
         f'visible_name="{_xml_attr(item.visible_name)}"/>'
         for item in ordered
     )
@@ -111,13 +117,15 @@ def prove_caption_style_registry(
 ) -> tuple[CaptionStyleBindingV3, ...]:
     """Bind saved styles by ID, or an exact unique recorded name after Office renumbers IDs."""
 
-    if "word/styles.xml" not in package.namelist():
-        raise DocxSemanticsV3Error("DOCX package lacks the main styles registry")
-    parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_blank_text=False)
-    root = etree.fromstring(package.read("word/styles.xml"), parser)
+    try:
+        parts = DocxPackageParts.from_package(package)
+        style_part = parts.one(parts.document().name, STYLES, required=True)
+    except DocxPartError as exc:
+        raise DocxSemanticsV3Error(str(exc)) from exc
+    assert style_part is not None
+    root = style_part.element
     style_tag = f"{{{_WORD_NAMESPACE}}}style"
     name_tag = f"{{{_WORD_NAMESPACE}}}name"
-    alias_tag = f"{{{_WORD_NAMESPACE}}}aliases"
     type_attr = f"{{{_WORD_NAMESPACE}}}type"
     id_attr = f"{{{_WORD_NAMESPACE}}}styleId"
     value_attr = f"{{{_WORD_NAMESPACE}}}val"
@@ -144,8 +152,8 @@ def prove_caption_style_registry(
             or names[0].text is not None
         ):
             raise DocxSemanticsV3Error("caption-style visible name is not exact and canonical")
-        if by_id[0].find(f".//{alias_tag}") is not None:
-            raise DocxSemanticsV3Error("caption-style binding must not use aliases")
+        # Authored aliases are legitimate style metadata. They remain opaque:
+        # only the exact primary name above may authenticate an Office ID rewrite.
         resolved.append(CaptionStyleBindingV3(binding.semantic_key, resolved_id, binding.visible_name))
     if len({item.resolved_style_id.casefold() for item in resolved}) != len(resolved):
         raise DocxSemanticsV3Error("caption-style resolved style IDs are not unique")

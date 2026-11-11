@@ -135,7 +135,7 @@ def test_heading_target_requires_heading_style(tmp_path: Path) -> None:
         style.set(qn("w:val"), "Normal")
 
     _mutate_xml_member(output, "word/document.xml", mutate)
-    with pytest.raises(DocxSemanticsV3Error, match=r"Heading1\.\.Heading9"):
+    with pytest.raises(DocxSemanticsV3Error, match="exact recorded paragraph style"):
         session.prove_package(output)
 
 

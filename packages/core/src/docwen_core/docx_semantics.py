@@ -319,13 +319,10 @@ class DocxSemanticRenderer:
             _require_style_type(self._document, fallback_style_id, "paragraph")
         if hyperlink_style_id is not None:
             _require_style_type(self._document, hyperlink_style_id, "character")
-        if (
-            any(run.href is not None for entry in fragment.entries for run in entry.runs)
-            and hyperlink_style_id != "Hyperlink"
-        ):
+        if any(run.href is not None for entry in fragment.entries for run in entry.runs) and hyperlink_style_id is None:
             raise _bibliography_diagnostic(
                 "semantic.docx.bibliography.style_invalid",
-                "Linked bibliography runs require the canonical Hyperlink character style.",
+                "Linked bibliography runs require an explicitly bound character style.",
             )
 
         anchor_element = placeholder_anchor._element
@@ -535,7 +532,7 @@ def _require_style_type(document: Any, style_id: str, expected_type: str) -> Non
     matching = [
         style for style in document.styles.element.findall(_qn("w:style")) if style.get(_qn("w:styleId")) == style_id
     ]
-    if len(matching) != 1 or matching[0].get(_qn("w:type")) != expected_type:
+    if not style_id or len(matching) != 1 or matching[0].get(_qn("w:type")) != expected_type:
         raise _bibliography_diagnostic(
             "semantic.docx.bibliography.style_invalid",
             f"Bibliography style {style_id!r} must resolve to exactly one {expected_type} style.",
@@ -1670,7 +1667,7 @@ def _import_bibliography_runs(
         if element.tag == _qn("w:r"):
             if element.attrib:
                 return None
-            run = _import_bibliography_run(element, href=None, hyperlink=False)
+            run = _import_bibliography_run(element, document=paragraph.part.document, href=None, hyperlink=False)
             if run is None:
                 return None
             imported.append(run)
@@ -1695,12 +1692,10 @@ def _import_bibliography_runs(
         href = relationship.target_ref
         if not _is_absolute_http_url(href):
             return None
-        if not _has_style_type(paragraph.part.document, "Hyperlink", "character"):
-            return None
         for child in element:
             if child.attrib:
                 return None
-            run = _import_bibliography_run(child, href=href, hyperlink=True)
+            run = _import_bibliography_run(child, document=paragraph.part.document, href=href, hyperlink=True)
             if run is None:
                 return None
             imported.append(run)
@@ -1710,6 +1705,7 @@ def _import_bibliography_runs(
 def _import_bibliography_run(
     run_element: Any,
     *,
+    document: Any,
     href: str | None,
     hyperlink: bool,
 ) -> SemanticBibliographyRun | None:
@@ -1718,11 +1714,13 @@ def _import_bibliography_run(
     bold = False
     italic = False
     if children and children[0].tag == _qn("w:rPr"):
-        formatting = _import_bibliography_run_properties(children[0], hyperlink=hyperlink)
+        formatting = _import_bibliography_run_properties(children[0], document=document, hyperlink=hyperlink)
         if formatting is None:
             return None
         bold, italic = formatting
         position = 1
+    elif hyperlink:
+        return None
     text_parts: list[str] = []
     for child in children[position:]:
         if child.tag == _qn("w:t"):
@@ -1752,6 +1750,7 @@ def _import_bibliography_run(
 def _import_bibliography_run_properties(
     run_properties: Any,
     *,
+    document: Any,
     hyperlink: bool,
 ) -> tuple[bool, bool] | None:
     bold: bool | None = None
@@ -1765,11 +1764,15 @@ def _import_bibliography_run_properties(
             return None
         seen_tags.add(child.tag)
         if child.tag == _qn("w:rStyle"):
+            # A template may retain any authored style ID. The run's explicit
+            # reference must resolve uniquely; names and aliases grant no
+            # authority. Bibliography ownership comes from its marked range.
             if (
                 not hyperlink
                 or style_seen
                 or set(child.attrib) != {_qn("w:val")}
-                or child.get(_qn("w:val")) != "Hyperlink"
+                or not (style_id := child.get(_qn("w:val")))
+                or not _has_style_type(document, style_id, "character")
             ):
                 return None
             style_seen = True

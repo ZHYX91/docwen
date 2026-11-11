@@ -1,8 +1,7 @@
-"""Word-native heading numbering injection for MD→DOCX conversion.
+"""Apply native numbering only to headings created by this conversion.
 
-Creates OOXML numbering definitions with pStyle-linked levels for heading
-numbering, and injects numPr into Heading style definitions in styles.xml.
-Called after Document.save() to perform post-save ZIP writeback.
+Template Heading styles remain shared, immutable identities. Request-owned
+paragraph bindings survive save without adding private markers to the file.
 """
 
 from __future__ import annotations
@@ -11,26 +10,25 @@ import contextlib
 import hashlib
 import logging
 import zipfile
-from collections.abc import Mapping
-from dataclasses import replace
+from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 
 import lxml.etree as etree
+from docx.document import Document
+from docx.text.paragraph import Paragraph
 
+from docwen_core.docx_numbering_parts import open_numbering_part
+from docwen_core.docx_numbering_structure import append_numbering_definitions
+from docwen_core.docx_package_parts import DocxPackageParts
 from docwen_core.file_io import replace_authorized_file
 from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.text.numbering_word_adapter import (
     TranslationResult,
     WordNumberingLevel,
 )
-from docwen_plugin_markdown.to_docx.numbering import (
-    _NUMBERING_XML_TEMPLATE,
-    NUMBERING_CONTENT_TYPE,
-    NUMBERING_REL_TYPE,
-    WML_NS,
-    _ensure_content_type,
-    _ensure_relationship,
-)
+from docwen_plugin_markdown.to_docx.direction import paragraph_is_rtl
+from docwen_plugin_markdown.to_docx.numbering import WML_NS
 
 logger = logging.getLogger(__name__)
 
@@ -42,20 +40,74 @@ BASE_INDENT = 420  # twips
 INDENT_INCREMENT = 420  # twips per level
 
 
-def _bind_heading_style_ids(
-    translation_result: TranslationResult,
-    heading_style_ids: Mapping[int, str],
-) -> TranslationResult:
-    """Bind abstract heading levels to request-owned template style IDs."""
+@dataclass(frozen=True)
+class _HeadingTarget:
+    path: tuple[int, ...]
+    level: int
+    attributes: tuple[tuple[str, str], ...]
+    properties: bytes
+    right_to_left: bool
 
-    levels: list[WordNumberingLevel] = []
-    for level in translation_result.levels:
-        heading_level = level.ilvl + 1
-        style_id = heading_style_ids.get(heading_level)
-        if not style_id:
-            raise ValueError(f"Missing managed heading style binding for level {heading_level}.")
-        levels.append(replace(level, p_style=style_id))
-    return replace(translation_result, levels=levels)
+
+@dataclass(frozen=True)
+class HeadingNumberingTargets:
+    """A save-boundary snapshot of renderer-owned heading paragraphs."""
+
+    paragraph_count: int
+    headings: tuple[_HeadingTarget, ...]
+
+
+def _paragraph_properties(paragraph: etree._Element) -> bytes:
+    properties = paragraph.find(f"{{{WML_NS}}}pPr")
+    if properties is None:
+        return b""
+    return etree.tostring(properties, method="c14n", exclusive=True)
+
+
+def _paragraph_attributes(paragraph: etree._Element) -> tuple[tuple[str, str], ...]:
+    return tuple(sorted((str(name), str(value)) for name, value in paragraph.attrib.items()))
+
+
+def capture_heading_numbering_targets(
+    document: Document,
+    headings: Iterable[tuple[Paragraph, int]],
+) -> HeadingNumberingTargets:
+    """Capture exact paragraphs after template filling and before save.
+
+    All recorded paragraphs must have been moved into the final main story.
+    Runs are deliberately not fingerprinted: note writeback can replace a
+    repeated note reference with its equivalent NOTEREF field before numbering.
+    Paragraph identity, structure and properties must remain unchanged.
+    """
+    root = document.element
+    targets: list[_HeadingTarget] = []
+    seen: set[tuple[int, ...]] = set()
+    for paragraph, level in headings:
+        if not 1 <= level <= 9:
+            raise ValueError(f"Invalid generated heading level: {level}.")
+        element = paragraph._p
+        path: list[int] = []
+        ancestor: etree._Element = element
+        while ancestor is not root:
+            parent = ancestor.getparent()
+            if parent is None:
+                raise ValueError("Generated heading is not attached to the final document.")
+            path.append(parent.index(ancestor))
+            ancestor = parent
+        identity = tuple(reversed(path))
+        if identity in seen:
+            raise ValueError("Generated heading was recorded more than once.")
+        seen.add(identity)
+        targets.append(
+            _HeadingTarget(
+                identity,
+                level,
+                _paragraph_attributes(element),
+                _paragraph_properties(element),
+                paragraph_is_rtl(paragraph),
+            )
+        )
+    return HeadingNumberingTargets(sum(1 for _ in root.iter(f"{{{WML_NS}}}p")), tuple(targets))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -66,15 +118,14 @@ def _bind_heading_style_ids(
 def create_heading_abstract_num(
     abstract_num_id: int,
     translation_result: TranslationResult,
+    *,
+    right_to_left_levels: frozenset[int] = frozenset(),
 ) -> etree._Element:
     """Create a ``w:abstractNum`` element from the translation result's levels.
 
-    Each level includes a ``w:pStyle`` linking the numbering to a heading
-    style (e.g. Heading1), which is the key mechanism for Word-native
-    heading numbering.
-
-    Uses ``hybridMultilevel`` as *multiLevelType* (required for style-linked
-    lists).
+    Levels deliberately have no ``w:pStyle`` link: the same Heading style
+    can be used by fixed template content outside this conversion's scope.
+    Generated headings select their level through direct paragraph numPr.
 
     Args:
         abstract_num_id: The allocated abstractNumId to use.
@@ -88,17 +139,17 @@ def create_heading_abstract_num(
     nsid_val = hashlib.md5(f"heading_{abstract_num_id}".encode()).hexdigest()[:8].upper()
     nsid.set(f"{{{WML_NS}}}val", nsid_val)
 
-    # multiLevelType — must be hybridMultilevel for style-linked lists
+    # A single multilevel sequence shared by generated headings.
     mlt = etree.SubElement(an, f"{{{WML_NS}}}multiLevelType")
     mlt.set(f"{{{WML_NS}}}val", "hybridMultilevel")
 
     for level in translation_result.levels:
-        an.append(_create_heading_lvl(level))
+        an.append(_create_heading_lvl(level, right_to_left=level.ilvl in right_to_left_levels))
 
     return an
 
 
-def _create_heading_lvl(level: WordNumberingLevel) -> etree._Element:
+def _create_heading_lvl(level: WordNumberingLevel, *, right_to_left: bool) -> etree._Element:
     """Create a single ``w:lvl`` element from a ``WordNumberingLevel``."""
     lvl = etree.Element(f"{{{WML_NS}}}lvl")
     lvl.set(f"{{{WML_NS}}}ilvl", str(level.ilvl))
@@ -111,10 +162,6 @@ def _create_heading_lvl(level: WordNumberingLevel) -> etree._Element:
     e = etree.SubElement(lvl, f"{{{WML_NS}}}numFmt")
     e.set(f"{{{WML_NS}}}val", level.num_fmt)
 
-    # pStyle — THE KEY: links to heading style (e.g. Heading1)
-    e = etree.SubElement(lvl, f"{{{WML_NS}}}pStyle")
-    e.set(f"{{{WML_NS}}}val", level.p_style)
-
     # suff — what follows the number
     e = etree.SubElement(lvl, f"{{{WML_NS}}}suff")
     e.set(f"{{{WML_NS}}}val", level.suff)
@@ -125,13 +172,13 @@ def _create_heading_lvl(level: WordNumberingLevel) -> etree._Element:
 
     # lvlJc
     e = etree.SubElement(lvl, f"{{{WML_NS}}}lvlJc")
-    e.set(f"{{{WML_NS}}}val", "left")
+    e.set(f"{{{WML_NS}}}val", "right" if right_to_left else "left")
 
     # pPr → ind (hanging indent for clean wrapping)
     pPr = etree.SubElement(lvl, f"{{{WML_NS}}}pPr")
     ind = etree.SubElement(pPr, f"{{{WML_NS}}}ind")
     left_val = BASE_INDENT + INDENT_INCREMENT * level.ilvl
-    ind.set(f"{{{WML_NS}}}left", str(left_val))
+    ind.set(f"{{{WML_NS}}}{'right' if right_to_left else 'left'}", str(left_val))
     ind.set(f"{{{WML_NS}}}hanging", str(INDENT_INCREMENT))
 
     return lvl
@@ -149,7 +196,7 @@ def create_heading_num(num_id: int, abstract_num_id: int) -> etree._Element:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Styles.xml injection
+# Request-owned paragraph numbering
 # ═══════════════════════════════════════════════════════════════════════════
 
 # CT_PPrBase child order — numPr comes after these elements:
@@ -158,6 +205,7 @@ _PPR_BEFORE_NUMPR = {
     "keepNext",
     "keepLines",
     "pageBreakBefore",
+    "framePr",
     "widowControl",
 }
 
@@ -177,49 +225,41 @@ def _insert_numpr(pPr: etree._Element, numPr: etree._Element) -> None:
     pPr.append(numPr)
 
 
-def inject_numpr_into_heading_styles(
-    styles_root: etree._Element,
-    num_id: int,
-    translation_result: TranslationResult,
-) -> None:
-    """Add ``w:numPr`` to each Heading style's ``w:pPr``.
+def _resolve_targets(
+    document_root: etree._Element,
+    targets: HeadingNumberingTargets,
+) -> list[tuple[etree._Element, int]]:
+    if sum(1 for _ in document_root.iter(f"{{{WML_NS}}}p")) != targets.paragraph_count:
+        raise ValueError("Document paragraphs changed after heading numbering targets were captured.")
+    resolved: list[tuple[etree._Element, int]] = []
+    for target in targets.headings:
+        element = document_root
+        for index in target.path:
+            if not 0 <= index < len(element):
+                raise ValueError("Generated heading no longer exists at its captured position.")
+            element = element[index]
+        if (
+            element.tag != f"{{{WML_NS}}}p"
+            or _paragraph_attributes(element) != target.attributes
+            or _paragraph_properties(element) != target.properties
+        ):
+            raise ValueError("Generated heading identity or properties changed before numbering writeback.")
+        resolved.append((element, target.level - 1))
+    return resolved
 
-    For each ``WordNumberingLevel`` in the translation result, finds the
-    corresponding ``w:style`` element (e.g. Heading1) and injects or
-    replaces its ``w:numPr``.
 
-    This is the second binding path (in addition to ``pStyle`` in the lvl
-    definition). Word writes both; the numPr on style takes priority per
-    the OOXML spec.
-    """
-    for level in translation_result.levels:
-        style_id = level.p_style  # e.g. "Heading1"
-        style_elem = styles_root.find(f'{{{WML_NS}}}style[@{{{WML_NS}}}styleId="{style_id}"]')
-        if style_elem is None:
-            logger.warning("Style %s not found in styles.xml — skipping", style_id)
-            continue
-
-        # Find or create pPr — insert at position 0 per CT_Style ordering
-        # (pPr must come before rPr, tblPr, etc.)
-        pPr = style_elem.find(f"{{{WML_NS}}}pPr")
-        if pPr is None:
-            pPr = etree.Element(f"{{{WML_NS}}}pPr")
-            style_elem.insert(0, pPr)
-
-        # Remove existing numPr if present
-        existing = pPr.find(f"{{{WML_NS}}}numPr")
-        if existing is not None:
-            pPr.remove(existing)
-
-        # Build w:numPr
-        numPr = etree.Element(f"{{{WML_NS}}}numPr")
-        ilvl_elem = etree.SubElement(numPr, f"{{{WML_NS}}}ilvl")
-        ilvl_elem.set(f"{{{WML_NS}}}val", str(level.ilvl))
-        numId_elem = etree.SubElement(numPr, f"{{{WML_NS}}}numId")
-        numId_elem.set(f"{{{WML_NS}}}val", str(num_id))
-
-        # Insert numPr at the correct position within pPr
-        _insert_numpr(pPr, numPr)
+def _apply_heading_number(paragraph: etree._Element, *, num_id: int, level: int | None) -> None:
+    properties = paragraph.find(f"{{{WML_NS}}}pPr")
+    if properties is None:
+        properties = etree.Element(f"{{{WML_NS}}}pPr")
+        paragraph.insert(0, properties)
+    for existing in properties.findall(f"{{{WML_NS}}}numPr"):
+        properties.remove(existing)
+    numbering = etree.Element(f"{{{WML_NS}}}numPr")
+    if level is not None:
+        etree.SubElement(numbering, f"{{{WML_NS}}}ilvl").set(f"{{{WML_NS}}}val", str(level))
+    etree.SubElement(numbering, f"{{{WML_NS}}}numId").set(f"{{{WML_NS}}}val", str(num_id))
+    _insert_numpr(properties, numbering)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -227,7 +267,7 @@ def inject_numpr_into_heading_styles(
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def _allocate_ids(num_root: etree._Element) -> tuple[int, int]:
+def _allocate_ids(num_root: etree._Element, reference_roots: Iterable[etree._Element]) -> tuple[int, int]:
     """Find free abstractNumId and numId in an existing numbering root.
 
     Scans all existing ``abstractNumId`` and ``numId`` attribute values,
@@ -239,42 +279,25 @@ def _allocate_ids(num_root: etree._Element) -> tuple[int, int]:
         Word allows abstractNumId and numId to share values.
     """
     used: set[int] = set()
-    for tag in ("abstractNumId", "numId"):
-        for elem in num_root.iter(f"{{{WML_NS}}}{tag}"):
-            val = elem.get(f"{{{WML_NS}}}val")
+    for element_name, attribute in (("abstractNum", "abstractNumId"), ("num", "numId")):
+        for element in num_root.findall(f"{{{WML_NS}}}{element_name}"):
+            val = element.get(f"{{{WML_NS}}}{attribute}")
             if val is not None:
                 with contextlib.suppress(ValueError):
                     used.add(int(val))
+    # Dangling template references must stay dangling, rather than silently
+    # acquire the new request's numbering when an ID happens to be reused.
+    for root in (num_root, *reference_roots):
+        for tag in ("abstractNumId", "numId"):
+            for element in root.iter(f"{{{WML_NS}}}{tag}"):
+                val = element.get(f"{{{WML_NS}}}val")
+                if val is not None:
+                    with contextlib.suppress(ValueError):
+                        used.add(int(val))
     candidate = 20000
     while candidate in used:
         candidate += 1
     return candidate, candidate
-
-
-def _insert_abstract_num(
-    num_root: etree._Element,
-    abstract_num_elem: etree._Element,
-) -> None:
-    """Insert abstractNum before the first num element (OOXML schema order).
-
-    CT_Numbering requires: all ``numPicBullet`` → all ``abstractNum`` → all
-    ``num``.  If ``num`` elements already exist (from template or list
-    numbering writeback), appending an ``abstractNum`` after them is
-    schema-invalid.
-    """
-    first_num = num_root.find(f"{{{WML_NS}}}num")
-    if first_num is not None:
-        first_num.addprevious(abstract_num_elem)
-    else:
-        num_root.append(abstract_num_elem)
-
-
-def _insert_num(
-    num_root: etree._Element,
-    num_elem: etree._Element,
-) -> None:
-    """Append num at the end (after all existing nums)."""
-    num_root.append(num_elem)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -282,144 +305,84 @@ def _insert_num(
 # ═══════════════════════════════════════════════════════════════════════════
 
 
+def _parse_xml(raw: bytes) -> etree._Element:
+    return etree.fromstring(raw, etree.XMLParser(resolve_entities=False, no_network=True, remove_blank_text=False))
+
+
+def _xml_bytes(root: etree._Element) -> bytes:
+    return etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
+
+
 def write_heading_numbering_to_docx(
     docx_path: str,
     translation_result: TranslationResult,
     *,
-    heading_style_ids: Mapping[int, str] | None = None,
+    targets: HeadingNumberingTargets,
 ) -> None:
-    """Inject heading numbering definitions into a saved DOCX file.
+    """Write native numbering to the exact generated headings captured before save.
 
-    Opens *docx_path* as a ZIP, ensures ``word/numbering.xml`` exists,
-    appends the heading ``abstractNum`` and ``num`` elements, injects
-    ``numPr`` into Heading styles in ``word/styles.xml``, updates
-    relationships and content types, then writes back.
-
-    Must be called **after** ``Document.save()`` so the ZIP contains
-    all body content.
-
-    IDs are dynamically allocated starting at 20 000 to avoid conflicts
-    with template numbering and the list-numbering range (10 000+).
+    Run after list-numbering writeback so IDs are allocated against the final
+    package inventory. Shared template styles and all unrelated parts are
+    copied unchanged. Target mismatch fails before replacing the original.
     """
-    if heading_style_ids is not None:
-        translation_result = _bind_heading_style_ids(translation_result, heading_style_ids)
-
-    if not translation_result.levels:
-        logger.debug("No heading numbering levels to inject — skipping")
+    supported_levels = {level.ilvl for level in translation_result.levels}
+    if not targets.headings:
         return
+    has_supported_targets = any(target.level - 1 in supported_levels for target in targets.headings)
 
     original = Path(docx_path)
+    with zipfile.ZipFile(original) as archive:
+        infos = archive.infolist()
+        if len({item.filename for item in infos}) != len(infos):
+            raise ValueError("DOCX contains duplicate ZIP members.")
+        data = {item.filename: archive.read(item.filename) for item in infos}
+    document_part = DocxPackageParts(data).document()
+    document_root = document_part.element
+    resolved = _resolve_targets(document_root, targets)
+    part = open_numbering_part(data, create=has_supported_targets)
+    num_root = part.element if part is not None else etree.Element(f"{{{WML_NS}}}numbering")
+
+    num_id = 0
+    if has_supported_targets:
+        reference_roots: list[etree._Element] = []
+        for name, raw in data.items():
+            if name.endswith(".xml") and (part is None or name != part.name):
+                # Opaque, malformed optional parts are outside this writer's scope.
+                # Their bytes are retained; valid Word parts reserve dangling IDs.
+                with contextlib.suppress(etree.XMLSyntaxError):
+                    reference_roots.append(_parse_xml(raw))
+        abstract_num_id, num_id = _allocate_ids(num_root, reference_roots)
+        directions: dict[int, bool] = {}
+        for target in targets.headings:
+            level = target.level - 1
+            previous = directions.setdefault(level, target.right_to_left)
+            if level in supported_levels and previous != target.right_to_left:
+                raise ValueError("Generated headings at one numbering level have conflicting text directions.")
+        abstract_num = create_heading_abstract_num(
+            abstract_num_id,
+            translation_result,
+            right_to_left_levels=frozenset(level for level, rtl in directions.items() if rtl),
+        )
+        append_numbering_definitions(num_root, (abstract_num,), (create_heading_num(num_id, abstract_num_id),))
+        assert part is not None
+        data[part.name] = _xml_bytes(num_root)
+    for paragraph, level in resolved:
+        if level in supported_levels:
+            _apply_heading_number(paragraph, num_id=num_id, level=level)
+        else:
+            # A scheme's omitted/unsupported level must not inherit numbering
+            # from a shared template Heading style. numId=0 cancels inheritance.
+            _apply_heading_number(paragraph, num_id=0, level=None)
+
+    data[document_part.name] = _xml_bytes(document_root)
 
     with TemporaryDirectory(prefix=".dw-heading-numbering-", dir=original.parent) as tmpdir:
         tmp_path = Path(tmpdir) / "heading_numbering_writeback.docx"
-
-        with (
-            zipfile.ZipFile(str(original), "r") as zf_in,
-            zipfile.ZipFile(str(tmp_path), "w", zipfile.ZIP_DEFLATED) as zf_out,
-        ):
-            names = set(zf_in.namelist())
-
-            # ── Guard against missing critical files (BUG-13) ───────────
-            if "word/_rels/document.xml.rels" not in names:
-                logger.error("DOCX missing word/_rels/document.xml.rels — cannot inject heading numbering")
-                return
-            if "[Content_Types].xml" not in names:
-                logger.error("DOCX missing [Content_Types].xml — cannot inject heading numbering")
-                return
-
-            # Read relationships and content types once
-            rels_raw = zf_in.read("word/_rels/document.xml.rels")
-            ct_raw = zf_in.read("[Content_Types].xml")
-            rels_root = etree.fromstring(rels_raw)
-            ct_root = etree.fromstring(ct_raw)
-
-            has_numbering = "word/numbering.xml" in names
-            has_styles = "word/styles.xml" in names
-
-            # ── numbering.xml ───────────────────────────────────────────
-            if has_numbering:
-                raw = zf_in.read("word/numbering.xml")
-                num_root = etree.fromstring(raw)
-            else:
-                num_root = etree.fromstring(_NUMBERING_XML_TEMPLATE)
-
-            # Dynamically allocate IDs (BUG-2)
-            abstract_num_id, num_id = _allocate_ids(num_root)
-
-            # Build heading numbering elements with allocated IDs
-            abstract_num_elem = create_heading_abstract_num(
-                abstract_num_id,
-                translation_result,
-            )
-            num_elem = create_heading_num(num_id, abstract_num_id)
-
-            # Insert respecting OOXML schema order (BUG-3)
-            _insert_abstract_num(num_root, abstract_num_elem)
-            _insert_num(num_root, num_elem)
-
-            num_bytes = etree.tostring(
-                num_root,
-                xml_declaration=True,
-                encoding="UTF-8",
-                standalone=True,
-            )
-
-            if not has_numbering:
-                _ensure_relationship(rels_root, "numbering.xml", NUMBERING_REL_TYPE)
-                _ensure_content_type(ct_root, "/word/numbering.xml", NUMBERING_CONTENT_TYPE)
-
-            # ── styles.xml: inject numPr into heading styles ────────────
-            styles_bytes: bytes | None = None
-            if has_styles:
-                styles_raw = zf_in.read("word/styles.xml")
-                styles_root = etree.fromstring(styles_raw)
-                inject_numpr_into_heading_styles(
-                    styles_root,
-                    num_id,
-                    translation_result,
-                )
-                styles_bytes = etree.tostring(
-                    styles_root,
-                    xml_declaration=True,
-                    encoding="UTF-8",
-                    standalone=True,
-                )
-
-            modified_rels = etree.tostring(
-                rels_root,
-                xml_declaration=True,
-                encoding="UTF-8",
-                standalone=True,
-            )
-            modified_ct = etree.tostring(
-                ct_root,
-                xml_declaration=True,
-                encoding="UTF-8",
-                standalone=True,
-            )
-
-            # Rebuild ZIP
-            for item in zf_in.infolist():
-                if item.filename == "word/numbering.xml":
-                    zf_out.writestr(item, num_bytes)
-                elif item.filename == "word/_rels/document.xml.rels":
-                    zf_out.writestr(item, modified_rels)
-                elif item.filename == "[Content_Types].xml":
-                    zf_out.writestr(item, modified_ct)
-                elif item.filename == "word/styles.xml" and styles_bytes is not None:
-                    zf_out.writestr(item, styles_bytes)
-                else:
-                    zf_out.writestr(item, zf_in.read(item.filename))
-
-            if not has_numbering:
-                # Write new numbering.xml with proper ZipInfo (BUG-14)
-                zi = zipfile.ZipInfo("word/numbering.xml")
-                zi.compress_type = zipfile.ZIP_DEFLATED
-                zf_out.writestr(zi, num_bytes)
-
+        with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as archive:
+            for info in infos:
+                archive.writestr(info, data[info.filename])
+            existing = {info.filename for info in infos}
+            for name in data.keys() - existing:
+                archive.writestr(name, data[name])
         replace_authorized_file(tmp_path, original)
-        logger.info(
-            "Heading numbering definitions injected: %d levels, numId=%s",
-            len(translation_result.levels),
-            num_id,
-        )
+    logger.info("Numbered %d generated headings with numId=%s", len(resolved), num_id)
