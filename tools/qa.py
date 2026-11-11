@@ -23,8 +23,7 @@ from tools import qa_reports, source_checks
 from tools.run_lease import OwnedRunLease, lease_payload, transition
 from tools.source_imports import source_import_environment
 from tools.windows_short_path import ShortPathDriveError, drive_root, mount_short_drive, unmount_short_drive
-from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
-from tools.workspace_root import WorkspaceRootError, resolve_workspace_root
+from tools.workspace_root import WORKSPACE_ROOT_ENV, WorkspaceRootError, resolve_workspace_root
 
 FAST_MARK_EXPR = "(unit or contract) and not slow"
 PR_GATE_MARK_EXPR = "pr_gate and (integration or gui_smoke or e2e)"
@@ -39,7 +38,6 @@ PYTEST_PRIMARY_MARKER_DEBT_LIMIT = 0
 PYTEST_PRIMARY_MARKER_OVERLAP_LIMIT = 0
 PYTEST_RUNTIME_ROOT_ENV = "DOCWEN_PYTEST_RUNTIME_ROOT"
 PYTEST_REPORT_DIR_ENV = "DOCWEN_PYTEST_REPORT_DIR"
-WORKSPACE_ROOT_ENV = _WORKSPACE_ROOT_ENV
 PYTEST_RUNTIME_LEASE = ".docwen-temp-lease.json"
 PYTEST_RUNTIME_PREFIX = "p"
 PYTEST_BASETEMP_NAME = "b"
@@ -174,6 +172,14 @@ def _optional_workspace_root(repo_root: Path, workspace_root: Path | None = None
         return None
 
 
+def _workspace_environment(repo_root: Path, workspace_root: Path | None) -> dict[str, str]:
+    """Carry the selected physical workspace into every QA child process."""
+    environment = source_import_environment(repo_root, os.environ)
+    if workspace_root is not None:
+        environment[WORKSPACE_ROOT_ENV] = str(workspace_root)
+    return environment
+
+
 def _is_within(path: Path, parent: Path) -> bool:
     return path == parent or parent in path.parents
 
@@ -253,7 +259,7 @@ def _pytest_runtime_environment(
             raise ValueError(f"pytest runtime child must not traverse a link or reparse point: {path}")
     if owned:
         _write_runtime_lease(runtime_root, state="active")
-    environment = source_import_environment(repo_root, os.environ)
+    environment = _workspace_environment(repo_root, governed_workspace)
     environment.update(
         {
             PYTEST_RUNTIME_ROOT_ENV: str(runtime_root),
@@ -492,6 +498,12 @@ def main(argv: list[str]) -> int:
         parser.error("--report-output requires pytest")
 
     repo_root = Path(__file__).resolve().parents[1]
+    try:
+        selected_workspace = _optional_workspace_root(repo_root, args.workspace_root)
+    except WorkspaceRootError as error:
+        print(f"[qa] {error}", file=sys.stderr)
+        return 2
+    workspace_environment = _workspace_environment(repo_root, selected_workspace)
     code = 0 if args.tests_only else _scan_private_symbol_usage(repo_root)
     if code != 0:
         return code
@@ -528,7 +540,7 @@ def main(argv: list[str]) -> int:
     exit_code = 0
     for name, cmd, gate in steps:
         print(f"==> {name}")
-        code = _run(cmd)
+        code = _run(cmd, env=workspace_environment)
         if code != 0:
             if gate:
                 return code
@@ -536,11 +548,6 @@ def main(argv: list[str]) -> int:
 
     if not args.skip_pytest:
         print("==> pytest")
-        try:
-            selected_workspace = _optional_workspace_root(repo_root, args.workspace_root)
-        except WorkspaceRootError as error:
-            print(f"[qa] {error}", file=sys.stderr)
-            return 2
         if selected_workspace is not None:
             try:
                 _cleanup_expired_workspace_temps(selected_workspace)
@@ -648,7 +655,7 @@ def main(argv: list[str]) -> int:
             raise RuntimeError("pytest runner returned no status")
         if args.coverage:
             for command in qa_reports.coverage_checks(runtime_root):
-                code = _run([sys.executable, *command])
+                code = _run([sys.executable, *command], env=workspace_environment)
                 return_code = return_code or code
         if args.report_output:
             try:
