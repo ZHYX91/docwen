@@ -12,6 +12,7 @@ from docx.oxml.ns import qn
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import project_field_links, reject_declared_input_link_lookups
 from docwen_plugin_markdown.renderer_inlines import add_hyperlink, plain_link_label
+from docwen_plugin_markdown.template_parts import template_story_parts
 
 
 class _RunWriter:
@@ -99,15 +100,10 @@ class YamlLinkProjection:
 
     def materialize(self, document: Any) -> None:
         """Split only token-bearing runs, preserving sibling text, breaks and styles."""
-        roots = [document.element]
-        roots.extend(
-            part.element
-            for part in document.part.related_parts.values()
-            if hasattr(part, "element") and str(part.partname).startswith(("/word/header", "/word/footer"))
-        )
         from docx.text.paragraph import Paragraph
 
-        for root in roots:
+        for owner in template_story_parts(document):
+            root = owner.element
             pending = [node for node in root.iter(qn("w:t")) if self.prefix in (node.text or "")]
             while pending:
                 node = pending[0]
@@ -117,11 +113,6 @@ class YamlLinkProjection:
                 if parent.tag != qn("w:p"):
                     raise ValueError("YAML hyperlink placeholder must not be inside an existing hyperlink")
                 # Header/footer paragraphs must create relationships in their own part.
-                owner = document
-                if root is not document.element:
-                    owner = next(
-                        part for part in document.part.related_parts.values() if getattr(part, "element", None) is root
-                    )
                 paragraph = Paragraph(parent, owner)
                 index = parent.index(run)
                 rpr = run.find(qn("w:rPr"))
