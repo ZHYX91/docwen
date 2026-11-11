@@ -347,6 +347,8 @@ def _merge_comments(
 def _subtract_hyperlink_cells(reference: str, changes: dict[int, set[int]]) -> tuple[str, ...] | None:
     """Subtract edited cells without expanding an original hyperlink rectangle."""
     min_col, min_row, max_col, max_row = range_boundaries(reference)
+    if min_col is None or min_row is None or max_col is None or max_row is None:
+        raise ValueError("XLSX hyperlink must refer to a finite cell range")
     affected = {
         row: sorted(column for column in columns if min_col <= column <= max_col)
         for row, columns in changes.items()
