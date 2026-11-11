@@ -38,7 +38,8 @@ pytestmark = pytest.mark.contract
 
 def _catalog():
     return build_document_style_catalog(
-        {"gui": {"language": {"locale": "en_US"}}},
+        {},
+        request_options={"locale": "en_US"},
         locales_dir=PROJECT_ROOT / "i18n" / "locales",
     )
 
@@ -167,7 +168,7 @@ print('x')
     rendered = renderer.render(analysis.ast)
     fill_template(document, {}, rendered, None)
     path, reopened = _save_reopen(document, tmp_path, "managed-rendering.docx")
-    validate_managed_style_package(path.read_bytes(), _catalog())
+    validate_managed_style_package(path.read_bytes(), _catalog(), bindings)
 
     assert _paragraph_style_id(next(p for p in reopened.paragraphs if p.text.startswith("Body plain"))) == (
         "DocWenBodyParagraph"
@@ -192,7 +193,7 @@ print('x')
     assert "print('x')" in [p.text for p in reopened.paragraphs]
 
     table = reopened.tables[0]
-    assert table.style is not None and table.style.style_id == "DocWenTableGrid"
+    assert table.style is not None and table.style.style_id == bindings.style_id("table_grid")
     for row_index, row in enumerate(table.rows):
         for cell in row.cells:
             expected = "DocWenTableHeader" if row_index == 0 else "DocWenTableContent"
@@ -315,7 +316,7 @@ AFTER
     )
     assert next(index for index, p in enumerate(reopened.paragraphs) if "SEQ Listing" in p._p.xml) < texts.index("code")
     assert texts[-1] == "AFTER"
-    validate_managed_style_package(path.read_bytes(), _catalog())
+    validate_managed_style_package(path.read_bytes(), _catalog(), bindings)
 
     legacy = Document()
     paragraph = legacy.add_paragraph()

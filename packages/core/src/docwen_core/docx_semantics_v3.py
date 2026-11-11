@@ -10,6 +10,7 @@ from docwen_core._docx_semantics_v3_fenced_map import (
     fenced_source_identity_from_mapping_v3,
     fenced_source_mapping_v3,
 )
+from docwen_core._docx_semantics_v3_heading_styles import HEADING_STYLE_BINDING_MAP_NAMESPACE, HeadingStyleBindingV3
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TAG_PREFIX,
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -45,6 +46,7 @@ __all__ = [
     "CAPTION_STYLE_BINDING_MAP_NAMESPACE",
     "FENCED_SOURCE_MAP_NAMESPACE",
     "FENCED_SOURCE_TAG_PREFIX",
+    "HEADING_STYLE_BINDING_MAP_NAMESPACE",
     "REFERENCE_OCCURRENCE_MAP_NAMESPACE",
     "REFERENCE_OCCURRENCE_TAG_PREFIX",
     "SOFT_REFERENCE_MAP_NAMESPACE",
@@ -58,6 +60,7 @@ __all__ = [
     "DocxSemanticsV3Recovery",
     "DocxSemanticsV3Session",
     "FencedSourceIdentityV3",
+    "HeadingStyleBindingV3",
     "OrdinaryAnchorGroupV3",
     "ReferenceOccurrenceIdentityV3",
     "SoftReferenceIdentityV3",

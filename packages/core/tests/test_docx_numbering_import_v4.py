@@ -115,7 +115,7 @@ def test_proven_word_list_is_separate_from_complete_authored_heading(tmp_path: P
     assert imported.numbering.number_format == "decimal"
     assert imported.numbering.level_text == "%1"
     assert imported.numbering.start == 3
-    assert imported.numbering.style_id == "Heading1"
+    assert imported.numbering.style_id is None
 
 
 def test_unproven_visible_prefix_remains_authored_and_gets_stable_diagnostic(

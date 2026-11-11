@@ -14,6 +14,12 @@ from zipfile import ZipFile
 from docwen_core import _docx_semantics_v3_fenced as fenced
 from docwen_core._docx_resolved_recovery_blocks import prove_resolved_recovery_blocks_v4
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
+from docwen_core._docx_semantics_v3_heading_styles import (
+    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+    HeadingStyleBindingV3,
+    parse_heading_style_binding_map,
+    prove_heading_style_registry,
+)
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
     CAPTION_STYLE_BINDING_MAP_NAMESPACE,
@@ -105,6 +111,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
     _resolved_v4_citations: tuple[Any, ...]
     _resolved_v4_heading_proof: HeadingNumberingProofIndex
     _resolved_v4_heading_imports: dict[int, ProofOnlyHeadingImport]
+    _resolved_v4_heading_styles: tuple[HeadingStyleBindingV3, ...]
 
     @classmethod
     def load_if_present(
@@ -156,10 +163,15 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         topology: list[Any] = []
         occurrences: list[NumberingOccurrenceIdentity] = []
         standalone_occurrences: list[StandaloneCaptionOccurrenceIdentity] = []
+        heading_styles: tuple[HeadingStyleBindingV3, ...] = ()
 
         if TARGET_MAP_NAMESPACE in owned:
             _number, root = owned[TARGET_MAP_NAMESPACE]
             targets, anchors = parse_semantic_map(root)
+        if HEADING_STYLE_BINDING_MAP_NAMESPACE in owned:
+            _number, root = owned[HEADING_STYLE_BINDING_MAP_NAMESPACE]
+            heading_styles = parse_heading_style_binding_map(root)
+            prove_heading_style_registry(document, heading_styles)
         if ANCHOR_TOPOLOGY_MAP_NAMESPACE in owned:
             _number, root = owned[ANCHOR_TOPOLOGY_MAP_NAMESPACE]
             topology = parse_anchor_topology_map(root)
@@ -246,12 +258,14 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 proven_nested_blocks=proven_nested_blocks,
                 proven_machine_nodes=proven_machine_nodes,
                 reserved_semantic_elements=reserved_semantic_elements,
+                heading_style_bindings=heading_styles,
             ),
         )
         recovery._resolved_v4_inline_tokens = inline_tokens
         recovery._resolved_v4_citations = citations
         recovery._resolved_v4_heading_proof = HeadingNumberingProofIndex.load(path)
         recovery._resolved_v4_heading_imports = {}
+        recovery._resolved_v4_heading_styles = heading_styles
         recovery._bind_disabled_occurrences(
             document,
             occurrences,
@@ -331,8 +345,13 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         expected = {item.source_id for item in targets if item.kind == "heading"}
         if set(headings_by_id) != expected:
             raise DocxSemanticsV3Error("resolved-v4 Heading target inventory differs from its physical paragraphs")
+        levels = {binding.source_id: binding.level for binding in self._resolved_v4_heading_styles}
         for source_id in sorted(expected):
-            self.heading_import(Paragraph(headings_by_id[source_id], document))
+            imported = self.heading_import(Paragraph(headings_by_id[source_id], document))
+            if imported.numbering is not None and imported.numbering.level != levels[source_id]:
+                raise DocxSemanticsV3Error(
+                    "resolved-v4 Heading numbering level differs from its recorded style binding"
+                )
 
     def _bind_disabled_occurrences(
         self,
@@ -525,8 +544,8 @@ def _has_explicit_resolved_v4_signal(
             num_properties = paragraph.findall(f"{qn('w:pPr')}/{qn('w:numPr')}")
             if num_properties:
                 # Source-native list children also carry numPr. Their list
-                # definition has no Heading-style ownership, so that shared
-                # Word feature is not an explicit resolved-v4 signal.
+                # definition has the proven ordinary hybrid-list shape, so
+                # numPr alone is not an explicit resolved-v4 signal.
                 if len(num_properties) != 1:
                     return True
                 [num_properties_node] = num_properties
@@ -561,8 +580,8 @@ def _ordinary_list_bindings(document: Any) -> frozenset[tuple[str, str]]:
     """Index native container lists without treating their IDs as provenance.
 
     The source writer emits hybrid lists with no level-to-Heading style link.
-    Resolved Heading definitions use multilevel plus explicit Heading pStyle
-    ownership. Missing, duplicate or ambiguous references do not gain this
+    Resolved Heading definitions use multilevel and direct paragraph bindings.
+    Missing, duplicate or ambiguous references do not gain this
     ordinary-list exemption and still enter the strict resolved proof.
     """
     from docx.oxml.ns import qn

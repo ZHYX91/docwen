@@ -23,6 +23,12 @@ from docwen_core._docx_semantics_v3_fenced_map import (
     fenced_source_map_xml,
     fenced_source_mapping_v3,
 )
+from docwen_core._docx_semantics_v3_heading_styles import (
+    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+    HeadingStyleBindingV3,
+    capture_heading_style_binding,
+    heading_style_binding_map_xml,
+)
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
     CAPTION_STYLE_BINDING_MAP_NAMESPACE,
@@ -105,6 +111,7 @@ class DocxSemanticsV3Session:
             validate_caption_style_bindings(caption_style_bindings) if caption_style_bindings else ()
         )
         self._targets: list[TargetBindingV3] = []
+        self._heading_style_bindings: list[HeadingStyleBindingV3] = []
         self._anchors: list[AnchorBindingV3] = []
         self._anchor_topology_edges: tuple[AnchorTopologyEdgeV3, ...] = ()
         self._captions: list[CaptionBindingV3] = []
@@ -159,7 +166,7 @@ class DocxSemanticsV3Session:
         prove_fenced_source_paragraph(paragraph._p, identity)
         self._fenced_sources.append(FencedSourceBindingV3(identity, paragraph._p))
 
-    def bind_heading(self, paragraph: Any, target: dict[str, Any]) -> None:
+    def bind_heading(self, paragraph: Any, target: dict[str, Any], *, heading_level: int | None = None) -> None:
         """Bind one ID-bearing Heading to its deterministic bookmark and map."""
 
         if self._finalized:
@@ -167,6 +174,7 @@ class DocxSemanticsV3Session:
         if target.get("kind") != "heading" or not target.get("id"):
             raise DocxSemanticsV3Error("Heading binding requires one addressable Heading target")
         identity = derive_target_identity_v3("heading", str(target["id"]))
+        binding = capture_heading_style_binding(self._document, paragraph, identity.source_id, heading_level)
         self._claim_source_id(identity.source_id)
         wrap_paragraph_content_with_bookmark(
             paragraph,
@@ -174,6 +182,7 @@ class DocxSemanticsV3Session:
             self._reserve_bookmark(identity.bookmark_name),
         )
         self._targets.append(TargetBindingV3(identity, (paragraph._p,)))
+        self._heading_style_bindings.append(binding)
 
     def bind_paragraph_anchor(
         self,
@@ -391,6 +400,13 @@ class DocxSemanticsV3Session:
         if not self._finalized:
             raise DocxSemanticsV3Error("semantic session must be finalized before package write")
         parts: list[tuple[str, bytes]] = []
+        if self._heading_style_bindings:
+            parts.append(
+                (
+                    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+                    heading_style_binding_map_xml(tuple(self._heading_style_bindings)),
+                )
+            )
         if self._targets or self._anchors:
             parts.append(
                 (
@@ -487,6 +503,8 @@ class DocxSemanticsV3Session:
         )
         if (
             recovery.target_identities != expected_targets
+            or recovery.heading_style_bindings
+            != tuple(sorted(self._heading_style_bindings, key=lambda item: item.source_id))
             or recovery.anchor_identities != expected_anchors
             or recovery.anchor_topology_edges != self._anchor_topology_edges
             or recovery.soft_reference_identities != expected_soft

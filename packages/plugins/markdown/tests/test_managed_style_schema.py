@@ -15,7 +15,7 @@ from docx.styles.style import ParagraphStyle
 
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
-from docwen_plugin_markdown.to_docx.managed_styles import complete_managed_styles
+from docwen_plugin_markdown.to_docx.managed_styles import complete_managed_styles, validate_managed_style_package
 from docwen_runtime.config.document_styles import build_document_style_catalog
 
 from .conftest import PROJECT_ROOT
@@ -50,7 +50,8 @@ _STYLE_CHILDREN = (
 
 def _catalog(locale: str = "en_US"):
     return build_document_style_catalog(
-        {"gui": {"language": {"locale": locale}}},
+        {},
+        request_options={"locale": locale},
         locales_dir=PROJECT_ROOT / "i18n" / "locales",
     )
 
@@ -134,6 +135,13 @@ def test_host_specific_normal_id_uses_resolved_foundation_identity(normal_id: st
                 reference.set(qn("w:val"), "EffectsNormal")
 
     _rewrite_effects(template, rename_effects_normal)
+    original_styles = {
+        part_name: {
+            item.get(qn("w:styleId")): etree.tostring(item, method="c14n", exclusive=True)
+            for item in root.findall(qn("w:style"))
+        }
+        for part_name, root in _style_tables(template).items()
+    }
     template, bindings = complete_managed_styles(template, _catalog())
     assert dict(bindings.foundation_style_ids)["normal"] == normal_id
     actual_normal = next(style for style in template.styles if style.style_id == normal_id)
@@ -144,17 +152,31 @@ def test_host_specific_normal_id_uses_resolved_foundation_identity(normal_id: st
     )
     assert rendered[0].style.style_id == bindings.style_id("body_paragraph")
     for part_name, root in _style_tables(template).items():
-        normal_styles = [item for item in root.findall(qn("w:style")) if item.get(qn("w:styleId")) == normal_id]
+        expected_normal_id = normal_id if part_name == "word/styles.xml" else "EffectsNormal"
+        normal_styles = [
+            item for item in root.findall(qn("w:style")) if item.get(qn("w:styleId")) == expected_normal_id
+        ]
         assert len(normal_styles) == 1, part_name
         assert normal_styles[0].get(qn("w:type")) == "paragraph"
-        assert not any(item.get(qn("w:styleId")) in {"Normal", "EffectsNormal"} for item in root.findall(qn("w:style")))
+        by_id = {item.get(qn("w:styleId")): item for item in root.findall(qn("w:style"))}
+        assert "Normal" not in by_id
+        assert ("EffectsNormal" if part_name == "word/styles.xml" else normal_id) not in by_id
+        for original_id, original_xml in original_styles[part_name].items():
+            assert etree.tostring(by_id[original_id], method="c14n", exclusive=True) == original_xml
+        resolved_ids = dict(bindings.style_ids)
+        if part_name == "word/stylesWithEffects.xml":
+            assert bindings.effects_style_ids is not None
+            resolved_ids = dict(bindings.effects_style_ids)
+            assert resolved_ids["normal"] == "EffectsNormal"
         body = next(
-            item
-            for item in root.findall(qn("w:style"))
-            if item.get(qn("w:styleId")) == bindings.style_id("body_paragraph")
+            item for item in root.findall(qn("w:style")) if item.get(qn("w:styleId")) == resolved_ids["body_paragraph"]
         )
         based_on = body.find(qn("w:basedOn"))
-        assert based_on is not None and based_on.get(qn("w:val")) == normal_id
+        assert based_on is not None and based_on.get(qn("w:val")) == expected_normal_id
+
+    buffer = BytesIO()
+    template.save(buffer)
+    validate_managed_style_package(buffer.getvalue(), _catalog(), bindings)
 
     custom = template.styles.add_style("CustomBody", WD_STYLE_TYPE.PARAGRAPH)
     assert isinstance(custom, ParagraphStyle)
