@@ -123,6 +123,7 @@ from docwen_plugin_markdown.to_docx.numbering_comments import (
     annotate_native_numbering,
     annotate_numbering_prefixes,
 )
+from docwen_plugin_markdown.to_docx.sections import SectionBreakContext
 from docwen_plugin_markdown.yaml_links import YamlLinkProjection
 from docwen_plugin_markdown.yaml_processor import (
     TITLE_PLACEHOLDER_ALIASES,
@@ -1257,6 +1258,7 @@ class MdToDocxConverter:
                 # Create renderer with explicit doc object (does NOT create its own Document)
                 renderer = MdToDocxRenderer(
                     doc=doc,
+                    section_context=SectionBreakContext(doc, placeholder_para),
                     body_font=body_font,
                     body_style=body_style,
                     body_paragraph_format=body_paragraph_format,

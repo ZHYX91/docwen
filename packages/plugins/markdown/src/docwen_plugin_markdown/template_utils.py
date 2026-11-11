@@ -24,6 +24,7 @@ from docx.shared import Emu, Mm, Pt
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
+from docwen_plugin_markdown.to_docx.sections import section_properties_at
 from docwen_plugin_markdown.yaml_processor import BODY_PLACEHOLDER_ALIASES
 
 # ── Built-in fallback template ──────────────────────────────────────────────
@@ -33,21 +34,16 @@ _BUILTIN_PLACEHOLDER = "{{正文}}"
 
 def body_content_extent(doc: Any, placeholder: Any = None) -> tuple[int, int]:
     """Return usable column width/page height at the template body location."""
-    section = doc.sections[-1]
-    if placeholder is not None:
-        for element in (placeholder._p, *placeholder._p.itersiblings()):
-            properties = element if element.tag == qn("w:sectPr") else element.find(qn("w:pPr") + "/" + qn("w:sectPr"))
-            if properties is not None:
-                section = Section(properties, doc.part)
-                break
+    properties = section_properties_at(doc, placeholder)
+    section = Section(properties, doc.part) if properties is not None else None
 
     def length(name: str, default_mm: float) -> int:
-        value = getattr(section, name)
+        value = getattr(section, name, None)
         return int(Mm(default_mm) if value is None else value)
 
     width = length("page_width", 210) - length("left_margin", 25.4) - length("right_margin", 25.4) - length("gutter", 0)
     height = length("page_height", 297) - length("top_margin", 25.4) - length("bottom_margin", 25.4)
-    columns = section._sectPr.find(qn("w:cols"))
+    columns = properties.find(qn("w:cols")) if properties is not None else None
     if columns is not None:
         widths = [int(item.get(qn("w:w"), "0")) * 635 for item in columns.findall(qn("w:col"))]
         if widths and all(value > 0 for value in widths):
