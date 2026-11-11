@@ -8,7 +8,7 @@ from zipfile import ZipFile
 from lxml import etree
 from openpyxl.utils.cell import coordinate_to_tuple, get_column_letter
 
-from docwen_plugin_spreadsheet.worksheets import ordinary_worksheet_parts
+from docwen_core.spreadsheet_package import ordinary_worksheet_parts
 
 _MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 

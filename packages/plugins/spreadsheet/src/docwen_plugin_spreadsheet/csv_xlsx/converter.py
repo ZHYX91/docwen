@@ -20,13 +20,15 @@ from typing import TYPE_CHECKING, Any
 
 from docwen_core.detection import sniff_delimited_separator
 from docwen_core.errors import CancellationRequested
-from docwen_plugin_spreadsheet.delimited import decoded_samples
-from docwen_plugin_spreadsheet.sparse_projection import (
+from docwen_core.spreadsheet_package import preflight_worksheet_allocations
+from docwen_core.spreadsheet_projection import (
     MAX_SPREADSHEET_PROJECTION_CELLS,
-    ProjectionBudget,
-    preflight_worksheet_allocations,
+    WorksheetValueView,
+    ordinary_worksheets,
+    plan_delimited_projection,
+    write_delimited_projection,
 )
-from docwen_plugin_spreadsheet.worksheets import ordinary_worksheets
+from docwen_plugin_spreadsheet.delimited import decoded_samples
 from docwen_plugin_spreadsheet.xlsx_text import XLSX_CELL_TEXT_LIMIT, xlsx_cell_text_length
 
 if TYPE_CHECKING:
@@ -133,21 +135,6 @@ def _find_unavailable_formula_caches(
 
     visit_formula_caches(input_path, visit, sheet_names=sheet_names, cancel_check=cancel_check)
     return count, locations
-
-
-def _stored_value_rows(worksheet: Any, *, cancel_check: Callable[[], None]):
-    """Stream the delimited coordinate rectangle without creating blank cells."""
-    max_row, max_column = worksheet.max_row, worksheet.max_column
-    for row in range(1, max_row + 1):
-        if row % _CANCEL_CHECK_ROW_INTERVAL == 0:
-            cancel_check()
-        values: list[Any] = []
-        for column in range(1, max_column + 1):
-            if column % 1000 == 0:
-                cancel_check()
-            cell = worksheet._cells.get((row, column))
-            values.append(None if cell is None else cell.value)
-        yield values
 
 
 def _formula_cache_warning_message(count: int, locations: list[str]) -> str:
@@ -430,13 +417,17 @@ class XlsxToCsvConverter:
         artifacts: list[ArtifactManifest] = []
         total_sheets = 0
         total_rows = 0
+        output_paths: list[Path] = []
+        completed = False
 
         try:
-            worksheets = ordinary_worksheets(wb)
+            worksheets = ordinary_worksheets(wb.worksheets)
             total_sheets = len(worksheets)
-            projection_budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
-            for worksheet in worksheets:
-                projection_budget.reserve(worksheet.max_row * worksheet.max_column, location=worksheet.title)
+            projections = plan_delimited_projection(
+                (WorksheetValueView(ws.title, ws.max_row, ws.max_column, ws._cells) for ws in worksheets),
+                cancel_check=context.cancellation.check,
+                limit=MAX_SPREADSHEET_PROJECTION_CELLS,
+            )
             formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
                 wb,
                 formula_wb,
@@ -453,19 +444,13 @@ class XlsxToCsvConverter:
 
                 output_path = context.workspace.create_artifact_path("primary" if idx == 0 else "auxiliary", ".csv")
 
-                row_count = 0
-                with open(output_path, "w", encoding="utf-8-sig", newline="") as f:
-                    writer = csv.writer(f)
-                    for row_index, row in enumerate(_stored_value_rows(ws, cancel_check=context.cancellation.check), 1):
-                        if row_index % _CANCEL_CHECK_ROW_INTERVAL == 0:
-                            context.cancellation.check()
-                        output_row = []
-                        for column_index, value in enumerate(row, 1):
-                            if column_index % 1000 == 0:
-                                context.cancellation.check()
-                            output_row.append("" if value is None else value)
-                        writer.writerow(output_row)
-                        row_count += 1
+                row_count = write_delimited_projection(
+                    projections[idx],
+                    output_path,
+                    cancel_check=context.cancellation.check,
+                    delimiter=",",
+                )
+                output_paths.append(Path(output_path))
 
                 context.cancellation.check()
                 total_rows += row_count
@@ -485,8 +470,11 @@ class XlsxToCsvConverter:
                     },
                     is_primary=(idx == 0),
                 )
-                context.workspace.add_artifact(artifact)
                 artifacts.append(artifact)
+            context.cancellation.check()
+            for artifact in artifacts:
+                context.workspace.add_artifact(artifact)
+            completed = True
 
         except CancellationRequested:
             raise
@@ -509,6 +497,9 @@ class XlsxToCsvConverter:
                 ],
             )
         finally:
+            if not completed:
+                for output_path in output_paths:
+                    output_path.unlink(missing_ok=True)
             if wb is not None:
                 wb.close()
             if formula_wb is not None:
@@ -753,13 +744,17 @@ class XlsxToTsvConverter:
         artifacts: list[ArtifactManifest] = []
         total_sheets = 0
         total_rows = 0
+        output_paths: list[Path] = []
+        completed = False
 
         try:
-            worksheets = ordinary_worksheets(wb)
+            worksheets = ordinary_worksheets(wb.worksheets)
             total_sheets = len(worksheets)
-            projection_budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
-            for worksheet in worksheets:
-                projection_budget.reserve(worksheet.max_row * worksheet.max_column, location=worksheet.title)
+            projections = plan_delimited_projection(
+                (WorksheetValueView(ws.title, ws.max_row, ws.max_column, ws._cells) for ws in worksheets),
+                cancel_check=context.cancellation.check,
+                limit=MAX_SPREADSHEET_PROJECTION_CELLS,
+            )
             formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
                 wb,
                 formula_wb,
@@ -776,19 +771,13 @@ class XlsxToTsvConverter:
 
                 output_path = context.workspace.create_artifact_path("primary" if idx == 0 else "auxiliary", ".tsv")
 
-                row_count = 0
-                with open(output_path, "w", encoding="utf-8-sig", newline="") as f:
-                    writer = csv.writer(f, delimiter="\t")
-                    for row_index, row in enumerate(_stored_value_rows(ws, cancel_check=context.cancellation.check), 1):
-                        if row_index % _CANCEL_CHECK_ROW_INTERVAL == 0:
-                            context.cancellation.check()
-                        output_row = []
-                        for column_index, value in enumerate(row, 1):
-                            if column_index % 1000 == 0:
-                                context.cancellation.check()
-                            output_row.append("" if value is None else value)
-                        writer.writerow(output_row)
-                        row_count += 1
+                row_count = write_delimited_projection(
+                    projections[idx],
+                    output_path,
+                    cancel_check=context.cancellation.check,
+                    delimiter="\t",
+                )
+                output_paths.append(Path(output_path))
 
                 context.cancellation.check()
                 total_rows += row_count
@@ -807,8 +796,11 @@ class XlsxToTsvConverter:
                     },
                     is_primary=(idx == 0),
                 )
-                context.workspace.add_artifact(artifact)
                 artifacts.append(artifact)
+            context.cancellation.check()
+            for artifact in artifacts:
+                context.workspace.add_artifact(artifact)
+            completed = True
 
         except CancellationRequested:
             raise
@@ -831,6 +823,9 @@ class XlsxToTsvConverter:
                 ],
             )
         finally:
+            if not completed:
+                for output_path in output_paths:
+                    output_path.unlink(missing_ok=True)
             if wb is not None:
                 wb.close()
             if formula_wb is not None:
