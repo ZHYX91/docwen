@@ -65,6 +65,17 @@ XLSX image markers resolve relative files beside the actual selected template (o
 
 XLSX 图片标记中的相对文件首先在实际选中模板旁解析，普通表格导出则在源 Markdown 旁解析。同名工作目录文件不能覆盖该邻居，即使邻居不是有效图片；只有邻居缺席才使用既有 CWD 兼容查找，绝对路径保持自身身份。保护格仍消费输入，但不覆盖原值或插图；说明注释显示可读图片文件名，不输出内部传输标记或转义路径，最长 500 个字符。
 
+### XLSX scalar types / XLSX 标量类型
+
+Whole-cell YAML fills preserve booleans and ordinary numbers as native cell values. Integers with more than
+fifteen decimal digits are written as exact decimal strings before serialization; setting a numeric cell's
+display format to text is insufficient. Authored numeric strings remain text, including leading zeros.
+This does not recover precision already lost when YAML parses a floating-point value.
+
+整个单元格的 YAML 填充保留布尔值及普通数值的实际类型。超过十五位十进制数字的整数在保存前转为精确
+十进制字符串，不能仅把数值单元格的显示格式改为文本。原本为字符串的数字仍为文本，并保留前导零。
+浮点值在 YAML 解析时已经损失的精度不在此处恢复。
+
 ### DOCX style identity / DOCX 样式身份
 
 Every managed style has one identity chain:
