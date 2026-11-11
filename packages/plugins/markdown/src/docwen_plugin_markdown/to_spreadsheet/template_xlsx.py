@@ -12,7 +12,6 @@ from typing import Any
 from urllib.parse import quote, unquote
 
 import yaml
-from openpyxl import load_workbook
 from openpyxl.comments import Comment
 from openpyxl.styles import numbers
 from openpyxl.utils import get_column_letter, range_boundaries
@@ -23,6 +22,7 @@ from docwen_core.formats import CATEGORY_IMAGE, get_category
 from docwen_core.yaml_tools import extract_yaml
 from docwen_plugin_markdown.common_utils import parse_md_tables, parse_raw_md_tables
 from docwen_plugin_markdown.to_spreadsheet.image_plan import XlsxImageTextPlan
+from docwen_plugin_markdown.xlsx_template import load_template_workbook
 from docwen_plugin_markdown.xlsx_text import existing_xlsx_cells
 from docwen_plugin_markdown.yaml_processor import ensure_title_fallback
 
@@ -72,8 +72,7 @@ def build_template_workbook(
             table["headers"] = [header_value_projector(value) for value in table.get("headers", [])]
     table_columns = _columns_from_tables(tables)
 
-    with Path(template_path).open("rb") as stream:
-        workbook = load_workbook(stream)
+    workbook = load_template_workbook(template_path)
     image_plan = XlsxImageTextPlan(cell_value_writer)
     if image_scope is not None:
         image_plan.protect_template_literals(workbook, image_scope=image_scope, markdown=markdown)

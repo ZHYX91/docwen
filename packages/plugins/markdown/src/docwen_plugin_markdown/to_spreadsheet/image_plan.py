@@ -91,6 +91,12 @@ class XlsxImageTextPlan:
                 assign_bounded_xlsx_value(cell, value)
             else:
                 self._value_writer(cell, value)
+            # Ordinary Markdown exports treat generated empty text as a blank
+            # cell, including link literals restored by the value writer.
+            # Only clear edited cells: an untouched template may contain an
+            # intentional empty string that the package writer must preserve.
+            if cell.value == "":
+                cell.value = None
         self._values.pop(cell, None)
 
 
