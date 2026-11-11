@@ -1345,9 +1345,9 @@ class MdToDocxRenderer:
         for line in lines:
             paragraph = self._doc.add_paragraph(style=self._paragraph_style(image_only=False))
             paragraph.add_run(line)
-            if self._body_paragraph_format is not None:
+            if self._body_paragraph_format is not None and self._quote_depth == 0:
                 self._body_paragraph_format.apply_to(paragraph)
-            if self._body_run_format is not None:
+            if self._body_run_format is not None and self._quote_depth == 0:
                 self._body_run_format.apply_to(paragraph)
             paragraphs.append(paragraph)
         return paragraphs
