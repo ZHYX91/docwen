@@ -135,20 +135,27 @@ class TestWordNativeHeadingNumbering:
         return etree.fromstring(raw)
 
     @staticmethod
-    def _find_heading_abstract_num(num_root: etree._Element) -> etree._Element | None:
-        """Find the heading abstractNum (one with pStyle linking to Heading styles)."""
-        WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-        for an in num_root.findall(f"{{{WML_NS}}}abstractNum"):
-            for lvl in an.findall(f"{{{WML_NS}}}lvl"):
-                pStyle = lvl.find(f"{{{WML_NS}}}pStyle")
-                if pStyle is not None:
-                    val = pStyle.get(f"{{{WML_NS}}}val", "")
-                    if val.startswith("Heading"):
-                        return an
-        return None
+    def _heading_abstract_num(docx_path: str, text: str) -> etree._Element:
+        """Resolve a generated heading's directly assigned numbering definition."""
+        from docx import Document
+
+        paragraph = next(p for p in Document(docx_path).paragraphs if p.text == text)
+        num_id = paragraph._p.find(f"{{{WML_NS}}}pPr/{{{WML_NS}}}numPr/{{{WML_NS}}}numId")
+        assert num_id is not None
+        with zipfile.ZipFile(docx_path) as archive:
+            root = etree.fromstring(archive.read("word/numbering.xml"))
+        num = root.find(f'{{{WML_NS}}}num[@{{{WML_NS}}}numId="{num_id.get(f"{{{WML_NS}}}val")}"]')
+        assert num is not None
+        abstract_id = num.find(f"{{{WML_NS}}}abstractNumId")
+        assert abstract_id is not None
+        abstract = root.find(
+            f'{{{WML_NS}}}abstractNum[@{{{WML_NS}}}abstractNumId="{abstract_id.get(f"{{{WML_NS}}}val")}"]'
+        )
+        assert abstract is not None
+        return abstract
 
     def test_word_native_with_hierarchical_standard(self):
-        """word_native + hierarchical_standard produces numbering.xml with pStyle."""
+        """Generated headings use direct numPr without modifying shared styles."""
         md = "# Heading 1\n\n## Heading 2\n\n### Heading 3\n"
         md_path = write_temp_md(md)
         ctx, _ = make_context(
@@ -169,37 +176,32 @@ class TestWordNativeHeadingNumbering:
 
         output = str(Path(result.artifacts[0].staging_path))
 
-        # Verify numbering.xml exists and has abstractNum with pStyle
-        num_root = self._get_numbering_xml(output)
-        assert num_root is not None, "numbering.xml missing"
-
-        # Find the heading abstractNum dynamically (ID is no longer hardcoded — BUG-2 fix)
-        heading_an = self._find_heading_abstract_num(num_root)
-        assert heading_an is not None, "Heading abstractNum not found"
-        heading_id = heading_an.get(f"{{{self.WML_NS}}}abstractNumId")
-        assert heading_id is not None
-
-        # Verify pStyle on each level
+        heading_an = self._heading_abstract_num(output, "Heading 1")
         lvls = heading_an.findall(f"{{{self.WML_NS}}}lvl")
         assert len(lvls) >= 3
-        for i in range(3):
-            pStyle = lvls[i].find(f"{{{self.WML_NS}}}pStyle")
-            assert pStyle is not None, f"Level {i} missing pStyle"
-            assert pStyle.get(f"{{{self.WML_NS}}}val") == f"Heading{i + 1}"
+        assert not heading_an.findall(f"{{{self.WML_NS}}}lvl/{{{self.WML_NS}}}pStyle")
 
-        # Verify styles.xml has numPr on Heading styles with matching numId
+        from docx import Document
+
+        document = Document(output)
+        num_ids = set()
+        for level in range(1, 4):
+            heading = next(p for p in document.paragraphs if p.text == f"Heading {level}")
+            num_pr = heading._p.find(f"{{{self.WML_NS}}}pPr/{{{self.WML_NS}}}numPr")
+            assert num_pr is not None
+            ilvl = num_pr.find(f"{{{self.WML_NS}}}ilvl")
+            num_id = num_pr.find(f"{{{self.WML_NS}}}numId")
+            assert ilvl is not None and num_id is not None
+            assert ilvl.get(f"{{{self.WML_NS}}}val") == str(level - 1)
+            num_ids.add(num_id.get(f"{{{self.WML_NS}}}val"))
+        assert len(num_ids) == 1
+
         styles_root = self._get_styles_xml(output)
         assert styles_root is not None, "styles.xml missing"
         for style_id in ("Heading1", "Heading2", "Heading3"):
             style_elem = styles_root.find(f'{{{self.WML_NS}}}style[@{{{self.WML_NS}}}styleId="{style_id}"]')
             assert style_elem is not None, f"{style_id} not found"
-            pPr = style_elem.find(f"{{{self.WML_NS}}}pPr")
-            assert pPr is not None, f"{style_id} missing pPr"
-            numPr = pPr.find(f"{{{self.WML_NS}}}numPr")
-            assert numPr is not None, f"{style_id} missing numPr"
-            numId_elem = numPr.find(f"{{{self.WML_NS}}}numId")
-            assert numId_elem is not None
-            assert numId_elem.get(f"{{{self.WML_NS}}}val") == heading_id
+            assert style_elem.find(f"{{{self.WML_NS}}}pPr/{{{self.WML_NS}}}numPr") is None
 
     @pytest.mark.parametrize(
         "template_path",
@@ -239,30 +241,23 @@ class TestWordNativeHeadingNumbering:
             paragraph_style_ids[paragraph.text] = paragraph.style.style_id
         expected_style_ids = [paragraph_style_ids[f"Heading {level}"] for level in range(1, 4)]
 
-        num_root = self._get_numbering_xml(output)
-        assert num_root is not None
-        heading_abstract_num = next(
-            abstract_num
-            for abstract_num in num_root.findall(f"{{{self.WML_NS}}}abstractNum")
-            if any(
-                p_style.get(f"{{{self.WML_NS}}}val") == expected_style_ids[0]
-                for p_style in abstract_num.findall(f"{{{self.WML_NS}}}lvl/{{{self.WML_NS}}}pStyle")
-            )
-        )
+        heading_abstract_num = self._heading_abstract_num(output, "Heading 1")
         levels = heading_abstract_num.findall(f"{{{self.WML_NS}}}lvl")
-        actual_style_ids: list[str | None] = []
-        for index in range(3):
-            p_style = levels[index].find(f"{{{self.WML_NS}}}pStyle")
-            assert p_style is not None
-            actual_style_ids.append(p_style.get(f"{{{self.WML_NS}}}val"))
-        assert actual_style_ids == expected_style_ids
+        assert len(levels) >= 3
+        assert all(level.find(f"{{{self.WML_NS}}}pStyle") is None for level in levels)
 
         styles_root = self._get_styles_xml(output)
-        assert styles_root is not None
+        template_styles = self._get_styles_xml(str(template_path))
+        assert styles_root is not None and template_styles is not None
         for style_id in expected_style_ids:
             style = styles_root.find(f'{{{self.WML_NS}}}style[@{{{self.WML_NS}}}styleId="{style_id}"]')
-            assert style is not None
-            assert style.find(f"{{{self.WML_NS}}}pPr/{{{self.WML_NS}}}numPr") is not None
+            original = template_styles.find(f'{{{self.WML_NS}}}style[@{{{self.WML_NS}}}styleId="{style_id}"]')
+            assert style is not None and original is not None
+            actual = style.find(f"{{{self.WML_NS}}}pPr/{{{self.WML_NS}}}numPr")
+            expected = original.find(f"{{{self.WML_NS}}}pPr/{{{self.WML_NS}}}numPr")
+            assert (etree.tostring(actual) if actual is not None else None) == (
+                etree.tostring(expected) if expected is not None else None
+            )
 
     def test_word_native_with_gongwen_standard_approximate(self):
         """word_native + gongwen_standard succeeds (approximate verdict allowed)."""
@@ -360,12 +355,7 @@ class TestWordNativeHeadingNumbering:
         assert result.success
 
         output = str(Path(result.artifacts[0].staging_path))
-        with zipfile.ZipFile(output, "r") as zf:
-            # numbering.xml may exist from template, but heading abstractNum
-            # (with pStyle linking to Heading styles) should NOT be present
-            names = zf.namelist()
-            if "word/numbering.xml" in names:
-                raw = zf.read("word/numbering.xml")
-                num_root = etree.fromstring(raw)
-                heading_an = self._find_heading_abstract_num(num_root)
-                assert heading_an is None, "Heading abstractNum found despite add_numbering=False"
+        from docx import Document
+
+        heading = next(p for p in Document(output).paragraphs if p.text == "Heading")
+        assert heading._p.find(f"{{{WML_NS}}}pPr/{{{WML_NS}}}numPr") is None

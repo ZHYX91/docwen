@@ -12,6 +12,13 @@ import docwen_core._docx_semantics_v3_fenced as fenced
 from docwen_core._docx_caption_carrier import captionable_logical_elements
 from docwen_core._docx_semantics_v3_fenced import FencedSourceIdentityV3
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
+from docwen_core._docx_semantics_v3_heading_styles import (
+    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+    HeadingStyleBindingV3,
+    parse_heading_style_binding_map,
+    prove_heading_paragraph,
+    prove_heading_style_registry,
+)
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TAG_PREFIX,
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -59,7 +66,6 @@ from docwen_core._docx_semantics_v3_topology import (
     prove_anchor_topology_document,
     prove_block_sdt_envelope,
     prove_exact_field_run,
-    prove_heading_paragraph,
     prove_inline_occurrence_envelope,
     prove_ordinary_anchor_group,
     prove_owned_block_parent,
@@ -99,6 +105,7 @@ class DocxSemanticsV3Recovery:
         stable_reference_target_ids: tuple[str, ...] = (),
         recovered_captions: tuple[RecoveredCaptionV3, ...] = (),
         caption_style_bindings: tuple[CaptionStyleBindingV3, ...] = (),
+        heading_style_bindings: tuple[HeadingStyleBindingV3, ...] = (),
         fenced_source_identities: tuple[FencedSourceIdentityV3, ...] = (),
         fenced_sources_by_paragraph: dict[Any, tuple[FencedSourceIdentityV3, str]] | None = None,
     ) -> None:
@@ -116,6 +123,8 @@ class DocxSemanticsV3Recovery:
         self.stable_reference_target_ids = stable_reference_target_ids
         self.recovered_captions = recovered_captions
         self.caption_style_bindings = caption_style_bindings
+        self.heading_style_bindings = heading_style_bindings
+        self._heading_levels_by_source_id = {binding.source_id: binding.level for binding in heading_style_bindings}
         self.fenced_source_identities = fenced_source_identities
         self._fenced_sources_by_paragraph = fenced_sources_by_paragraph or {}
         self.caption_signatures = tuple(
@@ -127,6 +136,7 @@ class DocxSemanticsV3Recovery:
         """Load zero or one strict map of each owned namespace."""
 
         caption_styles: tuple[CaptionStyleBindingV3, ...] = ()
+        heading_styles: tuple[HeadingStyleBindingV3, ...] = ()
         with ZipFile(Path(path)) as package:
             owned = read_owned_map_parts(package)
             for namespace, (item_number, _root) in owned.items():
@@ -135,6 +145,10 @@ class DocxSemanticsV3Recovery:
                 _number, root = owned[CAPTION_STYLE_BINDING_MAP_NAMESPACE]
                 caption_styles = parse_caption_style_binding_map(root)
                 caption_styles = prove_caption_style_registry(package, caption_styles, allow_style_id_rewrite=True)
+            if HEADING_STYLE_BINDING_MAP_NAMESPACE in owned:
+                _number, root = owned[HEADING_STYLE_BINDING_MAP_NAMESPACE]
+                heading_styles = parse_heading_style_binding_map(root)
+                prove_heading_style_registry(document, heading_styles)
 
         from docwen_core.docx_table_roles import TABLE_ROLES_NAMESPACE, prove_table_role_bookmarks
 
@@ -184,6 +198,7 @@ class DocxSemanticsV3Recovery:
             fenced_sources,
             anchor_topology,
             topology_map_present=ANCHOR_TOPOLOGY_MAP_NAMESPACE in owned,
+            heading_style_bindings=heading_styles,
             standalone_target_tags=frozenset(addressable_standalone_tags),
             proven_table_role_nodes=role_nodes,
         )
@@ -210,6 +225,7 @@ class DocxSemanticsV3Recovery:
         anchor_topology: list[AnchorTopologyEdgeV3],
         *,
         topology_map_present: bool,
+        heading_style_bindings: tuple[HeadingStyleBindingV3, ...] = (),
         caption_parser: Callable[..., tuple[str, str]] | None = None,
         standalone_target_tags: frozenset[str] = frozenset(),
         proven_table_role_nodes: frozenset[Any] = frozenset(),
@@ -220,6 +236,11 @@ class DocxSemanticsV3Recovery:
         from docx.oxml.ns import qn
 
         target_by_tag = {item.tag: item for item in targets}
+        heading_bindings = {binding.source_id: binding for binding in heading_style_bindings}
+        if len(heading_bindings) != len(heading_style_bindings) or set(heading_bindings) != {
+            target.source_id for target in targets if target.kind == "heading"
+        }:
+            raise DocxSemanticsV3Error("Heading-style bindings differ from the exact target set")
         anchor_by_tag = {item.tag: item for item in anchors}
         block_elements: dict[Any, tuple[Any, ...]] = {}
         block_anchors: dict[Any, SourceAnchorV3] = {}
@@ -272,7 +293,7 @@ class DocxSemanticsV3Recovery:
                     logical = logical_group_elements(blocks)
                     if len(logical) != 1 or logical[0].tag != qn("w:p"):
                         raise DocxSemanticsV3Error("Heading target SDT must resolve to exactly one paragraph")
-                    prove_heading_paragraph(logical[0])
+                    prove_heading_paragraph(logical[0], heading_bindings[target.source_id])
                     block_anchors[logical[0]] = SourceAnchorV3("semantic_target", target.source_id, target.kind)
                 else:
                     caption, _object_elements = _prove_caption_target_group(
@@ -379,6 +400,7 @@ class DocxSemanticsV3Recovery:
             stable_reference_target_ids=tuple(stable_target_ids),
             recovered_captions=tuple(recovered_captions),
             caption_style_bindings=caption_style_bindings,
+            heading_style_bindings=heading_style_bindings,
             fenced_source_identities=tuple(fenced_sources),
             fenced_sources_by_paragraph=fenced_sources_by_paragraph,
         )
@@ -471,6 +493,13 @@ class DocxSemanticsV3Recovery:
             else:
                 output.extend(logical_group_elements(blocks, proven_nested_blocks=self._block_elements))
         return output
+
+    def heading_level(self, paragraph_element: Any) -> int | None:
+        """Return the source level of an authenticated generated Heading."""
+        anchor = self._block_anchors.get(paragraph_element)
+        if anchor is None or anchor.owner_kind != "semantic_target" or anchor.block_kind != "heading":
+            return None
+        return self._heading_levels_by_source_id.get(anchor.source_id)
 
     def source_anchor(self, paragraph_element: Any) -> SourceAnchorV3 | None:
         return self._block_anchors.get(paragraph_element)

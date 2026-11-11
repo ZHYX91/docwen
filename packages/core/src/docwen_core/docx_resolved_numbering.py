@@ -20,6 +20,7 @@ from docwen_core._docx_resolved_inline import (
 from docwen_core._docx_resolved_numbering_proof import (
     ResolvedNumberingDocxError,
     ResolvedNumberingProofMixin,
+    ResolvedParagraphInventory,
 )
 from docwen_core._docx_resolved_source_carriers import (
     ResolvedOrdinaryAnchorBindingV4,
@@ -43,6 +44,12 @@ from docwen_core._docx_semantics_v3_fenced_map import (
     fenced_source_identity_from_mapping_v3,
     fenced_source_map_xml,
     fenced_source_mapping_v3,
+)
+from docwen_core._docx_semantics_v3_heading_styles import (
+    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+    HeadingStyleBindingV3,
+    capture_heading_style_binding,
+    heading_style_binding_map_xml,
 )
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -183,6 +190,10 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._heading_style_ids = dict(heading_style_ids)
         self._heading_style_names = dict(heading_style_names)
         self._caption_style_bindings = validate_caption_style_bindings(caption_style_bindings)
+        self._heading_inventory = ResolvedParagraphInventory(document, set(self._heading_style_ids.values()), "Heading")
+        self._caption_inventory = ResolvedParagraphInventory(
+            document, {item.resolved_style_id for item in self._caption_style_bindings}, "caption"
+        )
         existing_abstract, existing_num = existing_numbering_ids(document)
         self._projection = create_heading_numbering_projection(
             port.plan,
@@ -221,6 +232,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._caption_plan_bindings: list[_CaptionPlanBinding] = []
         self._heading_rendered_texts: dict[tuple[int, int, str], str] = {}
         self._heading_payload_snapshots: dict[tuple[int, int, str], tuple[Any, ...]] = {}
+        self._heading_style_bindings: list[HeadingStyleBindingV3] = []
         self._source_projected_heading_keys: set[tuple[int, int, str]] = set()
         self._occurrence_bindings: list[_DisabledOccurrenceBinding] = []
         self._standalone_occurrence_bindings: list[_StandaloneOccurrenceBinding] = []
@@ -332,9 +344,13 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
             snapshot = tuple(deepcopy(item) for item in paragraph._p if item.tag != qn("w:pPr"))
         self._heading_rendered_texts[key] = rendered_text
         self._heading_payload_snapshots[key] = snapshot
-        if not plan_target.enabled:
-            self._require_style_without_numbering(expected_style_id)
+        self._heading_inventory.bind(key, paragraph._p)
         if document_target.target_id is not None:
+            self._heading_style_bindings.append(
+                capture_heading_style_binding(
+                    self._document, paragraph, document_target.target_id, document_target.heading_level
+                )
+            )
             identity = self._target_identity(document_target, plan_target)
             wrap_paragraph_content_with_bookmark(
                 paragraph,
@@ -429,6 +445,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
             preserve_payload=payload_fragments is not None,
         )
         key = (source_start, source_end, kind)
+        self._caption_inventory.bind(key, caption._p)
         self._caption_target_keys.append(key)
         self._caption_plan_bindings.append(
             _CaptionPlanBinding(
@@ -650,6 +667,8 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._anchor_topology_edges = order.anchor_topology_edges
         self._block_parent_by_tag = dict(order.direct_parent_by_tag)
         self._block_physical_tags = physical_tags
+        self._heading_inventory.capture(self._document)
+        self._caption_inventory.capture(self._document)
         self._finalized = True
 
     def write_package(
@@ -706,6 +725,13 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 (
                     CAPTION_STYLE_BINDING_MAP_NAMESPACE,
                     caption_style_binding_map_xml(self._caption_style_bindings),
+                )
+            )
+        if self._heading_style_bindings:
+            parts.append(
+                (
+                    HEADING_STYLE_BINDING_MAP_NAMESPACE,
+                    heading_style_binding_map_xml(tuple(self._heading_style_bindings)),
                 )
             )
         if self._occurrence_bindings:

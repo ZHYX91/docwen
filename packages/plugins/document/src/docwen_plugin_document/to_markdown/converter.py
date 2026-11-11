@@ -1363,6 +1363,11 @@ class DocxToMarkdownConverter:
         style_name = ""
         if para is not None and para.style is not None:
             style_name = para.style.name or ""
+        owned_heading_level = self._semantic_v3_recovery.heading_level(para_element)
+        if owned_heading_level is None:
+            direct_outline = para_element.find(f"{qn('w:pPr')}/{qn('w:outlineLvl')}")
+            if direct_outline is not None and direct_outline.get(qn("w:val")) in {str(level) for level in range(9)}:
+                owned_heading_level = int(direct_outline.get(qn("w:val"))) + 1
 
         # ── 3. Style-driven code-block / quote detection ────────────
         from docwen_core.docx_parsing.format_features import (
@@ -1373,12 +1378,14 @@ class DocxToMarkdownConverter:
         )
 
         style_type, style_value = (
-            detect_paragraph_style_type(para, config=style_detector_config) if para is not None else (None, None)
+            detect_paragraph_style_type(para, config=style_detector_config)
+            if para is not None and owned_heading_level is None
+            else (None, None)
         )
         # Existing authenticated ordinary-anchor groups can reliably identify
         # quote prose and list continuations with retained semantic styles.
         # Anonymous documents continue through the ordinary style mapper.
-        if style_type is None and para is not None:
+        if style_type is None and para is not None and owned_heading_level is None:
             owners = self._semantic_v3_recovery.ordinary_anchor_groups(para_element)
             quote_depth = sum(group.anchor.block_kind in {"block_quote", "callout"} for group in owners)
             if quote_depth:
@@ -1471,10 +1478,14 @@ class DocxToMarkdownConverter:
 
         # 3b. Shading-based code block (fallback)
         effective_style_config = style_detector_config or StyleDetectorConfig()
-        if para is not None and has_paragraph_gray_shading(
-            para,
-            wps_enabled=effective_style_config.wps_shading_enabled,
-            word_enabled=effective_style_config.word_shading_enabled,
+        if (
+            owned_heading_level is None
+            and para is not None
+            and has_paragraph_gray_shading(
+                para,
+                wps_enabled=effective_style_config.wps_shading_enabled,
+                word_enabled=effective_style_config.word_shading_enabled,
+            )
         ):
             _accumulate_code_paragraph()
             _append_code_images()
@@ -1483,7 +1494,7 @@ class DocxToMarkdownConverter:
 
         # 3c. A paragraph whose non-empty runs all carry one configured
         # character style is promoted to the corresponding block form.
-        if para is not None and style_type is None:
+        if para is not None and style_type is None and owned_heading_level is None:
             run_style_type, run_style_value = detect_full_paragraph_run_style(
                 para,
                 config=effective_style_config,
@@ -1639,11 +1650,18 @@ class DocxToMarkdownConverter:
         )
         is_title_style = style_name in ("Title", "Subtitle")
         style_heading_level = self._heading_level_from_style(style_name)
-        is_heading = outline_lvl is not None or style_heading_level is not None or is_title_style
+        is_heading = (
+            owned_heading_level is not None
+            or outline_lvl is not None
+            or style_heading_level is not None
+            or is_title_style
+        )
 
         # Determine heading level for Title/Subtitle styles
         heading_level = 1
-        if is_title_style and outline_lvl is None:
+        if owned_heading_level is not None:
+            heading_level = owned_heading_level
+        elif is_title_style and outline_lvl is None:
             heading_level = 1 if style_name == "Title" else 2
         elif is_heading and outline_lvl is not None:
             heading_level = max(1, min(9, outline_lvl))

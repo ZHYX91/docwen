@@ -462,18 +462,6 @@ def prove_block_sdt_envelope(sdt: Any, tag: str) -> None:
         raise DocxSemanticsV3Error("owned block SDT content is not canonical")
 
 
-def prove_heading_paragraph(paragraph: Any) -> None:
-    """Prove an addressable Heading remains a Heading1..Heading9 paragraph."""
-
-    import re
-
-    from docx.oxml.ns import qn
-
-    style = paragraph.find(f"./{qn('w:pPr')}/{qn('w:pStyle')}")
-    if style is None or re.fullmatch(r"Heading[1-9]", style.get(qn("w:val"), "")) is None:
-        raise DocxSemanticsV3Error("Heading target must retain an exact Heading1..Heading9 style")
-
-
 def prove_source_recovery_records(soft: list[Any], occurrences: list[Any]) -> None:
     """Prove one source identity and globally non-overlapping authored ranges."""
 

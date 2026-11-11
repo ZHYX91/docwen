@@ -136,6 +136,7 @@ if TYPE_CHECKING:
     from docx.document import Document
 
     from docwen_core.protocols.execution_context import DocumentStyleConverterContext
+    from docwen_plugin_markdown.to_docx.heading_numbering import HeadingNumberingTargets
 
 # ── Media types ─────────────────────────────────────────────────────────
 MEDIA_TYPE_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -630,6 +631,25 @@ def _semantic_v3_package_diagnostic(message: str) -> ConversionDiagnostic:
         message=message,
         code="MD2DOCX-SEMANTICS-V3-PACKAGE-PROOF",
     )
+
+
+def _save_rendered_document(
+    doc: Document,
+    output_path: str,
+    renderer: MdToDocxRenderer | None,
+    *,
+    native_headings: bool,
+) -> HeadingNumberingTargets | None:
+    """Capture generated heading identities at the final document-save boundary."""
+    targets = None
+    if renderer is not None:
+        renderer.finalize_loss_comments()
+        if native_headings:
+            from docwen_plugin_markdown.to_docx.heading_numbering import capture_heading_numbering_targets
+
+            targets = capture_heading_numbering_targets(doc, renderer.generated_headings)
+    doc.save(output_path)
+    return targets
 
 
 class MdToDocxConverter:
@@ -1360,9 +1380,9 @@ class MdToDocxConverter:
             from docwen_core.docx_table_roles import inject_table_roles, prepare_table_roles
 
             table_roles = prepare_table_roles(doc)
-            if renderer is not None:
-                renderer.finalize_loss_comments()
-            doc.save(output_path)
+            heading_targets = _save_rendered_document(
+                doc, output_path, renderer, native_headings=word_native_translation is not None
+            )
 
             # Write footnote/endnote body elements into the DOCX ZIP parts
             deferred_note_references = 0
@@ -1381,7 +1401,7 @@ class MdToDocxConverter:
                 write_numbering_to_docx(output_path, renderer.list_numbering)
 
             # Write Word-native heading numbering definitions
-            if render_body and word_native_translation is not None:
+            if heading_targets is not None and word_native_translation is not None:
                 from docwen_plugin_markdown.to_docx.heading_numbering import (
                     write_heading_numbering_to_docx,
                 )
@@ -1389,7 +1409,7 @@ class MdToDocxConverter:
                 write_heading_numbering_to_docx(
                     output_path,
                     word_native_translation,
-                    heading_style_ids={level: managed_styles.style_id(f"heading_{level}") for level in range(1, 10)},
+                    targets=heading_targets,
                 )
 
             if semantic_v3_session is not None:

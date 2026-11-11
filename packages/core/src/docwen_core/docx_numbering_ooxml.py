@@ -152,7 +152,7 @@ def apply_heading_numbering(
 
     materialization = target.materialization
     if not target.enabled or materialization is None:
-        remove_paragraph_numbering(paragraph)
+        suppress_paragraph_numbering(paragraph)
         return
     if getattr(materialization, "type", None) != "heading_list":
         raise ResolvedNumberingOoxmlError("Heading target lacks heading_list materialization")
@@ -177,15 +177,16 @@ def apply_heading_numbering(
     _insert_num_pr(p_pr, num_pr)
 
 
-def remove_paragraph_numbering(paragraph: Any) -> None:
-    """Ensure a disabled target has no direct effective ``w:numPr``."""
+def suppress_paragraph_numbering(paragraph: Any) -> None:
+    """Disable this paragraph's numbering, including inherited style numbering."""
 
-    p_pr = paragraph._p.pPr
-    if p_pr is None:
-        return
-    existing = p_pr.find(f"{{{WML_NS}}}numPr")
-    if existing is not None:
+    p_pr = paragraph._p.get_or_add_pPr()
+    for existing in p_pr.findall(f"{{{WML_NS}}}numPr"):
         p_pr.remove(existing)
+    num_pr = etree.Element(f"{{{WML_NS}}}numPr")
+    etree.SubElement(num_pr, f"{{{WML_NS}}}ilvl").set(f"{{{WML_NS}}}val", "0")
+    etree.SubElement(num_pr, f"{{{WML_NS}}}numId").set(f"{{{WML_NS}}}val", "0")
+    _insert_num_pr(p_pr, num_pr)
 
 
 def materialize_caption_number(
@@ -500,6 +501,6 @@ __all__ = [
     "materialize_caption_number",
     "prove_caption_number",
     "prove_heading_numbering_projection",
-    "remove_paragraph_numbering",
+    "suppress_paragraph_numbering",
     "write_heading_numbering_projection",
 ]

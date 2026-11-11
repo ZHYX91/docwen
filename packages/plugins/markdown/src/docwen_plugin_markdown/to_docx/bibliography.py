@@ -103,10 +103,22 @@ def prepare_bibliography_anchor(
     from docx.oxml import OxmlElement
     from docx.text.paragraph import Paragraph
 
+    matches = [
+        style
+        for style in document.styles.element.findall(_qn("w:style"))
+        if style.get(_qn("w:styleId")) == bibliography_style_id
+    ]
+    if not bibliography_style_id or len(matches) != 1 or matches[0].get(_qn("w:type")) != "paragraph":
+        raise BibliographyConversionError(
+            "MD2DOCX-BIBLIOGRAPHY-STYLE-INVALID",
+            "Bibliography style must resolve by ID to exactly one paragraph style.",
+        )
     body_marker = _direct_body_markers(document)[0]
     paragraph_element: Any = OxmlElement("w:p")
     paragraph = Paragraph(paragraph_element, document)
-    paragraph.style = bibliography_style_id
+    # python-docx's string assignment searches names before IDs. A template
+    # may have an unrelated style whose visible name equals this real ID.
+    paragraph_element.get_or_add_pPr().get_or_add_pStyle().set(_qn("w:val"), bibliography_style_id)
     paragraph.add_run("{{ bibliography }}")
     body_marker._p.addnext(paragraph_element)
     return paragraph

@@ -13,15 +13,8 @@ from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
 
-import lxml.etree as etree
-
-from docwen_core.docx_numbering_ooxml import (
-    CONTENT_TYPES_NS,
-    NUMBERING_CONTENT_TYPE,
-    NUMBERING_REL_TYPE,
-    RELS_NS,
-    WML_NS,
-)
+from docwen_core.docx_numbering_ooxml import WML_NS
+from docwen_core.docx_numbering_parts import NumberingPartError, open_numbering_part
 
 AMBIGUOUS_VISIBLE_PREFIX_DIAGNOSTIC = "docwen.docx.numbering.ambiguous_number_prefix"
 _MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -102,22 +95,18 @@ class HeadingNumberingProofIndex:
     @classmethod
     def load(cls, path: str | Path) -> HeadingNumberingProofIndex:
         package_path = Path(path)
-        parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_blank_text=False)
         with ZipFile(package_path) as package:
             infos = package.infolist()
             if len({item.filename for item in infos}) != len(infos):
                 raise DocxNumberingImportError("DOCX contains duplicate ZIP members")
-            names = {item.filename for item in infos}
-            required = {"word/_rels/document.xml.rels", "[Content_Types].xml"}
-            if not required <= names:
-                raise DocxNumberingImportError("DOCX lacks required OPC support parts")
-            rels = etree.fromstring(package.read("word/_rels/document.xml.rels"), parser)
-            content_types = etree.fromstring(package.read("[Content_Types].xml"), parser)
-            if "word/numbering.xml" not in names:
-                _prove_numbering_opc_support(rels, content_types, present=False)
-                return cls()
-            _prove_numbering_opc_support(rels, content_types, present=True)
-            numbering = etree.fromstring(package.read("word/numbering.xml"), parser)
+            data = {item.filename: package.read(item.filename) for item in infos}
+        try:
+            part = open_numbering_part(data)
+        except NumberingPartError as exc:
+            raise DocxNumberingImportError(str(exc)) from exc
+        if part is None:
+            return cls()
+        numbering = part.element
         levels, instances = _parse_numbering_part(numbering)
         return cls(levels=levels, instances=instances)
 
@@ -185,27 +174,6 @@ def import_heading_without_source_mutation(
             ),
         )
     return ProofOnlyHeadingImport(authored, numbering, diagnostics)
-
-
-def _prove_numbering_opc_support(rels: Any, content_types: Any, *, present: bool) -> None:
-    if rels.tag != f"{{{RELS_NS}}}Relationships" or content_types.tag != f"{{{CONTENT_TYPES_NS}}}Types":
-        raise DocxNumberingImportError("DOCX OPC support roots are invalid")
-    relationships = [
-        item for item in rels if item.get("Type") == NUMBERING_REL_TYPE or item.get("Target") == "numbering.xml"
-    ]
-    overrides = [item for item in content_types if item.get("PartName") == "/word/numbering.xml"]
-    if not present:
-        if relationships or overrides:
-            raise DocxNumberingImportError("DOCX advertises an absent numbering part")
-        return
-    if (
-        len(relationships) != 1
-        or relationships[0].get("Type") != NUMBERING_REL_TYPE
-        or relationships[0].get("Target") != "numbering.xml"
-        or len(overrides) != 1
-        or overrides[0].get("ContentType") != NUMBERING_CONTENT_TYPE
-    ):
-        raise DocxNumberingImportError("numbering part lacks exact OPC support")
 
 
 def _parse_numbering_part(root: Any) -> tuple[dict[tuple[int, int], _Level], dict[int, _Instance]]:
