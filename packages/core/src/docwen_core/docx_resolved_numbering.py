@@ -20,7 +20,6 @@ from docwen_core._docx_resolved_inline import (
 from docwen_core._docx_resolved_numbering_proof import (
     ResolvedNumberingDocxError,
     ResolvedNumberingProofMixin,
-    ResolvedParagraphInventory,
 )
 from docwen_core._docx_resolved_source_carriers import (
     ResolvedOrdinaryAnchorBindingV4,
@@ -30,6 +29,12 @@ from docwen_core._docx_resolved_source_carriers import (
     resolved_anchor_group_v4,
     resolved_semantic_group_v4,
     validate_fenced_anchor_ranges_v4,
+)
+from docwen_core._docx_semantics_v3_caption_groups import (
+    PAIRED_CAPTION_MAP_NAMESPACE,
+    PairedCaptionMapV3,
+    derive_paired_caption_group,
+    paired_caption_map_xml,
 )
 from docwen_core._docx_semantics_v3_fenced import (
     FENCED_SOURCE_MAP_NAMESPACE,
@@ -87,6 +92,7 @@ from docwen_core._docx_semantics_v3_styles import (
     validate_caption_style_bindings,
 )
 from docwen_core._docx_semantics_v3_topology import anchor_topology_map_xml
+from docwen_core._docx_template_paragraphs import TemplateParagraphInventory
 from docwen_core.docx_bookmarks import (
     DocxBookmarkAllocator,
     build_docx_bookmark_inventory,
@@ -158,6 +164,8 @@ class _CaptionPlanBinding:
     object_count: int
     object_snapshots: tuple[Any, ...]
     payload_fragments: tuple[ResolvedInlineFragment, ...] | None
+    caption_element: Any
+    object_elements: tuple[Any, ...]
 
 
 class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
@@ -190,9 +198,14 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._heading_style_ids = dict(heading_style_ids)
         self._heading_style_names = dict(heading_style_names)
         self._caption_style_bindings = validate_caption_style_bindings(caption_style_bindings)
-        self._heading_inventory = ResolvedParagraphInventory(document, set(self._heading_style_ids.values()), "Heading")
-        self._caption_inventory = ResolvedParagraphInventory(
-            document, {item.resolved_style_id for item in self._caption_style_bindings}, "caption"
+        self._heading_inventory = TemplateParagraphInventory(
+            document, set(self._heading_style_ids.values()), "Heading", error_type=ResolvedNumberingDocxError
+        )
+        self._caption_inventory = TemplateParagraphInventory(
+            document,
+            {item.resolved_style_id for item in self._caption_style_bindings},
+            "caption",
+            error_type=ResolvedNumberingDocxError,
         )
         existing_abstract, existing_num = existing_numbering_ids(document)
         self._projection = create_heading_numbering_projection(
@@ -230,6 +243,8 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._block_physical_tags: tuple[str, ...] = ()
         self._caption_target_keys: list[tuple[int, int, str]] = []
         self._caption_plan_bindings: list[_CaptionPlanBinding] = []
+        self._paired_caption_map: PairedCaptionMapV3 | None = None
+        self._paired_caption_tags: dict[tuple[int, int, str], str] = {}
         self._heading_rendered_texts: dict[tuple[int, int, str], str] = {}
         self._heading_payload_snapshots: dict[tuple[int, int, str], tuple[Any, ...]] = {}
         self._heading_style_bindings: list[HeadingStyleBindingV3] = []
@@ -454,6 +469,8 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 len(object_elements),
                 tuple(deepcopy(item) for item in logical_objects),
                 payload_fragments,
+                caption._p,
+                object_elements,
             )
         )
         standalone = not logical_objects
@@ -632,6 +649,35 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                     payload=binding,
                 )
             )
+        caption_bindings = sorted(self._caption_plan_bindings, key=lambda item: item.document_target.occurrence_key)
+        pair_records = []
+        for ordinal, binding in enumerate(caption_bindings, 1):
+            target = binding.document_target
+            if target.target_id is not None or not binding.plan_target.enabled or not binding.object_elements:
+                continue
+            record = derive_paired_caption_group(self._port.source_sha256, ordinal, target.kind)
+            pair_records.append(record)
+            self._paired_caption_tags[target.occurrence_key] = record.tag
+            physical = (
+                (*binding.object_elements, binding.caption_element)
+                if target.kind == "figure"
+                else (binding.caption_element, *binding.object_elements)
+            )
+            groups.append(
+                resolved_semantic_group_v4(
+                    role="paired_caption",
+                    tag=record.tag,
+                    elements=physical,
+                    source_start=target.source_start,
+                    source_end=target.source_end,
+                    source_kind=target.kind,
+                    payload=binding,
+                )
+            )
+        if caption_bindings:
+            self._paired_caption_map = PairedCaptionMapV3(
+                self._port.source_sha256, len(caption_bindings), tuple(pair_records)
+            )
         try:
             body = self._document.element.body
             validate_fenced_anchor_ranges_v4(
@@ -727,6 +773,8 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                     caption_style_binding_map_xml(self._caption_style_bindings),
                 )
             )
+        if self._paired_caption_map is not None:
+            parts.append((PAIRED_CAPTION_MAP_NAMESPACE, paired_caption_map_xml(self._paired_caption_map)))
         if self._heading_style_bindings:
             parts.append(
                 (

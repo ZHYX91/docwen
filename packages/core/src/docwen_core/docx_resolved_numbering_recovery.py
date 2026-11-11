@@ -13,6 +13,12 @@ from zipfile import ZipFile
 
 from docwen_core import _docx_semantics_v3_fenced as fenced
 from docwen_core._docx_resolved_recovery_blocks import prove_resolved_recovery_blocks_v4
+from docwen_core._docx_semantics_v3_caption_groups import (
+    PAIRED_CAPTION_MAP_NAMESPACE,
+    PAIRED_CAPTION_TAG_PREFIX,
+    PairedCaptionMapV3,
+    parse_paired_caption_map,
+)
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
 from docwen_core._docx_semantics_v3_heading_styles import (
     HEADING_STYLE_BINDING_MAP_NAMESPACE,
@@ -164,6 +170,13 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         occurrences: list[NumberingOccurrenceIdentity] = []
         standalone_occurrences: list[StandaloneCaptionOccurrenceIdentity] = []
         heading_styles: tuple[HeadingStyleBindingV3, ...] = ()
+        caption_map: PairedCaptionMapV3 | None = None
+
+        if (CAPTION_STYLE_BINDING_MAP_NAMESPACE in owned) != (PAIRED_CAPTION_MAP_NAMESPACE in owned):
+            raise DocxSemanticsV3Error("resolved-v4 caption styles and generated ownership inventory must coexist")
+        if PAIRED_CAPTION_MAP_NAMESPACE in owned:
+            _number, root = owned[PAIRED_CAPTION_MAP_NAMESPACE]
+            caption_map = parse_paired_caption_map(root)
 
         if TARGET_MAP_NAMESPACE in owned:
             _number, root = owned[TARGET_MAP_NAMESPACE]
@@ -213,7 +226,15 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         elif CITATION_ITEM_MAP_NAMESPACE in owned:
             raise DocxSemanticsV3Error("resolved-v4 Citation item map has no occurrence map")
         _prove_one_source_identity(
-            (*soft, *references, *fenced_sources, *occurrences, *standalone_occurrences, *citation_records)
+            (
+                *soft,
+                *references,
+                *fenced_sources,
+                *occurrences,
+                *standalone_occurrences,
+                *citation_records,
+                *((caption_map,) if caption_map is not None else ()),
+            )
         )
         _prove_merged_inline_order(document, (*soft, *references, *citation_records))
 
@@ -238,7 +259,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             occurrences=occurrences,
             standalone_occurrences=standalone_occurrences,
             inline_tags=frozenset(inline_tokens),
-            caption_styles=caption_styles,
+            paired_caption_map=caption_map,
         )
         recovery = cast(
             ResolvedNumberingV4Recovery,
@@ -259,6 +280,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 proven_machine_nodes=proven_machine_nodes,
                 reserved_semantic_elements=reserved_semantic_elements,
                 heading_style_bindings=heading_styles,
+                paired_caption_map=caption_map,
             ),
         )
         recovery._resolved_v4_inline_tokens = inline_tokens
@@ -285,9 +307,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             parse_caption,
         )
         recovery._prove_target_headings(document, targets)
-        recovery.caption_signatures = tuple(
-            (item.kind, item.source_id, item.title, item.cached_number) for item in recovery.recovered_captions
-        )
+        recovery.prove_caption_inventory(document)
         return recovery
 
     def heading_import(self, paragraph: Any) -> ProofOnlyHeadingImport:
@@ -534,12 +554,25 @@ def _has_explicit_resolved_v4_signal(
     # inspect the physical caption below, then let the selected reader prove
     # the same occurrence map and exact SDT inventory.
     target_by_tag = {item.tag: item for item in targets}
+    caption_tags: set[str] = set()
+    if PAIRED_CAPTION_MAP_NAMESPACE in owned:
+        _number, root = owned[PAIRED_CAPTION_MAP_NAMESPACE]
+        caption_tags.update(item.tag for item in parse_paired_caption_map(root).groups)
+    if STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE in owned:
+        _number, root = owned[STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE]
+        caption_tags.update(item.tag for item in parse_standalone_caption_occurrence_map(root))
+    for wrapper in document.element.body.iter(qn("w:sdt")):
+        if (sdt_tag(wrapper) or "").startswith(
+            PAIRED_CAPTION_TAG_PREFIX
+        ) and wrapper.getparent() is not document.element.body:
+            return True
     caption_style_ids = {item.resolved_style_id for item in caption_styles}
     ordinary_list_bindings = _ordinary_list_bindings(document)
     for paragraph in document.element.body.iter(qn("w:p")):
         owner = paragraph.getparent()
         wrapper = None if owner is None else owner.getparent()
-        target = target_by_tag.get(sdt_tag(wrapper) or "") if wrapper is not None else None
+        owner_tag = sdt_tag(wrapper) if wrapper is not None else None
+        target = target_by_tag.get(owner_tag or "")
         if target is not None and target.kind == "heading":
             num_properties = paragraph.findall(f"{qn('w:pPr')}/{qn('w:numPr')}")
             if num_properties:
@@ -558,6 +591,8 @@ def _has_explicit_resolved_v4_signal(
                     or (num_ids[0].get(qn("w:val")), levels[0].get(qn("w:val"))) not in ordinary_list_bindings
                 ):
                     return True
+            continue
+        if target is None and owner_tag not in caption_tags:
             continue
         style = paragraph.find(f"{qn('w:pPr')}/{qn('w:pStyle')}")
         if style is None or style.get(qn("w:val")) not in caption_style_ids:

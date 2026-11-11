@@ -954,6 +954,36 @@ Headings are not registered as new request targets.
 本次生成的标题也写入直接 `outlineLvl`，包括无 ID 标题，但不改模板共享样式；回读优先采用已证明的源码级别或
 明确的直接大纲级别，灰底和代码／引用样式启发式不能将其改成其他块。模板原有标题不被认作新生成目标。
 
+#### Generated caption ownership / 生成题注的所有权
+
+Every package with generated captions also contains
+`https://docwen.dev/schema/document-paired-caption-map/v1`. Its closed `documentPairedCaptionMap` root has
+`version="1"`, `source_sha256`, and positive `caption_count`. The count includes all generated addressable,
+ID-less, paired, and standalone captions. Each enabled ID-less paired caption has one `pair` record containing
+exactly `ordinal,kind,tag`; records follow their positions in that complete caption inventory. The pair tag is
+`docwen-caption-pair-v1:` plus the lowercase SHA-256 of UTF-8
+`docwen-caption-pair-v1\0<source_sha256>\0<ordinal>\0<kind>`. Empty pair records are valid when all generated
+captions already have target, disabled-occurrence or standalone ownership.
+
+Each pair owns one closed block SDT containing its caption and one logical native object in the order below.
+Ordinary v3 pairs belong directly to the main body; resolved pairs may additionally occupy a proven container
+position. Pair tags, order, cardinality, complete caption count, style, field materialization and native object
+evidence must agree. The caption-style and caption-ownership maps are both required when captions exist.
+Removing an entire ownership map, unwrapping or duplicating a pair, or damaging its field cannot turn a generated
+caption into silently ignored prose. A fixed template caption remains ordinary template content even when it
+shares the same style or contains a valid `SEQ` field. Style and physical adjacency do not establish ownership.
+Before saving, the writer separately tracks original template nodes and explicitly bound generated captions.
+Only surviving original nodes receive a template allowance; new unbound paragraphs and replacement copies fail.
+Template metadata can be filled before final capture; surviving template paragraphs must then remain identical
+through save and reopen.
+
+凡生成题注，同时保存题注所有权表；总数涵盖本次全部有 ID、无 ID、配对及独立题注。启用编号且无 ID 的配对题注
+用独立摘要 SDT 包住题注和原生对象，其出现顺序、完整总数、样式、域及对象证据必须一致。已有目标、禁用出现或
+独立题注证据继续负责相应结构。删除整张所有权表、剥离／复制配对结构或损坏新题注的域都会失败；模板固定题注即使
+同样式、也有合法 `SEQ`，仍保持模板内容，不因样式或相邻位置而被认作本次生成题注。这不创建源码 ID 或书签。
+写出时另行区分原模板节点与明确绑定的新题注：新增但未绑定的段落、替换原段落的副本不能继承模板豁免。
+最终捕获前允许模板元数据填充和锚点消费，捕获后保存重开须保持存活的模板段落原样。
+
 DOCX caption/object order is fixed by the declaration's semantic kind and is not selected by a profile or Export
 Style. A Figure-labelled carrier is immediately followed by its resolved `figure_caption` paragraph. A resolved
 `table_caption`, `equation_caption`, or `code_block_caption` paragraph is immediately followed by its
@@ -964,8 +994,8 @@ consecutive Word paragraphs count as one logical object. Direct adjacency is mea
 ordinary-anchor SDT that wraps the carrier is the same carrier, not an intervening block. DOCX-to-Markdown always
 restores the canonical source order of declaration followed by carrier.
 
-An ID-less caption is recovered only from that fixed direct adjacency and the one exact request-resolved managed
-caption style authenticated by the caption-style binding map below. When enabled, it additionally requires exactly
+An ID-less caption is recovered only from its explicit occurrence ownership, fixed direct adjacency, and the one
+exact request-resolved managed caption style authenticated by the caption-style binding map below. When enabled, it additionally requires exactly
 one closed simple-`SEQ` or chapter-`STYLEREF`+separator+`SEQ` materialization and matching cached result under the
 resolved numbering/export plan. A disabled ID-less declaration requires the independent occurrence authority below;
 style plus adjacency alone is never proof of a declaration. An ID-less caption has no
