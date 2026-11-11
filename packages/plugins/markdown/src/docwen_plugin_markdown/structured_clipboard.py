@@ -165,14 +165,36 @@ def _place_docx_body(document: Any, elements: list[Any], placeholder: Any | None
 
 
 def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
+    from docwen_plugin_markdown.template_errors import TemplatePackageError
     from docwen_plugin_markdown.template_filler import fill_template
-    from docwen_plugin_markdown.template_utils import find_body_placeholder, resolve_template, scan_placeholders
+    from docwen_plugin_markdown.template_ownership import validate_template_placeholder_ownership
+    from docwen_plugin_markdown.template_utils import (
+        find_body_placeholder,
+        resolve_template,
+        scan_placeholders,
+        validate_body_placeholder_placement,
+    )
     from docwen_plugin_markdown.yaml_processor import BODY_PLACEHOLDER_ALIASES
 
     document_model = _load(context)
     resources = resolve_bound_images(context, document_model)
     context.cancellation.check()
-    document = resolve_template(context.request.options.get("template_name"))
+    try:
+        document = resolve_template(context.request.options.get("template_name"))
+        validate_template_placeholder_ownership(document)
+        validate_body_placeholder_placement(document)
+    except TemplatePackageError as exc:
+        return ConversionResult(
+            task_id=context.request.request_id,
+            success=False,
+            error=ConversionErrorInfo(
+                error_type=exc.error_type,
+                message=str(exc),
+                diagnostic_code=exc.diagnostic_code,
+            ),
+            diagnostics=[ConversionDiagnostic(level="error", message=str(exc), code=exc.diagnostic_code)],
+            metrics=ConversionMetrics(input_bytes=Path(context.workspace.input_path).stat().st_size),
+        )
     placeholder = find_body_placeholder(document)
     # Clear template-only fields before authored clipboard blocks are appended,
     # so authored text resembling {{placeholders}} is never reinterpreted.

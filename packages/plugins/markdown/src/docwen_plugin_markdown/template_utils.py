@@ -23,7 +23,9 @@ from docx.section import Section
 from docx.shared import Emu, Mm, Pt
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
+from lxml import etree
 
+from docwen_plugin_markdown.template_errors import BodyPlaceholderPlacementError, TemplatePackageError
 from docwen_plugin_markdown.to_docx.sections import section_properties_at
 from docwen_plugin_markdown.yaml_processor import BODY_PLACEHOLDER_ALIASES
 
@@ -67,74 +69,63 @@ _DEFAULT_BODY_FONT: dict[str, Any] = {
 }
 
 
-class TemplatePackageError(ValueError):
-    """A stable invalid-input failure for a malformed template package."""
-
-    diagnostic_code = "MD2DOCX-TEMPLATE-PACKAGE-INVALID"
-
-
-class BodyPlaceholderPlacementError(TemplatePackageError):
-    """A body marker exists outside the supported single-paragraph anchor."""
-
-    diagnostic_code = "MD2DOCX-TEMPLATE-BODY-PLACEMENT"
-
-
 @dataclass(frozen=True, slots=True)
 class BodyParagraphFormat:
-    """Direct paragraph-format contract projected from ``{{body}}``."""
+    """Authored paragraph properties, independent of python-docx's API subset.
 
-    alignment: Any
-    left_indent: Any
-    right_indent: Any
-    first_line_indent: Any
-    space_before: Any
-    space_after: Any
-    line_spacing: Any
-    line_spacing_rule: Any
-    keep_together: bool | None
-    keep_with_next: bool | None
-    page_break_before: bool | None
-    widow_control: bool | None
-    # Preserve the authored w:ind payload, including character-width units
-    # such as hangingChars/firstLineChars that python-docx's Length API drops.
-    indent_attributes: tuple[tuple[str, str], ...] = ()
+    The anchor owns visual formatting; the generated paragraph owns its style,
+    numbering and document identity. Sections and range anchors stay at their
+    original location through the body splice, never in this projection.
+    """
+
+    properties: tuple[etree._Element, ...]
+    attributes: tuple[tuple[str, str], ...] = ()
+    namespaces: tuple[tuple[str | None, str], ...] = ()
     # A style mapping can introduce competing indentation that the anchor did
     # not inherit. Retain its original style context only for those direct axes.
     source_style_id: str | None = None
     source_indent_attributes: tuple[tuple[str, str], ...] = ()
 
+    @property
+    def indent_attributes(self) -> tuple[tuple[str, str], ...]:
+        indent = next((part for part in self.properties if part.tag == qn("w:ind")), None)
+        return _property_attributes(indent) if indent is not None else ()
+
     def apply_to(self, paragraph: Any) -> None:
-        paragraph_format = paragraph.paragraph_format
-        for name in (
-            "alignment",
-            "left_indent",
-            "right_indent",
-            "first_line_indent",
-            "space_before",
-            "space_after",
-            "line_spacing",
-            "line_spacing_rule",
-            "keep_together",
-            "keep_with_next",
-            "page_break_before",
-            "widow_control",
-        ):
-            # A direct w:ind snapshot is the authoritative source for all
-            # indentation attributes. Do not first round character units to
-            # lengths or synthesize an incompatible firstLine/hanging pair.
-            if self.indent_attributes and name in {"left_indent", "right_indent", "first_line_indent"}:
-                continue
-            value = getattr(self, name)
-            if value is not None:
-                setattr(paragraph_format, name, value)
-        if self.indent_attributes:
-            indent = paragraph._p.get_or_add_pPr().get_or_add_ind()
-            indent.attrib.clear()
-            for name, value in self.indent_attributes:
-                indent.set(name, value)
+        projected_indent = False
+        if self.properties or self.attributes:
+            p_pr = paragraph._p.get_or_add_pPr()
+            _preserve_property_namespaces(p_pr, self.namespaces)
+            for name, value in self.attributes:
+                if name not in p_pr.attrib:
+                    p_pr.set(name, value)
+            owned = {part.tag: part for part in p_pr}
+            for source in self.properties:
+                if not isinstance(getattr(source, "tag", None), str):
+                    p_pr.append(deepcopy(source))
+                    continue
+                existing = owned.get(source.tag)
+                if existing is None:
+                    _insert_property(p_pr, source, _PARAGRAPH_PROPERTY_ORDER)
+                    projected_indent |= source.tag == qn("w:ind")
+                elif source.tag == qn("w:rPr"):
+                    # Paragraph-mark formatting affects empty paragraphs too.
+                    # Merge it without overwriting a generated mark's format.
+                    _preserve_property_namespaces(existing, tuple(source.nsmap.items()))
+                    for name, value in source.attrib.items():
+                        if name not in existing.attrib:
+                            existing.set(name, value)
+                    owned_mark = {part.tag for part in existing}
+                    for part in source:
+                        if not isinstance(getattr(part, "tag", None), str):
+                            existing.append(deepcopy(part))
+                            continue
+                        if part.tag not in owned_mark:
+                            _insert_property(existing, part, _RUN_PROPERTY_ORDER)
         target_style = paragraph.style
         if (
-            self.source_style_id is not None
+            projected_indent
+            and self.source_style_id is not None
             and target_style is not None
             and target_style.style_id != self.source_style_id
         ):
@@ -247,11 +238,55 @@ def _preserve_mapped_indentation(paragraph: Any, indent: Any, source: dict[str, 
             indent.set(source_length, source.get(source_length, "0"))
 
 
-# Only user-authored direct text properties are eligible for projection into
-# regular Markdown body runs. In particular never project rStyle or structural
-# field/anchor properties from the placeholder.
-_BODY_RUN_DIRECT_TAGS = frozenset(
-    qn(f"w:{name}") for name in ("rFonts", "b", "bCs", "i", "iCs", "strike", "dstrike", "color", "sz", "szCs", "u")
+# Revision history is attached to the source text, not to newly generated text.
+# Everything else in a property container remains eligible, including future
+# extension properties that python-docx does not expose through its public API.
+_REVISION_PROPERTY_TAGS = frozenset(
+    qn(f"w:{name}") for name in ("pPrChange", "rPrChange", "ins", "del", "moveFrom", "moveTo")
+)
+_PARAGRAPH_OWNERSHIP_TAGS = _REVISION_PROPERTY_TAGS | frozenset(
+    qn(f"w:{name}") for name in ("pStyle", "numPr", "sectPr", "divId", "cnfStyle")
+)
+_IDENTITY_ATTRIBUTES = frozenset(
+    qn(name) for name in ("w:rsidR", "w:rsidRPr", "w:rsidP", "w:rsidDel", "w14:paraId", "w14:textId")
+)
+_PARAGRAPH_PROPERTY_ORDER = (
+    "pStyle",
+    "keepNext",
+    "keepLines",
+    "pageBreakBefore",
+    "framePr",
+    "widowControl",
+    "numPr",
+    "suppressLineNumbers",
+    "pBdr",
+    "shd",
+    "tabs",
+    "suppressAutoHyphens",
+    "kinsoku",
+    "wordWrap",
+    "overflowPunct",
+    "topLinePunct",
+    "autoSpaceDE",
+    "autoSpaceDN",
+    "bidi",
+    "adjustRightInd",
+    "snapToGrid",
+    "spacing",
+    "ind",
+    "contextualSpacing",
+    "mirrorIndents",
+    "suppressOverlap",
+    "jc",
+    "textDirection",
+    "textAlignment",
+    "textboxTightWrap",
+    "outlineLvl",
+    "divId",
+    "cnfStyle",
+    "rPr",
+    "sectPr",
+    "pPrChange",
 )
 # CT_RPr successor order: insert copied children before their next known peer
 # to preserve WordprocessingML schema order even for mixed Markdown runs.
@@ -295,7 +330,57 @@ _RUN_PROPERTY_ORDER = (
     "eastAsianLayout",
     "specVanish",
     "oMath",
+    "rPrChange",
 )
+
+
+def _format_snapshot(source: etree._Element, *, paragraph: bool = False) -> etree._Element:
+    """Copy a format container, removing only source-owned history/identity."""
+    snapshot = deepcopy(source)
+    excluded = _PARAGRAPH_OWNERSHIP_TAGS if paragraph else _REVISION_PROPERTY_TAGS
+    for child in list(snapshot):
+        if child.tag in excluded:
+            snapshot.remove(child)
+    for element in snapshot.iter():
+        for name in _IDENTITY_ATTRIBUTES:
+            if name in element.attrib:
+                del element.attrib[name]
+        for child in list(element):
+            if child.tag in _REVISION_PROPERTY_TAGS:
+                element.remove(child)
+    return snapshot
+
+
+def _property_attributes(element: etree._Element) -> tuple[tuple[str, str], ...]:
+    return tuple((str(name), str(value)) for name, value in element.attrib.items())
+
+
+def _preserve_property_namespaces(target: etree._Element, namespaces: tuple[tuple[str | None, str], ...]) -> None:
+    """Retain prefix context used by opaque values such as mc:Ignorable.
+
+    Copying an attribute only retains its QName, not prefixes appearing in its
+    value. Declare the source context on the existing property container; keep
+    the paragraph/run and its property element identities intact.
+    """
+    source = dict(namespaces)
+    if any(target.nsmap.get(prefix) != uri for prefix, uri in source.items()):
+        prefixes = {prefix for prefix in (*target.nsmap, *source) if prefix is not None}
+        # lxml accepts None for a default namespace; its installed stub only
+        # declares named prefixes for this argument.
+        etree.cleanup_namespaces(target, top_nsmap=cast(dict[str, str], source), keep_ns_prefixes=sorted(prefixes))
+
+
+def _insert_property(parent: etree._Element, source: etree._Element, order: tuple[str, ...]) -> None:
+    """Keep known schema order while retaining opaque extension properties."""
+    tags = tuple(qn(f"w:{name}") for name in order)
+    successor_tags = set(tags[tags.index(source.tag) + 1 :]) if source.tag in tags else set()
+    successor = next((child for child in parent if child.tag in successor_tags), None)
+    copied = deepcopy(source)
+    if successor is None:
+        parent.append(copied)
+    else:
+        successor.addprevious(copied)
+
 
 _FONT_ATTRIBUTE_PEERS = {
     qn(f"w:{name}"): qn(f"w:{peer}")
@@ -307,7 +392,24 @@ _FONT_ATTRIBUTE_PEERS = {
     )
     for name, peer in ((explicit, theme), (theme, explicit))
 }
-_BODY_RUN_TOGGLE_TAGS = frozenset(qn(f"w:{name}") for name in ("b", "bCs", "i", "iCs", "strike", "dstrike"))
+_BODY_RUN_TOGGLE_TAGS = frozenset(
+    qn(f"w:{name}")
+    for name in (
+        "b",
+        "bCs",
+        "i",
+        "iCs",
+        "caps",
+        "smallCaps",
+        "strike",
+        "dstrike",
+        "outline",
+        "shadow",
+        "emboss",
+        "imprint",
+        "vanish",
+    )
+)
 
 
 def _on_off_value(element: Any) -> bool:
@@ -340,8 +442,8 @@ def _style_run_properties(style: Any) -> dict[str, Any]:
     while style is not None and style.style_id not in seen:
         seen.add(style.style_id)
         r_pr = style.element.find(qn("w:rPr"))
-        for source in r_pr if r_pr is not None else ():
-            if source.tag not in _BODY_RUN_DIRECT_TAGS:
+        for source in _format_snapshot(r_pr) if r_pr is not None else ():
+            if not isinstance(getattr(source, "tag", None), str):
                 continue
             existing = properties.get(source.tag)
             if existing is None:
@@ -356,15 +458,17 @@ def _style_run_properties(style: Any) -> dict[str, Any]:
 class BodyRunFormat:
     """Authored direct character properties of the body anchor's first run."""
 
-    properties: tuple[Any, ...]
+    properties: tuple[etree._Element, ...]
+    attributes: tuple[tuple[str, str], ...] = ()
+    namespaces: tuple[tuple[str | None, str], ...] = ()
 
     @classmethod
     def from_style(cls, style: Any, *, document: Any, fallback_font: dict[str, Any]) -> BodyRunFormat:
         """Materialize the ordinary body's effective style for mixed Headings."""
         properties = _style_run_properties(style)
         defaults = document.styles.element.find(f"{qn('w:docDefaults')}/{qn('w:rPrDefault')}/{qn('w:rPr')}")
-        for source in defaults if defaults is not None else ():
-            if source.tag not in _BODY_RUN_DIRECT_TAGS:
+        for source in _format_snapshot(defaults) if defaults is not None else ():
+            if not isinstance(getattr(source, "tag", None), str):
                 continue
             existing = properties.get(source.tag)
             if existing is None:
@@ -412,9 +516,20 @@ class BodyRunFormat:
             if not run.text:
                 continue
             r_pr = run._r.get_or_add_rPr()
+            _preserve_property_namespaces(r_pr, self.namespaces)
+            for name, value in self.attributes:
+                if name not in r_pr.attrib:
+                    r_pr.set(name, value)
+            # Read the target's own character style before adding the anchor's
+            # style. Authored direct properties override an inherited anchor
+            # style, but may not override generated code/link character styles.
             styled = _style_run_properties(run.style) if r_pr.find(qn("w:rStyle")) is not None else {}
+            owned = {part.tag: part for part in r_pr}
             for source in self.properties:
-                existing = r_pr.find(source.tag)
+                if not isinstance(getattr(source, "tag", None), str):
+                    r_pr.append(deepcopy(source))
+                    continue
+                existing = owned.get(source.tag)
                 protected = styled.get(source.tag)
                 if source.tag == qn("w:rFonts"):
                     merged = deepcopy(existing) if existing is not None else OxmlElement("w:rFonts")
@@ -434,9 +549,7 @@ class BodyRunFormat:
                     source = OxmlElement(f"w:{source.tag.rsplit('}', 1)[-1]}")
                     if not value:
                         source.set(qn("w:val"), "0")
-                name = source.tag.rsplit("}", 1)[-1]
-                successors = tuple(f"w:{part}" for part in _RUN_PROPERTY_ORDER[_RUN_PROPERTY_ORDER.index(name) + 1 :])
-                r_pr.insert_element_before(deepcopy(cast(Any, source)), *successors)
+                _insert_property(r_pr, source, _RUN_PROPERTY_ORDER)
 
 
 def extract_body_run_format(doc: Document) -> BodyRunFormat | None:
@@ -451,8 +564,12 @@ def extract_body_run_format(doc: Document) -> BodyRunFormat | None:
         r_pr = run._r.rPr
         if r_pr is None:
             return None
-        properties = tuple(deepcopy(part) for part in r_pr if part.tag in _BODY_RUN_DIRECT_TAGS)
-        return BodyRunFormat(properties) if properties else None
+        snapshot = _format_snapshot(r_pr)
+        properties = tuple(snapshot)
+        attributes = _property_attributes(snapshot)
+        return (
+            BodyRunFormat(properties, attributes, tuple(snapshot.nsmap.items())) if properties or attributes else None
+        )
     return None
 
 
@@ -575,7 +692,14 @@ def validate_body_placeholder_placement(doc: Document) -> None:
     )
     for root in roots:
         for paragraph in root.iter(qn("w:p")):
-            text = "".join(node.text or "" for node in paragraph.iter(qn("w:t")))
+            texts = []
+            for node in paragraph.iter(qn("w:t")):
+                owner = node.getparent()
+                while owner is not None and owner.tag != qn("w:p"):
+                    owner = owner.getparent()
+                if owner is paragraph:
+                    texts.append(node.text or "")
+            text = "".join(texts)
             for match in pattern.finditer(text):
                 if match.group(1).strip() not in BODY_PLACEHOLDER_ALIASES:
                     continue
@@ -637,28 +761,16 @@ def extract_body_style(doc: Document) -> Any | None:
 
 
 def extract_body_paragraph_format(doc: Document) -> BodyParagraphFormat | None:
-    """Snapshot direct body formatting without copying unrelated OOXML."""
+    """Snapshot authored formatting, leaving structure to the body splice."""
     placeholder = find_body_placeholder(doc)
     if placeholder is None:
         return None
-    paragraph_format = placeholder.paragraph_format
     p_pr = placeholder._p.pPr
-    source_indent = p_pr.find(qn("w:ind")) if p_pr is not None else None
-    authored_indent = tuple(source_indent.attrib.items()) if source_indent is not None else ()
+    snapshot = _format_snapshot(p_pr, paragraph=True) if p_pr is not None else None
     return BodyParagraphFormat(
-        alignment=paragraph_format.alignment,
-        left_indent=paragraph_format.left_indent,
-        right_indent=paragraph_format.right_indent,
-        first_line_indent=paragraph_format.first_line_indent,
-        space_before=paragraph_format.space_before,
-        space_after=paragraph_format.space_after,
-        line_spacing=paragraph_format.line_spacing,
-        line_spacing_rule=paragraph_format.line_spacing_rule,
-        keep_together=paragraph_format.keep_together,
-        keep_with_next=paragraph_format.keep_with_next,
-        page_break_before=paragraph_format.page_break_before,
-        widow_control=paragraph_format.widow_control,
-        indent_attributes=authored_indent,
+        properties=tuple(snapshot) if snapshot is not None else (),
+        attributes=_property_attributes(snapshot) if snapshot is not None else (),
+        namespaces=tuple(snapshot.nsmap.items()) if snapshot is not None else (),
         source_style_id=placeholder.style.style_id if placeholder.style is not None else None,
         source_indent_attributes=tuple(inherited_indent_attributes(placeholder).items()),
     )
@@ -737,7 +849,8 @@ def scan_placeholders(doc: Document) -> dict[str, list[Any]]:
         occurrence (without braces). A paragraph is listed once per key even
         when that key occurs more than once in the paragraph.
     """
-    pattern = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
+    from docwen_plugin_markdown.template_ownership import iter_paragraph_placeholder_spans
+
     placeholders: dict[str, list[Any]] = {}
     roots = [doc.element]
     roots.extend(
@@ -750,14 +863,7 @@ def scan_placeholders(doc: Document) -> dict[str, list[Any]]:
             # Scan original XML as well as supported body/cell anchors so an
             # unsupported attachment location cannot silently go unnoticed.
             # Text in a nested textbox belongs only to its own paragraph.
-            texts = []
-            for node in element.iter(qn("w:t")):
-                owner = node.getparent()
-                while owner is not None and owner.tag != qn("w:p"):
-                    owner = owner.getparent()
-                if owner is element:
-                    texts.append(node.text or "")
-            keys = dict.fromkeys(match.group(1).strip() for match in pattern.finditer("".join(texts)))
+            keys = dict.fromkeys(span.key for span in iter_paragraph_placeholder_spans(element))
             paragraph = Paragraph(element, doc)
             for key in keys:
                 placeholders.setdefault(key, []).append(paragraph)

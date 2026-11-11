@@ -79,14 +79,15 @@ from docwen_plugin_markdown.runtime_semantics_v3 import (
     apply_runtime_semantics_v3,
     prepare_runtime_semantics_v3,
 )
+from docwen_plugin_markdown.template_errors import TemplatePackageError
 from docwen_plugin_markdown.template_filler import fill_template
+from docwen_plugin_markdown.template_ownership import validate_template_placeholder_ownership
 from docwen_plugin_markdown.template_policy import (
     template_attachment_alignment,
     template_gongwen_fields_enabled,
     template_list_separator,
 )
 from docwen_plugin_markdown.template_utils import (
-    TemplatePackageError,
     body_content_extent,
     extract_body_font,
     extract_body_paragraph_format,
@@ -728,6 +729,7 @@ class MdToDocxConverter:
 
             try:
                 doc = resolve_template(options.get("template_name"))
+                validate_template_placeholder_ownership(doc)
                 validate_body_placeholder_placement(doc)
                 render_body = find_body_placeholder(doc) is not None
             except TemplatePackageError as exc:
