@@ -167,9 +167,15 @@ def write_delimited_projection(
                 # booleans, numbers and formula-looking strings from this view.
                 writer.writerow(row)
                 row_count += 1
-            handle.flush()
-            written = os.fstat(handle.fileno())
         cancel_check()
+        # Capture completed metadata only after close. The path must still
+        # name the file created by mkstemp before it can be installed.
+        written = temporary.lstat()
+        if not stat.S_ISREG(written.st_mode) or (written.st_dev, written.st_ino) != (
+            created.st_dev,
+            created.st_ino,
+        ):
+            raise RuntimeError("Spreadsheet temporary file changed before installation; ownership is unconfirmed.")
         # A same-directory hard link installs the fully closed file atomically
         # and refuses a target that appeared after the initial collision check.
         os.link(temporary, output)

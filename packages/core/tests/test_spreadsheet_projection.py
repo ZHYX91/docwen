@@ -206,28 +206,42 @@ def test_failure_before_receipt_returns_removes_the_installed_output(
     assert list(tmp_path.iterdir()) == []
 
 
-def test_cancellation_survives_refused_cleanup_of_a_replaced_temporary_file(tmp_path: Path) -> None:
+@pytest.mark.parametrize("cancel", [False, True])
+def test_replaced_temporary_file_is_not_installed_and_cleanup_preserves_the_original_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cancel: bool
+) -> None:
     output = tmp_path / "output.csv"
-    error = CancellationRequested("cancel while reading values")
+    error = CancellationRequested("cancel after closing values")
     replacements: list[Path] = []
+    handles = []
+    fdopen = spreadsheet_projection.os.fdopen
 
-    class Values(dict):
-        def get(self, key, default=None):
+    def capture_handle(*args, **kwargs):
+        handle = fdopen(*args, **kwargs)
+        handles.append(handle)
+        return handle
+
+    def cancel_check():
+        if handles and handles[0].closed and not replacements:
+            # The handle is really closed, so this replacement is possible on
+            # Windows as well as Unix; the writer has not installed it yet.
             [replacement] = tmp_path.glob("delimited-*.csv")
             replacements.append(replacement)
             foreign = tmp_path / "foreign.csv"
             foreign.write_bytes(b"a different temporary owner")
             foreign.replace(replacement)
-            return super().get(key, default)
+            if cancel:
+                raise error
 
-    def cancel_check():
-        if replacements:
-            raise error
-
-    view = WorksheetValueView("Data", 1, 1, Values({(1, 1): _Cell(value="original")}))
-    with pytest.raises(CancellationRequested) as raised:
-        write_delimited_projection(view, output, cancel_check=cancel_check)
-    assert raised.value is error
-    assert any("ownership is unconfirmed" in note for note in error.__notes__)
+    monkeypatch.setattr(spreadsheet_projection.os, "fdopen", capture_handle)
+    view = WorksheetValueView("Data", 1, 1, {(1, 1): _Cell(value="original")})
+    if cancel:
+        with pytest.raises(CancellationRequested) as raised:
+            write_delimited_projection(view, output, cancel_check=cancel_check)
+        assert raised.value is error
+        assert any("ownership is unconfirmed" in note for note in error.__notes__)
+    else:
+        with pytest.raises(RuntimeError, match="temporary file changed before installation"):
+            write_delimited_projection(view, output, cancel_check=cancel_check)
     assert len(replacements) == 1 and replacements[0].read_bytes() == b"a different temporary owner"
     assert list(tmp_path.iterdir()) == replacements
