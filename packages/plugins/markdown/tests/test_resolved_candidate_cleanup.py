@@ -86,3 +86,24 @@ def test_candidate_cleanup_error_does_not_hide_original_proof_diagnostic(
     assert not workspace.registered_artifacts
     candidate = next(Path(workspace.staging_dir).glob("*.candidate"))
     original_unlink(candidate)
+
+
+def test_preparation_failure_does_not_leave_an_unowned_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import docwen_core.docx_table_roles as table_roles
+
+    context, workspace = _context(tmp_path, _refs(_NEUTRAL, _PLAN))
+    original_preparation = table_roles.prepare_table_roles
+
+    def fail_preparation(document, **kwargs):
+        if kwargs:
+            return original_preparation(document, **kwargs)
+        raise ValueError("injected table preparation failure")
+
+    monkeypatch.setattr(table_roles, "prepare_table_roles", fail_preparation)
+    result = MdToDocxConverter().convert(context)
+    assert not result.success and result.error is not None
+    assert "injected table preparation failure" in result.error.message
+    assert not workspace.registered_artifacts
+    assert not list(Path(workspace.staging_dir).iterdir())
