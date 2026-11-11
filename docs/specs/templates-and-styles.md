@@ -213,7 +213,37 @@ rule to the current section.
 新增分节从插入位置所在节继承完整节属性，包括页眉页脚引用、纸张、页边距、分栏、页面边框及首页设置，
 不使用文档末节代替。分节类型写在新节上；显式页码起始值保留在原节，不在连续的新节上重复重启。
 
+## Placeholder ownership / 占位符所有权
+
+Template filling admits placeholders in ordinary text in supported document stories. A placeholder inside or
+crossing a Word-managed region—complex-field instructions or results, a simple field, or a data-bound content
+control—fails before rendering with `MD2DOCX-TEMPLATE-PLACEHOLDER-OWNERSHIP`. Nested fields and zero-width field
+boundaries retain their ownership. A tab or line break interrupts a placeholder; it cannot join otherwise
+separate text into a fill target. The scanner and filler use the same text-span rules.
+
+Fields and bound controls without placeholders retain their instructions, results and bindings. DocWen does not
+lock or unlink them, and does not replace only a cached result that Word could overwrite on update. Ordinary
+placeholders outside those regions continue to fill through the existing template-selection and conversion flow.
+
+模板填充只处理受支持文档区域中的普通文字占位符。占位符位于或跨过 Word 自动管理区域时，在渲染前
+返回 `MD2DOCX-TEMPLATE-PLACEHOLDER-OWNERSHIP`：包括复杂域的指令与结果、简单域以及绑定数据的内容控件。
+嵌套域和无可见文字的域边界同样受保护；制表符或换行会打断占位符，不把两侧文字拼成填充目标。
+扫描与替换共用同一文本范围规则。没有占位符的域或绑定控件保留原指令、结果和绑定，不锁定或解除域。
+这些区域之外的占位符继续按原流程填充，用户选择模板和生成文档的操作不增加步骤。
+
 ## Completion and rendering / 注入与渲染
+
+The body anchor's direct paragraph and run formatting is projected as OOXML properties, including properties
+outside python-docx's high-level API: tab stops, borders, shading, paragraph-mark formatting, highlight, character
+spacing, small caps and language. Paragraph style, numbering, section identity, range markers and revision records
+are not copied as visual defaults. A target's semantic formatting, explicit inline properties and character style
+take precedence; an anchor character style is inherited only when the target has no character style of its own.
+Quotes, lists, tables, code and other semantic containers keep their own formatting rules.
+
+正文锚点的直接段落和字符格式按 OOXML 属性继承，包括制表位、边框、底纹、段落标记格式、高亮、字符
+间距、小型大写和语言等。段落样式、编号、分节身份、范围标记及修订记录不作为视觉默认值复制。
+目标段落的语义格式、显式行内格式及字符样式优先；只有目标没有自己的字符样式时，才继承锚点字符样式。
+引用、列表、表格、代码等语义容器继续使用各自格式规则。
 
 Ordinary Markdown body paragraphs carry only explicitly authored direct
 paragraph properties from the standalone `{{body}}` anchor. Indentation is

@@ -121,7 +121,7 @@ XLSX 仅在最终单元格完全由一个受支持链接构成时写入原生超
 | `签发人` / `主送机关` / `抄送机关` | Preserve authored strings. Flat lists use `、`; multiple nonempty items get a Word comment asking the user to confirm signer layout or recipient punctuation and order. 已写好的字符串原样保留；列表使用顿号，多项列表在填充值上添加批注，请用户确认签发人排版或机关之间的标点与顺序。 |
 | `成文日期` / `印发日期` | Format recognized dates as Chinese dates; publication dates end with `印发`. Unrecognized text is retained. 可识别日期使用中文年月日，印发日期增加“印发”，无法识别的原文保持不变。 |
 | `附注` | Remove one existing outer pair of parentheses; the template owns the displayed parentheses. 去掉内容已有的一层外括号，由模板控制显示的括号。 |
-| Empty official fields / 空公文字段 | Remove only eligible dedicated paragraphs or rows, preserving other nonempty fields and unrelated content. 仅清理符合条件的专用段落或表格行，保护其他有值字段和无关内容。 |
+| Empty official fields / 空公文字段 | Remove only dedicated text-only paragraphs or rows; retain containers holding bookmarks, comments, content controls, sections or other non-text structure, and preserve other nonempty fields. 仅清理专用的纯文字段落或表格行；含书签、批注、内容控件、分节及其他非文字结构的容器保留，同时保护其他有值字段。 |
 
 `{{附件说明}}` must occupy an entire paragraph in the main document body or a table cell, including nested tables. Each original occurrence expands separately. Inline occurrences, headers, footers and text boxes produce a template error when field formatting is enabled. Empty attachments keep table cells structurally valid. Inserted YAML values are literal content and are never interpreted again as template placeholders.
 

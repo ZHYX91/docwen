@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterator, Mapping
 from copy import deepcopy
 from typing import Any, Literal, cast
@@ -23,8 +22,6 @@ from docwen_plugin_markdown.gongwen_fields import (
 )
 from docwen_plugin_markdown.to_docx.sections import splice_body_elements
 from docwen_plugin_markdown.yaml_processor import is_empty_field_value
-
-_PLACEHOLDER = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
 
 
 def fill_template(
@@ -47,8 +44,13 @@ def fill_template(
     """
     values = prepare_gongwen_fields(yaml_dict) if gongwen_fields_enabled else yaml_dict
     review_notes = gongwen_review_notes(yaml_dict) if gongwen_fields_enabled else {}
+    if gongwen_fields_enabled:
+        validate_attachment_placeholders(
+            doc,
+            placeholder_map or {},
+            rendered_elements=[paragraph._element for paragraph in rendered_paragraphs],
+        )
     if placeholder_map and gongwen_fields_enabled:
-        validate_attachment_placeholders(doc, placeholder_map)
         validate_review_placeholders(doc, placeholder_map, review_notes)
         remove_empty_gongwen_fields(doc, values, placeholder_map)
         render_attachment_placeholders(values.get("附件说明", ()), placeholder_map, alignment=attachment_alignment)
@@ -105,37 +107,17 @@ def fill_yaml_placeholders(
 def _replace_placeholder_runs(
     paragraph, replacements: Mapping[str, str], *, doc=None, review_notes: Mapping[str, str] | None = None
 ) -> None:
-    characters: list[str] = []
-    locations: list[tuple[Any, int] | None] = []
-    for element in paragraph._element.iter():
-        # Textbox paragraphs are separate locations, never part of the outer
-        # paragraph that owns their drawing.
-        owner = element.getparent()
-        while owner is not None and owner.tag != qn("w:p"):
-            owner = owner.getparent()
-        if owner is not paragraph._element:
-            continue
-        if element.tag == qn("w:t"):
-            for offset, character in enumerate(element.text or ""):
-                characters.append(character)
-                locations.append((element, offset))
-        elif element.tag in {qn("w:br"), qn("w:cr"), qn("w:tab")}:
-            characters.append("\0")
-            locations.append(None)
+    from docwen_plugin_markdown.template_ownership import iter_paragraph_placeholder_spans
 
     # Match all keys before editing any text. Reverse edits keep original
     # offsets valid even when values contain another key's {{placeholder}}.
-    matches = list(_PLACEHOLDER.finditer("".join(characters)))
-    for match in reversed(matches):
-        key = match.group(1).strip()
-        if key not in replacements or any(location is None for location in locations[match.start() : match.end()]):
+    spans = list(iter_paragraph_placeholder_spans(paragraph))
+    for span in reversed(spans):
+        key = span.key
+        if key not in replacements:
             continue
-        first = locations[match.start()]
-        last = locations[match.end() - 1]
-        if first is None or last is None:
-            continue
-        start_element, start_offset = first
-        end_element, end_offset = last
+        start_element, start_offset = span.locations[0]
+        end_element, end_offset = span.locations[-1]
         end_offset += 1
         replacement = replacements[key]
         if start_element is end_element:
@@ -146,8 +128,8 @@ def _replace_placeholder_runs(
             end_text = end_element.text or ""
             _set_word_text(start_element, start_text[:start_offset] + replacement)
             seen = {start_element, end_element}
-            for location in locations[match.start() + 1 : match.end() - 1]:
-                if location is not None and location[0] not in seen:
+            for location in span.locations[1:-1]:
+                if location[0] not in seen:
                     _set_word_text(location[0], "")
                     seen.add(location[0])
             _set_word_text(end_element, end_text[end_offset:])

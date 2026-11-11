@@ -62,6 +62,7 @@ from docwen_plugin_markdown.resolved_runtime_v4 import (
 )
 from docwen_plugin_markdown.resolved_source_carriers_v4 import apply_resolved_source_carriers_v4
 from docwen_plugin_markdown.runtime_semantics_v3 import RuntimeSemanticsV3Unsupported
+from docwen_plugin_markdown.template_errors import TemplatePackageError
 from docwen_plugin_markdown.template_filler import fill_template
 from docwen_plugin_markdown.template_policy import (
     template_attachment_alignment,
@@ -69,7 +70,6 @@ from docwen_plugin_markdown.template_policy import (
     template_list_separator,
 )
 from docwen_plugin_markdown.template_utils import (
-    TemplatePackageError,
     extract_body_font,
     extract_body_paragraph_format,
     extract_body_run_format,
@@ -77,6 +77,7 @@ from docwen_plugin_markdown.template_utils import (
     find_body_placeholder,
     resolve_template,
     scan_placeholders,
+    validate_body_placeholder_placement,
 )
 from docwen_plugin_markdown.to_docx.bibliography import (
     BibliographyConversionError,
@@ -196,7 +197,9 @@ def convert_resolved_v4_to_docx(
         )
     except TemplatePackageError as exc:
         return failed_with_resource_cleanup(
-            _failure(task_id, started_at, exc.diagnostic_code, str(exc), input_bytes=input_bytes)
+            _failure(
+                task_id, started_at, exc.diagnostic_code, str(exc), input_bytes=input_bytes, error_type=exc.error_type
+            )
         )
     except (
         ManagedStyleCompletionError,
@@ -328,6 +331,10 @@ def _render_resolved_v4_docx(
 
     context.progress.report_progress(40.0, "Resolving template and managed styles")
     doc = resolve_template(template_name or None)
+    from docwen_plugin_markdown.template_ownership import validate_template_placeholder_ownership
+
+    validate_template_placeholder_ownership(doc)
+    validate_body_placeholder_placement(doc)
     bibliography_fragment = resources.bibliography
     validate_bibliography_placement(doc, bibliography_fragment)
     code_font = _option_or_config(
@@ -692,12 +699,13 @@ def _failure(
     message: str,
     *,
     input_bytes: int,
+    error_type: str = "invalid_resolved_document",
 ) -> ConversionResult:
     return ConversionResult(
         task_id=task_id,
         success=False,
         error=ConversionErrorInfo(
-            error_type="invalid_resolved_document",
+            error_type=error_type,
             message=message,
             diagnostic_code=code,
         ),
