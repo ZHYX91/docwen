@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
@@ -13,6 +12,12 @@ from docwen_core._docx_resolved_source_carriers import (
     prove_resolved_anchor_topology_v4,
     prove_resolved_block_hierarchy_v4,
     prove_resolved_ordinary_anchor_group_v4,
+)
+from docwen_core._docx_semantics_v3_caption_groups import (
+    PAIRED_CAPTION_MAP_NAMESPACE,
+    PAIRED_CAPTION_TAG_PREFIX,
+    PairedCaptionMapV3,
+    parse_paired_caption_map,
 )
 from docwen_core._docx_semantics_v3_fenced import (
     FENCED_SOURCE_MAP_NAMESPACE,
@@ -63,6 +68,7 @@ from docwen_core._docx_semantics_v3_topology import (
     prove_inline_occurrence_envelope,
     prove_soft_reference_envelope,
 )
+from docwen_core._docx_template_paragraphs import TemplateParagraphInventory
 from docwen_core.docx_bookmarks import (
     build_docx_bookmark_inventory,
     prove_bookmark_name,
@@ -98,67 +104,12 @@ class ResolvedNumberingDocxError(ResolvedNumberingOoxmlError):
     """The validated port and rendered document no longer agree."""
 
 
-class ResolvedParagraphInventory:
-    """Separate original template paragraphs from this session's bound targets."""
-
-    def __init__(self, document: Any, style_ids: set[str], purpose: str) -> None:
-        self._style_ids = style_ids
-        self._purpose = purpose
-        self._original = tuple(self._paragraphs(document))
-        self._bound: dict[tuple[int, int, str], Any] = {}
-        self._indices: dict[tuple[int, int, str], int] | None = None
-        self._original_snapshots: dict[int, Any] = {}
-
-    def _paragraphs(self, document: Any) -> list[Any]:
-        from docx.oxml.ns import qn
-
-        return [
-            paragraph
-            for paragraph in document.element.body.iter(qn("w:p"))
-            if ResolvedNumberingProofMixin._direct_paragraph_style_id(paragraph) in self._style_ids
-        ]
-
-    def bind(self, key: tuple[int, int, str], paragraph: Any) -> None:
-        if self._indices is not None or key in self._bound:
-            raise ResolvedNumberingDocxError(f"{self._purpose} inventory cannot bind this target")
-        if paragraph in self._original or paragraph in self._bound.values():
-            raise ResolvedNumberingDocxError(f"{self._purpose} target reuses an existing paragraph")
-        self._bound[key] = paragraph
-
-    def capture(self, document: Any) -> None:
-        paragraphs = self._paragraphs(document)
-        present = set(paragraphs)
-        surviving_originals = present.intersection(self._original)
-        expected = surviving_originals.union(self._bound.values())
-        if len(paragraphs) != len(expected) or present != expected:
-            raise ResolvedNumberingDocxError(f"{self._purpose} paragraph inventory differs from bound identities")
-        indices = {paragraph: index for index, paragraph in enumerate(paragraphs)}
-        bound_order = sorted(self._bound, key=lambda key: indices[self._bound[key]])
-        if bound_order != sorted(self._bound):
-            raise ResolvedNumberingDocxError(f"{self._purpose} paragraph order differs from source authority")
-        self._indices = {key: indices[paragraph] for key, paragraph in self._bound.items()}
-        # Template filling may consume body anchors/empty metadata paragraphs
-        # and replace YAML text before finalization. Only surviving identities
-        # gain a template allowance; a replacement copy is a new unbound node.
-        self._original_snapshots = {indices[paragraph]: deepcopy(paragraph) for paragraph in surviving_originals}
-
-    def prove(self, document: Any) -> dict[tuple[int, int, str], Any]:
-        if self._indices is None:
-            raise ResolvedNumberingDocxError(f"{self._purpose} paragraph inventory was not finalized")
-        paragraphs = self._paragraphs(document)
-        if len(paragraphs) != len(self._indices) + len(self._original_snapshots):
-            raise ResolvedNumberingDocxError(f"{self._purpose} paragraph inventory differs after reopen")
-        if any(
-            not _elements_equal(paragraphs[index], original) for index, original in self._original_snapshots.items()
-        ):
-            raise ResolvedNumberingDocxError(f"template {self._purpose} paragraph changed after finalization")
-        return {key: paragraphs[index] for key, index in self._indices.items()}
-
-
 class ResolvedNumberingProofMixin:
     """Authenticate every session-owned physical carrier after package reopen."""
 
     _caption_plan_bindings: list[Any]
+    _paired_caption_map: PairedCaptionMapV3 | None
+    _paired_caption_tags: dict[tuple[int, int, str], str]
     _caption_style_bindings: tuple[Any, ...]
     _caption_target_keys: list[Any]
     _citation_projection: Any | None
@@ -170,8 +121,8 @@ class ResolvedNumberingProofMixin:
     _heading_style_ids: dict[int, str]
     _heading_style_names: dict[str, str]
     _heading_style_bindings: list[HeadingStyleBindingV3]
-    _heading_inventory: ResolvedParagraphInventory
-    _caption_inventory: ResolvedParagraphInventory
+    _heading_inventory: TemplateParagraphInventory
+    _caption_inventory: TemplateParagraphInventory
     _occurrence_bindings: list[Any]
     _standalone_occurrence_bindings: list[Any]
     _ordinary_anchors: list[Any]
@@ -205,6 +156,7 @@ class ResolvedNumberingProofMixin:
             self._prove_soft_reference_map(owned)
             self._prove_reference_occurrence_map(owned)
             self._prove_caption_style_map(package, owned)
+            self._prove_paired_caption_map(owned)
             self._prove_heading_style_map(owned)
             self._prove_numbering_occurrence_map(owned)
             self._prove_standalone_caption_occurrence_map(owned)
@@ -275,6 +227,17 @@ class ResolvedNumberingProofMixin:
         expected = tuple(sorted(self._heading_style_bindings, key=lambda item: item.source_id))
         if parse_heading_style_binding_map(root) != expected:
             raise ResolvedNumberingDocxError("Heading-style map differs after reopen")
+
+    def _prove_paired_caption_map(self, owned: dict[str, tuple[int, Any]]) -> None:
+        if self._paired_caption_map is None:
+            if PAIRED_CAPTION_MAP_NAMESPACE in owned:
+                raise ResolvedNumberingDocxError("unexpected caption-pair map is present")
+            return
+        if PAIRED_CAPTION_MAP_NAMESPACE not in owned:
+            raise ResolvedNumberingDocxError("caption-pair map is missing")
+        _number, root = owned[PAIRED_CAPTION_MAP_NAMESPACE]
+        if parse_paired_caption_map(root) != self._paired_caption_map:
+            raise ResolvedNumberingDocxError("caption-pair map differs after reopen")
 
     def _prove_anchor_topology_map(self, owned: dict[str, tuple[int, Any]]) -> None:
         if not self._anchor_topology_edges:
@@ -540,14 +503,12 @@ class ResolvedNumberingProofMixin:
                         raise ResolvedNumberingDocxError(
                             "enabled standalone ID-less caption lacks its occurrence wrapper"
                         )
-                elif owner is document.element.body:
-                    pass
                 elif (
                     owner is None
                     or owner.tag != qn("w:sdtContent")
-                    or not (sdt_tag(owner.getparent()) or "").startswith(ANCHOR_TAG_PREFIX)
+                    or sdt_tag(sdt) != self._paired_caption_tags.get(document_target.occurrence_key)
                 ):
-                    raise ResolvedNumberingDocxError("enabled ID-less caption has an unexpected ownership wrapper")
+                    raise ResolvedNumberingDocxError("enabled ID-less caption lacks its exact paired ownership wrapper")
             proven[document_target.occurrence_key] = paragraph
         return proven
 
@@ -701,6 +662,7 @@ class ResolvedNumberingProofMixin:
             *(item.identity.tag for item in self._ordinary_anchors),
             *(item.identity.tag for item in self._occurrence_bindings),
             *(item.identity.tag for item in self._standalone_occurrence_bindings),
+            *self._paired_caption_tags.values(),
         }
         try:
             wrappers = prove_resolved_block_hierarchy_v4(
@@ -867,7 +829,12 @@ class ResolvedNumberingProofMixin:
             raise ResolvedNumberingDocxError("caption lost its directly adjacent logical object")
         parent_tag = sdt_tag(container.getparent()) if container.tag == qn("w:sdtContent") else None
         exact_owner = parent_tag is not None and parent_tag.startswith(
-            ("docwen-target-v1:", "docwen-numbering-occurrence-v1:", STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+            (
+                "docwen-target-v1:",
+                "docwen-numbering-occurrence-v1:",
+                STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
+                PAIRED_CAPTION_TAG_PREFIX,
+            )
         )
         if exact_owner and (len(children) != count + 1 or not exact_slot):
             raise ResolvedNumberingDocxError("caption ownership wrapper has wrong block cardinality")

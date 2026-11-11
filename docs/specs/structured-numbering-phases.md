@@ -257,6 +257,15 @@ that the native numbering level agrees with the recorded Heading level.
 及其唯一段落样式定义，无须重命名本地化或数字 ID 的模板样式。已编号 resolved 标题还证明原生编号层级与
 记录的标题层级一致。
 
+Generated captions carry a source-bound ownership inventory covering addressable, disabled and standalone
+captions together. Each enabled ID-less caption/object pair has its own digest SDT with an ordinal in that complete
+inventory. Recovery proves exact mapped carriers, field/object content, nesting and total count; shared caption styles
+never claim fixed template paragraphs. Nested resolved pairs require authenticated container/object ancestry.
+
+生成题注携带绑定源摘要的完整所有权清单，同时包含可引用、禁用编号及独立题注。每个启用编号且无 ID 的
+题注／对象配对使用独立摘要 SDT，序号对应完整题注清单。回读严格证明映射载体、域／对象内容、嵌套及总数，
+不因共享题注样式认领模板固定段落；嵌套 resolved 配对必须具有已认证的容器及对象祖先关系。
+
 Disabled ID-less captions round-trip through the independent closed
 `document-numbering-occurrence-map/v1` and physical two-block occurrence SDT frozen by
 [Markdown compatibility](markdown-compatibility.md#disabled-id-less-caption-occurrence-authority--禁用且无-id-题注出现权威).

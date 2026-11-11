@@ -5,6 +5,7 @@ from __future__ import annotations
 from itertools import pairwise
 from typing import Any
 
+from docwen_core._docx_semantics_v3_caption_groups import PAIRED_CAPTION_TAG_PREFIX
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TAG_PREFIX,
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -244,7 +245,7 @@ def prove_owned_block_parent(child: Any, tag: str, body: Any, parent_sdt: Any | 
     if (
         not tag.startswith(ANCHOR_TAG_PREFIX)
         or parent_tag is None
-        or not parent_tag.startswith((ANCHOR_TAG_PREFIX, TARGET_TAG_PREFIX))
+        or not parent_tag.startswith((ANCHOR_TAG_PREFIX, TARGET_TAG_PREFIX, PAIRED_CAPTION_TAG_PREFIX))
         or content is None
         or content.tag != qn("w:sdtContent")
         or content.getparent() is not parent_sdt
