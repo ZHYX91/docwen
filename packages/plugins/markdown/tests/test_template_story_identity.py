@@ -59,7 +59,7 @@ def test_relocated_story_fills_plain_values_and_owns_its_hyperlinks(tmp_path: Pa
     story.paragraphs[0].text = "{{name}} / {{link}}"
     story.part._partname = PackURI("/layout/regions/custom.xml")
     template = tmp_path / "template.docx"
-    document.save(template)
+    document.save(str(template))
     before = template.read_bytes()
     source = tmp_path / "input.md"
     source.write_text('---\nname: Alice\nlink: "[Website](https://example.org/)"\n---\nBody.\n', encoding="utf-8")
@@ -90,7 +90,7 @@ def test_relocated_story_owned_markers_fail_before_modification(
     story.part._partname = PackURI("/layout/region.xml")
     _owned_marker(story.paragraphs[0], kind)
     template = tmp_path / "template.docx"
-    document.save(template)
+    document.save(str(template))
     before = template.read_bytes()
     options = {"template_name": str(template), "heading_merge_mode": "never"}
     if route == "resolved":
@@ -124,7 +124,7 @@ def test_relocated_story_cannot_hide_reserved_layout_markers(tmp_path: Path, mar
     header.part._partname = PackURI("/layout/custom.xml")
     header.paragraphs[0].text = marker
     template = tmp_path / "template.docx"
-    document.save(template)
+    document.save(str(template))
     source = tmp_path / "input.md"
     source.write_text("Body\n", encoding="utf-8")
     context, workspace = make_context(str(source), options={"template_name": str(template)})
@@ -142,7 +142,7 @@ def test_relationship_annotations_do_not_reject_a_valid_template(tmp_path: Path,
     header.part._partname = PackURI("/layout/annotated.xml")
     header.paragraphs[0].text = "{{name}}"
     template = tmp_path / "template.docx"
-    document.save(template)
+    document.save(str(template))
     with ZipFile(template) as archive:
         members = {name: archive.read(name) for name in archive.namelist()}
     relationships = etree.fromstring(members[member])
