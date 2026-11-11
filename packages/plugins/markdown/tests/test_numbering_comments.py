@@ -156,6 +156,19 @@ def _style_bytes(document, name):
     return etree.tostring(document.styles[name]._element)
 
 
+def _assert_native_heading_number(document, paragraph, expected):
+    """Resolve the saved paragraph's actual list instance and displayed prefix."""
+    number_id = _paragraph_num_id(paragraph)
+    assert number_id is not None and number_id != "0"
+    level_element = paragraph._p.find(f"{qn('w:pPr')}/{qn('w:numPr')}/{qn('w:ilvl')}")
+    assert level_element is not None
+    index = NumberingIndex(document)
+    level = index.lookup(number_id, int(level_element.get(qn("w:val"))))
+    assert level is not None and level.p_style is None
+    assert index.render_numbering_text(level, level.start).rstrip() == expected
+    return number_id
+
+
 @pytest.mark.parametrize("fields", [False, True])
 @pytest.mark.parametrize(
     "scheme,expected", [("gongwen_standard", ["一、", "（一）"]), ("hierarchical_standard", ["1", "1.1"])]
@@ -196,7 +209,7 @@ def test_switch_off_or_numbering_off_never_comments_existing_numbers(tmp_path, e
 def test_render_mode_controls_native_numbers_independently_of_legacy_text_switch(
     tmp_path, text_enabled, comments_enabled
 ):
-    result, _original_path, output_path = _convert(
+    result, original_path, output_path = _convert(
         tmp_path,
         mode="word_native",
         source="# Title\n",
@@ -211,14 +224,20 @@ def test_render_mode_controls_native_numbers_independently_of_legacy_text_switch
     if comments_enabled:
         assert _anchors(document)[str(reviews[0].comment_id)] == "T"
     heading = next(p for p in document.paragraphs if p.text == "Title")
-    assert _paragraph_num_id(heading) is None
-    with ZipFile(output_path) as package:
-        assert b"20000" in package.read("word/numbering.xml")
+    generated_number_id = _assert_native_heading_number(document, heading, "一、")
+    original = Document(str(original_path))
+    assert _style_bytes(document, "Heading 1") == _style_bytes(original, "Heading 1")
+    fixed_heading = next(p for p in document.paragraphs if p.text == "Original comment anchor")
+    assert _paragraph_num_id(fixed_heading) is None
+    assert fixed_heading.style is not None
+    inherited = NumberingIndex(document).lookup_by_style_id(fixed_heading.style.style_id)
+    assert inherited == NumberingIndex(original).lookup_by_style_id(fixed_heading.style.style_id)
+    assert inherited is not None and inherited.num_id != generated_number_id
 
 
 @pytest.mark.parametrize("mode", ["text", "word_native"])
 def test_missing_comment_key_defaults_off_without_disabling_numbering(tmp_path, mode):
-    _result, _original, output_path = _convert(tmp_path, enabled=None, mode=mode, source="# Title\n")
+    _result, original_path, output_path = _convert(tmp_path, enabled=None, mode=mode, source="# Title\n")
     document = Document(str(output_path))
     assert [comment.text for comment in document.comments] == ["Original review"]
     heading = next(p for p in document.paragraphs if (style := p.style) is not None and style.name == "Heading 1")
@@ -227,7 +246,9 @@ def test_missing_comment_key_defaults_off_without_disabling_numbering(tmp_path, 
     else:
         assert heading.text == "Title"
         assert heading.style is not None
-        assert NumberingIndex(document).lookup_by_style_id(heading.style.style_id) is not None
+        _assert_native_heading_number(document, heading, "一、")
+        assert _style_bytes(document, "Heading 1") == _style_bytes(Document(str(original_path)), "Heading 1")
+        assert NumberingIndex(document).lookup_by_style_id(heading.style.style_id) is None
 
 
 def test_native_numbering_review_preserves_formula_loss_comment_range(tmp_path):
