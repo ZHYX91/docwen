@@ -31,7 +31,7 @@ from docwen_core.models.resolved_numbering import (
     load_resolved_numbering_bytes,
 )
 
-from .test_docx_resolved_numbering_v4 import _caption_bindings
+from ._docx_resolved_numbering_support import _caption_bindings
 
 pytestmark = pytest.mark.contract
 
