@@ -464,8 +464,13 @@ cleared formula caches are the intentional exception to unchanged original works
 `test_template_csv_projection.py` checks the complete Markdown converter with chartsheets at every position,
 chart-only refusal, sparse stored cells, exact/cumulative budgets and rejection before native merge allocation.
 Real cancellation tokens interrupt both tall and wide output, close the workbook and remove the whole private
-batch. Core projection tests additionally pair early/late destination collisions with exact existing-file bytes;
-package tests cover non-default relationship targets, UTF-8/UTF-16 DTD refusal and scaled ZIP/byte budgets.
+batch. Core projection tests additionally pair early/late destination collisions with exact existing-file bytes,
+refuse unsupported hard-link installation, and preserve replaced inodes, edited files and symlinks during rollback.
+Full Markdown and native CSV/TSV converters also replace an earlier completed sheet while a later sheet is being
+allocated: registration must fail or cancellation must propagate, the replacement survives, other owned outputs
+are removed, and every native workbook view closes. These deterministic boundaries do not establish resistance
+to hostile continuous path swaps. Package tests cover non-default relationship targets, UTF-8/UTF-16 DTD refusal
+and scaled ZIP/byte budgets.
 `test_template_csv_publication.py` drives the real Runtime and finalizer for success, budget failure and cancellation,
 checking final CSV contents, ordinary sheet indices, original input bytes and an existing published output.
 

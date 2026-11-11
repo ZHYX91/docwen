@@ -29,6 +29,7 @@ from docwen_core.models.result import (
 from docwen_core.spreadsheet_package import preflight_worksheet_allocations
 from docwen_core.spreadsheet_projection import (
     MAX_SPREADSHEET_PROJECTION_CELLS,
+    DelimitedWrite,
     WorksheetValueView,
     ordinary_worksheets,
     plan_delimited_projection,
@@ -629,6 +630,7 @@ class MdToCsvConverter:
         input_stem = _source_stem(context)
         artifacts: list[ArtifactManifest] = []
         total_output_bytes = 0
+        writes: list[DelimitedWrite] = []
 
         cancellable.check()
         progress.report_progress(70.0, "Writing template workbook sheets to CSV")
@@ -649,8 +651,9 @@ class MdToCsvConverter:
 
                 for merged_range in worksheet.merged_cells.ranges:
                     losses.merge_to_csv(f"{suggested}!{merged_range}")
-                write_delimited_projection(projection, csv_path, cancel_check=cancellable.check)
-                pending.callback(Path(csv_path).unlink, missing_ok=True)
+                written = write_delimited_projection(projection, csv_path, cancel_check=cancellable.check)
+                writes.append(written)
+                pending.callback(written.cleanup)
 
                 cancellable.check()
                 file_bytes = Path(csv_path).stat().st_size
@@ -676,6 +679,8 @@ class MdToCsvConverter:
                 artifacts.append(artifact)
 
             cancellable.check()
+            for written in writes:
+                written.validate()
             for artifact in artifacts:
                 workspace.add_artifact(artifact)
             pending.pop_all()
