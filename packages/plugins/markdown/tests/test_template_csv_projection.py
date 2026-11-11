@@ -248,3 +248,46 @@ def test_existing_staging_path_is_neither_overwritten_nor_owned_for_cleanup(
     assert existing.read_bytes() == b"previous owner"
     assert workspace.registered_artifacts == []
     assert list(Path(workspace.staging_dir).iterdir()) == [existing]
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_changed_earlier_csv_is_neither_published_nor_deleted_during_batch_rollback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cancel: bool
+) -> None:
+    template = tmp_path / "template.xlsx"
+    workbook = Workbook()
+    workbook.active["A1"] = "first"
+    workbook.create_sheet("Second")["A1"] = "second"
+    workbook.create_sheet("Third")["A1"] = "third"
+    workbook.save(template)
+    before = template.read_bytes()
+    context, workspace = _context(tmp_path, template)
+    context._cancellation = CancellationToken()
+    loaded, closed = _capture_views(monkeypatch)
+    allocate = workspace.create_artifact_path
+    created = []
+
+    def replace_previous(kind, suffix):
+        path = allocate(kind, suffix)
+        created.append(Path(path))
+        if len(created) == 3:
+            replacement = created[0].with_name("replacement.csv")
+            replacement.write_bytes(b"a later writer owns this path")
+            replacement.replace(created[0])
+            if cancel:
+                context.cancellation.cancel("third sheet")
+        return path
+
+    monkeypatch.setattr(workspace, "create_artifact_path", replace_previous)
+    if cancel:
+        with pytest.raises(CancellationRequested):
+            MdToCsvConverter().convert(context)
+    else:
+        result = MdToCsvConverter().convert(context)
+        assert not result.success and "ownership is unconfirmed" in result.error.message
+    assert len(created) == 3
+    assert list(Path(workspace.staging_dir).iterdir()) == [created[0]]
+    assert created[0].read_bytes() == b"a later writer owns this path"
+    assert workspace.registered_artifacts == []
+    assert len(loaded) == 1 and loaded == closed
+    assert template.read_bytes() == before

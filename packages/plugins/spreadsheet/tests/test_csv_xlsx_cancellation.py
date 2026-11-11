@@ -167,6 +167,65 @@ def test_existing_delimited_staging_file_is_not_overwritten_or_cleaned(
     assert list(staging.iterdir()) == [existing]
 
 
+@pytest.mark.parametrize(("converter_type", "target"), [(XlsxToCsvConverter, "csv"), (XlsxToTsvConverter, "tsv")])
+@pytest.mark.parametrize("cancel", [False, True])
+def test_replaced_batch_output_is_not_published_or_deleted_and_workbook_views_close(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, converter_type: type, target: str, cancel: bool
+) -> None:
+    from docwen_plugin_spreadsheet.csv_xlsx import converter as converter_module
+
+    source = tmp_path / "source.xlsx"
+    workbook = openpyxl.Workbook()
+    workbook.active["A1"] = "first"
+    workbook.create_sheet("Second")["A1"] = "second"
+    workbook.create_sheet("Third")["A1"] = "third"
+    workbook.save(source)
+    before = source.read_bytes()
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    context = _build_fake_context(str(source), str(staging), target_format=target)
+    allocate = context.workspace.create_artifact_path
+    created, loaded, closed = [], [], []
+    load_views = converter_module._load_xlsx_views
+    close_view = openpyxl.Workbook.close
+
+    def capture_views(path):
+        views = load_views(path)
+        loaded.extend(views)
+        return views
+
+    def capture_close(view):
+        closed.append(view)
+        close_view(view)
+
+    def replace_previous(kind, suffix):
+        path = allocate(kind, suffix)
+        created.append(Path(path))
+        if len(created) == 3:
+            replacement = tmp_path / f"replacement.{target}"
+            replacement.write_bytes(b"a later writer owns this path")
+            replacement.replace(created[0])
+            if cancel:
+                context.cancellation.cancel("third sheet")
+        return path
+
+    monkeypatch.setattr(context.workspace, "create_artifact_path", replace_previous)
+    monkeypatch.setattr(converter_module, "_load_xlsx_views", capture_views)
+    monkeypatch.setattr(openpyxl.Workbook, "close", capture_close)
+    if cancel:
+        with pytest.raises(CancellationRequested):
+            converter_type().convert(context)
+    else:
+        result = converter_type().convert(context)
+        assert not result.success and "ownership is unconfirmed" in result.error.message
+    assert len(created) == 3
+    assert list(staging.iterdir()) == [created[0]]
+    assert created[0].read_bytes() == b"a later writer owns this path"
+    assert context.workspace.registered_artifacts == []
+    assert len(loaded) == 2 and loaded == closed
+    assert source.read_bytes() == before
+
+
 @pytest.mark.parametrize("sep", [",", "\t"])
 def test_single_wide_row_can_cancel_before_completing(tmp_path: Path, sep: str) -> None:
     source = tmp_path / "wide.txt"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import os
+import stat
 import tempfile
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, replace
@@ -64,6 +65,34 @@ class WorksheetValueView:
     cells: Mapping[tuple[int, int], CellValue]
 
 
+def _file_identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
+    return value.st_dev, value.st_ino, value.st_mode, value.st_size, value.st_mtime_ns, value.st_ctime_ns
+
+
+@dataclass(frozen=True)
+class DelimitedWrite:
+    """Receipt for exactly the regular file created by one projection write."""
+
+    path: Path
+    row_count: int
+    identity: tuple[int, int, int, int, int, int]
+
+    def validate(self) -> None:
+        current = self.path.lstat()
+        if not stat.S_ISREG(current.st_mode) or _file_identity(current) != self.identity:
+            raise RuntimeError("Spreadsheet staging output changed after its creation; ownership is unconfirmed.")
+
+    def cleanup(self) -> None:
+        """Remove this write only; preserve any replacement during rollback."""
+        try:
+            current = self.path.lstat()
+        except FileNotFoundError:
+            return
+        if not stat.S_ISREG(current.st_mode) or _file_identity(current) != self.identity:
+            return
+        self.path.unlink()
+
+
 def plan_delimited_projection(
     views: Iterable[WorksheetValueView],
     *,
@@ -104,7 +133,7 @@ def write_delimited_projection(
     *,
     cancel_check: Callable[[], None],
     delimiter: str = ",",
-) -> int:
+) -> DelimitedWrite:
     """Commit one complete UTF-8/BOM projection, cleaning an interrupted write."""
     cancel_check()
     output = Path(output_path)
@@ -112,6 +141,7 @@ def write_delimited_projection(
         raise FileExistsError(f"Spreadsheet projection output already exists: {output}")
     descriptor, name = tempfile.mkstemp(prefix="delimited-", suffix=output.suffix, dir=output.parent)
     temporary = Path(name)
+    created = os.fstat(descriptor)
     row_count = 0
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8-sig", newline="") as handle:
@@ -121,10 +151,25 @@ def write_delimited_projection(
                 # booleans, numbers and formula-looking strings from this view.
                 writer.writerow(row)
                 row_count += 1
+            handle.flush()
+            written = os.fstat(handle.fileno())
         cancel_check()
         # A same-directory hard link installs the fully closed file atomically
         # and refuses a target that appeared after the initial collision check.
         os.link(temporary, output)
     finally:
-        temporary.unlink(missing_ok=True)
-    return row_count
+        try:
+            current = temporary.lstat()
+        except FileNotFoundError:
+            pass
+        else:
+            if not stat.S_ISREG(current.st_mode) or (current.st_dev, current.st_ino) != (
+                created.st_dev,
+                created.st_ino,
+            ):
+                raise RuntimeError("Spreadsheet temporary file was replaced; cleanup ownership is unconfirmed.")
+            temporary.unlink()
+    installed = output.lstat()
+    if _file_identity(installed)[:-1] != _file_identity(written)[:-1]:
+        raise RuntimeError("Spreadsheet staging output changed during installation; ownership is unconfirmed.")
+    return DelimitedWrite(output, row_count, _file_identity(installed))

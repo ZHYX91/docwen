@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import csv
+import errno
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+from docwen_core import spreadsheet_projection
 from docwen_core.cancellation import CancellationToken
 from docwen_core.errors import CancellationRequested
 from docwen_core.spreadsheet_projection import (
@@ -37,7 +39,7 @@ def test_empty_ordinary_sheet_keeps_an_empty_artifact_without_an_invented_row(tm
     projections = plan_delimited_projection([WorksheetValueView("Empty", 1, 1, {})], cancel_check=lambda: None, limit=0)
     assert len(projections) == 1 and projections[0].title == "Empty"
     output = tmp_path / "empty.csv"
-    assert write_delimited_projection(projections[0], output, cancel_check=lambda: None) == 0
+    assert write_delimited_projection(projections[0], output, cancel_check=lambda: None).row_count == 0
     assert output.read_bytes() == b""
 
 
@@ -52,7 +54,7 @@ def test_saved_sparse_rectangle_retains_values_without_materializing_cells(tmp_p
     before = dict(cells)
     view = plan_delimited_projection([WorksheetValueView("Sparse", 101, 100, cells)], cancel_check=lambda: None)[0]
     output = tmp_path / "projection.csv"
-    assert write_delimited_projection(view, output, cancel_check=lambda: None, delimiter=delimiter) == 101
+    assert write_delimited_projection(view, output, cancel_check=lambda: None, delimiter=delimiter).row_count == 101
     assert output.read_bytes().startswith(b"\xef\xbb\xbf")
     with output.open(encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.reader(handle, delimiter=delimiter))
@@ -111,3 +113,47 @@ def test_late_destination_collision_never_replaces_or_deletes_the_other_file(tmp
         write_delimited_projection(view, output, cancel_check=lambda: None)
     assert output.read_bytes() == b"other owner won the destination"
     assert list(tmp_path.iterdir()) == [output]
+
+
+@pytest.mark.parametrize("replacement", ["new_inode", "changed_contents", "symlink"])
+def test_write_receipt_does_not_adopt_or_delete_changed_output(tmp_path: Path, replacement: str) -> None:
+    output = tmp_path / "output.csv"
+    view = WorksheetValueView("Data", 1, 1, {(1, 1): SimpleNamespace(value="original")})
+    receipt = write_delimited_projection(view, output, cancel_check=lambda: None)
+    receipt.validate()
+    other = tmp_path / "other.csv"
+    if replacement == "changed_contents":
+        output.write_bytes(b"another writer modified this inode")
+    else:
+        other.write_bytes(b"a different owner")
+        if replacement == "new_inode":
+            other.replace(output)
+        else:
+            output.unlink()
+            try:
+                output.symlink_to(other)
+            except OSError as exc:
+                pytest.skip(f"Host does not allow symbolic-link creation: {exc}")
+    before = output.read_bytes()
+    with pytest.raises(RuntimeError, match="ownership is unconfirmed"):
+        receipt.validate()
+    receipt.cleanup()
+    assert output.read_bytes() == before
+    assert output.is_symlink() is (replacement == "symlink")
+    if other.exists():
+        assert other.read_bytes() == b"a different owner"
+
+
+def test_unsupported_hardlink_volume_fails_without_partial_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "output.csv"
+    view = WorksheetValueView("Data", 1, 1, {(1, 1): SimpleNamespace(value="original")})
+
+    def unsupported(_source, _destination):
+        raise OSError(errno.ENOTSUP, "Hard links unsupported")
+
+    monkeypatch.setattr(spreadsheet_projection.os, "link", unsupported)
+    with pytest.raises(OSError, match="Hard links unsupported"):
+        write_delimited_projection(view, output, cancel_check=lambda: None)
+    assert list(tmp_path.iterdir()) == []
