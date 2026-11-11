@@ -221,6 +221,11 @@ control—fails before rendering with `MD2DOCX-TEMPLATE-PLACEHOLDER-OWNERSHIP`. 
 boundaries retain their ownership. A tab or line break interrupts a placeholder; it cannot join otherwise
 separate text into a fill target. The scanner and filler use the same text-span rules.
 
+Body, header and footer stories are identified by their internal OPC relationships and content types, not by
+`word/header*.xml` or `word/footer*.xml` filenames. All placeholder, ownership and YAML-link consumers share this
+inventory; default, first-page and even-page stories keep their actual part names and hyperlink owners. Invalid or
+ambiguous related parts fail before rendering, while unrelated orphan members gain no story ownership.
+
 Fields and bound controls without placeholders retain their instructions, results and bindings. DocWen does not
 lock or unlink them, and does not replace only a cached result that Word could overwrite on update. Ordinary
 placeholders outside those regions continue to fill through the existing template-selection and conversion flow.
@@ -230,6 +235,9 @@ placeholders outside those regions continue to fill through the existing templat
 嵌套域和无可见文字的域边界同样受保护；制表符或换行会打断占位符，不把两侧文字拼成填充目标。
 扫描与替换共用同一文本范围规则。没有占位符的域或绑定控件保留原指令、结果和绑定，不锁定或解除域。
 这些区域之外的占位符继续按原流程填充，用户选择模板和生成文档的操作不增加步骤。
+正文、页眉和页脚以内部 OPC 关系和内容类型确定身份，不依赖惯用文件名。占位符、所有权检查和 YAML
+链接共用同一清单，保留默认、首页和偶数页区域的真实部件路径及链接所属部件；歧义或错误的关系在渲染前
+拒绝，未被引用的同名文件不会被当作文档区域。
 
 ## Completion and rendering / 注入与渲染
 

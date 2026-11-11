@@ -25,7 +25,9 @@ from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 from lxml import etree
 
+from docwen_core.docx_package_parts import DocxPackageParts, DocxPartError
 from docwen_plugin_markdown.template_errors import BodyPlaceholderPlacementError, TemplatePackageError
+from docwen_plugin_markdown.template_parts import template_story_parts
 from docwen_plugin_markdown.to_docx.sections import section_properties_at
 from docwen_plugin_markdown.yaml_processor import BODY_PLACEHOLDER_ALIASES
 
@@ -634,11 +636,9 @@ def load_template(template_path: str | Path | None = None) -> Document:
         path = Path(template_path)
         try:
             with ZipFile(path, "r") as archive:
-                names = archive.namelist()
-                if len(names) != len(set(names)):
-                    raise TemplatePackageError("DOCX template contains duplicate ZIP members.")
-        except TemplatePackageError:
-            raise
+                DocxPackageParts.from_package(archive).stories()
+        except DocxPartError as exc:
+            raise TemplatePackageError(str(exc)) from exc
         except (BadZipFile, OSError) as exc:
             raise TemplatePackageError(f"DOCX template package is unreadable: {exc}") from exc
         with path.open("rb") as stream:
@@ -684,12 +684,7 @@ def validate_body_placeholder_placement(doc: Document) -> None:
         if _whole_paragraph_placeholder_key(paragraph.text) in BODY_PLACEHOLDER_ALIASES
     }
     pattern = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
-    roots = [doc.element]
-    roots.extend(
-        part.element
-        for part in doc.part.related_parts.values()
-        if hasattr(part, "element") and str(part.partname).startswith(("/word/header", "/word/footer"))
-    )
+    roots = [part.element for part in template_story_parts(doc)]
     for root in roots:
         for paragraph in root.iter(qn("w:p")):
             texts = []
@@ -852,19 +847,13 @@ def scan_placeholders(doc: Document) -> dict[str, list[Any]]:
     from docwen_plugin_markdown.template_ownership import iter_paragraph_placeholder_spans
 
     placeholders: dict[str, list[Any]] = {}
-    roots = [doc.element]
-    roots.extend(
-        part.element
-        for part in doc.part.related_parts.values()
-        if hasattr(part, "element") and str(part.partname).startswith(("/word/header", "/word/footer"))
-    )
-    for root in roots:
-        for element in root.iter(qn("w:p")):
+    for part in template_story_parts(doc):
+        for element in part.element.iter(qn("w:p")):
             # Scan original XML as well as supported body/cell anchors so an
             # unsupported attachment location cannot silently go unnoticed.
             # Text in a nested textbox belongs only to its own paragraph.
             keys = dict.fromkeys(span.key for span in iter_paragraph_placeholder_spans(element))
-            paragraph = Paragraph(element, doc)
+            paragraph = Paragraph(element, part)
             for key in keys:
                 placeholders.setdefault(key, []).append(paragraph)
     return placeholders
