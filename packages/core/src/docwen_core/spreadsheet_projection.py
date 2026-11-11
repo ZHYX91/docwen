@@ -127,6 +127,20 @@ def stored_value_rows(view: WorksheetValueView, *, cancel_check: Callable[[], No
     cancel_check()
 
 
+def _remove_created_file(path: Path, created: os.stat_result, *, complete: bool) -> None:
+    """Keep any path whose identity no longer belongs to this writer."""
+    try:
+        current = path.lstat()
+    except FileNotFoundError:
+        return
+    same_inode = (current.st_dev, current.st_ino) == (created.st_dev, created.st_ino)
+    # Linking/unlinking changes ctime even when the contents remain our own.
+    same_contents = _file_identity(current)[:-1] == _file_identity(created)[:-1]
+    if not stat.S_ISREG(current.st_mode) or not same_inode or (complete and not same_contents):
+        raise RuntimeError(f"Spreadsheet file changed before cleanup; ownership is unconfirmed: {path}")
+    path.unlink()
+
+
 def write_delimited_projection(
     view: WorksheetValueView,
     output_path: str | Path,
@@ -143,6 +157,8 @@ def write_delimited_projection(
     temporary = Path(name)
     created = os.fstat(descriptor)
     row_count = 0
+    installed = False
+    written: os.stat_result | None = None
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8-sig", newline="") as handle:
             writer = csv.writer(handle, delimiter=delimiter)
@@ -157,19 +173,23 @@ def write_delimited_projection(
         # A same-directory hard link installs the fully closed file atomically
         # and refuses a target that appeared after the initial collision check.
         os.link(temporary, output)
-    finally:
-        try:
-            current = temporary.lstat()
-        except FileNotFoundError:
-            pass
-        else:
-            if not stat.S_ISREG(current.st_mode) or (current.st_dev, current.st_ino) != (
-                created.st_dev,
-                created.st_ino,
-            ):
-                raise RuntimeError("Spreadsheet temporary file was replaced; cleanup ownership is unconfirmed.")
-            temporary.unlink()
-    installed = output.lstat()
-    if _file_identity(installed)[:-1] != _file_identity(written)[:-1]:
-        raise RuntimeError("Spreadsheet staging output changed during installation; ownership is unconfirmed.")
-    return DelimitedWrite(output, row_count, _file_identity(installed))
+        installed = True
+        _remove_created_file(temporary, written, complete=True)
+        observed = output.lstat()
+        if _file_identity(observed)[:-1] != _file_identity(written)[:-1]:
+            raise RuntimeError("Spreadsheet staging output changed during installation; ownership is unconfirmed.")
+        return DelimitedWrite(output, row_count, _file_identity(observed))
+    except BaseException as error:
+        # Ownership transfers to the caller only when a receipt is returned.
+        # Until then, this writer must also unwind a successful installation.
+        cleanup = [(temporary, created, False)]
+        if installed and written is not None:
+            cleanup.insert(0, (output, written, True))
+        for path, identity, complete in cleanup:
+            try:
+                _remove_created_file(path, identity, complete=complete)
+            except BaseException as cleanup_error:
+                error.add_note(
+                    f"Spreadsheet cleanup failed for {path}: {type(cleanup_error).__name__}: {cleanup_error}"
+                )
+        raise
