@@ -48,6 +48,11 @@ python tools/run_source.py --workspace-root ../.workspace cli -- --version
 
 也可设置 `DOCWEN_WORKSPACE_ROOT` 为该目录的绝对路径。标准 `repos/docwen` 布局和关联 Git worktree 可自动定位既有工作区；普通 clone 使用显式参数。初始化只创建明确指定的新目录，或为既有治理根添加仓库登记，不读取维护者私有规划。
 
+QA 将最终选定的工作区根传给源码检查、pytest 及其子进程；命令行
+`--workspace-root` 优先于继承的环境变量。共享 Git common-dir 的 worktree
+不需要再设置一份同值环境变量。Windows 短盘符只投影测试运行目录，
+工作区治理和产品 runtime 仍使用已选定的物理路径。
+
 运行目录由工程入口租用并通过 `DOCWEN_RUNTIME_ROOT` 传给产品；正常安装默认使用应用缓存。产品不解析工程目录布局或 README。CI 保留显式 `--pytest-runtime-root`、`--own-pytest-runtime` 与报告目录的入口。
 
 在本地一次跑完格式化校验、静态检查、类型检查与快速测试：

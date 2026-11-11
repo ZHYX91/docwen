@@ -142,6 +142,8 @@ def test_full_qa_uses_the_explicit_pytest_runtime_root(
     assert environments[0] is not None
     assert environments[0]["DOCWEN_PYTEST_RUNTIME_ROOT"] == str(short_view)
     assert environments[0]["DOCWEN_PYTEST_REPORT_DIR"] == str(short_view / qa.PYTEST_REPORT_NAME)
+    assert environments[0][qa.WORKSPACE_ROOT_ENV] == str(workspace)
+    assert environments[0]["DOCWEN_RUNTIME_ROOT"] == str(runtime_root / "r")
     assert mounted == [runtime_root]
     assert unmounted == [("W:", runtime_root)]
 
@@ -182,6 +184,7 @@ def test_qa_builds_one_workspace_contained_pytest_runtime_environment(tmp_path: 
     assert runtime_root == requested_root.resolve()
     assert environment["DOCWEN_PYTEST_RUNTIME_ROOT"] == str(runtime_root)
     assert environment["DOCWEN_PYTEST_REPORT_DIR"] == str(runtime_root / qa.PYTEST_REPORT_NAME)
+    assert environment[qa.WORKSPACE_ROOT_ENV] == str(workspace)
     assert environment["TEMP"] == str(runtime_root / qa.PYTEST_SYSTEM_TEMP_NAME)
     assert environment["TMP"] == str(runtime_root / qa.PYTEST_SYSTEM_TEMP_NAME)
     assert environment["TMPDIR"] == str(runtime_root / qa.PYTEST_SYSTEM_TEMP_NAME)
