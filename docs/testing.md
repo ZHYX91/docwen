@@ -461,6 +461,14 @@ a conflicting sheet title, a named table, a table-backed local name and a hyperl
 untouched cells. The saved output checks each clone's identities together with source-byte preservation;
 cleared formula caches are the intentional exception to unchanged original worksheet XML.
 
+`test_template_csv_projection.py` checks the complete Markdown converter with chartsheets at every position,
+chart-only refusal, sparse stored cells, exact/cumulative budgets and rejection before native merge allocation.
+Real cancellation tokens interrupt both tall and wide output, close the workbook and remove the whole private
+batch. Core projection tests additionally pair early/late destination collisions with exact existing-file bytes;
+package tests cover non-default relationship targets, UTF-8/UTF-16 DTD refusal and scaled ZIP/byte budgets.
+`test_template_csv_publication.py` drives the real Runtime and finalizer for success, budget failure and cancellation,
+checking final CSV contents, ordinary sheet indices, original input bytes and an existing published output.
+
 `test_xlsx_image_text_plan.py` combines near-limit text with real template/table images and URL-quoted Unicode paths. It checks final ASCII/non-BMP limits, exact drawing bytes, literal marker trust, overwritten/protected cells, placeholder discovery order, duplicate drawings, sparse cells and the internal CSV-template helper. Temporary scope strings never enter openpyxl; output assertions save and reopen real workbooks. `test_mhtml_query_resolution.py` checks actual PNG bytes through Runtime under paired synthetic/absolute bases, empty query/fragment delimiters and relative paths.
 
 

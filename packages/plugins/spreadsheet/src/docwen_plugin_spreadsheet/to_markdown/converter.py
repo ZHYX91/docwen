@@ -25,16 +25,16 @@ from docwen_core.detection import sniff_delimited_separator
 from docwen_core.errors import CancellationRequested
 from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.markdown_utils import encode_markdown_table_cell
-from docwen_core.text.ocr import report_ocr_outcome
-from docwen_plugin_spreadsheet.delimited import decoded_samples
-from docwen_plugin_spreadsheet.sparse_projection import (
+from docwen_core.spreadsheet_package import preflight_worksheet_allocations
+from docwen_core.spreadsheet_projection import (
     MAX_SPREADSHEET_PROJECTION_CELLS,
     ProjectionBudget,
     SpreadsheetProjectionLimitError,
-    preflight_worksheet_allocations,
-    worksheet_blocks,
+    ordinary_worksheets,
 )
-from docwen_plugin_spreadsheet.worksheets import ordinary_worksheets
+from docwen_core.text.ocr import report_ocr_outcome
+from docwen_plugin_spreadsheet.delimited import decoded_samples
+from docwen_plugin_spreadsheet.sparse_projection import worksheet_blocks
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -784,7 +784,7 @@ class SpreadsheetToMarkdownConverter:
         )
         wb, formula_wb = _load_xlsx_views(input_path)
         try:
-            worksheets = ordinary_worksheets(wb)
+            worksheets = ordinary_worksheets(wb.worksheets)
             budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
             copy_budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
             unavailable_formula_count, unavailable_formula_locations = _find_unavailable_formula_caches(

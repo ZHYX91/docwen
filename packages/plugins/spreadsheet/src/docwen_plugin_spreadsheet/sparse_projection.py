@@ -4,81 +4,11 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
 from typing import Any
-from zipfile import ZipFile
-
-from lxml import etree
-from openpyxl.utils.cell import range_boundaries
 
 from docwen_core.export_semantics import TableMergeRegion, build_table_semantic_grid, render_table_semantic_grid
+from docwen_core.spreadsheet_projection import ProjectionBudget, SpreadsheetProjectionLimitError
 from docwen_plugin_spreadsheet.native_links import native_cell_markdown
-from docwen_plugin_spreadsheet.worksheets import NoOrdinaryWorksheetsError, ordinary_worksheet_parts
-
-MAX_SPREADSHEET_PROJECTION_CELLS = 1_000_000
-_MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
-
-
-class SpreadsheetProjectionLimitError(ValueError):
-    """A request would allocate more native or projected cells than allowed."""
-
-    diagnostic_code = "SPREADSHEET-PROJECTION-LIMIT"
-
-
-@dataclass
-class ProjectionBudget:
-    limit: int = MAX_SPREADSHEET_PROJECTION_CELLS
-    used: int = 0
-
-    def reserve(self, count: int, *, location: str) -> None:
-        if count < 0 or self.used + count > self.limit:
-            raise SpreadsheetProjectionLimitError(f"Spreadsheet projection exceeds {self.limit} cells at {location}.")
-        self.used += count
-
-
-def preflight_worksheet_allocations(
-    path: str, *, cancel_check: Callable[[], None], limit: int = MAX_SPREADSHEET_PROJECTION_CELLS
-) -> None:
-    """Reject expansive merges before openpyxl allocates covered cell objects.
-
-    Both counts are cumulative across typed worksheet parts. Distant cell
-    coordinates cost one stored cell; they never imply an origin rectangle.
-    """
-    cells = ProjectionBudget(limit=limit)
-    covered = ProjectionBudget(limit=limit)
-    found = False
-    with ZipFile(path) as package:
-        for name, part in ordinary_worksheet_parts(package):
-            found = True
-            cancel_check()
-            with package.open(part) as stream:
-                for index, (_, element) in enumerate(
-                    etree.iterparse(
-                        stream,
-                        events=("end",),
-                        tag=(f"{_MAIN}c", f"{_MAIN}row", f"{_MAIN}mergeCell"),
-                        resolve_entities=False,
-                        no_network=True,
-                    )
-                ):
-                    if index % 1000 == 0:
-                        cancel_check()
-                    if element.tag == f"{_MAIN}c":
-                        cells.reserve(1, location=name)
-                    elif element.tag == f"{_MAIN}mergeCell":
-                        min_col, min_row, max_col, max_row = range_boundaries(str(element.get("ref", "")))
-                        if None in (min_col, min_row, max_col, max_row):
-                            raise ValueError("Worksheet merge has no finite cell rectangle.")
-                        assert (
-                            min_col is not None and min_row is not None and max_col is not None and max_row is not None
-                        )
-                        covered.reserve((max_row - min_row + 1) * (max_col - min_col + 1), location=name)
-                    element.clear()
-                    while element.getprevious() is not None:
-                        del element.getparent()[0]
-            cancel_check()
-    if not found:
-        raise NoOrdinaryWorksheetsError("The workbook contains no ordinary worksheets to export.")
 
 
 def encode_generated_cell_fragment(markdown: str) -> str:
