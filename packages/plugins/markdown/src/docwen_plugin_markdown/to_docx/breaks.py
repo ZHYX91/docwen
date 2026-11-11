@@ -18,12 +18,13 @@ These functions close findings F-F1-001 through F-F1-005 (and F-F1-006).
 
 from __future__ import annotations
 
-import copy
 import logging
 from typing import TYPE_CHECKING
 
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+
+from docwen_plugin_markdown.to_docx.sections import SectionBreakContext
 
 if TYPE_CHECKING:
     from docx.text.paragraph import Paragraph
@@ -32,14 +33,6 @@ logger = logging.getLogger(__name__)
 
 # ── Namespace constants ──────────────────────────────────────────────────
 _WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-
-# ── Section type mapping ─────────────────────────────────────────────────
-_SECTION_TYPE_MAP: dict[str, str] = {
-    "next": "nextPage",
-    "continuous": "continuous",
-    "even": "evenPage",
-    "odd": "oddPage",
-}
 
 # ── Horizontal rule border widths (eighths of a point) ──────────────────
 _HR_BORDER_SZ: dict[str, str] = {
@@ -80,49 +73,18 @@ def insert_page_break(doc) -> Paragraph:
     return p
 
 
-def insert_section_break(doc, section_type: str = "next") -> Paragraph:
-    """Insert a section break as a new paragraph.
+def insert_section_break(doc, section_type: str = "next", *, context: SectionBreakContext | None = None) -> Paragraph:
+    """Split the owning section and return its new boundary paragraph.
 
-    The paragraph's ``pPr`` receives a ``w:sectPr`` element containing
-    the section type and page settings copied from the document's
-    default section.
-
-    Supported *section_type* values:
-
-    =============  ===========
-    Short name     OOXML value
-    =============  ===========
-    ``"next"``     ``nextPage``
-    ``"continuous"`` ``continuous``
-    ``"even"``     ``evenPage``
-    ``"odd"``      ``oddPage``
-    =============  ===========
-
-    Args:
-        doc: python-docx ``Document`` object.
-        section_type: One of ``"next"``, ``"continuous"``, ``"even"``,
-            ``"odd"``.  Defaults to ``"next"``.
-
-    Returns:
-        The newly created ``Paragraph`` containing the section break.
+    A supplied context follows the template insertion slot while rendering is
+    staged at the end of the document. Direct calls split the actual last
+    section. Complete section XML is retained, including header references.
     """
-    word_type = _SECTION_TYPE_MAP.get(section_type, "nextPage")
-
-    p = doc.add_paragraph()
-    pPr = _get_or_add_pPr(p._p)
-
-    sectPr = OxmlElement("w:sectPr")
-
-    # Section type
-    stype = OxmlElement("w:type")
-    stype.set(qn("w:val"), word_type)
-    sectPr.append(stype)
-
-    _copy_page_settings(doc, sectPr)
-    pPr.append(sectPr)
-
-    logger.debug(f"Created section-break paragraph: type={word_type}")
-    return p
+    paragraph = doc.add_paragraph()
+    owner = context if context is not None else SectionBreakContext(doc, paragraph)
+    owner.append_break(paragraph, section_type)
+    logger.debug("Created section-break paragraph: type=%s", section_type)
+    return paragraph
 
 
 def insert_horizontal_rule(doc, variant: str = "1", *, style=None) -> Paragraph:
@@ -173,30 +135,13 @@ def append_page_break_to_paragraph(paragraph) -> None:
     logger.debug("Appended page break to paragraph")
 
 
-def append_section_break_to_paragraph(paragraph, doc, section_type: str = "next") -> None:
-    """Add a section break to an existing paragraph's ``pPr``.
-
-    Inserts ``<w:sectPr>`` into the paragraph properties of *paragraph*.
-
-    Args:
-        paragraph: A python-docx ``Paragraph`` object.
-        doc: python-docx ``Document`` object (for copying page settings).
-        section_type: One of ``"next"``, ``"continuous"``, ``"even"``,
-            ``"odd"``.  Defaults to ``"next"``.
-    """
-    word_type = _SECTION_TYPE_MAP.get(section_type, "nextPage")
-
-    pPr = _get_or_add_pPr(paragraph._p)
-    sectPr = OxmlElement("w:sectPr")
-
-    stype = OxmlElement("w:type")
-    stype.set(qn("w:val"), word_type)
-    sectPr.append(stype)
-
-    _copy_page_settings(doc, sectPr)
-    pPr.append(sectPr)
-
-    logger.debug(f"Appended section break to paragraph: type={word_type}")
+def append_section_break_to_paragraph(
+    paragraph, doc, section_type: str = "next", *, context: SectionBreakContext | None = None
+) -> None:
+    """Split at a main-body paragraph using the section owning that location."""
+    owner = context if context is not None else SectionBreakContext(doc, paragraph)
+    owner.append_break(paragraph, section_type)
+    logger.debug("Appended section break to paragraph: type=%s", section_type)
 
 
 def append_horizontal_rule_to_paragraph(paragraph, variant: str = "1") -> None:
@@ -231,30 +176,6 @@ def _get_or_add_pPr(p_elem):
         pPr = OxmlElement("w:pPr")
         p_elem.insert(0, pPr)
     return pPr
-
-
-def _copy_page_settings(doc, target_sectPr) -> None:
-    """Copy page-layout settings from the document's last ``sectPr``.
-
-    Copies ``pgSz``, ``pgMar``, ``cols``, and ``docGrid`` elements
-    from the document body's default section properties into
-    *target_sectPr* so that Word / WPS correctly recognises the
-    section break type.
-    """
-    try:
-        body = doc.element.body
-        doc_sectPr = body.find(f"{{{_WORD_NS}}}sectPr")
-        if doc_sectPr is None:
-            logger.warning("No default sectPr found in document body; section break will use Word defaults.")
-            return
-
-        for tag in ("pgSz", "pgMar", "cols", "docGrid"):
-            source = doc_sectPr.find(f"{{{_WORD_NS}}}{tag}")
-            if source is not None:
-                target_sectPr.append(copy.deepcopy(source))
-                logger.debug(f"Copied page setting: {tag}")
-    except Exception as exc:
-        logger.warning(f"Failed to copy page settings: {exc}; section break will use Word defaults.")
 
 
 def _apply_bottom_border(paragraph_or_paragraph, variant: str = "1") -> None:

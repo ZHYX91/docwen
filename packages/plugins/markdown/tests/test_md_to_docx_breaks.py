@@ -88,8 +88,12 @@ class TestInsertSectionBreak:
         p = insert_section_break(doc)
         sectPr = p._p.find(f"{{{_W}}}pPr/{{{_W}}}sectPr")
         assert sectPr is not None, "Missing sectPr in paragraph"
-        stype = sectPr.find(f"{{{_W}}}type")
-        assert stype is not None, "Missing w:type in sectPr"
+        # w:type is how the following section starts, not how this one ends.
+        assert sectPr.find(qn("w:type")) is None
+        continuation = doc._element.body.sectPr
+        assert continuation is not None
+        stype = continuation.find(qn("w:type"))
+        assert stype is not None
         assert stype.get(qn("w:val")) == "nextPage"
 
     @pytest.mark.parametrize(
@@ -106,8 +110,11 @@ class TestInsertSectionBreak:
         p = insert_section_break(doc, section_type=short)
         sectPr = p._p.find(f"{{{_W}}}pPr/{{{_W}}}sectPr")
         assert sectPr is not None, "Missing sectPr"
-        stype = sectPr.find(f"{{{_W}}}type")
-        assert stype is not None, "Missing type"
+        assert sectPr.find(qn("w:type")) is None
+        continuation = doc._element.body.sectPr
+        assert continuation is not None
+        stype = continuation.find(qn("w:type"))
+        assert stype is not None
         assert stype.get(qn("w:val")) == expected_ooXML
 
     def test_copies_page_settings(self):
@@ -209,7 +216,10 @@ class TestAppendSectionBreakToParagraph:
 
         sectPr = p._p.find(f"{{{_W}}}pPr/{{{_W}}}sectPr")
         assert sectPr is not None, "sectPr was not added to paragraph pPr"
-        stype = sectPr.find(f"{{{_W}}}type")
+        assert sectPr.find(qn("w:type")) is None
+        continuation = doc._element.body.sectPr
+        assert continuation is not None
+        stype = continuation.find(qn("w:type"))
         assert stype is not None
         assert stype.get(qn("w:val")) == "continuous"
 
@@ -342,8 +352,12 @@ class TestUserPathBreakInDocx:
         # Verify structure
         sectPr = doc.paragraphs[1]._p.find(f"{{{_W}}}pPr/{{{_W}}}sectPr")
         assert sectPr is not None
-        stype = sectPr.find(f"{{{_W}}}type")
-        assert stype is not None, "Missing w:type in sectPr"
+        # w:type is how the following section starts, not how this one ends.
+        assert sectPr.find(qn("w:type")) is None
+        continuation = doc._element.body.sectPr
+        assert continuation is not None
+        stype = continuation.find(qn("w:type"))
+        assert stype is not None
         assert stype.get(qn("w:val")) == "nextPage"
 
     def test_roundtrip_hr_preserves_structure(self):

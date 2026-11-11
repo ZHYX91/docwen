@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
-import logging
 import re
 from collections.abc import Iterator, Mapping
 from copy import deepcopy
@@ -23,9 +21,9 @@ from docwen_plugin_markdown.gongwen_fields import (
     validate_attachment_placeholders,
     validate_review_placeholders,
 )
+from docwen_plugin_markdown.to_docx.sections import splice_body_elements
 from docwen_plugin_markdown.yaml_processor import is_empty_field_value
 
-logger = logging.getLogger(__name__)
 _PLACEHOLDER = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
 
 
@@ -55,7 +53,7 @@ def fill_template(
         remove_empty_gongwen_fields(doc, values, placeholder_map)
         render_attachment_placeholders(values.get("附件说明", ()), placeholder_map, alignment=attachment_alignment)
 
-    if rendered_paragraphs and placeholder_para is not None:
+    if placeholder_para is not None:
         inject_body_paragraphs(doc, placeholder_para, rendered_paragraphs)
     elif rendered_paragraphs:
         _append_rendered_batch(doc, rendered_paragraphs)
@@ -73,22 +71,7 @@ def fill_template(
 
 def inject_body_paragraphs(doc, placeholder_para, rendered_paragraphs: list) -> None:
     """Batch-relocate rendered content to the original main-body anchor."""
-    body = doc.element.body
-    placeholder_elem = placeholder_para._element
-    try:
-        index = list(body).index(placeholder_elem)
-    except ValueError:
-        logger.warning("Placeholder element not found in document body")
-        return
-    elements = []
-    for paragraph in rendered_paragraphs:
-        element = paragraph._element
-        with contextlib.suppress(ValueError):
-            body.remove(element)
-        elements.append(element)
-    for offset, element in enumerate(elements):
-        body.insert(index + offset, element)
-    body.remove(placeholder_elem)
+    splice_body_elements(doc, [paragraph._element for paragraph in rendered_paragraphs], placeholder_para)
 
 
 def fill_yaml_placeholders(
@@ -209,17 +192,7 @@ def _set_word_text(element, text: str) -> None:
 
 def _append_rendered_batch(doc, paragraphs: list) -> None:
     """Keep one rendered batch ordered before terminal section properties."""
-    body = doc.element.body
-    elements = []
-    for paragraph in paragraphs:
-        element = paragraph._element
-        with contextlib.suppress(ValueError):
-            body.remove(element)
-        elements.append(element)
-    section = body.sectPr
-    index = body.index(section) if section is not None else len(body)
-    for offset, element in enumerate(elements):
-        body.insert(index + offset, element)
+    splice_body_elements(doc, [paragraph._element for paragraph in paragraphs], None)
 
 
 def _format_placeholder_value(value: Any, *, list_separator: str) -> str:
