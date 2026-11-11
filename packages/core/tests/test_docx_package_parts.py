@@ -40,7 +40,9 @@ def _package() -> dict[str, bytes]:
     rels = etree.fromstring(members.pop("word/_rels/document.xml.rels"))
     for relation in rels:
         if relation.get("TargetMode") != "External":
-            original = posixpath.normpath(posixpath.join("word", relation.get("Target")))
+            target = relation.get("Target")
+            assert target is not None
+            original = posixpath.normpath(posixpath.join("word", target))
             relation.set("Target", posixpath.relpath(original, "contents"))
     members["contents/_rels/report.xml.rels"] = etree.tostring(rels)
     root_rels = etree.fromstring(members["_rels/.rels"])
