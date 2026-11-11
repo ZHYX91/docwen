@@ -15,6 +15,7 @@ import csv
 import os
 import uuid
 from collections.abc import Callable
+from contextlib import ExitStack
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -23,6 +24,7 @@ from docwen_core.errors import CancellationRequested
 from docwen_core.spreadsheet_package import preflight_worksheet_allocations
 from docwen_core.spreadsheet_projection import (
     MAX_SPREADSHEET_PROJECTION_CELLS,
+    DelimitedWrite,
     WorksheetValueView,
     ordinary_worksheets,
     plan_delimited_projection,
@@ -417,7 +419,7 @@ class XlsxToCsvConverter:
         artifacts: list[ArtifactManifest] = []
         total_sheets = 0
         total_rows = 0
-        output_paths: list[Path] = []
+        writes: list[DelimitedWrite] = []
         completed = False
 
         try:
@@ -444,13 +446,14 @@ class XlsxToCsvConverter:
 
                 output_path = context.workspace.create_artifact_path("primary" if idx == 0 else "auxiliary", ".csv")
 
-                row_count = write_delimited_projection(
+                written = write_delimited_projection(
                     projections[idx],
                     output_path,
                     cancel_check=context.cancellation.check,
                     delimiter=",",
                 )
-                output_paths.append(Path(output_path))
+                writes.append(written)
+                row_count = written.row_count
 
                 context.cancellation.check()
                 total_rows += row_count
@@ -472,6 +475,8 @@ class XlsxToCsvConverter:
                 )
                 artifacts.append(artifact)
             context.cancellation.check()
+            for written in writes:
+                written.validate()
             for artifact in artifacts:
                 context.workspace.add_artifact(artifact)
             completed = True
@@ -497,13 +502,14 @@ class XlsxToCsvConverter:
                 ],
             )
         finally:
-            if not completed:
-                for output_path in output_paths:
-                    output_path.unlink(missing_ok=True)
-            if wb is not None:
-                wb.close()
-            if formula_wb is not None:
-                formula_wb.close()
+            with ExitStack() as cleanup:
+                if formula_wb is not None:
+                    cleanup.callback(formula_wb.close)
+                if wb is not None:
+                    cleanup.callback(wb.close)
+                if not completed:
+                    for written in writes:
+                        cleanup.callback(written.cleanup)
 
         context.progress.report_progress(100.0, "XLSX → CSV complete")
         context.logger.info(f"XLSX→CSV complete: {len(artifacts)} sheets, {total_rows} rows")
@@ -744,7 +750,7 @@ class XlsxToTsvConverter:
         artifacts: list[ArtifactManifest] = []
         total_sheets = 0
         total_rows = 0
-        output_paths: list[Path] = []
+        writes: list[DelimitedWrite] = []
         completed = False
 
         try:
@@ -771,13 +777,14 @@ class XlsxToTsvConverter:
 
                 output_path = context.workspace.create_artifact_path("primary" if idx == 0 else "auxiliary", ".tsv")
 
-                row_count = write_delimited_projection(
+                written = write_delimited_projection(
                     projections[idx],
                     output_path,
                     cancel_check=context.cancellation.check,
                     delimiter="\t",
                 )
-                output_paths.append(Path(output_path))
+                writes.append(written)
+                row_count = written.row_count
 
                 context.cancellation.check()
                 total_rows += row_count
@@ -798,6 +805,8 @@ class XlsxToTsvConverter:
                 )
                 artifacts.append(artifact)
             context.cancellation.check()
+            for written in writes:
+                written.validate()
             for artifact in artifacts:
                 context.workspace.add_artifact(artifact)
             completed = True
@@ -823,13 +832,14 @@ class XlsxToTsvConverter:
                 ],
             )
         finally:
-            if not completed:
-                for output_path in output_paths:
-                    output_path.unlink(missing_ok=True)
-            if wb is not None:
-                wb.close()
-            if formula_wb is not None:
-                formula_wb.close()
+            with ExitStack() as cleanup:
+                if formula_wb is not None:
+                    cleanup.callback(formula_wb.close)
+                if wb is not None:
+                    cleanup.callback(wb.close)
+                if not completed:
+                    for written in writes:
+                        cleanup.callback(written.cleanup)
 
         context.progress.report_progress(100.0, "XLSX → TSV complete")
         context.logger.info(f"XLSX→TSV complete: {len(artifacts)} sheets, {total_rows} rows")
