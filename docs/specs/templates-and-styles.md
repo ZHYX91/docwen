@@ -396,9 +396,13 @@ must resolve to a style of the correct type.
   only when the provider-neutral resolved numbering/export plan enables that kind and supplies the exact number;
   disabled captions retain authored content/style and contain no `SEQ`. Only a declaration with an ID is
   addressable. Caption semantic kind and native carrier structure are independent. DOCX order follows the semantic
-  kind: a Figure-labelled carrier directly precedes `DocWenFigureCaption`, while Table-, Equation-, and Code-labelled
-  captions directly precede their carrier, including cross-type pairs such as Figure plus a native table. The order
-  is not profile-configurable; canonical Markdown recovery writes every declaration above its carrier.
+  kind: a Figure-labelled carrier directly precedes its request-resolved `figure_caption` paragraph, while resolved
+  `table_caption`, `equation_caption`, and `code_block_caption` paragraphs directly precede their carrier, including
+  cross-type pairs such as Figure plus a native table. The order is not profile-configurable; canonical Markdown
+  recovery writes every declaration above its carrier.
+
+  题注使用本次请求解析出的实际样式身份，不要求模板采用固定样式 ID。DOCX 中图题紧随对象，表题、公式题注
+  和代码块题注在对象之前；语义种类与对象结构独立。回读 Markdown 时统一恢复题注声明在对象之前的顺序。
 - A declaration ID and its structure-owned numbered target semantics follow
   [Markdown compatibility](markdown-compatibility.md). When enabled, its target bookmark belongs to the caption
   paragraph and encloses either the simple `SEQ` field or the complete chapter `STYLEREF`+separator+`SEQ` composite,
@@ -407,12 +411,21 @@ must resolve to a style of the correct type.
   paragraph and one authenticated native carrier; it is internal pairing, not an authored marker or second target. A
   generic object/block anchor is styled as its underlying object and retained by an opaque block-level SDT plus
   custom XML mapping; it receives no bookmark, hyperlink target, caption style, `SEQ`, or `REF` semantics.
-- An enabled ID-less caption is recovered only from the fixed direct physical adjacency, its exact managed style,
-  exactly one closed simple-`SEQ` or chapter-`STYLEREF`+separator+`SEQ` materialization, and exact cached result. A
-  disabled ID-less caption instead requires the independent `document-numbering-occurrence-map/v1` plus exact
-  physical two-block occurrence SDT; it has no field, number, target, bookmark, or hidden ID. Style/adjacency alone,
-  reversed/opposite-side placement, an intervening block, missing/unproved carrier, mismatched field/occurrence map, or
-  multiple pairing claims fail closed.
+- Generated captions require explicit occurrence ownership, as defined by
+  [Markdown compatibility](markdown-compatibility.md#generated-caption-ownership--生成题注的所有权). The
+  `document-paired-caption-map/v1` records the complete generated caption count; each enabled ID-less paired caption
+  has a matching `docwen-caption-pair-v1:` SDT. Its fixed direct adjacency, exact resolved style, one closed
+  simple-`SEQ` or chapter-`STYLEREF`+separator+`SEQ` materialization, and cached result must also agree. A disabled
+  ID-less paired caption retains its independent `document-numbering-occurrence-map/v1` and exact two-block
+  occurrence SDT; it has no field, number, target, bookmark, or hidden ID. A fixed template caption remains template
+  content even if it shares that style and has a valid `SEQ` field. Missing ownership, reversed/opposite-side
+  placement, an intervening block, missing/unproved carrier, mismatched field/occurrence map, or multiple pairing
+  claims fail closed; style and adjacency alone never establish ownership.
+
+  本次生成的题注必须有明确的出现所有权，所有权表记录完整题注总数，启用编号且无 ID 的配对题注由对应摘要
+  SDT 绑定题注和对象；顺序、真实样式、域及缓存结果也须相符。禁用且无 ID 的配对题注继续由独立出现表和
+  两块 SDT 证明，不产生编号或隐藏 ID。模板固定题注即使采用同一样式并含合法 `SEQ`，仍属于模板内容。
+  缺失所有权、错误顺序或对象、域及配对证据不符均失败，不靠样式或相邻位置认领题注。
 - The exact caption style means the request-resolved style ID, not a requested-ID prefix. If any caption is rendered,
   a separate `document-caption-style-binding-map/v1` custom XML item persists exactly four ordered bindings
   (`figure_caption`, `table_caption`, `equation_caption`, `code_block_caption`) with each semantic key, resolved

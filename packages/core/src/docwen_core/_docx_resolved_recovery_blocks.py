@@ -4,18 +4,24 @@ from __future__ import annotations
 
 from typing import Any
 
+from docwen_core._docx_semantics_v3_caption_groups import PAIRED_CAPTION_TAG_PREFIX, PairedCaptionMapV3
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TAG_PREFIX,
     TARGET_TAG_PREFIX,
     DocxSemanticsV3Error,
 )
 from docwen_core._docx_semantics_v3_ooxml import sdt_tag
-from docwen_core._docx_semantics_v3_styles import caption_kind_for_paragraph_style
 from docwen_core._docx_semantics_v3_topology import logical_group_elements, prove_block_sdt_envelope
 from docwen_core.docx_standalone_caption_occurrence import STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX
 
 _OCCURRENCE_PREFIX = "docwen-numbering-occurrence-v1:"
-_BLOCK_PREFIXES = (ANCHOR_TAG_PREFIX, TARGET_TAG_PREFIX, _OCCURRENCE_PREFIX, STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+_BLOCK_PREFIXES = (
+    ANCHOR_TAG_PREFIX,
+    TARGET_TAG_PREFIX,
+    _OCCURRENCE_PREFIX,
+    STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
+    PAIRED_CAPTION_TAG_PREFIX,
+)
 _CONTAINERS = frozenset({"list", "list_item", "block_quote", "callout"})
 _OBJECT_KINDS = frozenset({"image", "table", "equation", "code_block"})
 
@@ -28,7 +34,7 @@ def prove_resolved_recovery_blocks_v4(
     occurrences: list[Any],
     standalone_occurrences: list[Any],
     inline_tags: frozenset[str],
-    caption_styles: tuple[Any, ...],
+    paired_caption_map: PairedCaptionMapV3 | None = None,
 ) -> tuple[dict[Any, tuple[Any, ...]], frozenset[Any], frozenset[Any]]:
     """Admit exact mapped wrappers, their envelopes, and closed parent roles.
 
@@ -39,7 +45,15 @@ def prove_resolved_recovery_blocks_v4(
 
     from docx.oxml.ns import qn
 
-    records = [*targets, *anchors, *occurrences, *(item for item in standalone_occurrences if item.target_id is None)]
+    pairs = () if paired_caption_map is None else paired_caption_map.groups
+    pair_tags = {item.tag for item in pairs}
+    records = [
+        *targets,
+        *anchors,
+        *occurrences,
+        *(item for item in standalone_occurrences if item.target_id is None),
+        *pairs,
+    ]
     by_tag = {item.tag: item for item in records}
     if len(by_tag) != len(records):
         raise DocxSemanticsV3Error("resolved recovery block maps duplicate an owner")
@@ -91,23 +105,14 @@ def prove_resolved_recovery_blocks_v4(
             continue
         record = by_tag[tag]
         blocks = contents[wrapper]
-        reserved_semantic_elements.update(logical_group_elements(blocks, proven_nested_blocks=contents))
+        if tag not in pair_tags:
+            reserved_semantic_elements.update(logical_group_elements(blocks, proven_nested_blocks=contents))
         if record.kind == "heading":
             machine_owners.extend(logical_group_elements(blocks, proven_nested_blocks=contents))
         else:
             paragraph = blocks[-1] if record.kind == "figure" else blocks[0]
             if paragraph.tag == qn("w:p"):
                 machine_owners.append(paragraph)
-    # Enabled ID-less captions use the existing native style/SEQ pairing.
-    # Admit their exact main-story paragraph candidates here; _recover_captions
-    # must then prove style, field skeleton, and adjacent native object before
-    # returning. Table-cell paragraphs and arbitrary SDT content are excluded.
-    if caption_styles:
-        machine_owners.extend(
-            block
-            for block in logical_group_elements(tuple(body), proven_nested_blocks=contents)
-            if block.tag == qn("w:p") and caption_kind_for_paragraph_style(block, caption_styles) is not None
-        )
     machine_owners.extend(wrapper for wrapper in body.iter(qn("w:sdt")) if sdt_tag(wrapper) in inline_tags)
     machine_nodes = frozenset(
         node

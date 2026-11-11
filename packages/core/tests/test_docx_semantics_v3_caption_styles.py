@@ -72,16 +72,16 @@ def test_addressable_standalone_caption_uses_authenticated_caption_only_target(t
     source = "Figure: Planned architecture ^Plan"
     document = Document()
     bindings, styles = _add_caption_styles(document)
-    caption = document.add_paragraph(style=styles["figure_caption"])
-    caption.add_run("Figure ")
-    append_complex_field(caption, instruction=" SEQ Figure \\* ARABIC ", cached_result="1")
-    caption.add_run(": Planned architecture")
     session = DocxSemanticsV3Session(
         document,
         source_sha256=hashlib.sha256(source.encode()).hexdigest(),
         caption_style_bindings=bindings,
         standalone_caption_authority=True,
     )
+    caption = document.add_paragraph(style=styles["figure_caption"])
+    caption.add_run("Figure ")
+    append_complex_field(caption, instruction=" SEQ Figure \\* ARABIC ", cached_result="1")
+    caption.add_run(": Planned architecture")
     session.bind_caption(
         caption,
         (),
