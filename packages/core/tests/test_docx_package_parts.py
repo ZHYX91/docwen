@@ -112,3 +112,24 @@ def test_orphan_conventional_header_cannot_gain_story_ownership() -> None:
     members = _package()
     members["word/header1.xml"] = members["layout/top.xml"]
     assert "word/header1.xml" not in {part.name for part in DocxPackageParts(members).stories()}
+
+
+@pytest.mark.parametrize("member", ["_rels/.rels", "contents/_rels/report.xml.rels"])
+def test_relationship_comments_and_processing_instructions_are_read_only(member: str) -> None:
+    members = _package()
+    root = etree.fromstring(members[member])
+    root.insert(0, etree.Comment("Producer annotation"))
+    root.append(etree.ProcessingInstruction("producer", "version='1'"))
+    members[member] = etree.tostring(root)
+    before = dict(members)
+    assert len(DocxPackageParts(members).stories()) == 3
+    assert members == before
+
+
+def test_unknown_relationship_elements_still_fail_closed() -> None:
+    members = _package()
+    root = etree.fromstring(members["_rels/.rels"])
+    etree.SubElement(root, f"{{{RELS_NS}}}Unexpected", Id="extra")
+    members["_rels/.rels"] = etree.tostring(root)
+    with pytest.raises(DocxPartError, match="invalid child"):
+        DocxPackageParts(members).stories()
