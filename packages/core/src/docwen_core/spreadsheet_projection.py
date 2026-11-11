@@ -155,12 +155,16 @@ def write_delimited_projection(
         raise FileExistsError(f"Spreadsheet projection output already exists: {output}")
     descriptor, name = tempfile.mkstemp(prefix="delimited-", suffix=output.suffix, dir=output.parent)
     temporary = Path(name)
-    created = os.fstat(descriptor)
+    raw_descriptor: int | None = descriptor
+    created: os.stat_result | None = None
     row_count = 0
     installed = False
     written: os.stat_result | None = None
     try:
-        with os.fdopen(descriptor, "w", encoding="utf-8-sig", newline="") as handle:
+        created = os.fstat(descriptor)
+        handle = os.fdopen(descriptor, "w", encoding="utf-8-sig", newline="")
+        raw_descriptor = None
+        with handle:
             writer = csv.writer(handle, delimiter=delimiter)
             for row in stored_value_rows(view, cancel_check=cancel_check):
                 # csv.writer represents None as an empty field while preserving
@@ -186,9 +190,25 @@ def write_delimited_projection(
             raise RuntimeError("Spreadsheet staging output changed during installation; ownership is unconfirmed.")
         return DelimitedWrite(output, row_count, _file_identity(observed))
     except BaseException as error:
+        # mkstemp transfers the raw descriptor immediately. fdopen takes over
+        # only on success, including when its constructor itself raises.
+        if raw_descriptor is not None:
+            if created is None:
+                try:
+                    created = os.fstat(raw_descriptor)
+                except BaseException as identity_error:
+                    error.add_note(f"Spreadsheet temporary identity unavailable: {identity_error}")
+            try:
+                os.close(raw_descriptor)
+            except BaseException as close_error:
+                error.add_note(f"Spreadsheet descriptor cleanup failed: {close_error}")
         # Ownership transfers to the caller only when a receipt is returned.
         # Until then, this writer must also unwind a successful installation.
-        cleanup = [(temporary, created, False)]
+        cleanup = []
+        if created is not None:
+            cleanup.append((temporary, created, False))
+        else:
+            error.add_note(f"Spreadsheet temporary file retained because ownership could not be confirmed: {temporary}")
         if installed and written is not None:
             cleanup.insert(0, (output, written, True))
         for path, identity, complete in cleanup:
