@@ -437,15 +437,6 @@ def _render_resolved_v4_docx(
     context.progress.report_progress(80.0, "Writing and proving resolved v4 DOCX")
     output_path = Path(workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".docx"))
     state["output_path"] = str(output_path)
-    descriptor, candidate_name = tempfile.mkstemp(
-        prefix=f".{output_path.name}.",
-        suffix=".candidate",
-        dir=output_path.parent,
-    )
-    os.close(descriptor)
-    candidate_path = Path(candidate_name)
-    candidate_path.unlink()
-
     from docwen_core.docx_table_roles import inject_table_roles, prepare_table_roles
 
     table_roles = prepare_table_roles(doc)
@@ -457,8 +448,15 @@ def _render_resolved_v4_docx(
         if note_ctx.has_notes:
             deferred_note_references = write_notes_to_docx(str(path), note_ctx)
 
+    descriptor, candidate_name = tempfile.mkstemp(
+        prefix=f".{output_path.name}.",
+        suffix=".candidate",
+        dir=output_path.parent,
+    )
+    candidate_path = Path(candidate_name)
     candidate_published = False
     try:
+        os.close(descriptor)
         session.write_package(
             candidate_path,
             package_transform=write_note_parts,
