@@ -61,7 +61,7 @@ def test_neutral_caption_sequence_isolated_from_template_before_and_after_save(t
         "SEQ Table \\* ARABIC",
         f"SEQ {generated_identifier} \\* ARABIC",
         f"SEQ {generated_identifier} \\* ARABIC",
-        f"REF {encode_target_bookmark('tbl-second')} \\h",
+        f"REF {encode_target_bookmark('tbl-second')} \\h \\* MERGEFORMAT",
         "SEQ Table \\* ARABIC",
     ]
     assert reopened.paragraphs[0]._p.xml == before_xml
