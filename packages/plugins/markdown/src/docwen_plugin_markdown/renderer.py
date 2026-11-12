@@ -361,7 +361,11 @@ class MdToDocxRenderer:
         list_style = managed_styles.get("list_block") if managed_styles is not None else body_style
         self._list_numbering = DocxListNumbering(doc, right_to_left=style_is_rtl(list_style))
 
-        self._semantic_renderer = DocxSemanticRenderer(doc)
+        caption_session = self._semantic_v3_session or self._resolved_numbering_session
+        self._semantic_renderer = DocxSemanticRenderer(
+            doc,
+            sequence_scope=caption_session.caption_sequence_scope if caption_session is not None else None,
+        )
 
     # ── Public accessors ────────────────────────────────────────────────
 
@@ -1627,6 +1631,7 @@ class MdToDocxRenderer:
     def _create_v3_caption(self, target: dict[str, Any]):
         """Create one v3 caption without using the superseded ID grammar."""
 
+        from docwen_core.docx_caption_sequences import caption_sequence_identifier
         from docwen_core.docx_semantics_v3 import append_complex_field
 
         kind = str(target["kind"])
@@ -1638,9 +1643,11 @@ class MdToDocxRenderer:
         }[kind]
         paragraph = self._doc.add_paragraph()
         paragraph.add_run(f"{counter} ")
+        if self._semantic_v3_session is None:
+            raise ValueError("v3 caption requires a request-owned sequence scope")
         append_complex_field(
             paragraph,
-            instruction=f" SEQ {counter} \\* ARABIC ",
+            instruction=f" SEQ {caption_sequence_identifier(self._semantic_v3_session.caption_sequence_scope, kind)} \\* ARABIC ",
             cached_result=str(target["number"]),
         )
         title = str(target.get("title") or "")

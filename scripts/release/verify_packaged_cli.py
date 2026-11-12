@@ -2434,6 +2434,43 @@ def _word_complex_fields(root: ElementTree.Element) -> list[tuple[str, str]]:
     return fields
 
 
+def _machine_caption_sequence_scope(archive: zipfile.ZipFile) -> str:
+    namespace = "https://docwen.dev/schema/document-paired-caption-map/v2"
+    maps = []
+    for name in archive.namelist():
+        if re.fullmatch(r"customXml/item[1-9][0-9]*\.xml", name) is None:
+            continue
+        payload = archive.read(name)
+        try:
+            root = ElementTree.fromstring(payload)
+        except ElementTree.ParseError as exc:
+            if namespace.encode() in payload:
+                raise RuntimeError("packaged_machine_exact_two_sequence_map_invalid") from exc
+            continue
+        if root.tag.startswith(f"{{{namespace}}}"):
+            maps.append(root)
+    if len(maps) != 1:
+        raise RuntimeError("packaged_machine_exact_two_sequence_map_count_invalid")
+    [root] = maps
+    scope = root.get("sequence_scope", "")
+    if (
+        root.tag != f"{{{namespace}}}documentPairedCaptionMap"
+        or root.attrib
+        != {
+            "version": "2",
+            "source_sha256": MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT["source_sha256"],
+            "caption_count": "4",
+            "sequence_scope": scope,
+        }
+        or re.fullmatch(r"[0-9a-f]{24}", scope) is None
+        or root.text is not None
+        or root.tail is not None
+        or len(root)
+    ):
+        raise RuntimeError("packaged_machine_exact_two_sequence_map_invalid")
+    return scope
+
+
 def verify_machine_document_semantics_docx(path: Path) -> None:
     """Fail closed unless a Machine-produced DOCX carries the v4 exact-two probe."""
 
@@ -2441,6 +2478,7 @@ def verify_machine_document_semantics_docx(path: Path) -> None:
         with _zipfile_with_long_path(path) as archive:
             document_xml = archive.read("word/document.xml")
             media_names = tuple(name for name in archive.namelist() if name.startswith("word/media/"))
+            sequence_scope = _machine_caption_sequence_scope(archive)
     except (OSError, KeyError, zipfile.BadZipFile) as exc:
         raise RuntimeError(f"packaged_machine_semantics_docx_invalid:{path}") from exc
     try:
@@ -2449,11 +2487,12 @@ def verify_machine_document_semantics_docx(path: Path) -> None:
         raise RuntimeError("packaged_machine_semantics_document_xml_invalid") from exc
 
     fields = _word_complex_fields(root)
-    for counter in ("Figure", "Table", "Equation", "Code"):
+    for counter, code in (("Figure", "F"), ("Table", "T"), ("Equation", "E"), ("Code", "C")):
+        identifier = f"DW_{code}_{sequence_scope}"
         sequence_fields = [
-            (instruction, result) for instruction, result in fields if instruction.startswith(f"SEQ {counter} ")
+            (instruction, result) for instruction, result in fields if instruction.startswith(f"SEQ {identifier} ")
         ]
-        if len(sequence_fields) != 1:
+        if sequence_fields != [(f"SEQ {identifier} \\* ARABIC", "1")]:
             raise RuntimeError(f"packaged_machine_exact_two_seq_invalid:{counter}:{fields}")
     reference_fields = [(instruction, result) for instruction, result in fields if instruction.startswith("REF DW_T_")]
     if len(reference_fields) != 2:

@@ -113,7 +113,7 @@ def test_declared_source_images_match_raw_source_with_tables_and_captions(
     direct_semantics = semantics(direct)
     assert len(direct_semantics[1]) == 3
     assert len(direct_semantics[2]) == 1
-    assert any("SEQ Figure" in (instruction or "") for instruction in direct_semantics[3])
+    assert any("SEQ DW_F_" in (instruction or "") for instruction in direct_semantics[3])
     assert semantics(declared) == direct_semantics
     assert snapshot.read_bytes() == raw_source.read_bytes() == source.encode()
 

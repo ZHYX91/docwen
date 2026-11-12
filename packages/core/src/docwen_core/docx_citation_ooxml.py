@@ -42,7 +42,7 @@ from docwen_core.docx_bookmarks import (
     build_docx_bookmark_inventory,
     prove_bookmark_name,
 )
-from docwen_core.docx_host_metadata import field_run_payload, has_owned_tag_properties
+from docwen_core.docx_host_metadata import field_run_payload, has_owned_tag_properties, owned_sdt_parts
 from docwen_core.models.resolved_numbering import ResolvedCitation, ResolvedCitationItem
 
 _XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
@@ -141,20 +141,10 @@ def prove_citation_occurrence_sdt(
 
     _validate_single_occurrence(identity)
     parent = sdt.getparent()
-    properties = sdt.find(qn("w:sdtPr"))
-    content = sdt.find(qn("w:sdtContent"))
-    if (
-        parent is None
-        or parent.tag != qn("w:p")
-        or [item.tag for item in sdt] != [qn("w:sdtPr"), qn("w:sdtContent")]
-        or properties is None
-        or content is None
-        or properties.text is not None
-        or properties.tail is not None
-        or content.text is not None
-        or content.tail is not None
-    ):
+    parts = owned_sdt_parts(sdt)
+    if parent is None or parent.tag != qn("w:p") or parts is None:
         raise ResolvedCitationOoxmlError("citation occurrence SDT envelope is not canonical")
+    properties, content = parts
     if not has_owned_tag_properties(properties, identity.tag):
         raise ResolvedCitationOoxmlError("citation occurrence SDT tag is not canonical")
     children = list(content)

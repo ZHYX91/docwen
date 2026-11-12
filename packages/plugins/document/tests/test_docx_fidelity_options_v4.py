@@ -88,7 +88,10 @@ def _authenticated_owner_docx(tmp_path: Path, owner_kind: str) -> Path:
     if owner_kind == "figure":
         caption = document.add_paragraph(style=styles["figure_caption"])
         caption.add_run("Figure ")
-        append_complex_field(caption, instruction=" SEQ Figure \\* ARABIC ", cached_result="1")
+        from docwen_core.docx_caption_sequences import caption_sequence_identifier
+
+        counter = caption_sequence_identifier(session.caption_sequence_scope, "figure")
+        append_complex_field(caption, instruction=f" SEQ {counter} \\* ARABIC ", cached_result="1")
         caption.add_run(": Authenticated figure")
         session.bind_caption(
             caption,

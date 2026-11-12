@@ -140,7 +140,7 @@ def test_neutral_data_real_docx_round_trip(tmp_path) -> None:
             for name in package.namelist()
             if name.startswith("customXml/") and name.endswith(".xml")
         ]
-    assert "SEQ Table" in xml
+    assert "SEQ DW_T_" in xml
     assert "REF _DW_" in xml
     assert "_DWO_" in xml
     assert "_DWB_BIBLIOGRAPHY" in xml
@@ -232,7 +232,7 @@ def test_targetless_table_caption_real_docx_round_trip_uses_explicit_pairing(tmp
 
     with ZipFile(output) as package:
         xml = package.read("word/document.xml").decode("utf-8")
-    assert "SEQ Table" in xml
+    assert "SEQ DW_T_" in xml
     assert "_DWP_C_" in xml
     assert "_DWP_O_" in xml
     assert "_DW_" not in xml

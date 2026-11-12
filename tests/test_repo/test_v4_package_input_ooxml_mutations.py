@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import copy
 import io
+import re
+import uuid
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
@@ -404,3 +406,91 @@ def test_unrelated_template_bookmark_and_page_field_are_allowed_but_owned_ref_is
     payload = support.rewrite_docx(original, _xml_mutation("word/document.xml", spoof_ref))
     with pytest.raises(producer.V4PackageInputError, match="owned_field_outside_managed_carrier"):
         producer._inspect_docx(payload, case.expected_ooxml, case.neutral_envelope, case.plan_envelope)
+
+
+@pytest.mark.parametrize("simple", [False, True])
+@pytest.mark.parametrize("quoted", [False, True])
+@pytest.mark.parametrize("counter", ["Table", "DW_T_ffffffffffffffffffffffff", f"DW_T_{support.SEQUENCE_SCOPE}"])
+def test_only_the_request_sequence_is_owned_outside_caption_carriers(simple: bool, quoted: bool, counter: str) -> None:
+    neutral, plan, expected = support.case_semantics("numbering-table-on", base.SOURCE)
+
+    def add_template_fields(root: ElementTree.Element) -> None:
+        body = root.find(f"{_W}body")
+        assert body is not None
+        for index, cached in ((0, "1"), (len(body), "2")):
+            paragraph = ElementTree.Element(f"{_W}p")
+            identifier = f'"{counter}"' if quoted else counter
+            instruction = f" SEQ {identifier} \\* ARABIC "
+            if simple:
+                field = ElementTree.SubElement(paragraph, f"{_W}fldSimple", {f"{_W}instr": instruction})
+                support._text(field, cached)
+            else:
+                support._field(paragraph, instruction, cached)
+            body.insert(index, paragraph)
+
+    payload = support.rewrite_docx(
+        support.build_docx(neutral, plan), _xml_mutation("word/document.xml", add_template_fields)
+    )
+    if counter == f"DW_T_{support.SEQUENCE_SCOPE}":
+        with pytest.raises(producer.V4PackageInputError, match="owned_field_outside_managed_carrier"):
+            producer._inspect_docx(payload, expected, neutral, plan)
+    else:
+        assert producer._inspect_docx(payload, expected, neutral, plan)["seqFieldCount"] == 1
+
+
+@pytest.mark.parametrize("counter", ["Table", "DW_T_ffffffffffffffffffffffff", f"DW_F_{support.SEQUENCE_SCOPE}"])
+def test_generated_caption_sequence_requires_persisted_scope_and_kind(counter: str) -> None:
+    neutral, plan, expected = support.case_semantics("numbering-table-on", base.SOURCE)
+
+    def replace_counter(root: ElementTree.Element) -> None:
+        field = next(item for item in root.iter(f"{_W}instrText") if (item.text or "").startswith(" SEQ "))
+        field.text = f" SEQ {counter} \\* ARABIC "
+
+    payload = support.rewrite_docx(
+        support.build_docx(neutral, plan), _xml_mutation("word/document.xml", replace_counter)
+    )
+    with pytest.raises(producer.V4PackageInputError, match="field_inventory_or_cache_mismatch"):
+        producer._inspect_docx(payload, expected, neutral, plan)
+
+
+@pytest.mark.parametrize("mutation", ["missing_scope", "invalid_scope", "wrong_scope", "wrong_source", "wrong_count"])
+def test_caption_sequence_map_is_independent_authority_with_valid_opc_support(mutation: str) -> None:
+    neutral, plan, expected = support.case_semantics("numbering-table-on", base.SOURCE)
+
+    def mutate_map(parts: dict[str, bytes]) -> None:
+        for name, raw in parts.items():
+            match = re.fullmatch(r"customXml/item([0-9]+)\.xml", name)
+            if match is None:
+                continue
+            root = ElementTree.fromstring(raw)
+            if root.tag != f"{{{support.PAIRED_CAPTION_NAMESPACE}}}documentPairedCaptionMap":
+                continue
+            if mutation == "missing_scope":
+                del root.attrib["sequence_scope"]
+            elif mutation == "invalid_scope":
+                root.set("sequence_scope", "Invalid")
+            elif mutation == "wrong_scope":
+                root.set("sequence_scope", "f" * 24)
+            elif mutation == "wrong_source":
+                root.set("source_sha256", "f" * 64)
+            else:
+                root.set("caption_count", "2")
+            parts[name] = ElementTree.tostring(root, encoding="utf-8", xml_declaration=True)
+            item_id = (
+                "{"
+                + str(
+                    uuid.uuid5(uuid.NAMESPACE_URL, f"{support.PAIRED_CAPTION_NAMESPACE}\0{support._sha(parts[name])}")
+                ).upper()
+                + "}"
+            )
+            props_name = f"customXml/itemProps{match[1]}.xml"
+            props = ElementTree.fromstring(parts[props_name])
+            props.set(f"{{{support.CUSTOM_PROPS}}}itemID", item_id)
+            parts[props_name] = ElementTree.tostring(props, encoding="utf-8", xml_declaration=True)
+            return
+        raise AssertionError("paired caption map missing")
+
+    payload = support.rewrite_docx(support.build_docx(neutral, plan), mutate_map)
+    code = "field_inventory_or_cache_mismatch" if mutation == "wrong_scope" else "caption_sequence_map_invalid"
+    with pytest.raises(producer.V4PackageInputError, match=code):
+        producer._inspect_docx(payload, expected, neutral, plan)

@@ -379,7 +379,9 @@ def test_rich_caption_number_bookmark_encloses_only_seq_fields(tmp_path: Path) -
     children = [item for item in caption if item.tag != qn("w:pPr")]
     start = next(index for index, item in enumerate(children) if item.tag == qn("w:bookmarkStart"))
     end = next(index for index, item in enumerate(children) if item.tag == qn("w:bookmarkEnd"))
-    assert "SEQ Table" in "".join(item.text or "" for child in children[start:end] for item in child.iter())
+    assert [item.text for child in children[start:end] for item in child.iter(qn("w:instrText"))] == [
+        f" SEQ DW_T_{session.caption_sequence_scope} \\* ARABIC "
+    ]
     assert all(item.tag != qn("w:sdt") for item in children[start : end + 1])
     assert any(item.tag == qn("w:sdt") for item in children[end + 1 :])
 

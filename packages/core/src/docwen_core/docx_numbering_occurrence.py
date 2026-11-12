@@ -11,6 +11,7 @@ from typing import Any, Literal
 from docwen_core._docx_caption_carrier import captionable_logical_elements
 from docwen_core._docx_semantics_v3_model import DocxSemanticsV3Error, require_sha256
 from docwen_core._docx_semantics_v3_ooxml import sdt_tag, wrap_direct_body_group
+from docwen_core.docx_host_metadata import has_owned_tag_properties, owned_sdt_parts
 
 NUMBERING_OCCURRENCE_MAP_NAMESPACE = "https://docwen.dev/schema/document-numbering-occurrence-map/v1"
 NUMBERING_OCCURRENCE_TAG_PREFIX = "docwen-numbering-occurrence-v1:"
@@ -208,15 +209,12 @@ def prove_numbering_occurrence_sdt(
 
     if sdt.tag != qn("w:sdt") or sdt_tag(sdt) != identity.tag:
         raise DocxSemanticsV3Error("numbering-occurrence SDT tag is invalid")
-    properties = sdt.find(qn("w:sdtPr"))
-    content = sdt.find(qn("w:sdtContent"))
-    if (
-        properties is None
-        or content is None
-        or [item.tag for item in list(sdt)] != [qn("w:sdtPr"), qn("w:sdtContent")]
-        or len(content) != 2
-    ):
+    parts = owned_sdt_parts(sdt)
+    if parts is None or len(parts[1]) != 2:
         raise DocxSemanticsV3Error("numbering-occurrence SDT envelope is not canonical")
+    properties, content = parts
+    if not has_owned_tag_properties(properties, identity.tag):
+        raise DocxSemanticsV3Error("numbering-occurrence SDT tag is not canonical")
     blocks = tuple(content)
     caption_index = 1 if identity.kind == "figure" else 0
     caption = blocks[caption_index]

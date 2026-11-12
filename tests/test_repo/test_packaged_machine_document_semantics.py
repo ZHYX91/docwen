@@ -26,6 +26,12 @@ _RETURNED_MARKDOWN = _AUTH_MARKDOWN.replace(
     "Ordinary: [[#^system-overview]] and ![[Guide#^h-7f3a]].",
     r"Ordinary: \[\[\#\^system-overview\]\] and \!\[\[Guide\#\^h-7f3a\]\].",
 )
+_SEQUENCE_SCOPE = "0123456789abcdef01234567"
+_SEQUENCE_MAP_XML = (
+    '<dw:documentPairedCaptionMap xmlns:dw="https://docwen.dev/schema/document-paired-caption-map/v2" '
+    f'version="2" source_sha256="{MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT["source_sha256"]}" '
+    f'caption_count="4" sequence_scope="{_SEQUENCE_SCOPE}"/>'
+)
 
 _DOCUMENT_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -81,6 +87,8 @@ _DOCUMENT_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
  </w:body>
 </w:document>
 """
+for _counter, _code in (("Figure", "F"), ("Table", "T"), ("Equation", "E"), ("Code", "C")):
+    _DOCUMENT_XML = _DOCUMENT_XML.replace(f"SEQ {_counter} ", f"SEQ DW_{_code}_{_SEQUENCE_SCOPE} ")
 
 _RELATIONSHIPS_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -97,10 +105,16 @@ def _write_probe(
     document_xml: str = _DOCUMENT_XML,
     relationships_xml: str = _RELATIONSHIPS_XML,
     include_media: bool = True,
+    sequence_map_xml: str | None = _SEQUENCE_MAP_XML,
+    duplicate_sequence_map: bool = False,
 ) -> None:
     with ZipFile(path, "w", ZIP_DEFLATED) as archive:
         archive.writestr("word/document.xml", document_xml)
         archive.writestr("word/_rels/document.xml.rels", relationships_xml)
+        if sequence_map_xml is not None:
+            archive.writestr("customXml/item1.xml", sequence_map_xml)
+            if duplicate_sequence_map:
+                archive.writestr("customXml/item2.xml", sequence_map_xml)
         if include_media:
             archive.writestr("word/media/image1.png", MACHINE_EXACT_TWO_IMAGE_BYTES)
 
@@ -168,8 +182,10 @@ def test_packaged_machine_docx_oracle_does_not_reopen_the_path(tmp_path: Path, m
             "REF DW_T_99999999999999999999999999999999999",
             "reference_bookmark_missing",
         ),
-        ("SEQ Figure", "SEQ Picture", "seq_invalid"),
-        ("SEQ Table", "SEQ Grid", "seq_invalid"),
+        (f"SEQ DW_F_{_SEQUENCE_SCOPE}", "SEQ Figure", "seq_invalid"),
+        (f"SEQ DW_T_{_SEQUENCE_SCOPE}", f"SEQ DW_T_{'0' * 24}", "seq_invalid"),
+        (f"SEQ DW_E_{_SEQUENCE_SCOPE}", f"SEQ DW_T_{_SEQUENCE_SCOPE}", "seq_invalid"),
+        (f"SEQ DW_C_{_SEQUENCE_SCOPE} \\* ARABIC", f"SEQ DW_C_{_SEQUENCE_SCOPE} \\r 1 \\* ARABIC", "seq_invalid"),
         (
             '<w:instrText> REF DW_T_00000000000000000000000000000000001 \\h </w:instrText></w:r>\n   <w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r>',
             '<w:instrText> REF DW_T_00000000000000000000000000000000001 \\h </w:instrText></w:r>\n   <w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>2</w:t></w:r>',
@@ -198,6 +214,52 @@ def test_packaged_machine_docx_oracle_rejects_a_missing_media(tmp_path: Path) ->
 
     with pytest.raises(RuntimeError, match="media_missing"):
         verify_machine_document_semantics_docx(docx_path)
+
+
+@pytest.mark.parametrize(
+    "sequence_map_xml",
+    (
+        None,
+        _SEQUENCE_MAP_XML.replace("/v2", "/v1").replace('version="2"', 'version="1"'),
+        _SEQUENCE_MAP_XML.replace(f' sequence_scope="{_SEQUENCE_SCOPE}"', ""),
+        _SEQUENCE_MAP_XML.replace(_SEQUENCE_SCOPE, _SEQUENCE_SCOPE.upper()),
+        _SEQUENCE_MAP_XML.replace(_SEQUENCE_SCOPE, "0" * 23),
+        _SEQUENCE_MAP_XML.replace('caption_count="4"', 'caption_count="3"'),
+        _SEQUENCE_MAP_XML.replace(str(MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT["source_sha256"]), "0" * 64),
+        _SEQUENCE_MAP_XML.replace("/>", ' counter="Table"/>'),
+        _SEQUENCE_MAP_XML.replace("/>", "><dw:pair/></dw:documentPairedCaptionMap>"),
+        _SEQUENCE_MAP_XML[:-1],
+    ),
+)
+def test_packaged_machine_docx_oracle_rejects_invalid_sequence_map(
+    tmp_path: Path, sequence_map_xml: str | None
+) -> None:
+    docx_path = tmp_path / "invalid-sequence-map.docx"
+    _write_probe(docx_path, sequence_map_xml=sequence_map_xml)
+
+    with pytest.raises(RuntimeError, match="sequence_map"):
+        verify_machine_document_semantics_docx(docx_path)
+
+
+def test_packaged_machine_docx_oracle_rejects_duplicate_sequence_maps(tmp_path: Path) -> None:
+    docx_path = tmp_path / "duplicate-sequence-map.docx"
+    _write_probe(docx_path, duplicate_sequence_map=True)
+
+    with pytest.raises(RuntimeError, match="sequence_map_count_invalid"):
+        verify_machine_document_semantics_docx(docx_path)
+
+
+def test_packaged_machine_docx_oracle_keeps_native_template_counter_independent(tmp_path: Path) -> None:
+    docx_path = tmp_path / "native-template-sequence.docx"
+    native = (
+        '<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r>'
+        "<w:r><w:instrText> SEQ Table \\* ARABIC </w:instrText></w:r>"
+        '<w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>9</w:t></w:r>'
+        '<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'
+    )
+    _write_probe(docx_path, document_xml=_DOCUMENT_XML.replace("<w:body>", f"<w:body>{native}", 1))
+
+    verify_machine_document_semantics_docx(docx_path)
 
 
 def test_packaged_machine_docx_oracle_rejects_a_disabled_occurrence(tmp_path: Path) -> None:

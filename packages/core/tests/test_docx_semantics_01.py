@@ -43,7 +43,7 @@ def test_targetless_caption_keeps_seq_cache_and_explicit_internal_pairing() -> N
     imported = DocxSemanticImporter().import_document(document)
     xml = document.element.xml
 
-    assert "SEQ Table" in xml
+    assert "SEQ DW_T_" in xml
     assert ">3<" in xml
     assert "_DW_" not in xml
     assert "_DWO_" not in xml
@@ -317,9 +317,9 @@ def test_localized_seq_identifier_uses_proven_target_table_kind(localized_identi
     )
     DocxSemanticRenderer(document).render_blocks(semantic_document.blocks)
     instruction = next(
-        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ Table")
+        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ DW_T_")
     )
-    instruction.text = (instruction.text or "").replace("Table", localized_identifier)
+    instruction.text = (instruction.text or "").replace((instruction.text or "").split()[1], localized_identifier)
 
     imported = DocxSemanticImporter().import_document(document)
 
@@ -338,9 +338,9 @@ def test_known_seq_after_unknown_precedes_structural_table_fallback(
     document, _table = _render_targeted_table()
     paragraph = document.paragraphs[0]
     instruction = next(
-        item for item in paragraph._p.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ Table")
+        item for item in paragraph._p.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ DW_T_")
     )
-    instruction.text = (instruction.text or "").replace("Table", known_identifier)
+    instruction.text = (instruction.text or "").replace((instruction.text or "").split()[1], known_identifier)
     _insert_simple_seq_before_complex_field(paragraph, identifier="Unknown", cached_result="999")
 
     extracted = extract_neutral_semantic_caption(
@@ -377,9 +377,9 @@ def test_localized_seq_identifier_uses_proven_targetless_table_pairing(
 ) -> None:
     document, table = _render_targetless_table()
     instruction = next(
-        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ Table")
+        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ DW_T_")
     )
-    instruction.text = (instruction.text or "").replace("Table", localized_identifier)
+    instruction.text = (instruction.text or "").replace((instruction.text or "").split()[1], localized_identifier)
     output = tmp_path / f"targetless-{localized_identifier}.docx"
     document.save(output)
 
@@ -393,9 +393,9 @@ def test_multiple_unknown_seq_identifiers_fail_closed_despite_proven_targetless_
     document, _table = _render_targetless_table()
     paragraph = document.paragraphs[0]
     instruction = next(
-        item for item in paragraph._p.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ Table")
+        item for item in paragraph._p.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ DW_T_")
     )
-    instruction.text = (instruction.text or "").replace("Table", "表格")
+    instruction.text = (instruction.text or "").replace((instruction.text or "").split()[1], "表格")
     _insert_simple_seq_before_complex_field(paragraph, identifier="Tabelle", cached_result="99")
 
     imported = DocxSemanticImporter().import_document(document)
@@ -409,9 +409,9 @@ def test_multiple_unknown_seq_identifiers_fail_closed_despite_proven_targetless_
 def test_localized_targetless_seq_requires_balanced_object_pairing_marker() -> None:
     document, _table = _render_targetless_table()
     instruction = next(
-        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ Table")
+        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ DW_T_")
     )
-    instruction.text = (instruction.text or "").replace("Table", "表格")
+    instruction.text = (instruction.text or "").replace((instruction.text or "").split()[1], "表格")
     _remove_marker_end(document.tables[0]._tbl, prefix="_DWP_O_")
 
     imported = DocxSemanticImporter().import_document(document)
@@ -425,9 +425,9 @@ def test_localized_targetless_seq_requires_balanced_object_pairing_marker() -> N
 def test_localized_targetless_seq_rejects_conflicting_object_target_marker() -> None:
     document, _table = _render_targetless_table()
     instruction = next(
-        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ Table")
+        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ DW_T_")
     )
-    instruction.text = (instruction.text or "").replace("Table", "表格")
+    instruction.text = (instruction.text or "").replace((instruction.text or "").split()[1], "表格")
     DocxSemanticRenderer(document, bookmark_id_start=2000).bind_object_target(document.tables[0], "tbl-conflict")
 
     imported = DocxSemanticImporter().import_document(document)
@@ -448,9 +448,9 @@ def test_localized_seq_identifier_requires_matching_physical_table_target() -> N
     )
     DocxSemanticRenderer(document).render_blocks(semantic_document.blocks)
     instruction = next(
-        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ Table")
+        item for item in document.element.iter(qn("w:instrText")) if (item.text or "").strip().startswith("SEQ DW_T_")
     )
-    instruction.text = (instruction.text or "").replace("Table", "表格")
+    instruction.text = (instruction.text or "").replace((instruction.text or "").split()[1], "表格")
     object_start = next(
         item
         for item in document.tables[0]._tbl.iter(qn("w:bookmarkStart"))
@@ -576,7 +576,7 @@ def test_renderer_rejects_existing_semantic_bookmark_name_without_partial_write(
         renderer.render_caption_for_table(table, _targeted_table().caption)  # type: ignore[arg-type]
 
     assert [item.code for item in error.value.diagnostics] == ["semantic.docx.bookmark.name_conflict"]
-    assert "SEQ Table" not in document.element.xml
+    assert "SEQ " not in document.element.xml
     assert "_DWO_" not in document.element.xml
 
 

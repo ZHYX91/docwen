@@ -109,8 +109,17 @@ def test_caption_target_raw_anchor_and_fenced_carrier_remain_layered(
         document_xml = package.read("word/document.xml").decode()
         package_payload = b"\n".join(package.read(name) for name in package.namelist())
         document_root = etree.fromstring(package.read("word/document.xml"))
+        [caption_map] = [
+            root
+            for name in package.namelist()
+            if re.fullmatch(r"customXml/item[0-9]+\.xml", name)
+            and (root := etree.fromstring(package.read(name))).tag
+            == "{https://docwen.dev/schema/document-paired-caption-map/v2}documentPairedCaptionMap"
+        ]
+    scope = caption_map.get("sequence_scope")
+    assert caption_map.get("version") == "2" and scope is not None and re.fullmatch(r"[0-9a-f]{24}", scope)
 
-    assert document_xml.count(" SEQ Code ") == 1
+    assert [item.text for item in document_root.iter(qn("w:instrText"))] == [f" SEQ DW_C_{scope} \\* ARABIC "]
     assert document_xml.count("bookmarkStart") == 1
     assert document_xml.count("docwen-fenced-source-v1:") == 1
     assert ANCHOR_TOPOLOGY_MAP_NAMESPACE.encode() not in package_payload

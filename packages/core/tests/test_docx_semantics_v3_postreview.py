@@ -353,7 +353,10 @@ def test_caption_target_can_own_an_inner_ordinary_anchor_group(tmp_path: Path) -
     )
     caption = document.add_paragraph(style="DocWenTableCaption")
     caption.add_run("Table ")
-    append_complex_field(caption, instruction=" SEQ Table \\* ARABIC ", cached_result="1")
+    from docwen_core.docx_caption_sequences import caption_sequence_identifier
+
+    counter = caption_sequence_identifier(session.caption_sequence_scope, "table")
+    append_complex_field(caption, instruction=f" SEQ {counter} \\* ARABIC ", cached_result="1")
     caption.add_run(": Results")
     table = document.add_table(rows=1, cols=1)
     table.cell(0, 0).text = "A"
