@@ -14,6 +14,7 @@ from docx.oxml.ns import qn
 from lxml import etree
 
 from docwen_core._docx_semantics_v3_caption_groups import PAIRED_CAPTION_MAP_NAMESPACE, PAIRED_CAPTION_TAG_PREFIX
+from docwen_core.docx_caption_sequences import caption_sequence_identifier
 from docwen_core.docx_semantics_v3 import DocxSemanticsV3Error, DocxSemanticsV3Recovery, DocxSemanticsV3Session
 
 from .test_docx_semantics_v3_caption_styles import _add_caption_styles, _add_table_caption
@@ -34,10 +35,14 @@ def _output(tmp_path: Path, *, template_has_seq: bool) -> tuple[Any, Path]:
     session = DocxSemanticsV3Session(
         document, source_sha256=hashlib.sha256(b"generated captions").hexdigest(), caption_style_bindings=bindings
     )
-    caption, table = _add_table_caption(document, styles["table_caption"], "Generated")
+    caption, table = _add_table_caption(
+        document, styles["table_caption"], "Generated", sequence_scope=session.caption_sequence_scope
+    )
     session.bind_ordinary_anchor((table._tbl,), {"block_kind": "table", "id": "generated-table"})
     session.bind_caption(caption, (table._tbl,), {"kind": "table", "number": "1", "title": "Generated"})
-    named, other = _add_table_caption(document, styles["table_caption"], "Addressable", number="2")
+    named, other = _add_table_caption(
+        document, styles["table_caption"], "Addressable", number="2", sequence_scope=session.caption_sequence_scope
+    )
     session.bind_caption(named, (other._tbl,), {"kind": "table", "id": "named", "number": "2", "title": "Addressable"})
     session.finalize_document()
     path = tmp_path / "caption-ownership.docx"
@@ -53,6 +58,11 @@ def test_fixed_template_caption_is_not_claimed_as_generated(tmp_path: Path, temp
     recovery = session.prove_package(path)
     assert recovery.caption_signatures == (("table", None, "Generated", "1"), ("table", "named", "Addressable", "2"))
     loaded = Document(str(path))
+    counter = caption_sequence_identifier(session.caption_sequence_scope, "table")
+    expected_instructions = ([" SEQ Table \\* ARABIC "] if template_has_seq else []) + [
+        f" SEQ {counter} \\* ARABIC "
+    ] * 2
+    assert [item.text for item in loaded.element.iter(qn("w:instrText"))] == expected_instructions
     reopened = DocxSemanticsV3Recovery.load(path, loaded)
     body = loaded.element.find(qn("w:body"))
     assert body is not None
@@ -116,7 +126,9 @@ def test_new_unbound_caption_cannot_inherit_template_allowance(tmp_path: Path, e
     session = DocxSemanticsV3Session(
         document, source_sha256=hashlib.sha256(b"source").hexdigest(), caption_style_bindings=bindings
     )
-    caption, table = _add_table_caption(document, styles["table_caption"], "Generated")
+    caption, table = _add_table_caption(
+        document, styles["table_caption"], "Generated", sequence_scope=session.caption_sequence_scope
+    )
     session.bind_caption(caption, (table._tbl,), {"kind": "table", "number": "1", "title": "Generated"})
     if extra == "unbound_caption":
         _add_table_caption(document, styles["table_caption"], "Forgotten")
