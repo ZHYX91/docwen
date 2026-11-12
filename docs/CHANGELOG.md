@@ -3,6 +3,31 @@
 - 本文档只记录版本演进和对外可见变更，不作为当前功能边界、架构约束或规范条款的事实源。
 - 长期有效的项目说明以 README 体系为准，设计与维护边界以 `docs/architecture.md` 为准，强约束规则以 `docs/specs/` 为准。
 
+## 0.23.0
+
+- Preserve worksheet row heights and more template features when generating XLSX from Markdown or structured clipboard input. Clone worksheet, Table and local-name references together, and retain only the intended cells when changing a range hyperlink.
+- Markdown 与结构化剪贴板生成 XLSX 时保留工作表行高及更多模板特征；克隆工作表时同步重定位 Table 和局部名称引用，区域超链接局部修改仅保留应有的链接单元格。
+- Write long integer identifiers as actual text before XLSX serialization, preserving their exact digits instead of relying on a text display format.
+- XLSX 序列化前将长整数编号写成真正的文本，保留完整数字，不再依赖文本显示格式保护精度。
+- Share CSV worksheet selection and sparse traversal across conversion routes. Skip chart sheets, enforce cumulative export limits, and respond to cancellation within wide rows without publishing incomplete outputs.
+- CSV 转换共用工作表筛选与稀疏遍历，跳过图表页、检查累计导出上限，并在宽行处理中响应取消，避免交付不完整结果。
+- Preserve DOCX section settings, header/footer relationships and body boundaries while filling templates. Protect placeholders inside dynamic fields and bound controls, and resolve header, footer, style and numbering parts by their package relationships.
+- DOCX 模板填充保留分节设置、页眉页脚关系和正文范围；保护动态域及绑定控件中的占位符，按包关系定位页眉、页脚、样式与编号部件。
+- Keep generated styles and numbering identities separate from existing template content, write numbering nodes in schema order, and restrict saved-output validation to the content owned by the conversion.
+- 生成的样式与编号使用独立于模板内容的身份，编号节点按格式规范排序，保存后校验限定在本次转换所属内容。
+- Preserve body formatting on visible references and aliases, including REF result colors after Word updates fields and saves the document, while retaining strict field identity checks.
+- 可见引用和别名继承正文格式，Word 更新域并保存后仍保留 REF 结果颜色，同时保持严格的域身份校验。
+- Retain ordinary complex-field hyperlinks from WPS and continue automatic heading and template numbering across intervening body paragraphs when reading DOCX back to Markdown.
+- DOCX 回转 Markdown 时保留 WPS 保存的普通复杂超链接域；标题和模板自动编号跨普通正文段落继续计数。
+- Give generated captions independent Word numbering sequences so template captions do not change their numbers or references when fields are updated. Restore captions from verified current document content rather than treating template captions as generated content.
+- 生成题注使用独立的 Word 编号序列，避免更新域时被模板题注改变序号和引用；回读依据已核验的当前文档内容恢复题注，不把模板题注当作生成内容。
+- Track Office subprocess ownership through completion, timeout and cancellation, and require confirmed process cleanup before reporting success. Keep task cancellation tied to its original request even when an identifier is reused.
+- Office 外部进程在完成、超时及取消期间保持明确归属，确认进程收尾后才报告成功；任务标识复用时，取消操作仍绑定原请求。
+- Pass the selected QA workspace consistently to subprocesses, and clean up conversion-owned candidate files on failed validation.
+- QA 工作区选择一致传递给子进程，校验失败时清理本次转换所属的候选文件。
+- Declare all twelve shipped interface languages in the Microsoft Store package, correct remaining French and Portuguese interface text, and refresh localized conversion screenshots with consistent dimensions while preserving template names.
+- 微软商店包声明全部十二种界面语言，修正法语和葡语界面文字，并更新同尺寸的本地化转换截图；模板名称保持原样。
+
 ## 0.22.0
 
 - Ship twelve complete localized Word templates, including Arabic title/body placeholders, RTL paragraphs, lists and table order. Correct several style translations without adding aliases for former translations; keep stable style IDs and preserve existing custom formatting during missing-style completion.

@@ -104,6 +104,28 @@ def test_store_config_and_manifest_bind_partner_center_identity() -> None:
     assert default_tile is not None and default_tile.attrib["ShortName"] == "DocWen"
     show_name = default_tile.find("uap:ShowNameOnTiles/uap:ShowOn", namespaces)
     assert show_name is not None and show_name.attrib["Tile"] == "square150x150Logo"
+    languages = [resource.attrib["Language"] for resource in manifest.findall("f:Resources/f:Resource", namespaces)]
+    assert languages == config["languages"]
+    assert set(languages) == {path.stem.replace("_", "-") for path in (_REPO_ROOT / "i18n/locales").glob("*.toml")}
+
+
+@pytest.mark.parametrize("invalid", ["missing", "duplicate", "unsupported", "nonstring", "empty"])
+def test_store_languages_reject_incomplete_or_ambiguous_declarations(tmp_path: Path, invalid: str) -> None:
+    config = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
+    if invalid == "missing":
+        config["languages"].pop()
+    elif invalid == "duplicate":
+        config["languages"][-1] = config["languages"][0]
+    elif invalid == "unsupported":
+        config["languages"][-1] = "xx-YY"
+    elif invalid == "nonstring":
+        config["languages"][-1] = []
+    else:
+        config["languages"] = []
+    path = tmp_path / "store.json"
+    path.write_text(json.dumps(config), encoding="utf-8")
+    with pytest.raises(build_msix.MsixBuildError, match=r"^msix_config_languages$"):
+        build_msix.read_config(path)
 
 
 @pytest.mark.parametrize("version", ["0.9.0.0", "1.0.0.1", "1.0.0", "65536.0.0.0"])

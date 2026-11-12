@@ -204,6 +204,9 @@ def test_render_initialization_and_evidence_failures_remain_leased(tmp_path, mon
 
         def import_without_qt(name, *args, **kwargs):
             if name.startswith("PySide6"):
+                assert Path.cwd().parent == workspace / "temp"
+                assert os.environ["QT_QPA_PLATFORM"] == "offscreen:configfile=offscreen-screen.json"
+                assert (Path.cwd() / "offscreen-screen.json").is_file()
                 raise ImportError("Qt unavailable")
             return original_import(name, *args, **kwargs)
 
@@ -232,7 +235,9 @@ def test_render_initialization_and_evidence_failures_remain_leased(tmp_path, mon
         monkeypatch.setattr(Path, "write_text", write_without_evidence)
     error = {"config": FileNotFoundError, "qt": ImportError, "evidence": RuntimeError}[phase]
     with pytest.raises(error) as caught:
-        render_screenshots.main(["--repo", str(repo), "en_US", "light", "--output", str(tmp_path / "media")])
+        render_screenshots.main(["--repo", str(repo), "en_US", "light", "--output", "../media"])
+    assert Path.cwd() == repo
+    assert (tmp_path / "media").is_dir()
     root = next((workspace / "temp").iterdir())
     assert json.loads((root / ".docwen-temp-lease.json").read_text())["state"] == "retained-failure"
     if phase == "evidence":

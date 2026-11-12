@@ -1141,7 +1141,7 @@ auto_selected_reason = "Un modèle disponible dans {template_kind} a été séle
 open_location = "Ouvrir l’emplacement du fichier"
 search = "Rechercher des modèles"
 recent = "Utilisés dans cette session"
-search_count = "{count} modèles sur {total} · le filtre ne change pas la sélection"
+search_count = "Modèles affichés : {count} sur {total} · le filtre ne change pas la sélection"
 
 [components.template_selector_tabbed]
 document_templates = "Document"
