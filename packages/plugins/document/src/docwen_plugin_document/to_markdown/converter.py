@@ -2071,10 +2071,9 @@ class DocxToMarkdownConverter:
                 else:
                     lines.append(f"{indent}{display}")
             else:
-                # Normal paragraph — reset list counter continuity
-                if list_counter is not None:
-                    list_counter.reset()
-
+                # A normal paragraph interrupts layout, not an OOXML numbering
+                # instance. The same numId continues after intervening prose;
+                # a separate instance/startOverride owns an explicit restart.
                 # Page break text splitting
                 if page_parts is not None:
                     for part_type, part in page_parts:

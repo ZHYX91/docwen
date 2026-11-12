@@ -8,6 +8,10 @@ from xml.etree import ElementTree as ET
 from zipfile import ZipFile
 
 import pytest
+from docx import Document
+from docx.enum.style import WD_STYLE_TYPE
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from markdown_it import MarkdownIt
 
 from tests.integration.test_formula_and_gongwen_source_content import _body, _bundle
@@ -79,3 +83,97 @@ def test_native_container_marker_precedes_heading_and_counts_once(
         [list_token] = [token for token in tokens if token.type == "ordered_list_open"]
         assert list_token.attrGet("start") == start
     assert tokens[-2].type == "inline" and tokens[-2].content == "Outside."
+
+
+@pytest.mark.parametrize("roman_style_binding", [False, True], ids=["direct-roman", "style-roman"])
+def test_native_numbering_instances_continue_across_prose_and_other_lists(
+    round_trip_runtime: Any, tmp_path: Path, roman_style_binding: bool
+) -> None:
+    """Native numId/startOverride, rather than cached text, owns continuation."""
+    document = Document()
+    numbering = document.part.numbering_part.element
+
+    def value(parent, tag, text):
+        child = OxmlElement("w:" + tag)
+        child.set(qn("w:val"), str(text))
+        parent.append(child)
+        return child
+
+    for abstract_id, formats in ((80, ("decimal", "decimal")), (81, ("upperRoman",)), (82, ("decimal",))):
+        abstract = OxmlElement("w:abstractNum")
+        abstract.set(qn("w:abstractNumId"), str(abstract_id))
+        for level, number_format in enumerate(formats):
+            definition = OxmlElement("w:lvl")
+            definition.set(qn("w:ilvl"), str(level))
+            value(definition, "start", 1)
+            value(definition, "numFmt", number_format)
+            value(definition, "lvlText", "%1.%2" if level else "%1" if abstract_id == 80 else "%1.")
+            value(definition, "suff", "space")
+            abstract.append(definition)
+        first_num = numbering.find(qn("w:num"))
+        numbering.insert(numbering.index(first_num) if first_num is not None else len(numbering), abstract)
+    for num_id, abstract_id in ((80, 80), (81, 81), (82, 82), (83, 82)):
+        instance = OxmlElement("w:num")
+        instance.set(qn("w:numId"), str(num_id))
+        value(instance, "abstractNumId", abstract_id)
+        if num_id == 83:
+            override = OxmlElement("w:lvlOverride")
+            override.set(qn("w:ilvl"), "0")
+            value(override, "startOverride", 4)
+            instance.append(override)
+        numbering.append(instance)
+
+    def bind(properties, num_id, level=0):
+        num_pr = OxmlElement("w:numPr")
+        value(num_pr, "ilvl", level)
+        value(num_pr, "numId", num_id)
+        properties.append(num_pr)
+
+    if roman_style_binding:
+        style = document.styles.add_style("Native Roman", WD_STYLE_TYPE.PARAGRAPH)
+        bind(style.element.get_or_add_pPr(), 81)
+
+    def item(text, num_id, level=0, *, heading=False):
+        paragraph = document.add_heading(text, level=level + 1) if heading else document.add_paragraph(text)
+        if num_id == 81 and roman_style_binding:
+            paragraph.style = document.styles["Native Roman"]
+        else:
+            bind(paragraph._p.get_or_add_pPr(), num_id, level)
+
+    item("Roman before", 81)
+    item("Heading first", 80, heading=True)
+    item("Heading child", 80, 1, heading=True)
+    document.add_paragraph("Intervening prose.")
+    item("List first", 82)
+    item("Heading second", 80, heading=True)
+    item("Roman after", 81)
+    item("Restart first", 83)
+    document.add_paragraph("Another paragraph.")
+    item("Restart second", 83)
+    item("List resumed", 82)
+    item("Heading child after", 80, 1, heading=True)
+    source = tmp_path / "native-counters.docx"
+    document.save(str(source))
+    converted, _ = _bundle(
+        round_trip_runtime,
+        source,
+        tmp_path / "read-counters",
+        source_format="docx",
+        capability="convert.docx.to_markdown",
+        options={"remove_numbering": False},
+    )
+    _, body = _body(converted.read_text(encoding="utf-8"))
+    assert [line for line in body.splitlines() if line] == [
+        "I. Roman before",
+        "# 1 Heading first",
+        "## 1.1 Heading child",
+        "Intervening prose.",
+        "1. List first",
+        "# 2 Heading second",
+        "II. Roman after",
+        "4. Restart first",
+        "Another paragraph.",
+        "5. Restart second",
+        "2. List resumed",
+        "## 2.1 Heading child after",
+    ]
