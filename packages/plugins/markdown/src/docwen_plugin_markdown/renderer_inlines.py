@@ -308,6 +308,8 @@ def _render_formatted_container(
     element = previous.getnext() if previous is not None else next(iter(parent._p), None)
     while element is not None:
         for run_element in element.iter(qn("w:r")):
+            if any(child.tag in {qn("w:fldChar"), qn("w:instrText"), qn("w:delInstrText")} for child in run_element):
+                continue
             apply_property(Run(run_element, parent))
         element = element.getnext()
 

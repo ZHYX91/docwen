@@ -10,6 +10,7 @@ from zipfile import ZipFile
 
 import docwen_core._docx_semantics_v3_fenced as fenced
 from docwen_core._docx_caption_carrier import captionable_logical_elements
+from docwen_core._docx_reference_fields import parse_reference_instruction
 from docwen_core._docx_semantics_v3_fenced import FencedSourceIdentityV3
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
 from docwen_core._docx_semantics_v3_model import (
@@ -795,12 +796,7 @@ def _prove_reference_occurrences(
         target_ids.append(
             next(item.source_id for item in targets if item.bookmark_name == record.resolved_bookmark_name)
         )
-        expected = (
-            f" REF {record.resolved_bookmark_name} \\n \\h "
-            if expected_heading
-            else f" REF {record.resolved_bookmark_name} \\h "
-        )
-        if instruction != expected:
+        if parse_reference_instruction(instruction) != (record.resolved_bookmark_name, expected_heading):
             raise DocxSemanticsV3Error("reference-occurrence REF instruction does not match authenticated metadata")
         _prove_reference_occurrence_field_skeleton(content, record)
         expected_visible = _reference_occurrence_visible(record)

@@ -13,6 +13,7 @@ from itertools import pairwise
 from typing import Any
 from urllib.parse import urlsplit
 
+from docwen_core._docx_reference_fields import reference_instruction
 from docwen_core.docx_bookmarks import (
     BOOKMARK_ID_MAX,
     DocxBookmarkInventory,
@@ -216,7 +217,7 @@ class DocxSemanticRenderer:
 
         self.append_complex_field(
             paragraph,
-            instruction=f" REF {encode_target_bookmark(reference.target_id)} \\h ",
+            instruction=reference_instruction(encode_target_bookmark(reference.target_id)),
             cached_result=reference.cached_result,
         )
 
