@@ -11,6 +11,142 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+_SAMPLE_TEXT = {
+    "ar_SA": (
+        "تقرير المشروع",
+        "التقدم",
+        "اكتملت مراجعة المستندات والتحقق من البيانات.",
+        "المهمة",
+        "الحالة",
+        "مراجعة المستندات",
+        "مكتمل",
+    ),
+    "de_DE": (
+        "Projektbericht",
+        "Fortschritt",
+        "Die Dokumentenprüfung und die Datenkontrolle sind abgeschlossen.",
+        "Aufgabe",
+        "Status",
+        "Dokumentenprüfung",
+        "Abgeschlossen",
+    ),
+    "en_US": (
+        "Project report",
+        "Progress",
+        "Document review and data checks are complete.",
+        "Task",
+        "Status",
+        "Document review",
+        "Complete",
+    ),
+    "es_ES": (
+        "Informe del proyecto",
+        "Avances",
+        "La revisión de documentos y la comprobación de datos han finalizado.",
+        "Tarea",
+        "Estado",
+        "Revisión de documentos",
+        "Completada",
+    ),
+    "fr_FR": (
+        "Rapport de projet",
+        "Avancement",
+        "La révision des documents et la vérification des données sont terminées.",
+        "Tâche",
+        "État",
+        "Révision des documents",
+        "Terminée",
+    ),
+    "ja_JP": (
+        "プロジェクト報告",
+        "進捗状況",
+        "文書の確認とデータの照合が完了しました。",
+        "作業",
+        "状況",
+        "文書の確認",
+        "完了",
+    ),
+    "ko_KR": (
+        "프로젝트 보고서",
+        "진행 상황",
+        "문서 검토와 데이터 확인을 완료했습니다.",
+        "작업",
+        "상태",
+        "문서 검토",
+        "완료",
+    ),
+    "pt_BR": (
+        "Relatório do projeto",
+        "Andamento",
+        "A revisão dos documentos e a conferência dos dados foram concluídas.",
+        "Tarefa",
+        "Status",
+        "Revisão dos documentos",
+        "Concluída",
+    ),
+    "ru_RU": (
+        "Отчёт по проекту",
+        "Ход работы",
+        "Проверка документов и данных завершена.",
+        "Задача",
+        "Статус",
+        "Проверка документов",
+        "Завершена",
+    ),
+    "vi_VN": (
+        "Báo cáo dự án",
+        "Tiến độ",
+        "Đã hoàn tất rà soát tài liệu và kiểm tra dữ liệu.",
+        "Công việc",
+        "Trạng thái",
+        "Rà soát tài liệu",
+        "Hoàn tất",
+    ),
+    "zh_CN": (
+        "项目周报",
+        "工作进展",
+        "本周完成文档整理与数据核对。",
+        "任务",
+        "状态",
+        "文档整理",
+        "已完成",
+    ),
+    "zh_TW": (
+        "專案週報",
+        "工作進度",
+        "本週完成文件整理與資料核對。",
+        "工作",
+        "狀態",
+        "文件整理",
+        "已完成",
+    ),
+}
+
+
+def write_sample(directory: Path, locale: str, *, document: bool) -> Path:
+    """Create a fictional input in the screenshot language, without an English fallback."""
+    title, heading, summary, task_header, status_header, task, status = _SAMPLE_TEXT[locale]
+    sample = directory / f"{title}{'.docx' if document else '.md'}"
+    if document:
+        from docx import Document
+
+        source = Document()
+        source.add_heading(title, 0)
+        source.add_heading(heading, 1)
+        source.add_paragraph(summary)
+        table = source.add_table(rows=2, cols=2)
+        for row, texts in zip(table.rows, ((task_header, status_header), (task, status)), strict=True):
+            for cell, value in zip(row.cells, texts, strict=True):
+                cell.text = value
+        source.save(sample)
+    else:
+        sample.write_text(
+            f"# {title}\n\n## {heading}\n\n{summary}\n\n"
+            f"| {task_header} | {status_header} |\n| --- | --- |\n| {task} | {status} |\n",
+            encoding="utf-8",
+        )
+    return sample
+
 
 def main(argv: list[str] | None = None) -> None:
     tool_repo = Path(__file__).resolve().parents[2]
@@ -35,9 +171,15 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Populate sample session history with the selected real template",
     )
+    parser.add_argument(
+        "--filter-selected-template",
+        action="store_true",
+        help="Use the existing search field to show only the selected template",
+    )
     parser.add_argument("--output", type=Path, required=True, help="Dedicated directory for reviewed media")
     args = parser.parse_args(argv)
     repo = args.repo.resolve(strict=True)
+    args.output = args.output.resolve()
     sys.path.insert(0, str(tool_repo))
     from tools.run_lease import managed_run
     from tools.workspace_root import resolve_workspace_root
@@ -49,7 +191,14 @@ def main(argv: list[str] | None = None) -> None:
     with managed_run(
         workspace / "temp", prefix="docwen-qt-media-", owner="docwen.qt-store-media", kind="real-qt-widget-render"
     ) as run:
-        _render(args, repo, run.root)
+        previous_directory = Path.cwd()
+        try:
+            # Qt separates platform options with colons. A relative file name
+            # in the leased run works even when the checkout is on another drive.
+            os.chdir(run.root)
+            _render(args, repo, run.root)
+        finally:
+            os.chdir(previous_directory)
 
 
 def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
@@ -92,48 +241,21 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
     )
     assert not examples.exists(), "Do not overwrite an existing example directory"
     examples.mkdir()
-    sample = examples / ("项目周报.md" if locale == "zh_CN" else "Project report.md")
-    sample.write_text(
-        "# 项目周报\n\n## 工作进展\n\n本周完成文档整理与数据核对。\n\n| 任务 | 状态 |\n| --- | --- |\n| 文档整理 | 已完成 |\n"
-        if locale == "zh_CN"
-        else "# Project report\n\n## Progress\n\nDocument review and data checks are complete.\n\n| Task | Status |\n| --- | --- |\n| Document review | Complete |\n",
-        encoding="utf-8",
-    )
-    if args.input == "document":
-        from docx import Document
-
-        document = Document()
-        document.add_heading("项目周报" if locale == "zh_CN" else "Project report", 0)
-        document.add_heading("工作进展" if locale == "zh_CN" else "Progress", 1)
-        document.add_paragraph(
-            "本周完成文档整理与数据核对。" if locale == "zh_CN" else "Document review and data checks are complete."
-        )
-        table = document.add_table(rows=2, cols=2)
-        values = (
-            (("任务", "状态"), ("文档整理", "已完成"))
-            if locale == "zh_CN"
-            else (("Task", "Status"), ("Document review", "Complete"))
-        )
-        for row, texts in zip(table.rows, values, strict=True):
-            for cell, value in zip(row.cells, texts, strict=True):
-                cell.text = value
-        sample = sample.with_suffix(".docx")
-        document.save(sample)
+    sample = write_sample(examples, locale, document=args.input == "document")
     for k in ("DOCWEN_CONFIG_DIR", "DOCWEN_LOG_DIR", "DOCWEN_LOG_TO_TEMP", "QT_SCREEN_SCALE_FACTORS"):
         os.environ.pop(k, None)
     os.environ.update(
         DOCWEN_RUNTIME_ROOT=str(root / "runtime"),
         DOCWEN_DATA_DIR=str(profile),
         QT_SCALE_FACTOR=str(args.device_pixel_ratio),
-        QT_QPA_PLATFORM="offscreen:configfile=" + os.path.relpath(screen_config, repo).replace("\\", "/"),
+        QT_QPA_PLATFORM="offscreen:configfile=" + screen_config.name,
         PYTHONDONTWRITEBYTECODE="1",
         DOCWEN_GUI_DISABLE_STATE_SAVE="1",
     )
     for k in ("TEMP", "TMP", "TMPDIR"):
         os.environ[k] = str(root / "temp")
-    os.chdir(repo)
     from PySide6.QtCore import QTimer
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QLineEdit
 
     from docwen_bundle import gui_entry
     from docwen_gui import app as gui_app
@@ -141,7 +263,7 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
     original = gui_app.create_main_window
     main_label = "document" if args.input == "document" else "markdown"
     record = {
-        "sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+        "sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(),
         "locale": locale,
         "theme": theme,
         "scale": args.scale,
@@ -149,6 +271,7 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
         "input": args.input,
         "devicePixelRatio": args.device_pixel_ratio,
         "showRecentTemplate": args.show_recent_template,
+        "filterSelectedTemplate": args.filter_selected_template,
         "requestedSizes": {
             main_label: {"width": args.width, "height": args.height},
             **(
@@ -262,6 +385,20 @@ def _render(args: argparse.Namespace, repo: Path, root: Path) -> None:
                                 assert selected is not None
                                 window._template_selector.mark_used(selected[1])
                                 record["sampleRecentTemplate"] = selected[1]
+                            if args.filter_selected_template:
+                                selected = window._template_selector.get_selected_template_resource()
+                                assert selected is not None
+                                searches = [
+                                    field
+                                    for field in window._template_selector.findChildren(
+                                        QLineEdit, "templateSelectorSearch"
+                                    )
+                                    if field.isVisible()
+                                ]
+                                assert len(searches) == 1
+                                label = window._template_selector.template_label(selected[1])
+                                searches[0].setText(label)
+                                record["sampleTemplateSearch"] = label
                             # Input inspection reveals the template panel and expands the
                             # normal window. Resize only after that transition settles;
                             # an earlier resize would become the collapsed-window width.

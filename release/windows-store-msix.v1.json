@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "storeId": "9NR2211SJH97",
-  "sourceVersion": "0.22.0",
-  "packageVersion": "1.0.17.0",
+  "sourceVersion": "0.23.0",
+  "packageVersion": "1.0.19.0",
   "identity": {
     "name": "ZHYX.DocWen",
     "publisher": "CN=9E46E7F1-F057-4B88-BF71-7C9CB77AF9C6",
@@ -23,7 +23,17 @@
   },
   "languages": [
     "zh-CN",
-    "en-US"
+    "en-US",
+    "zh-TW",
+    "ar-SA",
+    "de-DE",
+    "es-ES",
+    "fr-FR",
+    "ja-JP",
+    "ko-KR",
+    "pt-BR",
+    "ru-RU",
+    "vi-VN"
   ],
   "excludedPayloadPaths": [
     "_internal/docx/templates/default-docx-template"
