@@ -431,3 +431,157 @@ def test_run_shading_switches_can_disable_each_producer(fill, value, config):
     )
 
     assert rendered == "value"
+
+
+def _static_hyperlink_field(paragraph, instruction, *, split_instruction=False):
+    """Build a minimal static field; no Word/WPS-saved fixture is required."""
+    begin = OxmlElement("w:fldChar")
+    begin.set(qn("w:fldCharType"), "begin")
+    paragraph.add_run()._r.append(begin)
+    words = (instruction[:8], instruction[8:]) if split_instruction else (instruction,)
+    for word in words:
+        code = OxmlElement("w:instrText")
+        code.set(qn("xml:space"), "preserve")
+        code.text = word
+        paragraph.add_run()._r.append(code)
+    separator = OxmlElement("w:fldChar")
+    separator.set(qn("w:fldCharType"), "separate")
+    paragraph.add_run()._r.append(separator)
+    result = paragraph.add_run("label")
+    end_run = paragraph.add_run()
+    end_run.style = "Hyperlink" if "Hyperlink" in paragraph.part.document.styles else "Default Paragraph Font"
+    end = OxmlElement("w:fldChar")
+    end.set(qn("w:fldCharType"), "end")
+    end_run._r.append(end)
+    return begin, separator, result, end
+
+
+@pytest.mark.parametrize("split_instruction", [False, True])
+def test_complex_hyperlink_preserves_target_formatted_result_and_surrounding_text(split_instruction):
+    document = Document()
+    document.styles.add_style("Hyperlink", WD_STYLE_TYPE.CHARACTER)
+    paragraph = document.add_paragraph("Before ")
+    _, _, result, _ = _static_hyperlink_field(
+        paragraph, r' HYPERLINK "https://example.org/qa" \h ', split_instruction=split_instruction
+    )
+    result.bold = True
+    paragraph.add_run(" after")
+    original = paragraph._p.xml
+
+    assert render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig()) == (
+        "Before [**label**](https://example.org/qa) after"
+    )
+    assert render_paragraph_runs(paragraph, preserve_formatting=False, syntax_config=DocxMarkdownSyntaxConfig()) == (
+        "Before [label](https://example.org/qa) after"
+    )
+    assert paragraph._p.xml == original
+
+
+@pytest.mark.parametrize(
+    ("instruction", "destination"),
+    [
+        (r' hyperlink "https://example.org/qa" \H ', "https://example.org/qa"),
+        (r" HYPERLINK https://example.org/qa ", "https://example.org/qa"),
+        (r' HYPERLINK "https://example.org/qa" \* MERGEFORMAT ', "https://example.org/qa"),
+        (r' HYPERLINK "https://example.org/qa" \o "A tip" \t "_blank" \n ', "https://example.org/qa"),
+        (r' HYPERLINK "https://example.org/qa" \l "part" ', "https://example.org/qa#part"),
+    ],
+)
+def test_complex_hyperlink_reads_static_destination_switches(instruction, destination):
+    paragraph = Document().add_paragraph()
+    _static_hyperlink_field(paragraph, instruction)
+    assert render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig()) == f"[label]({destination})"
+
+
+def test_complex_hyperlink_escapes_destination_without_changing_its_commonmark_target():
+    from markdown_it import MarkdownIt
+
+    paragraph = Document().add_paragraph()
+    _static_hyperlink_field(paragraph, r' HYPERLINK "https://example.org/a (b)?v=1#part" \h ')
+    rendered = render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig())
+    children = MarkdownIt("commonmark").parseInline(rendered)[0].children
+    assert children is not None
+    assert [(token.type, token.attrGet("href")) for token in children if token.type == "link_open"] == [
+        ("link_open", "https://example.org/a%20(b)?v=1#part")
+    ]
+
+
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        r' HYPERLINK "https://example.org/qa" \h \h ',
+        r' HYPERLINK "https://example.org/qa" \p ',
+        r' HYPERLINK "https://example.org/qa" injected ',
+        r' HYPERLINK "https://example.org/qa" \* ROMAN ',
+        r' HYPERLINK "https://example.org/qa" \o ',
+        r' HYPERLINK "https://example.org/qa" \o \h ',
+        r' "HYPERLINK" "https://example.org/qa" ',
+        r' HYPERLINK "https://example.org/qa" "\h" ',
+        r' HYPERLINK "https://example.org/qa ',
+        r'HYPERLINK"https://example.org/qa"',
+        r' REF "https://example.org/qa" \h ',
+        r' INCLUDETEXT "https://example.org/qa" ',
+    ],
+)
+def test_unsupported_complex_field_semantics_keep_visible_text_without_inventing_a_link(instruction):
+    paragraph = Document().add_paragraph("Before ")
+    _static_hyperlink_field(paragraph, instruction)
+    paragraph.add_run(" after")
+    assert render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig()) == "Before label after"
+
+
+@pytest.mark.parametrize("damage", ["missing-separator", "missing-end", "mixed-end", "nested", "hidden-result"])
+def test_complex_hyperlink_does_not_own_malformed_or_hidden_field_content(damage):
+    paragraph = Document().add_paragraph("Before ")
+    _, separate, result, end = _static_hyperlink_field(paragraph, r' HYPERLINK "https://example.org/qa" \h ')
+    separate_run, end_run = separate.getparent(), end.getparent()
+    assert separate_run is not None and end_run is not None
+    if damage == "missing-separator":
+        separate_run.remove(separate)
+    elif damage == "missing-end":
+        end_run.remove(end)
+    elif damage == "mixed-end":
+        text = OxmlElement("w:t")
+        text.text = " boundary"
+        end_run.append(text)
+    elif damage == "nested":
+        outer = OxmlElement("w:r")
+        marker = OxmlElement("w:fldChar")
+        marker.set(qn("w:fldCharType"), "begin")
+        outer.append(marker)
+        paragraph._p.insert(1, outer)
+    else:
+        result.font.hidden = True
+    paragraph.add_run(" after")
+    rendered = render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig())
+    assert "https://" not in rendered and "Before " in rendered and rendered.endswith(" after")
+    assert ("label" in rendered) is (damage != "hidden-result")
+    assert (" boundary" in rendered) is (damage == "mixed-end")
+
+
+def test_complex_hyperlink_never_consumes_authenticated_reference_nodes():
+    paragraph = Document().add_paragraph()
+    _, _, result, _ = _static_hyperlink_field(paragraph, r' HYPERLINK "https://example.org/qa" \h ')
+    [text] = result._r.findall(qn("w:t"))
+    assert (
+        render_paragraph_runs(
+            paragraph,
+            syntax_config=DocxMarkdownSyntaxConfig(),
+            reference_spans={text: (text, "@[[#^owned|Alias]]")},
+        )
+        == "@[[#^owned|Alias]]"
+    )
+
+
+def test_complex_hyperlink_keeps_page_breaks_and_literal_mode():
+    paragraph = Document().add_paragraph()
+    _, _, result, _ = _static_hyperlink_field(paragraph, r' HYPERLINK "https://example.org/qa" \h ')
+    result.add_break(WD_BREAK.PAGE)
+    result.add_text("after")
+    assert render_paragraph_runs_split_on_page_breaks(paragraph, syntax_config=DocxMarkdownSyntaxConfig()) == [
+        "[label](https://example.org/qa)",
+        "[after](https://example.org/qa)",
+    ]
+    assert (
+        render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig(), literal_text=True) == "label\nafter"
+    )

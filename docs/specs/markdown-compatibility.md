@@ -924,10 +924,14 @@ caption paragraph before all visible runs and there is no `SEQ`. The four field 
 `Table`, `Equation`, and `Code`. A Heading target binds its bookmark to the heading paragraph; when enabled, it also
 binds the plan-supplied list/heading numbering. A numbered
 Heading cross-reference uses the Word equivalent of `REF DW_T_<digest> \n \h` so only the heading number is
-materialized. Other semantic cross-references use `REF DW_T_<digest> \h` with a cached numeric result. Alias rich
-runs are appended outside the REF field. An unnumbered semantic reference fails before rendering and creates no
-`REF`. Ordinary navigation to a semantic ID lands in the declaration/Heading paragraph regardless of numbering
-enablement. A caption or Heading without an ID may still be numbered, but creates no bookmark or target-map entry.
+materialized. Other semantic cross-references use `REF DW_T_<digest> \h` with a cached numeric result. New REF
+fields append `\* MERGEFORMAT` so native field updates retain the result's text formatting. Readers continue to
+accept the existing form without this switch; both forms require the same authenticated bookmark, Heading-number
+and hyperlink switches, and permit no other format switch. The switch does not change occurrence-map identities
+or cached-number authority. Alias rich runs are appended outside the REF field. An unnumbered semantic reference
+fails before rendering and creates no `REF`. Ordinary navigation to a semantic ID lands in the declaration/Heading
+paragraph regardless of numbering enablement. A caption or Heading without an ID may still be numbered, but creates
+no bookmark or target-map entry.
 
 DOCX caption/object order is fixed by the declaration's semantic kind and is not selected by a profile or Export
 Style. A Figure-labelled carrier is immediately followed by its `DocWenFigureCaption` paragraph. A

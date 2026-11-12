@@ -42,6 +42,7 @@ from docwen_core._docx_numbering_package import (
 from docwen_core._docx_numbering_package import (
     write_heading_numbering_projection as _write_heading_numbering_projection,
 )
+from docwen_core._docx_reference_fields import reference_instruction
 
 XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
 
@@ -471,7 +472,7 @@ def inline_reference_sdt(
     tag_element.set(qn("w:val"), tag)
     properties.append(tag_element)
     content = OxmlElement("w:sdtContent")
-    instruction = f" REF {bookmark_name} \\n \\h " if heading_number_only else f" REF {bookmark_name} \\h "
+    instruction = reference_instruction(bookmark_name, heading_number_only=heading_number_only)
     _append_complex_field(content, instruction=instruction, cached_result=cached_number)
     if alias is not None:
         _append_text_run(content, f" {alias}")
