@@ -1279,7 +1279,7 @@ export_markdown = "Exportar Markdown"
 export_markdown_tooltip = "Para MD"
 optimize_for_type = "Otimização"
 remove_existing_numbering = "Remover num."
-add_new_numbering = "Add num."
+add_new_numbering = "Adicionar numeração"
 
 # 表格转MD面板
 [action_area.spreadsheet]
@@ -1302,7 +1302,7 @@ optimize_for_type = "Otimizar por tipo de layout"
 # MD转文档面板
 [action_area.md_to_document]
 remove_existing_numbering = "Remover num."
-add_new_numbering = "Add num."
+add_new_numbering = "Adicionar numeração"
 format_combo_tooltip = "Selecionar formato de documento de destino"
 generate_tooltip = "Gerar documento no formato selecionado"
 
