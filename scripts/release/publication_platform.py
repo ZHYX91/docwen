@@ -34,7 +34,7 @@ from scripts.release.publication_download import (
     require_record_filesystem,
 )
 from scripts.release.publication_http import GitHub
-from scripts.release.publication_session import verify_candidate_jobs, verify_provenance
+from scripts.release.publication_session import candidate_jobs, verify_candidate_jobs, verify_provenance
 
 
 def _download(api: GitHub, artifact: dict[str, Any], output: Path, names: set[str], *, limit: int) -> None:
@@ -117,13 +117,20 @@ def fetch_platform(
     assert match is not None
     run_id, attempt = map(int, match.groups())
     run = api.get(f"{prefix}/actions/runs/{run_id}/attempts/{attempt}")
-    verify_candidate_jobs(api.get(f"{prefix}/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100"))
+    jobs = candidate_jobs(api, run_id=run_id, attempt=attempt, commit=commit)
+    verify_candidate_jobs(jobs)
     # Search only within the explicitly selected producer run, never earlier/latest runs.
     listing = api.get(f"{prefix}/actions/runs/{run_id}/artifacts?per_page=100")
     artifacts = listing.get("artifacts", [])
     require(listing.get("total_count") == len(artifacts), "incomplete candidate artifact response")
     metadata = _sibling(artifacts, f"docwen-publication-metadata-{run_id}-{attempt}", run_id)
-    package = _sibling(artifacts, f"docwen-{platform}-{run_id}-{attempt}", run_id)
+    producer_name = {
+        "windows": "Build Windows packages",
+        "linux": "Build Linux packages",
+        "macos": "Build macOS packages",
+    }[platform]
+    producer = next(job for job in jobs["jobs"] if job["name"] == producer_name)
+    package = _sibling(artifacts, f"docwen-{platform}-{run_id}-{producer['run_attempt']}", run_id)
     require(
         type(metadata.get("size_in_bytes")) is int and 0 < metadata["size_in_bytes"] <= 2 * 1024**2,
         "metadata artifact too large",

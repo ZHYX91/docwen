@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       artifact_id:
-        description: Exact verified portable publication candidate ID
+        description: Exact attested Windows producer or full publication candidate ID
         type: string
         required: true
       portable_commit:

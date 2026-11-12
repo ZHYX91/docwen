@@ -110,6 +110,35 @@ An interrupted `fetch-platform` directory can be resumed with the exact same com
 
 ### Independent MSIX channel / 独立 MSIX 渠道
 
+The Windows producer now attests its ZIP and `windows-candidate.json` before
+uploading separate package and metadata artifacts. `publication.py fetch-platform
+--platform windows` also accepts the exact `docwen-windows-<run>-<attempt>` artifact
+ID. It requires the same run's successful source gates and Windows package job,
+checks the immutable artifact digests and both attestations, and emits a scoped
+platform receipt with `candidateKind=windows-producer`. Linux/macOS package jobs
+may still be pending or failed. This receipt supports native acceptance and MSIX;
+it cannot be used as a full publication candidate. Older producers without the
+independent metadata and attestations are rejected, not retroactively certified.
+
+Windows 生产任务在上传前为 ZIP 和 `windows-candidate.json` 分别生成来源证明。
+`fetch-platform --platform windows` 与 MSIX 工作流可直接使用该 Windows 制品的精确 ID，
+核对同一次运行的源码检查、Windows 生产任务、制品摘要及两份来源证明，无需等待其他平台打包。
+回执明确标为 `candidateKind=windows-producer`，只用于 Windows 验收和 MSIX，不满足正式发布门禁。
+缺少独立元数据及证明的旧制品不能走此入口。
+
+For a failed-jobs-only rerun, required jobs are resolved newest-first within the
+same run and source commit (at most 20 attempts). A newer failure or skip never
+falls back to an older success. Selected-platform fetching uses the exact producer
+attempt's artifact. The final aggregate consumes the retained Windows artifact ID
+and its producer manifest, and rejects changed Windows bytes. All platform checks
+and the complete attested inventory remain mandatory for publication.
+
+只重跑失败任务时，校验器只在同一运行、同一源码内按新到旧解析任务，最多20次；
+新的失败或跳过不会被旧成功覆盖。全平台汇总继续按精确 ID 复用 Windows 制品，并核对独立清单中的
+原始哈希；重新构建得到的不同字节不能冒充先前验收包。正式发布仍要求全部平台通过。
+Linux 依赖获取保留固定快照和签名验证，增加每请求3次重试、30秒连接超时，以及索引刷新10分钟、
+安装15分钟的总上限；任一索引刷新失败即退出，不静默使用陈旧索引。
+
 `MSIX candidate` is a separate manual workflow. Select a ref at the portable candidate's source commit and supply its exact `artifact_id`. The workflow fetches and inspects that candidate, then builds the unsigned MSIX directly from its Windows ZIP; it does not rebuild DocWen or gate the portable Release. MSIX metadata binds the portable archive digest, candidate artifact, source commit and provenance receipt. The Store config's source version must match; its package version follows the independent Store channel. Signing, installation acceptance and Store submission are separate operations.
 
 `build_msix.py` requires a new work directory, creates an ownership lease and removes that directory after success. It never resets an existing caller directory or overwrites an output package. Local raw work belongs below the governed workspace `temp`; failed or interrupted runs follow bounded retention.

@@ -14,7 +14,7 @@ from scripts.release.publication_contract import PublicationError, file_identity
 pytestmark = pytest.mark.contract
 
 
-@pytest.mark.parametrize("failure", [None, "linux", "missing-origin", "missing-platform", "unverified"])
+@pytest.mark.parametrize("failure", [None, "producer", "linux", "missing-origin", "missing-platform", "unverified"])
 def test_single_platform_receipt_is_bound_before_unpacking(tmp_path: Path, failure: str | None) -> None:
     archive = tmp_path / "portable.zip"
     with zipfile.ZipFile(archive, "w") as bundle:
@@ -41,6 +41,8 @@ def test_single_platform_receipt_is_bound_before_unpacking(tmp_path: Path, failu
     }
     if failure == "linux":
         record["platform"] = "linux"
+    if failure == "producer":
+        record["candidateKind"] = "windows-producer"
     if failure == "missing-origin":
         record.pop("origin")
     if failure == "missing-platform":
@@ -50,13 +52,15 @@ def test_single_platform_receipt_is_bound_before_unpacking(tmp_path: Path, failu
     receipt = tmp_path / "receipt.json"
     receipt.write_text(json.dumps(record))
     output = tmp_path / "payload"
-    if failure:
+    if failure and failure != "producer":
         with pytest.raises(PublicationError):
             extract_candidate(archive, receipt, output, version="0.17.0")
         assert not output.exists()
     else:
         result = extract_candidate(archive, receipt, output, version="0.17.0")
         assert result["platformArtifact"] == artifact
+        if failure == "producer":
+            assert result["candidateKind"] == "windows-producer"
         assert (output / "DocWen.exe").read_bytes() == b"payload"
 
 

@@ -120,6 +120,7 @@ def assemble(
     attempt: int,
     source: Path,
     source_ref: str,
+    windows_manifest: Path | None = None,
 ) -> dict[str, Any]:
     require(bool(re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo)), "invalid repository")
     require(bool(re.fullmatch(r"[0-9a-f]{40}", commit)), "invalid source commit")
@@ -132,6 +133,21 @@ def assemble(
         package = builds / platform / name
         records[name] = file_identity(package)
         sources[name] = package
+    if windows_manifest is not None:
+        from scripts.release.windows_candidate import validate
+
+        windows = read_object(windows_manifest)
+        validate(windows, repository=repo, version=version, commit=commit)
+        require(
+            windows["assets"]["DocWen-windows-x64.zip"] == records["DocWen-windows-x64.zip"],
+            "final Windows bytes differ from independent producer",
+        )
+        require(
+            windows["origin"]["runId"] == run_id
+            and windows["origin"]["runAttempt"] <= attempt
+            and windows["origin"]["sourceRef"] == source_ref,
+            "final Windows producer origin mismatch",
+        )
     manifest = {
         "schema": SCHEMA,
         "repository": repo,
