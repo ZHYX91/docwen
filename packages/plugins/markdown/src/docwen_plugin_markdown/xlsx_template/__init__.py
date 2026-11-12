@@ -271,7 +271,8 @@ def _invalidate_calculation(editor: Any, worksheet_parts: set[str], workbook_roo
         else:
             workbook_root.insert(workbook_root.index(following), calc)
     calc.set("fullCalcOnLoad", "1")
-    calc.set("forceFullCalc", "1")
+    # Recalculate invalidated caches on load without opting the template into
+    # Excel's persistent forced-calculation mode. Preserve an explicit policy.
     relations_part = "xl/_rels/workbook.xml.rels"
     relationships = _parse(editor.parts[relations_part])
     removed: set[str] = set()

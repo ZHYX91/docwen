@@ -118,7 +118,35 @@ def test_value_edit_invalidates_caches_and_calculation_chain(tmp_path):
     assert b"calcChain" not in parts["[Content_Types].xml"]
     assert b"calcChain" not in parts["xl/_rels/workbook.xml.rels"]
     calc = _required(etree.fromstring(parts["xl/workbook.xml"]), f"{{{_S}}}calcPr")
-    assert calc.get("fullCalcOnLoad") == calc.get("forceFullCalc") == "1"
+    assert calc.get("fullCalcOnLoad") == "1"
+    assert calc.get("forceFullCalc") is None
+
+
+@pytest.mark.parametrize("force_full_calc", ["0", "1"])
+def test_value_edit_preserves_explicit_template_calculation_policy(tmp_path, force_full_calc):
+    source = tmp_path / "source.xlsx"
+    before = _source(source)
+    root = etree.fromstring(before["xl/workbook.xml"])
+    calc = _required(root, f"{{{_S}}}calcPr")
+    calc.set("forceFullCalc", force_full_calc)
+    calc.set("fullCalcOnLoad", "0")
+    before["xl/workbook.xml"] = etree.tostring(root)
+    _write(source, before)
+
+    workbook = load_template_workbook(source)
+    workbook["Data"]["A1"] = 7
+    output = tmp_path / "output.xlsx"
+    save_xlsx_workbook(workbook, output)
+
+    parts = _read(output)
+    calc = _required(etree.fromstring(parts["xl/workbook.xml"]), f"{{{_S}}}calcPr")
+    assert calc.get("forceFullCalc") == force_full_calc
+    assert calc.get("fullCalcOnLoad") == "1"
+    formula = _required(etree.fromstring(parts["xl/worksheets/sheet1.xml"]), f".//{{{_S}}}c[@r='B1']")
+    assert _required(formula, f"{{{_S}}}f").text == "A1*3"
+    assert formula.find(f"{{{_S}}}v") is None
+    assert "xl/calcChain.xml" not in parts
+    assert _read(source) == before
 
 
 def test_chartsheet_and_scoped_names_survive_sheet_insertion(tmp_path):
