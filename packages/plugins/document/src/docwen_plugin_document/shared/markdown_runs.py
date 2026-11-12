@@ -6,6 +6,7 @@ and delegates note references to NoteExtractor.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from itertools import pairwise
 from typing import Any
@@ -17,6 +18,7 @@ from docwen_core.docx_parsing.format_features import (
 )
 from docwen_core.docx_parsing.style_properties import resolve_run_formatting
 from docwen_core.docx_parsing.xml_ns import NS_W
+from docwen_core.links import encode_markdown_angle_destination
 from docwen_core.markdown_math import match_formula
 from docwen_core.text.markdown_literal import escape_markdown_literal
 from docwen_plugin_document.shared.word_metadata import run_metadata_is_valid
@@ -447,6 +449,94 @@ def _complex_note_reference(children: list[Any], start: int, resolver: Any, pare
     return None
 
 
+def _hyperlink_field_target(instruction: str) -> str | None:
+    """Read one static HYPERLINK destination without interpreting other fields."""
+    tokens: list[str] = []
+    quoted_tokens: list[bool] = []
+    cursor = 0
+    for match in re.finditer(r'"((?:[^"\\\r\n]|\\["\\])*)"|([^\s"]+)', instruction):
+        if instruction[cursor : match.start()].strip(" \t") or (tokens and cursor == match.start()):
+            return None
+        quoted, unquoted = match.groups()
+        tokens.append(re.sub(r'\\(["\\])', r"\1", quoted) if quoted is not None else unquoted)
+        quoted_tokens.append(quoted is not None)
+        cursor = match.end()
+    if instruction[cursor:].strip(" \t") or len(tokens) < 2 or quoted_tokens[0] or tokens[0].upper() != "HYPERLINK":
+        return None
+    target = tokens[1]
+    if not target or (target.startswith("\\") and not quoted_tokens[1]) or any(ord(char) < 32 for char in target):
+        return None
+    seen: set[str] = set()
+    cursor = 2
+    while cursor < len(tokens):
+        switch = tokens[cursor].lower()
+        if switch in seen or quoted_tokens[cursor]:
+            return None
+        seen.add(switch)
+        cursor += 1
+        if switch in {r"\h", r"\n"}:
+            continue
+        if switch not in {r"\l", r"\o", r"\t", r"\*"} or cursor == len(tokens):
+            return None
+        value = tokens[cursor]
+        if value.startswith("\\") and not quoted_tokens[cursor]:
+            return None
+        cursor += 1
+        if switch == r"\*" and value.upper() not in {"MERGEFORMAT", "CHARFORMAT"}:
+            return None
+        if switch == r"\l":
+            if not value or "#" in target or any(ord(char) < 32 for char in value):
+                return None
+            target += "#" + value
+    return target
+
+
+def _complex_hyperlink(
+    children: list[Any], start: int, parent: Any, covered_nodes: set[Any]
+) -> tuple[str, list[Any], int] | None:
+    """Recognize one complete split-run field, preserving its result runs."""
+    q = f"{{{NS_W}}}"
+    instruction: list[str] = []
+    results: list[Any] = []
+    separated = False
+    for index in range(start, len(children)):
+        run = children[index]
+        if _is_transparent_proof_marker(run):
+            continue
+        if (
+            run.tag != q + "r"
+            or _run_is_hidden(run, parent)
+            or not run_metadata_is_valid(run)
+            or any(node in covered_nodes for node in run.iter())
+        ):
+            return None
+        payload = [node for node in run if node.tag != q + "rPr"]
+        if not payload:
+            return None
+        if len(payload) == 1 and payload[0].tag == q + "fldChar":
+            if len(payload[0]) or payload[0].text is not None:
+                return None
+            kind = payload[0].get(q + "fldCharType")
+            if kind == "begin" and index == start:
+                continue
+            if kind == "separate" and not separated and instruction:
+                separated = True
+                continue
+            if kind == "end" and separated and results:
+                target = _hyperlink_field_target("".join(instruction))
+                return (target, results, index) if target is not None else None
+            return None
+        if index == start:
+            return None
+        if not separated and all(node.tag == q + "instrText" and not len(node) for node in payload):
+            instruction.extend(node.text or "" for node in payload)
+        elif separated and all(node.tag in {q + "t", q + "tab", q + "br", q + "cr"} for node in payload):
+            results.append(run)
+        else:
+            return None
+    return None
+
+
 def _reference_covered_nodes(element: Any, spans: dict[Any, tuple[Any, str]]) -> set[Any]:
     """Map proven inclusive XML ranges without widening them to whole runs.
 
@@ -535,19 +625,28 @@ def _render_paragraph_run_segments(
             # w:t text and already-rendered code/formatting remain untouched.
             _parts().append(line_break_text)
 
-    def _process_hyperlink(child: Any) -> None:
+    def _process_hyperlink(child: Any, *, field: tuple[str, list[Any]] | None = None) -> None:
         nonlocal segments
-        url = resolve_hyperlink_target(para, child) or ""
+        url = field[0] if field is not None else resolve_hyperlink_target(para, child) or ""
+        destination = (
+            f"<{encode_markdown_angle_destination(url)}>"
+            if any(char.isspace() or char in "()<>\\" for char in url)
+            else url
+        )
         outer_segments = segments
         segments = [[]]
         try:
-            _process_children(child)
+            if field is None:
+                _process_children(child)
+            else:
+                for run in field[1]:
+                    _handle_run(run)
             hyperlink_segments = [join_markdown_parts(parts) for parts in segments]
         finally:
             segments = outer_segments
         for index, text in enumerate(hyperlink_segments):
             if text:
-                _append(f"[{text}]({url})" if url and not literal_text else text)
+                _append(f"[{text}]({destination})" if url and not literal_text else text)
             if index < len(hyperlink_segments) - 1:
                 if split_page_breaks:
                     segments.append([])
@@ -557,6 +656,7 @@ def _render_paragraph_run_segments(
     def _process_children(parent: Any) -> None:
         children = list(parent)
         consumed_through = -1
+        field_depth = 0
         for index, child in enumerate(children):
             if index <= consumed_through:
                 continue
@@ -578,7 +678,22 @@ def _render_paragraph_run_segments(
                     reference, consumed_through = resolved
                     _append(reference)
                     continue
+                hyperlink = (
+                    _complex_hyperlink(children, index, formatting_parent, covered_nodes)
+                    if field_depth == 0 and not literal_text
+                    else None
+                )
+                if hyperlink is not None:
+                    target, result_runs, consumed_through = hyperlink
+                    _process_hyperlink(None, field=(target, result_runs))
+                    continue
                 _handle_run(child)
+                for marker in child.findall(f"{{{NS_W}}}fldChar"):
+                    kind = marker.get(f"{{{NS_W}}}fldCharType")
+                    if kind == "begin":
+                        field_depth += 1
+                    elif kind == "end":
+                        field_depth = max(0, field_depth - 1)
             elif tag == "hyperlink":
                 _process_hyperlink(child)
             elif tag == "fldSimple":

@@ -17,6 +17,8 @@
 - 生成的样式与编号使用独立于模板内容的身份，编号节点按格式规范排序，保存后校验限定在本次转换所属内容。
 - Preserve body formatting on visible references and aliases, including REF result colors after Word updates fields and saves the document, while retaining strict field identity checks.
 - 可见引用和别名继承正文格式，Word 更新域并保存后仍保留 REF 结果颜色，同时保持严格的域身份校验。
+- Retain ordinary complex-field hyperlinks from WPS and continue automatic heading and template numbering across intervening body paragraphs when reading DOCX back to Markdown.
+- DOCX 回转 Markdown 时保留 WPS 保存的普通复杂超链接域；标题和模板自动编号跨普通正文段落继续计数。
 - Give generated captions independent Word numbering sequences so template captions do not change their numbers or references when fields are updated. Restore captions from verified current document content rather than treating template captions as generated content.
 - 生成题注使用独立的 Word 编号序列，避免更新域时被模板题注改变序号和引用；回读依据已核验的当前文档内容恢复题注，不把模板题注当作生成内容。
 - Track Office subprocess ownership through completion, timeout and cancellation, and require confirmed process cleanup before reporting success. Keep task cancellation tied to its original request even when an identifier is reused.
