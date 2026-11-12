@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
@@ -31,9 +32,11 @@ class _OptimizerController(_Controller):
     def describe_runtime_capabilities(self) -> dict[str, Any]:
         return deepcopy(self.projection)
 
-    def prepare_execution_cancellation(self, request: Any, *, batch: bool = False) -> object:
+    def prepare_execution_cancellation(
+        self, request: Any, *, batch: bool = False, on_reserved: Callable[[object], None] | None = None
+    ) -> object:
         self.prepared.append(request)
-        return super().prepare_execution_cancellation(request, batch=batch)
+        return super().prepare_execution_cancellation(request, batch=batch, on_reserved=on_reserved)
 
 
 def _projection(monkeypatch: pytest.MonkeyPatch, *, office_available: bool = True) -> dict[str, Any]:
