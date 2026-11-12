@@ -81,6 +81,7 @@ from docwen_core.docx_bookmarks import (
     DocxBookmarkAllocator,
     build_docx_bookmark_inventory,
 )
+from docwen_core.docx_caption_sequences import allocate_caption_sequence_scope
 from docwen_core.docx_standalone_caption_occurrence import (
     STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
     StandaloneCaptionOccurrenceIdentity,
@@ -110,6 +111,7 @@ class DocxSemanticsV3Session:
         require_sha256(source_sha256)
         self._document = document
         self._source_sha256 = source_sha256
+        self._caption_sequence_scope = allocate_caption_sequence_scope(document, source_sha256)
         self._standalone_caption_authority = standalone_caption_authority
         self._standalone_plan_sha256 = hashlib.sha256(
             f"docwen-direct-number-suite-caption-plan-v1\0{source_sha256}".encode()
@@ -136,6 +138,10 @@ class DocxSemanticsV3Session:
         self._owned_source_ids: set[str] = set()
         self._bookmark_allocator: DocxBookmarkAllocator | None = None
         self._finalized = False
+
+    @property
+    def caption_sequence_scope(self) -> str:
+        return self._caption_sequence_scope
 
     @property
     def has_projection(self) -> bool:
@@ -419,7 +425,7 @@ class DocxSemanticsV3Session:
             for ordinal, binding in enumerate(self._captions, 1)
             if binding.source_id is None and binding.object_elements
         )
-        return PairedCaptionMapV3(self._source_sha256, len(self._captions), groups)
+        return PairedCaptionMapV3(self._source_sha256, len(self._captions), groups, self._caption_sequence_scope)
 
     def _direct_body_owner(self, element: Any) -> Any:
         body = self._document.element.body

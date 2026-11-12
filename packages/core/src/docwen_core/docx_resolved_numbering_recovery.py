@@ -62,6 +62,7 @@ from docwen_core._docx_semantics_v3_topology import (
     logical_group_elements,
     parse_anchor_topology_map,
 )
+from docwen_core.docx_caption_sequences import caption_sequence_identifier
 from docwen_core.docx_citation_ooxml import (
     CITATION_ITEM_MAP_NAMESPACE,
     CITATION_OCCURRENCE_MAP_NAMESPACE,
@@ -91,12 +92,6 @@ from docwen_core.docx_standalone_caption_occurrence import (
     prove_standalone_caption_occurrence_sdt,
 )
 
-_CAPTION_COUNTER = {
-    "figure": "Figure",
-    "table": "Table",
-    "equation": "Equation",
-    "code_block": "Code",
-}
 _CAPTION_STYLE_KEY = {
     "figure": "figure_caption",
     "table": "table_caption",
@@ -245,11 +240,14 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         }
 
         def parse_caption(paragraph: Any, kind: str, *, required_bookmark: str | None) -> tuple[str, str]:
+            if caption_map is None:
+                raise DocxSemanticsV3Error("resolved-v4 caption has no generated sequence authority")
             return _parse_resolved_v4_caption(
                 paragraph,
                 kind,
                 required_bookmark=required_bookmark,
                 inline_tokens=inline_tokens,
+                sequence_scope=caption_map.sequence_scope,
             )
 
         proven_nested_blocks, proven_machine_nodes, reserved_semantic_elements = prove_resolved_recovery_blocks_v4(
@@ -555,9 +553,11 @@ def _has_explicit_resolved_v4_signal(
     # the same occurrence map and exact SDT inventory.
     target_by_tag = {item.tag: item for item in targets}
     caption_tags: set[str] = set()
+    caption_map: PairedCaptionMapV3 | None = None
     if PAIRED_CAPTION_MAP_NAMESPACE in owned:
         _number, root = owned[PAIRED_CAPTION_MAP_NAMESPACE]
-        caption_tags.update(item.tag for item in parse_paired_caption_map(root).groups)
+        caption_map = parse_paired_caption_map(root)
+        caption_tags.update(item.tag for item in caption_map.groups)
     if STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE in owned:
         _number, root = owned[STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE]
         caption_tags.update(item.tag for item in parse_standalone_caption_occurrence_map(root))
@@ -601,11 +601,13 @@ def _has_explicit_resolved_v4_signal(
         if not any("SEQ" in item for item in instructions):
             return True
         kind = target.kind if target is not None else caption_kind_for_paragraph_style(paragraph, caption_styles)
-        if kind not in _CAPTION_COUNTER:
+        if kind not in _CAPTION_STYLE_KEY:
             continue
         bookmark = target.bookmark_name if target is not None else None
+        if caption_map is None:
+            return True
         try:
-            _parse_v3_caption(paragraph, kind, required_bookmark=bookmark)
+            _parse_v3_caption(paragraph, kind, required_bookmark=bookmark, sequence_scope=caption_map.sequence_scope)
         except DocxSemanticsV3Error:
             return True
     return False
@@ -731,12 +733,13 @@ def _parse_resolved_v4_caption(
     *,
     required_bookmark: str | None,
     inline_tokens: dict[str, str],
+    sequence_scope: str,
 ) -> tuple[str, str]:
     from docx.oxml.ns import qn
 
-    counter = _CAPTION_COUNTER.get(kind)
-    if counter is None:
+    if kind not in _CAPTION_STYLE_KEY:
         raise DocxSemanticsV3Error("resolved-v4 caption kind is outside the closed set")
+    counter = caption_sequence_identifier(sequence_scope, kind)
     payload = tuple(item for item in paragraph if item.tag != qn("w:pPr"))
     direct_instructions = [
         item.text or "" for child in payload if child.tag != qn("w:sdt") for item in child.iter(qn("w:instrText"))

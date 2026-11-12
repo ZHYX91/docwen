@@ -9,6 +9,7 @@ import pytest
 from docx import Document
 from tests.support.native.docx_seq_acceptance import create_fixture, field_snapshot
 
+from docwen_core.docx_caption_sequences import caption_sequence_identifier
 from docwen_core.docx_semantics_v3 import DocxSemanticsV3Recovery
 
 pytestmark = pytest.mark.contract
@@ -24,9 +25,14 @@ def test_seq_fixture_separates_generated_ownership_from_native_update_evidence(t
         assert [field["cached_result"] for field in sequences] == (
             ["1", "2"] if name == "control" else ["1", "1", "2", "2"]
         )
-        assert {field["instruction"].strip() for field in sequences} == {"SEQ Table \\* ARABIC"}
         assert [field["cached_result"] for field in references] == ["1", "2"]
         recovered = DocxSemanticsV3Recovery.load(output, Document(str(output)))
+        assert recovered.paired_caption_map is not None
+        counter = caption_sequence_identifier(recovered.paired_caption_map.sequence_scope, "table")
+        expected = [f"SEQ {counter} \\* ARABIC"] * 2
+        if name != "control":
+            expected = ["SEQ Table \\* ARABIC", *expected, "SEQ Table \\* ARABIC"]
+        assert [field["instruction"].strip() for field in sequences] == expected
         assert [(item[0], item[1], item[3]) for item in recovered.caption_signatures] == [
             ("table", "generated-first", "1"),
             ("table", "generated-second", "2"),

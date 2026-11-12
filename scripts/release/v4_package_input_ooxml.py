@@ -29,6 +29,7 @@ _FIELD_FORMATS = {
     "roman_lower": "roman",
 }
 _CAPTION_KINDS = {"figure", "table", "equation", "code_block"}
+_CAPTION_COUNTER_CODES = {"Figure": "F", "Table": "T", "Equation": "E", "Code": "C"}
 
 
 class V4OoxmlProofError(ValueError):
@@ -286,7 +287,10 @@ def _val(parent: ElementTree.Element, name: str, *, required: bool = True) -> st
 
 
 def _expected_caption_fields(
-    materialization: Mapping[str, object], derived_number: str, style_names: Mapping[int, str]
+    materialization: Mapping[str, object],
+    derived_number: str,
+    style_names: Mapping[int, str],
+    sequence_scope: str | None,
 ) -> list[tuple[str, str]]:
     field_format = _FIELD_FORMATS.get(str(materialization.get("number_format")))
     if field_format is None:
@@ -299,7 +303,10 @@ def _expected_caption_fields(
         result.append((f' STYLEREF "{style_names[level]}" \\n ', str(materialization.get("chapter_cached_number"))))
     elif materialization.get("type") != "simple_seq":
         _fail("ooxml_caption_materialization_invalid")
-    counter = str(materialization.get("counter", ""))
+    code = _CAPTION_COUNTER_CODES.get(str(materialization.get("counter", "")))
+    if code is None or sequence_scope is None:
+        _fail("ooxml_caption_sequence_authority_invalid")
+    counter = f"DW_{code}_{sequence_scope}"
     action = materialization.get("sequence_action")
     if action == "continue":
         instruction = f" SEQ {counter} \\* {field_format} "
@@ -429,6 +436,7 @@ def inspect_resolved_docx(
             target_tags,
             caption_maps.styles_by_kind,
             caption_maps.occurrence_tags,
+            caption_maps.paired_tags,
         )
     except (map_proof.V4OoxmlMapError, target_proof.V4OoxmlTargetError) as exc:
         raise V4OoxmlProofError(str(exc)) from exc
@@ -516,7 +524,9 @@ def inspect_resolved_docx(
                 number = str(derived_number or "")
                 if not number:
                     _fail("ooxml_caption_derived_number_missing")
-                caption_pairs = _expected_caption_fields(materialized, number, heading_style_names)
+                caption_pairs = _expected_caption_fields(
+                    materialized, number, heading_style_names, caption_maps.sequence_scope
+                )
                 expected_fields.extend((instruction, cached, paragraph) for instruction, cached in caption_pairs)
                 label = f"{materialized.get('localized_label', '')}{materialized.get('label_separator', '')}"
                 if not _visible_text(paragraph).startswith(label):
@@ -617,19 +627,25 @@ def inspect_resolved_docx(
     if actual_fields != Counter(expected_fields):
         _fail("ooxml_field_inventory_or_cache_mismatch")
     owned_counters = {
-        str(materialization.get("counter"))
-        for planned in plan_targets
-        if isinstance((materialization := planned.get("materialization")), dict) and materialization.get("counter")
+        f"dw_{code.lower()}_{caption_maps.sequence_scope}"
+        for code in _CAPTION_COUNTER_CODES.values()
+        if caption_maps.sequence_scope is not None
     }
     for paragraph in document.iter(f"{_W}p"):
         if paragraph in managed_paragraphs:
             continue
-        instruction = "".join(item.text or "" for item in paragraph.iter(f"{_W}instrText"))
+        instruction = " ".join(
+            ["".join(item.text or "" for item in paragraph.iter(f"{_W}instrText"))]
+            + [item.get(f"{_W}instr", "") for item in paragraph.iter(f"{_W}fldSimple")]
+        )
         if (
             any(f" REF {name} " in instruction for name in expected_names)
             or re.search(r"(?:^|\s)REF\s+(?:DW_T_|_DWC_)", instruction, re.IGNORECASE) is not None
             or re.search(r"(?:^|\s)CITATION\s+DWCIT_", instruction, re.IGNORECASE) is not None
-            or any(f" SEQ {counter} " in instruction for counter in owned_counters)
+            or any(
+                (match[1] or match[2]).casefold() in owned_counters
+                for match in re.finditer(r'(?:^|\s)SEQ\s+(?:"([^"]+)"|([^\s\\]+))', instruction, re.IGNORECASE)
+            )
         ):
             _fail("ooxml_owned_field_outside_managed_carrier")
     if set(bookmarks) != expected_names:

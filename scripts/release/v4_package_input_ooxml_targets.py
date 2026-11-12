@@ -209,6 +209,7 @@ def project_targets(
     target_tags: Mapping[tuple[int, int, str], str],
     caption_styles: Mapping[str, tuple[str, str]],
     occurrence_tags: Mapping[tuple[int, int, str], str],
+    paired_tags: Mapping[tuple[int, int, str], str],
 ) -> TargetProjection:
     """Pair typed source targets to one exact managed paragraph and logical object."""
 
@@ -238,6 +239,8 @@ def project_targets(
     occurrence_prefix = "docwen-numbering-occurrence-v1:"
     if {tag for tag in sdts if tag.startswith(occurrence_prefix)} != set(occurrence_tags.values()):
         _fail("ooxml_occurrence_sdt_inventory_invalid")
+    if {tag for tag in sdts if tag.startswith("docwen-caption-pair-v1:")} != set(paired_tags.values()):
+        _fail("ooxml_caption_pair_sdt_inventory_invalid")
     carriers: dict[tuple[int, int, str], str | None] = {}
     used_objects: set[ElementTree.Element] = set()
     plan_by_key = {_key(item): planned for item, planned in zip(targets, planned_targets, strict=True)}
@@ -285,7 +288,15 @@ def project_targets(
             ):
                 _fail("ooxml_caption_target_carrier_invalid")
         elif plan_by_key[key].get("enabled") is True:
-            if parents.get(paragraph) is not body or actual_tag is not None:
+            expected_pair = paired_tags.get(key)
+            carrier = _ancestor(paragraph, parents, f"{_W}sdt")
+            if (
+                expected_pair is None
+                or carrier is None
+                or carrier is not sdts.get(expected_pair)
+                or parents.get(carrier) is not body
+                or actual_tag != expected_pair
+            ):
                 _fail("ooxml_enabled_idless_caption_carrier_invalid")
         else:
             expected_occurrence = occurrence_tags.get(key)

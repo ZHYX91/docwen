@@ -115,9 +115,10 @@ def test_libreoffice_style_field_rewrite_preserves_table_reference_and_fails_clo
     instruction = next(
         item
         for item in viewer_document.element.iter(qn("w:instrText"))
-        if (item.text or "").strip().startswith("SEQ Table")
+        if (item.text or "").strip().startswith("SEQ DW_T_")
     )
-    instruction.text = (instruction.text or "").replace("Table", "表格")
+    sequence_identifier = (instruction.text or "").split()[1]
+    instruction.text = (instruction.text or "").replace(sequence_identifier, "表格", 1)
     locked_field_begins = [
         item
         for item in viewer_document.element.iter(qn("w:fldChar"))
@@ -140,7 +141,7 @@ def test_libreoffice_style_field_rewrite_preserves_table_reference_and_fails_clo
     ]
 
     assert "SEQ 表格" in reopened.element.xml
-    assert "SEQ Table" not in reopened.element.xml
+    assert sequence_identifier not in reopened.element.xml
     assert [item.code for item in imported.diagnostics] == [
         "semantic.docx.citation.field_unlocked",
         "semantic.docx.citation.field_unlocked",

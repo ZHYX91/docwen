@@ -111,7 +111,7 @@ def test_figure_captioned_multi_image_table_round_trips_as_native_table(
         "Composite",
         "1",
     )
-    assert "SEQ Figure" in caption.caption_element.xml
+    assert "SEQ DW_F_" in caption.caption_element.xml
     assert len(list(table.iter(qn("w:drawing")))) == 2
     assert [item.tag for item in body[:2]] == [qn("w:tbl"), qn("w:p")]
 
@@ -159,8 +159,8 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
     ]
     assert all(item.object_elements == () for item in recovery.recovered_captions)
     instructions = [item.text or "" for item in reopened.element.iter(qn("w:instrText"))]
-    assert any("SEQ Figure" in item for item in instructions)
-    assert any("SEQ Table" in item for item in instructions)
+    assert any("SEQ DW_F_" in item for item in instructions)
+    assert any("SEQ DW_T_" in item for item in instructions)
     # Both the block-ID and title references resolve to the addressable Figure;
     # the ID-less Table reference remains a soft reference.
     references = [item for item in instructions if " REF " in item]
@@ -392,10 +392,10 @@ def test_exact_two_figure_captioned_multi_image_table_round_trips_with_short_tar
         "Composite",
         "1",
     )
-    assert "SEQ Figure" in caption.caption_element.xml
+    assert "SEQ DW_F_" in caption.caption_element.xml
     instructions = [item.text or "" for item in reopened.element.iter(qn("w:instrText"))]
     assert any(" REF " in item for item in instructions)
-    assert not any("SEQ Table" in item for item in instructions)
+    assert not any("SEQ DW_T_" in item for item in instructions)
     assert len(list(table.iter(qn("w:drawing")))) == 2
     assert [item.tag for item in body[:2]] == [qn("w:tbl"), qn("w:p")]
 
