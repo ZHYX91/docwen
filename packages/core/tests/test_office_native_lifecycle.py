@@ -39,6 +39,11 @@ def test_current_host_owner_waits_for_child_after_launcher_exit(tmp_path: Path, 
     assert result.owner_exit_code == 0 and result.launcher_exit_code == 0
     assert evidence.with_suffix(".child").exists()
     assert time.monotonic() - started < 7
+    if mode == "large-output":
+        assert json.loads(evidence.with_suffix(".output-bytes").read_text()) == {
+            "stdout": 4 * 1024 * 1024,
+            "stderr": 4 * 1024 * 1024,
+        }
     previous = evidence.with_suffix(".heartbeat").read_bytes()
     time.sleep(0.04)
     assert evidence.with_suffix(".heartbeat").read_bytes() == previous
@@ -74,6 +79,11 @@ def test_native_group_closeout_with_real_processes_and_substituted_darwin_querie
     assert result["cleanup_confirmed"] is (mode != "kill-refused"), result
     assert result["succeeded"] is (mode in {"normal", "large-output"})
     assert result["launcher_exit_code"] == (None if mode == "kill-refused" else 0)
+    if mode == "large-output":
+        assert json.loads(evidence.with_suffix(".output-bytes").read_text()) == {
+            "stdout": 4 * 1024 * 1024,
+            "stderr": 4 * 1024 * 1024,
+        }
     if mode == "kill-refused":
         assert "could not be confirmed" in result["reason"]
 

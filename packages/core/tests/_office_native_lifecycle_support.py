@@ -22,9 +22,16 @@ def _child(evidence: Path, mode: str) -> None:
     evidence.with_suffix(".heartbeat").write_text(str(time.monotonic_ns()) + "\n", encoding="utf-8")
     evidence.with_suffix(".child").write_text(str(os.getpid()), encoding="utf-8")
     if mode == "large-output":
+        sent = {"stdout": 0, "stderr": 0}
         for _ in range(8):
-            os.write(1, b"o" * (512 * 1024))
-            os.write(2, b"e" * (512 * 1024))
+            for descriptor, value, name in ((1, b"o", "stdout"), (2, b"e", "stderr")):
+                pending = memoryview(value * (512 * 1024))
+                while pending:
+                    written = os.write(descriptor, pending)
+                    assert 0 < written <= len(pending)
+                    sent[name] += written
+                    pending = pending[written:]
+        evidence.with_suffix(".output-bytes").write_text(json.dumps(sent), encoding="utf-8")
     deadline = time.monotonic() + (2.0 if mode in {"cancel", "timeout", "kill-refused"} else 0.25)
     while time.monotonic() < deadline:
         with evidence.with_suffix(".heartbeat").open("a", encoding="utf-8") as heartbeat:
