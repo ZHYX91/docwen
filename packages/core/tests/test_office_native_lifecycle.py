@@ -50,10 +50,10 @@ def test_current_host_owner_waits_for_child_after_launcher_exit(tmp_path: Path, 
 
 
 @pytest.mark.skipif(
-    sys.platform != "linux", reason="controlled POSIX group probe uses Linux procfs only as ABI substitute"
+    sys.platform != "linux", reason="controlled POSIX group probe uses Linux process queries as Darwin API substitutes"
 )
 @pytest.mark.parametrize("mode", ["normal", "large-output", "cancel", "timeout", "kill-refused"])
-def test_native_group_closeout_with_real_processes_and_substituted_darwin_inventory(tmp_path: Path, mode: str) -> None:
+def test_native_group_closeout_with_real_processes_and_substituted_darwin_queries(tmp_path: Path, mode: str) -> None:
     evidence = tmp_path / "family"
     command = [sys.executable, str(Path(support.__file__)), "portable-group-probe", str(evidence), mode]
     with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:

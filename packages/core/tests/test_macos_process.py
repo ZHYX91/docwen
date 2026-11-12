@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import ctypes
 import errno
-import os
-from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -28,9 +26,10 @@ def family(monkeypatch: pytest.MonkeyPatch) -> tuple[mac.MacOSProcessGroup, Magi
     monkeypatch.setattr(mac.os, "setsid", MagicMock(), raising=False)
     monkeypatch.setattr(mac.os, "killpg", MagicMock(), raising=False)
     monkeypatch.setattr(mac.signal, "SIGKILL", getattr(mac.signal, "SIGKILL", 9), raising=False)
-    monkeypatch.setattr(mac.os, "waitid", MagicMock(return_value=SimpleNamespace(si_pid=123)), raising=False)
-    for name, value in (("P_PID", 1), ("WEXITED", 4), ("WNOHANG", 1), ("WNOWAIT", 0x01000000)):
-        monkeypatch.setattr(mac.os, name, getattr(os, name, value), raising=False)
+    monkeypatch.setattr(mac.os, "WNOHANG", 1, raising=False)
+    waiter = MagicMock()
+    waiter.exited.return_value = True
+    monkeypatch.setattr(mac, "MacChildWaiter", lambda: waiter)
     process = MagicMock(pid=123)
     process.poll.side_effect = AssertionError("must not reap the group identity through poll")
     process.communicate.side_effect = AssertionError("must not wait on inherited pipes")
@@ -38,6 +37,21 @@ def family(monkeypatch: pytest.MonkeyPatch) -> tuple[mac.MacOSProcessGroup, Magi
     family = mac.MacOSProcessGroup()
     family.start(["office"], stdin=10, stdout=11, cwd=None, environment=None)
     return family, inventory
+
+
+def test_group_owner_does_not_require_python_waitid(
+    family: tuple[mac.MacOSProcessGroup, MagicMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Python 3.12 on Darwin omits this wrapper and its associated constants.
+    for name in ("waitid", "P_PID", "WEXITED", "WNOWAIT"):
+        monkeypatch.delattr(mac.os, name, raising=False)
+    owner = mac.MacOSProcessGroup()
+    owner.start(["office"], stdin=10, stdout=11, cwd=None, environment=None)
+    inventory = family[1]
+    inventory.identity.return_value = _identity(123, state=5)
+    inventory.group.return_value = (_identity(123, state=5),)
+    assert owner.exited()
+    owner.terminate(force=True)
 
 
 def test_parent_exit_is_not_group_exit_and_launcher_is_reaped_last(
@@ -85,7 +99,7 @@ def test_lost_wait_child_authority_never_sends_a_group_signal(
     family: tuple[mac.MacOSProcessGroup, MagicMock], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     owner, _inventory = family
-    monkeypatch.setattr(mac.os, "waitid", MagicMock(side_effect=ChildProcessError("identity gone")))
+    monkeypatch.setattr(owner.child_waiter, "exited", MagicMock(side_effect=ChildProcessError("identity gone")))
     signals = MagicMock()
     monkeypatch.setattr(mac.os, "killpg", signals, raising=False)
     with pytest.raises(ChildProcessError):
@@ -112,18 +126,19 @@ def _inventory(api: MagicMock) -> mac.MacProcessInventory:
     return inventory
 
 
-def test_darwin_identity_reads_the_full_public_abi() -> None:
+@pytest.mark.parametrize("state", [2, 5])
+def test_darwin_identity_reads_the_full_public_abi_including_unreaped_zombies(state: int) -> None:
     api = MagicMock()
 
     def fill(pid: int, flavor: int, argument: int, pointer: Any, size: int) -> int:
-        assert flavor == 3 and argument == 0 and size == 136
+        assert flavor == 3 and argument == 1 and size == 136
         info = ctypes.cast(pointer, ctypes.POINTER(mac._ProcBSDInfo)).contents
-        info.pid, info.pgid, info.status = pid, 123, 2
+        info.pid, info.pgid, info.status = pid, 123, state
         info.start_seconds, info.start_microseconds = 100, 250
         return size
 
     api.proc_pidinfo.side_effect = fill
-    assert _inventory(api).identity(124) == mac.MacProcessIdentity(124, 123, 2, (100, 250))
+    assert _inventory(api).identity(124) == mac.MacProcessIdentity(124, 123, state, (100, 250))
 
 
 @pytest.mark.parametrize("error,size", [(0, 0), (errno.EPERM, 0), (0, 12)])
@@ -146,3 +161,75 @@ def test_group_inventory_errors_and_truncation_are_not_empty_groups(size: int, e
     api.proc_listpids.side_effect = lambda *_args: (ctypes.set_errno(error), size)[1]
     with pytest.raises(OSError):
         _inventory(api).group(123)
+
+
+@pytest.fixture
+def wait_api(monkeypatch: pytest.MonkeyPatch) -> tuple[mac.MacChildWaiter, MagicMock]:
+    api = MagicMock()
+    loader = MagicMock(return_value=api)
+    monkeypatch.setattr(mac.sys, "platform", "darwin")
+    monkeypatch.setattr(mac.ctypes, "CDLL", loader)
+    waiter = mac.MacChildWaiter()
+    loader.assert_called_once_with("/usr/lib/libSystem.B.dylib", use_errno=True)
+    assert api.waitid.argtypes == [ctypes.c_int, ctypes.c_uint32, ctypes.POINTER(mac._SigInfo), ctypes.c_int]
+    assert api.waitid.restype is ctypes.c_int
+    return waiter, api
+
+
+@pytest.mark.parametrize("exited", [False, True])
+def test_darwin_wait_child_uses_native_layout_and_nonreaping_nonblocking_flags(
+    wait_api: tuple[mac.MacChildWaiter, MagicMock], exited: bool
+) -> None:
+    waiter, api = wait_api
+    assert ctypes.sizeof(mac._SigInfo) == 104
+    assert (mac._SigInfo.pid.offset, mac._SigInfo.value.offset, mac._SigInfo.reserved.offset) == (12, 32, 48)
+
+    def wait(id_type: int, pid: int, pointer: Any, flags: int) -> int:
+        assert id_type == 1 and pid == 123 and flags == 0x25
+        assert ctypes.string_at(pointer, 104) == bytes(104)
+        if exited:
+            info = ctypes.cast(pointer, ctypes.POINTER(mac._SigInfo)).contents
+            info.pid, info.signo, info.code = pid, 20, 1
+        return 0
+
+    api.waitid.side_effect = wait
+    assert waiter.exited(123) is exited
+
+
+@pytest.mark.parametrize("error", [errno.ECHILD, errno.EPERM, errno.EINVAL])
+def test_darwin_wait_child_query_error_is_never_an_exit_receipt(
+    wait_api: tuple[mac.MacChildWaiter, MagicMock], error: int
+) -> None:
+    waiter, api = wait_api
+    api.waitid.side_effect = lambda *_args: (ctypes.set_errno(error), -1)[1]
+    with pytest.raises(OSError) as caught:
+        waiter.exited(123)
+    assert caught.value.errno == error
+    assert api.waitid.call_count == 1
+
+
+@pytest.mark.parametrize("pid,signo,code", [(124, 20, 1), (123, 0, 1), (123, 20, 4)])
+def test_darwin_wait_child_rejects_mismatched_or_nonterminal_receipts(
+    wait_api: tuple[mac.MacChildWaiter, MagicMock], pid: int, signo: int, code: int
+) -> None:
+    waiter, api = wait_api
+
+    def wait(_id_type: int, _pid: int, pointer: Any, _flags: int) -> int:
+        info = ctypes.cast(pointer, ctypes.POINTER(mac._SigInfo)).contents
+        info.pid, info.signo, info.code = pid, signo, code
+        return 0
+
+    api.waitid.side_effect = wait
+    with pytest.raises(OSError, match=r"invalid.*receipt"):
+        waiter.exited(123)
+
+
+def test_darwin_wait_child_retries_eintr_only_inside_one_finite_budget(
+    wait_api: tuple[mac.MacChildWaiter, MagicMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    waiter, api = wait_api
+    api.waitid.side_effect = lambda *_args: (ctypes.set_errno(errno.EINTR), -1)[1]
+    monkeypatch.setattr(mac.time, "monotonic", MagicMock(side_effect=[0.0, 0.1, 0.3]))
+    with pytest.raises(InterruptedError):
+        waiter.exited(123)
+    assert api.waitid.call_count == 2

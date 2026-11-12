@@ -34,7 +34,7 @@ def _child(evidence: Path, mode: str) -> None:
 
 
 def _portable_group_probe(evidence: Path, mode: str) -> None:
-    """Exercise the real group owner on Linux, substituting only Darwin's ABI.
+    """Exercise the real group owner on Linux, substituting Darwin query APIs.
 
     The test subreaper also collects its test-owned orphan zombies after the
     production group proof. It does not upgrade the production cleanup receipt.
@@ -62,6 +62,11 @@ def _portable_group_probe(evidence: Path, mode: str) -> None:
                         members.append(identity)
             return tuple(members)
 
+    class POSIXChildWaiter:
+        def exited(self, pid: int) -> bool:
+            result = os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+            return result is not None and result.si_pid == pid
+
     class Stop:
         def is_set(self) -> bool:
             return mode in {"cancel", "kill-refused"} and evidence.with_suffix(".child").exists()
@@ -76,6 +81,7 @@ def _portable_group_probe(evidence: Path, mode: str) -> None:
 
     _enable_owner()
     mac.MacProcessInventory = ProcfsInventory
+    mac.MacChildWaiter = POSIXChildWaiter
     native._native_family = mac.MacOSProcessGroup
     if mode == "kill-refused":
         actual_signal = mac.os.killpg
