@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 
 import pytest
 
 from docwen_core.errors import CancellationRequested
-from docwen_core.tempfiles import TemporaryDirectory, TemporaryDirectoryError, make_temp_dir
+from docwen_core.tempfiles import TemporaryDirectory, TemporaryDirectoryError, make_publication_dir, make_temp_dir
 
 pytestmark = pytest.mark.unit
 
 
-def test_permission_denial_is_not_retried(monkeypatch, tmp_path: Path) -> None:
+@pytest.mark.parametrize("allocate", [make_temp_dir, make_publication_dir])
+def test_permission_denial_is_not_retried(monkeypatch, tmp_path: Path, allocate) -> None:
     calls = 0
 
     def denied(path, mode=0o777):
@@ -23,11 +25,12 @@ def test_permission_denial_is_not_retried(monkeypatch, tmp_path: Path) -> None:
 
     monkeypatch.setattr(os, "mkdir", denied)
     with pytest.raises(TemporaryDirectoryError):
-        make_temp_dir(prefix="dw-", dir=tmp_path)
+        allocate(prefix="dw-", dir=tmp_path)
     assert calls == 1
 
 
-def test_name_collision_is_bounded_and_checks_cancellation(monkeypatch, tmp_path: Path) -> None:
+@pytest.mark.parametrize("allocate", [make_temp_dir, make_publication_dir])
+def test_name_collision_is_bounded_and_checks_cancellation(monkeypatch, tmp_path: Path, allocate) -> None:
     calls = 0
     cancelled = False
 
@@ -44,8 +47,35 @@ def test_name_collision_is_bounded_and_checks_cancellation(monkeypatch, tmp_path
 
     monkeypatch.setattr(os, "mkdir", conflict)
     with pytest.raises(CancellationRequested, match="cancelled"):
-        make_temp_dir(prefix="dw-", dir=tmp_path, cancellation_check=check)
+        allocate(prefix="dw-", dir=tmp_path, cancellation_check=check)
     assert calls == 3
+
+
+@pytest.mark.parametrize("allocate", [make_temp_dir, make_publication_dir])
+def test_allocation_attempts_are_bounded_without_changing_an_existing_entry(
+    monkeypatch, tmp_path: Path, allocate
+) -> None:
+    monkeypatch.setattr("docwen_core.tempfiles.secrets.token_hex", lambda _count: "occupied")
+    occupied = tmp_path / "dw-occupied"
+    occupied.mkdir()
+    marker = occupied / "foreign"
+    marker.write_bytes(b"preserve existing bytes")
+    with pytest.raises(TemporaryDirectoryError, match="unique"):
+        allocate(prefix="dw-", dir=tmp_path, attempts=2)
+    assert marker.read_bytes() == b"preserve existing bytes"
+    assert list(tmp_path.iterdir()) == [occupied]
+    with pytest.raises(ValueError, match="positive"):
+        allocate(dir=tmp_path, attempts=0)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX mode and umask semantics")
+def test_publication_directory_uses_normal_umask_and_private_work_remains_private(tmp_path: Path) -> None:
+    normal = tmp_path / "normal"
+    normal.mkdir()
+    published = Path(make_publication_dir(prefix="output-", dir=tmp_path))
+    private = Path(make_temp_dir(prefix="work-", dir=tmp_path))
+    assert stat.S_IMODE(published.stat().st_mode) == stat.S_IMODE(normal.stat().st_mode)
+    assert stat.S_IMODE(private.stat().st_mode) == 0o700
 
 
 def test_cleanup_failure_does_not_mask_primary_error(monkeypatch, tmp_path: Path) -> None:

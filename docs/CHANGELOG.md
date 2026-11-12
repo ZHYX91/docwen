@@ -5,6 +5,9 @@
 
 ## 0.23.0
 
+- Preserve the selected output folder's inherited access permissions when publishing result directories, so outputs created by an elevated conversion remain accessible through the ordinary desktop.
+- 发布结果目录时继承所选输出父目录的访问权限，提升权限的转换进程生成的结果仍可通过普通桌面访问。
+
 - Preserve worksheet row heights and more template features when generating XLSX from Markdown or structured clipboard input. Clone worksheet, Table and local-name references together, and retain only the intended cells when changing a range hyperlink.
 - Markdown 与结构化剪贴板生成 XLSX 时保留工作表行高及更多模板特征；克隆工作表时同步重定位 Table 和局部名称引用，区域超链接局部修改仅保留应有的链接单元格。
 - Write long integer identifiers as actual text before XLSX serialization, preserving their exact digits instead of relying on a text display format.

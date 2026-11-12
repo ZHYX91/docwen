@@ -12,7 +12,7 @@ from types import TracebackType
 
 
 class TemporaryDirectoryError(OSError):
-    """A private temporary directory could not be created."""
+    """An owned temporary directory could not be created."""
 
 
 def make_temp_dir(
@@ -24,6 +24,49 @@ def make_temp_dir(
     attempts: int = 16,
 ) -> str:
     """Create a private directory; retry name collisions only, never persistent denial."""
+    return _make_directory(
+        suffix=suffix,
+        prefix=prefix,
+        dir=dir,
+        private=True,
+        cancellation_check=cancellation_check,
+        attempts=attempts,
+    )
+
+
+def make_publication_dir(
+    *,
+    dir: str | os.PathLike[str],
+    prefix: str = "tmp",
+    suffix: str = "",
+    cancellation_check: Callable[[], None] | None = None,
+    attempts: int = 16,
+) -> str:
+    """Create an owned candidate that will become a public output directory.
+
+    Ordinary directory creation inherits the target parent's Windows ACL and
+    follows the process umask on POSIX. The permissions are suitable for the
+    published result from creation, without changing an ACL after commit.
+    """
+    return _make_directory(
+        suffix=suffix,
+        prefix=prefix,
+        dir=dir,
+        private=False,
+        cancellation_check=cancellation_check,
+        attempts=attempts,
+    )
+
+
+def _make_directory(
+    *,
+    suffix: str,
+    prefix: str,
+    dir: str | os.PathLike[str] | None,
+    private: bool,
+    cancellation_check: Callable[[], None] | None,
+    attempts: int,
+) -> str:
     if attempts < 1:
         raise ValueError("attempts must be positive")
     parent = Path(dir) if dir is not None else Path(tempfile.gettempdir())
@@ -32,7 +75,10 @@ def make_temp_dir(
             cancellation_check()
         candidate = parent / f"{prefix}{secrets.token_hex(5)}{suffix}"
         try:
-            os.mkdir(candidate, 0o700)
+            if private:
+                os.mkdir(candidate, 0o700)
+            else:
+                os.mkdir(candidate)
         except FileExistsError:
             continue
         except PermissionError as exc:
