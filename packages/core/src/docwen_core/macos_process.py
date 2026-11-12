@@ -32,6 +32,66 @@ def _os_feature(name: str) -> Any:
     return feature
 
 
+class _SigValue(ctypes.Union):
+    _fields_ = (("integer", ctypes.c_int32), ("pointer", ctypes.c_void_p))
+
+
+class _SigInfo(ctypes.Structure):
+    # Public 64-bit Darwin siginfo_t ABI (sys/signal.h), not Linux's layout.
+    _fields_ = [
+        ("signo", ctypes.c_int32),
+        ("error", ctypes.c_int32),
+        ("code", ctypes.c_int32),
+        ("pid", ctypes.c_int32),
+        ("uid", ctypes.c_uint32),
+        ("status", ctypes.c_int32),
+        ("address", ctypes.c_void_p),
+        ("value", _SigValue),
+        ("band", ctypes.c_int64),
+        ("reserved", ctypes.c_uint64 * 7),
+    ]
+
+
+class MacChildWaiter:
+    """Observe a wait-child without reaping it, including on Python 3.12.
+
+    CPython exposes os.waitid on macOS only from 3.13. The public Darwin
+    libSystem call is available on every supported macOS version. Always use
+    its native ABI and flags, independent of the interpreter's optional API.
+    """
+
+    api: Any
+
+    def __init__(self) -> None:
+        if sys.platform != "darwin" or ctypes.sizeof(ctypes.c_void_p) != 8:
+            raise OSError("Darwin wait-child observation requires 64-bit macOS")
+        self.api = ctypes.CDLL("/usr/lib/libSystem.B.dylib", use_errno=True)
+        self.api.waitid.argtypes = [ctypes.c_int, ctypes.c_uint32, ctypes.POINTER(_SigInfo), ctypes.c_int]
+        self.api.waitid.restype = ctypes.c_int
+
+    def exited(self, pid: int) -> bool:
+        if pid <= 0:
+            raise OSError("Cannot observe an invalid Office wait-child identity")
+        deadline = time.monotonic() + _SCAN_TIMEOUT_S
+        while True:
+            # Darwin may leave siginfo untouched under WNOHANG; start cleared.
+            info = _SigInfo()
+            ctypes.set_errno(0)
+            # sys/wait.h: P_PID=1, WEXITED=4, WNOHANG=1, WNOWAIT=0x20.
+            result = self.api.waitid(1, pid, ctypes.byref(info), 0x25)
+            if result == 0:
+                break
+            error = ctypes.get_errno()
+            if error != errno.EINTR or time.monotonic() >= deadline:
+                raise OSError(error, "Cannot establish the Darwin Office wait-child identity")
+        if info.pid == 0:
+            return False
+        # sys/signal.h: SIGCHLD=20; CLD_EXITED/KILLED/DUMPED are 1/2/3.
+        if info.pid != pid or info.signo != 20 or info.code not in (1, 2, 3):
+            raise OSError("Darwin returned an invalid Office wait-child exit receipt")
+        return True
+
+
 class _ProcBSDInfo(ctypes.Structure):
     # Public Darwin proc_bsdinfo ABI (sys/proc_info.h), including start time.
     _fields_ = [
@@ -90,7 +150,9 @@ class MacProcessInventory:
     def identity(self, pid: int) -> MacProcessIdentity | None:
         info = _ProcBSDInfo()
         ctypes.set_errno(0)
-        size = self.api.proc_pidinfo(pid, 3, 0, ctypes.byref(info), ctypes.sizeof(info))  # PROC_PIDTBSDINFO
+        # PROC_PIDTBSDINFO requires a nonzero argument to include zombies.
+        # The deliberately unreaped launcher must remain identity-observable.
+        size = self.api.proc_pidinfo(pid, 3, 1, ctypes.byref(info), ctypes.sizeof(info))
         if size == 0 and ctypes.get_errno() == errno.ESRCH:
             return None
         if size != ctypes.sizeof(info) or info.pid != pid:
@@ -126,12 +188,13 @@ class MacOSProcessGroup:
         self.process: subprocess.Popen[bytes] | None = None
         self.known: dict[int, MacProcessIdentity] = {}
         self.reaped = False
-        for name in ("setsid", "killpg", "waitid", "P_PID", "WEXITED", "WNOHANG", "WNOWAIT"):
+        for name in ("setsid", "killpg", "WNOHANG"):
             _os_feature(name)
         kill_signal = getattr(signal, "SIGKILL", None)
         if kill_signal is None:
             raise OSError("macOS Office ownership requires a force signal")
         self.kill_signal = kill_signal
+        self.child_waiter = MacChildWaiter()
         # This runs only in the spawned owner, never in the GUI/CLI process.
         _os_feature("setsid")()
         self.inventory = MacProcessInventory()
@@ -160,14 +223,10 @@ class MacOSProcessGroup:
             raise OSError("Cannot establish the private Office process group")
         self.known[self.pid] = identity
 
-    def _peek_launcher(self) -> Any:
+    def _peek_launcher(self) -> bool:
         # Never Popen.poll()/wait() here: reaping a fast-exiting launcher would
         # release its PID while a later killpg still targets that numeric ID.
-        return _os_feature("waitid")(
-            _os_feature("P_PID"),
-            self.pid,
-            _os_feature("WEXITED") | _os_feature("WNOHANG") | _os_feature("WNOWAIT"),
-        )
+        return self.child_waiter.exited(self.pid)
 
     def exited(self) -> bool:
         if self.process is None:
@@ -190,11 +249,7 @@ class MacOSProcessGroup:
                 # because an earlier group snapshot omitted it during a race.
                 members[pid] = current
         self.known.update(members)
-        return (
-            observation is not None
-            and observation.si_pid == self.pid
-            and not any(member.status != _SZOMB for member in members.values())
-        )
+        return observation and not any(member.status != _SZOMB for member in members.values())
 
     def terminate(self, *, force: bool) -> None:
         if self.process is None or self.reaped:
