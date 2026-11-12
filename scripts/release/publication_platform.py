@@ -130,7 +130,7 @@ def fetch_platform(
         "macos": "Build macOS packages",
     }[platform]
     producer = next(job for job in jobs["jobs"] if job["name"] == producer_name)
-    package = _sibling(artifacts, f"docwen-{platform}-{run_id}-{producer['run_attempt']}", run_id)
+    package = _sibling(artifacts, f"docwen-{platform}-{run_id}-{producer['producer_attempt']}", run_id)
     require(
         type(metadata.get("size_in_bytes")) is int and 0 < metadata["size_in_bytes"] <= 2 * 1024**2,
         "metadata artifact too large",

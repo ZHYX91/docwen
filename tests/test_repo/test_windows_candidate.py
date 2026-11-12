@@ -202,3 +202,40 @@ def test_rerun_only_reuses_same_run_success_and_never_masks_new_failures(failure
         jobs = candidate_jobs(api, run_id=10, attempt=2, commit=COMMIT)
         verify_candidate_jobs(jobs)
         assert next(row for row in jobs["jobs"] if row["name"] == "Build Windows packages")["run_attempt"] == 1
+
+
+@pytest.mark.parametrize("replacement", ["carried", "rebuilt", "failure", "no-timestamps", "changed-steps"])
+def test_carried_job_new_id_does_not_move_its_artifact_to_the_rerun(replacement) -> None:
+    class CopiedJobs(FakeGitHub):
+        def get(self, path, *, allow_missing=False):
+            number = int(path.split("/attempts/")[1].split("/")[0])
+            if "/jobs?" not in path:
+                return {**self.run, "run_attempt": number}
+            jobs = copy.deepcopy(self.jobs)
+            for row in jobs["jobs"]:
+                row.update(
+                    id=100 + number,
+                    run_attempt=number,
+                    started_at="2026-11-12T11:51:27Z",
+                    completed_at="2026-11-12T11:58:31Z",
+                    steps=[{"number": 1, "name": "Build", "conclusion": "success"}],
+                )
+                if number == 2:
+                    if replacement == "rebuilt":
+                        row["started_at"] = "2026-11-12T12:44:00Z"
+                    elif replacement == "failure":
+                        row["conclusion"] = "failure"
+                    elif replacement == "no-timestamps":
+                        row.pop("started_at")
+                    elif replacement == "changed-steps":
+                        row["steps"][0]["name"] = "Different build"
+            return jobs
+
+    jobs = candidate_jobs(CopiedJobs(), run_id=10, attempt=2, commit=COMMIT)
+    windows = next(row for row in jobs["jobs"] if row["name"] == "Build Windows packages")
+    assert windows["run_attempt"] == 2
+    assert windows["id"] == 102
+    assert windows["producer_attempt"] == (1 if replacement == "carried" else 2)
+    if replacement == "failure":
+        with pytest.raises(PublicationError):
+            verify_candidate_jobs(jobs)

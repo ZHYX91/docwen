@@ -66,7 +66,7 @@ def verify_candidate_jobs(payload: dict[str, Any]) -> None:
 def candidate_jobs(api: GitHub, *, run_id: int, attempt: int, commit: str) -> dict[str, Any]:
     """Resolve rerun dependencies within this exact run, never from another build.
 
-    GitHub omits unchanged successful jobs from a failed-jobs-only rerun. The
+    GitHub may omit unchanged successful jobs or copy them with new job IDs. The
     most recent occurrence wins, including failures and skips; an older success
     must never mask a failed replacement. Bound the history and reject gaps.
     """
@@ -97,7 +97,20 @@ def candidate_jobs(api: GitHub, *, run_id: int, attempt: int, commit: str) -> di
                 "candidate job run mismatch",
             )
             if name not in selected:
-                selected[name] = {**job, "run_attempt": number}
+                selected[name] = {**job, "run_attempt": number, "producer_attempt": number}
+            else:
+                latest = selected[name]
+                # Carried jobs retain their execution timestamps and steps even
+                # when GitHub assigns a new ID and run_attempt. Only identical,
+                # complete successful executions can identify an older producer.
+                if (
+                    latest.get("conclusion") == job.get("conclusion") == "success"
+                    and latest.get("started_at")
+                    and latest.get("completed_at")
+                    and latest.get("steps")
+                    and all(latest.get(key) == job.get(key) for key in ("started_at", "completed_at", "steps"))
+                ):
+                    latest["producer_attempt"] = number
     return {"total_count": len(selected), "jobs": list(selected.values())}
 
 
