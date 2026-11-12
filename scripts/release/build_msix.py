@@ -154,7 +154,15 @@ def read_config(path: Path) -> dict[str, Any]:
     _as_text(target["maxVersionTested"], "max_version_tested")
 
     languages = config["languages"]
-    _require(isinstance(languages, list) and languages == ["zh-CN", "en-US"], "msix_config_languages")
+    supported_languages = {path.stem.replace("_", "-") for path in (_REPO_ROOT / "i18n/locales").glob("*.toml")}
+    _require(
+        isinstance(languages, list)
+        and all(isinstance(language, str) for language in languages)
+        and bool(supported_languages)
+        and len(languages) == len(supported_languages)
+        and set(languages) == supported_languages,
+        "msix_config_languages",
+    )
     excluded = config["excludedPayloadPaths"]
     _require(
         excluded == ["_internal/docx/templates/default-docx-template"],
