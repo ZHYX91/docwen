@@ -6,6 +6,7 @@ import hashlib
 import logging
 import sys
 import threading
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,6 +19,7 @@ from docwen_application.bundle_mapping import (
     validate_physical_page_diagnostics,
 )
 from docwen_application.composed_capabilities import composed_capability_bindings
+from docwen_application.controller import CancellationScopeConflictError
 from docwen_application.conversion_capabilities import (
     CAPABILITY_BINDINGS,
     CAPABILITY_BY_ID,
@@ -64,7 +66,9 @@ class _ExecutionController(Protocol):
 
     def describe_runtime_capabilities(self) -> dict[str, Any]: ...
 
-    def prepare_execution_cancellation(self, request: Any, *, batch: bool = False) -> object: ...
+    def prepare_execution_cancellation(
+        self, request: Any, *, batch: bool = False, on_reserved: Callable[[object], None] | None = None
+    ) -> object: ...
 
     def release_execution_cancellation(self, task_id: str, reservation: object) -> None: ...
 
@@ -72,7 +76,7 @@ class _ExecutionController(Protocol):
 
     def execute_aggregate(self, request: Any, action_name: str) -> Any: ...
 
-    def cancel(self, task_id: str) -> None: ...
+    def cancel(self, task_id: str, *, reservation: object | None = None) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,19 +182,46 @@ class ConversionService:
             binding,
             effective_options,
         )
-        reservation = self._controller.prepare_execution_cancellation(conversion_request, batch=False)
-        task = _TaskRecord(
-            request=conversion_request,
-            public_options=dict(effective_options),
-            staging_root=record.request.output.staging_root,
-            reservation=reservation,
-            binding=binding,
-        )
+        captured: object | None = None
+
+        def capture(reservation: object) -> None:
+            # The controller has not published any aliases yet. Record the
+            # release identity even if prepare is interrupted before returning.
+            nonlocal captured
+            captured = reservation
+
         with self._lock:
             if task_id in self._tasks:
-                self._controller.release_execution_cancellation(task_id, reservation)
                 raise ConversionServiceError("conflict", "task_id_in_use", f"task id is already in use: {task_id}")
-            self._tasks[task_id] = task
+            task: _TaskRecord | None = None
+            try:
+                reservation = self._controller.prepare_execution_cancellation(
+                    conversion_request, batch=False, on_reserved=capture
+                )
+                if captured is None or captured is not reservation:
+                    raise ConversionServiceError(
+                        "internal",
+                        "invalid_cancellation_reservation",
+                        "controller did not capture its exact reservation",
+                    )
+                task = _TaskRecord(
+                    request=conversion_request,
+                    public_options=dict(effective_options),
+                    staging_root=record.request.output.staging_root,
+                    reservation=reservation,
+                    binding=binding,
+                )
+                self._tasks[task_id] = task
+            except BaseException as error:
+                if task is not None and self._tasks.get(task_id) is task:
+                    self._tasks.pop(task_id)
+                if captured is not None:
+                    self._controller.release_execution_cancellation(task_id, captured)
+                if isinstance(error, CancellationScopeConflictError):
+                    raise ConversionServiceError(
+                        "conflict", "task_id_in_use", f"task id is already in use: {task_id}"
+                    ) from error
+                raise
         return task_id
 
     def execute_accepted(self, task_id: str) -> ConversionTaskOutcome:
@@ -231,7 +262,7 @@ class ConversionService:
                 return "not_found"
             if task.state == "terminal":
                 return "already_terminal"
-        self._controller.cancel(task_id)
+        self._controller.cancel(task_id, reservation=task.reservation)
         return "cancellation_requested"
 
     def _outcome_from_result(self, task: _TaskRecord, result: ConversionResult) -> ConversionTaskOutcome:

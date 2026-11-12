@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from ._conversion_service_support import (
     _EXPECTED_DOCUMENT_SEMANTICS_MACHINE_LIMITATIONS,
     _EXPECTED_RESOLVED_DOCUMENT_MACHINE_LIMITATIONS,
@@ -301,9 +303,11 @@ def test_document_routes_translate_all_four_public_fidelity_combinations_at_runt
             super().__init__()
             self.prepared_requests: list[Any] = []
 
-        def prepare_execution_cancellation(self, request: Any, *, batch: bool = False) -> object:
+        def prepare_execution_cancellation(
+            self, request: Any, *, batch: bool = False, on_reserved: Callable[[object], None] | None = None
+        ) -> object:
             self.prepared_requests.append(request)
-            return super().prepare_execution_cancellation(request, batch=batch)
+            return super().prepare_execution_cancellation(request, batch=batch, on_reserved=on_reserved)
 
     source = tmp_path / f"source-{capability_id}.bin"
     source.write_bytes(b"fixture")

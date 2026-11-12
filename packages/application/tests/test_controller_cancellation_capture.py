@@ -21,7 +21,7 @@ def _request(tmp_path: Path) -> ConversionRequest:
     return ConversionRequest(request_id="captured-owner", input_refs=refs, target_format="xlsx")
 
 
-def test_failed_capture_publishes_no_alias_and_retry_retains_legacy_semantics(tmp_path):
+def test_failed_capture_publishes_no_alias_and_retry_has_one_exclusive_owner(tmp_path):
     controller = ApplicationController()
     request = _request(tmp_path)
     captured = []
@@ -37,7 +37,8 @@ def test_failed_capture_publishes_no_alias_and_retry_retains_legacy_semantics(tm
     [failed] = captured
     retained = controller.prepare_execution_cancellation(request, batch=True)
     assert retained is not failed
-    assert controller.prepare_execution_cancellation(request, batch=True) is retained
+    with pytest.raises(ControllerError, match="already owned"):
+        controller.prepare_execution_cancellation(request, batch=True)
     controller.release_execution_cancellation(request.request_id, failed)
     assert set(controller._cancellation_scopes) == {"captured-owner", "captured-owner-0", "captured-owner-1"}
     assert all(scope is retained for scope in controller._cancellation_scopes.values())
