@@ -5,10 +5,12 @@ from __future__ import annotations
 import base64
 import hashlib
 import html
+import io
+import os
 import posixpath
 import re
 from io import BytesIO
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 from urllib.parse import unquote
 from zipfile import ZipFile
@@ -213,8 +215,25 @@ def test_repeated_native_image_occurrences_are_never_overwritten(
     ],
 )
 def test_unrelated_native_hyperlink_keeps_qualified_identity(
-    tmp_path: Path, round_trip_runtime: Any, target: str
+    tmp_path: Path, round_trip_runtime: Any, target: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    if target.startswith("\\\\"):
+        # The synthetic external share is an opaque link, never a readable
+        # local resource. Reject remote filesystem I/O before it can occur.
+        def guard_remote_path(function):
+            def guarded(path, *args, **kwargs):
+                if isinstance(path, (str, bytes, os.PathLike)):
+                    drive = PureWindowsPath(os.fsdecode(path)).drive
+                    extended_local_drive = drive.startswith("\\\\?\\") and drive.endswith(":")
+                    assert not drive.startswith("\\\\") or extended_local_drive, path
+                return function(path, *args, **kwargs)
+
+            return guarded
+
+        import builtins
+
+        for owner, attribute in ((os, "stat"), (os, "scandir"), (io, "open"), (builtins, "open")):
+            monkeypatch.setattr(owner, attribute, guard_remote_path(getattr(owner, attribute)))
     document = Document()
     image = tmp_path / "red.png"
     image.write_bytes(_png((230, 0, 0)))
@@ -239,8 +258,24 @@ def test_unrelated_native_hyperlink_keeps_qualified_identity(
     bundle, markdown, primary = _bundle(
         round_trip_runtime, source, tmp_path / "output", image_link_style="markdown_embed"
     )
-    assert f"[Unrelated native hyperlink]({target})" in markdown
+    expected_destination = "<%5C%5Cserver%5Cdocx-image_1_rId9.png>" if target.startswith("\\\\") else target
+    assert f"[Unrelated native hyperlink]({expected_destination})" in markdown
+    # Parse the actual href independently of the producer. Raw UNC spelling
+    # in Markdown also consumes its leading backslash pair as an escape.
+    ast = mistune.create_markdown(renderer="ast")(markdown)
+    assert isinstance(ast, list)
+    [link] = [node for block in ast for node in block.get("children", []) if node["type"] == "link"]
+    actual_href = link["attrs"]["url"]
+    assert "".join(child.get("raw", "") for child in link["children"]) == "Unrelated native hyperlink"
+    if target.startswith("\\\\"):
+        assert actual_href == "%5C%5Cserver%5Cdocx-image_1_rId9.png"
+        assert unquote(actual_href) == target
+        assert PureWindowsPath(unquote(actual_href)).drive == PureWindowsPath(target).drive
+        assert PureWindowsPath(unquote(actual_href)).parts == PureWindowsPath(target).parts
+    else:
+        assert actual_href == target
     [(_, actual_image)] = _image_targets(markdown)
+    assert actual_href != actual_image
     assert _target_artifact(bundle, primary, actual_image).sha256 == hashlib.sha256(image.read_bytes()).hexdigest()
 
 

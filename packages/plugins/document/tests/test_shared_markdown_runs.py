@@ -585,3 +585,105 @@ def test_complex_hyperlink_keeps_page_breaks_and_literal_mode():
     assert (
         render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig(), literal_text=True) == "label\nafter"
     )
+
+
+@pytest.mark.parametrize("carrier", ["relationship", "complex-field"])
+@pytest.mark.parametrize(
+    ("target", "expected_href"),
+    [
+        (r"\\server\docx-image_1_rId9.png", "%5C%5Cserver%5Cdocx-image_1_rId9.png"),
+        (r"\\server\share\file.png", "%5C%5Cserver%5Cshare%5Cfile.png"),
+        (r"\\server\share\a (b).png", "%5C%5Cserver%5Cshare%5Ca%20(b).png"),
+        (r"C:\folder\[item].png", "C:%5Cfolder%5C%5Bitem%5D.png"),
+        (r"https://example.org/a\#part", "https://example.org/a%5C#part"),
+        ("https://example.org/a?q=&copy;#part", "https://example.org/a?q=&copy;#part"),
+        ("https://example.org/a?a=1&b=2#part", "https://example.org/a?a=1&b=2#part"),
+        ("https://example.org/a?q=%2520&b=%20#part", "https://example.org/a?q=%2520&b=%20#part"),
+    ],
+)
+def test_native_hyperlink_literal_target_keeps_parsed_uri_identity(carrier, target, expected_href):
+    from pathlib import PureWindowsPath
+    from urllib.parse import unquote, urlsplit
+
+    import mistune
+    from markdown_it import MarkdownIt
+
+    paragraph = Document().add_paragraph()
+    if carrier == "relationship":
+        hyperlink = OxmlElement("w:hyperlink")
+        hyperlink.set(
+            qn("r:id"),
+            paragraph.part.relate_to(
+                target,
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+                is_external=True,
+            ),
+        )
+        run = OxmlElement("w:r")
+        text = OxmlElement("w:t")
+        text.text = "label"
+        run.append(text)
+        hyperlink.append(run)
+        paragraph._p.append(hyperlink)
+    else:
+        operand = target.replace("\\", "\\\\")
+        _static_hyperlink_field(paragraph, f' HYPERLINK "{operand}" \\h ')
+    original = paragraph._p.xml
+    rendered = render_paragraph_runs(paragraph, syntax_config=DocxMarkdownSyntaxConfig())
+    commonmark = MarkdownIt("commonmark").parseInline(rendered)[0].children
+    assert commonmark is not None
+    assert [token.attrGet("href") for token in commonmark if token.type == "link_open"] == [expected_href]
+    parsed = mistune.create_markdown(renderer="ast")(rendered)
+    assert isinstance(parsed, list)
+    [block] = parsed
+    assert isinstance(block, dict)
+    [mistune_link] = block["children"]
+    assert mistune_link["attrs"]["url"] == expected_href
+    assert unquote(expected_href) == unquote(target)
+    if target.startswith("\\\\"):
+        assert PureWindowsPath(unquote(expected_href)).drive == PureWindowsPath(target).drive
+        assert PureWindowsPath(unquote(expected_href)).parts == PureWindowsPath(target).parts
+    if target.startswith("https:"):
+        assert urlsplit(expected_href).query == urlsplit(target).query
+        assert urlsplit(expected_href).fragment == urlsplit(target).fragment
+    assert paragraph._p.xml == original
+
+
+@pytest.mark.parametrize(("control", "encoded"), [("\n", "%0A"), ("\r", "%0D"), ("\t", "%09")])
+def test_native_hyperlink_relationship_control_characters_survive_package_and_markdown(control, encoded):
+    from io import BytesIO
+    from urllib.parse import unquote
+
+    import mistune
+    from markdown_it import MarkdownIt
+
+    document = Document()
+    paragraph = document.add_paragraph()
+    target = f"https://example.org/a{control}b?q=1"
+    hyperlink = OxmlElement("w:hyperlink")
+    rel_id = paragraph.part.relate_to(
+        target, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", is_external=True
+    )
+    hyperlink.set(qn("r:id"), rel_id)
+    run, text = OxmlElement("w:r"), OxmlElement("w:t")
+    text.text = "label"
+    run.append(text)
+    hyperlink.append(run)
+    paragraph._p.append(hyperlink)
+    package = BytesIO()
+    document.save(package)
+    package.seek(0)
+    reopened = Document(package)
+    assert reopened.part.rels[rel_id].target_ref == target
+    rendered = render_paragraph_runs(reopened.paragraphs[0], syntax_config=DocxMarkdownSyntaxConfig())
+    expected_href = f"https://example.org/a{encoded}b?q=1"
+    tokens = MarkdownIt("commonmark").parseInline(rendered)[0].children
+    assert tokens is not None
+    assert [token.attrGet("href") for token in tokens if token.type == "link_open"] == [expected_href]
+    parsed = mistune.create_markdown(renderer="ast")(rendered)
+    assert isinstance(parsed, list)
+    [block] = parsed
+    assert isinstance(block, dict)
+    [link] = block["children"]
+    assert link["attrs"]["url"] == expected_href
+    assert unquote(expected_href) == target
