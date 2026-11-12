@@ -510,10 +510,22 @@ class BodyRunFormat:
         return cls(tuple(properties.values()))
 
     def apply_to(self, paragraph: Any, *, start_index: int = 0, resolve_character_toggles: bool = False) -> None:
-        # Include child runs in hyperlinks and semantic wrappers. Each direct
-        # or character-style property keeps its own authority; an rStyle alone
-        # must not prevent unrelated body font attributes from being inherited.
+        # Callers pass newly rendered body paragraphs or the appended body
+        # range of a generated heading, never retained template paragraphs.
+        # Visible caches and aliases inherit the same per-property formatting
+        # as ordinary text; field instructions and markers keep their identity.
         for element in list(paragraph._p.iter(qn("w:r")))[start_index:]:
+            if any(child.tag in {qn("w:fldChar"), qn("w:instrText"), qn("w:delInstrText")} for child in element):
+                continue
+            nested_paragraph = False
+            for ancestor in element.iterancestors():
+                if ancestor is paragraph._p:
+                    break
+                if ancestor.tag == qn("w:p"):
+                    nested_paragraph = True
+                    break
+            if nested_paragraph:
+                continue
             run = Run(element, paragraph)
             if not run.text:
                 continue

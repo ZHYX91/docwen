@@ -5,12 +5,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from docwen_core._docx_reference_fields import parse_reference_instruction, reference_instruction
 from docwen_core._docx_semantics_v3_model import DocxSemanticsV3Error
-
-_REF_INSTRUCTION_RE = re.compile(
-    r"\s*REF\s+(DW_T_[0-9a-f]{35})(?:\s+(\\n))?\s+\\h\s*",
-    re.IGNORECASE,
-)
 
 
 def wrap_paragraph_content_with_bookmark(paragraph: Any, name: str, bookmark_id: str) -> None:
@@ -101,7 +97,7 @@ def inline_reference_sdt(
     tag_element.set(qn("w:val"), tag)
     properties.append(tag_element)
     content = OxmlElement("w:sdtContent")
-    instruction = f" REF {bookmark_name} \\n \\h " if heading_number_only else f" REF {bookmark_name} \\h "
+    instruction = reference_instruction(bookmark_name, heading_number_only=heading_number_only)
     append_complex_field_to_container(
         content,
         instruction=instruction,
@@ -250,10 +246,10 @@ def recover_paragraph_children(
                     instruction = "".join(
                         item.text or "" for item in (() if content is None else content.iter(qn("w:instrText")))
                     )
-                    match = _REF_INSTRUCTION_RE.fullmatch(instruction)
-                    if match is None or match.group(1) not in target_ids_by_bookmark:
+                    parsed = parse_reference_instruction(instruction)
+                    if parsed is None or parsed[0] not in target_ids_by_bookmark:
                         raise DocxSemanticsV3Error("reference-occurrence REF field has no authenticated target")
-                    stable_reference_target_ids.append(target_ids_by_bookmark[match.group(1)])
+                    stable_reference_target_ids.append(target_ids_by_bookmark[parsed[0]])
             else:
                 output.append(visible_text(child))
             index += 1
@@ -278,11 +274,11 @@ def recover_paragraph_children(
             if end_index >= len(children):
                 raise DocxSemanticsV3Error("unterminated complex field in semantic paragraph")
             instruction = "".join(instruction_parts)
-            match = _REF_INSTRUCTION_RE.fullmatch(instruction)
+            parsed = parse_reference_instruction(instruction)
             if not emit_references:
                 output.append("".join(field_visible))
-            elif match is not None:
-                bookmark_name = match.group(1)
+            elif parsed is not None and re.fullmatch(r"DW_T_[0-9a-f]{35}", parsed[0]) is not None:
+                bookmark_name = parsed[0]
                 if bookmark_name not in target_ids_by_bookmark:
                     raise DocxSemanticsV3Error("owned REF field has no authenticated semantic target")
                 target_id = target_ids_by_bookmark[bookmark_name]
