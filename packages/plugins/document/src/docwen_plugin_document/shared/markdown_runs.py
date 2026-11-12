@@ -18,7 +18,6 @@ from docwen_core.docx_parsing.format_features import (
 )
 from docwen_core.docx_parsing.style_properties import resolve_run_formatting
 from docwen_core.docx_parsing.xml_ns import NS_W
-from docwen_core.links import encode_markdown_angle_destination
 from docwen_core.markdown_math import match_formula
 from docwen_core.text.markdown_literal import escape_markdown_literal
 from docwen_plugin_document.shared.word_metadata import run_metadata_is_valid
@@ -628,10 +627,19 @@ def _render_paragraph_run_segments(
     def _process_hyperlink(child: Any, *, field: tuple[str, list[Any]] | None = None) -> None:
         nonlocal segments
         url = field[0] if field is not None else resolve_hyperlink_target(para, child) or ""
+        # OOXML targets are literal strings, not Markdown source escape pairs
+        # or entities. Preserve each backslash and entity-shaped URI character.
+        literal_target = (
+            url.replace("&", "&amp;")
+            .replace("\\", "%5C")
+            .replace("<", "%3C")
+            .replace(">", "%3E")
+            .replace("\r", "%0D")
+            .replace("\n", "%0A")
+            .replace("\t", "%09")
+        )
         destination = (
-            f"<{encode_markdown_angle_destination(url)}>"
-            if any(char.isspace() or char in "()<>\\" for char in url)
-            else url
+            f"<{literal_target}>" if any(char.isspace() or char in "()<>\\" for char in url) else literal_target
         )
         outer_segments = segments
         segments = [[]]
