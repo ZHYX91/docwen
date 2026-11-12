@@ -111,6 +111,7 @@ class ResolvedNumberingProofMixin:
     _paired_caption_map: PairedCaptionMapV3 | None
     _paired_caption_tags: dict[tuple[int, int, str], str]
     _caption_style_bindings: tuple[Any, ...]
+    _caption_sequence_scope: str
     _caption_target_keys: list[Any]
     _citation_projection: Any | None
     _document: Any
@@ -481,6 +482,7 @@ class ResolvedNumberingProofMixin:
                 plan_target,
                 authored_content=document_target.authored_text,
                 heading_style_names=self._heading_style_names,
+                sequence_scope=self._caption_sequence_scope,
                 bookmark_name=bookmark_name,
                 bookmark_inventory=bookmark_inventory,
                 rendered_payload=rendered_payload,

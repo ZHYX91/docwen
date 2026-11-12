@@ -18,6 +18,8 @@ OFFICE_RELS = "http://schemas.openxmlformats.org/officeDocument/2006/relationshi
 CUSTOM_PROPS = "http://schemas.openxmlformats.org/officeDocument/2006/customXml"
 CAPTION_STYLE_NAMESPACE = "https://docwen.dev/schema/document-caption-style-binding-map/v1"
 OCCURRENCE_NAMESPACE = "https://docwen.dev/schema/document-numbering-occurrence-map/v1"
+PAIRED_CAPTION_NAMESPACE = "https://docwen.dev/schema/document-paired-caption-map/v2"
+SEQUENCE_SCOPE = "0123456789abcdef01234567"
 MATH = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 _W = f"{{{WML}}}"
 _R = f"{{{RELS}}}"
@@ -332,6 +334,19 @@ def _occurrence_map(
     ).encode()
 
 
+def _paired_caption_map(records: list[tuple[int, str, str]], source_sha256: str, caption_count: int) -> bytes:
+    root = ElementTree.Element(
+        f"{{{PAIRED_CAPTION_NAMESPACE}}}documentPairedCaptionMap",
+        version="2",
+        source_sha256=source_sha256,
+        caption_count=str(caption_count),
+        sequence_scope=SEQUENCE_SCOPE,
+    )
+    for ordinal, kind, tag in records:
+        ElementTree.SubElement(root, f"{{{PAIRED_CAPTION_NAMESPACE}}}pair", ordinal=str(ordinal), kind=kind, tag=tag)
+    return ElementTree.tostring(root, encoding="utf-8", xml_declaration=True)
+
+
 def _custom_xml_parts(
     maps: list[tuple[str, bytes]],
     content_types: ElementTree.Element,
@@ -393,12 +408,13 @@ def _paragraph_style(paragraph: ElementTree.Element, style_id: str) -> ElementTr
 
 def _caption_field(materialized: Mapping[str, object]) -> str:
     field_format = _FIELD_FORMATS[str(materialized["number_format"])]
+    counter = f"DW_{str(materialized['counter'])[0]}_{SEQUENCE_SCOPE}"
     action = materialized["sequence_action"]
     if action == "continue":
-        return f" SEQ {materialized['counter']} \\* {field_format} "
+        return f" SEQ {counter} \\* {field_format} "
     if action == "reset_to_start":
-        return f" SEQ {materialized['counter']} \\r {materialized['start_value']} \\* {field_format} "
-    return f" SEQ {materialized['counter']} \\s {materialized['restart_heading_level']} \\* {field_format} "
+        return f" SEQ {counter} \\r {materialized['start_value']} \\* {field_format} "
+    return f" SEQ {counter} \\s {materialized['restart_heading_level']} \\* {field_format} "
 
 
 def _display(level: Mapping[str, object]) -> str:
@@ -423,6 +439,8 @@ def build_docx(neutral_envelope: Mapping[str, object], plan_envelope: Mapping[st
     source_sha = str(neutral_envelope["source_sha256"])
     plan_sha = str(plan_envelope["plan_sha256"])
     occurrence_records: list[tuple[Mapping[str, object], str, str]] = []
+    paired_records: list[tuple[int, str, str]] = []
+    caption_count = 0
     bookmark_id = 0
     for target, target_plan in zip(targets, planned, strict=True):
         kind = str(target["kind"])
@@ -448,12 +466,16 @@ def build_docx(neutral_envelope: Mapping[str, object], plan_envelope: Mapping[st
                 paragraph.append(end)
                 bookmark_id += 1
         else:
+            caption_count += 1
             style_id = f"Caption{kind.title().replace('_', '')}"
             if target_id is not None:
                 tag, bookmark_name = identity.target_identity(kind, str(target_id))
                 _carrier, container = _block_sdt(body, tag)
             elif target_plan["enabled"]:
-                container = body
+                digest = _sha(f"docwen-caption-pair-v1\0{source_sha}\0{caption_count}\0{kind}".encode())
+                tag = f"docwen-caption-pair-v1:{digest}"
+                paired_records.append((caption_count, kind, tag))
+                _carrier, container = _block_sdt(body, tag)
             else:
                 tag, digest = _occurrence_identity(target, source_sha, plan_sha)
                 occurrence_records.append((target, tag, digest))
@@ -578,6 +600,8 @@ def build_docx(neutral_envelope: Mapping[str, object], plan_envelope: Mapping[st
     if occurrence_records:
         occurrence_records.sort(key=lambda item: (item[0]["source_start"], item[0]["source_end"], item[0]["kind"]))
         maps.append((OCCURRENCE_NAMESPACE, _occurrence_map(occurrence_records, source_sha, plan_sha)))
+    if caption_count:
+        maps.append((PAIRED_CAPTION_NAMESPACE, _paired_caption_map(paired_records, source_sha, caption_count)))
     custom_parts = _custom_xml_parts(maps, content_types, document_rels)
     root_rels = ElementTree.Element(f"{_R}Relationships")
     ElementTree.SubElement(

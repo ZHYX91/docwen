@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -11,6 +12,7 @@ import pytest
 from docx import Document
 from docx.oxml.ns import qn
 
+from docwen_core.docx_bookmarks import build_docx_bookmark_inventory
 from docwen_core.docx_numbering_ooxml import (
     WML_NS,
     ResolvedNumberingOoxmlError,
@@ -19,6 +21,7 @@ from docwen_core.docx_numbering_ooxml import (
     existing_numbering_ids,
     inline_reference_sdt,
     materialize_caption_number,
+    prove_caption_number,
     write_heading_numbering_projection,
 )
 from docwen_core.models.resolved_numbering import (
@@ -35,6 +38,8 @@ from docwen_core.models.resolved_numbering import (
 )
 
 pytestmark = pytest.mark.unit
+
+_SEQUENCE_SCOPE = "0123456789abcdef01234567"
 
 
 def _plan(*, target: NumberingTarget | None = None) -> ResolvedNumberingPlan:
@@ -205,12 +210,12 @@ def test_heading_projection_is_exact_and_never_rewrites_authored_title(tmp_path:
         (
             _caption_materialization("simple_seq", "continue", sequence_cache="7"),
             "7",
-            r" SEQ Figure \* ARABIC ",
+            r" SEQ DW_F_0123456789abcdef01234567 \* ARABIC ",
         ),
         (
             _caption_materialization("simple_seq", "reset_to_start", start=9, sequence_cache="9"),
             "9",
-            r" SEQ Figure \r 9 \* ARABIC ",
+            r" SEQ DW_F_0123456789abcdef01234567 \r 9 \* ARABIC ",
         ),
         (
             _caption_materialization(
@@ -221,7 +226,7 @@ def test_heading_projection_is_exact_and_never_rewrites_authored_title(tmp_path:
                 sequence_cache="2",
             ),
             "2",
-            r" SEQ Figure \s 3 \* ARABIC ",
+            r" SEQ DW_F_0123456789abcdef01234567 \s 3 \* ARABIC ",
         ),
     ],
 )
@@ -239,6 +244,7 @@ def test_simple_caption_fields_have_exact_cached_result_and_bookmark(
         target,
         authored_content="曲线",
         heading_style_names={"heading_3": "Heading 3"},
+        sequence_scope=_SEQUENCE_SCOPE,
         bookmark_name="DW_T_0123456789abcdef0123456789abcdef012",
         bookmark_id="1",
     )
@@ -263,7 +269,7 @@ def test_simple_caption_fields_have_exact_cached_result_and_bookmark(
                 chapter_cache="2",
                 sequence_cache="4",
             ),
-            r" SEQ Figure \* ARABIC ",
+            r" SEQ DW_F_0123456789abcdef01234567 \* ARABIC ",
         ),
         (
             _caption_materialization(
@@ -274,7 +280,7 @@ def test_simple_caption_fields_have_exact_cached_result_and_bookmark(
                 chapter_cache="2",
                 sequence_cache="4",
             ),
-            r" SEQ Figure \r 9 \* ARABIC ",
+            r" SEQ DW_F_0123456789abcdef01234567 \r 9 \* ARABIC ",
         ),
         (
             _caption_materialization(
@@ -286,7 +292,7 @@ def test_simple_caption_fields_have_exact_cached_result_and_bookmark(
                 chapter_cache="2",
                 sequence_cache="4",
             ),
-            r" SEQ Figure \s 3 \* ARABIC ",
+            r" SEQ DW_F_0123456789abcdef01234567 \s 3 \* ARABIC ",
         ),
     ],
 )
@@ -301,6 +307,7 @@ def test_chapter_caption_bookmark_owns_styleref_separator_and_seq(
         _caption_target(materialization, derived="2-4"),
         authored_content="曲线",
         heading_style_names={"heading_1": "Heading 1", "heading_3": "Heading 3"},
+        sequence_scope=_SEQUENCE_SCOPE,
         bookmark_name="DW_T_0123456789abcdef0123456789abcdef012",
         bookmark_id="3",
     )
@@ -334,6 +341,7 @@ def test_chapter_field_caches_are_explicit_and_never_split_on_separator() -> Non
         _caption_target(materialization, derived="1-2-3"),
         authored_content="多级章号",
         heading_style_names={"heading_1": "Heading 1"},
+        sequence_scope=_SEQUENCE_SCOPE,
     )
 
     assert [item.text for item in paragraph._p.iter(qn("w:t"))] == [
@@ -362,6 +370,7 @@ def test_caption_cache_contradiction_fails_before_partial_result_is_accepted() -
             _caption_target(materialization, derived="1-2-4"),
             authored_content="无效",
             heading_style_names={"heading_1": "Heading 1"},
+            sequence_scope=_SEQUENCE_SCOPE,
         )
     assert paragraph.text == "original"
 
@@ -374,6 +383,7 @@ def test_disabled_id_bearing_caption_has_zero_width_bookmark_and_no_field() -> N
         _caption_target(None, derived=None, enabled=False),
         authored_content="曲线",
         heading_style_names={},
+        sequence_scope=_SEQUENCE_SCOPE,
         bookmark_name="DW_T_0123456789abcdef0123456789abcdef012",
         bookmark_id="5",
     )
@@ -386,6 +396,55 @@ def test_disabled_id_bearing_caption_has_zero_width_bookmark_and_no_field() -> N
     assert start_index + 1 == end_index < text_index
     assert not _instructions(paragraph._p)
     assert paragraph.text == "曲线"
+
+
+@pytest.mark.parametrize(
+    ("counter", "kind", "identifier"),
+    [
+        ("Figure", "figure", "DW_F_0123456789abcdef01234567"),
+        ("Table", "table", "DW_T_0123456789abcdef01234567"),
+        ("Equation", "equation", "DW_E_0123456789abcdef01234567"),
+        ("Code", "code_block", "DW_C_0123456789abcdef01234567"),
+    ],
+)
+def test_caption_physical_counter_is_request_scoped_and_proof_rejects_another_scope(
+    counter: str, kind: str, identifier: str
+) -> None:
+    document = Document()
+    paragraph = document.add_paragraph()
+    materialization = replace(_caption_materialization("simple_seq", "continue"), counter=counter)  # type: ignore[arg-type]
+    target = replace(_caption_target(materialization, derived="1"), kind=kind)  # type: ignore[arg-type]
+
+    materialize_caption_number(
+        paragraph,
+        target,
+        authored_content="Caption",
+        heading_style_names={},
+        sequence_scope=_SEQUENCE_SCOPE,
+    )
+
+    assert _instructions(paragraph._p) == [f" SEQ {identifier} \\* ARABIC "]
+    assert materialization.counter == counter
+    bookmarks = build_docx_bookmark_inventory(document)
+    prove_caption_number(
+        paragraph._p,
+        target,
+        sequence_scope=_SEQUENCE_SCOPE,
+        authored_content="Caption",
+        heading_style_names={},
+        bookmark_name=None,
+        bookmark_inventory=bookmarks,
+    )
+    with pytest.raises(ResolvedNumberingOoxmlError, match="field instruction"):
+        prove_caption_number(
+            paragraph._p,
+            target,
+            sequence_scope="abcdef0123456789abcdef01",
+            authored_content="Caption",
+            heading_style_names={},
+            bookmark_name=None,
+            bookmark_inventory=bookmarks,
+        )
 
 
 def test_reference_uses_ref_cache_and_keeps_alias_outside_field() -> None:

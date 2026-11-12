@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
@@ -79,6 +80,7 @@ from docwen_core._docx_semantics_v3_topology import (
     prove_source_recovery_records,
 )
 from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_bookmark_name
+from docwen_core.docx_caption_sequences import caption_sequence_identifier
 from docwen_core.docx_standalone_caption_occurrence import (
     STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
     STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
@@ -253,6 +255,8 @@ class DocxSemanticsV3Recovery:
     ) -> DocxSemanticsV3Recovery:
         from docx.oxml.ns import qn
 
+        if caption_parser is None and paired_caption_map is not None:
+            caption_parser = partial(_parse_v3_caption, sequence_scope=paired_caption_map.sequence_scope)
         target_by_tag = {item.tag: item for item in targets}
         heading_bindings = {binding.source_id: binding for binding in heading_style_bindings}
         if len(heading_bindings) != len(heading_style_bindings) or set(heading_bindings) != {
@@ -450,6 +454,8 @@ class DocxSemanticsV3Recovery:
 
         if not occurrences:
             return
+        if self.paired_caption_map is None:
+            raise DocxSemanticsV3Error("standalone caption lacks its generated sequence scope")
         body = document.element.body
         idless = [item for item in occurrences if item.target_id is None]
         addressable = [item for item in occurrences if item.target_id is not None]
@@ -484,7 +490,12 @@ class DocxSemanticsV3Recovery:
                 occurrence,
                 caption_style_id=style_id,
             )
-            title, number = _parse_v3_caption(caption, occurrence.kind, required_bookmark=None)
+            title, number = _parse_v3_caption(
+                caption,
+                occurrence.kind,
+                required_bookmark=None,
+                sequence_scope=self.paired_caption_map.sequence_scope,
+            )
             expected_number = occurrence.derived_number or ""
             if not occurrence.enabled or number != expected_number:
                 raise DocxSemanticsV3Error("direct standalone caption numbering differs from its authority")
@@ -645,8 +656,9 @@ def _prove_caption_target_group(
     if not caption_style_bindings:
         raise DocxSemanticsV3Error("caption target lacks its authenticated caption-style binding map")
     prove_caption_paragraph_style(caption, target.kind, caption_style_bindings)
-    parser = _parse_v3_caption if caption_parser is None else caption_parser
-    parser(caption, target.kind, required_bookmark=target.bookmark_name)
+    if caption_parser is None:
+        raise DocxSemanticsV3Error("caption target lacks its generated sequence scope")
+    caption_parser(caption, target.kind, required_bookmark=target.bookmark_name)
     return caption, object_elements
 
 
@@ -661,12 +673,13 @@ def _parse_v3_caption(
     kind: str,
     *,
     required_bookmark: str | None,
+    sequence_scope: str,
 ) -> tuple[str, str]:
     from docx.oxml.ns import qn
 
     counter = {"figure": "Figure", "table": "Table", "equation": "Equation", "code_block": "Code"}[kind]
     instructions = [item.text or "" for item in paragraph.iter(qn("w:instrText"))]
-    expected = f" SEQ {counter} \\* ARABIC "
+    expected = f" SEQ {caption_sequence_identifier(sequence_scope, kind)} \\* ARABIC "
     if instructions != [expected]:
         raise DocxSemanticsV3Error("caption must contain exactly one matching SEQ field")
     field_chars = [item.get(qn("w:fldCharType")) for item in paragraph.iter(qn("w:fldChar"))]
@@ -719,8 +732,9 @@ def _recover_captions(
             caption_parser=caption_parser,
             standalone=(tag or "") in standalone_target_tags,
         )
-        parser = _parse_v3_caption if caption_parser is None else caption_parser
-        title, number = parser(
+        if caption_parser is None:
+            raise DocxSemanticsV3Error("caption target lacks its generated sequence scope")
+        title, number = caption_parser(
             caption,
             target.kind,
             required_bookmark=target.bookmark_name,
@@ -755,8 +769,9 @@ def _recover_captions(
         if id(child) in claimed or any(id(element) in claimed for element in object_elements):
             raise DocxSemanticsV3Error("caption/object participates in multiple pairing claims")
         _prove_caption_object_kind(kind, object_elements)
-        parser = _parse_v3_caption if caption_parser is None else caption_parser
-        title, number = parser(child, kind, required_bookmark=None)
+        if caption_parser is None:
+            raise DocxSemanticsV3Error("caption-pair group lacks its generated sequence scope")
+        title, number = caption_parser(child, kind, required_bookmark=None)
         recovered.append(
             RecoveredCaptionV3(
                 kind=kind,  # type: ignore[arg-type]

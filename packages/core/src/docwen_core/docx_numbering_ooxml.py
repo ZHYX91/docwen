@@ -42,6 +42,7 @@ from docwen_core._docx_numbering_package import (
 from docwen_core._docx_numbering_package import (
     write_heading_numbering_projection as _write_heading_numbering_projection,
 )
+from docwen_core.docx_caption_sequences import caption_sequence_identifier
 from docwen_core.docx_numbering_parts import NumberingPartError, open_numbering_part
 from docwen_core.docx_numbering_structure import validate_numbering_order
 from docwen_core.docx_package_parts import DocxPackageParts
@@ -55,6 +56,8 @@ _FIELD_FORMATS = {
     "roman_upper": "ROMAN",
     "roman_lower": "roman",
 }
+
+_CAPTION_KINDS = {"Figure": "figure", "Table": "table", "Equation": "equation", "Code": "code_block"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,6 +201,7 @@ def materialize_caption_number(
     *,
     authored_content: str,
     heading_style_names: Mapping[str, str],
+    sequence_scope: str,
     bookmark_name: str | None = None,
     bookmark_id: str | None = None,
     preserve_payload: bool = False,
@@ -233,6 +237,7 @@ def materialize_caption_number(
         materialization,
         target.derived_number,
         heading_style_names=heading_style_names,
+        sequence_scope=sequence_scope,
     )
     _clear_paragraph_payload(paragraph._p)
 
@@ -279,6 +284,7 @@ def prove_caption_number(
     *,
     authored_content: str,
     heading_style_names: Mapping[str, str],
+    sequence_scope: str,
     bookmark_name: str | None,
     bookmark_inventory: Any,
     rendered_payload: tuple[Any, ...] | None = None,
@@ -318,6 +324,7 @@ def prove_caption_number(
         materialization,
         target.derived_number,
         heading_style_names=heading_style_names,
+        sequence_scope=sequence_scope,
     )
     cursor = 0
     if cursor >= len(payload):
@@ -412,6 +419,7 @@ def _caption_field_plan(
     derived_number: str,
     *,
     heading_style_names: Mapping[str, str],
+    sequence_scope: str,
 ) -> _CaptionFieldPlan:
     field_switch = _FIELD_FORMATS.get(materialization.number_format)
     if field_switch is None:
@@ -434,7 +442,10 @@ def _caption_field_plan(
     elif materialization.chapter_cached_number is not None or sequence_result != derived_number:
         raise ResolvedNumberingOoxmlError("simple cached field result contradicts derived number")
 
-    counter = materialization.counter
+    kind = _CAPTION_KINDS.get(materialization.counter)
+    if kind is None:
+        raise ResolvedNumberingOoxmlError("caption counter is outside the closed set")
+    counter = caption_sequence_identifier(sequence_scope, kind)
     if materialization.sequence_action == "continue":
         sequence_instruction = f" SEQ {counter} \\* {field_switch} "
     elif materialization.sequence_action == "reset_to_start":

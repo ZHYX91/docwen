@@ -133,7 +133,7 @@ def test_representative_exact_two_materializes_all_physical_semantics_without_le
     assert len([item for item in names if item.startswith("word/media/")]) == 1
     assert all(
         any(token in instruction for instruction in instructions)
-        for token in ("SEQ Figure", "SEQ Table", "SEQ Equation", "SEQ Code")
+        for token in ("SEQ DW_F_", "SEQ DW_T_", "SEQ DW_E_", "SEQ DW_C_")
     )
     assert sum(" REF " in item for item in instructions) == 2
     assert sum(" CITATION " in item for item in instructions) == 1

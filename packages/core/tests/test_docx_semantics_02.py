@@ -88,7 +88,7 @@ def test_atomic_table_caption_preflights_object_and_shorthand_names() -> None:
         )
 
     assert [item.code for item in error.value.diagnostics] == ["semantic.docx.bookmark.name_conflict"]
-    assert "SEQ Table" not in document.element.xml
+    assert "SEQ " not in document.element.xml
     assert encode_target_bookmark("tbl-sales") not in document.element.xml
 
 

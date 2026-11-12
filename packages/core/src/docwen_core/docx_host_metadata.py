@@ -550,6 +550,34 @@ def _control_run_defaults(properties: Any) -> bool:
     return True
 
 
+def owned_sdt_parts(sdt: Any) -> tuple[Any, Any] | None:
+    """Read a closed envelope with Word's validated end-boundary formatting.
+
+    This grants no ownership: callers must still prove the recorded tag and
+    complete content. End properties may contain only closed run defaults;
+    their formatting is never applied to, or read as, the control's content.
+    """
+    if sdt.tag != f"{_WORD}sdt" or sdt.attrib or sdt.text is not None or sdt.tail is not None:
+        return None
+    children = list(sdt)
+    tags = [child.tag for child in children]
+    if tags == [f"{_WORD}sdtPr", f"{_WORD}sdtEndPr", f"{_WORD}sdtContent"]:
+        end_properties = children.pop(1)
+        if (
+            end_properties.attrib
+            or end_properties.text is not None
+            or end_properties.tail is not None
+            or any(part.tag != f"{_WORD}rPr" or not _control_run_defaults(part) for part in end_properties)
+        ):
+            return None
+    elif tags != [f"{_WORD}sdtPr", f"{_WORD}sdtContent"]:
+        return None
+    properties, content = children
+    if any(part.attrib or part.text is not None or part.tail is not None for part in (properties, content)):
+        return None
+    return properties, content
+
+
 def has_owned_tag_properties(properties: Any, tag: str) -> bool:
     """Prove tag/ID identity while tolerating host control formatting defaults."""
     if properties.attrib or properties.text is not None or properties.tail is not None:

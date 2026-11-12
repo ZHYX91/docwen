@@ -413,7 +413,8 @@ must resolve to a style of the correct type.
   custom XML mapping; it receives no bookmark, hyperlink target, caption style, `SEQ`, or `REF` semantics.
 - Generated captions require explicit occurrence ownership, as defined by
   [Markdown compatibility](markdown-compatibility.md#generated-caption-ownership--生成题注的所有权). The
-  `document-paired-caption-map/v1` records the complete generated caption count; each enabled ID-less paired caption
+  `document-paired-caption-map/v2` records the complete generated caption count and request-owned native SEQ scope;
+  each enabled ID-less paired caption
   has a matching `docwen-caption-pair-v1:` SDT. Its fixed direct adjacency, exact resolved style, one closed
   simple-`SEQ` or chapter-`STYLEREF`+separator+`SEQ` materialization, and cached result must also agree. A disabled
   ID-less paired caption retains its independent `document-numbering-occurrence-map/v1` and exact two-block
