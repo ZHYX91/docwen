@@ -11,7 +11,6 @@ import multiprocessing
 import os
 import shutil
 import stat
-import subprocess
 import sys
 import tempfile
 import time
@@ -23,6 +22,7 @@ from typing import Any, BinaryIO, Literal, Protocol
 
 from docwen_core.detection import SUPPORTED_EXTENSION_FORMATS
 from docwen_core.office_macro_security import OfficeMacroPolicyError, ensure_excel_input_has_no_xlm
+from docwen_core.office_process import OfficeProcessResult
 from docwen_core.tempfiles import make_temp_dir
 from docwen_core.windows_process import WindowsProcessIdentity
 
@@ -729,9 +729,9 @@ class _OfficeConversionOwner:
 
         self.output.parent.mkdir(parents=True, exist_ok=True)
         # A task workspace can be cleaned by Runtime after a failed bridge.
-        # Linux process state must outlive that scope if native exit is unproven.
-        process_parent = None if sys.platform == "linux" else self.output.parent
-        self.workspace = Path(make_temp_dir(prefix=_OFFICE_WORKSPACE_PREFIX, dir=process_parent))
+        # Process state on every platform must outlive that scope if native
+        # exit is unproven. Only a confirmed family receipt permits removal.
+        self.workspace = Path(make_temp_dir(prefix=_OFFICE_WORKSPACE_PREFIX))
         self.input_snapshot = self.workspace / f"input{preferred_extension}"
         self.backend_output = self.workspace / f"output{self.output.suffix}"
         _copy_private_office_input(
@@ -751,20 +751,16 @@ class _OfficeConversionOwner:
             dir=self.output.parent,
         )
         self.publication_output = Path(publication_name)
-        if sys.platform == "linux":
-            # The independent process workspace may be on another filesystem.
-            # Copy into this already exclusively created same-volume publication
-            # file, preserving the existing bounded copy/freshness contract.
-            with os.fdopen(descriptor, "wb", buffering=0) as destination_stream:
-                _copy_private_office_input(
-                    backend_output,
-                    self.publication_output,
-                    cancel=self.cancel,
-                    destination_stream=destination_stream,
-                )
-        else:
-            os.close(descriptor)
-            os.replace(backend_output, self.publication_output)
+        # The independent process workspace may be on another filesystem.
+        # Copy into this already exclusively created same-volume publication
+        # file, preserving the existing bounded copy/freshness contract.
+        with os.fdopen(descriptor, "wb", buffering=0) as destination_stream:
+            _copy_private_office_input(
+                backend_output,
+                self.publication_output,
+                cancel=self.cancel,
+                destination_stream=destination_stream,
+            )
         return self.publication_output
 
     def cleanup_workspace(self) -> tuple[bool, str]:
@@ -849,59 +845,13 @@ def _run_libreoffice_process(
     *,
     cancel: object | None = None,
     timeout_s: float = LIBREOFFICE_CONVERSION_TIMEOUT_S,
-) -> bool | _OfficeCleanupFailure:
-    if sys.platform != "linux":
-        return _run_libreoffice_process_legacy(cmd, cancel=cancel, timeout_s=timeout_s)
+) -> OfficeProcessResult:
     from docwen_core.office_process import OfficeProcessCleanupUnconfirmed, run_owned_office
 
     try:
-        result = run_owned_office(cmd, is_cancelled=lambda: _is_cancel_requested(cancel), timeout_s=timeout_s)
+        return run_owned_office(cmd, is_cancelled=lambda: _is_cancel_requested(cancel), timeout_s=timeout_s)
     except OfficeProcessCleanupUnconfirmed as error:
-        return _OfficeCleanupFailure(str(error))
-    if not result.cleanup_confirmed:
-        return _OfficeCleanupFailure(result.reason)
-    return result.succeeded
-
-
-def _run_libreoffice_process_legacy(
-    cmd: list[str],
-    *,
-    cancel: object | None = None,
-    timeout_s: float = LIBREOFFICE_CONVERSION_TIMEOUT_S,
-) -> bool:
-    proc: subprocess.Popen[str] | None = None
-    try:
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        deadline = time.monotonic() + max(timeout_s, 0.0)
-        while True:
-            return_code = proc.poll()
-            if return_code is not None:
-                break
-            if _is_cancel_requested(cancel):
-                proc.terminate()
-                try:
-                    proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    proc.wait(timeout=5)
-                return False
-            if time.monotonic() >= deadline:
-                proc.kill()
-                proc.wait(timeout=5)
-                return False
-            time.sleep(0.2)
-        proc.communicate()
-    except OSError:
-        if proc is not None:
-            with contextlib.suppress(Exception):
-                proc.kill()
-        return False
-    return proc.returncode == 0
+        return OfficeProcessResult(False, False, str(error))
 
 
 def _try_libreoffice_conversion(
@@ -959,13 +909,13 @@ def _try_libreoffice_conversion(
             cancel=cancel,
             timeout_s=timeout_s,
         )
-        if isinstance(process_result, _OfficeCleanupFailure):
+        if not process_result.cleanup_confirmed:
             cleanup_failure = _OfficeCleanupFailure(
-                f"{process_result.message}. Retained Office profile: {profile_dir}; "
+                f"{process_result.reason}. Retained Office profile: {profile_dir}; "
                 f"input: {input_path}; private output: {conversion_dir}."
             )
             return cleanup_failure
-        process_succeeded = process_result
+        process_succeeded = process_result.succeeded
         output_extension = convert_to.partition(":")[0].strip().lstrip(".")
         generated = conversion_dir / f"{Path(input_path).stem}.{output_extension}"
         if process_succeeded and output_extension and generated.is_file() and not _is_cancel_requested(cancel):
@@ -1228,10 +1178,9 @@ def convert_with_backend_priority(
     """Convert through one private, content-named snapshot and publish atomically.
 
     The external backend never receives ``input_path`` itself, including when
-    its suffix already agrees with ``source_format``. Linux input snapshots and
+    its suffix already agrees with ``source_format``. All input snapshots and
     backend output live in an independent process-owned temporary workspace;
-    other platforms retain their adjacent workspace. Final publication is
-    always staged beside the requested output, after process and workspace
+    final publication is staged beside the requested output, after process and workspace
     cleanup have been confirmed.
     """
 

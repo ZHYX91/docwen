@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from docwen_core.office_process import OfficeProcessResult
+
 from ._office_bridge_support import (
     Path,
     _write_formula_writer_container,
@@ -71,7 +73,7 @@ def test_libreoffice_conversion_seeds_owned_formula_font_profile(
     _write_formula_writer_container(input_path, document_format="docx")
     observed_profiles: list[Path] = []
 
-    def fake_run(args: list[str], **_kwargs: object) -> bool:
+    def fake_run(args: list[str], **_kwargs: object) -> OfficeProcessResult:
         profile_uri = args[1].partition("=")[2]
         parsed_profile_path = urllib_parse.unquote(urllib_parse.urlparse(profile_uri).path)
         if os.name == "nt":
@@ -87,7 +89,7 @@ def test_libreoffice_conversion_seeds_owned_formula_font_profile(
         observed_profiles.append(profile_path)
         output_dir = Path(args[args.index("--outdir") + 1])
         (output_dir / f"{Path(args[-1]).stem}.pdf").write_bytes(b"%PDF-1.4")
-        return True
+        return OfficeProcessResult(True, True)
 
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
     monkeypatch.setattr(office_bridge, "_run_libreoffice_process", fake_run)
@@ -114,18 +116,10 @@ def test_libreoffice_conversion_fails_closed_when_owned_profile_cannot_cleanup(
     input_path.write_bytes(b"docx")
     cleanup_calls: list[Path] = []
 
-    class _FakeProcess:
-        returncode = 0
-
-        def __init__(self, args: list[str], **_kwargs: object) -> None:
-            output_dir = Path(args[args.index("--outdir") + 1])
-            (output_dir / f"{Path(args[-1]).stem}.pdf").write_bytes(b"pdf")
-
-        def poll(self) -> int:
-            return self.returncode
-
-        def communicate(self) -> tuple[str, str]:
-            return "", ""
+    def converted(args: list[str], **_kwargs: object) -> OfficeProcessResult:
+        output_dir = Path(args[args.index("--outdir") + 1])
+        (output_dir / f"{Path(args[-1]).stem}.pdf").write_bytes(b"pdf")
+        return OfficeProcessResult(True, True)
 
     def failed_cleanup(path: Path, **_kwargs: object) -> bool:
         cleanup_calls.append(path)
@@ -133,10 +127,7 @@ def test_libreoffice_conversion_fails_closed_when_owned_profile_cannot_cleanup(
         return False
 
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
-    monkeypatch.setattr(office_bridge.subprocess, "Popen", _FakeProcess)
-    # This direct-child test double owns the unchanged Windows/macOS runner.
-    # Linux family ownership is exercised by native launcher/child fixtures.
-    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", office_bridge._run_libreoffice_process_legacy)
+    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", converted)
     monkeypatch.setattr(
         office_bridge,
         "_remove_libreoffice_profile",
@@ -169,33 +160,21 @@ def test_libreoffice_conversion_uses_extension_before_filter_name(
     commands: list[list[str]] = []
     profile_paths: list[Path] = []
 
-    class _FakeProcess:
-        returncode = 0
-
-        def __init__(self, args: list[str], **kwargs: object) -> None:
-            commands.append(args)
-            self.args = args
-            profile_uri = args[1].partition("=")[2]
-            parsed_profile_path = urllib_parse.unquote(urllib_parse.urlparse(profile_uri).path)
-            if os.name == "nt":
-                parsed_profile_path = parsed_profile_path.lstrip("/")
-            profile_path = Path(parsed_profile_path)
-            assert profile_path.is_dir()
-            profile_paths.append(profile_path)
-
-        def poll(self) -> int:
-            return self.returncode
-
-        def communicate(self) -> tuple[str, str]:
-            output_dir = Path(self.args[self.args.index("--outdir") + 1])
-            (output_dir / f"{Path(self.args[-1]).stem}.pdf").write_bytes(b"%PDF-1.4")
-            return "", ""
+    def converted(args: list[str], **_kwargs: object) -> OfficeProcessResult:
+        commands.append(args)
+        profile_uri = args[1].partition("=")[2]
+        parsed_profile_path = urllib_parse.unquote(urllib_parse.urlparse(profile_uri).path)
+        if os.name == "nt":
+            parsed_profile_path = parsed_profile_path.lstrip("/")
+        profile_path = Path(parsed_profile_path)
+        assert profile_path.is_dir()
+        profile_paths.append(profile_path)
+        output_dir = Path(args[args.index("--outdir") + 1])
+        (output_dir / f"{Path(args[-1]).stem}.pdf").write_bytes(b"%PDF-1.4")
+        return OfficeProcessResult(True, True)
 
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
-    monkeypatch.setattr(office_bridge.subprocess, "Popen", _FakeProcess)
-    # This direct-child test double owns the unchanged Windows/macOS runner.
-    # Linux family ownership is exercised by native launcher/child fixtures.
-    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", office_bridge._run_libreoffice_process_legacy)
+    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", converted)
 
     result = office_bridge._try_libreoffice_conversion(
         str(input_path),

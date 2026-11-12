@@ -227,11 +227,13 @@ Compact amount fields and positioned cells share one complete token grammar: opt
 原生文本 PDF 金额保留有符号 Decimal 精度，按明确合计行／列角色分配，不按大小或正单价补猜。完整唯一的角色标签文本不被较弱位置证据静默覆盖；无法证明买卖方区域时保持未赋值并提示。各页独立解释，后页冲突保留首个已归属值并指出两页身份。OFD 结构字段和位置回退保留符号；此合同不代表 OCR 引擎精度或原生票据查看器验收。
 
 
-## Linux Office lifecycle / Linux Office 生命周期
+## Office process lifecycle / Office 进程生命周期
 
-Linux Office bridging owns the native launcher and descendants through a local spawned supervisor. Normal completion, cancellation and timeout must confirm child exit/reap before cleaning process state. An unconfirmed result retains independent profile/input/output state and fails without publishing. The finite native fixture exercises these source contracts; it does not establish real LibreOffice or other-platform behavior. The public default Office timeout remains 90 seconds.
+LibreOffice bridging uses a joined, local supervisor on every supported platform. Linux retains its subreaper/pidfd ownership and kernel exit/reap proof. Windows creates the launcher suspended, assigns it to a non-breakaway Job before resuming it, and requires zero active Job processes plus launcher-handle exit. macOS anchors a private session and a controlled Office process group, keeps the launcher unreaped to pin the group identity, and checks that no group member remains active before reaping the launcher. An observed escaped identity or failed process query cannot grant cleanup permission. Darwin does not provide Linux-style orphan adoption: arbitrary descendants that daemonize and escape before observation are outside this group contract and require separate native-launcher acceptance.
 
-Linux Office 桥接通过局部监督进程拥有 native launcher 及其后代；正常完成、取消与超时均先确认退出和回收，再清理进程状态。未确认时保留独立 profile／输入／输出现场并失败，不发布产物。有界 native 夹具验证这些源码合同，不代表真实 LibreOffice 或其它平台已验。公开默认 Office 超时仍为 90 秒。
+正常完成、取消、超时和强制终止都使用同一有界退出确认链。父 launcher 退出或发出 kill 不代表进程族已经停止。未确认时三平台均保留独立于任务 staging 的 profile／输入／输出，返回 `OFFICE_PROCESS_CLEANUP_UNCONFIRMED`，不继续尝试其它后端、不发布产物。确认后才清理进程现场，并通过有界复制和同卷原子替换发布。未被使用的 LibreOffice 标准输出直接丢弃，不使用可被子进程持有的 PIPE 或无界 `communicate()`。公开默认 Office 超时仍为 90 秒；退出确认另有固定、有界的宽限期。
+
+受控 Python/native 夹具、Windows API 替身和 Darwin 查询替身验证源码合同；它们不是真实 LibreOffice、Windows/macOS 原生包或 Word/WPS 的验收证据。macOS 的实际 LibreOffice launcher 是否保持受控进程组，及三平台实际转换、取消、超时后的进程／文件句柄状态仍需宿主验收。COM 的独立实例身份规则保持原有设计，复用新的跨平台私有快照位置。
 
 ### Settings presentation boundary
 

@@ -1,7 +1,9 @@
-"""Linux-only ownership of one external Office process family.
+"""Supervise one external Office process family with a joined exit receipt.
 
-The spawned owner is a local subreaper. It never changes the application's
-process-wide child ownership and never treats a launcher's exit as quiescence.
+Linux uses a local subreaper; Windows uses a suspended launch inside a Job;
+macOS owns a controlled group in an independent session. No platform treats a
+launcher's exit alone as family quiescence or changes the application's child
+ownership. Platform workers share the same bounded parent/owner protocol.
 """
 
 from __future__ import annotations
@@ -44,7 +46,7 @@ class OfficeProcessResult:
 
 
 class OfficeProcessCleanupUnconfirmed(RuntimeError):
-    """An interrupted wait could not prove that owned processes were reaped."""
+    """An interrupted wait could not prove the owned process family's exit."""
 
 
 class _ConfirmedInterruption(BaseException):
@@ -54,7 +56,7 @@ class _ConfirmedInterruption(BaseException):
 
 @dataclass(frozen=True, slots=True)
 class OwnedProcessLaunch:
-    """Optional launch I/O for another consumer of the same Linux owner."""
+    """Optional file-backed diagnostics and finite launch input for an owner."""
 
     cwd: str | None = None
     environment: tuple[tuple[str, str], ...] | None = None
@@ -367,7 +369,12 @@ def _start_owner(cmd: list[str], timeout_s: float, launch: OwnedProcessLaunch | 
     context = multiprocessing.get_context("spawn")
     parent_connection, child_connection = context.Pipe(duplex=False)
     stop = context.Event()
-    owner = context.Process(target=_owner_worker, args=(child_connection, stop, cmd, timeout_s, launch), daemon=True)
+    worker = _owner_worker
+    if sys.platform != "linux":
+        from docwen_core.office_native_process import native_owner_worker
+
+        worker = native_owner_worker
+    owner = context.Process(target=worker, args=(child_connection, stop, cmd, timeout_s, launch), daemon=True)
     try:
         owner.start()
     except BaseException:
@@ -480,7 +487,7 @@ def _run_owned_office(
         outcome = OfficeProcessResult(
             False,
             False,
-            "Office owner did not exit normally with a complete matching reap receipt",
+            "Office owner did not exit normally with a complete matching process-family exit receipt",
             owner_pid,
             owner_exit_code=owner_exit_code,
         )
