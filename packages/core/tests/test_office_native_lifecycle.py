@@ -151,7 +151,12 @@ def test_native_owner_uses_file_streams_and_reports_before_supervisor_join(monke
         assert isinstance(stdin, int) and isinstance(stdout, int)
         streams.extend((stdin, stdout))
         assert os.read(stdin, 1) == b""
-        assert os.write(stdout, b"x" * (4 * 1024 * 1024)) == 4 * 1024 * 1024
+        pending = memoryview(b"x" * (4 * 1024 * 1024))
+        # Windows NUL can accept only part of one low-level write.
+        while pending:
+            written = os.write(stdout, pending)
+            assert 0 < written <= len(pending)
+            pending = pending[written:]
 
     family.start.side_effect = start
     family.exited.return_value = True
