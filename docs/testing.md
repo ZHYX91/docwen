@@ -569,6 +569,16 @@ Discovery-layer controls distinguish readable task files, missing interfaces, va
 
 发现层对照区分可读任务文件、接口缺失、次线程退出、命名空间身份冲突及有限的条目／时间／文本预算。原生对照可由测试提供 `children` 文件，并填入 C 孩子独立记录的 procfs PID，或故意省略接口以执行真实 status／PPid 扫描。这些测试文件证明发现解析和后续真实内核归属，不宣称宿主实际提供可用的内核 `children` 文件。
 
+### Windows/macOS Office ownership and bounded output
+
+`test_office_native_lifecycle.py` starts only short-TTL test-owned Python families. Its launcher exits before a child that retains the standard streams; normal completion, multi-megabyte stdout/stderr, cancellation and timeout must all reach a joined process-family receipt. This test uses the current host's production backend: Linux subreaper, Windows Job or macOS controlled group. It does not start an installed Office application. Retention tests inject only the missing process receipt, then execute real `WorkspaceManager.cleanup` and check that the independent profile, private input and partial output survive while no replacement artifact is published.
+
+On Linux, a separate real-process probe exercises the macOS group owner and native closeout loop with only the Darwin inventory replaced by procfs. It preserves an unreaped launcher as the group-ID anchor and independently observes a live heartbeat during an injected KILL refusal. Its helper waits only for the fixture's original finite TTL and reaps test-owned orphans after recording the production result. That rescue cannot convert an unconfirmed production outcome into success. These checks establish the group algorithm on a controlled POSIX family; they do not establish Darwin ABI behavior or arbitrary daemon-escape containment.
+
+`test_windows_job_process.py` checks the order suspended-create → Job assignment → resume, the explicit inherited-handle list, active-child accounting after parent exit, failed assignment without business execution, and the fact that a termination request is not an exit receipt. `test_macos_process.py` checks the public `proc_bsdinfo` layout, missing/denied/truncated inventory results, observed group escape, retained wait-child identity and no group signals after releasing that identity. Both modules use platform API substitutes and are source tests, not Windows/macOS native acceptance. `test_office_native_process.py` checks a fixed closeout deadline, sticky ownership failures and cancellation before launch. The lifecycle module also checks file-backed standard streams and owner-resource close failures. Existing Linux ownership and Mermaid tests cover the shared parent-supervisor regression boundary.
+
+Native acceptance remains required for installed LibreOffice on Windows and macOS, including the actual launcher's group/Job behavior, normal conversion, cancellation, timeout, large diagnostics and process/file-handle exit before cleanup. macOS has no Linux subreaper or supported kqueue descendant tracking; observed escapes fail closed, while descendants that escape before observation are not covered by the controlled-group contract. No source test result substitutes for that host evidence.
+
 
 `test_spreadsheet_literal_final_docx.py` saves and reopens native XLSX inputs, then publishes Markdown and DOCX
 through Runtime/finalizer and Artifact Bundle. An independent Markdown-to-HTML consumer and direct OOXML cell

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
+from docwen_core.office_process import OfficeProcessResult
 
 from ._office_bridge_support import (
     Path,
@@ -310,7 +310,7 @@ def test_libreoffice_wrong_suffix_uses_canonical_private_name_and_publishes(
     observed_input: list[Path] = []
     observed_output_dirs: list[Path] = []
 
-    def fake_run(args: list[str], **_kwargs: object) -> bool:
+    def fake_run(args: list[str], **_kwargs: object) -> OfficeProcessResult:
         private_input = Path(args[-1])
         output_dir = Path(args[args.index("--outdir") + 1])
         observed_input.append(private_input)
@@ -318,7 +318,7 @@ def test_libreoffice_wrong_suffix_uses_canonical_private_name_and_publishes(
         assert private_input.suffix == ".xlsx"
         assert private_input != source.resolve()
         (output_dir / f"{private_input.stem}.pdf").write_bytes(b"converted pdf")
-        return True
+        return OfficeProcessResult(True, True)
 
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
     monkeypatch.setattr(office_bridge, "_run_libreoffice_process", fake_run)
@@ -353,13 +353,13 @@ def test_libreoffice_failure_removes_private_partial_without_deleting_existing_o
     output.write_bytes(b"existing output")
     observed_output_dirs: list[Path] = []
 
-    def fake_run(args: list[str], **_kwargs: object) -> bool:
+    def fake_run(args: list[str], **_kwargs: object) -> OfficeProcessResult:
         private_input = Path(args[-1])
         output_dir = Path(args[args.index("--outdir") + 1])
         observed_output_dirs.append(output_dir)
         assert private_input.suffix == ".xlsx"
         (output_dir / f"{private_input.stem}.pdf").write_bytes(b"partial pdf")
-        return False
+        return OfficeProcessResult(False, True)
 
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
     monkeypatch.setattr(office_bridge, "_run_libreoffice_process", fake_run)
@@ -394,34 +394,15 @@ def test_libreoffice_timeout_removes_partial_without_deleting_existing_output(
     output_path.write_bytes(b"existing output")
     output_dirs: list[Path] = []
 
-    class _FakeProcess:
-        returncode: int | None = None
+    def timed_out(args: list[str], **kwargs: object) -> OfficeProcessResult:
+        assert kwargs["timeout_s"] == 1.0
+        output_dir = Path(args[args.index("--outdir") + 1])
+        output_dirs.append(output_dir)
+        (output_dir / f"{Path(args[-1]).stem}.pdf").write_bytes(b"partial")
+        return OfficeProcessResult(False, True, "Office conversion timed out")
 
-        def __init__(self, args: list[str], **_kwargs: object) -> None:
-            output_dir = Path(args[args.index("--outdir") + 1])
-            output_dirs.append(output_dir)
-            (output_dir / f"{Path(args[-1]).stem}.pdf").write_bytes(b"partial")
-
-        def poll(self) -> int | None:
-            return self.returncode
-
-        def kill(self) -> None:
-            self.returncode = -9
-
-        def wait(self, timeout: float | None = None) -> int:
-            del timeout
-            return int(self.returncode or 0)
-
-        def communicate(self) -> tuple[str, str]:
-            return "", ""
-
-    monotonic_values = iter([0.0, 2.0])
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
-    monkeypatch.setattr(office_bridge.subprocess, "Popen", _FakeProcess)
-    # This direct-child test double owns the unchanged Windows/macOS runner.
-    # Linux family ownership is exercised by native launcher/child fixtures.
-    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", office_bridge._run_libreoffice_process_legacy)
-    monkeypatch.setattr(office_bridge.time, "monotonic", lambda: next(monotonic_values, 2.0))
+    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", timed_out)
 
     result = office_bridge._try_libreoffice_conversion(
         str(input_path),
@@ -436,60 +417,33 @@ def test_libreoffice_timeout_removes_partial_without_deleting_existing_output(
     assert not list(tmp_path.glob(f"{office_bridge._LIBREOFFICE_RESULT_PREFIX}*"))
 
 
-def test_libreoffice_conversion_terminates_process_when_cancelled(
+def test_libreoffice_conversion_discards_output_after_confirmed_cancellation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """LibreOffice subprocesses should not wait for the hard timeout after cancellation."""
+    """Process lifetime is proven by the owner; this layer owns its file outcome."""
     from docwen_core import office_bridge
 
     input_path = tmp_path / "input.docx"
     output_path = tmp_path / "output.pdf"
     input_path.write_bytes(b"docx")
 
-    class _CancellationView:
+    class CancellationView:
         is_cancelled = False
 
-    cancel = _CancellationView()
+    cancel = CancellationView()
+    output_dirs: list[Path] = []
 
-    class _FakeProcess:
-        instances: ClassVar[list[_FakeProcess]] = []
-
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            self.returncode: int | None = None
-            self.terminated = False
-            self.killed = False
-            _FakeProcess.instances.append(self)
-
-        def poll(self) -> int | None:
-            return self.returncode
-
-        def terminate(self) -> None:
-            self.terminated = True
-            self.returncode = -15
-
-        def kill(self) -> None:
-            self.killed = True
-            self.returncode = -9
-
-        def wait(self, timeout: float | None = None) -> int:
-            if self.returncode is None:
-                self.returncode = 0
-            return self.returncode
-
-        def communicate(self) -> tuple[str, str]:
-            return "", ""
-
-    def fake_sleep(_seconds: float) -> None:
+    def cancelled(args: list[str], **kwargs: object) -> OfficeProcessResult:
+        assert kwargs["cancel"] is cancel
+        output_dir = Path(args[args.index("--outdir") + 1])
+        output_dirs.append(output_dir)
+        (output_dir / "input.pdf").write_bytes(b"partial")
         cancel.is_cancelled = True
+        return OfficeProcessResult(False, True, "Office conversion cancelled")
 
     monkeypatch.setattr(office_bridge, "find_soffice_path", lambda: "soffice")
-    monkeypatch.setattr(office_bridge.subprocess, "Popen", _FakeProcess)
-    # This direct-child test double owns the unchanged Windows/macOS runner.
-    # Linux family ownership is exercised by native launcher/child fixtures.
-    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", office_bridge._run_libreoffice_process_legacy)
-    monkeypatch.setattr(office_bridge.time, "sleep", fake_sleep)
-
+    monkeypatch.setattr(office_bridge, "_run_libreoffice_process", cancelled)
     result = office_bridge._try_libreoffice_conversion(
         str(input_path),
         str(output_path),
@@ -498,9 +452,7 @@ def test_libreoffice_conversion_terminates_process_when_cancelled(
     )
 
     assert result is None
-    assert len(_FakeProcess.instances) == 1
-    assert _FakeProcess.instances[0].terminated is True
-    assert _FakeProcess.instances[0].killed is False
+    assert output_dirs and not output_dirs[0].exists()
     assert not output_path.exists()
 
 
