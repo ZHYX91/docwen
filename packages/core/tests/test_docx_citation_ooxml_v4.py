@@ -12,11 +12,12 @@ import lxml.etree as etree
 import pytest
 from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml import OxmlElement
+from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import qn
 
 from docwen_core._docx_semantics_v3_model import CaptionStyleBindingV3, CaptionStyleKeyV3
 from docwen_core._docx_semantics_v3_package import read_owned_map_parts
+from docwen_core.docx_bookmarks import build_docx_bookmark_inventory
 from docwen_core.docx_citation_ooxml import (
     CITATION_ITEM_MAP_NAMESPACE,
     CITATION_OCCURRENCE_MAP_NAMESPACE,
@@ -27,12 +28,14 @@ from docwen_core.docx_citation_ooxml import (
     citation_instruction,
     citation_item_map_xml,
     citation_occurrence_map_xml,
+    citation_occurrence_sdt,
     derive_citation_item,
     derive_citation_item_reference,
     derive_citation_occurrence,
     parse_citation_item_map,
     parse_citation_occurrence_map,
     preflight_citation_document,
+    prove_citation_occurrence_sdt,
     read_proven_resolved_citations,
     validate_citation_authorities,
     validate_citation_item_map,
@@ -124,6 +127,96 @@ def _projection():
     projection = build_resolved_citation_projection(_sha(source), _citations(source))
     assert projection is not None
     return source, projection
+
+
+def _citation_control() -> tuple[Any, Any, Any, Any]:
+    _source, projection = _projection()
+    identity = projection.occurrence_map.occurrences[0]
+    document = Document()
+    paragraph = document.add_paragraph()
+    sdt = citation_occurrence_sdt(identity, bookmark_id="1")
+    paragraph._p.append(sdt)
+    content = sdt.find(qn("w:sdtContent"))
+    assert content is not None
+    cache = next(run for run in content.findall(qn("w:r")) if run.find(qn("w:t")) is not None)
+    return document, sdt, identity, cache
+
+
+def _visual_properties(content: str = '<w:b/><w:color w:val="224466"/><w:vanish w:val="0"/>') -> Any:
+    return parse_xml(f'<w:rPr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">{content}</w:rPr>')
+
+
+def test_citation_visible_cache_accepts_closed_visual_properties_without_changing_identity() -> None:
+    document, sdt, identity, cache = _citation_control()
+    cache.insert(0, _visual_properties())
+    original = etree.tostring(sdt)
+
+    prove_citation_occurrence_sdt(sdt, identity, bookmark_inventory=build_docx_bookmark_inventory(document))
+
+    assert cache.findtext(qn("w:t")) == identity.cached_result
+    tag = sdt.find(f"{qn('w:sdtPr')}/{qn('w:tag')}")
+    assert tag is not None and tag.get(qn("w:val")) == identity.tag
+    assert etree.tostring(sdt) == original
+
+
+@pytest.mark.parametrize(
+    "properties",
+    [
+        "<w:vanish/>",
+        "<w:webHidden/>",
+        "<w:specVanish/>",
+        "<w:unknown/>",
+        '<w:b w:unknown="true"/>',
+        "<w:rPrChange/>",
+        "<w:t>injected</w:t>",
+    ],
+)
+def test_citation_cache_formatting_cannot_hide_or_add_semantic_content(properties: str) -> None:
+    document, sdt, identity, cache = _citation_control()
+    cache.insert(0, _visual_properties(properties))
+
+    with pytest.raises(ResolvedCitationOoxmlError, match=r"cached.*(?:canonical|exact)"):
+        prove_citation_occurrence_sdt(sdt, identity, bookmark_inventory=build_docx_bookmark_inventory(document))
+
+
+@pytest.mark.parametrize("payload", ["w:fldChar", "w:instrText"])
+def test_citation_marker_and_instruction_do_not_accept_visual_properties(payload: str) -> None:
+    document, sdt, identity, _cache = _citation_control()
+    node = sdt.find(f".//{qn(payload)}")
+    assert node is not None
+    run = node.getparent()
+    assert run is not None
+    run.insert(0, _visual_properties())
+
+    with pytest.raises(ResolvedCitationOoxmlError, match=r"canonical|exact"):
+        prove_citation_occurrence_sdt(sdt, identity, bookmark_inventory=build_docx_bookmark_inventory(document))
+
+
+@pytest.mark.parametrize("damage", ["cache", "spacing", "instruction", "tag", "bookmark"])
+def test_formatted_citation_cache_keeps_exact_text_and_physical_authority(damage: str) -> None:
+    document, sdt, identity, cache = _citation_control()
+    cache.insert(0, _visual_properties())
+    text = cache.find(qn("w:t"))
+    assert text is not None
+    if damage == "cache":
+        text.text = "Tampered cache"
+    elif damage == "spacing":
+        text.set(qn("xml:space"), "preserve")
+    elif damage == "instruction":
+        instruction = sdt.find(f".//{qn('w:instrText')}")
+        assert instruction is not None
+        instruction.text = " CITATION foreign "
+    elif damage == "tag":
+        tag = sdt.find(f"{qn('w:sdtPr')}/{qn('w:tag')}")
+        assert tag is not None
+        tag.set(qn("w:val"), "foreign")
+    else:
+        bookmark = sdt.find(f".//{qn('w:bookmarkStart')}")
+        assert bookmark is not None
+        bookmark.set(qn("w:name"), "foreign")
+
+    with pytest.raises(ResolvedCitationOoxmlError):
+        prove_citation_occurrence_sdt(sdt, identity, bookmark_inventory=build_docx_bookmark_inventory(document))
 
 
 def test_exact_item_and_occurrence_preimages_keep_provider_identity() -> None:

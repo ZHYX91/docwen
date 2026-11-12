@@ -8,6 +8,7 @@ from zipfile import ZipFile
 
 from docwen_core._docx_caption_carrier import captionable_logical_elements
 from docwen_core._docx_numbering_package import _elements_equal
+from docwen_core._docx_reference_fields import parse_reference_instruction
 from docwen_core._docx_resolved_source_carriers import (
     prove_resolved_anchor_topology_v4,
     prove_resolved_block_hierarchy_v4,
@@ -779,16 +780,15 @@ class ResolvedNumberingProofMixin:
         prove_exact_field_run(children[2], qn("w:fldChar"), field_type="separate")
         prove_exact_field_run(children[3], qn("w:t"))
         prove_exact_field_run(children[4], qn("w:fldChar"), field_type="end")
-        instruction = (
-            f" REF {record.resolved_bookmark_name} \\n \\h "
-            if target.kind == "heading"
-            else f" REF {record.resolved_bookmark_name} \\h "
-        )
-        if (children[1][0].text or "") != instruction or (children[3][0].text or "") != record.cached_number:
+        if (
+            parse_reference_instruction(children[1].findtext(qn("w:instrText")) or "")
+            != (record.resolved_bookmark_name, target.kind == "heading")
+            or children[3].findtext(qn("w:t")) != record.cached_number
+        ):
             raise ResolvedNumberingDocxError("reference instruction or cached number differs from authority")
         if reference.alias is not None:
             prove_alias_run(children[5])
-            if (children[5][0].text or "") != f" {reference.alias}":
+            if children[5].findtext(qn("w:t")) != f" {reference.alias}":
                 raise ResolvedNumberingDocxError("reference Alias differs from authored authority")
 
     def _prove_heading_bookmark(self, paragraph: Any, bookmark_name: str, bookmark_inventory: Any) -> None:

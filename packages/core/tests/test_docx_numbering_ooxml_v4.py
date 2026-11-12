@@ -456,7 +456,7 @@ def test_reference_uses_ref_cache_and_keeps_alias_outside_field() -> None:
         alias="当前标题",
     )
 
-    assert _instructions(sdt) == [r" REF DW_T_0123456789abcdef0123456789abcdef012 \n \h "]
+    assert _instructions(sdt) == [r" REF DW_T_0123456789abcdef0123456789abcdef012 \n \h \* MERGEFORMAT "]
     assert [item.text for item in sdt.iter(qn("w:t"))] == ["3.2", " 当前标题"]
     content = sdt.find(qn("w:sdtContent"))
     assert content is not None

@@ -1,4 +1,4 @@
-"""Non-semantic metadata added by Office while saving existing content controls."""
+"""Closed visual run properties and non-semantic Office control metadata."""
 
 from __future__ import annotations
 
@@ -605,11 +605,18 @@ def has_owned_tag_properties(properties: Any, tag: str) -> bool:
     return True
 
 
-def field_run_payload(run: Any) -> list[Any] | None:
-    """Exclude valid revision IDs and the proofing hint Word adds to field caches."""
+def field_run_payload(run: Any, *, allow_text_formatting: bool = False) -> list[Any] | None:
+    """Validate host IDs and the explicitly allowed formatting of one run.
+
+    Visual properties are accepted only for an opted-in, single text payload.
+    Field instructions and markers retain their narrower proofing-hint shape;
+    callers still prove the payload's exact value and semantic identity.
+    """
     allowed = {f"{_WORD}rsidR", f"{_WORD}rsidRPr", f"{_WORD}rsidDel"}
-    if not set(run.attrib).issubset(allowed) or any(
-        re.fullmatch(r"[0-9A-Fa-f]{8}", value) is None for value in run.attrib.values()
+    if (
+        run.tag != f"{_WORD}r"
+        or not set(run.attrib).issubset(allowed)
+        or any(re.fullmatch(r"[0-9A-Fa-f]{8}", value) is None for value in run.attrib.values())
     ):
         return None
     if run.xpath("text()") or run.tail is not None:
@@ -617,16 +624,26 @@ def field_run_payload(run: Any) -> list[Any] | None:
     children = list(run)
     if children and children[0].tag == f"{_WORD}rPr":
         properties = children.pop(0)
-        if properties.attrib or properties.text is not None or properties.tail is not None or len(properties) > 1:
-            return None
-        for item in properties:
-            if (
-                item.tag != f"{_WORD}noProof"
-                or not set(item.attrib).issubset({f"{_WORD}val"})
-                or item.get(f"{_WORD}val", "true") not in _ON_OFF
-                or item.text is not None
-                or item.tail is not None
-                or len(item)
+        if allow_text_formatting and len(children) == 1 and children[0].tag == f"{_WORD}t":
+            if not _control_run_defaults(properties) or any(
+                item.tag in {f"{_WORD}vanish", f"{_WORD}webHidden", f"{_WORD}specVanish", f"{_WORD}oMath"}
+                and item.get(f"{_WORD}val", "true").strip() in {"true", "1", "on"}
+                for item in properties
             ):
+                # Visible reference text cannot become hidden or mathematical
+                # content. Control defaults retain their separate metadata rules.
                 return None
+        else:
+            if properties.attrib or properties.text is not None or properties.tail is not None or len(properties) > 1:
+                return None
+            for item in properties:
+                if (
+                    item.tag != f"{_WORD}noProof"
+                    or not set(item.attrib).issubset({f"{_WORD}val"})
+                    or item.get(f"{_WORD}val", "true") not in _ON_OFF
+                    or item.text is not None
+                    or item.tail is not None
+                    or len(item)
+                ):
+                    return None
     return children

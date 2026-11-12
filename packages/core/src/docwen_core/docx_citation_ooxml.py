@@ -42,7 +42,7 @@ from docwen_core.docx_bookmarks import (
     build_docx_bookmark_inventory,
     prove_bookmark_name,
 )
-from docwen_core.docx_host_metadata import has_owned_tag_properties, owned_sdt_parts
+from docwen_core.docx_host_metadata import field_run_payload, has_owned_tag_properties, owned_sdt_parts
 from docwen_core.models.resolved_numbering import ResolvedCitation, ResolvedCitationItem
 
 _XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
@@ -348,11 +348,11 @@ def _prove_instruction_run(run: Any, expected: str) -> None:
 def _prove_cached_run(run: Any, expected: str) -> None:
     from docx.oxml.ns import qn
 
-    children = list(run)
+    children = field_run_payload(run, allow_text_formatting=True)
     preserve = expected[:1].isspace() or expected[-1:].isspace()
     expected_attributes = (_XML_SPACE,) if preserve else ()
     if (
-        run.attrib
+        children is None
         or len(children) != 1
         or children[0].tag != qn("w:t")
         or tuple(children[0].attrib) != expected_attributes

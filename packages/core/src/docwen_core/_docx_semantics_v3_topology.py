@@ -350,7 +350,7 @@ def prove_exact_field_run(
 ) -> None:
     from docx.oxml.ns import qn
 
-    children = field_run_payload(run)
+    children = field_run_payload(run, allow_text_formatting=payload_tag == qn("w:t"))
     if children is None:
         raise DocxSemanticsV3Error("reference-occurrence REF run is not canonical")
     if len(children) != 1 or children[0].tag != payload_tag or len(children[0]) != 0:
@@ -381,8 +381,8 @@ def prove_exact_field_run(
 def prove_alias_run(run: Any) -> None:
     from docx.oxml.ns import qn
 
-    children = list(run)
-    if run.attrib or run.xpath("text()") or run.tail is not None:
+    children = field_run_payload(run, allow_text_formatting=True)
+    if children is None:
         raise DocxSemanticsV3Error("reference-occurrence Alias run is not canonical")
     if len(children) != 1 or children[0].tag != qn("w:t") or len(children[0]) != 0:
         raise DocxSemanticsV3Error("reference-occurrence Alias run payload is not canonical")
@@ -409,12 +409,11 @@ def prove_soft_reference_envelope(sdt: Any, tag: str, expected_visible: str) -> 
         or content.tail is not None
         or len(runs) != 1
         or runs[0].tag != qn("w:r")
-        or runs[0].attrib
-        or runs[0].xpath("text()")
-        or runs[0].tail is not None
     ):
         raise DocxSemanticsV3Error("soft-reference SDT content is not canonical")
-    texts = list(runs[0])
+    texts = field_run_payload(runs[0], allow_text_formatting=True)
+    if texts is None:
+        raise DocxSemanticsV3Error("soft-reference run is not canonical")
     expected_attributes = (
         (("{http://www.w3.org/XML/1998/namespace}space", "preserve"),)
         if expected_visible[:1].isspace() or expected_visible[-1:].isspace()
