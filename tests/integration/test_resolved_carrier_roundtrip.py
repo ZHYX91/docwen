@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import re
+import uuid
 from copy import deepcopy
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -22,6 +24,23 @@ from ._resolved_carrier_roundtrip_support import (
 )
 
 pytestmark = pytest.mark.integration
+
+
+def _caption_sequence_scope(package: ZipFile) -> str:
+    roots = [
+        etree.fromstring(package.read(name))
+        for name in package.namelist()
+        if re.fullmatch(r"customXml/item[0-9]+\.xml", name)
+    ]
+    [caption_map] = [
+        root
+        for root in roots
+        if root.tag == "{https://docwen.dev/schema/document-paired-caption-map/v2}documentPairedCaptionMap"
+    ]
+    assert caption_map.get("version") == "2"
+    scope = caption_map.get("sequence_scope")
+    assert scope is not None and re.fullmatch(r"[0-9a-f]{24}", scope)
+    return scope
 
 
 @pytest.mark.parametrize(("quoted", "outer"), [(False, False), (True, False), (True, True)])
@@ -264,7 +283,8 @@ def test_enabled_caption_in_authenticated_quote_retains_fields_title_and_anchor(
     )
     with ZipFile(output) as package:
         native = etree.fromstring(package.read("word/document.xml"))
-    assert [node.text for node in native.iter(qn("w:instrText"))] == [" SEQ Table \\* ARABIC "]
+        scope = _caption_sequence_scope(package)
+    assert [node.text for node in native.iter(qn("w:instrText"))] == [f" SEQ DW_T_{scope} \\* ARABIC "]
     assert len(list(native.iter(qn("w:bookmarkStart")))) == int(target_id is not None)
     result, returned = read_document(tmp_path / "read", output)
     assert result.success, result.error
@@ -327,18 +347,38 @@ def test_list_anchor_owns_caption_and_native_table_without_quote_special_cases(
     assert "| a |" in returned and "| b |" in returned
 
 
-@pytest.mark.parametrize("mutation", ["unowned_bookmark", "wrong_seq"])
+@pytest.mark.parametrize("mutation", ["unowned_bookmark", "wrong_seq", "wrong_scope", "template_counter", "map_scope"])
 def test_enabled_idless_caption_candidate_requires_its_independent_field_proof(tmp_path: Path, mutation: str) -> None:
     source = "> Table: Cap\n>\n> |a|\n> |---|\n> |b|\n\n^outer\n"
     output = write_caption_document(tmp_path / "write", source, target_end=source.index("\n\n^outer"), enabled=True)
     original = hashlib.sha256(output.read_bytes()).hexdigest()
     with ZipFile(output) as package:
         members = {name: package.read(name) for name in package.namelist()}
+        scope = _caption_sequence_scope(package)
     document = etree.fromstring(members["word/document.xml"])
     instruction = next(document.iter(qn("w:instrText")))
-    assert instruction.text == " SEQ Table \\* ARABIC "
+    assert instruction.text == f" SEQ DW_T_{scope} \\* ARABIC "
+    other_scope = ("0" if scope[0] != "0" else "1") + scope[1:]
     if mutation == "wrong_seq":
-        instruction.text = " SEQ Figure \\* ARABIC "
+        instruction.text = f" SEQ DW_F_{scope} \\* ARABIC "
+    elif mutation == "wrong_scope":
+        instruction.text = f" SEQ DW_T_{other_scope} \\* ARABIC "
+    elif mutation == "template_counter":
+        instruction.text = " SEQ Table \\* ARABIC "
+    elif mutation == "map_scope":
+        for name in members:
+            if match := re.fullmatch(r"customXml/item([0-9]+)\.xml", name):
+                root = etree.fromstring(members[name])
+                if root.get("sequence_scope") == scope:
+                    root.set("sequence_scope", other_scope)
+                    members[name] = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
+                    namespace = "https://docwen.dev/schema/document-paired-caption-map/v2"
+                    digest = hashlib.sha256(members[name]).hexdigest()
+                    item_id = "{" + str(uuid.uuid5(uuid.NAMESPACE_URL, f"{namespace}\0{digest}")).upper() + "}"
+                    props_name = f"customXml/itemProps{match[1]}.xml"
+                    props = etree.fromstring(members[props_name])
+                    props.set("{http://schemas.openxmlformats.org/officeDocument/2006/customXml}itemID", item_id)
+                    members[props_name] = etree.tostring(props, xml_declaration=True, encoding="UTF-8", standalone=True)
     else:
         caption = next(ancestor for ancestor in instruction.iterancestors() if ancestor.tag == qn("w:p"))
         start = etree.SubElement(caption, qn("w:bookmarkStart"))

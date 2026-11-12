@@ -9,8 +9,9 @@ from typing import Any
 from lxml import etree
 
 from docwen_core._docx_semantics_v3_model import DocxSemanticsV3Error, require_sha256
+from docwen_core.docx_caption_sequences import caption_sequence_identifier
 
-PAIRED_CAPTION_MAP_NAMESPACE = "https://docwen.dev/schema/document-paired-caption-map/v1"
+PAIRED_CAPTION_MAP_NAMESPACE = "https://docwen.dev/schema/document-paired-caption-map/v2"
 PAIRED_CAPTION_TAG_PREFIX = "docwen-caption-pair-v1:"
 _KINDS = {"figure", "table", "equation", "code_block"}
 
@@ -27,6 +28,7 @@ class PairedCaptionMapV3:
     source_sha256: str
     caption_count: int
     groups: tuple[PairedCaptionGroupV3, ...]
+    sequence_scope: str
 
 
 def derive_paired_caption_group(source_sha256: str, ordinal: int, kind: str) -> PairedCaptionGroupV3:
@@ -39,6 +41,10 @@ def derive_paired_caption_group(source_sha256: str, ordinal: int, kind: str) -> 
 
 def _validate(record: PairedCaptionMapV3) -> None:
     require_sha256(record.source_sha256)
+    try:
+        caption_sequence_identifier(record.sequence_scope, "table")
+    except ValueError as exc:
+        raise DocxSemanticsV3Error("caption-pair map has an invalid sequence scope") from exc
     if type(record.caption_count) is not int or record.caption_count < 1:
         raise DocxSemanticsV3Error("caption-pair map must declare a positive total caption count")
     last = 0
@@ -58,9 +64,10 @@ def paired_caption_map_xml(record: PairedCaptionMapV3) -> bytes:
     root = etree.Element(
         f"{{{namespace}}}documentPairedCaptionMap",
         nsmap={"dw": namespace},
-        version="1",
+        version="2",
         source_sha256=record.source_sha256,
         caption_count=str(record.caption_count),
+        sequence_scope=record.sequence_scope,
     )
     for group in record.groups:
         etree.SubElement(root, f"{{{namespace}}}pair", ordinal=str(group.ordinal), kind=group.kind, tag=group.tag)
@@ -72,8 +79,8 @@ def parse_paired_caption_map(root: Any) -> PairedCaptionMapV3:
     count = root.get("caption_count", "")
     if (
         root.tag != f"{namespace}documentPairedCaptionMap"
-        or set(root.attrib) != {"version", "source_sha256", "caption_count"}
-        or root.get("version") != "1"
+        or set(root.attrib) != {"version", "source_sha256", "caption_count", "sequence_scope"}
+        or root.get("version") != "2"
         or not count.isascii()
         or not count.isdecimal()
         or str(int(count)) != count
@@ -96,6 +103,6 @@ def parse_paired_caption_map(root: Any) -> PairedCaptionMapV3:
         ):
             raise DocxSemanticsV3Error("caption-pair record is not closed and canonical")
         groups.append(PairedCaptionGroupV3(int(ordinal), child.get("kind"), child.get("tag")))
-    record = PairedCaptionMapV3(root.get("source_sha256"), int(count), tuple(groups))
+    record = PairedCaptionMapV3(root.get("source_sha256"), int(count), tuple(groups), root.get("sequence_scope"))
     _validate(record)
     return record

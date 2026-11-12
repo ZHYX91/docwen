@@ -22,6 +22,7 @@ from docwen_core.docx_bookmarks import (
     is_legal_bookmark_name,
     prove_bookmark_name,
 )
+from docwen_core.docx_caption_sequences import allocate_caption_sequence_scope, caption_sequence_identifier
 from docwen_core.docx_parsing.document_semantics import (
     BIBLIOGRAPHY_BOOKMARK_NAME,
     BIBLIOGRAPHY_ENTRY_BOOKMARK_PREFIX,
@@ -69,7 +70,13 @@ from docwen_core.models.semantic_document import (
 class DocxSemanticRenderer:
     """Render neutral semantic objects to standard DOCX structures."""
 
-    def __init__(self, document: Any, *, bookmark_id_start: int = 1000) -> None:
+    def __init__(
+        self,
+        document: Any,
+        *,
+        bookmark_id_start: int = 1000,
+        sequence_scope: str | None = None,
+    ) -> None:
         if type(bookmark_id_start) is not int:
             raise TypeError("bookmark_id_start must be an integer")
         if not 0 <= bookmark_id_start <= BOOKMARK_ID_MAX:
@@ -77,6 +84,9 @@ class DocxSemanticRenderer:
         self._document = document
         self._bookmark_id = bookmark_id_start
         self._pairing_token = 1
+        if sequence_scope is not None:
+            caption_sequence_identifier(sequence_scope, "table")
+        self._sequence_scope = sequence_scope
 
     def render_blocks(self, blocks: tuple[SemanticParagraph | SemanticTable, ...]) -> list[Any]:
         """Append validated neutral blocks and return their python-docx objects."""
@@ -196,6 +206,10 @@ class DocxSemanticRenderer:
         pairing_name: str | None,
         reservations: dict[str, str],
     ) -> Any:
+        if self._sequence_scope is None:
+            self._sequence_scope = allocate_caption_sequence_scope(self._document, seed="neutral-caption-renderer")
+        sequence_kind = "code_block" if caption.kind == "listing" else caption.kind
+        sequence_identifier = caption_sequence_identifier(self._sequence_scope, sequence_kind)
         paragraph = self._document.add_paragraph()
         paragraph.add_run(f"{caption.label} ")
         if pairing_name is not None:
@@ -204,7 +218,7 @@ class DocxSemanticRenderer:
             append_zero_width_bookmark(paragraph, shorthand_name, reservations[shorthand_name])
         append_complex_field(
             paragraph,
-            instruction=f" SEQ {caption.kind.title()} \\* ARABIC ",
+            instruction=f" SEQ {sequence_identifier} \\* ARABIC ",
             cached_result=caption.cached_number,
             bookmark_name=target_name,
             bookmark_id=(reservations[target_name] if target_name is not None else None),

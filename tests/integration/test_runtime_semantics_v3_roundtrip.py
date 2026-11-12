@@ -141,12 +141,12 @@ def test_production_caption_matrix_round_trip(
     with ZipFile(docx_path) as package:
         document_xml = package.read("word/document.xml").decode()
         package_text = b"\n".join(package.read(name) for name in package.namelist()).decode(errors="ignore")
-    assert f" SEQ {kind} " in document_xml
+    assert f" SEQ DW_{kind[0]}_" in document_xml
     if target_id is None:
-        assert "DW_T_" not in document_xml
+        assert 'w:name="DW_T_' not in document_xml
         assert f'source_id="{target_id}"' not in package_text
     else:
-        assert "DW_T_" in document_xml
+        assert 'w:name="DW_T_' in document_xml
         assert f'source_id="{target_id}"' in package_text
 
     returned = docx_to_md(
@@ -325,7 +325,7 @@ def test_production_caption_target_and_raw_table_anchor_remain_distinct(
     with ZipFile(docx_path) as package:
         document_xml = package.read("word/document.xml").decode()
         package_text = b"\n".join(package.read(name) for name in package.namelist()).decode(errors="ignore")
-    assert document_xml.count(" SEQ Table ") == 1
+    assert document_xml.count(" SEQ DW_T_") == 1
     assert document_xml.count("bookmarkStart") == 1
     assert document_xml.count(ANCHOR_TAG_PREFIX) == 1
     assert 'source_id="table-target"' in package_text

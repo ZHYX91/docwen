@@ -120,7 +120,7 @@ def test_legacy_caption_reference_source_is_not_reinterpreted_by_v3(round_trip_r
     [returned_image] = list(reverse_dir.rglob("*.png"))
     assert returned_image.name in returned
     xml = _document_xml(docx_path)
-    assert "SEQ Figure" not in xml
+    assert "SEQ DW_F_" not in xml
     assert "REF _DW_" not in xml
     assert "w:bookmarkStart" not in xml
     assert 'descr="A two-by-two blue square"' in xml
@@ -154,7 +154,7 @@ def test_enhanced_table_round_trip_and_real_ooxml_grid(round_trip_runtime, tmp_p
     assert "South" in returned
     assert r"See \@tbl-sales for the synthetic totals." in returned
     xml = _document_xml(docx_path)
-    assert "SEQ Table" not in xml
+    assert "SEQ DW_T_" not in xml
     assert "w:gridSpan" in xml
     assert 'w:vMerge w:val="restart"' in xml
     assert "w:vMerge" in xml
@@ -260,7 +260,7 @@ def test_markdown_targetless_table_caption_survives_nonadjacent_real_docx_import
     MdToDocxRenderer(document).render(analysis.ast)
     body = document.element.body
     table_element = document.tables[0]._tbl
-    caption_element = next(paragraph._p for paragraph in document.paragraphs if "SEQ Table" in paragraph._p.xml)
+    caption_element = next(paragraph._p for paragraph in document.paragraphs if "SEQ DW_T_" in paragraph._p.xml)
     assert body.index(caption_element) < body.index(table_element)
     separator = document.add_paragraph("Physical paragraph between caption and table.")._p
     body.remove(separator)
@@ -272,7 +272,7 @@ def test_markdown_targetless_table_caption_survives_nonadjacent_real_docx_import
     reopened = Document(output)
     reopened_body = reopened.element.body
     reopened_table = reopened.tables[0]._tbl
-    reopened_caption = next(paragraph._p for paragraph in reopened.paragraphs if "SEQ Table" in paragraph._p.xml)
+    reopened_caption = next(paragraph._p for paragraph in reopened.paragraphs if "SEQ DW_T_" in paragraph._p.xml)
     reopened_separator = next(
         paragraph._p
         for paragraph in reopened.paragraphs

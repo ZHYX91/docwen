@@ -181,8 +181,8 @@ print('x')
         assert image_p_pr.find(qn(f"w:{direct_tag}")) is None
 
     caption_styles = {
-        kind: _paragraph_style_id(next(p for p in reopened.paragraphs if f"SEQ {kind.title()}" in p._p.xml))
-        for kind in ("figure", "table", "equation", "listing")
+        kind: _paragraph_style_id(next(p for p in reopened.paragraphs if f"SEQ DW_{code}_" in p._p.xml))
+        for kind, code in (("figure", "F"), ("table", "T"), ("equation", "E"), ("listing", "C"))
     }
     assert caption_styles == {
         "figure": "DocWenFigureCaption",
@@ -311,10 +311,10 @@ AFTER
     assert body_children[-1].tag == qn("w:sectPr")
     texts = [p.text for p in reopened.paragraphs]
     assert texts[0] == "PREFACE"
-    assert next(index for index, p in enumerate(reopened.paragraphs) if "SEQ Equation" in p._p.xml) < next(
+    assert next(index for index, p in enumerate(reopened.paragraphs) if "SEQ DW_E_" in p._p.xml) < next(
         index for index, p in enumerate(reopened.paragraphs) if p._p.find(f".//{qn('m:oMath')}") is not None
     )
-    assert next(index for index, p in enumerate(reopened.paragraphs) if "SEQ Listing" in p._p.xml) < texts.index("code")
+    assert next(index for index, p in enumerate(reopened.paragraphs) if "SEQ DW_C_" in p._p.xml) < texts.index("code")
     assert texts[-1] == "AFTER"
     validate_managed_style_package(path.read_bytes(), _catalog(), bindings)
 
@@ -564,12 +564,12 @@ code
     assert body is not None
     children = list(body)
     figure = next(p._p for p in document.paragraphs if _paragraph_style_id(p) == "DocWenImageParagraph")
-    figure_caption = next(p._p for p in document.paragraphs if "SEQ Figure" in p._p.xml)
-    table_caption = next(p._p for p in document.paragraphs if "SEQ Table" in p._p.xml)
+    figure_caption = next(p._p for p in document.paragraphs if "SEQ DW_F_" in p._p.xml)
+    table_caption = next(p._p for p in document.paragraphs if "SEQ DW_T_" in p._p.xml)
     table = document.tables[0]._tbl
-    equation_caption = next(p._p for p in document.paragraphs if "SEQ Equation" in p._p.xml)
+    equation_caption = next(p._p for p in document.paragraphs if "SEQ DW_E_" in p._p.xml)
     equation = next(p._p for p in document.paragraphs if p._p.find(f".//{qn('m:oMath')}") is not None)
-    listing_caption = next(p._p for p in document.paragraphs if "SEQ Listing" in p._p.xml)
+    listing_caption = next(p._p for p in document.paragraphs if "SEQ DW_C_" in p._p.xml)
     listing = next(p._p for p in document.paragraphs if p.text == "code")
     assert children.index(figure_caption) == children.index(figure) + 1
     assert children.index(table) == children.index(table_caption) + 1

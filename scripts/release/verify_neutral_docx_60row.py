@@ -15,6 +15,7 @@ from zipfile import ZipFile
 from docx import Document
 from lxml import etree
 
+from docwen_core.docx_caption_sequences import caption_sequence_kind
 from docwen_core.docx_semantics import DocxSemanticImporter, DocxSemanticRenderer
 from docwen_core.models.semantic_document import (
     SemanticBibliographyFragment,
@@ -260,7 +261,13 @@ def verify_docx_60row(output: Path, semantic_document: SemanticDocument) -> dict
 
     instructions = tuple(root.xpath(".//w:instrText/text()", namespaces=namespaces))
     normalized_instructions = tuple(" ".join(instruction.split()) for instruction in instructions)
-    _require(any(item.startswith("SEQ Table ") for item in normalized_instructions), "raw_ooxml_seq_field")
+    _require(
+        any(
+            item.startswith("SEQ ") and caption_sequence_kind(item.split()[1]) == "table"
+            for item in normalized_instructions
+        ),
+        "raw_ooxml_seq_field",
+    )
     _require(any(item.startswith("REF _DW_") for item in normalized_instructions), "raw_ooxml_ref_field")
     _require("CITATION source-one" in normalized_instructions, "raw_ooxml_single_citation_field")
     _require(

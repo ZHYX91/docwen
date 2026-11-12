@@ -15,7 +15,13 @@ from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml.ns import qn
 
+from docwen_core._docx_semantics_v3_caption_groups import (
+    PairedCaptionMapV3,
+    paired_caption_map_xml,
+    parse_paired_caption_map,
+)
 from docwen_core._docx_semantics_v3_styles import caption_style_binding_map_xml
+from docwen_core.docx_caption_sequences import caption_sequence_identifier
 from docwen_core.docx_semantics_v3 import (
     CAPTION_STYLE_BINDING_MAP_NAMESPACE,
     CaptionStyleBindingV3,
@@ -41,13 +47,17 @@ def test_addressable_and_idless_captions_use_persisted_collision_binding(tmp_pat
         source_sha256=hashlib.sha256(b"two tables").hexdigest(),
         caption_style_bindings=bindings,
     )
-    first_caption, first_table = _add_table_caption(document, styles["table_caption"], "Addressable")
+    first_caption, first_table = _add_table_caption(
+        document, styles["table_caption"], "Addressable", sequence_scope=session.caption_sequence_scope
+    )
     session.bind_caption(
         first_caption,
         (first_table._tbl,),
         {"kind": "table", "id": "results", "number": "1", "title": "Addressable"},
     )
-    second_caption, second_table = _add_table_caption(document, styles["table_caption"], "ID-less", number="2")
+    second_caption, second_table = _add_table_caption(
+        document, styles["table_caption"], "ID-less", number="2", sequence_scope=session.caption_sequence_scope
+    )
     session.bind_caption(
         second_caption,
         (second_table._tbl,),
@@ -80,7 +90,8 @@ def test_addressable_standalone_caption_uses_authenticated_caption_only_target(t
     )
     caption = document.add_paragraph(style=styles["figure_caption"])
     caption.add_run("Figure ")
-    append_complex_field(caption, instruction=" SEQ Figure \\* ARABIC ", cached_result="1")
+    counter = caption_sequence_identifier(session.caption_sequence_scope, "figure")
+    append_complex_field(caption, instruction=f" SEQ {counter} \\* ARABIC ", cached_result="1")
     caption.add_run(": Planned architecture")
     session.bind_caption(
         caption,
@@ -125,7 +136,9 @@ def test_bind_caption_rejects_cross_kind_pstyle() -> None:
         source_sha256=hashlib.sha256(b"cross-kind").hexdigest(),
         caption_style_bindings=bindings,
     )
-    caption, table = _add_table_caption(document, styles["figure_caption"], "Wrong")
+    caption, table = _add_table_caption(
+        document, styles["figure_caption"], "Wrong", sequence_scope=session.caption_sequence_scope
+    )
     with pytest.raises(DocxSemanticsV3Error, match="pStyle does not match"):
         session.bind_caption(
             caption,
@@ -139,6 +152,36 @@ def test_recovery_rejects_missing_caption_style_map(tmp_path: Path) -> None:
     _remove_caption_style_map(output)
     with pytest.raises(DocxSemanticsV3Error, match="lacks its authenticated caption-style"):
         DocxSemanticsV3Recovery.load(output, Document(str(output)))
+
+
+@pytest.mark.parametrize("counter", ("Table", "DW_T_" + "0" * 24, "DW_F_" + "0" * 24))
+def test_recovery_rejects_unbound_physical_sequence(tmp_path: Path, counter: str) -> None:
+    output = _valid_table_package(tmp_path)
+
+    def mutate(root) -> None:
+        [instruction] = list(root.iter(qn("w:instrText")))
+        instruction.text = f" SEQ {counter} \\* ARABIC "
+
+    _mutate_xml_member(output, "word/document.xml", mutate)
+    with pytest.raises(DocxSemanticsV3Error, match="matching SEQ field"):
+        DocxSemanticsV3Recovery.load(output, Document(str(output)))
+
+
+@pytest.mark.parametrize("damage", ("missing", "uppercase", "old_version", "extra"))
+def test_caption_ownership_scope_is_required_and_closed(damage: str) -> None:
+    record = PairedCaptionMapV3("a" * 64, 1, (), "b" * 24)
+    root = etree.fromstring(paired_caption_map_xml(record))
+    assert parse_paired_caption_map(root) == record
+    if damage == "missing":
+        del root.attrib["sequence_scope"]
+    elif damage == "uppercase":
+        root.set("sequence_scope", "B" * 24)
+    elif damage == "old_version":
+        root.set("version", "1")
+    else:
+        root.set("counter", "Table")
+    with pytest.raises(DocxSemanticsV3Error, match=r"closed|invalid sequence scope"):
+        parse_paired_caption_map(root)
 
 
 @pytest.mark.parametrize(
@@ -294,7 +337,9 @@ def _valid_table_package(tmp_path: Path, *, name: str = "valid-table.docx") -> P
         source_sha256=hashlib.sha256(name.encode()).hexdigest(),
         caption_style_bindings=bindings,
     )
-    caption, table = _add_table_caption(document, styles["table_caption"], "Results")
+    caption, table = _add_table_caption(
+        document, styles["table_caption"], "Results", sequence_scope=session.caption_sequence_scope
+    )
     session.bind_caption(
         caption,
         (table._tbl,),
@@ -324,10 +369,11 @@ def _add_caption_styles(document, *, table_collision: bool = False):
     return tuple(bindings), styles
 
 
-def _add_table_caption(document, style, title: str, *, number: str = "1"):
+def _add_table_caption(document, style, title: str, *, number: str = "1", sequence_scope: str | None = None):
     caption = document.add_paragraph(style=style)
     caption.add_run("Table ")
-    append_complex_field(caption, instruction=" SEQ Table \\* ARABIC ", cached_result=number)
+    counter = caption_sequence_identifier(sequence_scope, "table") if sequence_scope is not None else "Table"
+    append_complex_field(caption, instruction=f" SEQ {counter} \\* ARABIC ", cached_result=number)
     caption.add_run(f": {title}")
     table = document.add_table(rows=1, cols=1)
     table.cell(0, 0).text = title

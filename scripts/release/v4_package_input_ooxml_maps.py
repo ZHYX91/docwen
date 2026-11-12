@@ -14,6 +14,7 @@ OFFICE_RELS = "http://schemas.openxmlformats.org/officeDocument/2006/relationshi
 CUSTOM_PROPS = "http://schemas.openxmlformats.org/officeDocument/2006/customXml"
 CAPTION_STYLE_NAMESPACE = "https://docwen.dev/schema/document-caption-style-binding-map/v1"
 OCCURRENCE_NAMESPACE = "https://docwen.dev/schema/document-numbering-occurrence-map/v1"
+PAIRED_CAPTION_NAMESPACE = "https://docwen.dev/schema/document-paired-caption-map/v2"
 
 _CUSTOM_XML_REL = f"{OFFICE_RELS}/customXml"
 _CUSTOM_XML_PROPS_REL = f"{OFFICE_RELS}/customXmlProps"
@@ -38,6 +39,8 @@ class V4OoxmlMapError(ValueError):
 class CaptionMaps:
     styles_by_kind: Mapping[str, tuple[str, str]]
     occurrence_tags: Mapping[tuple[int, int, str], str]
+    paired_tags: Mapping[tuple[int, int, str], str]
+    sequence_scope: str | None
 
 
 def _fail(code: str) -> NoReturn:
@@ -62,7 +65,8 @@ def _namespace(root: ElementTree.Element) -> str | None:
 
 def _owned_items(parts: Mapping[str, bytes]) -> dict[str, tuple[int, str, bytes, ElementTree.Element]]:
     result: dict[str, tuple[int, str, bytes, ElementTree.Element]] = {}
-    signals = tuple(value.encode() for value in (CAPTION_STYLE_NAMESPACE, OCCURRENCE_NAMESPACE))
+    namespaces = {CAPTION_STYLE_NAMESPACE, OCCURRENCE_NAMESPACE, PAIRED_CAPTION_NAMESPACE}
+    signals = tuple(value.encode() for value in namespaces)
     for name, raw in parts.items():
         match = _ITEM.fullmatch(name)
         if match is None:
@@ -74,7 +78,7 @@ def _owned_items(parts: Mapping[str, bytes]) -> dict[str, tuple[int, str, bytes,
                 raise
             continue
         namespace = _namespace(root)
-        if namespace not in {CAPTION_STYLE_NAMESPACE, OCCURRENCE_NAMESPACE}:
+        if namespace not in namespaces:
             continue
         if namespace in result:
             _fail("ooxml_owned_custom_xml_duplicate")
@@ -270,6 +274,52 @@ def _occurrences(
     return result
 
 
+def _paired_captions(
+    root: ElementTree.Element,
+    captions: Sequence[tuple[Mapping[str, object], Mapping[str, object]]],
+    source_sha256: str,
+) -> tuple[str, dict[tuple[int, int, str], str]]:
+    ns = f"{{{PAIRED_CAPTION_NAMESPACE}}}"
+    scope = root.get("sequence_scope", "")
+    if (
+        root.tag != f"{ns}documentPairedCaptionMap"
+        or root.attrib
+        != {
+            "version": "2",
+            "source_sha256": source_sha256,
+            "caption_count": str(len(captions)),
+            "sequence_scope": scope,
+        }
+        or re.fullmatch(r"[0-9a-f]{24}", scope) is None
+        or root.text is not None
+        or root.tail is not None
+    ):
+        _fail("ooxml_caption_sequence_map_invalid")
+    expected: list[dict[str, str]] = []
+    tags: dict[tuple[int, int, str], str] = {}
+    ordered = sorted(captions, key=lambda pair: (*_range(pair[0]), str(pair[0].get("kind"))))
+    for ordinal, (target, planned) in enumerate(ordered, 1):
+        if target.get("target_id") is not None or planned.get("enabled") is not True:
+            continue
+        kind = str(target.get("kind"))
+        digest = hashlib.sha256(f"docwen-caption-pair-v1\0{source_sha256}\0{ordinal}\0{kind}".encode()).hexdigest()
+        tag = f"docwen-caption-pair-v1:{digest}"
+        expected.append({"ordinal": str(ordinal), "kind": kind, "tag": tag})
+        tags[(*_range(target), kind)] = tag
+    if len(root) != len(expected):
+        _fail("ooxml_caption_pair_inventory_invalid")
+    for child, attributes in zip(root, expected, strict=True):
+        if (
+            child.tag != f"{ns}pair"
+            or child.attrib != attributes
+            or child.text is not None
+            or child.tail is not None
+            or len(child)
+        ):
+            _fail("ooxml_caption_pair_record_invalid")
+    return scope, tags
+
+
 def inspect_caption_maps(
     parts: Mapping[str, bytes],
     document_relationships: ElementTree.Element,
@@ -279,7 +329,7 @@ def inspect_caption_maps(
     source_sha256: str,
     plan_sha256: str,
 ) -> CaptionMaps:
-    """Authenticate caption styles and disabled ID-less occurrence identities."""
+    """Authenticate caption styles, sequence scope and ID-less ownership."""
 
     if _SHA256.fullmatch(source_sha256) is None or _SHA256.fullmatch(plan_sha256) is None:
         _fail("ooxml_custom_xml_plan_identity_invalid")
@@ -291,6 +341,17 @@ def inspect_caption_maps(
     if bool(captions) != bool(style_item):
         _fail("ooxml_caption_style_map_presence_invalid")
     styles = {} if style_item is None else _caption_styles(style_item[3])
+    paired_item = owned.get(PAIRED_CAPTION_NAMESPACE)
+    if bool(captions) != bool(paired_item):
+        _fail("ooxml_caption_sequence_map_presence_invalid")
+    caption_pairs = [
+        (target, planned)
+        for target, planned in zip(targets, planned_targets, strict=True)
+        if target.get("kind") in _KEY_KIND.values()
+    ]
+    sequence_scope, paired_tags = (
+        (None, {}) if paired_item is None else _paired_captions(paired_item[3], caption_pairs, source_sha256)
+    )
     disabled_idless = [
         target
         for target, planned in zip(targets, planned_targets, strict=True)
@@ -304,7 +365,7 @@ def inspect_caption_maps(
     occurrences = (
         {} if occurrence_item is None else _occurrences(occurrence_item[3], disabled_idless, source_sha256, plan_sha256)
     )
-    return CaptionMaps(styles, occurrences)
+    return CaptionMaps(styles, occurrences, paired_tags, sequence_scope)
 
 
 __all__ = ["CaptionMaps", "V4OoxmlMapError", "inspect_caption_maps"]

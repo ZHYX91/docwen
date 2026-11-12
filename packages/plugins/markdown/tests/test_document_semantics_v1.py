@@ -168,7 +168,7 @@ See @tbl-sales.
 
     with ZipFile(output) as package:
         xml = package.read("word/document.xml").decode("utf-8")
-    assert "SEQ Table" in xml
+    assert "SEQ DW_T_" in xml
     assert "REF _DW_" in xml
     assert "w:gridSpan" in xml
     assert "w:vMerge" in xml
@@ -202,7 +202,7 @@ def test_legacy_caption_extractor_ignores_unbalanced_target_bookmark() -> None:
     analysis = _analyze(markdown)
     document = Document()
     MdToDocxRenderer(document).render(analysis.ast)
-    caption = next(paragraph for paragraph in document.paragraphs if "SEQ Table" in paragraph._p.xml)
+    caption = next(paragraph for paragraph in document.paragraphs if "SEQ DW_T_" in paragraph._p.xml)
     target_start = next(
         item for item in caption._p.iter(qn("w:bookmarkStart")) if (item.get(qn("w:name")) or "").startswith("_DW_")
     )

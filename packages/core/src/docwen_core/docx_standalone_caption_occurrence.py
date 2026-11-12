@@ -15,6 +15,7 @@ from docwen_core._docx_semantics_v3_model import (
     require_source_id,
 )
 from docwen_core._docx_semantics_v3_ooxml import sdt_tag, wrap_direct_body_group
+from docwen_core.docx_host_metadata import has_owned_tag_properties, owned_sdt_parts
 
 STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE = "https://docwen.dev/schema/document-standalone-caption-occurrence-map/v1"
 STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX = "docwen-standalone-caption-v1:"
@@ -251,15 +252,12 @@ def prove_standalone_caption_occurrence_sdt(
         raise DocxSemanticsV3Error("addressable standalone caption is proven by its target SDT")
     if sdt.tag != qn("w:sdt") or sdt_tag(sdt) != identity.tag:
         raise DocxSemanticsV3Error("standalone-caption occurrence SDT tag is invalid")
-    properties = sdt.find(qn("w:sdtPr"))
-    content = sdt.find(qn("w:sdtContent"))
-    if (
-        properties is None
-        or content is None
-        or [item.tag for item in list(sdt)] != [qn("w:sdtPr"), qn("w:sdtContent")]
-        or len(content) != 1
-    ):
+    parts = owned_sdt_parts(sdt)
+    if parts is None or len(parts[1]) != 1:
         raise DocxSemanticsV3Error("standalone-caption occurrence SDT envelope is not canonical")
+    properties, content = parts
+    if not has_owned_tag_properties(properties, identity.tag):
+        raise DocxSemanticsV3Error("standalone-caption occurrence SDT tag is not canonical")
     caption = content[0]
     if caption.tag != qn("w:p"):
         raise DocxSemanticsV3Error("standalone-caption occurrence slot is not a paragraph")

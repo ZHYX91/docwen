@@ -11,7 +11,7 @@ from docwen_core._docx_semantics_v3_model import (
     DocxSemanticsV3Error,
     require_sha256,
 )
-from docwen_core.docx_host_metadata import has_owned_tag_properties
+from docwen_core.docx_host_metadata import has_owned_tag_properties, owned_sdt_parts
 
 FENCED_SOURCE_MAP_NAMESPACE = "https://docwen.dev/schema/document-fenced-source-map/v1"
 FENCED_SOURCE_TAG_PREFIX = "docwen-fenced-source-v1:"
@@ -242,15 +242,11 @@ def _prove_fenced_source_paragraph(
     if len(payload) != 1 or payload[0].tag != qn("w:sdt"):
         raise DocxSemanticsV3Error("fenced-source SDT does not cover the complete paragraph payload")
     sdt = payload[0]
-    if sdt.attrib or sdt.text is not None or sdt.tail is not None:
+    parts = owned_sdt_parts(sdt)
+    if parts is None:
         raise DocxSemanticsV3Error("fenced-source SDT envelope is not canonical")
-    sdt_children = list(sdt)
-    if [item.tag for item in sdt_children] != [qn("w:sdtPr"), qn("w:sdtContent")]:
-        raise DocxSemanticsV3Error("fenced-source SDT envelope is not canonical")
-    _prove_single_tag(sdt_children[0], identity.tag)
-    content = sdt_children[1]
-    if content.attrib or content.text is not None or content.tail is not None:
-        raise DocxSemanticsV3Error("fenced-source SDT content is not canonical")
+    properties, content = parts
+    _prove_single_tag(properties, identity.tag)
     logical_body = _prove_and_read_body_runs(content)
     identity, authored = _prove_body_and_framing_eols(identity, logical_body)
     if (

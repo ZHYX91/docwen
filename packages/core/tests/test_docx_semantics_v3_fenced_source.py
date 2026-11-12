@@ -307,7 +307,10 @@ def test_captioned_code_uses_same_independent_inner_carrier(tmp_path: Path) -> N
     )
     caption = document.add_paragraph(style=code_style)
     caption.add_run("Code ")
-    append_complex_field(caption, instruction=" SEQ Code \\* ARABIC ", cached_result="1")
+    from docwen_core.docx_caption_sequences import caption_sequence_identifier
+
+    counter = caption_sequence_identifier(session.caption_sequence_scope, "code_block")
+    append_complex_field(caption, instruction=f" SEQ {counter} \\* ARABIC ", cached_result="1")
     caption.add_run(": Demo")
     paragraph = _body_paragraph(document, "print(1)")
     session.bind_fenced_source(paragraph, identity, logical_body="print(1)\n")

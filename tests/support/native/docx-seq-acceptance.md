@@ -2,7 +2,8 @@
 
 This is a reproducible host acceptance fixture, **not a claim that native field updates pass**. It exercises the
 ordinary Markdown caption writer with two generated captions and two generated REF fields. One template contains
-two fixed captions using the same native `SEQ Table` identifier, before and after the body anchor. The paired control
+two fixed captions using the native `SEQ Table` identifier, before and after the body anchor. Generated captions use
+one separately owned `DW_T_<scope>` counter; their REF fields keep the original target bookmarks. The paired control
 has the same fixed content with literal numbers. Both files are produced by the real converter; context adapters only
 supply request configuration, progress and a private staging directory.
 
@@ -32,8 +33,9 @@ uv run --frozen --all-extras python -m tests.support.native.docx_seq_acceptance 
 
 Save each JSON observation alongside the host/version evidence. A pre-update source assertion or python-docx reopen
 does not calculate SEQ and cannot replace these observations. The current source contract gives the two generated
-captions/REFs caches `1` and `2`; the shared-counter output also contains the template's cached `1` and `2` under the
-same identifier. Compare the actual native results with those intended generated values and the control. If native
+captions/REFs caches `1` and `2`; the shared-counter output also contains the template's cached `1` and `2` under its
+independent `Table` identifier. Both pairs must remain `1` and `2` after repeated native updates. Compare the actual
+native results with those intended generated values and the control. If native
 update changes generated numbering or REF meaning because of template fields, record that as a confirmed host-level
 failure requiring a counter-ownership decision. Do not silently add a reset switch, unlink fields or weaken proof.
 

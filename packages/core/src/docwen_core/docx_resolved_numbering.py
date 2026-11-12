@@ -97,6 +97,7 @@ from docwen_core.docx_bookmarks import (
     DocxBookmarkAllocator,
     build_docx_bookmark_inventory,
 )
+from docwen_core.docx_caption_sequences import allocate_caption_sequence_scope
 from docwen_core.docx_citation_ooxml import (
     CITATION_ITEM_MAP_NAMESPACE,
     CITATION_OCCURRENCE_MAP_NAMESPACE,
@@ -195,6 +196,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
             raise ResolvedNumberingDocxError("resolved-numbering port failed runtime revalidation") from exc
         self._document = document
         self._port = port
+        self._caption_sequence_scope = allocate_caption_sequence_scope(document, port.source_sha256)
         self._heading_style_ids = dict(heading_style_ids)
         self._heading_style_names = dict(heading_style_names)
         self._caption_style_bindings = validate_caption_style_bindings(caption_style_bindings)
@@ -265,6 +267,10 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
     @property
     def port(self) -> ResolvedNumberingPort:
         return self._port
+
+    @property
+    def caption_sequence_scope(self) -> str:
+        return self._caption_sequence_scope
 
     @property
     def citation_projection(self) -> ResolvedCitationProjection | None:
@@ -455,6 +461,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
             plan_target,
             authored_content=document_target.authored_text,
             heading_style_names=self._heading_style_names,
+            sequence_scope=self._caption_sequence_scope,
             bookmark_name=identity.bookmark_name if identity is not None else None,
             bookmark_id=bookmark_id,
             preserve_payload=payload_fragments is not None,
@@ -676,7 +683,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
             )
         if caption_bindings:
             self._paired_caption_map = PairedCaptionMapV3(
-                self._port.source_sha256, len(caption_bindings), tuple(pair_records)
+                self._port.source_sha256, len(caption_bindings), tuple(pair_records), self._caption_sequence_scope
             )
         try:
             body = self._document.element.body

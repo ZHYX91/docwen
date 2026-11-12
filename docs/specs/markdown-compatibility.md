@@ -957,13 +957,25 @@ Headings are not registered as new request targets.
 #### Generated caption ownership / 生成题注的所有权
 
 Every package with generated captions also contains
-`https://docwen.dev/schema/document-paired-caption-map/v1`. Its closed `documentPairedCaptionMap` root has
-`version="1"`, `source_sha256`, and positive `caption_count`. The count includes all generated addressable,
+`https://docwen.dev/schema/document-paired-caption-map/v2`. Its closed `documentPairedCaptionMap` root has
+`version="2"`, `source_sha256`, positive `caption_count`, and `sequence_scope` (24 lowercase hexadecimal characters).
+The count includes all generated addressable,
 ID-less, paired, and standalone captions. Each enabled ID-less paired caption has one `pair` record containing
 exactly `ordinal,kind,tag`; records follow their positions in that complete caption inventory. The pair tag is
 `docwen-caption-pair-v1:` plus the lowercase SHA-256 of UTF-8
 `docwen-caption-pair-v1\0<source_sha256>\0<ordinal>\0<kind>`. Empty pair records are valid when all generated
 captions already have target, disabled-occurrence or standalone ownership.
+
+The logical numbering plan retains `Figure`, `Table`, `Equation`, and `Code`. Generated native fields instead use
+`DW_F_<sequence_scope>`, `DW_T_<sequence_scope>`, `DW_E_<sequence_scope>`, and `DW_C_<sequence_scope>` respectively.
+The writer allocates one scope per request after checking all existing package fields, including split complex
+instructions and simple fields in non-default story paths. Proof and recovery require that exact persisted scope.
+Visible labels, numbering switches and REF bookmarks retain their meanings. Template counters remain independent
+before and after generated content; no reset is added to a shared template counter. Neutral captions use the same
+allocation rule, but their physical identifier alone never establishes caption ownership.
+
+题注显示标签和逻辑编号计划保持不变；原生 SEQ 使用本请求独立标识，所有权表必须记录并严格证明该标识。
+模板正文前后的原有序列保持独立，不能通过重置模板同名计数器来修正生成题注。
 
 Each pair owns one closed block SDT containing its caption and one logical native object in the order below.
 Ordinary v3 pairs belong directly to the main body; resolved pairs may additionally occupy a proven container
@@ -1429,6 +1441,12 @@ formatting IDs use XML Schema integer, while the separate host control `sdtPr/id
 identity contract above. Text scale accepts the schema's 0–600 integer and percentage forms. Unsupported
 properties, unknown attributes, nested content, duplicate properties and invalid values still fail ownership
 validation. This is a closed metadata profile, not a general DOCX schema validator or an Office rendering promise.
+Owned block and inline SDTs also accept one `w:sdtEndPr` between `w:sdtPr` and `w:sdtContent`, as added by native
+Word save. It has no attributes, text or tail, and may contain only `w:rPr` sets validated by the same closed
+run-default profile above. Each set independently rejects duplicate properties, invalid values, nested revisions,
+fields and visible payload. A duplicate or misplaced end-properties container still fails. Boundary formatting is
+neither applied to nor counted as control content; the authenticated tag, field/bookmark topology and complete
+content remain required.
 The source schemas are `wml.xsd` and `shared-commonSimpleTypes.xsd` in the
 [official ECMA-376 Part 4 archive](https://ecma-international.org/publications-and-standards/standards/ecma-376/).
 Lexical validation follows each member type: unsigned decimal measures contain digits without a sign; integer,

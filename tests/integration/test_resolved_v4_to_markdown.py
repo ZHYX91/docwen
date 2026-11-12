@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, cast
@@ -47,6 +48,7 @@ from docwen_core.models.resolved_numbering import (
     ResolvedNumberingPort,
     ResolvedReference,
     canonicalize_numbering_plan,
+    load_resolved_numbering_port,
 )
 from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
@@ -69,6 +71,23 @@ _PLAN = _FORWARD_FIXTURES / "numbering-export-plan.rich.json"
 
 def _sha(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _caption_sequence_scope(package: ZipFile) -> str:
+    roots = [
+        etree.fromstring(package.read(name))
+        for name in package.namelist()
+        if re.fullmatch(r"customXml/item[0-9]+\.xml", name)
+    ]
+    [caption_map] = [
+        root
+        for root in roots
+        if root.tag == "{https://docwen.dev/schema/document-paired-caption-map/v2}documentPairedCaptionMap"
+    ]
+    assert caption_map.get("version") == "2"
+    scope = caption_map.get("sequence_scope")
+    assert scope is not None and re.fullmatch(r"[0-9a-f]{24}", scope)
+    return scope
 
 
 def _write_standalone_caption_pair(tmp_path: Path) -> tuple[Path, Path]:
@@ -381,11 +400,12 @@ def test_standalone_captions_round_trip_with_numbering_and_reference_authority(t
     with ZipFile(source) as package:
         document_xml = package.read("word/document.xml")
         all_xml = b"".join(package.read(name) for name in package.namelist() if name.endswith(".xml"))
+        scope = _caption_sequence_scope(package)
     assert document_xml.count(b"docwen-standalone-caption-v1:") == 2
     assert b"https://docwen.dev/schema/document-standalone-caption-occurrence-map/v1" in all_xml
-    assert b"SEQ Figure" in document_xml
-    assert b"SEQ Table" in document_xml
-    assert b"SEQ Code" not in document_xml
+    assert f"SEQ DW_F_{scope}".encode() in document_xml
+    assert f"SEQ DW_T_{scope}".encode() in document_xml
+    assert f"SEQ DW_C_{scope}".encode() not in document_xml
     assert b" REF " in document_xml
 
     reverse = DocxToMarkdownConverter().convert(_reverse_context(tmp_path, source, request_id="standalone-captions"))
@@ -398,6 +418,66 @@ def test_standalone_captions_round_trip_with_numbering_and_reference_authority(t
     assert "See @[[#^fig-plan]]." in markdown
     assert "Figure: 1" not in markdown
     assert "Table: 1" not in markdown
+
+
+def test_generated_captions_keep_their_sequence_separate_from_template_fields(tmp_path: Path) -> None:
+    neutral, plan = _write_standalone_caption_pair(tmp_path)
+    port = load_resolved_numbering_port(neutral, plan)
+    document = Document()
+    template_paragraphs = []
+    for label, cached in (("Template before ", "1"), ("Template after ", "2")):
+        paragraph = document.add_paragraph(label)
+        field = etree.SubElement(paragraph._p, qn("w:fldSimple"))
+        field.set(qn("w:instr"), " SEQ Table \\* ARABIC ")
+        run = etree.SubElement(field, qn("w:r"))
+        etree.SubElement(run, qn("w:t")).text = cached
+        template_paragraphs.append(paragraph)
+    before, after = template_paragraphs
+    template_xml = tuple(etree.tostring(item._p) for item in template_paragraphs)
+    session = ResolvedNumberingDocxSession(
+        document,
+        port,
+        heading_style_ids={},
+        heading_style_names={},
+        caption_style_bindings=_caption_bindings(document),
+    )
+    styles = {"figure": "Figure Caption V4", "table": "Table Caption V4", "code_block": "Code Caption V4"}
+    for target in port.document.targets:
+        caption = document.add_paragraph(style=styles[target.kind])
+        after._p.addprevious(caption._p)
+        session.bind_caption(
+            caption, (), source_start=target.source_start, source_end=target.source_end, kind=target.kind
+        )
+    reference = port.document.references[0]
+    paragraph = document.add_paragraph("See ")
+    after._p.addprevious(paragraph._p)
+    session.render_reference(paragraph, source_start=reference.source_start, source_end=reference.source_end)
+    output = tmp_path / "template-sequences.docx"
+    session.write_package(output)
+
+    assert tuple(etree.tostring(item._p) for item in (before, after)) == template_xml
+    with ZipFile(output) as package:
+        scope = _caption_sequence_scope(package)
+        root = etree.fromstring(package.read("word/document.xml"))
+    assert scope == session.caption_sequence_scope
+    assert [item.get(qn("w:instr")) for item in root.iter(qn("w:fldSimple"))] == [
+        " SEQ Table \\* ARABIC ",
+        " SEQ Table \\* ARABIC ",
+    ]
+    assert ["".join(text.text or "" for text in field.iter(qn("w:t"))) for field in root.iter(qn("w:fldSimple"))] == [
+        "1",
+        "2",
+    ]
+    instructions = [item.text for item in root.iter(qn("w:instrText"))]
+    assert instructions[:2] == [f" SEQ DW_F_{scope} \\* ARABIC ", f" SEQ DW_T_{scope} \\* ARABIC "]
+    assert len(instructions) == 3 and instructions[2].startswith(" REF ")
+    recovered = ResolvedNumberingV4Recovery.load_if_present(output, Document(str(output)))
+    assert recovered is not None
+    assert recovered.caption_signatures == (
+        ("figure", "fig-plan", "Planned figure", "1"),
+        ("table", None, "Planned table", "1"),
+        ("code_block", None, "Planned code", ""),
+    )
 
 
 @pytest.mark.parametrize("enabled", [True, False])

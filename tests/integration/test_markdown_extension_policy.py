@@ -229,7 +229,7 @@ def test_input_switches_control_native_structures_and_preserve_disabled_syntax(
     output = Path(result.artifacts[0].staging_path)
     with ZipFile(output) as package:
         xml = package.read("word/document.xml").decode()
-        assert ("SEQ Table" in xml) is dialect.captions_references
+        assert ("SEQ DW_T_" in xml) is dialect.captions_references
         assert ("<w:vMerge" in xml) is dialect.structural_tables
         assert ("<w:endnoteReference" in xml) is dialect.typed_endnotes
         assert ("<w:footnoteReference" in xml) is not dialect.typed_endnotes

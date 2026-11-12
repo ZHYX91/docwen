@@ -14,7 +14,7 @@ from docwen_core._docx_semantics_v3_model import (
     DocxSemanticsV3Error,
     derive_anchor_topology_edge_v3,
 )
-from docwen_core.docx_host_metadata import field_run_payload, has_owned_tag_properties
+from docwen_core.docx_host_metadata import field_run_payload, has_owned_tag_properties, owned_sdt_parts
 
 
 def order_ordinary_anchor_bindings(
@@ -334,20 +334,10 @@ def prove_ordinary_anchor_group(
 
 
 def prove_inline_occurrence_envelope(sdt: Any, tag: str) -> None:
-    from docx.oxml.ns import qn
-
-    children = list(sdt)
-    if (
-        sdt.attrib
-        or sdt.text is not None
-        or sdt.tail is not None
-        or [item.tag for item in children] != [qn("w:sdtPr"), qn("w:sdtContent")]
-    ):
+    parts = owned_sdt_parts(sdt)
+    if parts is None:
         raise DocxSemanticsV3Error("reference-occurrence SDT envelope is not canonical")
-    _prove_single_tag_properties(children[0], tag, context="reference-occurrence")
-    content = children[1]
-    if content.attrib or content.text is not None or content.tail is not None:
-        raise DocxSemanticsV3Error("reference-occurrence SDT content is not canonical")
+    _prove_single_tag_properties(parts[0], tag, context="reference-occurrence")
 
 
 def prove_exact_field_run(
@@ -407,16 +397,11 @@ def prove_alias_run(run: Any) -> None:
 def prove_soft_reference_envelope(sdt: Any, tag: str, expected_visible: str) -> None:
     from docx.oxml.ns import qn
 
-    children = list(sdt)
-    if (
-        sdt.attrib
-        or sdt.text is not None
-        or sdt.tail is not None
-        or [item.tag for item in children] != [qn("w:sdtPr"), qn("w:sdtContent")]
-    ):
+    parts = owned_sdt_parts(sdt)
+    if parts is None:
         raise DocxSemanticsV3Error("soft-reference SDT envelope is not canonical")
-    _prove_single_tag_properties(children[0], tag, context="soft-reference")
-    content = children[1]
+    properties, content = parts
+    _prove_single_tag_properties(properties, tag, context="soft-reference")
     runs = list(content)
     if (
         content.attrib
@@ -446,20 +431,10 @@ def prove_soft_reference_envelope(sdt: Any, tag: str, expected_visible: str) -> 
 
 
 def prove_block_sdt_envelope(sdt: Any, tag: str) -> None:
-    from docx.oxml.ns import qn
-
-    children = list(sdt)
-    if (
-        sdt.attrib
-        or sdt.text is not None
-        or sdt.tail is not None
-        or [item.tag for item in children] != [qn("w:sdtPr"), qn("w:sdtContent")]
-    ):
+    parts = owned_sdt_parts(sdt)
+    if parts is None:
         raise DocxSemanticsV3Error("owned block SDT envelope is not canonical")
-    _prove_single_tag_properties(children[0], tag, context="owned block")
-    content = children[1]
-    if content.attrib or content.text is not None or content.tail is not None:
-        raise DocxSemanticsV3Error("owned block SDT content is not canonical")
+    _prove_single_tag_properties(parts[0], tag, context="owned block")
 
 
 def prove_source_recovery_records(soft: list[Any], occurrences: list[Any]) -> None:

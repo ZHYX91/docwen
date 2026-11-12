@@ -13,6 +13,7 @@ from docwen_core.docx_bookmarks import (
     DocxBookmarkInventory,
     prove_bookmark_name,
 )
+from docwen_core.docx_caption_sequences import caption_sequence_kind
 from docwen_core.models.semantic_document import PORTABLE_TARGET_ID_MAX_LENGTH
 
 _BOOKMARK_PREFIX = "_DW_"
@@ -364,7 +365,10 @@ def _extract_semantic_caption(
         match = re.match(r"\s*SEQ\s+([^\\\s]+)", instruction, re.IGNORECASE)
         if match is None:
             continue
-        known_kind = _CAPTION_KIND_BY_FIELD.get(match.group(1).casefold())
+        identifier = match.group(1)
+        known_kind = _CAPTION_KIND_BY_FIELD.get(identifier.casefold()) or caption_sequence_kind(identifier)
+        if known_kind == "code_block":
+            known_kind = "listing"
         if known_kind is None:
             unknown_candidates.append(cached_result.strip())
         else:
