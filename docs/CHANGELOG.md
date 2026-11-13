@@ -5,6 +5,11 @@
 
 ## 0.23.0
 
+- Reduce startup work by loading document, spreadsheet, presentation, image and layout converters when used, applying initial appearance once, and copying only requested configuration values. Template discovery runs in the background and reuses one validated state per scan.
+- 文档、表格、演示、图片和版式转换实现改为使用时加载；初始外观一次应用，配置按需复制。模板目录后台扫描并在单次扫描内复用已验证状态。
+- Accelerate sparse table alignment, avoid creating empty cells during comparisons, reject merges beyond Excel worksheet limits, and preserve PDF self-links without duplication when splitting pages.
+- 优化稀疏表格对齐，比较时不创建空白单元格，拒绝超出 Excel 行列上限的合并结果；PDF 拆分不再重复插入同页链接。
+
 - Preserve the selected output folder's inherited access permissions when publishing result directories, so outputs created by an elevated conversion remain accessible through the ordinary desktop.
 - 发布结果目录时继承所选输出父目录的访问权限，提升权限的转换进程生成的结果仍可通过普通桌面访问。
 

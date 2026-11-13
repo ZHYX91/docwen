@@ -28,6 +28,43 @@ from docwen_plugin_spreadsheet.table_merger.semantics import value_identity
 pytestmark = pytest.mark.contract
 
 
+def test_cell_merge_rejects_shift_beyond_excel_column_limit(tmp_path):
+    for name, marker in (("base", "B1"), ("collect", "A1")):
+        book = openpyxl.Workbook()
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        sheet[marker] = "alignment-marker"
+        if name == "collect":
+            sheet["XFD1"] = "must-not-be-lost"
+        book.save(tmp_path / f"{name}.xlsx")
+        book.close()
+    result = _run(tmp_path, "cell", 1)
+    assert result.success is False
+    assert not result.artifacts
+    assert not list((tmp_path / "staging").glob("*.xlsx"))
+
+
+def test_alignment_keeps_sparse_cells_and_checks_cancellation():
+    book = openpyxl.Workbook()
+    base = book.active
+    assert isinstance(base, Worksheet)
+    collect = book.create_sheet()
+    base["B2"] = "match"
+    base["CV100"] = "last"
+    collect["A1"] = "match"
+    converter = TableMergerConverter()
+    checks = []
+    assert converter._find_best_offset(base, collect, 2, cancel_check=lambda: checks.append(1)) == (1, 1)
+    assert len(base._cells) == 2
+    assert len(collect._cells) == 1
+    assert checks
+    converter._row_similarity(base, 2, collect, 1, 1)
+    converter._col_similarity(base, 2, collect, 1, 1)
+    assert len(base._cells) == 2
+    assert len(collect._cells) == 1
+    book.close()
+
+
 def _write(path: Path, rows: Sequence[Sequence[Any]], mode: str = "row") -> None:
     book = openpyxl.Workbook()
     sheet = book.active

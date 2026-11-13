@@ -9,6 +9,7 @@ import unicodedata
 from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from docwen_core.detection import inspect_file
 from docwen_core.models import StructureStatus
@@ -159,11 +160,8 @@ class TemplateRegistry:
     def _list_templates(self, target_type: str | None, *, include_disabled: bool) -> list[TemplateInfo]:
         templates: list[TemplateInfo] = []
         identities: dict[str, Path] = {}
-        defaults = (
-            {target: self._state_store.default_id(target) for target in ("docx", "xlsx")}
-            if self._state_store is not None
-            else {"docx": None, "xlsx": None}
-        )
+        state = self._state_store.load() if self._state_store is not None else None
+        defaults = state["defaults"] if state is not None else {"docx": None, "xlsx": None}
         for templates_dir in self._dirs:
             if not templates_dir.exists():
                 continue
@@ -181,7 +179,7 @@ class TemplateRegistry:
                 is_managed_user = self._state_store is not None and self._is_managed_user_template(path)
                 if is_managed_user:
                     assert self._state_store is not None
-                    template_id = self._state_store.ensure_user_identity(path, target)
+                    template_id = self._state_store.ensure_user_identity(path, target, state=state)
                 else:
                     template_id = _canonical_template_id(path.stem, target)
                 conflicting_path = identities.get(template_id)
@@ -206,9 +204,10 @@ class TemplateRegistry:
                 )
 
         if self._state_store is not None:
-            templates = self._apply_persisted_order(templates)
+            templates = self._apply_persisted_order(templates, state=state)
             if not include_disabled:
-                templates = [template for template in templates if self._state_store.is_enabled(template.id)]
+                assert state is not None
+                templates = [template for template in templates if state["enabled"].get(template.id, True)]
 
         if target_type is None:
             return templates
@@ -237,14 +236,16 @@ class TemplateRegistry:
         except OSError:
             return path.parent == self._managed_user_dir
 
-    def _apply_persisted_order(self, templates: list[TemplateInfo]) -> list[TemplateInfo]:
+    def _apply_persisted_order(
+        self, templates: list[TemplateInfo], *, state: dict[str, Any] | None = None
+    ) -> list[TemplateInfo]:
         if self._state_store is None:
             return templates
         ordered: list[TemplateInfo] = []
         for target in ("docx", "xlsx"):
             candidates = [template for template in templates if template.target == target]
             by_id = {template.id: template for template in candidates}
-            ids = self._state_store.ordered_ids(target, [template.id for template in candidates])
+            ids = self._state_store.ordered_ids(target, [template.id for template in candidates], state=state)
             ordered.extend(by_id[template_id] for template_id in ids if template_id in by_id)
         ordered_ids = {template.id for template in ordered}
         ordered.extend(template for template in templates if template.id not in ordered_ids)

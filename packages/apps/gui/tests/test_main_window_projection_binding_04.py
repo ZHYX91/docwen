@@ -217,6 +217,9 @@ class TestRuntimeRequestBinding:
         monkeypatch.setattr(TemplateRegistry, "list_templates", fail_registry)
         candidate = MainWindow(view_model=MainWindowViewModel(controller=FakeController()))  # type: ignore[arg-type]
         candidate.setup_ui()
+        from tests.support.gui import wait_for_template_catalog
+
+        wait_for_template_catalog(candidate)
         try:
             assert candidate._template_selector is not None
             for template_type in ("docx", "xlsx"):

@@ -5,21 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from docwen_plugin_layout.manifest import build_manifest
-from docwen_plugin_layout.operations.converter import PdfMerger, PdfSplitter
-from docwen_plugin_layout.preprocess import PreprocessResult, preprocess_layout_input
-from docwen_plugin_layout.to_document.converter import LayoutToDocumentConverter
-from docwen_plugin_layout.to_image.converter import LayoutToImageConverter
-from docwen_plugin_layout.to_markdown.converter import LayoutToMarkdownConverter
-from docwen_plugin_layout.to_pdf.converter import (
-    LayoutToPdfConverter,
-    OfdToPdfConverter,
-    XpsToPdfConverter,
-)
+from docwen_plugin_layout.preprocess import preprocess_layout_input
 
 if TYPE_CHECKING:
     from docwen_core.models.manifest import PluginManifest
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import PluginExecutionContext
+    from docwen_plugin_layout.preprocess import PreprocessResult
 
 
 class LayoutPlugin:
@@ -50,6 +42,16 @@ class LayoutPlugin:
 
     def convert(self, context: PluginExecutionContext) -> ConversionResult:
         """Dispatch to the appropriate converter based on source/target."""
+        from docwen_plugin_layout.operations.converter import PdfMerger, PdfSplitter
+        from docwen_plugin_layout.to_document.converter import LayoutToDocumentConverter
+        from docwen_plugin_layout.to_image.converter import LayoutToImageConverter
+        from docwen_plugin_layout.to_markdown.converter import LayoutToMarkdownConverter
+        from docwen_plugin_layout.to_pdf.converter import (
+            LayoutToPdfConverter,
+            OfdToPdfConverter,
+            XpsToPdfConverter,
+        )
+
         source = context.request.input_refs[0].format if context.request.input_refs else ""
         target = context.request.target_format
 

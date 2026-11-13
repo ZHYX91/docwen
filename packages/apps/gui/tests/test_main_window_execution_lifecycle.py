@@ -157,6 +157,7 @@ def test_clipboard_snapshot_survives_real_worker_until_cancel_drain(
         qapp.processEvents()
         assert not source.exists()
         main_window.close()
+        qtbot.waitUntil(lambda: main_window._shutdown_finalized)
     assert not store.session_root.exists()
 
 

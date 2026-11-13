@@ -16,16 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from docwen_plugin_spreadsheet.csv_xlsx.converter import (
-    CsvToXlsxConverter,
-    TsvToXlsxConverter,
-    XlsxToCsvConverter,
-    XlsxToTsvConverter,
-)
-from docwen_plugin_spreadsheet.format_conversion.converter import SmartSheetConverter
 from docwen_plugin_spreadsheet.manifest import build_manifest
-from docwen_plugin_spreadsheet.table_merger.converter import TableMergerConverter
-from docwen_plugin_spreadsheet.to_markdown.converter import SpreadsheetToMarkdownConverter
 
 if TYPE_CHECKING:
     from docwen_core.models.manifest import PluginManifest
@@ -76,6 +67,16 @@ class SpreadsheetPlugin:
         Dispatches to the correct converter based on source_format,
         target_format, and action_name.
         """
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import (
+            CsvToXlsxConverter,
+            TsvToXlsxConverter,
+            XlsxToCsvConverter,
+            XlsxToTsvConverter,
+        )
+        from docwen_plugin_spreadsheet.format_conversion.converter import SmartSheetConverter
+        from docwen_plugin_spreadsheet.table_merger.converter import TableMergerConverter
+        from docwen_plugin_spreadsheet.to_markdown.converter import SpreadsheetToMarkdownConverter
+
         source = context.request.input_refs[0].format if context.request.input_refs else ""
         target = context.request.target_format
         action = context.request.action_name

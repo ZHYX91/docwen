@@ -34,15 +34,18 @@ pytestmark = pytest.mark.gui
 
 
 @pytest.fixture
-def window(qapp):
+def window(qapp, qtbot):
     from docwen_gui.main_window import MainWindow
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
     vm = MainWindowViewModel(controller=FakeController())  # type: ignore[arg-type]
     w = MainWindow(view_model=vm)
     w.setup_ui()
+    qtbot.waitUntil(lambda: not w._template_vm.busy)
     yield w
-    w.close()
+    from tests.support.gui import shutdown_main_window
+
+    shutdown_main_window(w)
 
 
 @pytest.fixture
@@ -95,6 +98,9 @@ def _make_window_with_config(qapp, values: dict[str, object]):
     vm = MainWindowViewModel(controller=_FakeController(values))  # type: ignore[arg-type]
     w = MainWindow(view_model=vm)
     w.setup_ui()
+    from tests.support.gui import wait_for_template_catalog
+
+    wait_for_template_catalog(w)
     return w
 
 

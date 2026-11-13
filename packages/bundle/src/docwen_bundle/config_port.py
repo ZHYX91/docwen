@@ -31,16 +31,7 @@ class ConfigPortAdapter:
         return self._loader.config
 
     def get(self, key: str, default: Any = None) -> Any:
-        data = self._trusted_config().as_dict()
-        parts = [p for p in (key or "").split(".") if p]
-        if not parts:
-            return default
-        cur: Any = data
-        for part in parts:
-            if not isinstance(cur, dict) or part not in cur:
-                return default
-            cur = cur[part]
-        return cur
+        return self._trusted_config().get_path(key, default)
 
     def snapshot(self) -> dict[str, Any]:
         return self._trusted_config().as_dict()

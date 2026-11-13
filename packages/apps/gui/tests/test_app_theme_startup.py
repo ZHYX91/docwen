@@ -17,11 +17,9 @@ def test_initialize_application_theme_reads_injected_config(
     from docwen_gui import app as app_module
     from docwen_gui.styles.theme_manager import ThemeManager
 
-    calls: list[tuple[object, object]] = []
+    calls: list[tuple[object, object, object]] = []
     manager = SimpleNamespace(
-        initialize=lambda app, theme: calls.append((app, theme)),
-        apply_ui_scale=lambda value: calls.append(("scale", value)),
-        apply_font_size_preset=lambda value: calls.append(("font", value)),
+        initialize=lambda app, theme, **appearance: calls.append((app, theme, appearance)),
     )
     monkeypatch.setattr(ThemeManager, "get_instance", classmethod(lambda cls: manager))
 
@@ -33,7 +31,7 @@ def test_initialize_application_theme_reads_injected_config(
 
     app_module._initialize_application_theme(qt_app, controller)
 
-    assert calls == [(qt_app, stored_theme), ("scale", 100), ("font", "default")]
+    assert calls == [(qt_app, stored_theme, {"scale": 100, "font_size_preset": "default"})]
 
 
 @pytest.mark.parametrize("stored_theme", [None, "", "sepia", 42])
@@ -46,7 +44,7 @@ def test_initialize_application_theme_falls_back_for_invalid_config(
 
     calls: list[str] = []
     manager = SimpleNamespace(
-        initialize=lambda app, theme: calls.append(theme),
+        initialize=lambda app, theme, **appearance: calls.append(theme),
         apply_ui_scale=lambda value: None,
         apply_font_size_preset=lambda value: None,
     )
