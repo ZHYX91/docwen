@@ -357,7 +357,7 @@ def test_all_link_modes_and_independent_fallbacks_are_admitted(tmp_path: Path, m
         assert snapshot[key] == expected
 
 
-def test_legacy_link_override_receives_lossless_hyperlink_fallback_defaults(tmp_path: Path) -> None:
+def test_sparse_link_override_receives_text_hyperlink_fallback_defaults(tmp_path: Path) -> None:
     from docwen_runtime.config.loader import ConfigLoader
 
     user_dir = tmp_path / "user"
@@ -368,6 +368,6 @@ def test_legacy_link_override_receives_lossless_hyperlink_fallback_defaults(tmp_
     loader = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=user_dir)
     snapshot = loader.config.as_dict()["link"]["non_embed_links"]
 
-    assert snapshot["wiki_hyperlink_fallback"] == snapshot["markdown_hyperlink_fallback"] == "keep"
+    assert snapshot["wiki_hyperlink_fallback"] == snapshot["markdown_hyperlink_fallback"] == "extract_text"
     assert user_file.read_bytes() == original
     assert not list(user_dir.glob("*.bak_*"))

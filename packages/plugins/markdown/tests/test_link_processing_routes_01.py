@@ -221,7 +221,8 @@ def test_xlsx_hyperlink_mode_materializes_supported_single_link_cells(tmp_path: 
     try:
         worksheet = workbook.active
         assert worksheet is not None
-        assert worksheet["A2"].value == "[[guide]]"
+        assert worksheet["A2"].value == "guide"
+        assert worksheet["A2"].hyperlink is None
         assert worksheet["B2"].value == "Markdown Label"
         assert worksheet["B2"].hyperlink.target == "https://example.com/markdown"
     finally:
@@ -384,9 +385,9 @@ def test_docx_embeds_relative_image_inside_table_without_pipe_corruption(
 @pytest.mark.parametrize(
     ("mode", "expected_text"),
     [
-        ("keep", "[[missing.md|Shown]]"),
-        ("ignore", "[[missing.md|Shown]]"),
-        ("placeholder", "[[missing.md|Shown]]"),
+        ("keep", "Shown"),
+        ("ignore", "Shown"),
+        ("placeholder", "Shown"),
     ],
 )
 def test_docx_missing_wiki_hyperlink_uses_independent_default_fallback(
@@ -442,7 +443,7 @@ def test_docx_fragment_only_wiki_link_has_no_false_hyperlink_affordance(
 
     observation = _convert_docx(source, _link_config(wiki_mode="hyperlink"))
 
-    assert observation.text == "[[#section-name|Section]]"
+    assert observation.text == "Section"
     assert not observation.hyperlink_targets
     assert "<w:hyperlink" not in observation.document_xml
     assert "<w:bookmarkStart" not in observation.document_xml
@@ -460,7 +461,7 @@ def test_docx_fragment_only_standard_link_has_no_false_hyperlink_affordance(
         _link_config(markdown_mode="hyperlink"),
     )
 
-    assert observation.text == "[Section](#section-name)"
+    assert observation.text == "Section"
     assert not observation.hyperlink_targets
     assert "<w:hyperlink" not in observation.document_xml
     assert "<w:u" not in observation.document_xml
@@ -519,7 +520,7 @@ def test_docx_protocol_relative_link_does_not_become_a_local_file(
 
     observation = _convert_docx(source, _link_config())
 
-    assert observation.text == "[Target](//example.com/path)"
+    assert observation.text == "Target"
     assert not observation.hyperlink_targets
 
 

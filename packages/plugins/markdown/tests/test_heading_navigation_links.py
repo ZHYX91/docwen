@@ -57,13 +57,13 @@ def test_markdown_and_wiki_heading_links_share_real_bookmark(tmp_path: Path, hea
 
 
 @pytest.mark.parametrize("heading", ["# Repeated\n\n# Repeated", "# Another"])
-def test_duplicate_and_unknown_heading_links_keep_original_by_default(tmp_path: Path, heading: str) -> None:
+def test_duplicate_and_unknown_heading_links_extract_text_by_default(tmp_path: Path, heading: str) -> None:
     source = tmp_path / "unknown.md"
     links = '[**Markdown**](#repeated "title") and [[#Repeated|Wiki]]'
     source.write_text(f"{links}\n\n{heading}\n", encoding="utf-8")
     observation = _convert_docx(source, _link_config())
 
-    assert links in observation.text
+    assert "Markdown and Wiki" in observation.text
     assert not _anchors(observation.document_xml)
     assert not _navigation_bookmarks(observation.document_xml)
     assert not observation.hyperlink_targets
@@ -95,7 +95,8 @@ def test_ordinary_block_id_link_does_not_bind_frozen_semantic_anchor(tmp_path: P
     source.write_text("[[#^intro|Ordinary]]\n\n# Intro ^intro\n", encoding="utf-8")
     observation = _convert_docx(source, _link_config())
 
-    assert "[[#^intro|Ordinary]]" in observation.text
+    assert "Ordinary" in observation.text
+    assert "[[#^intro|Ordinary]]" not in observation.text
     assert not _anchors(observation.document_xml)
     assert not _navigation_bookmarks(observation.document_xml)
     assert not observation.hyperlink_targets
@@ -124,7 +125,7 @@ def test_heading_bookmark_and_internal_hyperlink_survive_docx_save_reload(tmp_pa
 
 @pytest.mark.parametrize("kind", ["markdown", "wiki"])
 @pytest.mark.parametrize("matching", [True, False])
-def test_yaml_heading_links_use_rendered_body_targets_or_lossless_fallback(
+def test_yaml_heading_links_use_rendered_body_targets_or_default_text_fallback(
     tmp_path: Path, kind: str, matching: bool
 ) -> None:
     source = tmp_path / "yaml.md"
@@ -140,7 +141,7 @@ def test_yaml_heading_links_use_rendered_body_targets_or_lossless_fallback(
     template.save(str(template_path))
     observation = _convert_docx(source, _link_config(), options={"template_name": str(template_path)})
 
-    assert f"Site: {'YAML jump' if matching else link} end" in observation.text
+    assert "Site: YAML jump end" in observation.text
     if matching:
         assert len(_anchors(observation.document_xml)) == 1
         assert set(_anchors(observation.document_xml)) == set(_navigation_bookmarks(observation.document_xml))
@@ -175,7 +176,8 @@ def test_user_private_scheme_lookalike_is_never_a_navigation_capability(tmp_path
     source_link = "[Fake](docwen-navigation:guessed0)"
     source.write_text(source_link + "\n\n# guessed0\n", encoding="utf-8")
     observation = _convert_docx(source, _link_config())
-    assert source_link in observation.text
+    assert "Fake" in observation.text
+    assert source_link not in observation.text
     assert not _anchors(observation.document_xml)
     assert not _navigation_bookmarks(observation.document_xml)
     assert not observation.hyperlink_targets
@@ -193,7 +195,7 @@ def test_embedded_document_cannot_supply_a_root_fragment_target(tmp_path: Path) 
     observation = _convert_docx(source, _link_config())
 
     assert "Child body." in observation.text
-    assert "[Child](#embedded) / [[#Embedded|Wiki child]] / [Root](#root)" in observation.text
+    assert "Child / Wiki child / Root" in observation.text
     assert not _anchors(observation.document_xml)
     assert not _navigation_bookmarks(observation.document_xml)
     assert ANCHOR_TAG_PREFIX in observation.document_xml
