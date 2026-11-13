@@ -1,4 +1,4 @@
-"""Independent request-scoped ordinary link modes and lossless fallbacks."""
+"""Independent request-scoped ordinary link modes and selected fallbacks."""
 
 from __future__ import annotations
 
@@ -93,12 +93,12 @@ def test_extract_address_excludes_title_and_preserves_escaping(tmp_path: Path) -
         "data:text/plain,hello",
     ],
 )
-def test_non_navigable_uri_never_silently_loses_original_target(tmp_path: Path, target: str) -> None:
+def test_non_navigable_uri_defaults_to_display_text(tmp_path: Path, target: str) -> None:
     original = f"[Label](<{target}>)"
     result = process_markdown_links(
         original, str(tmp_path / "source.md"), link_config=LinkRuntimeConfig(), target_format="docx"
     )
-    assert result == escape_markdown_source_literal(original)
+    assert result == "Label"
 
 
 def test_declared_link_boundary_does_not_probe_markdown_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -113,7 +113,7 @@ def test_declared_link_boundary_does_not_probe_markdown_target(tmp_path: Path, m
         target_format="docx",
         local_lookup_allowed=False,
     )
-    assert result == escape_markdown_source_literal("[Label](private.md)")
+    assert result == "Label"
 
 
 @pytest.mark.parametrize("mode", ["keep", "extract_text", "extract_address", "remove"])

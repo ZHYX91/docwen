@@ -1110,12 +1110,12 @@ class SettingsViewModel(QObject):
                 markdown_link_mode=non_embed.get("markdown_mode", "hyperlink")
                 if isinstance(non_embed, dict)
                 else "hyperlink",
-                wiki_hyperlink_fallback=non_embed.get("wiki_hyperlink_fallback", "keep")
+                wiki_hyperlink_fallback=non_embed.get("wiki_hyperlink_fallback", "extract_text")
                 if isinstance(non_embed, dict)
-                else "keep",
-                markdown_hyperlink_fallback=non_embed.get("markdown_hyperlink_fallback", "keep")
+                else "extract_text",
+                markdown_hyperlink_fallback=non_embed.get("markdown_hyperlink_fallback", "extract_text")
                 if isinstance(non_embed, dict)
-                else "keep",
+                else "extract_text",
                 wiki_embed_image_mode=embed.get("wiki_image_mode", "embed") if isinstance(embed, dict) else "embed",
                 markdown_embed_image_mode=embed.get("markdown_image_mode", "embed")
                 if isinstance(embed, dict)

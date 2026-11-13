@@ -448,7 +448,7 @@ def test_xlsx_nested_table_codec_preserves_escaped_pipes_and_literal_tokens(
         (
             "[[target.md|Shown]]",
             {"wiki_mode": "hyperlink"},
-            "[[target.md|Shown]]",
+            "Shown",
         ),
         (
             "[[target.md|Shown|More]]",
@@ -478,7 +478,7 @@ def test_xlsx_nested_table_codec_preserves_escaped_pipes_and_literal_tokens(
         (
             "[Shown|More](https://example.com)",
             {"markdown_mode": "hyperlink"},
-            "[Shown|More](https://example.com)",
+            "Shown|More",
         ),
     ],
 )
@@ -521,6 +521,4 @@ def test_spreadsheet_link_replacements_keep_wiki_pipes_in_one_cell(
             rows = list(csv.reader(handle))
         row = rows[1]
         assert len(row) == 2
-    if target_format == "xlsx" and "hyperlink" in config_override.values():
-        expected_cell = "Shown" if syntax.startswith("[[") else "Shown|More"
     assert row == [expected_cell, "ok"]

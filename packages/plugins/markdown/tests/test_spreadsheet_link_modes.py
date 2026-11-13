@@ -1,4 +1,4 @@
-"""Native single-cell links, fallback losslessness and YAML parity."""
+"""Native single-cell links, selected fallbacks and YAML parity."""
 
 from __future__ import annotations
 
@@ -66,11 +66,16 @@ def test_mixed_link_fallback_does_not_split_cell(tmp_path: Path, fallback: str, 
     assert sheet["A2"].hyperlink is None
 
 
-def test_multiple_links_preserve_both_targets(tmp_path: Path) -> None:
+@pytest.mark.parametrize("target", ["xlsx", "csv"])
+def test_multiple_links_default_to_display_text(tmp_path: Path, target: str) -> None:
     value = "[A](https://a.example) [B](https://b.example)"
-    path = convert(tmp_path, f"| Links |\n| --- |\n| {value} |\n")
-    cell = active(load_workbook(path))["A2"]
-    assert cell.value == value and cell.hyperlink is None
+    path = convert(tmp_path, f"| Links |\n| --- |\n| {value} |\n", target=target)
+    if target == "csv":
+        with open(path, encoding="utf-8-sig", newline="") as handle:
+            assert list(csv.reader(handle)) == [["Links"], ["A B"]]
+    else:
+        cell = active(load_workbook(path))["A2"]
+        assert cell.value == "A B" and cell.hyperlink is None
 
 
 @pytest.mark.parametrize(
@@ -137,7 +142,7 @@ def test_yaml_list_multiple_links_uses_fallback(tmp_path: Path) -> None:
 
 def test_private_link_token_does_not_reduce_cell_capacity(tmp_path: Path) -> None:
     value = "x" * (32767 - len("[x](https://e.co)")) + "[x](https://e.co)"
-    path = convert(tmp_path, f"| Links |\n| --- |\n| {value} |\n")
+    path = convert(tmp_path, f"| Links |\n| --- |\n| {value} |\n", config={"markdown_hyperlink_fallback": "keep"})
     cell = active(load_workbook(path))["A2"]
     assert cell.value == value and cell.hyperlink is None
 
@@ -149,12 +154,21 @@ def test_hyperlink_label_formula_is_literal(tmp_path: Path) -> None:
     assert cell.hyperlink.target == "https://example.com"
 
 
-def test_link_in_header_retains_template_column_lookup(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "fallback,header",
+    [(None, "Site"), ("keep", "[Site](https://example.com)"), ("extract_address", "https://example.com")],
+)
+def test_link_in_header_uses_selected_fallback_text_for_template_column_lookup(
+    tmp_path: Path, fallback: str | None, header: str
+) -> None:
     template = tmp_path / "template.xlsx"
     wb = Workbook()
-    active(wb)["A1"] = "{{↓[Site](https://example.com)}}"
+    active(wb)["A1"] = "{{↓" + header + "}}"
     wb.save(template)
-    path = convert(tmp_path, "| [Site](https://example.com) |\n| --- |\n| preserved |\n", template=template)
+    config = {"markdown_hyperlink_fallback": fallback} if fallback else None
+    path = convert(
+        tmp_path, "| [Site](https://example.com) |\n| --- |\n| preserved |\n", template=template, config=config
+    )
     assert active(load_workbook(path))["A1"].value == "preserved"
 
 
@@ -184,7 +198,7 @@ def test_dangerous_decoded_scheme_never_becomes_native_hyperlink(tmp_path: Path,
     syntax = f"[Label]({target})"
     path = convert(tmp_path, f"| Links |\n| --- |\n| {syntax} |\n")
     cell = active(load_workbook(path))["A2"]
-    assert cell.value == syntax
+    assert cell.value == "Label"
     assert cell.hyperlink is None
 
 

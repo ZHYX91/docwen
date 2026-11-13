@@ -24,7 +24,7 @@ Markdown→XLSX 将模板自身声明的图片及当前链接策略生成的图�
 
 Authored ordinary Wiki and Markdown links independently support `keep`, `extract_text`, `extract_address`,
 `remove` and `hyperlink`. The main mode defaults to `hyperlink`; each syntax has its own fallback setting,
-`wiki_hyperlink_fallback` or `markdown_hyperlink_fallback`, defaulting to `keep`. Fallback choices are limited to
+`wiki_hyperlink_fallback` or `markdown_hyperlink_fallback`, defaulting to `extract_text`. Fallback choices are limited to
 `keep`, `extract_text` and `extract_address`. Keeping preserves the whole original syntax, extracting an address
 keeps the source destination and fragment rather than a resolved absolute path, and removal includes the display
 text. Unsupported or unresolved hyperlink destinations use the selected fallback, not an implicit removal.
@@ -68,7 +68,7 @@ native destinations remain visible text. This does not promise lossless import o
 
 普通 Wiki 与 Markdown 链接各自支持 `keep`（保留原样）、`extract_text`（提取文字）、`extract_address`
 （提取地址）、`remove`（连同显示文字删除）和 `hyperlink`（生成超链接）。主模式默认 `hyperlink`；
-`wiki_hyperlink_fallback` 与 `markdown_hyperlink_fallback` 各自默认 `keep`，可选值仅为 `keep`、
+`wiki_hyperlink_fallback` 与 `markdown_hyperlink_fallback` 各自默认 `extract_text`，可选值仅为 `keep`、
 `extract_text`、`extract_address`。保留原样保存完整源语法；提取地址保留源目标和锚点，不替换为解析后的
 绝对路径。无法生成超链接时遵守对应回退，不隐式删除链接。
 字段、单元格和标题链接回退中的纯文本标签使用与 DOCX 超链接一致的行内文字规则：公式保留可读的

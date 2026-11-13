@@ -522,15 +522,16 @@ class BatchEntryItemWidget(QWidget):
         row_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, row)
         row_layout.setContentsMargins(0, 0, 0, 0)
         set_metric(row_layout, "setSpacing", _SPACING_XS)
-        row_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        alignment = Qt.AlignmentFlag.AlignVCenter if elide_middle else Qt.AlignmentFlag.AlignTop
+        row_layout.setAlignment(alignment)
         title = QLabel(label_text, row)
         title.setObjectName("batchInfoLabel")
-        row_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
+        row_layout.addWidget(title, alignment=alignment)
         value = MiddleElidedLabel(value_text, row) if elide_middle else WrappingLabel(value_text, row)
         value.setObjectName(value_object_name)
         if not elide_middle:
             value.setWordWrap(True)
-        row_layout.addWidget(value, stretch=1, alignment=Qt.AlignmentFlag.AlignTop)
+        row_layout.addWidget(value, stretch=1, alignment=alignment)
         return row
 
     def _apply_entry(self, entry: BatchFileEntry) -> None:

@@ -79,7 +79,7 @@ def test_hyperlink_fallback_controls_are_independent_and_preserve_inactive_choic
     assert vm.config.link.wiki_link_mode == vm.config.link.markdown_link_mode == "hyperlink"
     for combo in (tab._wiki_hyperlink_fallback, tab._markdown_hyperlink_fallback):
         assert _combo_values(combo) == ["keep", "extract_text", "extract_address"]
-        assert combo.currentData() == "keep"
+        assert combo.currentData() == "extract_text"
         assert combo.isEnabled()
 
     tab.set_combo_data(tab._wiki_hyperlink_fallback, "extract_address")
