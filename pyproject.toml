@@ -254,6 +254,7 @@ include = [
     "scripts/release/publication_entry.py",
     "scripts/release/publication_http.py",
     "scripts/release/publication_session.py",
+    "scripts/release/windows_candidate.py",
     "tools/source_checks.py",
 ]
 exclude = [

@@ -54,6 +54,9 @@ def _copy_pages_preserving_internal_gotos(src, destination, pages: list[int], ca
             target_source_index = link.get("page")
             if link.get("kind") != fitz.LINK_GOTO or target_source_index not in destination_by_source:
                 continue
+            # insert_pdf already copies and remaps links within the copied page.
+            if target_source_index == source_index:
+                continue
             remapped_link = {
                 "kind": fitz.LINK_GOTO,
                 "from": link["from"],

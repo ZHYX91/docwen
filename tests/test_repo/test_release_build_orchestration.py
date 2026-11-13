@@ -154,7 +154,10 @@ def test_release_workflow_builds_each_supported_package_once_and_runs_packaged_g
 
     for job in (windows, linux, jobs["build-macos"]):
         assert "strategy" not in job
-        assert job["outputs"] == {"artifact_id": "${{ steps.upload.outputs.artifact-id }}"}
+        expected_outputs = {"artifact_id": "${{ steps.upload.outputs.artifact-id }}"}
+        if job is windows:
+            expected_outputs["metadata_artifact_id"] = "${{ steps.windows-metadata.outputs.artifact-id }}"
+        assert job["outputs"] == expected_outputs
 
     downloads = [step for step in jobs["verify-release"]["steps"] if "download-artifact@" in step.get("uses", "")]
     assert [step["with"] for step in downloads] == [
@@ -171,6 +174,11 @@ def test_release_workflow_builds_each_supported_package_once_and_runs_packaged_g
         {
             "artifact-ids": "${{ needs.build-macos.outputs.artifact_id }}",
             "path": "builds/macos",
+            "digest-mismatch": "error",
+        },
+        {
+            "artifact-ids": "${{ needs.build-windows.outputs.metadata_artifact_id }}",
+            "path": "builds/windows",
             "digest-mismatch": "error",
         },
     ]
@@ -206,6 +214,11 @@ def test_release_workflow_builds_each_supported_package_once_and_runs_packaged_g
     assert "https://snapshot.ubuntu.com/ubuntu/" in dependencies
     assert "Dir::Etc::sourceparts=-" in dependencies
     assert "libegl1" in dependencies
+    assert "APT::Update::Error-Mode=any" in dependencies
+    assert "Acquire::Retries=3" in dependencies
+    assert "--kill-after=15s 10m" in dependencies
+    assert "--kill-after=15s 15m" in dependencies
+    assert "--windows-manifest builds/windows/windows-candidate.json" in _commands(jobs["verify-release"])
 
     for job_name, job in jobs.items():
         assert isinstance(job, dict), job_name

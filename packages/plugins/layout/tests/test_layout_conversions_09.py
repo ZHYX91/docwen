@@ -19,6 +19,33 @@ from ._layout_conversions_support import (
 pytestmark = pytest.mark.contract
 
 
+def test_split_preserves_self_and_cross_page_links_exactly_once(tmp_path):
+    import fitz
+
+    from docwen_core.cancellation import CancellationToken
+    from docwen_plugin_layout.operations.converter import _copy_pages_preserving_internal_gotos
+
+    source = fitz.open()
+    source.new_page()
+    source.new_page()
+    for target in (0, 1):
+        source[0].insert_link(
+            {
+                "kind": fitz.LINK_GOTO,
+                "from": fitz.Rect(10, 10 + target * 30, 50, 30 + target * 30),
+                "page": target,
+                "to": fitz.Point(0, 0),
+            }
+        )
+    source.save(tmp_path / "source.pdf")
+    source.close()
+    with fitz.open(tmp_path / "source.pdf") as source, fitz.open() as output:
+        _copy_pages_preserving_internal_gotos(source, output, [1, 2], CancellationToken())
+        output.save(tmp_path / "output.pdf")
+    with fitz.open(tmp_path / "output.pdf") as output:
+        assert sorted(link["page"] for link in output[0].get_links()) == [0, 1]
+
+
 class TestPluginDispatch:
     def test_pdf_operations_forms_actions_match_old_system_projection(self, tmp_path: Path) -> None:
         """Split preserves safe internal actions when both pages stay together."""

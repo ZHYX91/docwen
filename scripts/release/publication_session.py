@@ -63,6 +63,57 @@ def verify_candidate_jobs(payload: dict[str, Any]) -> None:
         )
 
 
+def candidate_jobs(api: GitHub, *, run_id: int, attempt: int, commit: str) -> dict[str, Any]:
+    """Resolve rerun dependencies within this exact run, never from another build.
+
+    GitHub may omit unchanged successful jobs or copy them with new job IDs. The
+    most recent occurrence wins, including failures and skips; an older success
+    must never mask a failed replacement. Bound the history and reject gaps.
+    """
+    require(0 < attempt <= 20, "candidate attempt history exceeds limit")
+    selected: dict[str, dict[str, Any]] = {}
+    for number in range(attempt, 0, -1):
+        prefix = f"/repos/{api.repository}/actions/runs/{run_id}/attempts/{number}"
+        run = api.get(prefix)
+        require(
+            run.get("id") == run_id
+            and run.get("run_attempt") == number
+            and run.get("head_sha") == commit
+            and run.get("path") == WORKFLOW
+            and run.get("repository", {}).get("full_name") == api.repository
+            and run.get("event") in {"push", "workflow_dispatch"},
+            "candidate attempt source mismatch",
+        )
+        payload = api.get(prefix + "/jobs?per_page=100")
+        jobs = payload.get("jobs", [])
+        require(payload.get("total_count") == len(jobs), "incomplete candidate job response")
+        names: set[str] = set()
+        for job in jobs:
+            name = job.get("name", "").split(" / ")[-1]
+            require(name not in names, "ambiguous candidate job")
+            names.add(name)
+            require(
+                job.get("run_id", run_id) == run_id and job.get("run_attempt", number) == number,
+                "candidate job run mismatch",
+            )
+            if name not in selected:
+                selected[name] = {**job, "run_attempt": number, "producer_attempt": number}
+            else:
+                latest = selected[name]
+                # Carried jobs retain their execution timestamps and steps even
+                # when GitHub assigns a new ID and run_attempt. Only identical,
+                # complete successful executions can identify an older producer.
+                if (
+                    latest.get("conclusion") == job.get("conclusion") == "success"
+                    and latest.get("started_at")
+                    and latest.get("completed_at")
+                    and latest.get("steps")
+                    and all(latest.get(key) == job.get(key) for key in ("started_at", "completed_at", "steps"))
+                ):
+                    latest["producer_attempt"] = number
+    return {"total_count": len(selected), "jobs": list(selected.values())}
+
+
 def verify_provenance(directory: Path, manifest: dict[str, Any], names: tuple[str, ...]) -> None:
     """Check provenance for the bytes actually being consumed."""
     for name in names:
@@ -152,9 +203,7 @@ class ReleaseSession:
         require(artifact.get("id") == self.identity["artifactId"], "artifact ID mismatch")
         verify_origin(self.manifest, run, artifact, digest=self.identity["artifactDigest"])
         verify_candidate_jobs(
-            self.api.get(
-                f"{self.prefix}/actions/runs/{origin['runId']}/attempts/{origin['runAttempt']}/jobs?per_page=100"
-            )
+            candidate_jobs(self.api, run_id=origin["runId"], attempt=origin["runAttempt"], commit=self.commit)
         )
 
     def verify_accepted_source(self) -> None:

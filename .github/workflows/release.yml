@@ -110,6 +110,11 @@ jobs:
     name: Build Windows packages
     outputs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      metadata_artifact_id: ${{ steps.windows-metadata.outputs.artifact-id }}
+    permissions:
+      contents: read
+      attestations: write
+      id-token: write
     needs: [identity, source-checks]
     runs-on: windows-latest
     timeout-minutes: 90
@@ -158,6 +163,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           uv run python scripts/release/verify_packaged_gui.py --binary-dir "$output/payload" --gongwen-fields-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Describe the independently verified Windows producer
+        shell: pwsh
+        run: >-
+          uv run --no-project python scripts/release/windows_candidate.py
+          --directory "$env:RUNNER_TEMP/docwen-candidate"
+          --repository "$env:GITHUB_REPOSITORY" --version "$env:RELEASE_VERSION" --commit "$env:GITHUB_SHA"
+          --run-id "$env:GITHUB_RUN_ID" --attempt "$env:GITHUB_RUN_ATTEMPT" --source-ref "$env:GITHUB_REF"
+      - name: Attest Windows package and producer metadata
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: |
+            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.zip
+            ${{ runner.temp }}/docwen-candidate/windows-candidate.json
       - name: Upload verified Windows packages
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -165,6 +183,16 @@ jobs:
           name: docwen-windows-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.zip
           compression-level: 0
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 30
+
+      - name: Upload independent Windows metadata
+        id: windows-metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: docwen-windows-metadata-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/docwen-candidate/windows-candidate.json
           if-no-files-found: error
           overwrite: false
           retention-days: 30
@@ -369,12 +397,19 @@ jobs:
           artifact-ids: ${{ needs.build-macos.outputs.artifact_id }}
           path: builds/macos
           digest-mismatch: error
+      - name: Download the accepted Windows producer identity
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          artifact-ids: ${{ needs.build-windows.outputs.metadata_artifact_id }}
+          path: builds/windows
+          digest-mismatch: error
       - name: Assemble the exact verified candidate
         run: >-
           python scripts/release/publication.py assemble
           --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
           --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --source-ref "$GITHUB_REF"
           --source . --builds builds --directory publication
+          --windows-manifest builds/windows/windows-candidate.json
       - name: Attest exact candidate and public assets
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:

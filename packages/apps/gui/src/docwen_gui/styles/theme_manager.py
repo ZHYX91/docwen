@@ -56,7 +56,9 @@ class ThemeManager(QObject):
             cls._instance._disconnect_system_theme()
         cls._instance = None
 
-    def initialize(self, app: QApplication, theme_name: str) -> None:
+    def initialize(
+        self, app: QApplication, theme_name: str, *, scale: object = 100, font_size_preset: str | None = "default"
+    ) -> None:
         """One-time initialization with QApplication instance.
 
         Args:
@@ -65,6 +67,9 @@ class ThemeManager(QObject):
         """
         self._disconnect_system_theme()
         self._app = app
+        apply_scale_percent(scale)
+        self._font_size_preset = normalize_font_size_preset(font_size_preset)
+        apply_application_font(app, font_size_preset=self._font_size_preset)
         self._system_theme_connection = app.styleHints().colorSchemeChanged.connect(self._on_system_theme_changed)
         self.apply_theme(theme_name)
 

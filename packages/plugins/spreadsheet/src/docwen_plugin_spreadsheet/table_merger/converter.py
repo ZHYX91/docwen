@@ -33,6 +33,11 @@ def _write_scalar(cell: Any, value: Any, source_type: str | None = None) -> None
         cell.data_type = "e" if source_type == "e" else "s"
 
 
+def _check_extent(rows: int, columns: int) -> None:
+    if rows > 1_048_576 or columns > 16_384:
+        raise ValueError("Merged worksheet exceeds Excel's row or column limit")
+
+
 class TableMergerConverter:
     """Merge multiple table files into a single XLSX output.
 
@@ -171,13 +176,17 @@ class TableMergerConverter:
                         raise RuntimeError(f"Failed to merge '{Path(collect_file).name}': no active worksheet")
 
                     self._unmerge_all_cells(collect_ws)
-                    row_offset, col_offset = self._find_best_offset(base_ws, collect_ws, offset_range)
+                    row_offset, col_offset = self._find_best_offset(
+                        base_ws, collect_ws, offset_range, cancel_check=context.cancellation.check
+                    )
                     # Make room for leading collection fields instead of
                     # clipping them at worksheet row/column zero.
                     if row_offset < 0 and mode != self.MODE_BY_ROW:
+                        _check_extent(base_ws.max_row - row_offset, base_ws.max_column)
                         base_ws.insert_rows(1, -row_offset)
                         row_offset = 0
                     if col_offset < 0 and mode != self.MODE_BY_COLUMN:
+                        _check_extent(base_ws.max_row, base_ws.max_column - col_offset)
                         base_ws.insert_cols(1, -col_offset)
                         col_offset = 0
                     summary = MergeSummary(
@@ -196,6 +205,7 @@ class TableMergerConverter:
                         summary=summary,
                         cancel_check=context.cancellation.check,
                     )
+                    _check_extent(base_ws.max_row, base_ws.max_column)
                     summaries.append(summary)
                 finally:
                     collect_wb.close()
@@ -330,16 +340,24 @@ class TableMergerConverter:
         base_ws: Any,
         collect_ws: Any,
         offset_range: int,
+        *,
+        cancel_check: Callable[[], None] | None = None,
     ) -> tuple[int, int]:
         """Find best row/column offset via sliding window alignment."""
         max_overlap = 0
         best_offset = (0, 0)
 
         collect_cells = list(self._iter_cells_for_alignment(collect_ws))
+        base_values = {(cell.row, cell.column): self._cell_identity(cell) for cell in base_ws._cells.values()}
 
         for row_off in range(-offset_range, offset_range + 1):
             for col_off in range(-offset_range, offset_range + 1):
-                overlap = self._calc_overlap(base_ws, collect_cells, row_off, col_off)
+                if cancel_check is not None:
+                    cancel_check()
+                overlap = sum(
+                    value is not None and base_values.get((row + row_off, col + col_off)) == value
+                    for row, col, value in collect_cells
+                )
                 if overlap > max_overlap:
                     max_overlap = overlap
                     best_offset = (row_off, col_off)
@@ -367,7 +385,7 @@ class TableMergerConverter:
                 continue
             if b_row > base_ws.max_row or b_col > base_ws.max_column:
                 continue
-            b_val = self._cell_identity(base_ws.cell(b_row, b_col))
+            b_val = self._cell_identity(base_ws._cells.get((b_row, b_col)))
             if b_val is not None and c_val == b_val:
                 overlap += 1
         return overlap
@@ -392,7 +410,7 @@ class TableMergerConverter:
 
     @staticmethod
     def _cell_identity(cell: Any) -> Any:
-        return value_identity(cell.value, source_type=cell.data_type)
+        return None if cell is None else value_identity(cell.value, source_type=cell.data_type)
 
     def _suggest_offset_by_value_matching(
         self,
@@ -488,7 +506,8 @@ class TableMergerConverter:
     @staticmethod
     def _is_row_empty(ws: Any, row_idx: int) -> bool:
         for col_idx in range(1, ws.max_column + 1):
-            v = ws.cell(row_idx, col_idx).value
+            cell = ws._cells.get((row_idx, col_idx))
+            v = cell.value if cell is not None else None
             if v is not None and str(v).strip() != "":
                 return False
         return True
@@ -512,7 +531,9 @@ class TableMergerConverter:
 
         max_col = max(base_ws.max_column, collect_ws.max_column + col_offset)
         for col_idx in range(1, max_col + 1):
-            base_val = self._cell_identity(base_ws.cell(base_row, col_idx)) if col_idx <= base_ws.max_column else None
+            base_val = (
+                self._cell_identity(base_ws._cells.get((base_row, col_idx))) if col_idx <= base_ws.max_column else None
+            )
             base_empty = base_val is None
 
             cc = col_idx - col_offset
@@ -521,7 +542,7 @@ class TableMergerConverter:
                     base_has_unique = True
                 continue
 
-            collect_val = self._cell_identity(collect_ws.cell(collect_row, cc))
+            collect_val = self._cell_identity(collect_ws._cells.get((collect_row, cc)))
             collect_empty = collect_val is None
 
             if base_empty and collect_empty:
@@ -563,6 +584,7 @@ class TableMergerConverter:
                 best_row = base_row_idx
 
         insert_pos = best_row + 1
+        _check_extent(base_ws.max_row + 1, max(base_ws.max_column, collect_ws.max_column + col_offset))
         base_ws.insert_rows(insert_pos)
         for col_idx in range(1, collect_ws.max_column + 1):
             base_col = col_idx + col_offset
@@ -588,7 +610,7 @@ class TableMergerConverter:
             be = True
             bv = None
             if col_idx <= base_ws.max_column:
-                bv = self._cell_identity(base_ws.cell(base_row, col_idx))
+                bv = self._cell_identity(base_ws._cells.get((base_row, col_idx)))
                 be = bv is None
 
             cc = col_idx - col_offset
@@ -597,7 +619,7 @@ class TableMergerConverter:
                     total += 1
                 continue
 
-            cv = self._cell_identity(collect_ws.cell(collect_row, cc))
+            cv = self._cell_identity(collect_ws._cells.get((collect_row, cc)))
             ce = cv is None
             total += 1
 
@@ -652,7 +674,8 @@ class TableMergerConverter:
     @staticmethod
     def _is_col_empty(ws: Any, col_idx: int) -> bool:
         for row_idx in range(1, ws.max_row + 1):
-            v = ws.cell(row_idx, col_idx).value
+            cell = ws._cells.get((row_idx, col_idx))
+            v = cell.value if cell is not None else None
             if v is not None and str(v).strip() != "":
                 return False
         return True
@@ -675,7 +698,9 @@ class TableMergerConverter:
 
         max_row = max(base_ws.max_row, collect_ws.max_row + row_offset)
         for row_idx in range(1, max_row + 1):
-            base_val = self._cell_identity(base_ws.cell(row_idx, base_col)) if row_idx <= base_ws.max_row else None
+            base_val = (
+                self._cell_identity(base_ws._cells.get((row_idx, base_col))) if row_idx <= base_ws.max_row else None
+            )
             base_empty = base_val is None
 
             cr = row_idx - row_offset
@@ -684,7 +709,7 @@ class TableMergerConverter:
                     base_has_unique = True
                 continue
 
-            collect_val = self._cell_identity(collect_ws.cell(cr, collect_col))
+            collect_val = self._cell_identity(collect_ws._cells.get((cr, collect_col)))
             collect_empty = collect_val is None
 
             if base_empty and collect_empty:
@@ -726,6 +751,7 @@ class TableMergerConverter:
                 best_col = base_col_idx
 
         insert_pos = best_col + 1
+        _check_extent(max(base_ws.max_row, collect_ws.max_row + row_offset), base_ws.max_column + 1)
         base_ws.insert_cols(insert_pos)
         for row_idx in range(1, collect_ws.max_row + 1):
             base_row = row_idx + row_offset
@@ -751,7 +777,7 @@ class TableMergerConverter:
             be = True
             bv = None
             if row_idx <= base_ws.max_row:
-                bv = self._cell_identity(base_ws.cell(row_idx, base_col))
+                bv = self._cell_identity(base_ws._cells.get((row_idx, base_col)))
                 be = bv is None
 
             cr = row_idx - row_offset
@@ -760,7 +786,7 @@ class TableMergerConverter:
                     total += 1
                 continue
 
-            cv = self._cell_identity(collect_ws.cell(cr, collect_col))
+            cv = self._cell_identity(collect_ws._cells.get((cr, collect_col)))
             ce = cv is None
             total += 1
 
@@ -815,6 +841,7 @@ class TableMergerConverter:
             base_col = cell.column + col_offset
             if base_row < 1 or base_col < 1:
                 continue
+            _check_extent(base_row, base_col)
             base_cell = base_ws.cell(base_row, base_col)
             if type(base_cell).__name__ != "MergedCell":
                 original = base_cell.value

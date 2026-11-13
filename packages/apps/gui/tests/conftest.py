@@ -92,15 +92,16 @@ def cleanup_qt_top_level_widgets() -> Iterator[None]:
 
 
 @pytest.fixture
-def main_window(qapp) -> Iterator[object]:
+def main_window(qapp, qtbot) -> Iterator[object]:
     from docwen_gui.main_window import MainWindow
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
     vm = MainWindowViewModel(controller=None)
     window = MainWindow(view_model=vm)
     window.setup_ui()
+    qtbot.waitUntil(lambda: not window._template_vm.busy)
     yield window
-    window.close()
+    shutdown_main_window(window)
 
 
 @pytest.fixture

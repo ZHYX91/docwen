@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from docwen_plugin_presentation.manifest import build_manifest
-from docwen_plugin_presentation.pptx_md.converter import PptxToMarkdownConverter
-from docwen_plugin_presentation.pptx_md.ppt_converter import PptToMarkdownConverter
 
 if TYPE_CHECKING:
     from docwen_core.models.manifest import PluginManifest
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import PluginExecutionContext
+    from docwen_plugin_presentation.pptx_md.converter import PptxToMarkdownConverter
+    from docwen_plugin_presentation.pptx_md.ppt_converter import PptToMarkdownConverter
 
 
 class PresentationPlugin:
@@ -45,6 +45,9 @@ class PresentationPlugin:
         return False
 
     def convert(self, context: PluginExecutionContext) -> ConversionResult:
+        from docwen_plugin_presentation.pptx_md.converter import PptxToMarkdownConverter
+        from docwen_plugin_presentation.pptx_md.ppt_converter import PptToMarkdownConverter
+
         source = context.request.input_refs[0].format if context.request.input_refs else ""
         target = context.request.target_format
 

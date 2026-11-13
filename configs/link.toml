@@ -50,8 +50,8 @@ wiki_mode = "hyperlink"
 
 # Wiki 超链接无法生成时的回退方式（仅在 wiki_mode = "hyperlink" 时生效）
 # 可选值："keep"（保留原样）、"extract_text"（提取文本）、"extract_address"（提取地址）
-# 默认保留原样，避免目标格式不支持或目标无法解析时丢失链接信息
-wiki_hyperlink_fallback = "keep"
+# 默认提取显示文本，目标格式不支持或目标无法解析时仍保留可读内容
+wiki_hyperlink_fallback = "extract_text"
 
 # 普通Markdown链接的处理方式：[text](url)
 # 可选值：
@@ -65,7 +65,7 @@ markdown_mode = "hyperlink"
 # Markdown 超链接无法生成时的回退方式（仅在 markdown_mode = "hyperlink" 时生效）
 # 可选值："keep"（保留原样）、"extract_text"（提取文本）、"extract_address"（提取地址）
 # 与 Wiki 回退方式独立保存；CSV 不生成原生超链接，使用此回退方式
-markdown_hyperlink_fallback = "keep"
+markdown_hyperlink_fallback = "extract_text"
 
 # 是否启用裸 URL 自动链接（例如把 "https://example.com" 识别为可点击链接）
 # 默认关闭，避免误匹配。开启后仅影响 MD→DOCX。

@@ -77,9 +77,9 @@ The Link settings page owns `configs/link.toml`. Under `[non_embed_links]`, `wik
 - `hyperlink`: create a clickable link where the target format and destination support it; otherwise use that syntax's fallback.
 
 `wiki_hyperlink_fallback` and `markdown_hyperlink_fallback` independently accept `keep`, `extract_text` or
-`extract_address`; both default to `"keep"` to avoid silently losing the target or display text. Each secondary
+`extract_address`; both default to `"extract_text"` so unsupported links retain readable display text. Each secondary
 selector is enabled only while its main mode is `hyperlink`. Changing the main mode retains the saved fallback;
-Apply persists it, and resetting Link settings restores both fallbacks to `keep`. Help buttons explain each choice
+Apply persists it, and resetting Link settings restores both fallbacks to `extract_text`. Help buttons explain each choice
 on separate lines. Existing profiles that omit the new keys inherit these defaults without rewriting their files.
 
 XLSX creates a native hyperlink only when the final cell consists entirely of one supported link. Mixed text and
@@ -100,8 +100,8 @@ for the current provenance guard and semantic boundaries.
 - `hyperlink`：在输出格式和目标支持时生成可点击链接，否则采用对应语法的回退方式。
 
 `wiki_hyperlink_fallback` 与 `markdown_hyperlink_fallback` 分别可选 `keep`、`extract_text` 或
-`extract_address`，均默认 `"keep"`，避免静默丢失目标或显示文字。二级选择器仅在主模式为 `hyperlink`
-时启用；切换主模式保留已有回退选择，“应用”保存配置，“恢复链接默认”将两项回退重置为 `keep`。
+`extract_address`，均默认 `"extract_text"`，无法生成超链接时保留可读的显示文字。二级选择器仅在主模式为 `hyperlink`
+时启用；切换主模式保留已有回退选择，“应用”保存配置，“恢复链接默认”将两项回退重置为 `extract_text`。
 信息按钮逐行解释选项。未写入新键的旧配置继承默认值，不改写用户原文件。
 
 XLSX 仅在最终单元格完全由一个受支持链接构成时写入原生超链接；混合正文或多个链接时采用回退方式，

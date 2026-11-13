@@ -17,13 +17,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from docwen_plugin_document.manifest import build_manifest
-from docwen_plugin_document.to_document.converter import SmartDocConverter
-from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 
 if TYPE_CHECKING:
     from docwen_core.models.manifest import PluginManifest
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import PluginExecutionContext
+    from docwen_plugin_document.to_document.converter import SmartDocConverter
 
 
 class DocumentPlugin:
@@ -78,6 +77,9 @@ class DocumentPlugin:
           - docx/document → md  (DocxToMarkdownConverter)
           - SmartConverter document-format interconversion (SmartDocConverter, via external office bridge)
         """
+        from docwen_plugin_document.to_document.converter import SmartDocConverter
+        from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
+
         source = context.request.input_refs[0].format if context.request.input_refs else ""
         target = context.request.target_format
 

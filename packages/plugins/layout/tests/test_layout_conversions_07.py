@@ -182,7 +182,9 @@ class TestPreprocessChain:
                     "source_format": source_format,
                 }
             )
-            return plugin_module.PreprocessResult(
+            from docwen_plugin_layout.preprocess import PreprocessResult
+
+            return PreprocessResult(
                 effective_input_path=str(sample_pdf_path := tmp_path / "from_ofd.pdf"),
                 original_source_format="ofd",
                 effective_source_format="pdf",

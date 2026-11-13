@@ -153,10 +153,10 @@ class TemplateStateStore:
         payload = json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True)
         atomic_write_bytes(self.path, (payload + "\n").encode("utf-8"))
 
-    def ensure_user_identity(self, path: Path, target: str) -> str:
+    def ensure_user_identity(self, path: Path, target: str, *, state: dict[str, Any] | None = None) -> str:
         """Return a stable canonical ID for one user-owned template path."""
 
-        state = self.load()
+        state = self.load() if state is None else state
         identities = state["user_identities"]
         key = _identity_key(path.name)
         existing = identities.get(key)
@@ -297,10 +297,10 @@ class TemplateStateStore:
             state["defaults"][target] = template_id
             self.save(state)
 
-    def ordered_ids(self, target: str, discovered_ids: list[str]) -> list[str]:
+    def ordered_ids(self, target: str, discovered_ids: list[str], *, state: dict[str, Any] | None = None) -> list[str]:
         """Return discovered IDs in persisted order and persist newly discovered IDs."""
 
-        state = self.load()
+        state = self.load() if state is None else state
         persisted = state["order"].setdefault(target, [])
         discovered_set = set(discovered_ids)
         result: list[str] = []

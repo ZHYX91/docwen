@@ -5,6 +5,14 @@
 
 ## 0.23.0
 
+- Reduce startup work by loading document, spreadsheet, presentation, image and layout converters when used, applying initial appearance once, and copying only requested configuration values. Template discovery runs in the background and reuses one validated state per scan.
+- 文档、表格、演示、图片和版式转换实现改为使用时加载；初始外观一次应用，配置按需复制。模板目录后台扫描并在单次扫描内复用已验证状态。
+- Accelerate sparse table alignment, avoid creating empty cells during comparisons, reject merges beyond Excel worksheet limits, and preserve PDF self-links without duplication when splitting pages.
+- 优化稀疏表格对齐，比较时不创建空白单元格，拒绝超出 Excel 行列上限的合并结果；PDF 拆分不再重复插入同页链接。
+
+- Preserve the selected output folder's inherited access permissions when publishing result directories, so outputs created by an elevated conversion remain accessible through the ordinary desktop.
+- 发布结果目录时继承所选输出父目录的访问权限，提升权限的转换进程生成的结果仍可通过普通桌面访问。
+
 - Preserve worksheet row heights and more template features when generating XLSX from Markdown or structured clipboard input. Clone worksheet, Table and local-name references together, and retain only the intended cells when changing a range hyperlink.
 - Markdown 与结构化剪贴板生成 XLSX 时保留工作表行高及更多模板特征；克隆工作表时同步重定位 Table 和局部名称引用，区域超链接局部修改仅保留应有的链接单元格。
 - Write long integer identifiers as actual text before XLSX serialization, preserving their exact digits instead of relying on a text display format.

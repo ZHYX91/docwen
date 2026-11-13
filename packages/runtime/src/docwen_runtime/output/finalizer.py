@@ -29,7 +29,7 @@ from docwen_core.models.result import (
     ConversionMetrics,
     ConversionResult,
 )
-from docwen_core.tempfiles import TemporaryDirectory, make_temp_dir
+from docwen_core.tempfiles import TemporaryDirectory, make_publication_dir
 from docwen_runtime.output.document_node import (
     DocumentNodeLayoutPlan,
     has_markdown_artifacts,
@@ -519,7 +519,7 @@ class OutputFinalizer:
         try:
             self._ensure_contained(output_dir, final_root)
             temp_parent = filesystem_path(output_dir, force_extended=sys.platform == "win32")
-            temp_root = make_temp_dir(
+            temp_root = make_publication_dir(
                 prefix=".__docwen-node-",
                 dir=os.fspath(temp_parent),
                 cancellation_check=cancellation.check if cancellation is not None else None,

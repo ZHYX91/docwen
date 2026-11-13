@@ -66,6 +66,7 @@ def resource_window(qapp, qtbot, tmp_path: Path):
     qtbot.addWidget(window)
     window.show()
     qapp.processEvents()
+    qtbot.waitUntil(lambda: not window._template_vm.busy)
     yield window
     window.close()
     qapp.clipboard().clear()

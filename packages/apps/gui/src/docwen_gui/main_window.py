@@ -516,7 +516,7 @@ class MainWindow(QWidget):
         self._right_stack.addWidget(self._template_selector)
         self._right_stack.addWidget(self._conversion_panel)
         right_layout.addWidget(self._right_stack, 1)
-        self._load_templates_into_main_selector()
+        self._load_templates_into_main_selector(background=True)
 
         grid.addWidget(self._right_panel_frame, 0, 2)
 
@@ -1255,6 +1255,10 @@ class MainWindow(QWidget):
 
     def _on_main_window_template_selected(self, template_type: str, template_name: str) -> None:
         """Handle template selection from the main-window template selector."""
+        from .view_models.interaction import RightPanelSlot
+
+        if self._view_model.ui_projection.right_panel_slot != RightPanelSlot.TEMPLATE:
+            return
         sel = self._view_model.selected_file
         selected_path = getattr(sel, "path", None) if sel is not None else None
         if not selected_path:
@@ -1263,6 +1267,10 @@ class MainWindow(QWidget):
 
     def _on_main_window_template_tab_changed(self, template_type: str, _previous_type: str) -> None:
         """Keep the centre action surface aligned with the active template tab."""
+        from .view_models.interaction import RightPanelSlot
+
+        if self._view_model.ui_projection.right_panel_slot != RightPanelSlot.TEMPLATE:
+            return
         sel = self._view_model.selected_file
         selected_path = getattr(sel, "path", None) if sel is not None else None
         if selected_path:
@@ -1333,14 +1341,17 @@ class MainWindow(QWidget):
             self._show_template_target_mode(resolved_type, projection.template_context.file_path)
         return resolved_type
 
-    def _load_templates_into_main_selector(self) -> None:
+    def _load_templates_into_main_selector(self, *, background: bool = False) -> None:
         from .view_models.template_vm import TemplateViewModel
 
         if not hasattr(self, "_template_vm"):
             self._template_vm = TemplateViewModel(self)
             self._template_vm.changed.connect(self._render_template_catalog)
             self._template_vm.failed.connect(self._template_catalog_failed)
-        self._template_vm.refresh()
+        if background:
+            self._template_vm.refresh_async()
+        else:
+            self._template_vm.refresh()
         self._render_template_catalog()
 
     def _template_catalog_failed(self, detail: str) -> None:
@@ -2510,7 +2521,7 @@ class MainWindow(QWidget):
     def changeEvent(self, event: QEvent) -> None:
         super().changeEvent(event)
         if event.type() == QEvent.Type.ActivationChange and self.isActiveWindow() and hasattr(self, "_template_vm"):
-            self._template_vm.refresh()
+            self._template_vm.refresh_async()
         if event.type() != QEvent.Type.WindowStateChange:
             return
         if self._pending_normal_center_anchor is not None:
@@ -2521,17 +2532,19 @@ class MainWindow(QWidget):
         self._capture_normal_window_geometry()
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self._view_model.inspection_busy or self._path_operation.busy:
+        if self._execution.busy:
+            event.ignore()
+            self._begin_execution_close()
+            return
+        template_busy = hasattr(self, "_template_vm") and self._template_vm.busy
+        if self._view_model.inspection_busy or self._path_operation.busy or template_busy:
+            if template_busy:
+                self._template_vm.cancel_refresh()
             self._view_model.cancel_inspection()
             self._path_operation.cancel()
             event.ignore()
             QTimer.singleShot(25, self, self.close)
             return
-        if self._execution.busy:
-            event.ignore()
-            self._begin_execution_close()
-            return
-
         self._save_gui_state()
         if self._system_tray_icon is not None:
             self._system_tray_icon.hide()

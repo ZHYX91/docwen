@@ -31,7 +31,7 @@ from scripts.release.publication_contract import (
 )
 from scripts.release.publication_http import GitHub, env_seconds
 from scripts.release.publication_platform import fetch_platform
-from scripts.release.publication_session import ReleaseSession, verify_candidate_jobs
+from scripts.release.publication_session import ReleaseSession, candidate_jobs, verify_candidate_jobs
 
 
 def artifact_digest(api: GitHub, artifact_id: int) -> str:
@@ -154,9 +154,7 @@ def fetch_candidate(
     origin = manifest["origin"]
     run = api.get(f"/repos/{repository}/actions/runs/{origin['runId']}/attempts/{origin['runAttempt']}")
     verify_origin(manifest, run, metadata, digest=digest)
-    verify_candidate_jobs(
-        api.get(f"/repos/{repository}/actions/runs/{origin['runId']}/attempts/{origin['runAttempt']}/jobs?per_page=100")
-    )
+    verify_candidate_jobs(candidate_jobs(api, run_id=origin["runId"], attempt=origin["runAttempt"], commit=commit))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -174,6 +172,7 @@ def main(argv: list[str] | None = None) -> int:
             command.add_argument("--run-id", type=int, required=True)
             command.add_argument("--attempt", type=int, required=True)
             command.add_argument("--source-ref", required=True)
+            command.add_argument("--windows-manifest", type=Path)
         else:
             command.add_argument("--artifact-id", type=int, required=True)
             command.add_argument("--artifact-digest", type=canonical_digest)
@@ -202,10 +201,19 @@ def main(argv: list[str] | None = None) -> int:
                 attempt=args.attempt,
                 source=args.source,
                 source_ref=args.source_ref,
+                windows_manifest=args.windows_manifest,
             )
         elif args.operation == "fetch-platform":
             assert api is not None
-            result = fetch_platform(
+            selected_fetch = fetch_platform
+            metadata = api.get(f"/repos/{args.repository}/actions/artifacts/{args.artifact_id}")
+            producer = bool(re.fullmatch(r"docwen-windows-[1-9]\d*-[1-9]\d*", metadata.get("name", "")))
+            if producer:
+                from scripts.release.windows_candidate import fetch as fetch_windows
+
+                require(args.platform == "windows", "Windows producer cannot supply another platform")
+                selected_fetch = fetch_windows
+            result = selected_fetch(
                 api,
                 output=args.directory,
                 receipt=args.receipt,
@@ -214,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
                 repository=args.repository,
                 version=args.version,
                 commit=args.commit,
-                platform=args.platform,
+                **({} if producer else {"platform": args.platform}),
             )
             print(json.dumps(result, ensure_ascii=False))
         elif args.operation == "fetch":

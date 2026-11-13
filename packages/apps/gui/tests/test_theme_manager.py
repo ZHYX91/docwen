@@ -9,6 +9,27 @@ from docwen_gui.styles.theme_manager import ThemeManager
 pytestmark = pytest.mark.unit
 
 
+def test_initial_appearance_applies_stylesheet_once(qapp, monkeypatch: pytest.MonkeyPatch) -> None:
+    manager = ThemeManager()
+    applied = []
+    original = manager.apply_theme
+
+    def apply(theme):
+        applied.append(theme)
+        original(theme)
+
+    monkeypatch.setattr(manager, "apply_theme", apply)
+    try:
+        manager.initialize(qapp, "dark", scale=125, font_size_preset="large")
+        assert applied == ["dark"]
+        assert manager.get_ui_scale() == 125
+        assert manager.get_font_size_preset() == "large"
+        assert qapp.styleSheet()
+    finally:
+        manager.initialize(qapp, "light")
+        manager._disconnect_system_theme()
+
+
 class _FakeStyle:
     def __init__(self) -> None:
         self.unpolished = 0

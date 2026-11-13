@@ -5,11 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from docwen_plugin_image.format_conversion.converter import ImageFormatConverter
 from docwen_plugin_image.manifest import build_manifest
-from docwen_plugin_image.merge.converter import ImageToTiffMerger
-from docwen_plugin_image.to_markdown.converter import ImageToMarkdownConverter
-from docwen_plugin_image.to_pdf.converter import ImageToPdfConverter
 
 if TYPE_CHECKING:
     from docwen_core.models.manifest import PluginManifest
@@ -53,6 +49,10 @@ class ImagePlugin:
         )
         from docwen_core.protocols.hub_context import HubConversionContext, HubWorkspaceHandle
         from docwen_plugin_image._common import is_heic_format, preconvert_heic_to_png, source_format_from_context
+        from docwen_plugin_image.format_conversion.converter import ImageFormatConverter
+        from docwen_plugin_image.merge.converter import ImageToTiffMerger
+        from docwen_plugin_image.to_markdown.converter import ImageToMarkdownConverter
+        from docwen_plugin_image.to_pdf.converter import ImageToPdfConverter
 
         input_path = context.workspace.input_path
         converter_context: ConverterContext = context

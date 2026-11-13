@@ -7,6 +7,30 @@ from pathlib import Path
 
 import pytest
 
+
+def test_catalog_scan_reuses_state_and_still_observes_external_changes(tmp_path, monkeypatch):
+    from ._template_manager_support import _manager, _write_ooxml_template
+
+    manager, _builtin, user = _manager(tmp_path)
+    for index in range(20):
+        _write_ooxml_template(user / f"sample-{index}.docx", "docx")
+    templates = manager.list_templates()
+    loads = []
+    original = manager.state_store.load
+
+    def load():
+        loads.append(1)
+        return original()
+
+    monkeypatch.setattr(manager.state_store, "load", load)
+    manager.list_templates()
+    assert len(loads) <= 3
+    state = original()
+    state["enabled"][templates[0].id] = False
+    manager.state_store.save(state)
+    assert templates[0].id not in {item.id for item in manager.registry.list_templates()}
+
+
 from docwen_runtime.templates import (
     TemplateManagementError,
     TemplateNotFoundError,

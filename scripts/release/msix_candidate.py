@@ -101,6 +101,7 @@ def extract_candidate(archive_path: Path, receipt_path: Path, output: Path, *, v
                 )
             }
             | {"portableArchive": expected}
+            | ({"candidateKind": receipt["candidateKind"]} if "candidateKind" in receipt else {})
             | (
                 {key: receipt[key] for key in ("platform", "metadataArtifact", "platformArtifact")}
                 if platform_receipt

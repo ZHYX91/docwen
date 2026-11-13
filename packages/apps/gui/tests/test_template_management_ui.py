@@ -10,6 +10,40 @@ from docwen_gui.widgets.template_selector_tabbed import TabbedTemplateSelector
 pytestmark = pytest.mark.gui
 
 
+def test_catalog_background_scan_keeps_gui_responsive_and_discards_cancelled_result(qapp, qtbot, monkeypatch):
+    import threading
+
+    from PySide6.QtCore import QTimer
+
+    from docwen_gui.view_models.template_vm import TemplateViewModel
+
+    started = threading.Event()
+    release = threading.Event()
+    vm = TemplateViewModel()
+
+    def read(_manager, _name):
+        started.set()
+        assert release.wait(3)
+        return (), {}, {"docx": None, "xlsx": None}
+
+    monkeypatch.setattr(vm, "_read_catalog", read)
+    signals = []
+    vm.changed.connect(lambda: signals.append(1))
+    try:
+        vm.refresh_async()
+        qtbot.waitUntil(started.is_set)
+        responsive = []
+        QTimer.singleShot(0, lambda: responsive.append(1))
+        qtbot.waitUntil(lambda: bool(responsive))
+        vm.cancel_refresh()
+    finally:
+        release.set()
+        qtbot.waitUntil(lambda: not vm.busy)
+    assert not signals
+    assert vm.defaults == {}
+    vm.deleteLater()
+
+
 def test_tabbed_selector_preserves_registry_order(qapp) -> None:
     selector = TabbedTemplateSelector()
     selector.load_templates(

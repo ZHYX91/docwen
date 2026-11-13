@@ -24,9 +24,12 @@ Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 SOURCES
 
 # Ignore additional image repositories so they cannot influence dependency selection.
-apt_options=(-o "Dir::Etc::sourcelist=$sources" -o 'Dir::Etc::sourceparts=-')
-apt-get "${apt_options[@]}" update -qq
-DEBIAN_FRONTEND=noninteractive apt-get "${apt_options[@]}" install -y --no-install-recommends \
+apt_options=(-o "Dir::Etc::sourcelist=$sources" -o 'Dir::Etc::sourceparts=-'
+  -o 'Acquire::Retries=3' -o 'Acquire::http::Timeout=30' -o 'Acquire::https::Timeout=30')
+# A partial index refresh must not silently continue with stale indexes. Bound
+# the complete operation as well as each request; persistent outages still fail.
+timeout --signal=TERM --kill-after=15s 10m apt-get "${apt_options[@]}" -o 'APT::Update::Error-Mode=any' update -qq
+DEBIAN_FRONTEND=noninteractive timeout --signal=TERM --kill-after=15s 15m apt-get "${apt_options[@]}" install -y --no-install-recommends \
   binutils xvfb xauth libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 \
   libglib2.0-0t64 libfontconfig1 libnss3 libdbus-1-3 libgcrypt20 fonts-dejavu-core
 

@@ -4,6 +4,10 @@ The GUI renders one application/runtime state through view models. Widgets own p
 
 GUI 通过 ViewModel 呈现唯一的 application/runtime 状态。Widget 负责展示和交互接线，不成为配置或任务真相源。
 
+Initial template discovery and activation refresh use the existing serial background-operation owner. Only the latest live request updates the catalog on the GUI thread; closing waits for owned work to drain. A scan shares one validated state snapshot under the catalog lock, while subsequent scans and actual conversion still validate current state and template content. Initial theme, scale and font are applied together before constructing widgets.
+
+首次模板发现与窗口激活刷新使用现有串行后台任务所有者，仅最新有效请求在 GUI 线程更新目录，关闭时等待自有任务结束。单次扫描在目录锁内复用一份已验证状态，后续扫描和实际转换仍验证当前状态及模板内容。创建控件前统一应用初始主题、缩放与字体。
+
 ## Main behavior / 主要行为
 
 - Single and batch input modes support file dialog, drag/drop, filtering and stable ordering.

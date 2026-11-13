@@ -390,6 +390,18 @@ class DocWenConfig:
 
         return copy.deepcopy(object.__getattribute__(self, "_data"))
 
+    def get_path(self, key: str, default: Any = None) -> Any:
+        """Read an isolated value without copying unrelated configuration."""
+        parts = [part for part in (key or "").split(".") if part]
+        if not parts:
+            return default
+        value = object.__getattribute__(self, "_data")
+        for part in parts:
+            if not isinstance(value, dict) or part not in value:
+                return default
+            value = value[part]
+        return deepcopy(value)
+
 
 class ConfigLoader:
     """Load and manage the DocWen configuration.

@@ -199,6 +199,7 @@ class TestGuiCancellationExecution:
         )
         controller.start()
         window = create_main_window(controller=controller, task_event_bridge=bridge)
+        assert _wait_for(lambda: not window._template_vm.busy, timeout_ms=10000, interval_ms=20)
 
         try:
             source = tmp_path / "cancel-me.md"
@@ -334,6 +335,7 @@ class TestGuiBatchExecution:
         )
         controller.start()
         window = create_main_window(controller=controller)
+        assert _wait_for(lambda: not window._template_vm.busy, timeout_ms=10000, interval_ms=20)
 
         try:
             ok_source = tmp_path / "ok.md"

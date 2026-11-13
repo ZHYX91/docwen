@@ -7,14 +7,11 @@ pytestmark = pytest.mark.unit
 
 def test_config_port_adapter_rejects_reads_while_loader_state_is_untrusted() -> None:
     from docwen_bundle.config_port import ConfigPortAdapter
-
-    class _Config:
-        def as_dict(self) -> dict[str, object]:
-            return {"gui": {"theme": {"default_theme": "light"}}}
+    from docwen_runtime.config.loader import DocWenConfig
 
     class _Loader:
         config_state_trusted = False
-        config = _Config()
+        config = DocWenConfig({"gui": {"theme": {"default_theme": "light"}}})
 
     loader = _Loader()
     adapter = ConfigPortAdapter(loader)
@@ -27,6 +24,27 @@ def test_config_port_adapter_rejects_reads_while_loader_state_is_untrusted() -> 
     loader.config_state_trusted = True
     assert adapter.snapshot() == {"gui": {"theme": {"default_theme": "light"}}}
     assert adapter.get("gui.theme.default_theme") == "light"
+
+
+def test_config_read_copies_only_selected_value_and_preserves_isolation() -> None:
+    from types import SimpleNamespace
+
+    from docwen_bundle.config_port import ConfigPortAdapter
+    from docwen_runtime.config.loader import DocWenConfig
+
+    class Unrelated:
+        def __deepcopy__(self, memo):
+            raise AssertionError("single-value reads must not copy unrelated configuration")
+
+    data = {"gui": {"choices": ["light"]}, "unrelated": Unrelated()}
+    adapter = ConfigPortAdapter(SimpleNamespace(config=DocWenConfig(data)))
+    selected = adapter.get("gui")
+    selected["choices"].append("dark")
+    assert adapter.get("gui.choices") == ["light"]
+    default = object()
+    assert adapter.get("gui.missing", default) is default
+    assert adapter.get("", default) is default
+    assert adapter.get("gui.choices.child", default) is default
 
 
 def test_config_port_adapter_delegates_logical_group_reset() -> None:
