@@ -16,6 +16,8 @@
 - Windows Machine 开始读取输入管道前初始化可用的数值计算依赖，避免延迟加载后首次表格或 OCR 转换卡住。
 - Default Markdown and wiki hyperlink fallbacks to extracted text, and vertically center file-list folder buttons with their path labels.
 - Markdown 与 Wiki 超链接默认回退为提取文本；文件列表中的文件夹按钮与路径文字垂直居中。
+- Give repeated desktop/file launches one 30-second forwarding budget while the primary window starts or accepts the file, without shortening each response to one second.
+- 重复双击程序或关联文件时，共用 30 秒预算等待主窗口就绪及接收文件，不再将每次响应限制为 1 秒。
 
 - Reduce startup work by loading document, spreadsheet, presentation, image and layout converters when used, applying initial appearance once, and copying only requested configuration values. Template discovery runs in the background and reuses one validated state per scan.
 - 文档、表格、演示、图片和版式转换实现改为使用时加载；初始外观一次应用，配置按需复制。模板目录后台扫描并在单次扫描内复用已验证状态。

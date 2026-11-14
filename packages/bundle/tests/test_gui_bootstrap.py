@@ -8,6 +8,7 @@ unique app names with cleanup.
 from __future__ import annotations
 
 import os
+import threading
 import time
 from collections.abc import Generator
 from pathlib import Path
@@ -18,6 +19,7 @@ import pytest
 from docwen_bundle.gui_bootstrap import (
     ENV_DISABLE_CONTROL,
     ENV_TEST_AUTOCLOSE_MS,
+    GUI_FORWARD_TIMEOUT_SECONDS,
     GuiBootstrapDecision,
     bootstrap_gui,
     parse_startup_files,
@@ -182,6 +184,36 @@ class TestGuiBootstrapDecision:
 class TestBootstrapGui:
     """Integration tests for the bootstrap_gui function."""
 
+    @pytest.mark.parametrize("delay_phase", ["primary_startup", "response"])
+    def test_secondary_file_waits_for_slow_primary_without_duplicate_delivery(self, delay_phase: str) -> None:
+        from docwen_runtime.control import ControlServer
+
+        app_name = f"test_bootstrap_slow_{delay_phase}"
+        test_file = str(Path(__file__).resolve())
+        received: list[str] = []
+        primary = bootstrap_gui(app_name, argv=["script.py"])
+
+        def handle(action: str, payload: dict[str, object]) -> dict[str, bool]:
+            assert action == "open"
+            if delay_phase == "response":
+                time.sleep(1.2)
+            received.append(str(payload["file"]))
+            return {"accepted": True}
+
+        server = ControlServer(handle, app_name=app_name)
+        delayed_start = threading.Timer(5.5 if delay_phase == "primary_startup" else 0, server.start)
+        delayed_start.start()
+        try:
+            secondary = bootstrap_gui(app_name, argv=["script.py", test_file])
+            assert secondary.should_exit and not secondary.should_start_gui
+            assert secondary.exit_code == 0
+            assert received == [test_file]
+        finally:
+            delayed_start.join(timeout=10)
+            server.stop()
+            if primary.instance_lock:
+                primary.instance_lock.release()
+
     def test_forward_attempt_never_exceeds_outer_deadline(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from docwen_bundle import gui_bootstrap
 
@@ -191,7 +223,7 @@ class TestBootstrapGui:
             def request(self, action: str, payload: dict[str, object], *, timeout: float) -> None:
                 calls.append((action, payload, timeout))
 
-        clock = iter((100.0, 100.8, 100.9))
+        clock = iter((100.9,))
         monkeypatch.setattr(gui_bootstrap.time, "monotonic", lambda: next(clock))
 
         gui_bootstrap._send_when_control_ready(
@@ -250,7 +282,7 @@ class TestBootstrapGui:
             assert action == "activate"
             deadline = payload.get("_deadline_monotonic")
             assert isinstance(deadline, float)
-            assert 0 < deadline - time.monotonic() <= 1.0
+            assert 0 < deadline - time.monotonic() <= GUI_FORWARD_TIMEOUT_SECONDS
         finally:
             server.stop()
             if decision1.instance_lock:
@@ -284,7 +316,7 @@ class TestBootstrapGui:
             assert payload.get("file") == test_file
             deadline = payload.get("_deadline_monotonic")
             assert isinstance(deadline, float)
-            assert 0 < deadline - time.monotonic() <= 1.0
+            assert 0 < deadline - time.monotonic() <= GUI_FORWARD_TIMEOUT_SECONDS
         finally:
             server.stop()
             if decision1.instance_lock:
