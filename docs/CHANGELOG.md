@@ -5,6 +5,11 @@
 
 ## 0.23.0
 
+- Defer Markdown conversion engines during desktop startup, avoid reapplying the initial window font/theme, and load CLI composition factories only for the selected operation.
+- 桌面启动时按需加载 Markdown 转换引擎，避免主窗口重复应用初始字体与主题；CLI 仅在对应操作需要时加载组合工厂。
+- Add Windows `serve --stdio --managed --parent-pid PID`: the installed CLI owns worker lifetime and descendant cleanup without extracting an auxiliary executable.
+- 新增 Windows `serve --stdio --managed --parent-pid PID`：由正式 CLI 管理工作进程及后代清理，无需释放辅助可执行文件。
+
 - Reduce startup work by loading document, spreadsheet, presentation, image and layout converters when used, applying initial appearance once, and copying only requested configuration values. Template discovery runs in the background and reuses one validated state per scan.
 - 文档、表格、演示、图片和版式转换实现改为使用时加载；初始外观一次应用，配置按需复制。模板目录后台扫描并在单次扫描内复用已验证状态。
 - Accelerate sparse table alignment, avoid creating empty cells during comparisons, reject merges beyond Excel worksheet limits, and preserve PDF self-links without duplication when splitting pages.

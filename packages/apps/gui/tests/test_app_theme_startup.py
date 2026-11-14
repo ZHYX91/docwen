@@ -3,10 +3,37 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.mark.parametrize("stored_preset", ["default", "large", "small"])
+def test_window_keeps_already_initialized_font_and_theme(qapp, monkeypatch, stored_preset) -> None:
+    from docwen_gui.main_window import MainWindow
+    from docwen_gui.styles.theme_manager import ThemeManager
+
+    manager = ThemeManager()
+    manager.initialize(qapp, "light", font_size_preset=stored_preset)
+    monkeypatch.setattr(ThemeManager, "get_instance", classmethod(lambda cls: manager))
+    calls = []
+    window = SimpleNamespace(
+        _view_model=SimpleNamespace(
+            controller=SimpleNamespace(config_port=SimpleNamespace(get=lambda key, default: stored_preset))
+        ),
+        _apply_font_size_preset=lambda *args, **kwargs: calls.append(args),
+        _apply_window_opacity=lambda: None,
+        _initialize_app_icon=lambda: None,
+    )
+    try:
+        MainWindow._load_initial_preferences(cast(MainWindow, window))
+        assert calls == []
+        assert manager.get_font_size_preset() == stored_preset
+    finally:
+        manager.initialize(qapp, "light")
+        manager._disconnect_system_theme()
 
 
 @pytest.mark.parametrize("stored_theme", ["light", "dark", "system"])

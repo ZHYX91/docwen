@@ -1,5 +1,29 @@
 # Testing / 测试
 
+Desktop startup acceptance launches the packaged GUI executable directly as well as through
+CLI/Assistant. In an isolated profile, `DOCWEN_GUI_TEST_STARTUP_REPORT` may select a new report
+file under an existing owned directory. It records application imports, configuration, runtime,
+appearance, window creation, first paint and a subsequent event-loop turn. The external launcher
+separately measures process creation; first-paint events do not prove monitor presentation or
+first-conversion readiness. Compare reboot-first and repeated launches separately, with identical
+VM resources and security settings; record first conversion as well. Source offscreen/cProfile
+results identify hotspots and are not packaged cold-start evidence.
+
+桌面启动验收分别直接启动 GUI 实包及经 CLI／Assistant 打开。在隔离 profile 中，
+`DOCWEN_GUI_TEST_STARTUP_REPORT` 可指定已有受管目录中的新报告文件，记录导入、配置、运行时、
+外观、窗口构建、首次绘制及之后的事件循环。外部启动器另测进程创建；首帧事件不能证明显示器呈现
+或首次转换就绪。重启后首开与重复启动分别比较，保持虚拟机资源和安全设置一致，并同时记录首次转换。
+源码 offscreen／cProfile 仅用于定位热点，不作为实包冷启动证据。
+
+`test_windows_machine_owner.py` uses real Windows Jobs and owned synthetic subprocesses to
+verify cleanup after EOF, worker/parent exit and supervisor termination, with an unrelated sentinel,
+real pipe closure, bounded executable-sharing retries and the actual managed Machine handshake.
+Assistant integration additionally requires the paired packaged CLI, including Store alias launch.
+
+Windows 原生测试覆盖 EOF、工作进程／父进程退出、监督进程终止后的后代清理与无关进程保护，
+并实测断管、可执行文件共享占用的有限重试，以及 managed CLI 的真实协议握手。
+Assistant 联合验收还需核对配套实包及 Store 别名路径。
+
 `test_shipped_docx_templates.py` checks every locale's actual distributed template, complete style registry,
 localized placeholders and idempotent completion. `test_arabic_style_direction.py` checks preserved custom
 formats, RTL numbering/continuation indentation and table direction without reversing source cells.
