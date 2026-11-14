@@ -5,6 +5,9 @@
 
 ## 0.23.0
 
+- Update the bundled Soup Sieve dependency to 4.0.1, including upstream fixes for pathological selector processing and deeply nested document matching.
+- 随包 Soup Sieve 升至 4.0.1，包含上游对异常选择器处理和深层文档匹配耗时的修复。
+
 - Defer Markdown conversion engines during desktop startup, avoid reapplying the initial window font/theme, and load CLI composition factories only for the selected operation.
 - 桌面启动时按需加载 Markdown 转换引擎，避免主窗口重复应用初始字体与主题；CLI 仅在对应操作需要时加载组合工厂。
 - Add Windows `serve --stdio --managed --parent-pid PID`: the installed CLI owns worker lifetime and descendant cleanup without extracting an auxiliary executable.
