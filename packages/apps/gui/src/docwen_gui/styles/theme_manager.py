@@ -171,6 +171,10 @@ class ThemeManager(QObject):
     def get_font_size_preset(self) -> str:
         return self._font_size_preset
 
+    def is_initialized(self) -> bool:
+        """Whether the application already has its initial appearance."""
+        return self._app is not None
+
     def apply_ui_scale(self, percent: object) -> int:
         """Relayout existing controls and set the scale for future controls."""
         normalized = apply_scale_percent(percent)
