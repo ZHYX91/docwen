@@ -16,19 +16,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from docwen_plugin_markdown.manifest import build_manifest
-from docwen_plugin_markdown.numbering.converter import MdNumberingProcessor
-from docwen_plugin_markdown.office_bridge.converter import MarkdownOfficeBridgeConverter
-from docwen_plugin_markdown.structured_clipboard import (
-    convert_clipboard_document_to_csv,
-    convert_clipboard_document_to_docx,
-    convert_clipboard_document_to_markdown,
-    convert_clipboard_document_to_xlsx,
-)
-from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
-from docwen_plugin_markdown.to_spreadsheet.converter import (
-    MdToCsvConverter,
-    MdToXlsxConverter,
-)
 
 if TYPE_CHECKING:
     from docwen_core.models.manifest import PluginManifest
@@ -108,6 +95,13 @@ class MarkdownPlugin:
         source_format = "markdown" if source == "markdown" or admitted_markdown_text else source
 
         if source == "clipboard_document":
+            from docwen_plugin_markdown.structured_clipboard import (
+                convert_clipboard_document_to_csv,
+                convert_clipboard_document_to_docx,
+                convert_clipboard_document_to_markdown,
+                convert_clipboard_document_to_xlsx,
+            )
+
             if target == "docx":
                 return convert_clipboard_document_to_docx(context)
             if target == "xlsx":
@@ -119,18 +113,26 @@ class MarkdownPlugin:
 
         # ── Action: MD numbering ─────────────────────────────────
         if action == "process_md_numbering":
+            from docwen_plugin_markdown.numbering.converter import MdNumberingProcessor
+
             return MdNumberingProcessor().convert(context)
 
         # ── Markdown → DOCX ──────────────────────────────────────
         if source_format == "markdown" and target == "docx":
+            from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
+
             return MdToDocxConverter().convert(self._document_style_context(context))
 
         # ── Markdown → XLSX ──────────────────────────────────────
         if source_format == "markdown" and target == "xlsx":
+            from docwen_plugin_markdown.to_spreadsheet.converter import MdToXlsxConverter
+
             return MdToXlsxConverter().convert(context)
 
         # ── Markdown → CSV ───────────────────────────────────────
         if source_format == "markdown" and target == "csv":
+            from docwen_plugin_markdown.to_spreadsheet.converter import MdToCsvConverter
+
             return MdToCsvConverter().convert(context)
 
         # ── Markdown → DOC/ODT/RTF/WPS/PDF/XLS/ODS via Office bridge ─────
@@ -143,6 +145,8 @@ class MarkdownPlugin:
             "xls",
             "ods",
         ):
+            from docwen_plugin_markdown.office_bridge.converter import MarkdownOfficeBridgeConverter
+
             return MarkdownOfficeBridgeConverter().convert(context, target)
 
         # ── Fallback ─────────────────────────────────────────────

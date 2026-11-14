@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 ENV_DISABLE_CONTROL = "DOCWEN_GUI_DISABLE_CONTROL"
 ENV_TEST_AUTOCLOSE_MS = "DOCWEN_GUI_TEST_AUTOCLOSE_MS"
+GUI_FORWARD_TIMEOUT_SECONDS = 30.0
 
 
 class GuiBootstrapDecision:
@@ -82,7 +83,7 @@ def bootstrap_gui(app_name: str = "docwen", argv: list[str] | None = None) -> Gu
         return GuiBootstrapDecision(files_to_add=files, instance_lock=instance_lock)
 
     client = ControlClient(app_name=app_name)
-    deadline = time.monotonic() + 5.0
+    deadline = time.monotonic() + GUI_FORWARD_TIMEOUT_SECONDS
     try:
         if files:
             for file_path in files:
@@ -107,14 +108,12 @@ def _send_when_control_ready(client: Any, action: str, payload: dict[str, object
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise ControlTimeoutError("Timed out waiting for the primary GUI control endpoint.")
-        attempt_deadline = min(deadline, time.monotonic() + 1.0)
-        attempt_timeout = attempt_deadline - time.monotonic()
-        if attempt_timeout <= 0:
-            raise ControlTimeoutError("Timed out waiting for the primary GUI control endpoint.")
         attempt_payload = dict(payload)
-        attempt_payload["_deadline_monotonic"] = attempt_deadline
+        # Readiness polling must not shorten the delivered request's budget:
+        # the primary may still be constructing its window or admitting a file.
+        attempt_payload["_deadline_monotonic"] = deadline
         try:
-            client.request(action, attempt_payload, timeout=attempt_timeout)
+            client.request(action, attempt_payload, timeout=remaining)
             return
         except ControlNotRunningError as exc:
             sleep_remaining = deadline - time.monotonic()

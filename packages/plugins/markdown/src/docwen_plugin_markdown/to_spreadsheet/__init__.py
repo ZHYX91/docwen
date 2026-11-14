@@ -1,8 +1,20 @@
-"""MD → Spreadsheet converters (XLSX, CSV)."""
+"""Lazy public converter exports; importing a utility never loads its engine."""
 
-from docwen_plugin_markdown.to_spreadsheet.converter import (
-    MdToCsvConverter,
-    MdToXlsxConverter,
-)
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .converter import MdToCsvConverter, MdToXlsxConverter
 
 __all__ = ["MdToCsvConverter", "MdToXlsxConverter"]
+
+
+def __getattr__(name: str) -> Any:
+    if name not in __all__:
+        raise AttributeError(name)
+    from . import converter
+
+    value = getattr(converter, name)
+    globals()[name] = value
+    return value

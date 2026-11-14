@@ -541,7 +541,10 @@ class MainWindow(QWidget):
         cfg_port = getattr(controller, "config_port", None) if controller is not None else None
         if cfg_port is not None:
             preset = cfg_port.get("gui.font.size_preset", "default")
-            self._apply_font_size_preset(str(preset or "default"), persist=False)
+            normalized = normalize_font_size_preset(str(preset or "default"))
+            manager = ThemeManager.get_instance()
+            if not manager.is_initialized() or manager.get_font_size_preset() != normalized:
+                self._apply_font_size_preset(normalized, persist=False)
         self._apply_window_opacity()
         self._initialize_app_icon()
 

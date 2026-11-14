@@ -18,6 +18,35 @@ plan-first Application Service; the CLI JSON presentation envelope and private p
 wire 权威。进程内 CLI/GUI 与外部 `DocWenCLI serve --stdio` 共用同一个 plan-first Application
 Service；CLI JSON 展示 envelope 与私有 provider 路径不进入该 wire。
 
+## Windows managed process lifetime / Windows 受管进程生命周期
+
+On Windows, `DocWenCLI serve --stdio --managed --parent-pid PID` runs a small supervisor
+inside the installed CLI and starts that same executable as the ordinary stdio worker.
+The private Job is assigned atomically at suspended worker creation, disallows breakaway,
+and kills its members when its last non-inherited handle closes. The supervisor waits on
+an identity-stable caller handle and the worker handle. Worker exit or caller exit triggers
+Job termination and a bounded zero-active-process check before normal supervisor exit.
+Cancelling the held supervisor process also closes the Job. No temporary EXE is created.
+
+Windows 下，`DocWenCLI serve --stdio --managed --parent-pid PID` 在已安装 CLI 内运行监督逻辑，
+并以同一可执行文件启动普通 stdio 工作进程。私有 Job 在挂起进程创建时原子绑定，禁止脱离；最后一个
+不继承的 Job 句柄关闭时终止其成员。监督进程等待绑定身份的调用方句柄及工作进程句柄；任一退出后终止
+Job，并在有界时间内确认活动进程为零后退出。取消当前持有的监督进程也会关闭 Job，不创建临时 EXE。
+
+Before resuming the worker, stderr receives `DOCWEN_PROCESS_OWNER_READY:1` followed by LF.
+Consumers wait for this record before sending Machine initialization. Stdout remains framed
+Machine v2. Exit 125 means cleanup was not confirmed; 126/128 are pre-creation failures with
+a bounded `DOCWEN_OWNER_CREATE_ERROR:<Win32 code>` stderr record. Worker exits matching
+reserved controller statuses are mapped to 127. Only creation errors 32/33 retry, for at most
+five seconds while the caller remains alive. The parent PID grants liveness observation only,
+never authority to terminate that parent or any unrelated process. Plain `serve --stdio` is unchanged.
+
+工作进程恢复执行前，stderr 输出 `DOCWEN_PROCESS_OWNER_READY:1` 及 LF；消费者收到后才发送
+Machine 初始化，stdout 仍仅承载 Machine v2。125 表示清理未确认；126／128 是创建前失败，并附
+有界 `DOCWEN_OWNER_CREATE_ERROR:<Win32 code>`。工作进程与控制器保留值重合的退出码映射为 127。
+仅创建错误 32／33 在调用方存活期间重试，最长五秒。父 PID 仅用于取得存活观察句柄，不授予终止父进程
+或其他进程的权限。普通 `serve --stdio` 行为不变。
+
 ## Compatibility and template metadata / 兼容性与模板元数据
 
 The handshake requires exactly protocol 2.0. Template resources require `origin` (`builtin|custom`) and

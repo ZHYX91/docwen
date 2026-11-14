@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import sys
+from importlib import import_module
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, BinaryIO
 
 if TYPE_CHECKING:
@@ -28,6 +30,14 @@ def create_machine_server(
     from docwen_cli.machine.query_service import MachineQueryService
     from docwen_runtime.config import ConfigLoader
     from docwen_runtime.output.artifact_bundle import ArtifactBundleCommitter
+
+    # On Windows, NumPy's native DLL initialization can wait on the stdin
+    # handle while the protocol reader is blocked on that same pipe. Load the
+    # optional numeric backend before starting stdio, never in a task thread.
+    # Keep this in the Machine composition root so GUI and lightweight CLI
+    # commands retain their lazy startup. See numpy/numpy#24290.
+    if sys.platform == "win32" and find_spec("numpy") is not None:
+        import_module("numpy")
 
     if config_loader is None:
         config_loader = ConfigLoader(runtime_overrides={"logger": {"console_enable": False}})

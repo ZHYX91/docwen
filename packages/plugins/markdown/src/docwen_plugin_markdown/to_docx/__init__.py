@@ -1,5 +1,20 @@
-"""MD → DOCX converter."""
+"""Lazy public converter exports; importing a utility never loads its engine."""
 
-from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .converter import MdToDocxConverter
 
 __all__ = ["MdToDocxConverter"]
+
+
+def __getattr__(name: str) -> Any:
+    if name not in __all__:
+        raise AttributeError(name)
+    from . import converter
+
+    value = getattr(converter, name)
+    globals()[name] = value
+    return value

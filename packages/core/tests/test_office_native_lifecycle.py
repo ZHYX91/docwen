@@ -76,7 +76,7 @@ def test_native_group_closeout_with_real_processes_and_substituted_darwin_querie
         stdout, stderr = process.communicate(timeout=4)
     assert process.returncode == 0, (stdout, stderr)
     result = json.loads(evidence.with_suffix(".result").read_text())
-    assert result["cleanup_confirmed"] is (mode != "kill-refused"), result
+    assert result["cleanup_confirmed"] is (mode != "kill-refused"), json.dumps(result, sort_keys=True)
     assert result["succeeded"] is (mode in {"normal", "large-output"})
     assert result["launcher_exit_code"] == (None if mode == "kill-refused" else 0)
     if mode == "large-output":

@@ -9,6 +9,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from docwen_bundle.startup_diagnostics import gui_startup
 from docwen_runtime.security import NetworkGuardInstallationError, dependency_egress_guard
 
 if TYPE_CHECKING:
@@ -241,6 +242,7 @@ def _stop_gui_control_and_release_instance_lock(
 
 
 def _main_with_guard_active(argv: list[str] | None = None) -> int:
+    gui_startup.mark("guard_ready")
     from PySide6.QtCore import Qt
 
     from docwen_application.controller import ApplicationController
@@ -263,16 +265,20 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
     from docwen_runtime.config import ConfigLoader
     from docwen_runtime.profile_paths import current_profile_paths, profile_instance_name
 
+    gui_startup.mark("gui_imports_ready")
     args = argv if argv is not None else sys.argv
     app_name = profile_instance_name()
     decision = bootstrap_gui(app_name=app_name, argv=args)
     if decision.should_exit:
         return decision.exit_code
 
+    gui_startup.mark("instance_ready")
     app = create_qapplication(args)
+    gui_startup.mark("application_created")
 
     task_event_bridge = TaskEventBridge()
     config_loader = ConfigLoader()
+    gui_startup.mark("configuration_loaded")
     config_port = ConfigPortAdapter(config_loader)
     configured_locale = config_port.get("gui.language.locale", "zh_CN")
     active_locale = configured_locale if isinstance(configured_locale, str) else "zh_CN"
@@ -290,7 +296,9 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
         config_port=config_port,
     )
     controller.start()
+    gui_startup.mark("runtime_ready")
     _initialize_application_theme(app, controller)
+    gui_startup.mark("appearance_ready")
 
     window = create_main_window(
         controller=controller,
@@ -299,6 +307,7 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
         clipboard_input_root=str(current_profile_paths().data_dir / "clipboard-inputs"),
     )
 
+    gui_startup.mark("window_created")
     control_server: object | None = None
     instance_lock = decision.instance_lock
     if instance_lock is not None:
@@ -314,7 +323,10 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
     _schedule_test_conversion_report(app, window)
     _schedule_test_settings_report(app, window)
     _schedule_test_ipc_report(app, window)
+    gui_startup.mark("control_ready")
+    gui_startup.observe_window(window)
     window.show()
+    gui_startup.mark("show_requested")
     try:
         return app.exec()
     finally:
