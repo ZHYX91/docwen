@@ -12,6 +12,10 @@
 - 桌面启动时按需加载 Markdown 转换引擎，避免主窗口重复应用初始字体与主题；CLI 仅在对应操作需要时加载组合工厂。
 - Add Windows `serve --stdio --managed --parent-pid PID`: the installed CLI owns worker lifetime and descendant cleanup without extracting an auxiliary executable.
 - 新增 Windows `serve --stdio --managed --parent-pid PID`：由正式 CLI 管理工作进程及后代清理，无需释放辅助可执行文件。
+- Initialize the optional numeric backend before Windows Machine starts reading its input pipe, preventing first spreadsheet or OCR conversions from hanging after lazy loading.
+- Windows Machine 开始读取输入管道前初始化可用的数值计算依赖，避免延迟加载后首次表格或 OCR 转换卡住。
+- Default Markdown and wiki hyperlink fallbacks to extracted text, and vertically center file-list folder buttons with their path labels.
+- Markdown 与 Wiki 超链接默认回退为提取文本；文件列表中的文件夹按钮与路径文字垂直居中。
 
 - Reduce startup work by loading document, spreadsheet, presentation, image and layout converters when used, applying initial appearance once, and copying only requested configuration values. Template discovery runs in the background and reuses one validated state per scan.
 - 文档、表格、演示、图片和版式转换实现改为使用时加载；初始外观一次应用，配置按需复制。模板目录后台扫描并在单次扫描内复用已验证状态。
