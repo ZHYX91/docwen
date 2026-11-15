@@ -18,7 +18,7 @@ from docwen_core.models.file_ref import SOURCE_PRESENTATION_NAME_METADATA_KEY, F
 from docwen_core.models.request import ConversionRequest, OutputPolicy
 from docwen_gui.clipboard_inputs import ClipboardInputStore
 from docwen_gui.execution_requests import ExecutionRequestBuilder
-from docwen_gui.path_identity import normalize_path
+from docwen_gui.path_identity import normalize_path, path_key
 from docwen_plugin_markdown.plugin import MarkdownPlugin
 from docwen_runtime.adapters import RuntimePortAdapter
 from docwen_runtime.engine.route_resolver import RouteResolver
@@ -83,7 +83,7 @@ def test_clipboard_markdown_snapshot_runs_through_existing_runtime_pipeline(tmp_
 
 @pytest.mark.parametrize("image_location", ["snapshot-neighbor", "cwd"])
 @pytest.mark.parametrize("image_target", ["nearby.png", "file:nearby.png", "file:./nearby.png"])
-@pytest.mark.parametrize("syntax", ["inline", "reference"])
+@pytest.mark.parametrize("syntax", ["inline", "reference", "collapsed", "shortcut"])
 def test_clipboard_relative_image_has_no_implicit_source_directory(
     tmp_path: Path,
     round_trip_runtime: Any,
@@ -93,11 +93,14 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
     syntax: str,
 ) -> None:
     store = ClipboardInputStore(tmp_path / "managed")
-    text = (
-        f"# Clipboard image\n\n![Local][r]\n\n[r]: {image_target}\n"
-        if syntax == "reference"
-        else f"# Clipboard image\n\n![Local]({image_target})\n"
-    )
+    token = {
+        "inline": f"![Local]({image_target})",
+        "reference": "![Local][r]",
+        "collapsed": "![Local][]",
+        "shortcut": "![Local]",
+    }[syntax]
+    definition = "" if syntax == "inline" else f"\n[{'r' if syntax == 'reference' else 'Local'}]: {image_target}\n"
+    text = f"# Clipboard image\n\n{token}\n{definition}"
     snapshot = store.create(text, display_name_template="Clipboard Markdown {index}.md")
     source = Path(snapshot.path)
     image_root = source.parent if image_location == "snapshot-neighbor" else tmp_path
@@ -119,7 +122,7 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
     builder = ExecutionRequestBuilder(
         SimpleNamespace(files=[ref], controller=None),
         SimpleNamespace(get_file_entry=lambda _path: None),
-        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        file_contexts=lambda: {path_key(source): ("markdown", "markdown")},
         selected_template=lambda: ("docx", template.id),
         source_label=lambda path: logical_name if normalize_path(path) == normalize_path(str(source)) else None,
         synthetic_input=lambda path: normalize_path(path) == normalize_path(str(source)),
@@ -131,6 +134,7 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
         options={},
         output_policy=OutputPolicy(output_dir=str(tmp_path / "synthetic-output")),
     )
+    assert request.options["template_name"] == template.id
     assert request.input_refs[0].logical_path == ""
     assert request.input_refs[0].metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] == logical_name
     controller = ApplicationController(runtime_port=round_trip_runtime)
@@ -139,7 +143,13 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
     primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
     document = Document(primary.staging_path)
     assert not document.inline_shapes
-    assert "nearby.png" in "\n".join(paragraph.text for paragraph in document.paragraphs)
+    # The default missing-file policy keeps the exact authored occurrence.
+    # Reference definitions are Markdown metadata, not rendered body text.
+    assert [paragraph.text for paragraph in document.paragraphs] == [
+        "Clipboard Markdown 1",
+        "Clipboard image",
+        token,
+    ]
     assert source.read_bytes() == text.encode("utf-8")
     assert image_path.read_bytes() == image_bytes
 
@@ -158,7 +168,7 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
     ordinary_builder = ExecutionRequestBuilder(
         SimpleNamespace(files=[ordinary_ref], controller=None),
         SimpleNamespace(get_file_entry=lambda _path: None),
-        file_contexts=lambda: {normalize_path(str(regular)): ("markdown", "markdown")},
+        file_contexts=lambda: {path_key(regular): ("markdown", "markdown")},
         selected_template=lambda: ("docx", template.id),
     )
     ordinary_request, _ = ordinary_builder.single(
@@ -168,6 +178,7 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
         options={},
         output_policy=OutputPolicy(output_dir=str(tmp_path / "ordinary-output")),
     )
+    assert ordinary_request.options["template_name"] == template.id
     control = controller.execute_single(ordinary_request)
     assert control.success, control.error
     primary = next(artifact for artifact in control.artifacts if artifact.kind == "primary")
@@ -205,7 +216,7 @@ def test_clipboard_public_name_preserves_genuine_declared_resource_contract(
     builder = ExecutionRequestBuilder(
         SimpleNamespace(files=[source_ref], controller=None),
         SimpleNamespace(get_file_entry=lambda _path: None),
-        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        file_contexts=lambda: {path_key(source): ("markdown", "markdown")},
         selected_template=lambda: ("docx", template.id),
         source_label=lambda _path: snapshot.display_name,
         synthetic_input=lambda _path: True,
@@ -218,6 +229,7 @@ def test_clipboard_public_name_preserves_genuine_declared_resource_contract(
         options={},
         output_policy=OutputPolicy(output_dir=str(tmp_path / "declared-output")),
     )
+    assert request.options["template_name"] == template.id
     assert request.input_refs[0].logical_path == "notes/source.md"
     assert request.input_refs[0].metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] == snapshot.display_name
     request.input_refs.append(
@@ -447,7 +459,7 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
     builder = ExecutionRequestBuilder(
         SimpleNamespace(files=[source_ref], controller=None),
         SimpleNamespace(get_file_entry=lambda _path: None),
-        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        file_contexts=lambda: {path_key(source): ("markdown", "markdown")},
         selected_template=lambda: ("docx", template.id),
         source_label=lambda path: logical_name if normalize_path(path) == normalize_path(str(source)) else None,
         synthetic_input=lambda path: normalize_path(path) == normalize_path(str(source)),
@@ -459,6 +471,7 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
         options={},
         output_policy=OutputPolicy(output_dir=str(tmp_path / "published")),
     )
+    assert request.options["template_name"] == template.id
     assert request.input_refs[0].logical_path == ""
     assert request.input_refs[0].metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] == logical_name
 
