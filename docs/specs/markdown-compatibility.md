@@ -181,6 +181,14 @@ to a shallower quote must not become lazy continuation of the preceding deeper q
 
 ## Rules / 规则
 
+Valid link-reference definitions, including continued destinations and titles, do not keep a paragraph open. An immediately following type-7 HTML block therefore retains its literal source ownership. Numbering and proofreading must agree on these boundaries, preserve code/HTML contents, and retain source coordinates and line endings.
+
+有效链接引用定义（包含续行的目标和标题）不会使普通段落保持打开；紧随其后的第七类 HTML 块仍属于字面源码。编号与校对必须共享这些边界，保护代码／HTML 内容，并保留源码坐标及换行。
+
+Declared image bindings support inline, full-reference, collapsed-reference and shortcut-reference image tokens. Reference labels use the same normalization and first-definition precedence throughout declaration validation and rendering. Resolved images still require an authenticated source token and a declared resource; accepting a reference form does not permit filesystem discovery. Code, raw HTML and undefined references do not introduce image bindings.
+
+声明式图片绑定支持行内、完整引用、折叠引用和快捷引用图片标记。声明验证与渲染对引用标签采用一致的规范化及首个定义优先规则。解析后的图片仍须绑定经过认证的原文标记和已声明资源；接受引用式语法不授予文件系统扫描权限。代码、raw HTML 和未定义引用不产生图片绑定。
+
 - Parsers must not fetch remote content implicitly.
 - Missing or unsafe local resources produce diagnostics instead of traversal.
 - Source syntax and target rendering are compared semantically unless exact text is the contract.

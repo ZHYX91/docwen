@@ -15,6 +15,13 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+add_file = "Añadir archivo"
+start_conversion = "Iniciar conversión"
+cancel = "Cancelar"
+close_waiting_for_tasks = "Cancelando las tareas activas antes de cerrar…"
+close_wait_timeout = "Una tarea aún se está deteniendo. DocWen permanecerá abierto hasta que termine la limpieza."
+thread_start_uncertain = "El proceso de trabajo se inició, pero falló la notificación de inicio; se solicitó la cancelación."
+close_cancel_failed = "No se pudo solicitar la cancelación de {task_id}: {message}"
 runtime_folder_unavailable = "No se pudo crear la carpeta temporal de trabajo. Compruebe los permisos o el software de seguridad e inténtelo de nuevo."
 output_folder_unavailable = "No se puede usar con seguridad la carpeta de destino. Compruebe los permisos o elija otra carpeta."
 numbering_comments_unanchored = "Algunos números añadidos no se pueden aislar como texto con este esquema. Se omitieron sus comentarios y se conservaron los títulos."
@@ -81,6 +88,7 @@ request_output = "Salida: {value}"
 merge_result_summary = "{source} / {sheet} · {mode}: añadidos {added}, sustituidos {replaced}, omitidos {skipped}, combinados {combined}; valores desconocidos 0. Consulte las posiciones de origen en los detalles de la tarea."
 merge_formula_cache_missing = "Combinación detenida: una fórmula no tiene un resultado guardado. Recalcule y guarde el libro en una hoja de cálculo y vuelva a intentarlo. El archivo y las celdas aparecen en los detalles del error."
 [common]
+type_warning = "Advertencia"
 action_file_count = "{action} ({count} archivos)"
 app_name = "DocWen"
 default = "Predeterminado"
@@ -279,6 +287,7 @@ field_fallback = "Ajuste ({field})"
 tab_load_failed_message = "No se pudo cargar {tab}\n\nError: {error}"
 
 [settings.toml_editor]
+save_failed_message = "No se pudo guardar la configuración."
 config_label = "Configuracion"
 hint = "Sugerencia: esta pagina edita TOML directamente. La sintaxis se valida antes de guardar."
 toml_syntax_error = "Error de sintaxis TOML"
@@ -831,6 +840,7 @@ auto_open_folder_tooltip = "Abre automáticamente la carpeta de salida y selecci
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "Seleccionar carpeta de registros"
 # 日志系统区域
 system_section = "Sistema de registros"
 system_desc = "Activar o desactivar el registro y establecer su nivel."
@@ -996,6 +1006,7 @@ large = "Grande"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "El archivo no está disponible"
 inspecting = "Comprobando archivos…"
 empty_hint_single = "Arrastra un archivo aquí"
 empty_hint_batch = "Arrastra archivos o carpetas aquí"
@@ -1483,6 +1494,8 @@ letter_number_desc = "Coincide con: A. / A) / (A) / a. / a) (numeración con let
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "No se pudieron guardar las entradas de emparejamiento de símbolos."
+load_failed = "No se pudo cargar la fuente de configuración editable."
 # 对话框标题
 symbol_editor_title = "Pares de puntuación"
 typo_editor_title = "Editor de diccionario de erratas"

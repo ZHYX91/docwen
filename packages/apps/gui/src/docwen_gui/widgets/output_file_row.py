@@ -1,5 +1,7 @@
 """A compact output identity, multiple-results badge, and file-location action."""
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QToolButton, QWidget
 
@@ -37,7 +39,7 @@ class OutputFileRow(QWidget):
 
     def set_output(self, path: str, count: int) -> None:
         self._path = path
-        name = path.replace("\\", "/").rsplit("/", 1)[-1]
+        name = Path(path).name
         self.name_label.set_full_text(t("info_area.task_output_file", name=isolate_filename(name)) if path else "")
         self.name_label.setToolTip(path)
         self.location_button.setAccessibleDescription(path)

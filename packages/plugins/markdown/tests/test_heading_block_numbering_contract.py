@@ -8,13 +8,48 @@ from docwen_core.links import markdown_heading_ranges, markdown_source_context_l
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.text.heading_numbering import HeadingFormatter
 from docwen_plugin_markdown.common_utils import _apply_numbering
-from docwen_plugin_markdown.mistune_extensions import create_extended_markdown
+from docwen_plugin_markdown.mistune_extensions import create_extended_markdown, parse_markdown_text
 
 pytestmark = pytest.mark.contract
 
 
 def _formatter() -> HeadingFormatter:
     return HeadingFormatter({f"level_{level}": {"format": f"{{{level}.arabic_half}} "} for level in range(1, 10)})
+
+
+@pytest.mark.parametrize("eol", ["\n", "\r\n"])
+@pytest.mark.parametrize("container", ["", ">", "-"])
+@pytest.mark.parametrize(
+    "definition",
+    [
+        "[x]: /url\n",
+        "[x]:\n  /url\n",
+        '[x]: /url "title"\n',
+        '[x]: /url\n  "title"\n',
+        '[x]: /url "title\n# Hidden title"\n',
+        "[long\nlabel]: /url\n",
+    ],
+)
+def test_reference_definition_ends_the_paragraph_before_html(definition: str, container: str, eol: str) -> None:
+    body = definition + "<span>\n# Fake\n１２３\n</span>\n"
+    if container == ">":
+        body = "".join("> " + line for line in body.splitlines(keepends=True))
+    elif container == "-":
+        body = "- " + "\n  ".join(body.rstrip("\n").split("\n")) + "\n"
+    source = ("\ufeff" + body + "\n# Real\n").replace("\n", eol)
+    assert _parsed_headings(parse_markdown_text(source, extensions=MarkdownExtensions())) == [("atx", 1, "Real")]
+    assert _apply_numbering(source, _formatter()) == source.replace("# Real", "# 1 Real")
+
+
+@pytest.mark.parametrize("intro", ["paragraph\n[x]: /url\n", "[x]: /url invalid\n", "[x]: <broken\n"])
+def test_invalid_or_ineligible_definitions_leave_a_real_paragraph(intro: str) -> None:
+    source = intro + "<span>\n# Visible\n\n# Real\n"
+    ast = create_extended_markdown(extensions=MarkdownExtensions())(source)
+    assert isinstance(ast, list)
+    assert _parsed_headings(ast) == [("atx", 1, "Visible"), ("atx", 1, "Real")]
+    assert _apply_numbering(source, _formatter()) == source.replace("# Visible", "# 1 Visible").replace(
+        "# Real", "# 2 Real"
+    )
 
 
 @pytest.mark.parametrize("marker", ["0.", "2.", "9)", "123."])

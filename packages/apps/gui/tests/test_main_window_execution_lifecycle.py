@@ -11,6 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from docwen_gui.i18n import t
+
 pytestmark = pytest.mark.gui
 
 
@@ -218,7 +220,7 @@ def test_close_timeout_keeps_disabled_window_and_parented_worker_alive(
         assert thread.parent() is main_window._execution
         assert controller.cancelled == [request.request_id]
         assert controller.stop_count == 0
-        assert any("remain open" in row.message for row in main_window._info_area_vm.history_rows)
+        assert any(row.message == t("main_window.close_wait_timeout") for row in main_window._info_area_vm.history_rows)
     finally:
         release_event.set()
 

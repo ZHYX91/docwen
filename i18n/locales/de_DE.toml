@@ -11,6 +11,7 @@ template_name = "Deutsche Allgemeine Vorlage"
 # 通用文本
 # =============================================================================
 [common]
+type_warning = "Warnung"
 action_file_count = "{action} ({count} Dateien)"
 app_name = "DocWen"
 default = "Standard"
@@ -209,6 +210,7 @@ field_fallback = "Einstellung ({field})"
 tab_load_failed_message = "{tab} konnte nicht geladen werden\n\nFehler: {error}"
 
 [settings.toml_editor]
+save_failed_message = "Die Konfiguration konnte nicht gespeichert werden."
 config_label = "Konfiguration"
 hint = "Hinweis: Diese Seite bearbeitet TOML direkt. Die Syntax wird vor dem Speichern geprüft."
 toml_syntax_error = "TOML-Syntaxfehler"
@@ -761,6 +763,7 @@ auto_open_folder_tooltip = "Öffnet den Ausgabeordner nach der Konvertierung."
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "Protokollordner auswählen"
 # 日志系统区域
 system_section = "System"
 system_desc = "Logging aktivieren oder deaktivieren und die Protokollstufe festlegen."
@@ -926,6 +929,7 @@ large = "Gross"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "Datei nicht verfügbar"
 inspecting = "Dateien werden geprüft…"
 empty_hint_single = "Einzelne Datei hierher ziehen"
 empty_hint_batch = "Dateien/Ordner hierher ziehen"
@@ -1408,6 +1412,8 @@ letter_number_desc = "A. usw."
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "Die Einträge für Symbolpaare konnten nicht gespeichert werden."
+load_failed = "Die bearbeitbare Konfigurationsquelle konnte nicht geladen werden."
 # 对话框标题
 symbol_editor_title = "Satzzeichenpaare"
 typo_editor_title = "Tippfehler"
@@ -1698,6 +1704,13 @@ subtitle = "Untertitel"
 
 
 [main_window]
+add_file = "Datei hinzufügen"
+start_conversion = "Konvertierung starten"
+cancel = "Abbrechen"
+close_waiting_for_tasks = "Aktive Aufgaben werden vor dem Schließen abgebrochen…"
+close_wait_timeout = "Eine Aufgabe wird noch beendet. DocWen bleibt geöffnet, bis die Bereinigung abgeschlossen ist."
+thread_start_uncertain = "Der Aufgaben-Worker wurde gestartet, aber die Startmeldung ist fehlgeschlagen. Der Abbruch wurde angefordert."
+close_cancel_failed = "Abbruch für {task_id} konnte nicht angefordert werden: {message}"
 runtime_folder_unavailable = "Temporärer Arbeitsordner konnte nicht erstellt werden. Prüfen Sie Berechtigungen oder Sicherheitssoftware und versuchen Sie es erneut."
 output_folder_unavailable = "Der gewählte Speicherordner kann nicht sicher verwendet werden. Prüfen Sie die Berechtigungen oder wählen Sie einen anderen Ordner."
 numbering_comments_unanchored = "Einige hinzugefügte Nummern können mit diesem Schema nicht als eigener Text isoliert werden. Ihre Kommentare wurden ausgelassen; die Überschriften bleiben erhalten."

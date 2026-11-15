@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from docwen_gui.path_identity import path_key
+
 from ._batch_list_vm_support import (
     CATEGORY_ORDER,
     BatchFileEntry,
@@ -49,7 +51,7 @@ class TestFilter:
             workflow_category="document",
             status="failed",
         )
-        vm._entries["/test/doc.docx"] = ("document", entry)
+        vm._entries[path_key("/test/doc.docx")] = ("document", entry)
         vm.set_status_filter("failed")
         assert vm._entry_matches_filter(entry) is True
         vm.set_status_filter("all")
@@ -65,7 +67,7 @@ class TestFilter:
             workflow_category="document",
             status="cancelled",
         )
-        vm._entries["/test/doc.docx"] = ("document", entry)
+        vm._entries[path_key("/test/doc.docx")] = ("document", entry)
 
         vm.set_status_filter("cancelled")
 
@@ -213,7 +215,7 @@ class TestReorder:
     def test_reorder_manual(self, vm: BatchListViewModel) -> None:
         _add_synthetic(vm, ["/test/a.docx", "/test/b.docx"])
         vm.reorder_manual("document", ["/test/b.docx", "/test/a.docx"])
-        ordered = vm._get_ordered_paths_for_category("document")
+        ordered = vm.get_files_for_category("document")
         assert ordered == ["/test/b.docx", "/test/a.docx"]
 
     def test_reorder_switches_to_custom(self, vm: BatchListViewModel) -> None:

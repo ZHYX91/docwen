@@ -20,6 +20,21 @@ pytestmark = pytest.mark.contract
     ("body", "visible_occurrences"),
     [
         pytest.param(
+            "[x]: /url\n<span>\n# Fake\n１２３\n</span>\n\n１２３ prose\n",
+            (1,),
+            id="reference-definition-closes-paragraph-before-html",
+        ),
+        pytest.param(
+            '[x]:\n  /url\n  "１２３ title"\n<span>\n１２３\n</span>\n\n１２３ prose\n',
+            (2,),
+            id="multiline-reference-metadata-and-html-remain-protected",
+        ),
+        pytest.param(
+            "paragraph\n[x]: /url\n<span>\n１２３\n\n１２３ prose\n",
+            (0, 1),
+            id="ineligible-definition-does-not-protect-visible-prose",
+        ),
+        pytest.param(
             "start `open\n-\n[１２３](https://example.test) close`\n",
             (0,),
             id="setext-closes-the-inline-scope",

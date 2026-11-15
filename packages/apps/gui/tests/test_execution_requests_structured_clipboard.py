@@ -24,7 +24,7 @@ from docwen_core.models.file_ref import (
 )
 from docwen_gui.clipboard_inputs import ClipboardInputStore
 from docwen_gui.execution_requests import ExecutionRequestBuilder
-from docwen_gui.path_identity import normalize_path
+from docwen_gui.path_identity import path_key
 from docwen_runtime.templates import TemplateRegistry
 
 if TYPE_CHECKING:
@@ -53,7 +53,7 @@ def test_builder_separates_public_name_virtual_path_and_managed_integrity(tmp_pa
     builder = ExecutionRequestBuilder(
         cast("MainWindowViewModel", SimpleNamespace(files=[ref], controller=None)),
         cast("BatchListViewModel", SimpleNamespace(get_file_entry=lambda _path: None)),
-        file_contexts=lambda: {normalize_path(str(source)): ("clipboard_document", "markdown")},
+        file_contexts=lambda: {path_key(str(source)): ("clipboard_document", "markdown")},
         selected_template=lambda: ("docx", template.id),
         source_label=lambda _path: "剪贴板文档 1.dwclip",
         synthetic_input=lambda _path: True,
@@ -132,7 +132,7 @@ def test_builder_freezes_complete_structured_resource_group_before_request(tmp_p
     builder = ExecutionRequestBuilder(
         view_model,
         cast("BatchListViewModel", SimpleNamespace(get_file_entry=lambda _path: None)),
-        file_contexts=lambda: {normalize_path(bundle.main.path): ("clipboard_document", "markdown")},
+        file_contexts=lambda: {path_key(bundle.main.path): ("clipboard_document", "markdown")},
         selected_template=lambda: ("docx", template.id),
         source_label=lambda _path: bundle.main.display_name,
         synthetic_input=lambda _path: True,
@@ -189,7 +189,7 @@ def test_structured_markdown_request_does_not_require_template(tmp_path, mode, t
     builder = ExecutionRequestBuilder(
         cast("MainWindowViewModel", SimpleNamespace(files=refs, controller=None)),
         cast("BatchListViewModel", SimpleNamespace(get_file_entry=lambda _path: None)),
-        file_contexts=lambda: {normalize_path(ref.path): ("clipboard_document", "markdown") for ref in refs},
+        file_contexts=lambda: {path_key(ref.path): ("clipboard_document", "markdown") for ref in refs},
         selected_template=lambda: None,
     )
     if mode == "single":
@@ -216,7 +216,7 @@ def test_structured_template_request_still_requires_template(tmp_path, target) -
     builder = ExecutionRequestBuilder(
         cast("MainWindowViewModel", SimpleNamespace(files=[], controller=None)),
         cast("BatchListViewModel", SimpleNamespace(get_file_entry=lambda _path: None)),
-        file_contexts=lambda: {normalize_path(source): ("clipboard_document", "markdown")},
+        file_contexts=lambda: {path_key(source): ("clipboard_document", "markdown")},
         selected_template=lambda: None,
     )
     with pytest.raises(ValueError):

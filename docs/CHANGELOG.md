@@ -3,7 +3,22 @@
 - 本文档只记录版本演进和对外可见变更，不作为当前功能边界、架构约束或规范条款的事实源。
 - 长期有效的项目说明以 README 体系为准，设计与维护边界以 `docs/architecture.md` 为准，强约束规则以 `docs/specs/` 为准。
 
+## Unreleased / 未发布
+
 ## 0.23.0
+
+- Protect HTML blocks immediately following Markdown reference definitions from heading numbering and proofreading edits.
+- 保护 Markdown 引用定义后紧接的 HTML 块，避免编号和校对误改字面内容。
+- Support authenticated full, collapsed and shortcut reference images through declared-resource validation and DOCX rendering.
+- 声明资源验证与 DOCX 渲染贯通完整式、折叠式及快捷式引用图片，并保留原文认证和资源边界。
+- Proofread DOCX body tables and nested tables, count merged cells once, and include their real comments and paragraphs in the result statistics.
+- DOCX 校对覆盖正文表格及嵌套表格，合并格只检一次，结果统计纳入其段落与真实批注。
+- Keep POSIX filenames containing literal backslashes distinct throughout GUI selection, inspection and task source mapping; retain Windows path aliases.
+- GUI 选择、检查及任务源映射保持 POSIX 字面反斜杠文件名独立，同时保留 Windows 路径别名。
+- Start Windows Mermaid renderers inside their managed Job before a launcher can create child processes, preserving process-family cleanup on timeout and cancellation.
+- Windows Mermaid 渲染器在启动器能够创建子进程前加入受管 Job，确保超时及取消时能够清理完整进程族。
+- Complete missing GUI translations and check code-referenced translation keys. Declare Core's existing document-library dependencies and align CSV-template and clear-button documentation with supported behavior.
+- 补齐 GUI 缺失翻译并检查代码引用键；声明 Core 现有文档库依赖，同步 CSV 模板和清空按钮文档。
 
 - Update the bundled Soup Sieve dependency to 4.0.1, including upstream fixes for pathological selector processing and deeply nested document matching.
 - 随包 Soup Sieve 升至 4.0.1，包含上游对异常选择器处理和深层文档匹配耗时的修复。

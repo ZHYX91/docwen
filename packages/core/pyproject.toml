@@ -5,10 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "docwen-core"
 version = "0.23.0"
-description = "DocWen Core — shared models, protocols, errors, events, and format definitions"
+description = "DocWen Core — shared contracts, parsing, and document semantics"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "Pillow>=13.0.0,<14.0.0",
+    "python-docx>=1.2.0",
+    "lxml>=6.0.2",
     "tomlkit",
     "pywin32>=311; platform_system == 'Windows'",
 ]

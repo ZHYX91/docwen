@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from docwen_gui.path_identity import path_key
+
 from ._main_window_projection_binding_support import (
     SimpleNamespace,
     optimization_capability_projection,
@@ -83,11 +85,10 @@ class TestRuntimeRequestBinding:
         assert [entry.status for entry in entries if entry is not None] == ["failed", "failed"]
 
     def test_split_pdf_request_preserves_pdf_source_and_action(self, window, tmp_path) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "sample.pdf"
         source.write_bytes(b"%PDF-1.4\n")
-        window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
+        window._file_contexts = {path_key(str(source)): ("pdf", "layout")}
 
         request, context = window._requests.single(
             file_path=str(source),
@@ -130,11 +131,10 @@ class TestRuntimeRequestBinding:
     def test_txt_document_context_builds_markdown_runtime_request(self, window, tmp_path) -> None:
         """Core currently classifies txt as document; GUI request routing must
         still preserve the old TXT-as-Markdown source workflow."""
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.txt"
         source.write_text("# Title\n\ncontent", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
 
         request, _context = window._requests.single(
             file_path=str(source),

@@ -8,19 +8,54 @@ Requires a QApplication instance.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import PurePosixPath, PureWindowsPath
 
 import pytest
 from PySide6.QtWidgets import (
     QApplication,
 )
 
-from docwen_gui.i18n import get_locale, set_locale, t
+from docwen_gui.i18n import get_locale, isolate_filename, set_locale, t
 from docwen_gui.view_models.info_area_vm import (
     InfoAreaViewModel,
 )
 from docwen_gui.widgets.info_area import InfoArea
 
 pytestmark = pytest.mark.gui
+
+
+@pytest.mark.parametrize(
+    ("path_type", "output", "filename"),
+    [
+        (PurePosixPath, r"/tmp/a\b.docx", r"a\b.docx"),
+        (PurePosixPath, "/tmp/a/b.docx", "b.docx"),
+        (PureWindowsPath, r"C:\outputs\a\b.docx", "b.docx"),
+        (PureWindowsPath, "C:/outputs/a/b.docx", "b.docx"),
+    ],
+)
+def test_output_filename_uses_host_separators_without_changing_location(
+    monkeypatch, qtbot, qapp, request, path_type, output, filename
+) -> None:
+    from docwen_gui.view_models import info_area_vm
+    from docwen_gui.widgets import output_file_row
+
+    # Exercise both host policies without changing global pathlib or os.
+    monkeypatch.setattr(info_area_vm, "Path", path_type)
+    monkeypatch.setattr(output_file_row, "Path", path_type)
+    vm = InfoAreaViewModel()
+    request.addfinalizer(vm.stop_all_timers)
+    widget = InfoArea(view_model=vm)
+    qtbot.addWidget(widget)
+    vm.set_task_summary(output_path=output, state="success")
+
+    expected = t("info_area.task_output_file", name=isolate_filename(filename))
+    assert vm.output_file_text == expected
+    assert widget._output_row.name_label.full_text == expected
+    assert widget._output_row.name_label.toolTip() == output
+    assert vm.task_summary.output_path == output
+    with qtbot.waitSignal(vm.location_requested) as observed:
+        widget._output_row.location_button.click()
+    assert observed.args == [output]
 
 
 @pytest.mark.parametrize(

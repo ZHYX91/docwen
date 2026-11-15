@@ -17,12 +17,23 @@ runtime  application
 
 ## Layers / 分层
 
-- `docwen_core`: data contracts, shared parsing, OCR, links, formula and pure services.
+- `docwen_core`: data contracts, shared parsing, OCR, links, formula and document semantics.
 - `docwen_application`: request admission, pre-conversion orchestration and use-case control.
 - `docwen_runtime`: plugin registry, route resolution, workspaces, configuration, security, IPC and output finalization.
 - `docwen_plugin_*`: format-specific route implementations; plugins depend on core contracts, not application or runtime internals.
 - `docwen_cli` and `docwen_gui`: presentation and interaction layers.
 - `docwen_bundle`: composition root, entry points and adapter wiring.
+
+Core owns the shared DOCX semantic identities and OOXML projection used by multiple consumers.
+Its package directly declares `python-docx` and `lxml`; installing Core does not rely on a plugin
+to supply those libraries. Format conversion routes still belong to plugins, and Core must not
+import application, runtime, apps, plugins or bundle. The source dependency and isolated-import
+checks live in `tests/test_repo/test_core_document_dependencies.py`.
+
+Core 拥有多个消费者共用的 DOCX 语义身份与 OOXML 投影，并直接声明 `python-docx` 和 `lxml`
+依赖；单独安装 Core 不依赖插件间接提供这些库。格式转换路线仍由插件拥有，Core 不得导入
+application、runtime、apps、plugins 或 bundle。源码依赖与隔离导入检查见
+`tests/test_repo/test_core_document_dependencies.py`。
 
 ## Execution flow / 执行主链
 

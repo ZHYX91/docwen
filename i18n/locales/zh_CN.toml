@@ -11,6 +11,13 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+add_file = "添加文件"
+start_conversion = "开始转换"
+cancel = "取消"
+close_waiting_for_tasks = "正在取消活动任务，完成后关闭…"
+close_wait_timeout = "任务仍在停止中。清理完成前，DocWen 将保持打开。"
+thread_start_uncertain = "任务工作线程已启动，但启动状态报告失败；已请求取消。"
+close_cancel_failed = "无法请求取消任务 {task_id}：{message}"
 runtime_folder_unavailable = "无法创建临时工作目录。请检查文件夹权限或安全软件设置后重试。"
 output_folder_unavailable = "无法安全使用所选保存目录。请检查权限或更换目录。"
 numbering_comments_unanchored = "所选方案的部分自动序号无法单独定位为文字，已跳过这些序号的批注；标题内容保留。"
@@ -81,6 +88,7 @@ request_output = "输出：{value}"
 merge_result_summary = "{source} / {sheet} · {mode}：新增 {added}，替换 {replaced}，跳过 {skipped}，合并 {combined}；未知值 0。来源位置见任务详情。"
 merge_formula_cache_missing = "汇总已停止：公式没有已保存的结果。请在电子表格软件中重新计算并保存后重试；文件和单元格位置见失败详情。"
 [common]
+type_warning = "警告"
 action_file_count = "{action}（{count} 个文件）"
 app_name = "DocWen"
 default = "默认"
@@ -279,6 +287,7 @@ field_fallback = "设置项（{field}）"
 tab_load_failed_message = "{tab}加载失败\n\n错误：{error}"
 
 [settings.toml_editor]
+save_failed_message = "无法保存配置。"
 config_label = "配置"
 hint = "提示：该页直接编辑 TOML，保存前会做语法校验。"
 toml_syntax_error = "TOML 语法错误"
@@ -830,6 +839,7 @@ auto_open_folder_tooltip = "转换或校对成功后自动打开输出文件夹�
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "选择日志目录"
 # 日志系统区域
 system_section = "日志系统"
 system_desc = "启用或禁用日志，并设置日志级别。"
@@ -995,6 +1005,7 @@ large = "大"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "文件不可用"
 inspecting = "正在检查文件…"
 empty_hint_single = "拖拽单个文件到这里"
 empty_hint_batch = "拖拽文件或文件夹到这里"
@@ -1472,6 +1483,8 @@ letter_number_desc = "匹配：A. / A) / (A) / a. / a) 等字母序号"
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "无法保存符号配对条目。"
+load_failed = "无法加载可编辑的配置源。"
 # 对话框标题
 symbol_editor_title = "标点配对规则"
 typo_editor_title = "错别字库编辑器"

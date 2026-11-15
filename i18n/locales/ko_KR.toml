@@ -11,6 +11,7 @@ template_name = "한국어 범용 템플릿"
 # 通用文本
 # =============================================================================
 [common]
+type_warning = "경고"
 action_file_count = "{action} (파일 {count}개)"
 app_name = "DocWen"
 default = "기본값"
@@ -209,6 +210,7 @@ field_fallback = "설정 항목 ({field})"
 tab_load_failed_message = "{tab}을(를) 불러오지 못했습니다\n\n오류: {error}"
 
 [settings.toml_editor]
+save_failed_message = "설정을 저장하지 못했습니다."
 config_label = "구성"
 hint = "안내: 이 페이지는 TOML을 직접 편집합니다. 저장 전에 문법을 검사합니다."
 toml_syntax_error = "TOML 문법 오류"
@@ -761,6 +763,7 @@ auto_open_folder_tooltip = "변환 또는 교정이 성공하면 출력 폴더�
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "로그 폴더 선택"
 # 日志系统区域
 system_section = "로그 시스템"
 system_desc = "로그 기록을 켜거나 끄고 로그 수준을 설정합니다."
@@ -926,6 +929,7 @@ large = "크게"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "파일을 사용할 수 없습니다"
 inspecting = "파일 확인 중…"
 empty_hint_single = "여기에 파일을 드래그하세요"
 empty_hint_batch = "여기에 파일/폴더를 드래그하세요"
@@ -1408,6 +1412,8 @@ letter_number_desc = "매칭: A. / A) / (A) / a. / a) 문자 번호"
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "기호 쌍 항목을 저장하지 못했습니다."
+load_failed = "편집 가능한 설정 원본을 불러오지 못했습니다."
 # 对话框标题
 symbol_editor_title = "문장 부호 짝 규칙"
 typo_editor_title = "오탈자 사전 편집기"
@@ -1698,6 +1704,13 @@ subtitle = "부제"
 
 
 [main_window]
+add_file = "파일 추가"
+start_conversion = "변환 시작"
+cancel = "취소"
+close_waiting_for_tasks = "닫기 전에 실행 중인 작업을 취소하는 중…"
+close_wait_timeout = "작업을 아직 중지하는 중입니다. 정리가 끝날 때까지 DocWen이 열린 상태로 유지됩니다."
+thread_start_uncertain = "작업 워커가 시작되었지만 시작 상태를 보고하지 못해 취소를 요청했습니다."
+close_cancel_failed = "{task_id} 작업의 취소를 요청하지 못했습니다: {message}"
 runtime_folder_unavailable = "임시 작업 폴더를 만들 수 없습니다. 폴더 권한이나 보안 소프트웨어를 확인한 후 다시 시도하세요."
 output_folder_unavailable = "선택한 저장 폴더를 안전하게 사용할 수 없습니다. 권한을 확인하거나 다른 폴더를 선택하세요."
 numbering_comments_unanchored = "이 방식의 일부 추가 번호는 별도 텍스트로 구분할 수 없습니다. 해당 메모를 건너뛰고 제목 내용을 유지했습니다."

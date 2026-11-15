@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from docwen_gui.path_identity import path_key
+
 from ._main_window_projection_binding_support import (
     _bind_admitted_ref,
     _write_format_fixture,
@@ -111,11 +113,10 @@ class TestRuntimeRequestBinding:
         assert [window._batch_list_vm.get_file_entry(path).status for path in paths] == expected_statuses
 
     def test_named_validate_defers_markdown_target_to_runtime_catalog(self, window, tmp_path, monkeypatch) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
         calls: list[dict[str, object]] = []
 
         def fake_start_execution(**kwargs: object) -> None:
@@ -165,11 +166,10 @@ class TestRuntimeRequestBinding:
         ]
 
     def test_named_split_pdf_routes_to_pdf_action(self, window, tmp_path, monkeypatch) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "sample.pdf"
         source.write_bytes(b"%PDF-1.4\n")
-        window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
+        window._file_contexts = {path_key(str(source)): ("pdf", "layout")}
         calls: list[dict[str, object]] = []
 
         def fake_start_execution(**kwargs: object) -> None:
@@ -390,8 +390,8 @@ class TestRuntimeRequestBinding:
         first_norm = str(first).replace("\\", "/")
         second_norm = str(second).replace("\\", "/")
         window._file_contexts = {
-            first_norm: ("markdown", "markdown"),
-            second_norm: ("markdown", "markdown"),
+            path_key(first_norm): ("markdown", "markdown"),
+            path_key(second_norm): ("markdown", "markdown"),
         }
 
         request, context = window._requests.batch(

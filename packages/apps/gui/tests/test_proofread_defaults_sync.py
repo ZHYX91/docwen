@@ -15,7 +15,7 @@ from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 from docwen_core.options.proofread import resolve_proofread_switches
 from docwen_gui.execution_requests import ExecutionRequestBuilder
-from docwen_gui.path_identity import normalize_path
+from docwen_gui.path_identity import path_key
 from docwen_gui.view_models.action_area_vm import PROOFREAD_OPTION_KEYS, ActionAreaViewModel
 from docwen_gui.view_models.settings_vm import SettingsViewModel
 
@@ -95,7 +95,7 @@ def test_saved_defaults_reach_request_without_changing_core_option_priority(tmp_
     builder = ExecutionRequestBuilder(
         cast("MainWindowViewModel", SimpleNamespace(files=[ref], controller=None)),
         cast("BatchListViewModel", SimpleNamespace(get_file_entry=lambda _path: None)),
-        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        file_contexts=lambda: {path_key(str(source)): ("markdown", "markdown")},
         selected_template=lambda: ("docx", "standard"),
     )
     request, _context = builder.single(

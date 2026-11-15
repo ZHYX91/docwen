@@ -11,7 +11,6 @@ ViewModel which delegates to the parent ``MainWindowViewModel``.
 from __future__ import annotations
 
 import logging
-import os
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -25,6 +24,7 @@ from docwen_gui.file_admission_i18n import render_file_format_notice, render_rem
 from docwen_gui.file_types import FILE_CATEGORY_ORDER, FILE_EXTENSIONS_BY_CATEGORY
 from docwen_gui.i18n import isolate_filename
 from docwen_gui.i18n import t as _t
+from docwen_gui.path_identity import path_key
 
 if TYPE_CHECKING:
     from docwen_core.models import FileInspection
@@ -353,7 +353,7 @@ class InputAreaViewModel(QObject):
                     )
             for candidate in candidates:
                 normalized = str(candidate)
-                key = os.path.normcase(os.path.abspath(normalized))
+                key = path_key(normalized)
                 if key in seen:
                     continue
                 seen.add(key)
@@ -523,7 +523,7 @@ class InputAreaViewModel(QObject):
             if not exists:
                 return False
             normalized = str(candidate_path)
-            key = os.path.normcase(os.path.abspath(normalized))
+            key = path_key(normalized)
             if key not in seen and len(paths) < _TEXT_PAYLOAD_MAX_PATHS:
                 seen.add(key)
                 paths.append(normalized)
@@ -685,7 +685,7 @@ class InputAreaViewModel(QObject):
 
             for candidate in candidates:
                 normalized = str(candidate)
-                key = os.path.normcase(os.path.abspath(normalized))
+                key = path_key(normalized)
                 if key in seen:
                     continue
                 seen.add(key)

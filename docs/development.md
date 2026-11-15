@@ -32,11 +32,16 @@ See [GUI behavior and visual ownership](specs/gui-behavior.md#visual-system--视
 
 ## Contribution rules / 开发规则
 
-- Put shared contracts and pure logic in core.
+- Put shared contracts, parsing and document semantics in core. Declare its direct library dependencies
+  in `packages/core/pyproject.toml`; shared DOCX semantics use `python-docx` and `lxml` without depending
+  on plugin installation. Keep conversion routes in plugins.
 - Keep orchestration in application/runtime and format behavior in plugins.
 - Add or update the owning tests with every behavioral change.
 - Update current documentation when routes, configuration, output semantics, UI behavior or release gates change.
 - Do not add compatibility shims or second state sources without an explicit public contract.
 - Preserve source files and unrelated user changes during tests and maintenance.
+
+共享契约、解析与文档语义属于 Core；其直接库依赖在 `packages/core/pyproject.toml` 声明。
+共享 DOCX 语义直接使用 `python-docx` 和 `lxml`，不依赖插件安装补齐；转换路线仍属于插件。
 
 See [Architecture](architecture.md), [Testing](testing.md) and [Documentation style](maintenance/docs-style-guide.md).

@@ -7,7 +7,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import pairwise
 
-from docwen_core.links._markdown_inline import _INLINE_HTML_RE, _is_backslash_escaped, matching_backtick_run_end
+from docwen_core.links._markdown_inline import (
+    _INLINE_HTML_RE,
+    _is_backslash_escaped,
+    _is_markdown_blank_line,
+    matching_backtick_run_end,
+)
 
 _QUOTE = re.compile(r" {0,3}>[ \t]?")
 _LIST = re.compile(r" {0,3}(?P<marker>[-+*]|[0-9]{1,9}[.)])(?P<padding>[ \t]+|$)")
@@ -20,6 +25,11 @@ SETEXT_HEADING_RE = re.compile(r" {0,3}(=+|-+)[ \t]*$")
 TABLE_DELIMITER_RE = re.compile(r" {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$")
 _YAML_OPEN = re.compile(r"(?:\ufeff)?---[ \t]*(?:\r\n|\r|\n)")
 _YAML_CLOSE = re.compile(r"---[ \t]*(?:\r\n|\r|\n|$)")
+
+
+def markdown_source_lines(source: str) -> list[str]:
+    """Keep physical Markdown EOLs; Unicode separators remain authored text."""
+    return re.findall(r"[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+$", source)
 
 
 _HTML_PRE_TAGS = frozenset({"pre", "script", "style", "textarea"})
@@ -142,7 +152,7 @@ def yaml_front_matter_end(source: str) -> int:
     if opening is None:
         return 0
     offset = opening.end()
-    for line in source[offset:].splitlines(keepends=True):
+    for line in markdown_source_lines(source[offset:]):
         if _YAML_CLOSE.fullmatch(line):
             return offset + len(line)
         offset += len(line)
@@ -176,7 +186,7 @@ def _starts_fenced_code(line: str) -> bool:
 def _list_interrupts_paragraph(match: re.Match[str], line: str) -> bool:
     """A list needs a nonempty first item, and ordered lists must start at one."""
     marker = match.group("marker")
-    return bool(line[match.end() :].strip() and (not marker[0].isdigit() or int(marker[:-1]) == 1))
+    return bool(not _is_markdown_blank_line(line[match.end() :]) and (not marker[0].isdigit() or int(marker[:-1]) == 1))
 
 
 def _indent_end(line: str, start: int, columns: int) -> int | None:
@@ -234,7 +244,7 @@ class MarkdownBlockContext:
                     allow_lazy
                     and not container.requires_marker
                     and container.identity not in self._blank_containers
-                    and remainder.strip()
+                    and not _is_markdown_blank_line(remainder)
                     and not self._container_interrupts(remainder, quote=True)
                 ):
                     lazy = quote_lazy = True
@@ -243,7 +253,7 @@ class MarkdownBlockContext:
             else:
                 end = _indent_end(line, offset, container.indent)
                 if end is None:
-                    if not remainder.strip():
+                    if _is_markdown_blank_line(remainder):
                         end = len(line.rstrip("\r\n"))
                     elif (
                         allow_lazy
@@ -256,7 +266,7 @@ class MarkdownBlockContext:
                         break
                 offset = end
             active.append(container)
-            if not line[offset:].strip():
+            if _is_markdown_blank_line(line[offset:].rstrip("\r\n")):
                 blank_containers.add(container.identity)
 
         paragraph_continuation = self._paragraph_open and tuple(active) == self._containers
@@ -266,7 +276,9 @@ class MarkdownBlockContext:
                 if quote is not None:
                     child = line[quote.end() :].rstrip("\r\n")
                     requires_marker = (
-                        not child.strip() or _starts_fenced_code(child) or _indent_end(child, 0, 4) is not None
+                        _is_markdown_blank_line(child)
+                        or _starts_fenced_code(child)
+                        or _indent_end(child, 0, 4) is not None
                     )
                     active.append(self._new_container("quote", 0, requires_marker=requires_marker))
                     offset = quote.end()
@@ -309,7 +321,7 @@ class MarkdownBlockContext:
             self._table_columns = 0
         if literal:
             kind = "literal"
-        elif not content.strip():
+        elif _is_markdown_blank_line(content):
             kind = "blank"
         elif match_atx_heading(content, extended_headings=self._extended_headings):
             kind = "atx_heading"
@@ -371,7 +383,7 @@ def markdown_inline_regions(
     previous_containers: tuple[object, ...] = ()
     offset = 0
     rows: list[tuple[int, int, MarkdownBlockLine]] = []
-    for line in source.splitlines(keepends=True):
+    for line in markdown_source_lines(source):
         row = context.line(line, allow_lazy=True)
         end = offset + len(line)
         if row.containers != previous_containers:

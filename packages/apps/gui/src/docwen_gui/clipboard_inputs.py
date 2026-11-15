@@ -23,6 +23,7 @@ from docwen_gui.clipboard_image_bytes import (
     inspect_png_bytes,
     preflight_png_resources,
 )
+from docwen_gui.path_identity import path_key
 
 _PREVIEW_MAX_CHARS = 240
 _PREVIEW_MAX_LINES = 3
@@ -241,7 +242,7 @@ class ClipboardInputStore:
 
     @staticmethod
     def _key(path: str | os.PathLike[str]) -> str:
-        return os.path.normcase(os.path.abspath(os.fspath(path)))
+        return path_key(path)
 
     @classmethod
     def _cleanup_stale_sessions(cls, root: Path) -> None:

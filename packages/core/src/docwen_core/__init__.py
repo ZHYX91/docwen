@@ -1,7 +1,10 @@
-"""DocWen Core — shared models, protocols, errors, events, and format definitions.
+"""DocWen Core — shared contracts, parsing, and document semantics.
+
+Shared DOCX semantics use the directly declared python-docx and lxml dependencies.
+Format routes and application orchestration remain outside this package.
 
 This package MUST NOT depend on:
-- PySide6, python-docx, openpyxl, PyMuPDF, rapidocr, or any specific implementation library
+- presentation frameworks or format-route implementations
 - docwen_application, docwen_runtime, docwen_gui, docwen_cli, docwen_bundle, docwen_plugin_*
 """
 
