@@ -13,7 +13,11 @@ from docwen_application.conversion_contracts import (
     CSV_MEDIA_TYPE,
     DOCX_MEDIA_TYPE,
     DOCX_TO_MARKDOWN_CAPABILITY_ID,
+    ENEX_MEDIA_TYPE,
+    ENEX_TO_MARKDOWN_CAPABILITY_ID,
     GIF_MEDIA_TYPE,
+    HTML_MEDIA_TYPE,
+    HTML_TO_MARKDOWN_CAPABILITY_ID,
     IMAGES_MERGE_TO_TIFF_CAPABILITY_ID,
     JPEG_MEDIA_TYPE,
     JSON_MEDIA_TYPE,
@@ -54,6 +58,7 @@ from docwen_core.formats import (
     CATEGORY_IMAGE,
     CATEGORY_LAYOUT,
     CATEGORY_MARKDOWN,
+    CATEGORY_MARKUP,
     CATEGORY_SPREADSHEET,
 )
 from docwen_core.links.declared_resources import MARKDOWN_RESOURCE_BINDINGS_SCHEMA
@@ -321,6 +326,17 @@ _DOCX_TO_MARKDOWN_OPTIONS = _strict_options(
 )
 
 
+_MARKUP_TO_MARKDOWN_OPTIONS = _strict_options(
+    {
+        **_PHYSICAL_PAGE_OCR_COMMON_PROPERTIES,
+        **{
+            key: _XLSX_TO_MARKDOWN_OPTIONS["properties"][key]
+            for key in ("image_mode", "image_link_style", "ocr_placement")
+        },
+    }
+)
+
+
 _FIXED_LAYOUT_TO_MARKDOWN_OPTIONS = _strict_options(
     {
         **_PHYSICAL_PAGE_OCR_COMMON_PROPERTIES,
@@ -532,6 +548,30 @@ CAPABILITY_BINDINGS = (
         bundle_profile="document_with_resources",
         options_schema=_DOCX_TO_MARKDOWN_OPTIONS,
         limitations=_DOCUMENT_SEMANTICS_MACHINE_LIMITATIONS,
+    ),
+    CapabilityBinding(
+        capability_id=HTML_TO_MARKDOWN_CAPABILITY_ID,
+        input_media_type=HTML_MEDIA_TYPE,
+        input_format="html",
+        input_category=CATEGORY_MARKUP,
+        target_format="md",
+        output_media_type=MARKDOWN_MEDIA_TYPE,
+        runtime_route_id="docwen_plugin_markup:html:md:convert",
+        output_shape=_DOCUMENT_WITH_RESOURCES_SHAPE,
+        bundle_profile="document_with_resources",
+        options_schema=_MARKUP_TO_MARKDOWN_OPTIONS,
+    ),
+    CapabilityBinding(
+        capability_id=ENEX_TO_MARKDOWN_CAPABILITY_ID,
+        input_media_type=ENEX_MEDIA_TYPE,
+        input_format="enex",
+        input_category=CATEGORY_MARKUP,
+        target_format="md",
+        output_media_type=MARKDOWN_MEDIA_TYPE,
+        runtime_route_id="docwen_plugin_markup:enex:md:convert",
+        output_shape=_DOCUMENT_WITH_RESOURCES_SHAPE,
+        bundle_profile="document_with_resources",
+        options_schema=_MARKUP_TO_MARKDOWN_OPTIONS,
     ),
     CapabilityBinding(
         capability_id=PDF_TO_MARKDOWN_CAPABILITY_ID,

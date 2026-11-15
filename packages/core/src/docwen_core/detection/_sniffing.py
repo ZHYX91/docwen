@@ -316,6 +316,27 @@ def is_text_file(file_path: str, sample_size: int = 8192) -> bool:
     return printable / len(text) > 0.85
 
 
+def _has_html_document_envelope(text: str) -> bool:
+    """Skip leading comments/instructions without backtracking over their ends."""
+    if re.match(r"(?: {4}| {0,3}\t)", text):
+        return False  # Renderer-protected indented code is not an HTML root.
+    offset = 0
+    while offset < len(text):
+        while offset < len(text) and text[offset].isspace():
+            offset += 1
+        if text.startswith("<!--", offset):
+            terminator = "-->"
+        elif text.startswith("<?", offset):
+            terminator = "?>"
+        else:
+            break
+        end = text.find(terminator, offset + 2)
+        if end < 0:
+            return False
+        offset = end + len(terminator)
+    return re.match(r"(?:<!doctype\s+html\b|<(?:html|head|body)(?:\s|>))", text[offset:], re.IGNORECASE) is not None
+
+
 def detect_text_format(file_path: str) -> str:
     """Detect the text format of a file by content analysis.
 
@@ -349,21 +370,32 @@ def detect_text_format(file_path: str) -> str:
     ) and ("<html" in sample_lower or "boundary=" in sample_lower):
         return "mhtml"
 
-    # HTML — check for HTML markers
+    # Raw HTML is also valid inside Markdown. Score only authored Markdown
+    # outside HTML blocks; a complete HTML document still takes precedence.
     html_markers = ("<!doctype html", "<html", "<head", "<body", "<meta", "<div", "<p>")
-    if any(m in sample_lower for m in html_markers):
-        return "html"
+    has_html = any(m in sample_lower for m in html_markers)
+    markdown_text = text
+    if has_html:
+        from docwen_core.links import split_markdown_block_segments
+
+        segments = split_markdown_block_segments(text)
+        if any(literal and _has_html_document_envelope(part) for part, literal in segments):
+            return "html"
+        markdown_text = "".join(
+            part if not literal or re.match(r"\s*(?:`{3,}|~{3,}|---(?:\s|$))", part) else "\n"
+            for part, literal in segments
+        )
 
     # Markdown — check for Markdown markers
     md_markers: list[str] = []
-    for line in text.splitlines()[:50]:
+    for line in markdown_text.splitlines()[:50]:
         stripped = line.strip()
         if stripped:
             md_markers.append(stripped)
 
     md_score = 0
     for line_index, line in enumerate(md_markers):
-        if re.match(r"^#{1,6}(?:\s|$)", line) or line.startswith("```"):
+        if re.match(r"^#{1,6}(?:\s|$)", line) or line.startswith(("```", "~~~")):
             md_score += 2
         elif line.startswith("---") and len(line) <= 5:  # YAML front matter / HR
             md_score += 1
@@ -390,6 +422,9 @@ def detect_text_format(file_path: str) -> str:
 
     if md_score >= 2:
         return "markdown"
+
+    if has_html:
+        return "html"
 
     delimited_format = _detect_delimited_format(text)
     if delimited_format is not None:
