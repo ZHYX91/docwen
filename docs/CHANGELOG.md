@@ -7,6 +7,8 @@
 
 ## 0.23.0
 
+- Expose HTML and ENEX conversion capabilities to Machine clients with their real dependency status and attachment resources. Keep Markdown containing embedded HTML classified as Markdown while preserving detection of complete HTML documents.
+- Machine 接口公开 HTML 与 ENEX 转换能力及其真实依赖状态和附件资源；含嵌入 HTML 的 Markdown 保持 Markdown 分类，完整 HTML 文档仍按 HTML 检测。
 - Protect HTML blocks immediately following Markdown reference definitions from heading numbering and proofreading edits.
 - 保护 Markdown 引用定义后紧接的 HTML 块，避免编号和校对误改字面内容。
 - Support authenticated full, collapsed and shortcut reference images through declared-resource validation and DOCX rendering.

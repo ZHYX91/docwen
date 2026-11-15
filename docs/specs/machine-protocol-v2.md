@@ -71,6 +71,17 @@ Artifact Bundle v3 的图结构不变；因生产者协议标识也是闭合字�
 
 ## Boundaries / 边界
 
+`convert.html.to_markdown` and `convert.enex.to_markdown` expose the existing markup routes with a
+Markdown document entry and owned resources. Original embedded attachments remain resources with
+`resource_of` relations; discovery retains the required `markdownify` and optional OCR dependency
+states. Embedded HTML blocks do not change an otherwise Markdown input into an HTML document;
+actual HTML content under a Markdown filename still requires explicit mismatch acceptance.
+
+`convert.html.to_markdown` 与 `convert.enex.to_markdown` 将现有 markup 路由映射为 Markdown 文档入口
+及其资源；原始嵌入附件保持资源身份与 `resource_of` 关系，能力发现保留必需 `markdownify` 和可选 OCR
+依赖的真实状态。Markdown 中的嵌入 HTML 块不使整个输入变为 HTML；实际 HTML 使用 Markdown 文件名时，
+仍须明确接受格式不一致。
+
 - DocWen owns `docwen.machine.v2`, `docwen.artifact_bundle.v3`, capability discovery, task lifecycle, and
   conformance fixtures.
 - GUI, Assistant, OpenClaw, and external consumers use the same Machine Protocol.
