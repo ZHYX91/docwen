@@ -148,6 +148,8 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path, r
         "convert.markdown_source.to_docx",
         "convert.markdown.to_xlsx",
         "convert.docx.to_markdown",
+        "convert.html.to_markdown",
+        "convert.enex.to_markdown",
         "convert.pdf.to_markdown",
         "convert.ofd.to_markdown",
         "convert.xps.to_markdown",
