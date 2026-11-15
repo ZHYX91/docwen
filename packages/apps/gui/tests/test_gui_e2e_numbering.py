@@ -111,6 +111,24 @@ class TestMdToDocxNumberingE2E:
 
         normalized = normalize_path(str(md_path))
 
+        def _docx_template_ready() -> bool:
+            selected = window._template_selector.get_selected_template_resource()
+            if selected is None:
+                return False
+            template_type, template_id = selected
+            info = window._template_vm.find(template_id)
+            return (
+                template_type == "docx"
+                and info is not None
+                and info.target == "docx"
+                and window._template_vm.enabled.get(template_id, False)
+                and info.path.is_file()
+                and not window._template_vm.busy
+                and aa.generation_ready
+            )
+
+        assert _wait_for(_docx_template_ready, timeout_ms=10000), "Enabled DOCX template did not become ready"
+
         window._action_area_vm.request_conversion("docx")
         if app is not None:
             app.processEvents()
