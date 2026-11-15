@@ -7,6 +7,7 @@ import re
 import secrets
 from collections.abc import Callable, Sequence
 from copy import copy
+from itertools import pairwise
 from pathlib import Path, PureWindowsPath
 from urllib.parse import quote, unquote, urlsplit
 
@@ -14,17 +15,21 @@ from docwen_core.links._block_context import (
     MarkdownBlockContext,
     html_block_mode,
     markdown_inline_regions,
+    markdown_source_lines,
     yaml_front_matter_end,
 )
 from docwen_core.links._embed_dispatch import _is_table_context
 from docwen_core.links._error_semantics import LinkErrorKind, dispatch_error_output
 from docwen_core.links._markdown_inline import (
     _ACTIVE_PROTECTED_TOKENS,
+    _ACTIVE_REFERENCE_LABELS,
     _ANGLE_AUTOLINK_RE,
     _INLINE_HTML_RE,
     MarkdownInlineSourceOwner,
     _contains_active_protected_token,
     _is_backslash_escaped,
+    _is_markdown_blank_line,
+    _normalize_reference_label,
     encode_markdown_angle_destination,
     encode_markdown_destination_escapes,
     escape_markdown_label,
@@ -33,6 +38,15 @@ from docwen_core.links._markdown_inline import (
     matching_backtick_run_end,
     parse_inline_link,
     parse_markdown_destination,
+)
+from docwen_core.links._markdown_references import (
+    _ACTIVE_REFERENCE_DEFINITIONS,
+    _ACTIVE_REFERENCE_IMAGE_SOURCE,
+    FootnoteDefinitionContext,
+    MarkdownReferenceDefinition,
+    parse_markdown_image,
+    parse_reference_definition,
+    reference_image_source,
 )
 from docwen_core.links._patterns import WIKI_EMBED_PATTERN
 from docwen_core.links._resolver import resolve_file_path
@@ -133,7 +147,44 @@ def _matching_math_block_end(
     return None, len(lines)
 
 
-def _split_fenced_code_blocks(md: str, *, extended_headings: bool = False) -> list[tuple[str, bool]]:
+def _matching_reference_definition(
+    lines: Sequence[str], start: int, first: str, context: MarkdownBlockContext, containers: tuple[object, ...]
+) -> tuple[MarkdownReferenceDefinition, int] | None:
+    """Read only the continuation needed by a definition in this container."""
+    if re.match(r" {0,3}\[", first) is None:
+        return None
+    candidate_context = copy(context)
+    candidate_context.end_paragraph()
+    parts = [first]
+    definition, continuation = parse_reference_definition(first)
+    for index in range(start + 1, len(lines)):
+        if continuation is None:
+            break
+        row = candidate_context.line(lines[index], allow_new=False, allow_lazy=False, literal=True)
+        if row.containers != containers or _is_markdown_blank_line(row.content.rstrip("\r\n")):
+            break
+        parts.append(row.content)
+        if continuation and not any(
+            char == continuation and not _is_backslash_escaped(row.content, offset)
+            for offset, char in enumerate(row.content)
+        ):
+            # A long multiline title is scanned once, not reparsed for every
+            # continuation line. Only its first possible closer needs a parse.
+            continue
+        definition, continuation = parse_reference_definition("".join(parts))
+    if definition is None:
+        return None
+    candidate = "".join(parts)
+    return definition, start + len(markdown_source_lines(candidate[: definition.end])) - 1
+
+
+def _split_fenced_code_blocks(
+    md: str,
+    *,
+    extended_headings: bool = False,
+    references: dict[str, MarkdownReferenceDefinition] | None = None,
+    source_prefixes: dict[int, int] | None = None,
+) -> list[tuple[str, bool]]:
     """Split Markdown into ``(segment, is_fenced_code)`` pairs."""
     segments: list[tuple[str, bool]] = []
     if not md:
@@ -144,8 +195,9 @@ def _split_fenced_code_blocks(md: str, *, extended_headings: bool = False) -> li
         front_matter_end = 1
     if front_matter_end:
         segments.append((md[:front_matter_end], True))
-    lines = md[front_matter_end:].splitlines(keepends=True)
+    lines = markdown_source_lines(md[front_matter_end:])
     context = MarkdownBlockContext(extended_headings=extended_headings)
+    footnotes = FootnoteDefinitionContext()
     buffer: list[str] = []
     in_fence = False
     in_math_block = False
@@ -155,9 +207,19 @@ def _split_fenced_code_blocks(md: str, *, extended_headings: bool = False) -> li
     html_until_blank = False
     fence = ""
     literal_containers: tuple[object, ...] = ()
+    reference_end_index = -1
+    source_offset = front_matter_end
 
     for line_index, line in enumerate(lines):
-        in_literal = in_fence or in_math_block or html_end_marker is not None or html_until_blank
+        line_offset = source_offset
+        source_offset += len(line)
+        in_literal = (
+            in_fence
+            or in_math_block
+            or html_end_marker is not None
+            or html_until_blank
+            or line_index <= reference_end_index
+        )
         source_line = context.line(line, allow_new=not in_literal, allow_lazy=True, literal=in_literal)
         if in_literal and source_line.containers[: len(literal_containers)] != literal_containers:
             segments.append(("".join(buffer), True))
@@ -168,8 +230,17 @@ def _split_fenced_code_blocks(md: str, *, extended_headings: bool = False) -> li
             fence = ""
             source_line = context.line(line, allow_lazy=True)
         block_line = source_line.content
+        if source_prefixes is not None:
+            source_prefixes[line_offset] = source_line.content_start
+        if line_index <= reference_end_index:
+            buffer.append(line)
+            context.end_paragraph()
+            if line_index == reference_end_index:
+                segments.append(("".join(buffer), True))
+                buffer = []
+            continue
         if html_end_marker is not None or html_until_blank:
-            if html_until_blank and not block_line.strip():
+            if html_until_blank and _is_markdown_blank_line(block_line.rstrip("\r\n")):
                 segments.append(("".join(buffer), True))
                 buffer = []
                 html_until_blank = False
@@ -189,6 +260,27 @@ def _split_fenced_code_blocks(md: str, *, extended_headings: bool = False) -> li
                 math_end_index = None
             continue
         if not in_fence:
+            footnote_line = footnotes.consumes(block_line, source_line.containers)
+            if footnote_line:
+                context.end_paragraph()
+            if not footnote_line and not source_line.paragraph_continuation and source_line.block_kind == "paragraph":
+                reference = _matching_reference_definition(
+                    lines, line_index, block_line, context, source_line.containers
+                )
+                if reference is not None:
+                    definition, reference_end_index = reference
+                    if references is not None:
+                        references.setdefault(_normalize_reference_label(definition.label), definition)
+                    if buffer:
+                        segments.append(("".join(buffer), False))
+                        buffer = []
+                    context.end_paragraph()
+                    literal_containers = source_line.containers
+                    if reference_end_index == line_index:
+                        segments.append((line, True))
+                    else:
+                        buffer.append(line)
+                    continue
             html_mode = html_block_mode(
                 block_line,
                 allow_type7=not source_line.paragraph_continuation,
@@ -303,7 +395,7 @@ def _inline_source_owners(
             if bare_url_end is not None:
                 index = bare_url_end
                 continue
-        construct = parse_inline_link(segment, index, image=True)
+        construct = parse_markdown_image(segment, index)
         if construct is None:
             construct = parse_inline_link(segment, index, image=False)
         if construct is not None:
@@ -426,17 +518,36 @@ def split_markdown_inline_segments(
     label are protected; ordinary label text remains visible.
     """
 
-    return [
-        part
-        for start, end in markdown_inline_regions(
-            segment, structural_tables=structural_tables, extended_headings=extended_headings
-        )
-        for part in _split_inline_code_spans(
-            segment[start:end],
-            protect_bare_urls=protect_bare_urls,
-            protect_link_label_atoms=protect_link_label_atoms,
-        )
-    ]
+    if not _ACTIVE_REFERENCE_DEFINITIONS.get():
+        return [
+            part
+            for start, end in markdown_inline_regions(
+                segment, structural_tables=structural_tables, extended_headings=extended_headings
+            )
+            for part in _split_inline_code_spans(
+                segment[start:end],
+                protect_bare_urls=protect_bare_urls,
+                protect_link_label_atoms=protect_link_label_atoms,
+            )
+        ]
+    projection = reference_image_source(
+        segment, structural_tables=structural_tables, extended_headings=extended_headings
+    )
+    parts: list[tuple[str, bool]] = []
+    for start, end in pairwise(projection.boundaries):
+        region = projection.region(start, end)
+        token = _ACTIVE_REFERENCE_IMAGE_SOURCE.set(region)
+        try:
+            parts.extend(
+                _split_inline_code_spans(
+                    region.source,
+                    protect_bare_urls=protect_bare_urls,
+                    protect_link_label_atoms=protect_link_label_atoms,
+                )
+            )
+        finally:
+            _ACTIVE_REFERENCE_IMAGE_SOURCE.reset(token)
+    return parts
 
 
 def _map_visible_markdown(
@@ -460,7 +571,7 @@ def _map_visible_markdown(
     active_tokens: set[str] = set()
     nonce = secrets.token_hex(16)
 
-    def mask(value: str, *, comment: bool = False) -> str:
+    def mask(value: str, *, comment: bool = False, container_prefix: str = "") -> str:
         index = len(protected)
         # Comment tokens are re-scanned by the block lexer. They must not
         # introduce HTML block authority over adjacent authored lines.
@@ -471,7 +582,7 @@ def _map_visible_markdown(
             token = f"{opening}DOCWEN-VISIBLE-{nonce}-{index}{closing}"
         leading_match = re.match(r"[ \t]*", value)
         assert leading_match is not None
-        leading = leading_match.group(0)
+        leading = container_prefix or leading_match.group(0)
         line_endings = "".join(re.findall(r"\r\n|\r|\n", value))
         # Retain horizontal indentation so a protected indented-code line can
         # still carry surrounding block context.  In particular, Mistune's
@@ -500,26 +611,51 @@ def _map_visible_markdown(
         comment_parts.append(text[cursor:])
         comment_masked = "".join(comment_parts)
     check_cancelled()
-    block_masked = "".join(
-        mask(segment) if is_protected else segment
-        for segment, is_protected in _split_fenced_code_blocks(comment_masked, extended_headings=extended_headings)
+    reference_definitions: dict[str, MarkdownReferenceDefinition] = {}
+    source_prefixes: dict[int, int] = {}
+    block_segments = _split_fenced_code_blocks(
+        comment_masked,
+        extended_headings=extended_headings,
+        references=reference_definitions,
+        source_prefixes=source_prefixes,
     )
+    block_parts: list[str] = []
+    block_offset = 0
+    for segment, is_protected in block_segments:
+        prefix_length = source_prefixes.get(block_offset, 0) if reference_definitions else 0
+        block_parts.append(mask(segment, container_prefix=segment[:prefix_length]) if is_protected else segment)
+        block_offset += len(segment)
+    block_masked = "".join(block_parts)
     check_cancelled()
-    inline_masked = "".join(
-        mask(segment) if is_protected else segment
-        for segment, is_protected in split_markdown_inline_segments(
-            block_masked,
-            protect_bare_urls=protect_bare_urls,
-            structural_tables=structural_tables,
-            extended_headings=extended_headings,
-        )
-    )
-    check_cancelled()
-    context_token = _ACTIVE_PROTECTED_TOKENS.set(frozenset(active_tokens))
+    reference_token = _ACTIVE_REFERENCE_LABELS.set(frozenset(reference_definitions))
+    definitions_token = _ACTIVE_REFERENCE_DEFINITIONS.set(reference_definitions)
     try:
-        result = transform(inline_masked)
+        inline_masked = "".join(
+            mask(segment) if is_protected else segment
+            for segment, is_protected in split_markdown_inline_segments(
+                block_masked,
+                protect_bare_urls=protect_bare_urls,
+                structural_tables=structural_tables,
+                extended_headings=extended_headings,
+            )
+        )
+        check_cancelled()
+        context_token = _ACTIVE_PROTECTED_TOKENS.set(frozenset(active_tokens))
+        source_token = _ACTIVE_REFERENCE_IMAGE_SOURCE.set(
+            reference_image_source(
+                inline_masked, structural_tables=structural_tables, extended_headings=extended_headings
+            )
+            if reference_definitions
+            else None
+        )
+        try:
+            result = transform(inline_masked)
+        finally:
+            _ACTIVE_REFERENCE_IMAGE_SOURCE.reset(source_token)
+            _ACTIVE_PROTECTED_TOKENS.reset(context_token)
     finally:
-        _ACTIVE_PROTECTED_TOKENS.reset(context_token)
+        _ACTIVE_REFERENCE_DEFINITIONS.reset(definitions_token)
+        _ACTIVE_REFERENCE_LABELS.reset(reference_token)
     for placeholder, original in reversed(protected.items()):
         check_cancelled()
         result = result.replace(placeholder, original)
@@ -544,7 +680,7 @@ def _replace_markdown_links(
     while index < len(segment):
         if cancellation_check is not None:
             cancellation_check()
-        image_construct = parse_inline_link(segment, index, image=True)
+        image_construct = parse_markdown_image(segment, index)
         if image_construct is not None:
             index = image_construct.end
             continue

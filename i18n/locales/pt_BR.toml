@@ -11,6 +11,13 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+add_file = "Adicionar arquivo"
+start_conversion = "Iniciar conversão"
+cancel = "Cancelar"
+close_waiting_for_tasks = "Cancelando as tarefas ativas antes de fechar…"
+close_wait_timeout = "Uma tarefa ainda está sendo interrompida. O DocWen permanecerá aberto até a conclusão da limpeza."
+thread_start_uncertain = "O processo de trabalho foi iniciado, mas a notificação de início falhou; o cancelamento foi solicitado."
+close_cancel_failed = "Não foi possível solicitar o cancelamento de {task_id}: {message}"
 runtime_folder_unavailable = "Não foi possível criar a pasta temporária de trabalho. Verifique as permissões ou o software de segurança e tente novamente."
 output_folder_unavailable = "Não é possível usar a pasta de destino com segurança. Verifique as permissões ou escolha outra pasta."
 numbering_comments_unanchored = "Alguns números adicionados não podem ser isolados como texto neste esquema. Seus comentários foram ignorados; os títulos foram preservados."
@@ -80,6 +87,7 @@ request_output = "Saída: {value}"
 merge_result_summary = "{source} / {sheet} · {mode}: adicionados {added}, substituídos {replaced}, ignorados {skipped}, combinados {combined}; valores desconhecidos 0. As posições de origem estão nos detalhes da tarefa."
 merge_formula_cache_missing = "Combinação interrompida: uma fórmula não tem resultado salvo. Recalcule e salve a pasta de trabalho em um editor de planilhas e tente novamente. Consulte o arquivo e as células nos detalhes da falha."
 [common]
+type_warning = "Aviso"
 action_file_count = "{action} ({count} arquivos)"
 app_name = "DocWen"
 default = "Padrão"
@@ -278,6 +286,7 @@ field_fallback = "Configuração ({field})"
 tab_load_failed_message = "Falha ao carregar {tab}\n\nErro: {error}"
 
 [settings.toml_editor]
+save_failed_message = "Não foi possível salvar a configuração."
 config_label = "Configuração"
 hint = "Dica: esta página edita TOML diretamente. A sintaxe é validada antes de salvar."
 toml_syntax_error = "Erro de sintaxe TOML"
@@ -830,6 +839,7 @@ auto_open_folder_tooltip = "Abre a pasta de saída após a conversão."
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "Selecionar pasta de logs"
 # 日志系统区域
 system_section = "Sistema"
 system_desc = "Ativar ou desativar o registro e definir o nível."
@@ -994,6 +1004,7 @@ large = "Grande"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "Arquivo indisponível"
 inspecting = "Verificando arquivos…"
 empty_hint_single = "Arraste um arquivo aqui"
 empty_hint_batch = "Arraste arquivos/pastas aqui"
@@ -1473,6 +1484,8 @@ letter_number_desc = "A. etc."
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "Não foi possível salvar as entradas de pares de símbolos."
+load_failed = "Não foi possível carregar a fonte de configuração editável."
 # 对话框标题
 symbol_editor_title = "Pares de pontuação"
 typo_editor_title = "Erros"

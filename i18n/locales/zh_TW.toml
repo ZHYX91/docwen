@@ -11,6 +11,7 @@ template_name = "繁體中文通用模板"
 # 通用文本
 # =============================================================================
 [common]
+type_warning = "警告"
 action_file_count = "{action}（{count} 個檔案）"
 app_name = "DocWen"
 default = "默認"
@@ -209,6 +210,7 @@ field_fallback = "設定項（{field}）"
 tab_load_failed_message = "無法載入 {tab}\n\n錯誤：{error}"
 
 [settings.toml_editor]
+save_failed_message = "無法儲存設定。"
 config_label = "配置"
 hint = "提示：此頁直接編輯 TOML，保存前會進行語法檢查。"
 toml_syntax_error = "TOML 語法錯誤"
@@ -760,6 +762,7 @@ auto_open_folder_tooltip = "轉換或校對成功後自動打開輸出文件夾�
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "選擇日誌目錄"
 # 日志系统区域
 system_section = "日誌系統"
 system_desc = "啟用或停用日誌，並設定日誌級別。"
@@ -925,6 +928,7 @@ large = "大"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "檔案無法使用"
 inspecting = "正在檢查檔案…"
 empty_hint_single = "拖拽單個文件到這裡"
 empty_hint_batch = "拖拽文件或文件夾到這裡"
@@ -1407,6 +1411,8 @@ letter_number_desc = "匹配：A. / A) / (A) / a. / a) 等字母序號"
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "無法儲存符號配對項目。"
+load_failed = "無法載入可編輯的設定來源。"
 # 对话框标题
 symbol_editor_title = "標點配對規則"
 typo_editor_title = "錯別字庫編輯器"
@@ -1697,6 +1703,13 @@ subtitle = "副標題"
 
 
 [main_window]
+add_file = "新增檔案"
+start_conversion = "開始轉換"
+cancel = "取消"
+close_waiting_for_tasks = "正在取消執行中的工作，完成後關閉…"
+close_wait_timeout = "工作仍在停止中。清理完成前，DocWen 將保持開啟。"
+thread_start_uncertain = "工作執行緒已啟動，但啟動狀態回報失敗；已要求取消。"
+close_cancel_failed = "無法要求取消工作 {task_id}：{message}"
 runtime_folder_unavailable = "無法建立暫存工作資料夾。請檢查資料夾權限或防護軟體設定後再試。"
 output_folder_unavailable = "無法安全使用選取的儲存資料夾。請檢查權限或改選其他資料夾。"
 numbering_comments_unanchored = "所選方案的部分自動編號無法單獨定位為文字，已略過這些編號的註解；標題內容保留。"

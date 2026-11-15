@@ -357,7 +357,7 @@ def test_invalid_footnote_syntax_can_fall_back_to_normal_reference_definition(
     assert process_markdown_links(text, source, link_config=config) == text
 
 
-def test_bare_reference_destination_accepts_nul_like_extended_parser(
+def test_bare_reference_destination_rejects_nul_like_extended_parser(
     tmp_path: Path,
 ) -> None:
     source = _write(tmp_path / "source.md")
@@ -365,7 +365,7 @@ def test_bare_reference_destination_accepts_nul_like_extended_parser(
     text = f"{definition}\n\n[foo][bar](baz)"
     config = replace(LinkRuntimeConfig(), non_embed_markdown_mode="remove")
 
-    assert process_markdown_links(text, source, link_config=config) == text
+    assert process_markdown_links(text, source, link_config=config) == f"{definition}\n\n[foo]"
 
 
 @pytest.mark.parametrize("target", ['u "\x00"', "u '\x00'", '<a> "\x00"'])

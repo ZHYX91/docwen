@@ -6,13 +6,50 @@ to mark issues, and writes the proofread DOCX to the staging directory.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from docwen_core.docx_comments import append_docx_comment
 
 if TYPE_CHECKING:
+    from docx.document import Document as DocumentObject
+    from docx.table import _Cell
+    from docx.text.paragraph import Paragraph
+
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import ProofreadConverterContext
+
+
+def _iter_main_story_paragraphs(
+    container: DocumentObject | _Cell, check_cancelled: Callable[[], None]
+) -> Iterator[Paragraph]:
+    """Walk body/table blocks in XML order, visiting each merged cell once.
+
+    Only direct paragraph and table blocks are eligible. Other stories and
+    text boxes embedded in runs are outside this validator's paragraph scope.
+    """
+    from docx.document import Document as DocumentObject
+    from docx.oxml.table import CT_Tbl
+    from docx.oxml.text.paragraph import CT_P
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+
+    element = container._element.body if isinstance(container, DocumentObject) else container._tc
+    for block in element.iterchildren():
+        check_cancelled()
+        if isinstance(block, CT_P):
+            yield Paragraph(block, container)
+        elif isinstance(block, CT_Tbl):
+            seen_cells = set()
+            for row in Table(block, container).rows:
+                for cell in row.cells:
+                    check_cancelled()
+                    # row.cells repeats the anchor cell for horizontal and
+                    # vertical merges; retaining the XML object avoids id reuse.
+                    if cell._tc in seen_cells:
+                        continue
+                    seen_cells.add(cell._tc)
+                    yield from _iter_main_story_paragraphs(cell, check_cancelled)
 
 
 def _find_run_at_position(paragraph, position: int):
@@ -151,7 +188,8 @@ class DocxValidator:
             context.progress.report_progress(0.0, "Loading DOCX document")
 
             doc = Document(input_path)
-            context.logger.info(f"Loaded DOCX with {len(doc.paragraphs)} paragraphs")
+            paragraphs = list(_iter_main_story_paragraphs(doc, context.cancellation.check))
+            context.logger.info(f"Loaded DOCX with {len(paragraphs)} main-story paragraphs")
 
             # ── Resolve language ────────────────────────────────────────
             from docwen_plugin_proofread.comment_text import format_comment, resolve_comment_locale
@@ -180,11 +218,11 @@ class DocxValidator:
             issues_detected = 0
             comments_added = 0
             comment_failures: list[tuple[int, int, str]] = []
-            total_paragraphs = len(doc.paragraphs)
+            total_paragraphs = len(paragraphs)
             paragraphs_checked = 0
             paragraphs_skipped = 0
 
-            for i, para in enumerate(doc.paragraphs):
+            for i, para in enumerate(paragraphs):
                 context.cancellation.check()
 
                 text = para.text

@@ -11,6 +11,13 @@ template_name = "Modèle Général Français"
 # 通用文本
 # =============================================================================
 [main_window]
+add_file = "Ajouter un fichier"
+start_conversion = "Démarrer la conversion"
+cancel = "Annuler"
+close_waiting_for_tasks = "Annulation des tâches actives avant la fermeture…"
+close_wait_timeout = "Une tâche est encore en cours d’arrêt. DocWen restera ouvert jusqu’à la fin du nettoyage."
+thread_start_uncertain = "Le processus de travail a démarré, mais la notification de démarrage a échoué ; l’annulation a été demandée."
+close_cancel_failed = "Impossible de demander l’annulation de {task_id} : {message}"
 runtime_folder_unavailable = "Impossible de créer le dossier de travail temporaire. Vérifiez les autorisations ou le logiciel de sécurité, puis réessayez."
 output_folder_unavailable = "Impossible d’utiliser le dossier de destination en toute sécurité. Vérifiez les autorisations ou choisissez un autre dossier."
 numbering_comments_unanchored = "Certains numéros ajoutés ne peuvent pas être isolés comme texte avec ce schéma. Leurs commentaires ont été ignorés ; les titres sont conservés."
@@ -77,6 +84,7 @@ request_output = "Sortie : {value}"
 merge_result_summary = "{source} / {sheet} · {mode} : ajouts {added}, remplacements {replaced}, ignorés {skipped}, combinés {combined} ; valeurs inconnues 0. Les positions sources figurent dans les détails de la tâche."
 merge_formula_cache_missing = "Fusion arrêtée : une formule ne possède pas de résultat enregistré. Recalculez et enregistrez le classeur dans un tableur, puis réessayez. Le fichier et les cellules figurent dans les détails de l’échec."
 [common]
+type_warning = "Avertissement"
 action_file_count = "{action} ({count} fichiers)"
 app_name = "DocWen"
 default = "Défaut"
@@ -275,6 +283,7 @@ field_fallback = "Paramètre ({field})"
 tab_load_failed_message = "Impossible de charger {tab}\n\nErreur : {error}"
 
 [settings.toml_editor]
+save_failed_message = "Impossible d’enregistrer la configuration."
 config_label = "Configuration"
 hint = "Astuce : cette page modifie directement le TOML. La syntaxe est vérifiée avant l’enregistrement."
 toml_syntax_error = "Erreur de syntaxe TOML"
@@ -827,6 +836,7 @@ auto_open_folder_tooltip = "Ouvre le dossier de sortie après la conversion."
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "Sélectionner le dossier des journaux"
 # 日志系统区域
 system_section = "Système"
 system_desc = "Activer ou désactiver la journalisation et définir son niveau."
@@ -992,6 +1002,7 @@ large = "Grande"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "Fichier indisponible"
 inspecting = "Vérification des fichiers…"
 empty_hint_single = "Glisser un fichier ici"
 empty_hint_batch = "Glisser fichiers/dossiers ici"
@@ -1474,6 +1485,8 @@ letter_number_desc = "A. etc."
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "Impossible d’enregistrer les entrées de paires de symboles."
+load_failed = "Impossible de charger la source de configuration modifiable."
 # 对话框标题
 symbol_editor_title = "Paires de ponctuation"
 typo_editor_title = "Fautes"

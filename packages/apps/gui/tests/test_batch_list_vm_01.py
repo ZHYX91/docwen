@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from docwen_gui.path_identity import path_key
+
 from ._batch_list_vm_support import (
     CATEGORY_ORDER,
     OOXML_SIGNATURE_VALIDATION_UNAVAILABLE,
@@ -495,7 +497,7 @@ class TestFileStatus:
     def test_pulse_disabled_over_limit(self, vm: BatchListViewModel) -> None:
         # Add 41 files to trigger the limit
         for i in range(41):
-            vm._entries[f"/test/file{i}.txt"] = (
+            vm._entries[path_key(f"/test/file{i}.txt")] = (
                 "text",
                 BatchFileEntry(
                     file_path=f"/test/file{i}.txt",

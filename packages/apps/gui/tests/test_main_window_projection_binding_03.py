@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from docwen_gui.path_identity import path_key
+
 from ._main_window_projection_binding_support import (
     _DOCX_TEMPLATE_ID,
     _bind_admitted_ref,
@@ -185,11 +187,10 @@ class TestRuntimeRequestBinding:
 
     def test_request_builder_admits_programmatic_path_through_core(self, window, tmp_path) -> None:
         from docwen_core.models import FILE_INSPECTION_METADATA_KEY
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "not-added.md"
         source.write_text("# Content\n", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
 
         request, _context = window._requests.single(
             file_path=str(source),
@@ -309,11 +310,10 @@ class TestRuntimeRequestBinding:
         assert input_ref.warning_message != inspection.warning_message
 
     def test_docx_template_selection_is_added_to_document_request(self, window, tmp_path) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
         _load_request_templates(window)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
@@ -401,14 +401,13 @@ class TestRuntimeRequestBinding:
 
     def test_image_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("ja_JP")
         try:
             source = tmp_path / "sample.png"
             source.write_bytes(b"\x89PNG\r\n\x1a\n")
-            window._file_contexts = {normalize_path(str(source)): ("png", "image")}
+            window._file_contexts = {path_key(str(source)): ("png", "image")}
 
             request, context = window._requests.single(
                 file_path=str(source),
@@ -424,7 +423,6 @@ class TestRuntimeRequestBinding:
             set_locale(previous_locale)
 
     def test_image_to_markdown_request_consumes_link_style_default(self, qapp, tmp_path) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         window = _make_window_with_config(
             qapp,
@@ -435,7 +433,7 @@ class TestRuntimeRequestBinding:
         try:
             source = tmp_path / "sample.png"
             source.write_bytes(b"\x89PNG\r\n\x1a\n")
-            window._file_contexts = {normalize_path(str(source)): ("png", "image")}
+            window._file_contexts = {path_key(str(source)): ("png", "image")}
 
             window._view_model.set_selected_file(_file_ref(str(source), "image", "png"))
 
@@ -455,7 +453,6 @@ class TestRuntimeRequestBinding:
 
     def test_markup_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("de_DE")
@@ -465,7 +462,7 @@ class TestRuntimeRequestBinding:
                 "<html><head><title>Probe</title></head><body><h1>Probe</h1></body></html>",
                 encoding="utf-8",
             )
-            window._file_contexts = {normalize_path(str(source)): ("html", "markup")}
+            window._file_contexts = {path_key(str(source)): ("html", "markup")}
 
             request, context = window._requests.single(
                 file_path=str(source),
@@ -484,14 +481,13 @@ class TestRuntimeRequestBinding:
 
     def test_layout_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("de_DE")
         try:
             source = tmp_path / "layout.pdf"
             source.write_bytes(b"%PDF-1.4\n")
-            window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
+            window._file_contexts = {path_key(str(source)): ("pdf", "layout")}
 
             request, context = window._requests.single(
                 file_path=str(source),
@@ -510,14 +506,13 @@ class TestRuntimeRequestBinding:
 
     def test_invoice_cn_to_markdown_request_does_not_derive_task_language_from_display(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("de_DE")
         try:
             source = tmp_path / "invoice.pdf"
             source.write_bytes(b"%PDF-1.4\n%\x00\x00\x00\x00\n")
-            window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
+            window._file_contexts = {path_key(str(source)): ("pdf", "layout")}
 
             request, context = window._requests.single(
                 file_path=str(source),
@@ -566,14 +561,13 @@ class TestRuntimeRequestBinding:
 
     def test_md_numbering_request_does_not_carry_markdown_export_metadata(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("de_DE")
         try:
             source = tmp_path / "note.md"
             source.write_text("# Title\n", encoding="utf-8")
-            window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+            window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
 
             request, context = window._requests.single(
                 file_path=str(source),
@@ -592,11 +586,10 @@ class TestRuntimeRequestBinding:
             set_locale(previous_locale)
 
     def test_docx_template_selection_is_added_to_wps_request(self, window, tmp_path) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
         _load_request_templates(window, xlsx=False)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
@@ -612,11 +605,10 @@ class TestRuntimeRequestBinding:
         assert request.options["template_name"] == _DOCX_TEMPLATE_ID
 
     def test_docx_template_selection_is_added_to_pdf_request(self, window, tmp_path) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
         _load_request_templates(window, xlsx=False)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
@@ -638,11 +630,10 @@ class TestRuntimeRequestBinding:
         tmp_path,
         suffix: str,
     ) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / f"plain{suffix}"
         source.write_text("plain UTF-8 text without Markdown syntax\n", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("txt", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("txt", "markdown")}
         _load_request_templates(window, xlsx=False)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None

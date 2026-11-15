@@ -61,6 +61,7 @@ from PySide6.QtWidgets import (
 from docwen_gui.file_admission_i18n import render_file_format_notice, render_remaining_file_warnings
 from docwen_gui.font_utils import DEFAULT_FONT_SIZE, resolve_font_size_preset
 from docwen_gui.i18n import t as _t
+from docwen_gui.path_identity import path_key
 from docwen_gui.resources import set_action_icon
 from docwen_gui.styles.design_tokens import Sizing
 from docwen_gui.styles.theme_semantics import apply_theme_class
@@ -989,8 +990,8 @@ def _source_path_text(file_path: str) -> str:
 
 
 def _path_compare_key(file_path: str) -> str:
-    """Normalize a path for comparing raw Windows paths and VM keys."""
-    return str(Path(file_path)).replace("\\", "/")
+    """Use the same file identity as the view models and request builder."""
+    return path_key(file_path)
 
 
 # ── BatchList main widget ──────────────────────────────────────────────
@@ -1809,7 +1810,7 @@ class BatchList(QWidget):
         list_widget = self._tabs.get(category)
         if list_widget is None or list_widget.count() <= 1:
             return
-        ordered = self._vm._get_ordered_paths_for_category(category)
+        ordered = self._vm.get_files_for_category(category)
         if not ordered:
             return
 

@@ -7,12 +7,12 @@ from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 
 from docwen_gui.diagnostics import DiagnosticSummary
+from docwen_gui.path_identity import normalize_path, path_key
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,9 +75,9 @@ class TaskHistory(QObject):
         if operation_id not in self._records:
             intent = deepcopy(context)
             if intent.get("file_path"):
-                intent["file_path"] = Path(intent["file_path"]).as_posix()
+                intent["file_path"] = normalize_path(intent["file_path"])
             if intent.get("file_paths"):
-                intent["file_paths"] = [Path(path).as_posix() for path in intent["file_paths"]]
+                intent["file_paths"] = [normalize_path(path) for path in intent["file_paths"]]
             self._records[operation_id] = TaskRecord(intent)
             self._retain_paths(operation_id, self._records[operation_id].paths)
             while len(self._records) > self._limit:
@@ -105,7 +105,8 @@ class TaskHistory(QObject):
     ) -> None:
         record = self.get(operation_id)
         if record is not None:
-            path = Path(path).as_posix()
+            key = path_key(path)
+            path = next((source for source in record.paths if path_key(source) == key), normalize_path(path))
             record.outcomes[path] = FileOutcome(
                 path,
                 status,

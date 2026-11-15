@@ -4,10 +4,21 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from itertools import pairwise
 
-from docwen_core.links._block_context import markdown_inline_regions
-from docwen_core.links._markdown_inline import MarkdownInlineSourceOwner, _is_backslash_escaped
-from docwen_core.links._non_embed import markdown_inline_source_owners, split_markdown_block_segments
+from docwen_core.links._block_context import markdown_inline_regions, markdown_source_lines
+from docwen_core.links._markdown_inline import (
+    _ACTIVE_REFERENCE_LABELS,
+    MarkdownInlineSourceOwner,
+    _is_backslash_escaped,
+)
+from docwen_core.links._markdown_references import (
+    _ACTIVE_REFERENCE_DEFINITIONS,
+    _ACTIVE_REFERENCE_IMAGE_SOURCE,
+    markdown_reference_definitions,
+    reference_image_source,
+)
+from docwen_core.links._non_embed import _split_fenced_code_blocks, markdown_inline_source_owners
 
 _COMMENT_RE = re.compile(r"<!--|%%")
 
@@ -28,6 +39,7 @@ def markdown_source_owners(
     atoms cannot own the suffix. Wiki ownership does not hide its semantic
     record. Consumers decide which owner kinds to exclude from their scan.
     """
+    definitions = markdown_reference_definitions(source, extended_headings=extended_headings) if full_document else None
 
     def atoms_after(start: int) -> list[tuple[int, int, int, int, str]]:
         base = start
@@ -43,26 +55,60 @@ def markdown_source_owners(
         if full_document:
             parts: list[str] = []
             offset = 0
-            for segment, protected in split_markdown_block_segments(remaining, extended_headings=extended_headings):
+            source_prefixes: dict[int, int] = {}
+            segments = _split_fenced_code_blocks(
+                remaining, extended_headings=extended_headings, source_prefixes=source_prefixes
+            )
+            for segment, protected in segments:
                 end = offset + len(segment)
                 if protected:
                     atoms.append((base + offset, 0, base + end, base + end, "block"))
-                    parts.append("".join(char if char in "\r\n" else " " for char in segment))
+                    masked = [char if char in "\r\n" else " " for char in segment]
+                    line_offset = offset
+                    for line in markdown_source_lines(segment):
+                        prefix = source_prefixes.get(line_offset, 0)
+                        segment_line_start = line_offset - offset
+                        masked[segment_line_start : segment_line_start + prefix] = line[:prefix]
+                        line_offset += len(line)
+                    parts.append("".join(masked))
                 else:
                     parts.append(segment)
                 offset = end
             projection = "".join(parts)
+        image_source = (
+            reference_image_source(projection, structural_tables=structural_tables, extended_headings=extended_headings)
+            if definitions or _ACTIVE_REFERENCE_DEFINITIONS.get()
+            else None
+        )
         regions = (
-            markdown_inline_regions(
-                projection, structural_tables=structural_tables, extended_headings=extended_headings
+            (
+                pairwise(image_source.boundaries)
+                if image_source
+                else markdown_inline_regions(
+                    projection, structural_tables=structural_tables, extended_headings=extended_headings
+                )
             )
             if full_document
             else [(0, len(projection))]
         )
         for region_start, region_end in regions:
-            for owner in markdown_inline_source_owners(
-                projection[region_start:region_end], include_link_syntax=full_document
-            ):
+            reference_token = _ACTIVE_REFERENCE_LABELS.set(
+                frozenset(definitions) if definitions is not None else _ACTIVE_REFERENCE_LABELS.get()
+            )
+            definitions_token = _ACTIVE_REFERENCE_DEFINITIONS.set(
+                definitions if definitions is not None else _ACTIVE_REFERENCE_DEFINITIONS.get()
+            )
+            region = image_source.region(region_start, region_end) if image_source else None
+            source_token = _ACTIVE_REFERENCE_IMAGE_SOURCE.set(region)
+            try:
+                inline_owners = markdown_inline_source_owners(
+                    region.source if region else projection[region_start:region_end], include_link_syntax=full_document
+                )
+            finally:
+                _ACTIVE_REFERENCE_IMAGE_SOURCE.reset(source_token)
+                _ACTIVE_REFERENCE_DEFINITIONS.reset(definitions_token)
+                _ACTIVE_REFERENCE_LABELS.reset(reference_token)
+            for owner in inline_owners:
                 owner_start = region_start + owner.start
                 owner_end = region_start + owner.end
                 consume_end = owner_end

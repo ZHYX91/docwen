@@ -13,7 +13,7 @@ import time
 from collections.abc import Iterator
 from io import BytesIO
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from PIL import Image
 
@@ -21,8 +21,8 @@ from docwen_core.errors import CancellationRequested, ExternalProcessCleanupUnco
 from docwen_core.mermaid_runtime import inspect_mermaid_runtime
 from docwen_core.tempfiles import make_temp_dir
 
-# Import the CLI only after Python attaches this process to its cleanup
-# boundary, closing the Windows race between creation and job assignment.
+# Import the CLI only after its process owner has established the cleanup
+# boundary. Windows also starts the launcher suspended before Job assignment.
 _BOOTSTRAP = r"""import { once } from 'node:events';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
@@ -80,53 +80,15 @@ class MermaidRenderError(RuntimeError):
     """The diagram cannot be rendered; the caller should retain its source."""
 
 
-def _attach_windows_job(process: subprocess.Popen) -> Any:
-    import win32api
-    import win32con
-    import win32job
-
-    job = cast(Any, win32job.CreateJobObject(None, ""))
-    try:
-        limits = win32job.QueryInformationJobObject(job, win32job.JobObjectExtendedLimitInformation)
-        limits["BasicLimitInformation"]["LimitFlags"] |= win32job.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-        win32job.SetInformationJobObject(job, win32job.JobObjectExtendedLimitInformation, limits)
-        handle = win32api.OpenProcess(win32con.PROCESS_SET_QUOTA | win32con.PROCESS_TERMINATE, False, process.pid)
-        try:
-            win32job.AssignProcessToJobObject(job, handle)
-        finally:
-            win32api.CloseHandle(handle)
-        return job
-    except BaseException:
-        job.Close()
-        raise
-
-
-def _stop_windows_job(job: Any) -> None:
-    import win32job
-
-    try:
-        # Closing a kill-on-close job only initiates termination. Chromium can
-        # still hold profile files after the Node parent has exited.
-        win32job.TerminateJobObject(job, 1)
-        deadline = time.monotonic() + 5
-        while win32job.QueryInformationJobObject(job, win32job.JobObjectBasicAccountingInformation)["ActiveProcesses"]:
-            if time.monotonic() >= deadline:
-                raise MermaidRenderError("Mermaid child processes did not stop before cleanup")
-            time.sleep(0.01)
-    finally:
-        job.Close()
-
-
 def _run_renderer(command: list[str], job_dir: Path, cancellation: Any, timeout: float) -> None:
     environment = dict(os.environ)
     environment.pop("NODE_OPTIONS", None)
     environment["TMPDIR"] = environment["TEMP"] = environment["TMP"] = str(job_dir)
     log_path = job_dir / "renderer.log"
-    if sys.platform == "linux":
-        _run_linux_renderer(command, job_dir, cancellation, timeout, environment, log_path)
+    if sys.platform in {"linux", "win32"}:
+        _run_owned_renderer(command, job_dir, cancellation, timeout, environment, log_path)
         return
     process = None
-    job = None
     try:
         with log_path.open("wb") as log:
             process = subprocess.Popen(
@@ -139,8 +101,6 @@ def _run_renderer(command: list[str], job_dir: Path, cancellation: Any, timeout:
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
                 start_new_session=os.name != "nt",
             )
-            if os.name == "nt":
-                job = _attach_windows_job(process)
             if cancellation is not None:
                 cancellation.check()
             assert process.stdin is not None
@@ -175,9 +135,7 @@ def _run_renderer(command: list[str], job_dir: Path, cancellation: Any, timeout:
             )
         )
         try:
-            if job is not None:
-                _stop_windows_job(job)
-            elif process is not None and os.name != "nt":
+            if process is not None and os.name != "nt":
                 with contextlib.suppress(ProcessLookupError):
                     os.killpg(process.pid, signal.SIGKILL)
         except BaseException as error:
@@ -233,7 +191,7 @@ def _renderer_directory(root: Path) -> Iterator[Path]:
                 raise
 
 
-def _run_linux_renderer(
+def _run_owned_renderer(
     command: list[str],
     job_dir: Path,
     cancellation: Any,

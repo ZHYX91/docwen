@@ -18,7 +18,6 @@ State managed:
 from __future__ import annotations
 
 import contextlib
-import os
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -29,12 +28,7 @@ from PySide6.QtCore import QObject, Signal
 from docwen_core.formats.categories import ALL_CATEGORIES
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY, AdmissionDecision
 from docwen_gui.file_admission_i18n import render_file_inspection_message
-
-
-def _normalize_path(file_path: str) -> str:
-    """Normalize a file path to a consistent key format (forward slashes)."""
-    return str(Path(file_path)).replace(os.sep, "/")
-
+from docwen_gui.path_identity import normalize_path, path_key
 
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
@@ -277,8 +271,9 @@ class BatchListViewModel(QObject):
         failed: list[tuple[str, str]] = []
 
         for file_path in file_paths:
-            normalized = _normalize_path(file_path)
-            if normalized in self._entries:
+            normalized = normalize_path(file_path)
+            key = path_key(file_path)
+            if key in self._entries:
                 continue
 
             info: Mapping[str, Any] | None = None
@@ -349,18 +344,19 @@ class BatchListViewModel(QObject):
                 source_preview=str(info.get("source_preview") or ""),
                 source_location_available=bool(info.get("source_location_available", True)),
             )
-            self._entries[normalized] = (display_category, entry)
+            self._entries[key] = (display_category, entry)
             added.append(normalized)
 
-        self._maybe_sort_after_add(added)
+        added_keys = [path_key(path) for path in added]
+        self._maybe_sort_after_add(added_keys)
         self.files_added.emit(added, failed)
         self.entry_count_changed.emit(len(self._entries))
-        self._activate_optimal_category_for_added(added)
+        self._activate_optimal_category_for_added(added_keys)
         return added, failed
 
     def refresh_admission(self, ref: FileRef) -> None:
         """Refresh an existing row without changing its order or retaining stale task results."""
-        normalized = _normalize_path(ref.path)
+        normalized = path_key(ref.path)
         record = self._entries.get(normalized)
         if record is None or record[1].metadata == ref.metadata:
             return
@@ -377,8 +373,8 @@ class BatchListViewModel(QObject):
             if normalized in old_order:
                 old_order.remove(normalized)
             self._custom_order_by_category[category].append(normalized)
-            self.files_removed.emit(normalized)
-            self.files_added.emit([normalized], [])
+            self.files_removed.emit(entry.file_path)
+            self.files_added.emit([entry.file_path], [])
         self.set_file_status(normalized, "pending")
 
     @staticmethod
@@ -393,7 +389,7 @@ class BatchListViewModel(QObject):
 
     def get_file_display_category(self, file_path: str) -> str | None:
         """Return the GUI tab category without mutating execution metadata."""
-        record = self._entries.get(_normalize_path(file_path))
+        record = self._entries.get(path_key(file_path))
         return record[0] if record is not None else None
 
     def _maybe_sort_after_add(self, added: list[str]) -> None:
@@ -439,7 +435,7 @@ class BatchListViewModel(QObject):
         """Remove a single file. Returns True if found and removed."""
         if not self.can_remove_file(file_path):
             return False
-        normalized = _normalize_path(file_path)
+        normalized = path_key(file_path)
         record = self._entries.pop(normalized, None)
         if record is None:
             return False
@@ -448,9 +444,9 @@ class BatchListViewModel(QObject):
             order = self._custom_order_by_category.get(category, [])
             if normalized in order:
                 order.remove(normalized)
-        self.files_removed.emit(normalized)
+        self.files_removed.emit(record[1].file_path)
         if self._main_vm is not None:
-            self._main_vm.remove_file(normalized)
+            self._main_vm.remove_file(record[1].file_path)
         self.entry_count_changed.emit(len(self._entries))
         return True
 
@@ -464,7 +460,7 @@ class BatchListViewModel(QObject):
 
     def clear_files(self) -> None:
         """Remove all files and reset state."""
-        if any(not self.can_remove_file(path) for path in self._entries):
+        if any(not self.can_remove_file(entry.file_path) for _, entry in self._entries.values()):
             return
         self._entries.clear()
         self._custom_order_by_category = {cat: [] for cat in CATEGORY_ORDER}
@@ -479,15 +475,14 @@ class BatchListViewModel(QObject):
         """Return all file paths in category order, respecting current ordering."""
         files: list[str] = []
         for category in CATEGORY_ORDER:
-            files.extend(self._get_ordered_paths_for_category(category))
+            files.extend(self.get_files_for_category(category))
         return files
 
     def get_files_for_category(self, category: str) -> list[str]:
         """Return file paths for a specific category."""
         if category not in CATEGORY_ORDER:
             return []
-        ordered = self._get_ordered_paths_for_category(category)
-        return ordered
+        return [self._entries[key][1].file_path for key in self._get_ordered_keys_for_category(category)]
 
     def get_file_count(self, category: str | None = None) -> int:
         """Return file count for a category or total if None."""
@@ -501,7 +496,7 @@ class BatchListViewModel(QObject):
 
     def get_file_entry(self, file_path: str) -> BatchFileEntry | None:
         """Get the BatchFileEntry for a file path."""
-        normalized = _normalize_path(file_path)
+        normalized = path_key(file_path)
         record = self._entries.get(normalized)
         if record is None:
             return None
@@ -522,7 +517,7 @@ class BatchListViewModel(QObject):
         normalized_status = str(status).strip().lower()
         if normalized_status not in BATCH_FILE_STATUSES:
             raise ValueError(f"status must be one of {sorted(BATCH_FILE_STATUSES)!r}")
-        normalized = _normalize_path(file_path)
+        normalized = path_key(file_path)
         record = self._entries.get(normalized)
         if record is None:
             return False
@@ -550,14 +545,14 @@ class BatchListViewModel(QObject):
             entry.operation_id = operation_id
         entry.status = normalized_status
 
-        self.status_changed.emit(normalized, normalized_status)
+        self.status_changed.emit(entry.file_path, normalized_status)
 
         if (
             previous_status == "pending"
             and normalized_status == "processing"
             and should_pulse_processing_transition(len(self._entries))
         ):
-            self.pulse_requested.emit(normalized)
+            self.pulse_requested.emit(entry.file_path)
 
         return True
 
@@ -608,7 +603,7 @@ class BatchListViewModel(QObject):
         failed: list[str] = []
         for cat in categories:
             failed.extend(
-                path for path, (ecat, entry) in self._entries.items() if ecat == cat and entry.status == "failed"
+                entry.file_path for ecat, entry in self._entries.values() if ecat == cat and entry.status == "failed"
             )
         return failed
 
@@ -616,7 +611,7 @@ class BatchListViewModel(QObject):
         """Reset failed files back to pending state."""
         reset_files: list[str] = []
         for path in file_paths:
-            normalized = _normalize_path(path)
+            normalized = path_key(path)
             record = self._entries.get(normalized)
             if record is None:
                 continue
@@ -624,7 +619,7 @@ class BatchListViewModel(QObject):
             if entry.status != "failed":
                 continue
             self.set_file_status(normalized, "pending", output_path="", skip_reason="", error_message="")
-            reset_files.append(normalized)
+            reset_files.append(entry.file_path)
         return reset_files
 
     # ── Category / Tab operations ──────────────────────────────────────
@@ -652,7 +647,7 @@ class BatchListViewModel(QObject):
         ascending = bool(ascending)
         if sort_key != "custom" and self._sort_key == "custom":
             for cat in CATEGORY_ORDER:
-                self._custom_order_by_category[cat] = self._get_ordered_paths_for_category(cat)
+                self._custom_order_by_category[cat] = self._get_ordered_keys_for_category(cat)
         self._sort_key = sort_key
         self._sort_ascending = ascending
         self.sort_changed.emit(sort_key, ascending)
@@ -661,8 +656,8 @@ class BatchListViewModel(QObject):
         """Return current (sort_key, ascending) tuple."""
         return self._sort_key, self._sort_ascending
 
-    def _get_ordered_paths_for_category(self, category: str) -> list[str]:
-        """Get file paths for a category, ordered by current sort state."""
+    def _get_ordered_keys_for_category(self, category: str) -> list[str]:
+        """Get internal path keys for a category, ordered by current sort state."""
         # Gather entries for this category
         entries_in_cat: list[tuple[str, BatchFileEntry]] = [
             (path, entry) for path, (cat, entry) in self._entries.items() if cat == category
@@ -690,7 +685,7 @@ class BatchListViewModel(QObject):
 
     def reorder_manual(self, category: str, ordered_paths: list[str]) -> None:
         """Record a manual reorder (from drag or Ctrl+Up/Down)."""
-        self._custom_order_by_category[category] = list(ordered_paths)
+        self._custom_order_by_category[category] = [path_key(path) for path in ordered_paths]
         if self._sort_key != "custom":
             self._sort_key = "custom"
             self._sort_ascending = True
@@ -702,17 +697,17 @@ class BatchListViewModel(QObject):
     def get_current_file(self, category: str | None = None) -> str | None:
         """Return a suggested current file — first in category if no explicit selection."""
         cat = category or self._current_category
-        paths = self._get_ordered_paths_for_category(cat)
+        paths = self._get_ordered_keys_for_category(cat)
         # Filter by active filter
         filtered = [p for p in paths if self._entries.get(p) and self._entry_matches_filter(self._entries[p][1])]
-        return filtered[0] if filtered else None
+        return self._entries[filtered[0]][1].file_path if filtered else None
 
     def locate_file_entry(self, file_path: str) -> tuple[bool, str | None]:
         """Find which category a file belongs to and activate that tab.
 
         Returns (found, category).
         """
-        normalized = _normalize_path(file_path)
+        normalized = path_key(file_path)
         record = self._entries.get(normalized)
         if record is None:
             return False, None
@@ -726,10 +721,10 @@ class BatchListViewModel(QObject):
         """Build retry targets: (selected_failed, category_failed)."""
         selected_failed: list[str] = []
         if file_path:
-            normalized = _normalize_path(file_path)
+            normalized = path_key(file_path)
             entry = self.get_file_entry(normalized)
             if entry is not None and entry.status == "failed":
-                selected_failed.append(normalized)
+                selected_failed.append(entry.file_path)
         category_failed = self.get_failed_files(category)
         return selected_failed, category_failed
 
@@ -765,14 +760,14 @@ class BatchListViewModel(QObject):
         for category in CATEGORY_ORDER:
             if category not in allowed:
                 continue
-            for path in self._get_ordered_paths_for_category(category):
+            for path in self._get_ordered_keys_for_category(category):
                 entry_info = self._entries.get(path)
                 if entry_info is None:
                     continue
                 _cat, entry = entry_info
                 if allowed_formats is not None and entry.detected_format.strip().lower() not in allowed_formats:
                     continue
-                result.append(path)
+                result.append(entry.file_path)
         return result
 
     def has_aggregate_targets(self, action_name: str) -> bool:

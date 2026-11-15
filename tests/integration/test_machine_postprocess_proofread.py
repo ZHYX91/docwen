@@ -115,3 +115,49 @@ def test_generated_docx_comments_and_atomic_bundle(tmp_path: Path, monkeypatch, 
     assert ("POSTPROCESS_PROOFREAD_APPLIED" in codes) == (expected > 0)
     assert ("POSTPROCESS_PROOFREAD_SKIPPED" in codes) == (selection in ("none", "config_off"))
     assert source.read_bytes() == original
+
+
+def test_generated_table_docx_is_proofread_before_publication(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("DOCWEN_RUNTIME_ROOT", str(tmp_path / "runtime"))
+    source = tmp_path / "table.md"
+    source.write_text("正文正常\n\n| 列 |\n| --- |\n| 表格（ |\n", encoding="utf-8")
+    original = source.read_bytes()
+    output = tmp_path / "output"
+    output.mkdir()
+    loader = ConfigLoader(
+        user_dir=tmp_path / "config",
+        runtime_overrides={"logger": {"console_enable": False}},
+    )
+    controller = ApplicationController(
+        runtime_port=create_runtime_port(config_loader=loader), config_port=ConfigPortAdapter(loader)
+    )
+    controller.start()
+    service = ConversionService(controller, ArtifactBundleCommitter())
+    plan = service.plan(
+        ConversionPlanRequest(
+            "convert.markdown_source.to_docx",
+            (_handle(source, "source", "text/markdown", "table.md"),),
+            StagingOutputTarget(str(output)),
+            {
+                "locale": "zh_CN",
+                "add_numbering": False,
+                "proofread": {rule: rule == "enable_symbol_pairing" for rule in RULES},
+            },
+        )
+    )
+    outcome = service.execute_accepted(service.accept(plan.plan_id))
+    assert outcome.state == "completed", (outcome.error, outcome.diagnostics)
+    assert outcome.bundle is not None
+    [artifact] = outcome.bundle.artifacts
+    final = output / artifact.locator
+    with zipfile.ZipFile(final) as package:
+        document = etree.fromstring(package.read("word/document.xml"))
+        comments = etree.fromstring(package.read("word/comments.xml"))
+    namespaces = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    [paragraph] = document.xpath("//w:tbl//w:p[w:commentRangeStart]", namespaces=namespaces)
+    assert "".join(paragraph.xpath(".//w:t/text()", namespaces=namespaces)) == "表格（"
+    assert len(comments) == 1
+    assert "（" in "".join(comments[0].itertext())
+    assert {d.code for d in outcome.diagnostics} >= {"PROOFREAD-OK", "POSTPROCESS_PROOFREAD_APPLIED"}
+    assert [path for path in output.rglob("*") if path.is_file()] == [final]
+    assert source.read_bytes() == original

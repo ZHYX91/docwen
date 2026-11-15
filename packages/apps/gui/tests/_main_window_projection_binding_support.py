@@ -22,6 +22,7 @@ from PySide6.QtWidgets import QApplication, QGridLayout, QStackedWidget, QWidget
 from tests.support.gui_vm_fakes import FakeController, optimization_capability_projection
 
 from docwen_core.models.file_ref import FileRef
+from docwen_gui.path_identity import path_key
 from docwen_gui.view_models.input_area_vm import _BATCH_SCAN_LIMIT
 from docwen_gui.view_models.interaction import (
     ConversionContext,
@@ -256,7 +257,6 @@ def _bind_admitted_ref(window, path: Path, category: str, fmt: str) -> FileRef:
         FormatRelation,
         StructureStatus,
     )
-    from docwen_gui.path_identity import normalize_path
 
     stat = path.stat()
     container_formats = {"doc", "docx", "epub", "pptx", "wps", "xlsx"}
@@ -290,7 +290,7 @@ def _bind_admitted_ref(window, path: Path, category: str, fmt: str) -> FileRef:
         metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
     )
     window._view_model._files = [ref]
-    window._file_contexts = {normalize_path(str(path)): (fmt, category)}
+    window._file_contexts = {path_key(str(path)): (fmt, category)}
     return ref
 
 

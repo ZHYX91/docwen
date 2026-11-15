@@ -14,7 +14,7 @@ from docwen_core.models.file_ref import SOURCE_PRESENTATION_NAME_METADATA_KEY, F
 from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 from docwen_gui.execution_admission import ExecutionAdmission, ExecutionAdmissionError, check_frozen_request
 from docwen_gui.execution_requests import ExecutionRequestBuilder
-from docwen_gui.path_identity import normalize_path
+from docwen_gui.path_identity import normalize_path, path_key
 from docwen_runtime.templates import TemplateRegistry
 
 if TYPE_CHECKING:
@@ -95,7 +95,7 @@ def test_synthetic_source_label_does_not_declare_a_typed_resource_root(tmp_path)
     logical_name = "剪贴板 Markdown 1.md"
     builder = ExecutionRequestBuilder(
         *_models([ref]),
-        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        file_contexts=lambda: {path_key(str(source)): ("markdown", "markdown")},
         selected_template=lambda: ("docx", "standard"),
         source_label=lambda path: logical_name if normalize_path(path) == normalize_path(str(source)) else None,
         synthetic_input=lambda path: normalize_path(path) == normalize_path(str(source)),
@@ -137,7 +137,7 @@ def test_synthetic_clipboard_csv_uses_shipped_xlsx_template_identity(tmp_path):
     )
     builder = ExecutionRequestBuilder(
         *_models([ref]),
-        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        file_contexts=lambda: {path_key(str(source)): ("markdown", "markdown")},
         selected_template=lambda: ("xlsx", template_id),
         source_label=lambda _path: "Clipboard Markdown 1.md",
         synthetic_input=lambda _path: True,
@@ -164,7 +164,7 @@ def test_md_to_docx_proofread_options_survive_route_scoping_as_application_inten
     )
     builder = ExecutionRequestBuilder(
         *_models([ref]),
-        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        file_contexts=lambda: {path_key(str(source)): ("markdown", "markdown")},
         selected_template=lambda: ("docx", "standard"),
     )
 
@@ -216,7 +216,7 @@ def test_non_docx_conversion_does_not_carry_inert_proofread_options(tmp_path):
     )
     builder = ExecutionRequestBuilder(
         *_models([ref]),
-        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        file_contexts=lambda: {path_key(str(source)): ("markdown", "markdown")},
         selected_template=lambda: ("docx", "standard"),
     )
 
@@ -243,7 +243,7 @@ def test_builder_reads_replaced_context_and_current_template(tmp_path):
         selected_template=lambda: state["template"],
     )
     assert builder.file_context(str(source)) is None
-    state["contexts"] = {normalize_path(str(source)): ("markdown", "markdown")}
+    state["contexts"] = {path_key(str(source)): ("markdown", "markdown")}
     first, _ = builder.single(file_path=str(source), target_format="docx", action_name="", options={})
     state["template"] = ("docx", "second-id")
     second, _ = builder.batch(file_paths=[str(source)], target_format="docx", action_name="", options={})

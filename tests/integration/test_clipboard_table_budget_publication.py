@@ -25,7 +25,7 @@ from docwen_gui.clipboard_capture import FrozenClipboardCapture
 from docwen_gui.clipboard_inputs import ClipboardInputStore
 from docwen_gui.clipboard_rich_document import project_frozen_rich_document
 from docwen_gui.execution_requests import ExecutionRequestBuilder
-from docwen_gui.path_identity import normalize_path
+from docwen_gui.path_identity import path_key
 from docwen_runtime.output.artifact_bundle import ArtifactBundleCommitter
 from docwen_runtime.templates import TemplateRegistry
 from tests.integration.test_structured_resource_group_runtime import _builder, _source_ref
@@ -115,7 +115,7 @@ def test_oversized_html_keeps_complete_plain_snapshot_and_published_body(
         builder = ExecutionRequestBuilder(
             cast("MainWindowViewModel", SimpleNamespace(files=[source_ref], controller=None)),
             cast("BatchListViewModel", SimpleNamespace(get_file_entry=lambda _path: None)),
-            file_contexts=lambda: {normalize_path(snapshot.path): ("markdown", "markdown")},
+            file_contexts=lambda: {path_key(snapshot.path): ("markdown", "markdown")},
             selected_template=lambda: ("docx", template),
             source_label=lambda path: snapshot.display_name if store.is_snapshot(path) else None,
             synthetic_input=store.is_snapshot,
@@ -127,6 +127,7 @@ def test_oversized_html_keeps_complete_plain_snapshot_and_published_body(
             options={"remove_numbering": False},
             output_policy=OutputPolicy(output_dir=str(output)),
         )
+        assert request.options["template_name"] == template
         assert request.source_stem == "Clipboard 1"
         _, body = _word_bundle(round_trip_runtime, request, output)
         paragraphs = [_text(node) for node in body.findall(f"{W}p") if _text(node)]

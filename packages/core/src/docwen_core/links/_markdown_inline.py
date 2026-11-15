@@ -37,6 +37,7 @@ _ACTIVE_PROTECTED_TOKENS: ContextVar[frozenset[str]] = ContextVar(
     "docwen_active_markdown_tokens",
     default=frozenset(),
 )
+_ACTIVE_REFERENCE_LABELS: ContextVar[frozenset[str] | None] = ContextVar("docwen_reference_labels", default=None)
 _BLOCK_INTERRUPT_RE = re.compile(
     r"^[ \t]{0,3}(?:"
     r"#{1,9}[ \t]+|"
@@ -68,6 +69,7 @@ class MarkdownInlineLink:
     label: str
     target: str
     is_image: bool
+    display_label: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -312,6 +314,15 @@ def _has_reference_definition(text: str, label: str) -> bool:
     normalized = _normalize_reference_label(label)
     if not normalized:
         return False
+    active = _ACTIVE_REFERENCE_LABELS.get()
+    if active is None:
+        from docwen_core.links._markdown_references import markdown_reference_definitions
+
+        active = frozenset(markdown_reference_definitions(text))
+    if normalized in active:
+        return True
+    if not _is_valid_footnote_definition_label(label):
+        return False
     raw_lines = re.split(r"\r\n|\r|\n", text)
     logical_lines: list[str] = []
     container_flags: list[tuple[int, bool]] = []
@@ -548,24 +559,8 @@ def matching_backtick_run_end(text: str, start: int) -> int | None:
     return None
 
 
-def parse_inline_link(
-    text: str,
-    start: int,
-    *,
-    image: bool,
-) -> MarkdownInlineLink | None:
-    """Parse a balanced, escape-aware inline link/image beginning at *start*."""
-    if image:
-        if not text.startswith("![", start) or _is_backslash_escaped(text, start):
-            return None
-        label_open = start + 1
-    else:
-        if start >= len(text) or text[start] != "[" or _is_backslash_escaped(text, start):
-            return None
-        if start > 0 and text[start - 1] == "!" and not _is_backslash_escaped(text, start - 1):
-            return None
-        label_open = start
-
+def _link_label_close(text: str, label_open: int) -> int | None:
+    """Find the shared escape/code-aware closing bracket of an image or link."""
     depth = 1
     cursor = label_open + 1
     label_close: int | None = None
@@ -599,7 +594,28 @@ def parse_inline_link(
                     label_close = cursor
                     break
         cursor += 1
+    return label_close
 
+
+def parse_inline_link(
+    text: str,
+    start: int,
+    *,
+    image: bool,
+) -> MarkdownInlineLink | None:
+    """Parse a balanced, escape-aware inline link/image beginning at *start*."""
+    if image:
+        if not text.startswith("![", start) or _is_backslash_escaped(text, start):
+            return None
+        label_open = start + 1
+    else:
+        if start >= len(text) or text[start] != "[" or _is_backslash_escaped(text, start):
+            return None
+        if start > 0 and text[start - 1] == "!" and not _is_backslash_escaped(text, start - 1):
+            return None
+        label_open = start
+
+    label_close = _link_label_close(text, label_open)
     if label_close is None or label_close + 1 >= len(text) or text[label_close + 1] != "(":
         return None
     label = text[label_open + 1 : label_close]

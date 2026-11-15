@@ -88,6 +88,49 @@ def test_failed_job_assignment_never_resumes_or_guesses_children(api: SimpleName
     family.close()
 
 
+def test_native_owner_reaps_suspended_launcher_after_job_assignment_failure(api, tmp_path, monkeypatch):
+    from docwen_core import office_native_process as native
+    from docwen_core.office_process import OwnedProcessLaunch
+
+    events: list[str] = []
+    api.kernel.CreateProcess.side_effect = lambda *args: events.append("created") or (101, 102, 103, 104)
+
+    def assignment_failed(*args):
+        events.append("assignment-failed")
+        raise OSError("nested job unavailable")
+
+    def terminate(*args):
+        events.append("terminated")
+        api.kernel.WaitForSingleObject.return_value = 0
+
+    api.jobs.AssignProcessToJobObject.side_effect = assignment_failed
+    api.kernel.WaitForSingleObject.return_value = 258
+    api.kernel.TerminateProcess.side_effect = terminate
+    monkeypatch.setattr(native, "_native_family", windows_process.WindowsJobProcess)
+    monkeypatch.setattr(native.signal, "signal", MagicMock())
+    connection = MagicMock()
+
+    native.native_owner_worker(
+        connection,
+        SimpleNamespace(is_set=lambda: False),
+        ["venv-python.exe", "worker.py"],
+        5,
+        OwnedProcessLaunch(cwd=str(tmp_path), log_path=str(tmp_path / "renderer.log"), stdin_bytes=b"go\n"),
+    )
+
+    assert events == ["created", "assignment-failed", "terminated"]
+    assert api.kernel.CreateProcess.call_args.args[5] & 0x4
+    api.threads.ResumeThread.assert_not_called()
+    api.kernel.TerminateProcess.assert_called_once_with(101, 1)
+    api.jobs.TerminateJobObject.assert_not_called()
+    receipt = connection.send.call_args.args[0]
+    assert receipt.cleanup_confirmed and not receipt.succeeded
+    assert "launch failed" in receipt.reason
+    assert receipt.launcher_pid == 103
+    api.jobs.CreateJobObject.return_value.Close.assert_called_once()
+    assert [call.args[0] for call in api.kernel.CloseHandle.call_args_list] == [201, 202, 102, 101]
+
+
 @pytest.mark.parametrize("state", [258, 0xFFFFFFFF, 0x80])
 def test_job_zero_requires_a_successful_launcher_handle_wait(api: SimpleNamespace, state: int) -> None:
     family = windows_process.WindowsJobProcess()

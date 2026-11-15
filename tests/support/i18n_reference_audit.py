@@ -167,14 +167,6 @@ def _contract(expected_count: int, keys: frozenset[str], rationale: str) -> Dyna
     return DynamicCallContract(expected_count=expected_count, keys=keys, rationale=rationale)
 
 
-def _literal_fallback(expected_count: int, default: str, rationale: str) -> LiteralFallbackContract:
-    return LiteralFallbackContract(
-        expected_count=expected_count,
-        default=default,
-        rationale=rationale,
-    )
-
-
 # Keyed by the shipped source path and Python's canonical AST expression.
 # This is deliberately exhaustive: a new non-literal translator call fails
 # until its finite producer and exact suffix set are reviewed here.
@@ -489,76 +481,10 @@ DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
 }
 
 
-# These call sites intentionally supply bounded English fallback copy while the
-# catalogue migration remains incomplete. The path, key, call count, and exact
-# fallback are all frozen: deleting any other live literal locale key cannot be
-# hidden by merely passing a default string.
-LITERAL_FALLBACK_CONTRACTS: Mapping[tuple[str, str], LiteralFallbackContract] = {
-    (
-        "packages/apps/gui/src/docwen_gui/main_window.py",
-        "main_window.add_file",
-    ): _literal_fallback(1, "Add File", "window shortcut label"),
-    (
-        "packages/apps/gui/src/docwen_gui/main_window.py",
-        "main_window.start_conversion",
-    ): _literal_fallback(1, "Start Conversion", "window shortcut label"),
-    (
-        "packages/apps/gui/src/docwen_gui/main_window.py",
-        "main_window.cancel",
-    ): _literal_fallback(1, "Cancel", "window shortcut label"),
-    (
-        "packages/apps/gui/src/docwen_gui/qt_bridge/execution_supervisor.py",
-        "main_window.thread_start_uncertain",
-    ): _literal_fallback(
-        1,
-        "The task worker started but startup reporting failed; cancellation was requested.",
-        "worker startup recovery",
-    ),
-    (
-        "packages/apps/gui/src/docwen_gui/main_window.py",
-        "main_window.close_waiting_for_tasks",
-    ): _literal_fallback(1, "Cancelling active tasks before closing...", "close lifecycle"),
-    (
-        "packages/apps/gui/src/docwen_gui/qt_bridge/execution_supervisor.py",
-        "main_window.close_cancel_failed",
-    ): _literal_fallback(
-        1,
-        "Could not request cancellation for {task_id}: {message}",
-        "close lifecycle failure",
-    ),
-    (
-        "packages/apps/gui/src/docwen_gui/main_window.py",
-        "main_window.close_wait_timeout",
-    ): _literal_fallback(
-        1,
-        "A task is still stopping. DocWen will remain open until cleanup finishes.",
-        "close lifecycle timeout",
-    ),
-    (
-        "packages/apps/gui/src/docwen_gui/view_models/main_window_vm.py",
-        "components.file_drop.file_unavailable",
-    ): _literal_fallback(1, "File is unavailable", "file admission recovery"),
-    (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/logging_tab.py",
-        "settings.logging.browse_title",
-    ): _literal_fallback(1, "Select Log Directory", "log directory chooser"),
-    (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/numbering_clean_editor.py",
-        "common.type_warning",
-    ): _literal_fallback(1, "Warning", "typed warning dialog"),
-    (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/proofread_tab.py",
-        "editors.mapping.save_symbol_mapping_failed",
-    ): _literal_fallback(1, "Could not save symbol pairing entries.", "mapping persistence error"),
-    (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/proofread_tab.py",
-        "editors.mapping.load_failed",
-    ): _literal_fallback(1, "Could not load the editable configuration source.", "mapping load error"),
-    (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/toml_editor.py",
-        "settings.toml_editor.save_failed_message",
-    ): _literal_fallback(2, "The configuration could not be saved.", "TOML persistence error"),
-}
+# All former fallback-only keys now have shipped catalogue translations.
+# Keep the exception mechanism fail-closed for explicitly reviewed future gaps;
+# translated keys must not retain exceptions that could hide a later deletion.
+LITERAL_FALLBACK_CONTRACTS: Mapping[tuple[str, str], LiteralFallbackContract] = {}
 
 
 def _flatten(prefix: str, value: Any, out: set[str]) -> None:

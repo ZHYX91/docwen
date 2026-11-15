@@ -254,6 +254,26 @@ def test_exact_literal_fallback_contract_is_counted_and_default_bound(tmp_path: 
     assert audit.contract_mismatches == ()
 
 
+@pytest.mark.parametrize("translated", [True, False])
+def test_migrated_literal_key_needs_no_fallback_exception(tmp_path: Path, translated: bool) -> None:
+    locale_dir = _write_fixture_locale(tmp_path, '[ui]\none = "One"' + ('\nlive = "Live"' if translated else ""))
+    source = _write_gui_source(tmp_path, 'from docwen_gui.i18n import t\nt("ui.live", "Fallback")')
+    signature = (source.relative_to(tmp_path).as_posix(), "ui.live")
+    stale = {signature: LiteralFallbackContract(expected_count=1, default="Fallback", rationale="old gap")}
+
+    audit = audit_locale_references(tmp_path, locale_dir=locale_dir, contracts={}, literal_contracts={})
+    if translated:
+        assert "ui.live" in audit.used
+        assert audit.undefined_literal_keys == ()
+        obsolete = audit_locale_references(tmp_path, locale_dir=locale_dir, contracts={}, literal_contracts=stale)
+        assert obsolete.contract_mismatches == (
+            "packages/apps/gui/src/sample.py :: literal ui.live expected 1, observed 0",
+        )
+    else:
+        assert audit.undefined_literal_keys == ("packages/apps/gui/src/sample.py:2: ui.live",)
+    assert audit.contract_mismatches == ()
+
+
 def test_unknown_dynamic_translation_expression_fails_closed(tmp_path: Path) -> None:
     locale_dir = _write_fixture_locale(tmp_path, '[ui]\none = "One"\ntwo = "Two"')
     _write_gui_source(

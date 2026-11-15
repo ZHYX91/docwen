@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from docwen_gui.path_identity import path_key
+
 from ._main_window_projection_binding_support import (
     _XLSX_TEMPLATE_ID,
     FakeController,
@@ -30,11 +32,10 @@ from ._main_window_projection_binding_support import (
 
 class TestRuntimeRequestBinding:
     def test_xlsx_template_selection_is_added_to_spreadsheet_request(self, window, tmp_path) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
         _load_request_templates(window)
         assert window._template_selector.activate_and_select("xlsx") is True
 
@@ -53,11 +54,10 @@ class TestRuntimeRequestBinding:
         window,
         tmp_path,
     ) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
         window._view_model.set_selected_file(FileRef(path=str(source), format="markdown", category="markdown"))
         _load_request_templates(window, docx=False)
         window._action_area_vm.optimize_for_type = "invoice_cn"
@@ -77,11 +77,10 @@ class TestRuntimeRequestBinding:
         assert context["options"]["template_name"] == _XLSX_TEMPLATE_ID
 
     def test_xlsx_template_selection_is_added_to_csv_request(self, window, tmp_path) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
         _load_request_templates(window)
         assert window._template_selector.activate_and_select("xlsx") is True
 
@@ -96,7 +95,6 @@ class TestRuntimeRequestBinding:
         assert context["options"]["template_name"] == _XLSX_TEMPLATE_ID
 
     def test_single_request_uses_output_preferences(self, qapp, tmp_path) -> None:
-        from docwen_gui.path_identity import normalize_path
 
         output_dir = tmp_path / "exports"
         window = _make_window_with_config(
@@ -112,7 +110,7 @@ class TestRuntimeRequestBinding:
         try:
             source = tmp_path / "note.md"
             source.write_text("# Title", encoding="utf-8")
-            window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+            window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
 
             request, context = window._requests.single(
                 file_path=str(source),
@@ -164,11 +162,10 @@ class TestRuntimeRequestBinding:
         tmp_path,
     ) -> None:
         from docwen_gui.i18n import t
-        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {path_key(str(source)): ("markdown", "markdown")}
 
         controller = window._view_model.controller
         assert controller is not None

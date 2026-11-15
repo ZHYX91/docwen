@@ -18,6 +18,7 @@ import logging
 import time
 from dataclasses import dataclass, field, replace
 from datetime import datetime
+from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
@@ -260,7 +261,7 @@ class InfoAreaViewModel(QObject):
         path = self._task_summary.output_path
         if not path or self._task_summary.state in {"", "active", "cancelling"}:
             return ""
-        name = path.replace("\\", "/").rsplit("/", 1)[-1]
+        name = Path(path).name
         return _t("info_area.task_output_file", "Output: {name}", name=isolate_filename(name))
 
     @property

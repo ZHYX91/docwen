@@ -16,7 +16,7 @@ from docwen_core.models import (
 )
 from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.i18n import t as _t
-from docwen_gui.path_identity import normalize_path
+from docwen_gui.path_identity import path_key
 
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
@@ -132,12 +132,12 @@ def check_frozen_clipboard_bundles(request: ConversionRequest, bundles: tuple[Cl
     for source in request.input_refs:
         if source.input_role == "linked_resource" or source.format != "clipboard_document":
             continue
-        matched = [bundle for bundle in bundles if normalize_path(bundle.main.path) == normalize_path(source.path)]
+        matched = [bundle for bundle in bundles if path_key(bundle.main.path) == path_key(source.path)]
         if len(matched) != 1 or not clipboard_bundle_available(matched[0]):
             raise ExecutionAdmissionError(_t("main_window.file_admission_invalid", "File inspection data is invalid."))
         expected = [
             (
-                normalize_path(item.path),
+                path_key(item.path),
                 item.resource_id,
                 item.logical_path,
                 item.media_type,
@@ -148,7 +148,7 @@ def check_frozen_clipboard_bundles(request: ConversionRequest, bundles: tuple[Cl
         ]
         actual = [
             (
-                normalize_path(ref.path),
+                path_key(ref.path),
                 ref.metadata.get(MANAGED_RESOURCE_ID_METADATA_KEY),
                 ref.logical_path,
                 ref.media_type,
@@ -251,10 +251,10 @@ class ExecutionAdmission:
             acceptance = make_admission_acceptance(inspection)
             ref.metadata[FILE_ADMISSION_ACCEPTANCE_METADATA_KEY] = acceptance
             frozen_facts = inspection.to_dict()
-            normalized = normalize_path(ref.path)
+            normalized = path_key(ref.path)
             for source_ref in self._view_model.files:
                 if (
-                    normalize_path(source_ref.path) == normalized
+                    path_key(source_ref.path) == normalized
                     and source_ref.metadata.get(FILE_INSPECTION_METADATA_KEY) == frozen_facts
                 ):
                     source_ref.metadata[FILE_ADMISSION_ACCEPTANCE_METADATA_KEY] = dict(acceptance)

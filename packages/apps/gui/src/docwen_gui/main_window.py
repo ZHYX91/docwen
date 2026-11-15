@@ -61,7 +61,7 @@ from docwen_gui.execution_requests import ExecutionRequestBuilder, OutputPolicyC
 from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.font_utils import FONT_SIZE_PRESETS, normalize_font_size_preset
 from docwen_gui.i18n import t as _t
-from docwen_gui.path_identity import normalize_path
+from docwen_gui.path_identity import normalize_path, path_key
 from docwen_gui.qt_bridge.execution_supervisor import ExecutionSupervisor
 from docwen_gui.resources import load_svg_icon
 from docwen_gui.styles.design_tokens import Spacing
@@ -137,9 +137,9 @@ def _move_path_to_front(file_paths: Sequence[str], preferred_path: str | None) -
     ordered = list(file_paths)
     if not preferred_path:
         return ordered
-    preferred_key = normalize_path(preferred_path)
+    preferred_key = path_key(preferred_path)
     for index, path in enumerate(ordered):
-        if normalize_path(path) != preferred_key:
+        if path_key(path) != preferred_key:
             continue
         if index == 0:
             return ordered
@@ -1303,7 +1303,7 @@ class MainWindow(QWidget):
         if (
             self._action_area_vm.mode == self._view_model.mode
             and self._action_area_vm.file_type == expected_mode
-            and normalize_path(self._action_area_vm.file_path or "") == normalize_path(file_path)
+            and path_key(self._action_area_vm.file_path or "") == path_key(file_path)
             and self._action_area_vm.target_route_sources == sources
         ):
             return
@@ -1501,22 +1501,22 @@ class MainWindow(QWidget):
 
     def _sync_files_from_main_vm(self, file_refs: Sequence[FileRef]) -> None:
         self._file_contexts = {
-            normalize_path(ref.path): (
+            path_key(ref.path): (
                 ref.format.lower(),
                 ref.category.lower(),
             )
             for ref in file_refs
             if ref.path
         }
-        refs_by_path = {normalize_path(ref.path): ref for ref in file_refs if ref.path}
+        refs_by_path = {path_key(ref.path): ref for ref in file_refs if ref.path}
         desired_paths = set(refs_by_path)
-        current_paths = {normalize_path(path) for path in self._batch_list_vm.get_files()}
+        current_paths = {path_key(path) for path in self._batch_list_vm.get_files()}
 
-        missing = [ref.path for ref in file_refs if normalize_path(ref.path) not in current_paths]
+        missing = [ref.path for ref in file_refs if path_key(ref.path) not in current_paths]
         if missing:
 
             def resolve_existing_ref(path: str) -> dict[str, Any] | None:
-                ref = refs_by_path.get(normalize_path(path))
+                ref = refs_by_path.get(path_key(path))
                 if ref is None:
                     return None
                 presentation = self._clipboard_presentation(ref.path)
@@ -1542,10 +1542,10 @@ class MainWindow(QWidget):
             if not self._input_area_vm.selection_message:
                 self._input_area_vm.sync_selection(file_refs)
             sel = self._view_model.selected_file
-            preferred_key = normalize_path(getattr(sel, "path", "")) if sel is not None else ""
+            preferred_key = path_key(getattr(sel, "path", "")) if sel is not None else ""
             if preferred_key not in desired_paths:
                 current_batch_file = self._batch_list_vm.get_current_file()
-                preferred_key = normalize_path(current_batch_file or "")
+                preferred_key = path_key(current_batch_file or "")
             preferred_ref = refs_by_path.get(preferred_key)
             if preferred_ref is not None:
                 self._view_model.set_selected_file(preferred_ref)
@@ -1593,9 +1593,9 @@ class MainWindow(QWidget):
         current_file = self._batch_list_vm.get_current_file()
         if not current_file:
             return False
-        current_key = normalize_path(current_file)
+        current_key = path_key(current_file)
         for ref in self._view_model.files:
-            if normalize_path(getattr(ref, "path", "")) != current_key:
+            if path_key(getattr(ref, "path", "")) != current_key:
                 continue
             self._view_model.set_selected_file(ref)
             with contextlib.suppress(Exception):
@@ -1675,9 +1675,9 @@ class MainWindow(QWidget):
         if not file_path:
             self._view_model.clear_selected_file()
             return
-        normalized = normalize_path(file_path)
+        normalized = path_key(file_path)
         for ref in self._view_model.files:
-            if normalize_path(getattr(ref, "path", "")) == normalized:
+            if path_key(getattr(ref, "path", "")) == normalized:
                 self._view_model.set_selected_file(ref)
                 return
         self._view_model.clear_selected_file()
@@ -1912,13 +1912,11 @@ class MainWindow(QWidget):
                 return
             options["spreadsheet_password"] = password
         retry_paths = record.paths if context.get("aggregate") else failed_files
-        synthetic_keys = {
-            normalize_path(path) for path in context.get("synthetic_input_paths", []) if isinstance(path, str)
-        }
+        synthetic_keys = {path_key(path) for path in context.get("synthetic_input_paths", []) if isinstance(path, str)}
         unavailable_snapshots = [
             path
             for path in retry_paths
-            if normalize_path(path) in synthetic_keys
+            if path_key(path) in synthetic_keys
             and (self._clipboard_store is None or not self._clipboard_store.snapshot_available(path))
         ]
         if unavailable_snapshots:
@@ -1951,9 +1949,9 @@ class MainWindow(QWidget):
                     options=options,
                 )
             elif context.get("batch"):
-                failed_keys = {normalize_path(path) for path in failed_files}
+                failed_keys = {path_key(path) for path in failed_files}
                 self._workflow.batch(
-                    file_paths=[path for path in context["file_paths"] if normalize_path(path) in failed_keys],
+                    file_paths=[path for path in context["file_paths"] if path_key(path) in failed_keys],
                     target_format=context["target_format"],
                     action_name=context["action_name"],
                     options=options,
@@ -1979,14 +1977,14 @@ class MainWindow(QWidget):
                     frozen_ref = FileRef.from_dict(raw_ref)
                 except (TypeError, ValueError):
                     continue
-                frozen_refs[normalize_path(frozen_ref.path)] = frozen_ref
+                frozen_refs[path_key(frozen_ref.path)] = frozen_ref
 
-            pending_restore = {normalize_path(path) for path in missing_paths}
+            pending_restore = {path_key(path) for path in missing_paths}
             restore_failed = False
 
             def restored(path: str, outcome) -> None:
                 nonlocal restore_failed
-                key = normalize_path(path)
+                key = path_key(path)
                 pending_restore.discard(key)
                 if outcome.rejected:
                     restore_failed = True
@@ -2007,7 +2005,7 @@ class MainWindow(QWidget):
                     resume_retry()
 
             for path in missing_paths:
-                frozen_ref = frozen_refs.get(normalize_path(path))
+                frozen_ref = frozen_refs.get(path_key(path))
                 inspector = None
                 if frozen_ref is not None:
                     raw_inspection = frozen_ref.metadata.get(FILE_INSPECTION_METADATA_KEY)

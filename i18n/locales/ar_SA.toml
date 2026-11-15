@@ -11,6 +11,13 @@ template_name = "قالب عربي عام"
 # Main Window
 # =============================================================================
 [main_window]
+add_file = "إضافة ملف"
+start_conversion = "بدء التحويل"
+cancel = "إلغاء"
+close_waiting_for_tasks = "جارٍ إلغاء المهام النشطة قبل الإغلاق…"
+close_wait_timeout = "لا تزال إحدى المهام قيد الإيقاف. سيبقى DocWen مفتوحًا حتى اكتمال التنظيف."
+thread_start_uncertain = "بدأت عملية تنفيذ المهمة، لكن تعذّر الإبلاغ عن بدء التشغيل؛ طُلب الإلغاء."
+close_cancel_failed = "تعذّر طلب إلغاء المهمة {task_id}: {message}"
 runtime_folder_unavailable = "تعذّر إنشاء مجلد عمل مؤقت. تحقّق من أذونات المجلد أو برنامج الحماية ثم حاول مجددًا."
 output_folder_unavailable = "لا يمكن استخدام مجلد الحفظ المحدد بأمان. تحقّق من الأذونات أو اختر مجلدًا آخر."
 numbering_comments_unanchored = "تعذر عزل بعض الأرقام المضافة كنص مستقل بهذا المخطط. تم تخطي تعليقاتها مع الحفاظ على محتوى العناوين."
@@ -81,6 +88,7 @@ request_output = "الإخراج: {value}"
 merge_result_summary = "{source} / {sheet} · {mode}: المضاف {added}، المستبدل {replaced}، المتجاوز {skipped}، المدمج {combined}؛ القيم غير المعروفة 0. مواضع المصدر متاحة في تفاصيل المهمة."
 merge_formula_cache_missing = "توقف الدمج لأن صيغة لا تحتوي على نتيجة محفوظة. أعد حساب المصنف واحفظه في برنامج جداول بيانات، ثم حاول مجددًا. راجع تفاصيل الخطأ لمعرفة الملف ومواضع الخلايا."
 [common]
+type_warning = "تحذير"
 action_file_count = "{action} ({count} ملفات)"
 app_name = "DocWen"
 default = "افتراضي"
@@ -279,6 +287,7 @@ field_fallback = "إعداد ({field})"
 tab_load_failed_message = "تعذّر تحميل {tab}\\n\\nالخطأ: {error}"
 
 [settings.toml_editor]
+save_failed_message = "تعذّر حفظ الإعدادات."
 config_label = "ملف الإعدادات"
 hint = "يمكن تعديل TOML مباشرة هنا. سيتحقق البرنامج من الصيغة قبل الحفظ."
 toml_syntax_error = "خطأ في صيغة TOML"
@@ -830,6 +839,7 @@ auto_open_folder_tooltip = "افتح مجلد النتائج وحدد الملف
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "اختيار مجلد السجلات"
 # 日志系统区域
 system_section = "نظام السجلات"
 system_desc = "فعّل السجلات واختر مستوى التفاصيل المسجلة."
@@ -994,6 +1004,7 @@ large = "كبير"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "الملف غير متاح"
 inspecting = "جارٍ فحص الملفات…"
 empty_hint_single = "اسحب ملفًا إلى هنا"
 empty_hint_batch = "اسحب ملفات أو مجلدات إلى هنا"
@@ -1472,6 +1483,8 @@ letter_number_desc = "مطابقة ترقيم بالحروف مثل A. أو A) �
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "تعذّر حفظ إدخالات أزواج الرموز."
+load_failed = "تعذّر تحميل مصدر الإعدادات القابل للتحرير."
 # 对话框标题
 symbol_editor_title = "قواعد مطابقة علامات الترقيم"
 typo_editor_title = "محرر قاموس الأخطاء الإملائية"

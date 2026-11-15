@@ -11,7 +11,6 @@ are protected by ``QMutex`` or use ``Signal`` with ``Qt.QueuedConnection``.
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +22,7 @@ from docwen_core.cancellation import CancellationToken
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.i18n import t as _t
+from docwen_gui.path_identity import path_key
 from docwen_gui.qt_bridge.background_operation import BackgroundOperation
 
 logger = logging.getLogger(__name__)
@@ -158,7 +158,7 @@ class MainWindowViewModel(QObject):
         self._inspection.busy_changed.connect(self._inspection_busy_changed)
         self._mutex = QMutex()
         self._files: list[FileRef] = []
-        self._reserved_inputs: dict[str, frozenset[Path]] = {}
+        self._reserved_inputs: dict[str, frozenset[str]] = {}
         self._mode: str = _read_default_mode(controller)
         self._status_message: str = _t("common.ready", "Ready")
         self._title: str = "DocWen Offline"
@@ -287,7 +287,7 @@ class MainWindowViewModel(QObject):
 
     @staticmethod
     def _inspection_key(path: str) -> str:
-        return os.path.normcase(os.path.abspath(os.fspath(path)))
+        return path_key(path)
 
     def cancel_inspection(self) -> None:
         self._pending_inspection_intents = []
@@ -472,17 +472,17 @@ class MainWindowViewModel(QObject):
                     added_refs.append(ref)
                 else:
                     self._selected_file = self._files[0]
-            existing = {Path(f.path): index for index, f in enumerate(self._files)}
+            existing = {path_key(f.path): index for index, f in enumerate(self._files)}
             for ref in new_refs if self._mode == "batch" else ():
-                index = existing.get(Path(ref.path))
+                index = existing.get(path_key(ref.path))
                 if index is None:
-                    existing[Path(ref.path)] = len(self._files)
+                    existing[path_key(ref.path)] = len(self._files)
                     self._files.append(ref)
                     added_refs.append(ref)
                 elif self._files[index] != ref:
                     self._files[index] = ref
                     added_refs.append(ref)
-                    if self._selected_file is not None and Path(self._selected_file.path) == Path(ref.path):
+                    if self._selected_file is not None and path_key(self._selected_file.path) == path_key(ref.path):
                         self._selected_file = ref
 
             if added_refs:
@@ -500,13 +500,13 @@ class MainWindowViewModel(QObject):
     def reserve_execution_inputs(self, operation_id: str, paths: tuple[str, ...]) -> None:
         """Keep admitted inputs until the owning worker has fully finished."""
         self.cancel_inspection()
-        self._reserved_inputs[operation_id] = frozenset(Path(path) for path in paths)
+        self._reserved_inputs[operation_id] = frozenset(path_key(path) for path in paths)
 
     def release_execution_inputs(self, operation_id: str) -> None:
         self._reserved_inputs.pop(operation_id, None)
 
     def can_remove_file(self, file_path: str) -> bool:
-        return all(Path(file_path) not in paths for paths in self._reserved_inputs.values())
+        return all(path_key(file_path) not in paths for paths in self._reserved_inputs.values())
 
     def remove_file(self, file_path: str) -> None:
         """Remove a single file from the input list.
@@ -521,8 +521,8 @@ class MainWindowViewModel(QObject):
         file_count = 0
         with QMutexLocker(self._mutex):
             before = len(self._files)
-            self._files = [f for f in self._files if Path(f.path) != Path(file_path)]
-            if self._selected_file is not None and Path(self._selected_file.path) == Path(file_path):
+            self._files = [f for f in self._files if path_key(f.path) != path_key(file_path)]
+            if self._selected_file is not None and path_key(self._selected_file.path) == path_key(file_path):
                 self._selected_file = None
             if len(self._files) != before:
                 files_snapshot = list(self._files)
@@ -733,7 +733,7 @@ class MainWindowViewModel(QObject):
                 return False
 
             def admitted(outcome: FileAddOutcome) -> None:
-                ref = next((ref for ref in self.files if Path(ref.path) == path), None)
+                ref = next((ref for ref in self.files if path_key(ref.path) == path_key(path)), None)
                 if ref is not None and not outcome.rejected:
                     self.set_selected_file(ref)
                     self.ipc_file_received.emit(str(path))

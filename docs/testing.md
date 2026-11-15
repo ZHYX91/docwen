@@ -1,5 +1,9 @@
 # Testing / 测试
 
+Content-integrity regressions cover link-reference definitions followed by HTML in numbering and proofreading, and declared inline/full/collapsed/shortcut images through actual DOCX conversion and embedded-media hashes. DOCX proofreading checks real comments in ordinary, nested and merged table cells, input preservation and automatic postprocessing before publication. GUI path tests distinguish POSIX literal backslashes from directory separators while retaining Windows aliases; language checks compare actual translated-code references with every locale, in addition to locale-to-locale parity. Core dependency tests block other product packages while exercising the shared DOCX semantic facade. These source checks remain separate from native application acceptance.
+
+内容完整性回归覆盖引用定义后紧接 HTML 的编号与校对，以及行内／完整／折叠／快捷引用图片的真实 DOCX 转换和嵌入媒体摘要。DOCX 校对检查普通、嵌套、合并表格单元格中的真实批注、输入不变及发布前自动后处理。GUI 路径测试区分 POSIX 字面反斜杠与目录分隔符，同时保留 Windows 别名；翻译检查除语言间对齐外，还将代码实际引用与全部语言词典比较。Core 依赖测试阻断其他产品包并执行共享 DOCX 语义接口。这些源码检查与原生应用验收分别记录。
+
 Desktop startup acceptance launches the packaged GUI executable directly as well as through
 CLI/Assistant. In an isolated profile, `DOCWEN_GUI_TEST_STARTUP_REPORT` may select a new report
 file under an existing owned directory. It records application imports, configuration, runtime,

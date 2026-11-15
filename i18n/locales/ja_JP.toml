@@ -11,6 +11,7 @@ template_name = "日本語汎用テンプレート"
 # 通用文本
 # =============================================================================
 [common]
+type_warning = "警告"
 action_file_count = "{action}（{count} ファイル）"
 app_name = "DocWen"
 default = "デフォルト"
@@ -209,6 +210,7 @@ field_fallback = "設定項目（{field}）"
 tab_load_failed_message = "{tab} を読み込めませんでした\n\nエラー: {error}"
 
 [settings.toml_editor]
+save_failed_message = "設定を保存できませんでした。"
 config_label = "設定"
 hint = "ヒント: このページでは TOML を直接編集します。保存前に構文を検証します。"
 toml_syntax_error = "TOML 構文エラー"
@@ -761,6 +763,7 @@ auto_open_folder_tooltip = "変換または校正が成功した後、出力フ�
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "ログフォルダーを選択"
 # 日志系统区域
 system_section = "ログシステム"
 system_desc = "ログ記録の有効・無効とログレベルを設定します。"
@@ -926,6 +929,7 @@ large = "大"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "ファイルを利用できません"
 inspecting = "ファイルを確認しています…"
 empty_hint_single = "ここにファイルをドラッグ"
 empty_hint_batch = "ここにファイルまたはフォルダをドラッグ"
@@ -1408,6 +1412,8 @@ letter_number_desc = "マッチ：A. / A) / (A) / a. / a) 文字番号"
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "記号の対応付け項目を保存できませんでした。"
+load_failed = "編集可能な設定ソースを読み込めませんでした。"
 # 对话框标题
 symbol_editor_title = "句読点のペア規則"
 typo_editor_title = "誤字辞書エディタ"
@@ -1698,6 +1704,13 @@ subtitle = "サブタイトル"
 
 
 [main_window]
+add_file = "ファイルを追加"
+start_conversion = "変換を開始"
+cancel = "キャンセル"
+close_waiting_for_tasks = "終了前に実行中のタスクをキャンセルしています…"
+close_wait_timeout = "タスクはまだ停止処理中です。後処理が完了するまで DocWen は開いたままになります。"
+thread_start_uncertain = "タスクのワーカーは起動しましたが、起動状態の通知に失敗したため、キャンセルを要求しました。"
+close_cancel_failed = "{task_id} のキャンセルを要求できませんでした：{message}"
 runtime_folder_unavailable = "一時作業フォルダーを作成できません。フォルダーの権限やセキュリティソフトを確認して再試行してください。"
 output_folder_unavailable = "選択した保存先フォルダーを安全に使用できません。権限を確認するか、別のフォルダーを選んでください。"
 numbering_comments_unanchored = "この方式では一部の追加番号を独立した文字として特定できません。該当するコメントを省略し、見出しの内容を保持しました。"

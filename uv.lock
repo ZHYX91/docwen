@@ -445,14 +445,18 @@ name = "docwen-core"
 version = "0.23.0"
 source = { editable = "packages/core" }
 dependencies = [
+    { name = "lxml" },
     { name = "pillow" },
+    { name = "python-docx" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "tomlkit" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "lxml", specifier = ">=6.0.2" },
     { name = "pillow", specifier = ">=13.0.0,<14.0.0" },
+    { name = "python-docx", specifier = ">=1.2.0" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=311" },
     { name = "tomlkit" },
 ]

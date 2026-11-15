@@ -23,6 +23,7 @@ from docwen_core.links._markdown_inline import (
     parse_inline_link,
     parse_markdown_destination,
 )
+from docwen_core.links._markdown_references import parse_markdown_image
 from docwen_core.links._non_embed import (
     _bare_url_end,
     _map_visible_markdown,
@@ -96,7 +97,7 @@ def _replace_markdown_images(
     on_missing_embed: Callable[[], None] | None = None,
     cancellation_check: Callable[[], None] | None = None,
 ) -> str:
-    """Apply a mode to standard ``![alt](target)`` image syntax."""
+    """Apply the image policy to inline and defined reference occurrences."""
     normalized_mode = EmbeddedImageMode(mode)
     parts: list[str] = []
     cursor = 0
@@ -105,13 +106,13 @@ def _replace_markdown_images(
     while index < len(segment):
         if cancellation_check is not None:
             cancellation_check()
-        construct = parse_inline_link(segment, index, image=True)
+        construct = parse_markdown_image(segment, index)
         if construct is None:
             index += 1
             continue
         original = segment[index : construct.end]
         in_table = table_safe and _is_table_context(segment, index)
-        alt = construct.label
+        alt = construct.display_label if construct.display_label is not None else construct.label
         target = construct.target.strip(" \t\r\n")
         if normalized_mode is EmbeddedImageMode.EXTRACT_TEXT:
             image_target, _, _ = _parse_markdown_image_target(target)
@@ -315,7 +316,7 @@ def _cross_boundary_construct_spans(
     ):
         index = range_start
         while index < range_end:
-            construct = parse_inline_link(text, index, image=True)
+            construct = parse_markdown_image(text, index)
             if construct is None:
                 construct = parse_inline_link(text, index, image=False)
             end = construct.end if construct is not None else None
@@ -449,7 +450,7 @@ def process_markdown_links(
         while index < len(segment):
             if cancellation_check is not None:
                 cancellation_check()
-            construct = parse_inline_link(segment, index, image=True)
+            construct = parse_markdown_image(segment, index)
             if construct is None:
                 construct = parse_inline_link(segment, index, image=False)
             if construct is not None:

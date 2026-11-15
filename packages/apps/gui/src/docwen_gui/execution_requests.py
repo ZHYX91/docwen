@@ -18,7 +18,7 @@ from docwen_application.postprocessing import prepare_postprocess_options
 from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.i18n import t as _t
-from docwen_gui.path_identity import normalize_path
+from docwen_gui.path_identity import normalize_path, path_key
 
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
@@ -288,7 +288,7 @@ class ExecutionRequestBuilder:
 
     def file_context(self, file_path: str) -> tuple[str, str] | None:
         """Read current routing state, including lists replaced after construction."""
-        context = self._file_contexts().get(normalize_path(file_path))
+        context = self._file_contexts().get(path_key(file_path))
         if context is not None:
             return context
         entry = self._batch_list_vm.get_file_entry(file_path)
@@ -341,7 +341,7 @@ class ExecutionRequestBuilder:
             FileRef,
         )
 
-        normalized = normalize_path(source_path)
+        normalized = path_key(source_path)
         source_label = self._source_label(source_path) or ""
 
         def projected_metadata(raw: dict[str, Any]) -> dict[str, Any]:
@@ -361,7 +361,7 @@ class ExecutionRequestBuilder:
             return raw
 
         source_ref = next(
-            (ref for ref in self._view_model.files if normalize_path(getattr(ref, "path", "")) == normalized),
+            (ref for ref in self._view_model.files if path_key(getattr(ref, "path", "")) == normalized),
             None,
         )
         if source_ref is not None:

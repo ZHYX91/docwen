@@ -92,7 +92,7 @@ Windows, Linux and macOS declare the primary conversion, proofreading, numbering
 | FEAT-CONV-002 | conversion | MD → DOCX 有两条显式能力：普通 source-native `convert.markdown_source.to_docx` 接收 1 个 Markdown `source` + 0..N 个声明式 `linked_resource`，并由本次请求的 `remove_numbering`/`add_numbering`/`numbering_scheme`/`heading_numbering_render_mode` 与 Markdown extension 选项决定导出；独立的 v4 `convert.markdown.to_docx` 仍只接收同一 source identity/hash 的 provider-neutral `resolved_document` + `numbering_export_plan` 精确双输入，并拒绝这些 source-authoring 编号选项。两条能力最终共用 DOCX 物化/回转安全边界；Number Suite 是否安装不是普通 source-native 导出的输入。高亮/下划线/上下标递归交付公式、图片、链接与注释；图片 alt 按 occurrence 绑定，保留 Wiki/Markdown 混排和空 alt；任务项以原生列表及可见 [ ]/[x] 文本交付完整子块。附件说明保留模板有效首行起点及样式，解析字符零的长度回退并局部抵消继承冲突；编号按序号位数用空白补位；附件对齐可选制表位（默认）或空格与悬挂缩进。默认以单个名称制表位和续行缩进共同定位；空格方式点后保留一个普通半角空格，复杂混排和两端对齐时可能略偏。 | docwen_plugin_markdown + docwen_core | resolved Conversion Port + to_docx/converter.py + renderer.py + docx_semantics.py + gongwen_fields.py | test_markdown_visible_content.py + test_resolved_carrier_roundtrip.py + test_resolved_conversion_v4.py + test_resolved_v4_to_docx.py + test_gongwen_indentation.py + test_gongwen_conversion.py + test_attachment_number_padding.py + exact OOXML/roundtrip gates | verified |
 | FEAT-CONV-053 | conversion | MD → DOC/ODT/RTF/WPS/PDF 转换：以 MD→DOCX 作为中间产物，再通过 Office/WPS/LibreOffice bridge 输出目标格式；DOCX 模板参数沿用 MD→DOCX 管线。 | docwen_plugin_markdown | office_bridge/converter.py + manifest.py + plugin.py | test_not_implemented.py + test_plugin_markdown_imports.py | tested |
 | FEAT-CONV-003 | conversion | XLSX/XLS/ET/ODS → MD；普通 worksheet 按类型和顺序导出，跳过 chartsheet，only-chart 明确拒绝；源单元格字面编码与生成资源语法分开，稀疏格／merge／图片按有界组件规划，保留源维度 metadata | docwen_plugin_spreadsheet | to_markdown/converter.py | GOLDEN-003 | verified |
-| FEAT-CONV-004 | conversion | MD → XLSX/CSV：导出 Markdown 表格；XLSX route 接受精确 canonical 模板资源 ID，图片计划与最终单元格文本分离，scope/路径编码不挤占 32767 UTF-16 容量，字面标记不获得读图权限；CSV route 不接受模板选项 | docwen_plugin_markdown | to_spreadsheet/converter.py | GOLDEN-001 + test_md_to_spreadsheet_*.py + manifest option tests | tested |
+| FEAT-CONV-004 | conversion | MD → XLSX/CSV：导出 Markdown 表格；两条 route 都接受精确 canonical XLSX 模板资源 ID，CSV 从模板工作簿逐表导出文本值，不保留工作簿样式。图片计划与最终单元格文本分离，scope/路径编码不挤占 32767 UTF-16 容量，字面标记不获得读图权限 | docwen_plugin_markdown | to_spreadsheet/converter.py | GOLDEN-001 + test_md_to_spreadsheet_*.py + manifest option tests | tested |
 | FEAT-CONV-005 | conversion | 图片互转：全部 image→image 格式对，含压缩策略；GIF/WebP/APNG 动画保留帧与时序，静态目标逐帧输出并警告，TIFF 保留多页；HEIC/HEIF 通过可选 `pillow-heif` 预处理为 PNG 后复用现有转换链 | docwen_plugin_image | format_conversion/converter.py + format_conversion/sequence.py + _common.py + plugin.py | GOLDEN-004 + test_image_sequence.py | tested |
 | FEAT-CONV-006 | conversion | PDF/OFD/XPS→MD：P 个物理页与 K 个提取资源相互独立；OCR 开启时恒交付 P 个有序 page fragment（空白/失败也保留），主 document 不重复 OCR 正文，资源只按可证明页面关系归属。该 route 不接受无效果的 placement 选项。 | docwen_plugin_layout + docwen_application | to_markdown/converter.py + bundle_mapping.py + conversion_service.py | GOLDEN-005 + P=4/K=5 四组合 + source/packaged Machine | verified |
 | FEAT-CONV-007 | conversion | 文档格式互转：docx/doc/odt/rtf/wps 全 20 对，Hub=docx | docwen_plugin_document | to_document/converter.py | packages/plugins/document/tests/test_smart_converter.py | tested |
@@ -198,6 +198,14 @@ Windows, Linux and macOS declare the primary conversion, proofreading, numbering
 | FEAT-DETECT-004 | detection | ``FileInspection`` 冻结路径、大小、mtime、声明/真实格式、结构状态和准入决定；跨族显式接受绑定同一文件事实，执行前重新核验，防止伪造或过期 metadata 绕过准入 | docwen_core | models/file_inspection.py + detection/_validation.py | test_file_admission.py + test_controller_file_admission.py | tested |
 
 ## Spreadsheet fidelity / 表格保真边界
+
+Markdown-to-XLSX and Markdown-to-CSV both accept the canonical ID of an XLSX template through
+`template_name`. CSV exports the resulting workbook's sheets as text values; workbook formatting
+is not a CSV feature. Discover the template ID through the resource catalog rather than passing
+a filename or path.
+
+Markdown 转 XLSX 和 CSV 均通过 `template_name` 接受 XLSX 模板的 canonical ID。CSV 将生成的
+工作簿逐表导出为文本值，不携带工作簿样式。模板 ID 从资源目录发现，不传文件名或路径。
 
 Office-backed spreadsheet format conversion is best effort. XLSX→ODS does not guarantee preservation of frozen or split panes, including when the ODS is converted back to XLSX. Excel's ODS export can omit the view settings; selecting LibreOffice is not a preservation guarantee. Check important sheets in the target application and restore the required panes there. Source files are not changed.
 

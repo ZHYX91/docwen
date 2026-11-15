@@ -12,6 +12,13 @@ template_name = "Mẫu Chung Tiếng Việt"
 # Cua so chinh
 # =============================================================================
 [main_window]
+add_file = "Thêm tệp"
+start_conversion = "Bắt đầu chuyển đổi"
+cancel = "Hủy"
+close_waiting_for_tasks = "Đang hủy các tác vụ đang chạy trước khi đóng…"
+close_wait_timeout = "Một tác vụ vẫn đang dừng. DocWen sẽ tiếp tục mở cho đến khi hoàn tất dọn dẹp."
+thread_start_uncertain = "Tiến trình xử lý tác vụ đã khởi động nhưng không báo được trạng thái khởi động; đã yêu cầu hủy."
+close_cancel_failed = "Không thể yêu cầu hủy tác vụ {task_id}: {message}"
 runtime_folder_unavailable = "Không thể tạo thư mục làm việc tạm thời. Hãy kiểm tra quyền truy cập hoặc phần mềm bảo mật rồi thử lại."
 output_folder_unavailable = "Không thể dùng an toàn thư mục lưu đã chọn. Hãy kiểm tra quyền truy cập hoặc chọn thư mục khác."
 numbering_comments_unanchored = "Một số số được thêm không thể tách thành văn bản riêng theo sơ đồ này. Đã bỏ qua nhận xét tương ứng và giữ nguyên tiêu đề."
@@ -81,6 +88,7 @@ request_output = "Đầu ra: {value}"
 merge_result_summary = "{source} / {sheet} · {mode}: thêm {added}, thay thế {replaced}, bỏ qua {skipped}, kết hợp {combined}; giá trị chưa biết 0. Vị trí nguồn có trong chi tiết tác vụ."
 merge_formula_cache_missing = "Đã dừng gộp vì công thức chưa có kết quả được lưu. Hãy tính lại và lưu sổ làm việc trong phần mềm bảng tính rồi thử lại. Xem tên tệp và vị trí ô trong chi tiết lỗi."
 [common]
+type_warning = "Cảnh báo"
 action_file_count = "{action} ({count} tệp)"
 app_name = "DocWen"
 default = "Mặc định"
@@ -279,6 +287,7 @@ field_fallback = "Thiết lập ({field})"
 tab_load_failed_message = "Không thể tải {tab}\n\nLỗi: {error}"
 
 [settings.toml_editor]
+save_failed_message = "Không thể lưu cấu hình."
 config_label = "Cấu hình"
 hint = "Gợi ý: Trang này chỉnh sửa trực tiếp TOML. Cú pháp sẽ được kiểm tra trước khi lưu."
 toml_syntax_error = "Lỗi cú pháp TOML"
@@ -831,6 +840,7 @@ auto_open_folder_tooltip = "Tự động mở thư mục đầu ra và chọn t�
 # 日志设置选项卡
 # -----------------------------------------------------------------------------
 [settings.logging]
+browse_title = "Chọn thư mục nhật ký"
 # 日志系统区域
 system_section = "Hệ thống log"
 system_desc = "Bật hoặc tắt ghi nhật ký và đặt mức nhật ký."
@@ -995,6 +1005,7 @@ large = "Lon"
 
 # 文件拖拽区
 [components.file_drop]
+file_unavailable = "Tệp không khả dụng"
 inspecting = "Đang kiểm tra tệp…"
 empty_hint_single = "Kéo thả một tệp vào đây"
 empty_hint_batch = "Kéo thả tệp hoặc thư mục vào đây"
@@ -1475,6 +1486,8 @@ letter_number_desc = "Khớp: A. / A) / (A) / a. / a) kiểu đánh số chữ c
 
 # 映射编辑器
 [editors.mapping]
+save_symbol_mapping_failed = "Không thể lưu các mục ghép cặp ký hiệu."
+load_failed = "Không thể tải nguồn cấu hình có thể chỉnh sửa."
 # 对话框标题
 symbol_editor_title = "Quy tắc ghép cặp dấu"
 typo_editor_title = "Trình chỉnh sửa từ điển lỗi chính tả"
