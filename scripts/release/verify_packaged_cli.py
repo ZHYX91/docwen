@@ -2890,6 +2890,8 @@ def _run_machine_protocol_smoke_impl(
         "convert.markdown_source.to_docx",
         "convert.markdown.to_xlsx",
         "convert.docx.to_markdown",
+        "convert.html.to_markdown",
+        "convert.enex.to_markdown",
         "convert.pdf.to_markdown",
         "convert.ofd.to_markdown",
         "convert.xps.to_markdown",
