@@ -36,3 +36,22 @@ def test_product_source_does_not_import_excluded_modules() -> None:
                 if name.split(".")[0] in EXCLUDED:
                     imported.append(f"{path.relative_to(ROOT)}:{node.lineno}:{name}")
     assert imported == []
+
+
+@pytest.mark.parametrize(
+    "relative",
+    ["_internal/_tcl_data", "_internal/_tk_data", "_internal/Cython"],
+)
+def test_packaged_verifier_rejects_build_only_runtime_data(tmp_path: Path, relative: str) -> None:
+    from scripts.release.packaged_resources import verify_no_bundled_build_only_toolkits
+
+    (tmp_path / relative).mkdir(parents=True)
+    with pytest.raises(RuntimeError, match="test_unused_build_toolkits_bundled"):
+        verify_no_bundled_build_only_toolkits(tmp_path, error_prefix="test")
+
+
+def test_packaged_verifier_accepts_payload_without_build_tools(tmp_path: Path) -> None:
+    from scripts.release.packaged_resources import verify_no_bundled_build_only_toolkits
+
+    (tmp_path / "_internal").mkdir()
+    verify_no_bundled_build_only_toolkits(tmp_path, error_prefix="test")
