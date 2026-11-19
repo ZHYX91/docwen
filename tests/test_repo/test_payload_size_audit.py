@@ -22,6 +22,15 @@ def test_payload_size_report_groups_runtime_files(tmp_path: Path) -> None:
 
     report = audit_payload_size(tmp_path)
     assert report["physical_bytes"] == 15
+    assert report["ocr_model_bytes"] == 5
+    assert report["other_model_bytes"] == 0
+    assert report["non_ocr_bytes"] == 10
+    assert report["non_model_bytes"] == 10
+    assert report["top_non_ocr_groups"] == [("_internal/PySide6", 6), ("_internal/cv2", 4)]
+    assert report["largest_non_ocr_files"] == [
+        ("_internal/PySide6/QtCore.so", 6),
+        ("_internal/cv2/cv2.so", 4),
+    ]
     assert report["regular_files"] == 3
     assert report["links"] == 0
     assert report["top_groups"] == [
@@ -47,8 +56,31 @@ def test_payload_size_report_does_not_double_count_shared_models(tmp_path: Path)
 
     report = audit_payload_size(tmp_path)
     assert report["physical_bytes"] == len(b"shared-model")
+    assert report["ocr_model_bytes"] == len(b"shared-model")
+    assert report["non_ocr_bytes"] == 0
     assert report["regular_files"] == 1
     assert report["links"] == 1
+
+
+def test_payload_size_report_distinguishes_other_document_layout_models(tmp_path: Path) -> None:
+    data = {
+        "models/rapidocr/rec.onnx": b"a" * 2,
+        "_internal/rapidocr_onnxruntime/models/rec.onnx": b"a" * 2,
+        "models/rapidtable/layout_table.onnx": b"b" * 3,
+        "_internal/pymupdf/layout/resources/onnx/layout_rf2.4.1.onnx": b"c" * 4,
+        "_internal/pymupdf/layout/resources/onnx/layout_rf2.4.1.yaml": b"d" * 5,
+        "_internal/cv2/cv2.so": b"e" * 6,
+    }
+    for name, payload in data.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+    report = audit_payload_size(tmp_path)
+    assert report["physical_bytes"] == 22
+    assert report["ocr_model_bytes"] == 4
+    assert report["other_model_bytes"] == 7
+    assert report["non_ocr_bytes"] == 18
+    assert report["non_model_bytes"] == 11
 
 
 def test_payload_size_report_requires_plain_directory(tmp_path: Path) -> None:
