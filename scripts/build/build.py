@@ -1212,12 +1212,16 @@ def build_app(
             size_report = audit_payload_size(target)
             logger.info(
                 f"冻结载荷体积: {target.name}; physical_bytes={size_report['physical_bytes']}; "
+                f"non_ocr_bytes={size_report['non_ocr_bytes']}; "
+                f"non_model_bytes={size_report['non_model_bytes']}; "
+                f"ocr_model_bytes={size_report['ocr_model_bytes']}; "
+                f"other_model_bytes={size_report['other_model_bytes']}; "
                 f"regular_files={size_report['regular_files']}; links={size_report['links']}"
             )
-            for group, bytes_used in size_report["top_groups"]:
-                logger.info(f"冻结载荷体积分组: {target.name}; bytes={bytes_used}; group={group}")
-            for relative_path, bytes_used in size_report["largest_files"]:
-                logger.info(f"冻结载荷体积大文件: {target.name}; bytes={bytes_used}; path={relative_path}")
+            for group, bytes_used in size_report["top_non_ocr_groups"]:
+                logger.info(f"冻结载荷非 OCR 分组: {target.name}; bytes={bytes_used}; group={group}")
+            for relative_path, bytes_used in size_report["largest_non_ocr_files"]:
+                logger.info(f"冻结载荷非 OCR 大文件: {target.name}; bytes={bytes_used}; path={relative_path}")
 
         if cli_deploy_dir is not None and not verify_build(cli_deploy_dir, with_cli=True, with_gui=False):
             return None
