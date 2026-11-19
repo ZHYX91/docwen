@@ -59,6 +59,11 @@ except ModuleNotFoundError:  # Direct ``python scripts/build/build.py`` executio
     from payload_normalization import normalize_base_library_zip, normalize_packaged_record_files
 
 try:
+    from scripts.build.model_payload_dedup import compact_rapidocr_model_copies
+except ModuleNotFoundError:  # Direct ``python scripts/build/build.py`` execution.
+    from model_payload_dedup import compact_rapidocr_model_copies
+
+try:
     import PyInstaller.__main__ as pyinstaller_main
 except ModuleNotFoundError:
     pyinstaller_main = None
@@ -1184,6 +1189,12 @@ def build_app(
             record_result = normalize_packaged_record_files(target)
             base_library_result = normalize_base_library_zip(target)
             logger.info(f"规范化冻结载荷: {target.name}; RECORD={record_result}; base_library={base_library_result}")
+            model_result = compact_rapidocr_model_copies(target)
+            logger.info(
+                f"核对 RapidOCR 模型副本: {target.name}; "
+                f"linked={model_result['linked']}; skipped={model_result['skipped']}; "
+                f"saved_bytes={model_result['saved_bytes']}"
+            )
 
         if cli_deploy_dir is not None and not verify_build(cli_deploy_dir, with_cli=True, with_gui=False):
             return None
