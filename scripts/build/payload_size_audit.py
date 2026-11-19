@@ -9,6 +9,15 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
+from typing import TypedDict
+
+
+class PayloadSizeReport(TypedDict):
+    physical_bytes: int
+    regular_files: int
+    links: int
+    top_groups: list[tuple[str, int]]
+    largest_files: list[tuple[str, int]]
 
 
 def _size_group(relative: Path) -> str:
@@ -20,7 +29,7 @@ def _size_group(relative: Path) -> str:
     return "_internal/" + parts[1]
 
 
-def audit_payload_size(root: Path, *, max_items: int = 10) -> dict[str, object]:
+def audit_payload_size(root: Path, *, max_items: int = 10) -> PayloadSizeReport:
     """Summarize on-disk bytes without touching any payload contents."""
 
     if not root.is_dir() or root.is_symlink():
