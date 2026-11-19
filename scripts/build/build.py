@@ -64,6 +64,11 @@ except ModuleNotFoundError:  # Direct ``python scripts/build/build.py`` executio
     from model_payload_dedup import compact_rapidocr_model_copies
 
 try:
+    from scripts.build.payload_size_audit import audit_payload_size
+except ModuleNotFoundError:  # Direct ``python scripts/build/build.py`` execution.
+    from payload_size_audit import audit_payload_size
+
+try:
     import PyInstaller.__main__ as pyinstaller_main
 except ModuleNotFoundError:
     pyinstaller_main = None
@@ -1195,6 +1200,16 @@ def build_app(
                 f"linked={model_result['linked']}; skipped={model_result['skipped']}; "
                 f"saved_bytes={model_result['saved_bytes']}"
             )
+
+            size_report = audit_payload_size(target)
+            logger.info(
+                f"冻结载荷体积: {target.name}; physical_bytes={size_report['physical_bytes']}; "
+                f"regular_files={size_report['regular_files']}; links={size_report['links']}"
+            )
+            for group, bytes_used in size_report["top_groups"]:
+                logger.info(f"冻结载荷体积分组: {target.name}; bytes={bytes_used}; group={group}")
+            for relative_path, bytes_used in size_report["largest_files"]:
+                logger.info(f"冻结载荷体积大文件: {target.name}; bytes={bytes_used}; path={relative_path}")
 
         if cli_deploy_dir is not None and not verify_build(cli_deploy_dir, with_cli=True, with_gui=False):
             return None
