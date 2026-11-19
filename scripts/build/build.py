@@ -938,6 +938,14 @@ def build_app(
         "--exclude-module=telnetlib",
         "--exclude-module=nntplib",
         "--exclude-module=xmlrpc",
+        # The product uses Qt for its GUI and has no Tk desktop surface.
+        # Avoid transitively freezing Tcl/Tk into either the CLI or GUI.
+        "--exclude-module=tkinter",
+        "--exclude-module=turtle",
+        "--exclude-module=idlelib",
+        # Cython is a compiler used before bundling; both production builds
+        # ship Python modules and never compile modules in the user runtime.
+        "--exclude-module=Cython",
         "--exclude-module=PySide6.QtMultimedia",
         "--exclude-module=PySide6.QtMultimediaWidgets",
         "--exclude-module=PySide6.QtNetwork",
