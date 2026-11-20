@@ -104,7 +104,7 @@ def test_actual_html_still_requires_acceptance_when_named_markdown(tmp_path: Pat
 )
 def test_outer_document_format_is_detected(tmp_path: Path, suffix: str, content: str, expected: str) -> None:
     source = tmp_path / ("archive" + suffix)
-    source.write_text(content, encoding="utf-8")
+    source.write_bytes(content.encode("utf-8"))
     inspection = inspect_file(str(source))
     assert inspection.detected_format == expected
     assert inspection.decision == "allow"
