@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
@@ -143,6 +143,10 @@ def test_each_nonempty_field_survives_coverage_decisions(tmp_path, mode, base, c
         (True, 1),
         (" A", "A"),
         ("alpha", "beta"),
+        (time(9, 30), "09:30:00"),
+        ("09:30:00", time(9, 30)),
+        (timedelta(hours=32), "1 day, 8:00:00"),
+        ("1 day, 8:00:00", timedelta(hours=32)),
     ],
 )
 def test_distinct_identities_are_never_implicitly_deduplicated(tmp_path, mode, first, second):
@@ -152,7 +156,7 @@ def test_distinct_identities_are_never_implicitly_deduplicated(tmp_path, mode, f
     assert result.success
     records = _records(result.artifacts[0].staging_path, mode)
     assert len(records) == 3
-    assert {value_identity(row[0]) for row in records[1:]} == {value_identity(first), value_identity(second)}
+    assert {(type(row[0]), row[0]) for row in records[1:]} == {(type(first), first), (type(second), second)}
 
 
 def test_numeric_identity_does_not_round_integers_before_comparison():

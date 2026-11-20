@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 
@@ -25,6 +25,10 @@ def value_identity(value: Any, *, source_type: str | None = None) -> Any:
         return ("num", value)
     if isinstance(value, (date, datetime)):
         return ("date", value.isoformat())
+    if isinstance(value, time):
+        return ("time", value)
+    if isinstance(value, timedelta):
+        return ("duration", value)
     return ("str", str(value))
 
 
