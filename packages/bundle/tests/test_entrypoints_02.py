@@ -86,6 +86,7 @@ class TestGuiEntry:
         self,
         missing_root: str,
     ) -> None:
+        import os
         import sys
         import textwrap
 
@@ -115,12 +116,14 @@ class TestGuiEntry:
 
         completed = run_subprocess(
             [sys.executable, "-c", script, missing_root],
+            # Exercise dependency diagnostics even when another GUI owns the profile.
+            env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "DOCWEN_GUI_TEST_AUTOCLOSE_MS": "500"},
             check=False,
         )
 
         assert isinstance(completed.stdout, str)
         assert isinstance(completed.stderr, str)
-        assert completed.returncode == 4
+        assert completed.returncode == 4, completed.stderr
         assert completed.stdout == ""
         assert missing_root in completed.stderr
         assert "required dependency" in completed.stderr
