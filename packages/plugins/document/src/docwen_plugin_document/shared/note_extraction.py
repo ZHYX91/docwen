@@ -5,12 +5,13 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from typing import Any
-from zipfile import ZipFile
+from zipfile import BadZipFile, ZipFile
 
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from lxml import etree
 
 from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_bookmark_name
+from docwen_core.docx_package_parts import DocxPackageParts, DocxPartError
 from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig, StyleDetectorConfig
 from docwen_core.docx_parsing.xml_ns import NS_W
 from docwen_plugin_document.shared.markdown_runs import (
@@ -40,6 +41,7 @@ def _extract_notes_with_status(
     ref_tag = note_tag.rstrip("s") + "Ref"
 
     elem = None
+    hyperlink_targets: dict[str, str] = {}
     source_part = f"word/{part_name}.xml"
     package_part_failed = False
     try:
@@ -59,11 +61,14 @@ def _extract_notes_with_status(
             elem = getattr(part, "element", None)
             if elem is None:
                 elem = etree.fromstring(part.blob)
+            hyperlink_targets = {
+                rel.rId: rel.target_ref for rel in part.rels.values() if rel.is_external and rel.reltype == RT.HYPERLINK
+            }
     except Exception:
         package_part_failed = True
 
     if elem is None and docx_path:
-        elem, zip_part_failed = _load_notes_elem_from_zip(docx_path, part_name)
+        elem, hyperlink_targets, zip_part_failed = _load_notes_elem_from_zip(docx_path, part_name)
         if elem is not None:
             source_part = f"word/{part_name}.xml"
             package_part_failed = False
@@ -89,6 +94,7 @@ def _extract_notes_with_status(
             syntax_config=syntax_config,
             style_detector_config=style_detector_config,
             style_parent=doc,
+            hyperlink_targets=hyperlink_targets,
             math_renderer=math_renderer,
             source_part=source_part,
         )
@@ -109,17 +115,27 @@ def _extract_notes_with_status(
     return notes, False
 
 
-def _load_notes_elem_from_zip(docx_path: str, part_name: str) -> tuple[Any | None, bool]:
+def _load_notes_elem_from_zip(docx_path: str, part_name: str) -> tuple[Any | None, dict[str, str], bool]:
     """Load one notes element and report whether a present part was unreadable."""
     target = f"word/{part_name}.xml"
     try:
         with ZipFile(docx_path, "r") as zf:
             if target not in zf.namelist():
-                return None, False
-            data = zf.read(target)
-        return etree.fromstring(data), False
+                return None, {}, False
+            elem = etree.fromstring(zf.read(target))
+            try:
+                relationships = DocxPackageParts.from_package(zf).relationships(target)
+            except (BadZipFile, DocxPartError, OSError, RuntimeError):
+                # Retain readable note text if its relationships are ambiguous.
+                return elem, {}, False
+            targets = {
+                rel.get("Id", ""): rel.get("Target", "")
+                for rel in relationships
+                if rel.get("Type") == RT.HYPERLINK and rel.get("TargetMode") == "External" and rel.get("Target")
+            }
+            return elem, targets, False
     except Exception:
-        return None, True
+        return None, {}, True
 
 
 def _is_system_note(elem, w_ns: str) -> bool:
@@ -136,6 +152,7 @@ def _extract_note_content(
     syntax_config: DocxMarkdownSyntaxConfig | None = None,
     style_detector_config: StyleDetectorConfig | None = None,
     style_parent: Any = None,
+    hyperlink_targets: dict[str, str] | None = None,
     math_renderer: Callable[[Any, str], str] | None = None,
     source_part: str | None = None,
 ) -> str:
@@ -155,17 +172,21 @@ def _extract_note_content(
         if tag != "p":
             continue
         # Keep the original XML attached to its part, so formula diagnostics
-        # retain their exact occurrence path. Suppress only the native marker
-        # and its adjacent writer-owned separator through the shared walker.
+        # retain their exact occurrence path. The renderer skips the native
+        # marker itself; only its adjacent writer-owned separator needs a span.
         marker_spans: dict[Any, tuple[Any, str]] = {}
         for run in child.iter(f"{{{w_ns}}}r"):
             if any(ancestor.tag in {f"{{{w_ns}}}del", f"{{{w_ns}}}moveFrom"} for ancestor in run.iterancestors()):
                 continue
             if _run_is_hidden(run, style_parent):
                 continue
-            if run.find(f"{{{w_ns}}}{ref_tag}") is None:
+            marker = run.find(f"{{{w_ns}}}{ref_tag}")
+            if marker is None:
                 continue
-            marker_spans[run] = (run, "")
+            # The renderer already ignores the native marker. Only a marker at
+            # the end of its run can own the next run's writer-added space.
+            if marker.getnext() is not None:
+                continue
             separator = run.getnext()
             if (
                 separator is not None
@@ -179,6 +200,7 @@ def _extract_note_content(
             syntax_config=syntax_config or DocxMarkdownSyntaxConfig(),
             style_detector_config=style_detector_config,
             style_parent=style_parent,
+            hyperlink_targets=hyperlink_targets,
             math_renderer=render_math,
             reference_spans=marker_spans,
         )
