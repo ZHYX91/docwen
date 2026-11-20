@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from docwen_core.detection import inspect_file
+
 from ._input_routes_support import _run_request, _test_png_bytes
 from ._input_routes_support import pipeline as pipeline
 
@@ -37,6 +39,18 @@ def _convert(pipeline, tmp_path: Path, source: Path, **options):
 def _markdown(result) -> str:
     assert result.success, result.error
     return Path(next(item.staging_path for item in result.artifacts if item.is_primary)).read_text(encoding="utf-8")
+
+
+def test_single_part_encoded_archive_reaches_markdown(pipeline, tmp_path: Path) -> None:
+    source = tmp_path / "saved-page.mhtml"
+    archive = MIMEText("<html><body><h1>Archived page</h1><p>Café</p></body></html>", "html", "utf-8")
+    source.write_bytes(archive.as_bytes())
+    inspection = inspect_file(str(source))
+    assert inspection.decision == "allow"
+    assert inspection.detected_format == "mhtml"
+    markdown = _markdown(_convert(pipeline, tmp_path, source))
+    assert "Archived page" in markdown
+    assert "Café" in markdown
 
 
 @pytest.mark.parametrize("absolute", [False, True], ids=["synthetic-base", "absolute-base"])

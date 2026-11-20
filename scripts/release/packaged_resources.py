@@ -202,8 +202,22 @@ def verify_no_bundled_qt_network_stack(binary_dir: Path, *, error_prefix: str) -
         raise RuntimeError(f"{error_prefix}_forbidden_qt_network_stack: {sorted(forbidden)}")
 
 
+def verify_no_bundled_build_only_toolkits(binary_dir: Path, *, error_prefix: str) -> None:
+    """Require frozen products to exclude the Tk toolkit and Cython compiler."""
+
+    unused_roots = ("_internal/_tcl_data", "_internal/_tk_data", "_internal/Cython")
+    present = [
+        relative
+        for relative in unused_roots
+        if (binary_dir / relative).exists() or (binary_dir / relative).is_symlink()
+    ]
+    if present:
+        raise RuntimeError(f"{error_prefix}_unused_build_toolkits_bundled: {present}")
+
+
 def verify_common_resource_layout(binary_dir: Path, *, error_prefix: str) -> None:
     verify_no_bundled_qt_network_stack(binary_dir, error_prefix=error_prefix)
+    verify_no_bundled_build_only_toolkits(binary_dir, error_prefix=error_prefix)
 
     missing_dirs = [name for name in RESOURCE_DIRS if not (binary_dir / name).is_dir()]
     if missing_dirs:

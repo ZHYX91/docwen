@@ -137,6 +137,19 @@ def test_semicolon_content_uses_same_two_column_fact_at_final_output(
     ) == expected
 
 
+@pytest.mark.parametrize(("suffix", "delimiter"), [("csv", ","), ("csv", ";"), ("tsv", "\t")])
+def test_cr_records_preserve_columns_and_quoted_carriage_returns_in_xlsx(
+    tmp_path: Path, round_trip_runtime: Any, suffix: str, delimiter: str
+) -> None:
+    source = tmp_path / f"records.{suffix}"
+    expected = [["Name", "Note"], ["Alice", "line 1\rline 2"], ["Bob", "001"]]
+    with source.open("w", encoding="utf-8", newline="") as stream:
+        csv.writer(stream, delimiter=delimiter, lineterminator="\r").writerows(expected)
+    output = tmp_path / "published"
+    _, bundle = _publish(round_trip_runtime, source, output, "xlsx")
+    assert _saved_values(_primary(bundle, output)) == expected
+
+
 @pytest.mark.parametrize("target", ["xlsx", "md"])
 def test_delimiter_fact_survives_full_file_utf8_to_gbk_retry(
     tmp_path: Path, round_trip_runtime: Any, target: str
