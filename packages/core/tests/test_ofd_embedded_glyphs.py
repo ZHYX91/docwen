@@ -29,14 +29,14 @@ def _assert_triangle(outline):
 
 def test_truetype_subset_without_cmap_uses_declared_glyph_index(caplog):
     builder = FontBuilder(1000)
+    builder.setupHead(created=0, modified=0)
+    builder.font.recalcTimestamp = False
     builder.setupGlyphOrder([".notdef", "triangle"])
     pen = TTGlyphPen(None)
     _triangle(pen)
     builder.setupGlyf({".notdef": TTGlyphPen(None).glyph(), "triangle": pen.glyph()})
     builder.setupHorizontalMetrics({".notdef": (500, 0), "triangle": (500, 0)})
     builder.setupHorizontalHeader(ascent=800, descent=-200)
-    builder.font.recalcTimestamp = False
-    builder.font["head"].created = builder.font["head"].modified = 0
     buffer = BytesIO()
     builder.save(buffer)
 
