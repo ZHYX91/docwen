@@ -529,7 +529,9 @@ def sniff_delimited_separator(text: str) -> str | None:
     Single neutral records have no generic delimiter fact; callers retain the
     separately validated declared comma/tab contract for those records.
     """
-    sample = text[:_DELIMITED_SNIFF_SIZE]
+    # csv.Sniffer counts physical lines using LF. Normalize its bounded
+    # sample only; the conversion readers preserve embedded field newlines.
+    sample = text[:_DELIMITED_SNIFF_SIZE].replace("\r\n", "\n").replace("\r", "\n")
     try:
         dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
         reader = csv.reader(io.StringIO(sample), dialect)
@@ -618,7 +620,9 @@ def matches_single_column_declaration(file_path: str, declared_format: str) -> b
     if not text:
         return False
     try:
-        rows = csv.reader(io.StringIO(text), delimiter="," if declared_format == "csv" else "\t", strict=True)
+        rows = csv.reader(
+            io.StringIO(text, newline=""), delimiter="," if declared_format == "csv" else "\t", strict=True
+        )
         found = False
         for row in rows:
             if not row:
