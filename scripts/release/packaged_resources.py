@@ -207,7 +207,8 @@ def verify_no_bundled_build_only_toolkits(binary_dir: Path, *, error_prefix: str
 
     unused_roots = ("_internal/_tcl_data", "_internal/_tk_data", "_internal/Cython")
     present = [
-        relative for relative in unused_roots
+        relative
+        for relative in unused_roots
         if (binary_dir / relative).exists() or (binary_dir / relative).is_symlink()
     ]
     if present:

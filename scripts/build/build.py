@@ -612,6 +612,40 @@ def copytree_robust(src: Path, dst: Path) -> None:
             shutil.copy2(src_root / f, dst_root / f)
 
 
+def copy_frozen_runtime(src: Path, dst: Path) -> None:
+    """Merge a PyInstaller runtime, preserving relative library links on POSIX."""
+    if IS_WINDOWS:
+        copytree_robust(src, dst)
+        return
+
+    root = src.resolve(strict=True)
+    if src.is_symlink() or dst.is_symlink():
+        raise ValueError("frozen runtime roots must be plain directories")
+
+    def merge_directory(source: Path, destination: Path) -> None:
+        destination.mkdir(parents=True, exist_ok=True)
+        for entry in source.iterdir():
+            target = destination / entry.name
+            if entry.is_symlink():
+                link = entry.readlink()
+                if link.is_absolute() or not entry.resolve(strict=True).is_relative_to(root):
+                    raise ValueError(f"invalid frozen runtime link: {entry.relative_to(src)}")
+                target.unlink(missing_ok=True)
+                target.symlink_to(link)
+            else:
+                # A GUI alias at this name must not redirect a CLI file write.
+                if target.is_symlink():
+                    target.unlink()
+                if entry.is_dir():
+                    merge_directory(entry, target)
+                else:
+                    shutil.copyfile(entry, target)
+                    shutil.copystat(entry, target)
+        shutil.copystat(source, destination)
+
+    merge_directory(src, dst)
+
+
 def compile_cython_modules() -> bool:
     """
     编译 Cython 模块
@@ -1113,7 +1147,7 @@ def build_app(
             src_internal = cli_output_dir / "_internal"
             dst_internal = deploy_dir / "_internal"
             if src_internal.exists():
-                copytree_robust(src_internal, dst_internal)
+                copy_frozen_runtime(src_internal, dst_internal)
 
         # 补充复制资源文件
         resource_mappings = [

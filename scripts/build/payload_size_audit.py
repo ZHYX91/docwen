@@ -34,9 +34,7 @@ def _model_kind(relative: Path) -> str | None:
         return None
     if name.startswith(("models/rapidocr/", "_internal/rapidocr_onnxruntime/models/")):
         return "ocr"
-    if name.startswith(("models/rapidtable/", "_internal/pymupdf/layout/resources/onnx/")):
-        return "other"
-    return None
+    return "other"
 
 
 def _size_group(relative: Path) -> str:
