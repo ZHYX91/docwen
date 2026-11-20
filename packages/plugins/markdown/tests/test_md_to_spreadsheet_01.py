@@ -35,7 +35,7 @@ def test_template_free_breaks_are_wrapped_only_for_authored_html_breaks() -> Non
     assert result.success, result.error
     workbook = load_workbook(result.artifacts[0].staging_path)
     try:
-        row = workbook.active[2]
+        row = workbook.worksheets[0][2]
         assert [cell.value for cell in row] == ["one\ntwo\nthree", "`<br>`", "<br>"]
         assert row[0].alignment.wrap_text is True
         assert not row[1].alignment.wrap_text

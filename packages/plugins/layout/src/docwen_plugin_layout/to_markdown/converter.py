@@ -19,12 +19,13 @@ import os
 import re
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from docwen_core.detection import detect_content_format
 from docwen_core.errors import CancellationRequested
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.formats import get_category, get_media_type
+from docwen_core.markdown_utils import sanitize_for_wiki_link
 from docwen_core.paths import input_stem
 from docwen_core.text.ocr import (
     OcrOutcome,
@@ -67,16 +68,19 @@ def _extract_page_markdown(
         # The layout writer uses its Markdown-escaped URL as the filesystem path.
         # Keep the typed picture bytes until DocWen has chosen both destinations.
         from pymupdf4llm.helpers.document_layout import parse_document
+        from pymupdf4llm.ocr import OCRMode
 
-        parsed = parse_document(document, pages=[page_index], embed_images=True, force_text=True, use_ocr=False)
+        parsed = parse_document(document, pages=[page_index], embed_images=True, force_text=True, use_ocr=OCRMode.NEVER)
+        source_name = sanitize_for_wiki_link(Path(document.name or "page").name)
         for page in parsed.pages:
             for index, box in enumerate(page.boxes):
                 if isinstance(box.image, bytes):
-                    filename = f"{Path(document.name or 'page').name}-{page_index + 1:04d}-{index:02d}.png"
+                    filename = f"{source_name}-{page_index + 1:04d}-{index:02d}.png"
                     target = image_directory / filename
                     target.write_bytes(box.image)
-                    box.image = f"<{filename}>"
-        return parsed.to_markdown()
+                    # LayoutBox also accepts a Markdown target, as its own write_images mode does.
+                    box.image = f"<{filename}>"  # pyright: ignore[reportAttributeAccessIssue]
+        return cast(str, parsed.to_markdown(page_chunks=False))
 
     return renderer.to_markdown(
         document,
@@ -236,7 +240,7 @@ def _rename_preprocessed_image_refs(
 ) -> tuple[str, list[Path]]:
     """Replace an internal preprocessed-PDF prefix with the source filename."""
     effective_name = Path(effective_input_path).name
-    original_name = Path(original_input_path).name
+    original_name = sanitize_for_wiki_link(Path(original_input_path).name)
     if effective_name == original_name:
         return md_text, image_files
 
