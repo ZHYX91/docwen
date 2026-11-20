@@ -243,10 +243,11 @@ def test_run_ocr_auto_locale_selects_expected_language_model(
 
 
 def test_run_ocr_real_japanese_smoke_uses_selected_language_model(tmp_path: Path) -> None:
-    pytest.importorskip("rapidocr_onnxruntime")
     from PIL import Image, ImageDraw, ImageFont
 
     import docwen_core.text.ocr as ocr
+
+    pytest.importorskip("rapidocr_onnxruntime")
 
     font_path = _first_existing_font(
         (
@@ -263,7 +264,8 @@ def test_run_ocr_real_japanese_smoke_uses_selected_language_model(tmp_path: Path
     image = Image.new("RGB", (1000, 260), "white")
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype(str(font_path), 82)
-    draw.text((40, 80), "日本語 OCR", fill="black", font=font)
+    sample = "日本語のテスト"
+    draw.text((40, 80), sample, fill="black", font=font)
     image_path = tmp_path / "japanese_ocr.png"
     image.save(image_path)
 
@@ -279,14 +281,15 @@ def test_run_ocr_real_japanese_smoke_uses_selected_language_model(tmp_path: Path
         ocr.reset_ocr()
 
     assert outcome.status is ocr.OcrStatus.SUCCESS
-    assert outcome.text == "日本語 OCR"
+    assert outcome.text == sample
 
 
 def test_run_ocr_real_english_degraded_scan_smoke(tmp_path: Path) -> None:
-    pytest.importorskip("rapidocr_onnxruntime")
     from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
     import docwen_core.text.ocr as ocr
+
+    pytest.importorskip("rapidocr_onnxruntime")
 
     font_path = _first_existing_font(
         (
@@ -330,10 +333,11 @@ def test_run_ocr_real_english_degraded_scan_smoke(tmp_path: Path) -> None:
 
 
 def test_run_ocr_real_additional_language_token_smoke(tmp_path: Path) -> None:
-    pytest.importorskip("rapidocr_onnxruntime")
     from PIL import Image, ImageDraw, ImageFont
 
     import docwen_core.text.ocr as ocr
+
+    pytest.importorskip("rapidocr_onnxruntime")
 
     cases = (
         (
@@ -344,6 +348,8 @@ def test_run_ocr_real_additional_language_token_smoke(tmp_path: Path) -> None:
             (
                 r"C:\Windows\Fonts\malgunbd.ttf",
                 r"C:\Windows\Fonts\malgun.ttf",
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
                 "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
                 "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
                 "/System/Library/Fonts/AppleSDGothicNeo.ttc",
