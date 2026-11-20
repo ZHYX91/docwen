@@ -408,7 +408,7 @@ def convert_docx_to_md_gongwen(
     from docwen_plugin_optimizer_gongwen.recognition.signals import collect_structured_signals
 
     confidence = get_confidence_summary(result)
-    structured_signals = collect_structured_signals(result, scorer, features)
+    structured_signals = collect_structured_signals(result, features)
 
     if progress:
         progress.report_progress(100.0, "Gongwen conversion complete")

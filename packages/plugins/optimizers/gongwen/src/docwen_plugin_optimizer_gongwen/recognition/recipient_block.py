@@ -16,14 +16,47 @@ _COLLECTIVE_ADDRESS = re.compile(
     r"(?:各|[省市县区]直各)[\u3400-\u9fff、，,；;（）()\s]*"
     r"(?:人民政府|委员会|办公室|单位|部门|企业|学校|院校|公司|局|厅|部|院|校|中心|集团|协会)[、，,；;]$"
 )
+_RECIPIENT_LABEL = re.compile(r"^主送机关\s*[：:]")
+_RECIPIENT_NAME = re.compile(r"[\u3400-\u9fff][\u3400-\u9fffA-Za-z0-9、，,；;（）()\s]*")
+_RECIPIENT_SUFFIX = re.compile(
+    r"(?:政府|委员会|办公室|单位|部门|企业|学校|公司|集团|协会|学会|研究所|事务所|银行|"
+    r"社区|组织|总队|支队|各地|局|厅|部|院|校|中心|委|办|组|室|司|署|处|科|省|市|县|区|州|盟|旗)$"
+)
+_RECIPIENT_PROSE = re.compile(
+    r"^(?:现将|现就|根据|按照|请各)|(?:如下|下列)$|"
+    r"(?:单位|部门|机关)(?:应(?!急)|须|将|已|由|现请)"
+)
 _PROSE_CONTENT = re.compile(
     r"负责|联系|办理|承办|通知|要求|规定|会议|(?:单位|部门|机关|工作)(?:应|须|要|将|已|由|为|现|请)"
 )
 
 
-def _clear_continuation(text: str) -> bool:
-    if _COLLECTIVE_ADDRESS.fullmatch(text) is None or _PROSE_CONTENT.search(text):
+def is_recipient_address(text: str) -> bool:
+    """Accept an explicit label or an agency expression ending in a colon."""
+    text = text.strip()
+    label = _RECIPIENT_LABEL.match(text)
+    if label is not None:
+        return bool(text[label.end() :].strip().strip("：:").strip())
+    if not text.endswith(("：", ":")):
         return False
+    address = text[:-1].rstrip()
+    return (
+        _RECIPIENT_NAME.fullmatch(address) is not None
+        and _RECIPIENT_SUFFIX.search(address.rstrip("）) ")) is not None
+        and _RECIPIENT_PROSE.search(address) is None
+        and _balanced_brackets(address)
+    )
+
+
+def _clear_continuation(text: str) -> bool:
+    return (
+        _COLLECTIVE_ADDRESS.fullmatch(text) is not None
+        and _PROSE_CONTENT.search(text) is None
+        and _balanced_brackets(text)
+    )
+
+
+def _balanced_brackets(text: str) -> bool:
     brackets: list[str] = []
     for character in text:
         if character in "（(":

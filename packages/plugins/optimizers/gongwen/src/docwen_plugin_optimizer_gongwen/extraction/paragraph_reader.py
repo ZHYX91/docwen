@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -18,6 +19,7 @@ from docwen_core.docx_parsing.textbox_extraction import (
     extract_textbox_paragraphs,
 )
 from docwen_core.text.heading_numbering import detect_heading_prefix
+from docwen_plugin_optimizer_gongwen.constants import RE_MEETING_NUMBER
 from docwen_plugin_optimizer_gongwen.extraction.format_features import (
     extract_alignment,
     extract_font_info,
@@ -183,7 +185,7 @@ def read_paragraphs(
 
         # ── Heading clean-text: display text vs raw text ──
         raw_text = text.strip()
-        display_text = cleaned_text if heading_lvl > 0 else raw_text
+        display_text = cleaned_text.strip() if heading_lvl > 0 or list_marker else raw_text
         heading_body_boundary, heading_body_boundary_source = _detect_mixed_heading_body_boundary(
             para if para.text == text else None,
             display_text,
@@ -286,19 +288,29 @@ def _detect_paragraph_structure(
     # leading copy ID as an Arabic-space Heading prefix. Incomplete candidates
     # retain that same source for the precise preservation diagnostic; they do
     # not become headings merely because a configured rule matches the ID.
-    if parse_combined_id(text) is not None or looks_like_combined_id(text):
+    if RE_MEETING_NUMBER.fullmatch(text.strip()) or parse_combined_id(text) is not None or looks_like_combined_id(text):
         return text, 0, "", "", 0
+
+    style_map = {"Heading 1": 1, "Heading 2": 2, "Heading 3": 3, "Heading 4": 4, "Heading 5": 5}
+    heading_level = style_map.get(style_name, 0)
 
     # Pass 1: Shared heading numbering detection
     info = detect_heading_prefix(text, rules=cleanup_rules)
     # A prefix that consumes the whole paragraph (for example a pure numeric
     # 份号 such as ``001``) is metadata, not an empty heading.
-    if info is not None and info.clean_text.strip():
-        return info.clean_text.strip(), info.numbering_level, info.prefix, "", 0
+    if info is not None and (content := info.clean_text.strip()):
+        # A typed decimal marker on a prose sentence can be a decision list.
+        # Keep the sentence intact unless Word marks the paragraph as a heading.
+        if (
+            info.rule_id == "arabic_separator"
+            and re.fullmatch(r"[0-9]{1,9}\.", info.prefix)
+            and content.endswith(("。", "；", "！", "？"))
+            and not heading_level
+            and (para is None or extract_outline_level(para) not in range(9))
+        ):
+            return content, 0, "", info.prefix, 0
+        return content, info.numbering_level, info.prefix, "", 0
 
-    # Pass 2: Word style
-    style_map = {"Heading 1": 1, "Heading 2": 2, "Heading 3": 3, "Heading 4": 4, "Heading 5": 5}
-    heading_level = style_map.get(style_name, 0)
     heading_num = ""
     list_marker = ""
     list_level = 0

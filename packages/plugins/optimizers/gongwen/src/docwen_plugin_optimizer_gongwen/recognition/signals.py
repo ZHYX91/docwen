@@ -4,6 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from docwen_plugin_optimizer_gongwen.constants import (
+    NON_UNIQUE_SCORE_THRESHOLD,
+    ROUND1_ELEMENTS,
+    ROUND2_ELEMENTS,
+    ROUND3_ELEMENTS,
+    UNIQUE_SCORE_THRESHOLD,
+)
 from docwen_plugin_optimizer_gongwen.models import RecognitionResult
 
 if TYPE_CHECKING:
@@ -11,11 +18,15 @@ if TYPE_CHECKING:
 
 # ── Constants ──
 CLOSE_UNIQUE_MATCH_GAP_THRESHOLD = 20
+_ROUND_DETAILS = {
+    **dict.fromkeys(ROUND1_ELEMENTS, (1, UNIQUE_SCORE_THRESHOLD)),
+    **dict.fromkeys(ROUND2_ELEMENTS, (2, UNIQUE_SCORE_THRESHOLD)),
+    **dict.fromkeys(ROUND3_ELEMENTS, (3, NON_UNIQUE_SCORE_THRESHOLD)),
+}
 
 
 def collect_structured_signals(
     result: RecognitionResult,
-    scorer,  # ElementScorer for context queries
     features: list[ParagraphFeature],
 ) -> dict:
     """Collect structured review signals from recognition result.
@@ -37,40 +48,26 @@ def collect_structured_signals(
         "needs_review_reasons": [],
     }
 
-    # --- Detect close unique matches (score gap <= 20) ---
+    # Use the context and alternatives at assignment time. A second score
+    # after all rounds would include field positions unavailable at that point.
     for idx, candidate in result.candidates.items():
-        # Re-score to get all candidates trace
-        pf = features[idx] if idx < len(features) else None
-        if pf is None:
-            continue
-        all_cands = scorer.score_round(pf, round_group="round1")
-        if len(all_cands) >= 2:
-            gap = all_cands[0].score - all_cands[1].score
-            if gap <= CLOSE_UNIQUE_MATCH_GAP_THRESHOLD:
-                signals["close_unique_matches"].append(
-                    {
-                        "paragraph_index": idx,
-                        "element": candidate.element_type,
-                        "round": 1,
-                        "score": all_cands[0].score,
-                        "runner_up_element": all_cands[1].element_type,
-                        "runner_up_score": all_cands[1].score,
-                        "score_gap": gap,
-                    }
-                )
-
-    # --- Detect low confidence passes ---
-    for idx, candidate in result.candidates.items():
-        if candidate.confidence == "low":
-            signals["low_confidence_passes"].append(
+        round_number, threshold = _ROUND_DETAILS[candidate.element_type]
+        details = {"paragraph_index": idx, "element": candidate.element_type, "round": round_number}
+        runner_up = candidate.runner_up
+        if runner_up is not None and candidate.score - runner_up.score <= CLOSE_UNIQUE_MATCH_GAP_THRESHOLD:
+            signals["close_unique_matches"].append(
                 {
-                    "paragraph_index": idx,
-                    "element": candidate.element_type,
-                    "round": 1,
+                    **details,
                     "score": candidate.score,
-                    "threshold": 80,
+                    "runner_up_element": runner_up.element_type,
+                    "runner_up_score": runner_up.score,
+                    "score_gap": candidate.score - runner_up.score,
                 }
             )
+        if "default_body" in candidate.trace:
+            signals["used_fallback"].append({**details, "reason": "default_body"})
+        elif candidate.confidence == "low":
+            signals["low_confidence_passes"].append({**details, "score": candidate.score, "threshold": threshold})
 
     # --- Build needs_review_reasons ---
     if signals["close_unique_matches"]:
