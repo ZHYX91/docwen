@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from openpyxl import load_workbook
+
 from ._md_to_spreadsheet_support import (
     LinkRuntimeConfig,
     MdToCsvConverter,
@@ -19,6 +21,26 @@ from ._md_to_spreadsheet_support import (
 @pytest.mark.contract
 def test_required_range_boundaries_returns_complete_integer_geometry() -> None:
     assert _required_range_boundaries("B3:D7") == (2, 3, 4, 7)
+
+
+@pytest.mark.contract
+def test_template_free_breaks_are_wrapped_only_for_authored_html_breaks() -> None:
+    source = write_temp_md(
+        "| Multi | Code | Literal |\n| --- | --- | --- |\n"
+        r"| one<BR>two<br/>three | `<br>` | \<br\> |"
+        "\n"
+    )
+    context, _ = make_context(source, target_format="xlsx")
+    result = MdToXlsxConverter().convert(context)
+    assert result.success, result.error
+    workbook = load_workbook(result.artifacts[0].staging_path)
+    try:
+        row = workbook.active[2]
+        assert [cell.value for cell in row] == ["one\ntwo\nthree", "`<br>`", "<br>"]
+        assert row[0].alignment.wrap_text is True
+        assert not row[1].alignment.wrap_text
+    finally:
+        workbook.close()
 
 
 @pytest.mark.contract

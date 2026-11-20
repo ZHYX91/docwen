@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from PIL import Image
 
 from docwen_core.export_semantics import MarkdownExportSemantics
 from docwen_plugin_layout.to_markdown.converter import (
+    _extract_page_markdown,
     _referenced_extracted_images,
     _rewrite_extracted_image_refs,
 )
@@ -18,6 +20,28 @@ def _write_png(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with Image.new("RGB", (2, 2), (1, 2, 3)) as image:
         image.save(path, format="PNG")
+
+
+def test_layout_picture_bytes_keep_physical_path_independent_of_markdown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    renderer = pytest.importorskip("pymupdf4llm")
+    from pymupdf4llm.helpers import document_layout
+
+    directory = tmp_path / "folder with spaces [and brackets]"
+    directory.mkdir()
+    source = tmp_path / "original.png"
+    _write_png(source)
+    box = SimpleNamespace(image=source.read_bytes())
+    page = SimpleNamespace(boxes=[box])
+    parsed = SimpleNamespace(pages=[page], to_markdown=lambda: f"![]({box.image})")
+    monkeypatch.setattr(renderer, "_use_layout", True)
+    monkeypatch.setattr(document_layout, "parse_document", lambda *args, **kwargs: parsed)
+
+    markdown = _extract_page_markdown(renderer, SimpleNamespace(name="input file.pdf"), 2, directory)
+    (image_file,) = directory.iterdir()
+    assert image_file.read_bytes() == source.read_bytes()
+    assert markdown == f"![](<{image_file.name}>)"
 
 
 def test_bare_generated_image_name_is_rewritten_to_the_requested_link_style(tmp_path: Path) -> None:
