@@ -13,6 +13,8 @@ from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning, ocr_diagnostic_code
 
 if TYPE_CHECKING:
+    from fitz import Page
+
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import ConverterContext
 
@@ -113,8 +115,8 @@ class InvoiceCnConverter:
         ocr_language = str(options.get("ocr_language") or "auto")
         current_locale = str(options.get("locale") or "zh_CN")
         ocr_succeeded = False
-        page_count = 0
-        scan_pages: list[int] = []  # Track scan-detected pages for diagnostics
+        scan_pages: list[int] = []
+        ocr_pages: list[int] = []
 
         # ── Image source — requires OCR ───────────────────────────────
         if source_format in ("jpg", "jpeg", "png", "gif", "bmp", "tif", "tiff", "webp", "heic", "heif"):
@@ -150,40 +152,22 @@ class InvoiceCnConverter:
                 context.progress.report_progress(20.0, "Extracting PDF invoice text and spans")
 
                 from docwen_plugin_optimizer_invoice_cn.invoice_cn.pdf_parser import (
-                    get_pdf_page_count,
-                    is_scanpage,
-                    read_pdf_text_and_spans_single_page,
-                    render_pdf_page_to_png,
+                    parse_pdf_invoice,
+                    render_invoice_page,
                 )
 
-                # ── Scan-page detection (outside OCR gate) ───────────────
-                page_count = get_pdf_page_count(input_path)
-                scan_pages.clear()
-                for page_idx in range(page_count):
-                    try:
-                        page_text, _ = read_pdf_text_and_spans_single_page(input_path, page_idx)
-                    except Exception:
-                        page_text = ""
-                    if is_scanpage(page_text):
-                        scan_pages.append(page_idx)
-
-                # ── OCR fallback for scan pages ──────────────────────────
-                if scan_pages and enable_ocr:
-                    context.progress.report_progress(
-                        25.0,
-                        "Scan-based PDF page detected — rendering to PNG for OCR",
-                    )
-                    from pathlib import Path as _Path
-
+                def scan_page(
+                    page: Page, page_number: int, location: str
+                ) -> tuple[dict[str, str | None], list[dict[str, str]]] | None:
+                    scan_pages.append(page_number)
+                    if not enable_ocr:
+                        return None
+                    context.progress.report_progress(25.0, f"Running OCR on PDF page {page_number}")
                     try:
                         with TemporaryDirectory() as tmpdir:
-                            png_path = str(_Path(tmpdir) / "__page_0.png")
-                            render_pdf_page_to_png(
-                                file_path=input_path,
-                                page_index=scan_pages[0],
-                                png_path=png_path,
-                            )
-                            metadata, rows, outcome = _ocr_and_parse_image_invoice(
+                            png_path = str(Path(tmpdir) / "page.png")
+                            render_invoice_page(page, png_path)
+                            page_metadata, page_rows, outcome = _ocr_and_parse_image_invoice(
                                 png_path,
                                 source_format="png",
                                 ocr_language=ocr_language,
@@ -191,38 +175,20 @@ class InvoiceCnConverter:
                             )
                     except Exception as exc:
                         outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
+                        page_metadata, page_rows = {}, []
+                    _report_ocr_best_effort(context, outcome, location=location)
+                    if outcome.status is OcrStatus.SUCCESS:
+                        ocr_pages.append(page_number)
+                        return page_metadata, page_rows
+                    return None
 
-                    if outcome.status is not OcrStatus.SUCCESS:
-                        from docwen_plugin_optimizer_invoice_cn.invoice_cn.pdf_parser import (
-                            parse_pdf_invoice,
-                        )
-
-                        metadata, rows = parse_pdf_invoice(input_path, diagnostic_sink=context.progress)
-                    _report_ocr_best_effort(
-                        context,
-                        outcome,
-                        location=f"{Path(input_path).name}:page-{scan_pages[0] + 1}",
-                    )
-                    ocr_succeeded = outcome.status is OcrStatus.SUCCESS
-
-                elif scan_pages and not enable_ocr:
-                    # Warn about scan pages but still parse as-is
-                    context.progress.report_progress(
-                        25.0,
-                        "Scan page(s) detected but OCR is disabled — parsing available text",
-                    )
-
-                    from docwen_plugin_optimizer_invoice_cn.invoice_cn.pdf_parser import (
-                        parse_pdf_invoice,
-                    )
-
-                    metadata, rows = parse_pdf_invoice(input_path, diagnostic_sink=context.progress)
-                else:
-                    from docwen_plugin_optimizer_invoice_cn.invoice_cn.pdf_parser import (
-                        parse_pdf_invoice,
-                    )
-
-                    metadata, rows = parse_pdf_invoice(input_path, diagnostic_sink=context.progress)
+                metadata, rows = parse_pdf_invoice(
+                    input_path,
+                    diagnostic_sink=context.progress,
+                    on_scan_page=scan_page,
+                    check_cancelled=context.cancellation.check,
+                )
+                ocr_succeeded = bool(ocr_pages)
 
             elif source_format == "ofd":
                 context.progress.report_progress(20.0, "Extracting OFD invoice data")
@@ -264,7 +230,7 @@ class InvoiceCnConverter:
                     rows,
                     sink=context.progress,
                     location=f"{presentation_stem}.{source_format}",
-                    ocr=ocr_succeeded,
+                    ocr=ocr_succeeded and source_format != "pdf",
                 )
 
             # ── Build YAML frontmatter ───────────────────────────────
@@ -320,21 +286,20 @@ class InvoiceCnConverter:
                 diagnostics.append(
                     ConversionDiagnostic(
                         level="info",
-                        message="OCR-based invoice conversion",
+                        message=(
+                            f"OCR recovered content from PDF pages {ocr_pages}."
+                            if ocr_pages
+                            else "OCR-based invoice conversion"
+                        ),
                         code="INVOICE-OCR-OK",
                     )
                 )
 
             if scan_pages:
-                page_numbers = [page_index + 1 for page_index in scan_pages]
                 if enable_ocr:
-                    scan_message = (
-                        f"Scan-based pages detected: {page_numbers}. OCR attempted on page {page_numbers[0]}."
-                    )
-                    if ocr_succeeded and page_count > 1:
-                        scan_message += f"The exported invoice contains OCR content from page {page_numbers[0]} only."
+                    scan_message = f"Scan-based pages detected: {scan_pages}. OCR succeeded on pages {ocr_pages}."
                 else:
-                    scan_message = f"Scan-based pages detected: {page_numbers}. OCR is disabled."
+                    scan_message = f"Scan-based pages detected: {scan_pages}. OCR is disabled."
                 diagnostics.append(
                     ConversionDiagnostic(
                         level="warning",

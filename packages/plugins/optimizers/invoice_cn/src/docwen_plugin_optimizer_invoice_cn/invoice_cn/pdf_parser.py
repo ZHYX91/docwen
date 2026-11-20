@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import _compact_text
 
 if TYPE_CHECKING:
-    from fitz import Document
+    from fitz import Document, Page
 
     from docwen_core.protocols.execution_context import ProgressSink
+
+_InvoicePage = tuple[dict[str, str | None], list[dict[str, str]]]
 
 MIN_TEXT_LENGTH_FOR_INVOICE = 20
 """Minimum compact text length to consider a PDF page a text-based invoice.
@@ -53,64 +56,71 @@ def render_pdf_page_to_png(*, file_path: str, page_index: int, png_path: str) ->
     Returns:
         *png_path* (for chaining).
     """
+    with _open_invoice_pdf(file_path) as document:
+        return render_invoice_page(document[page_index], png_path)
+
+
+def render_invoice_page(page: Page, png_path: str) -> str:
+    """Render a page already open in the invoice parser."""
     import fitz
 
-    with fitz.open(file_path, filetype="pdf") as doc:
-        page = doc[page_index]
-        dpi = 300
-        zoom = max(72, int(dpi)) / 72.0
-        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
-        pix.save(png_path)
-        try:
-            from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+    dpi = 300
+    zoom = max(72, int(dpi)) / 72.0
+    pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+    pix.save(png_path)
+    try:
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
-            with Image.open(png_path) as src_img:
-                img = ImageOps.exif_transpose(src_img)
-                img = img.convert("L")
-                img = ImageOps.autocontrast(img)
-                img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=180, threshold=3))
-                img = ImageEnhance.Contrast(img).enhance(1.6)
+        with Image.open(png_path) as src_img:
+            img = ImageOps.exif_transpose(src_img)
+            img = img.convert("L")
+            img = ImageOps.autocontrast(img)
+            img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=180, threshold=3))
+            img = ImageEnhance.Contrast(img).enhance(1.6)
 
-                # Otsu binarisation — adaptive histogram-based thresholding
-                hist = img.histogram()
-                total = sum(hist)
-                if total > 0:
-                    sum_total = 0.0
-                    for i, h in enumerate(hist):
-                        sum_total += float(i * h)
-                    sum_b = 0.0
-                    w_b = 0
-                    max_var = -1.0
-                    threshold = 160
-                    for i in range(256):
-                        w_b += int(hist[i])
-                        if w_b == 0:
-                            continue
-                        w_f = total - w_b
-                        if w_f == 0:
-                            break
-                        sum_b += float(i * hist[i])
-                        m_b = sum_b / float(w_b)
-                        m_f = (sum_total - sum_b) / float(w_f)
-                        var_between = float(w_b) * float(w_f) * (m_b - m_f) * (m_b - m_f)
-                        if var_between > max_var:
-                            max_var = var_between
-                            threshold = i
+            # Otsu binarisation — adaptive histogram-based thresholding
+            hist = img.histogram()
+            total = sum(hist)
+            if total > 0:
+                sum_total = 0.0
+                for i, h in enumerate(hist):
+                    sum_total += float(i * h)
+                sum_b = 0.0
+                w_b = 0
+                max_var = -1.0
+                threshold = 160
+                for i in range(256):
+                    w_b += int(hist[i])
+                    if w_b == 0:
+                        continue
+                    w_f = total - w_b
+                    if w_f == 0:
+                        break
+                    sum_b += float(i * hist[i])
+                    m_b = sum_b / float(w_b)
+                    m_f = (sum_total - sum_b) / float(w_f)
+                    var_between = float(w_b) * float(w_f) * (m_b - m_f) * (m_b - m_f)
+                    if var_between > max_var:
+                        max_var = var_between
+                        threshold = i
 
-                    t = max(90, min(210, int(threshold)))
-                    table = [255 if i >= t else 0 for i in range(256)]
-                    img = img.point(table, mode="L")
-                    img.save(png_path, format="PNG", optimize=True)
-        except Exception:
-            pass
-        return png_path
+                t = max(90, min(210, int(threshold)))
+                table = [255 if i >= t else 0 for i in range(256)]
+                img = img.point(table, mode="L")
+                img.save(png_path, format="PNG", optimize=True)
+    except Exception:
+        pass
+    return png_path
 
 
 def _page_text_and_spans(page: Any) -> tuple[str, list[tuple[float, float, float, float, str]]]:
     """Read one page without mixing its coordinates with another page."""
-    text = str(page.get_text("text"))
+    import fitz
+
+    text_page = page.get_textpage(flags=fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES)
+    text = str(page.get_text("text", textpage=text_page))
     spans: list[tuple[float, float, float, float, str]] = []
-    data = cast(dict[str, Any], page.get_text("dict"))
+    data = cast(dict[str, Any], page.get_text("dict", textpage=text_page))
     for block in data.get("blocks") or []:
         if not isinstance(block, dict):
             continue
@@ -157,7 +167,9 @@ def parse_pdf_invoice(
     file_path: str,
     *,
     diagnostic_sink: ProgressSink | None = None,
-) -> tuple[dict[str, str | None], list[dict[str, str]]]:
+    on_scan_page: Callable[[Page, int, str], _InvoicePage | None] | None = None,
+    check_cancelled: Callable[[], None] | None = None,
+) -> _InvoicePage:
     """Parse each physical page before merging its owned fields and rows.
 
     Equal coordinates on separate pages never form a party or row. A later
@@ -168,22 +180,36 @@ def parse_pdf_invoice(
         merge_page_metadata,
         parse_invoice_metadata_from_text_and_spans,
     )
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.span_fields import report_metadata_issue
 
     metadata: dict[str, str | None] = {}
     rows: list[dict[str, str]] = []
     field_pages: dict[str, int] = {}
     with _open_invoice_pdf(file_path) as document:
         for page_index in range(len(document)):
+            if check_cancelled is not None:
+                check_cancelled()
             page = document[page_index]
             page_number = page_index + 1
             location = f"{Path(file_path).name}:page-{page_number}"
-            text, spans = _page_text_and_spans(page)
-            page_metadata, page_rows = parse_invoice_metadata_from_text_and_spans(
-                text,
-                spans,
-                diagnostic_sink=diagnostic_sink,
-                location=location,
+            try:
+                text, spans = _page_text_and_spans(page)
+            except (ValueError, RuntimeError):
+                report_metadata_issue(
+                    diagnostic_sink,
+                    code="INVOICE-PDF-PAGE-TEXT",
+                    location=location,
+                    message="Native text could not be extracted from this PDF page.",
+                )
+                text, spans = "", []
+            result = (
+                on_scan_page(page, page_number, location) if on_scan_page is not None and is_scanpage(text) else None
             )
+            if result is None:
+                result = parse_invoice_metadata_from_text_and_spans(
+                    text, spans, diagnostic_sink=diagnostic_sink, location=location
+                )
+            page_metadata, page_rows = result
             merge_page_metadata(metadata, field_pages, page_metadata, page_number, diagnostic_sink, location)
             rows.extend(page_rows)
     return metadata, rows
