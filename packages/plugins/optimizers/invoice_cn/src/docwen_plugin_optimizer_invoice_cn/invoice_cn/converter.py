@@ -63,7 +63,7 @@ class InvoiceCnConverter:
 
     Supports:
     - PDF invoices via PyMuPDF text+spans extraction + regex parsing
-    - OFD invoices via InvoiceData.xml (or fallback content.xml extraction)
+    - OFD invoices via structured attachments or positioned page text
     - Image invoices via OCR + regex parsing
     """
 
@@ -113,6 +113,7 @@ class InvoiceCnConverter:
         ocr_language = str(options.get("ocr_language") or "auto")
         current_locale = str(options.get("locale") or "zh_CN")
         ocr_succeeded = False
+        page_count = 0
         scan_pages: list[int] = []  # Track scan-detected pages for diagnostics
 
         # ── Image source — requires OCR ───────────────────────────────
@@ -229,7 +230,7 @@ class InvoiceCnConverter:
                     parse_ofd_invoice,
                 )
 
-                metadata, rows = parse_ofd_invoice(input_path)
+                metadata, rows = parse_ofd_invoice(input_path, diagnostic_sink=context.progress)
 
             else:
                 msg = f"Unsupported invoice source format: {source_format}"
@@ -255,6 +256,16 @@ class InvoiceCnConverter:
 
         try:
             context.cancellation.check()
+            from docwen_plugin_optimizer_invoice_cn.invoice_cn.validation import validate_invoice
+
+            if source_format in {"pdf", "ofd"} or ocr_succeeded:
+                validate_invoice(
+                    metadata,
+                    rows,
+                    sink=context.progress,
+                    location=f"{presentation_stem}.{source_format}",
+                    ocr=ocr_succeeded,
+                )
 
             # ── Build YAML frontmatter ───────────────────────────────
             context.progress.report_progress(60.0, "Building output Markdown")
@@ -315,13 +326,19 @@ class InvoiceCnConverter:
                 )
 
             if scan_pages:
+                page_numbers = [page_index + 1 for page_index in scan_pages]
+                if enable_ocr:
+                    scan_message = (
+                        f"Scan-based pages detected: {page_numbers}. OCR attempted on page {page_numbers[0]}."
+                    )
+                    if ocr_succeeded and page_count > 1:
+                        scan_message += f"The exported invoice contains OCR content from page {page_numbers[0]} only."
+                else:
+                    scan_message = f"Scan-based pages detected: {page_numbers}. OCR is disabled."
                 diagnostics.append(
                     ConversionDiagnostic(
                         level="warning",
-                        message=(
-                            f"Page(s) {scan_pages} appear to be scanned images. "
-                            f"OCR is {'enabled' if enable_ocr else 'disabled'}."
-                        ),
+                        message=scan_message,
                         code="INVOICE-SCAN-DETECTED",
                     )
                 )

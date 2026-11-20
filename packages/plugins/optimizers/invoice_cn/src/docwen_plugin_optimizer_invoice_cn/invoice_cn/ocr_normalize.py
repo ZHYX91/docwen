@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from decimal import Decimal, InvalidOperation
+from unicodedata import normalize
 
 # One complete lexical contract for both compact fields and positioned cells.
 # A caller extracting from a larger text must additionally prove the end of its
@@ -20,6 +21,16 @@ AMOUNT_TOKEN_PATTERN = (
     rf"(?:{_AMOUNT_DIGIT}{{1,3}}(?:[,，]{_AMOUNT_DIGIT}{{3}})+|{_AMOUNT_DIGIT}+)"
     rf"(?:[.．。]{_AMOUNT_DIGIT}*)?"
 )
+_NATIVE_NUMBER = r"(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:[.。][0-9]*)?"
+NATIVE_AMOUNT_PATTERN = rf"(?:¥\s*[+\-−]?\s*|[+\-−]\s*¥?\s*)?{_NATIVE_NUMBER}"
+
+
+def _normalize_positioned_amount(value: str) -> str:
+    """Accept one native amount, preserving the boundary between separate digits or values."""
+    token = normalize("NFKC", value).strip()
+    if re.fullmatch(NATIVE_AMOUNT_PATTERN, token) is None:
+        return ""
+    return _normalize_ocr_amount(token)
 
 
 def _compact_text(text: str) -> str:

@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import _compact_text
-from docwen_plugin_optimizer_invoice_cn.invoice_cn.span_fields import report_metadata_issue
 
 if TYPE_CHECKING:
+    from fitz import Document
+
     from docwen_core.protocols.execution_context import ProgressSink
 
 MIN_TEXT_LENGTH_FOR_INVOICE = 20
@@ -122,18 +123,21 @@ def _page_text_and_spans(page: Any) -> tuple[str, list[tuple[float, float, float
                 value = (span.get("text") or "").strip()
                 if not value:
                     continue
-                x0, y0, x1, y1 = span.get("bbox") or (0.0, 0.0, 0.0, 0.0)
-                spans.append((float(x0), float(y0), float(x1), float(y1), value))
+                x0, y0, x1, _y1 = span.get("bbox") or (0.0, 0.0, 0.0, 0.0)
+                # The baseline is stable across fonts and font sizes sharing a row.
+                # A vertical span's bounding box still identifies its own position.
+                baseline = float((span.get("origin") or (x0, y0))[1])
+                if abs((line.get("dir") or (1.0, 0.0))[1]) > 0.5:
+                    baseline = float(y0)
+                spans.append((float(x0), baseline, float(x1), baseline, value))
     return text, spans
 
 
 def read_pdf_text_and_spans(file_path: str) -> tuple[str, list[tuple[float, float, float, float, str]]]:
     """Read a raw text/span projection; invoice inference uses per-page facts."""
-    import fitz
-
     text_parts: list[str] = []
     spans: list[tuple[float, float, float, float, str]] = []
-    with fitz.open(file_path, filetype="pdf") as document:
+    with _open_invoice_pdf(file_path) as document:
         for page in document:
             page_text, page_spans = _page_text_and_spans(page)
             text_parts.append(page_text)
@@ -145,9 +149,7 @@ def read_pdf_text_and_spans_single_page(
     file_path: str, page_index: int
 ) -> tuple[str, list[tuple[float, float, float, float, str]]]:
     """Extract text and spans from the selected zero-based physical page."""
-    import fitz
-
-    with fitz.open(file_path, filetype="pdf") as document:
+    with _open_invoice_pdf(file_path) as document:
         return _page_text_and_spans(document[page_index])
 
 
@@ -162,14 +164,15 @@ def parse_pdf_invoice(
     conflicting field cannot overwrite the first complete value silently;
     its diagnostic retains both physical page identities.
     """
-    import fitz
-
-    from docwen_plugin_optimizer_invoice_cn.invoice_cn.metadata import parse_invoice_metadata_from_text_and_spans
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.metadata import (
+        merge_page_metadata,
+        parse_invoice_metadata_from_text_and_spans,
+    )
 
     metadata: dict[str, str | None] = {}
     rows: list[dict[str, str]] = []
     field_pages: dict[str, int] = {}
-    with fitz.open(file_path, filetype="pdf") as document:
+    with _open_invoice_pdf(file_path) as document:
         for page_index in range(len(document)):
             page = document[page_index]
             page_number = page_index + 1
@@ -181,27 +184,22 @@ def parse_pdf_invoice(
                 diagnostic_sink=diagnostic_sink,
                 location=location,
             )
-            for field, value in page_metadata.items():
-                if not value:
-                    continue
-                previous = metadata.get(field)
-                if previous and previous != value:
-                    report_metadata_issue(
-                        diagnostic_sink,
-                        code="INVOICE-METADATA-CONFLICT",
-                        location=f"{location}:{field}",
-                        message=f"Conflicting {field} on page-{field_pages[field]} and page-{page_number}; kept the first page-owned value.",
-                    )
-                else:
-                    metadata[field] = value
-                    field_pages.setdefault(field, page_number)
+            merge_page_metadata(metadata, field_pages, page_metadata, page_number, diagnostic_sink, location)
             rows.extend(page_rows)
     return metadata, rows
 
 
 def get_pdf_page_count(file_path: str) -> int:
     """Return the number of pages in a PDF file."""
+    with _open_invoice_pdf(file_path) as doc:
+        return len(doc)
+
+
+def _open_invoice_pdf(file_path: str) -> Document:
+    """Keep library exceptions containing source paths out of diagnostics."""
     import fitz
 
-    with fitz.open(file_path, filetype="pdf") as doc:
-        return len(doc)
+    try:
+        return fitz.open(file_path, filetype="pdf")
+    except (fitz.FileDataError, OSError):
+        raise ValueError("The PDF invoice could not be opened.") from None

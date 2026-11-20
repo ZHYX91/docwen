@@ -103,3 +103,47 @@ def test_exact_header_spans_remain_supported() -> None:
     assert rows[0]["金额"] == "8.00"
     assert rows[0]["税率"] == "1%"
     assert rows[0]["税额"] == "0.08"
+
+
+def test_long_price_and_preceding_specification_follow_their_own_rows() -> None:
+    spans = [
+        _span(x, 100, x + 22, label)
+        for x, label in zip(
+            [25, 110, 160, 210, 270, 330, 390, 470],
+            ["项目名称", "规格型号", "单位", "数量", "单价", "金额", "税率", "税额"],
+            strict=True,
+        )
+    ]
+    spans.extend(
+        [
+            _span(24, 114, 90, "*商品甲"),
+            _span(230, 114, 232, "2"),
+            _span(236, 114, 292, "1234.567890123456"),
+            _span(323, 114, 352, "2469.14"),
+            _span(392, 114, 410, "免税"),
+            _span(480, 114, 492, "***"),
+            _span(24, 126, 90, "*商品甲"),
+            _span(323, 126, 352, "-9.14"),
+            _span(392, 126, 410, "免税"),
+            _span(480, 126, 492, "***"),
+            _span(108, 139, 142, "合成规格"),
+            _span(24, 141, 90, "*商品乙"),
+            _span(24, 150, 90, "续行"),
+            _span(330, 141, 352, "14.00"),
+            _span(393, 141, 408, "6%"),
+            _span(479, 141, 492, "0.84"),
+            _span(25, 182, 30, "合"),
+            _span(70, 182, 75, "计"),
+            _span(320, 179, 352, "2474.00"),
+            _span(478, 179, 492, "0.84"),
+        ]
+    )
+    first, discount, third = parse_invoice_rows_from_pdf_spans(spans=spans)
+    assert (first["数量"], first["单价"], first["税额"]) == ("2", "1234.567890123456", "***")
+    assert (discount["规格型号"], discount["金额"], discount["税额"]) == ("", "-9.14", "***")
+    assert (third["商品名称"], third["规格型号"], third["金额"], third["税额"]) == (
+        "*商品乙续行",
+        "合成规格",
+        "14.00",
+        "0.84",
+    )
