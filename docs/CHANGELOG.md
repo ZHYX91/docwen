@@ -7,8 +7,8 @@
 
 ## 0.23.1
 
-- Read structured invoice attachments and match visible fields by page and column. Report missing or inconsistent invoice data and preserve discount and tax-exempt rows.
-- 从发票附件读取结构化数据，按页和列匹配票面字段，保留折扣和免税行，并提示缺失或不一致的数据。
+- Read structured invoice attachments and match visible fields by page and column. Keep scanned and text pages in source order, preserve discount and tax-exempt rows, and report missing or inconsistent data.
+- 从发票附件读取结构化数据，按页和列匹配票面字段。混合 PDF 按原顺序合并扫描页和文字页，保留折扣及免税行，提示缺失或不一致的数据。
 - Preserve OFD page order, referenced images and searchable Chinese text. Image export also handles spaces in PDF and OFD paths.
 - 普通 OFD 导出按声明顺序保留页面、引用图片和可检索中文。PDF 和 OFD 路径中含空格时也能导出图片。
 - Keep meeting introductions and numbered decisions in the body of official minutes, preserve meeting numbers, and report the scoring round and threshold used.
