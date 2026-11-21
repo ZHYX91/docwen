@@ -15,6 +15,34 @@ from scripts.release.verify_packaged_cli import _OFD_FIXTURE_SCRIPT, _verify_phy
 pytestmark = pytest.mark.contract
 
 
+def test_physical_cases_verify_each_result_and_report_later_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    events: list[str] = []
+    cases = [
+        verify_packaged_cli._PhysicalPageCase(tmp_path / "source.pdf", "application/pdf", 4, 4, False, True),
+        verify_packaged_cli._PhysicalPageCase(tmp_path / "source.ofd", "application/vnd.ofd", 2, 0, True, False),
+    ]
+
+    def execute(ordinal: int, case: verify_packaged_cli._PhysicalPageCase) -> tuple[str, dict[str, Any], Path]:
+        events.append(f"execute:{case.source_format}")
+        return str(ordinal), {"case": case.source_format}, tmp_path
+
+    def verify(**kwargs: Any) -> dict[str, Any]:
+        source_format = kwargs["terminal"]["case"]
+        events.append(f"verify:{source_format}")
+        raise RuntimeError(f"bad {source_format} result")
+
+    monkeypatch.setattr(verify_packaged_cli, "_verify_physical_page_bundle", verify)
+    failures = verify_packaged_cli._verify_physical_page_cases(cases, execute)
+
+    assert events == ["execute:pdf", "verify:pdf", "execute:ofd", "verify:ofd"]
+    assert failures == [
+        "pdf [ocr=off, images=on]: bad pdf result",
+        "ofd [ocr=on, images=off]: bad ofd result",
+    ]
+
+
 def test_physical_fault_publishes_a_complete_valid_image_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -167,7 +195,7 @@ def _verify(terminal: dict[str, Any], root: Path) -> None:
     )
 
 
-def test_packaged_physical_page_verifier_accepts_canonical_p4_k5(tmp_path: Path) -> None:
+def test_packaged_physical_page_verifier_accepts_four_owned_and_one_unresolved_image(tmp_path: Path) -> None:
     _verify(_canonical_terminal(tmp_path), tmp_path)
 
 

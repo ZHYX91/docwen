@@ -17,7 +17,8 @@ import threading
 import time
 import zipfile
 from bisect import bisect_right
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path, PureWindowsPath
 from typing import IO, Any
@@ -1063,6 +1064,59 @@ def _write_ocr_png(path: Path) -> None:
         font = ImageFont.load_default()
     draw.text((36, 72), "HELLO DOCWEN OCR", fill="black", font=font)
     image.save(path)
+
+
+@dataclass(frozen=True, slots=True)
+class _PhysicalPageCase:
+    source_path: Path
+    media_type: str
+    page_count: int
+    resource_count: int
+    ocr_enabled: bool
+    keep_images: bool
+    expected_statuses: tuple[str, ...] | None = None
+
+    @property
+    def source_format(self) -> str:
+        return self.source_path.suffix.removeprefix(".")
+
+    @property
+    def label(self) -> str:
+        ocr = "on" if self.ocr_enabled else "off"
+        images = "on" if self.keep_images else "off"
+        return f"{self.source_format} [ocr={ocr}, images={images}]"
+
+
+def _verify_physical_page_cases(
+    cases: Sequence[_PhysicalPageCase],
+    execute: Callable[[int, _PhysicalPageCase], tuple[str, dict[str, Any], Path]],
+) -> list[str]:
+    failures: list[str] = []
+    for ordinal, case in enumerate(cases, start=1):
+        # A broken transport or unresolved workspace can affect every later conversion.
+        try:
+            task_id, terminal, staging = execute(ordinal, case)
+        except (RuntimeError, OSError, subprocess.TimeoutExpired) as error:
+            raise RuntimeError(f"{case.label}: {error}") from error
+        try:
+            bundle = _verify_physical_page_bundle(
+                terminal=terminal,
+                task_id=task_id,
+                staging_root=staging,
+                page_count=case.page_count,
+                resource_count=case.resource_count,
+                ocr_enabled=case.ocr_enabled,
+                keep_images=case.keep_images,
+                expected_statuses=case.expected_statuses,
+                tiff_navigation=case.source_format == "tiff",
+            )
+            primary = next(artifact for artifact in bundle["artifacts"] if artifact["kind"] == "document")
+            primary_text = _read_text_with_long_path(staging / Path(primary["locator"]))
+            if "DOCWEN PHYSICAL PAGE" in primary_text or "DOCWEN TIFF FRAME" in primary_text:
+                raise RuntimeError("packaged_physical_page_primary_contains_ocr")
+        except (RuntimeError, OSError, UnicodeError) as error:
+            failures.append(f"{case.label}: {error}")
+    return failures
 
 
 def _prepare_physical_page_fault(parent: Path, ordinal: int) -> Path:
@@ -3456,21 +3510,13 @@ def _run_machine_protocol_smoke_impl(
         options={},
     )
 
-    def execute_physical_task(
-        *,
-        ordinal: int,
-        capability_id: str,
-        source_path: Path,
-        media_type: str,
-        ocr_enabled: bool,
-        keep_images: bool,
-        plant_legacy_image: bool = False,
-    ) -> tuple[str, dict[str, Any], Path]:
+    def execute_physical_task(ordinal: int, case: _PhysicalPageCase) -> tuple[str, dict[str, Any], Path]:
         if list(physical_runtime_temp.glob("dw-*")):
             raise RuntimeError("packaged_physical_page_workspace_residue_before_task")
         output_root = work_dir / f"machine-physical-{ordinal:02d}-staging"
         output_root.mkdir()
-        source_payload = _read_bytes_with_long_path(source_path)
+        source_payload = _read_bytes_with_long_path(case.source_path)
+        plant_legacy_image = case.source_format == "pdf" and case.keep_images
         armed = threading.Event()
         injected = threading.Event()
         stop = threading.Event()
@@ -3505,23 +3551,23 @@ def _run_machine_protocol_smoke_impl(
             task_id_value, terminal_value = execute_additional_task(
                 plan_request_id=100 + ordinal * 2,
                 execute_request_id=101 + ordinal * 2,
-                capability_id=capability_id,
+                capability_id=f"convert.{case.source_format}.to_markdown",
                 inputs=[
                     {
                         "input_id": f"input.physical.{ordinal}",
                         "kind": "resource",
                         "role": "source",
-                        "logical_path": f"inputs/physical-{ordinal}{source_path.suffix}",
-                        "locator": {"kind": "local_path", "path": str(source_path)},
-                        "media_type": media_type,
+                        "logical_path": f"inputs/physical-{ordinal}{case.source_path.suffix}",
+                        "locator": {"kind": "local_path", "path": str(case.source_path)},
+                        "media_type": case.media_type,
                         "size_bytes": len(source_payload),
                         "sha256": hashlib.sha256(source_payload).hexdigest(),
                     }
                 ],
                 output_root=output_root,
                 options={
-                    "recognize_text": ocr_enabled,
-                    "preserve_resources": keep_images,
+                    "recognize_text": case.ocr_enabled,
+                    "preserve_resources": case.keep_images,
                     "ocr_language": "english",
                 },
             )
@@ -3538,83 +3584,43 @@ def _run_machine_protocol_smoke_impl(
             raise RuntimeError("packaged_physical_page_workspace_residue_after_task")
         return task_id_value, terminal_value, output_root
 
-    physical_results: list[tuple[str, dict[str, Any], Path, bool, bool, int, int, tuple[str, ...] | None, bool]] = []
-    for ordinal, (ocr_enabled, keep_images) in enumerate(
-        ((False, False), (False, True), (True, False), (True, True)),
-        start=1,
-    ):
-        task_result = execute_physical_task(
-            ordinal=ordinal,
-            capability_id="convert.pdf.to_markdown",
-            source_path=physical_pdf,
-            media_type="application/pdf",
-            ocr_enabled=ocr_enabled,
-            keep_images=keep_images,
-            plant_legacy_image=keep_images,
-        )
-        expected_statuses = ("success", "no_text", "recognition_failed", "success") if ocr_enabled else None
-        physical_results.append((*task_result, ocr_enabled, keep_images, 4, 4, expected_statuses, False))
-    for ordinal, (ocr_enabled, keep_images) in enumerate(
-        ((False, False), (False, True), (True, False), (True, True)),
-        start=5,
-    ):
-        task_result = execute_physical_task(
-            ordinal=ordinal,
-            capability_id="convert.tiff.to_markdown",
-            source_path=physical_tiff,
-            media_type="image/tiff",
-            ocr_enabled=ocr_enabled,
-            keep_images=keep_images,
-        )
-        expected_statuses = ("success", "no_text", "recognition_failed", "success") if ocr_enabled else None
-        physical_results.append((*task_result, ocr_enabled, keep_images, 4, 4, expected_statuses, True))
-    for ordinal, (capability_id, source_path, media_type) in enumerate(
-        (
-            ("convert.ofd.to_markdown", physical_ofd, "application/vnd.ofd"),
-            ("convert.xps.to_markdown", physical_xps, "application/vnd.ms-xpsdocument"),
-        ),
-        start=9,
-    ):
-        task_result = execute_physical_task(
-            ordinal=ordinal,
-            capability_id=capability_id,
+    physical_ocr_statuses = ("success", "no_text", "recognition_failed", "success")
+    modes = ((False, False), (False, True), (True, False), (True, True))
+    cases = [
+        _PhysicalPageCase(
             source_path=source_path,
             media_type=media_type,
+            page_count=4,
+            resource_count=4,
+            ocr_enabled=ocr_enabled,
+            keep_images=keep_images,
+            expected_statuses=physical_ocr_statuses if ocr_enabled else None,
+        )
+        for source_path, media_type in ((physical_pdf, "application/pdf"), (physical_tiff, "image/tiff"))
+        for ocr_enabled, keep_images in modes
+    ]
+    cases.extend(
+        _PhysicalPageCase(
+            source_path=source_path,
+            media_type=media_type,
+            page_count=2,
+            resource_count=0,
             ocr_enabled=True,
             keep_images=False,
         )
-        physical_results.append((*task_result, True, False, 2, 0, None, False))
-
+        for source_path, media_type in (
+            (physical_ofd, "application/vnd.ofd"),
+            (physical_xps, "application/vnd.ms-xpsdocument"),
+        )
+    )
+    physical_failures = _verify_physical_page_cases(cases, execute_physical_task)
     machine_stdin.close()
     return_code = process.wait(timeout=120)
     trailing_stdout = machine_stdout.read(64)
     _validate_machine_exit(return_code, trailing_stdout, resources.finish_stderr_drain())
-    for (
-        physical_task_id,
-        physical_terminal,
-        physical_staging,
-        ocr_enabled,
-        keep_images,
-        page_count,
-        resource_count,
-        expected_statuses,
-        tiff_navigation,
-    ) in physical_results:
-        bundle = _verify_physical_page_bundle(
-            terminal=physical_terminal,
-            task_id=physical_task_id,
-            staging_root=physical_staging,
-            page_count=page_count,
-            resource_count=resource_count,
-            ocr_enabled=ocr_enabled,
-            keep_images=keep_images,
-            expected_statuses=expected_statuses,
-            tiff_navigation=tiff_navigation,
-        )
-        primary = next(artifact for artifact in bundle["artifacts"] if artifact["kind"] == "document")
-        primary_text = _read_text_with_long_path(physical_staging / Path(primary["locator"]))
-        if "DOCWEN PHYSICAL PAGE" in primary_text or "DOCWEN TIFF FRAME" in primary_text:
-            raise RuntimeError("packaged_physical_page_primary_contains_ocr")
+    if physical_failures:
+        details = "\n".join(physical_failures)
+        raise RuntimeError(f"packaged_physical_page_cases_failed ({len(physical_failures)}/{len(cases)}):\n{details}")
     # This is the exact document and Bundle already checked before the reverse
     # conversion; retain its identity instead of repeating a second shape gate.
     output = semantic_output
