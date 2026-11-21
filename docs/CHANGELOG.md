@@ -17,6 +17,8 @@
 - 按标题与正文之间的段落版式识别 Word 公文的主送机关。
 - Preserve inline revisions in official Word text and export each attachment table once.
 - 公文正文保留行内插入修订，附件表格只输出一次。
+- Update the bundled Mistune parser to 3.3.4 to fix excessive processing time on crafted Markdown links and images.
+- 随包 Mistune 升至 3.3.4，修复特制 Markdown 链接和图片导致解析耗时过长的问题。
 - Keep Word note text and links, Excel time values during merges, and in-cell line breaks when exporting Markdown tables. Improve recognition of delimited and markup inputs.
 - 保留 Word 注释中的文字与链接、Excel 合并时的时间值，以及 Markdown 表格导出到 Excel 时的单元格换行。改进分隔文本和标记文档的识别。
 - Exclude unused Tk and Cython build components from frozen packages while retaining offline OCR models.
