@@ -350,19 +350,22 @@ def convert_docx_to_md_gongwen(
     if attachment_indices:
         from docwen_plugin_optimizer_gongwen.rendering.markdown_renderer import render_feature_images
 
+        rendered_tables = {
+            feature.table_index
+            for feature in (features[idx] for idx in attachment_indices if idx < len(features))
+            if feature.table_index is not None and feature.is_table_anchor and feature.table_markdown
+        }
         attachment_lines = []
         attachment_images: list[str] = []
         for idx in sorted(attachment_indices):
             if idx >= len(features):
                 continue
             feature = features[idx]
-            line = (
-                feature.table_markdown
-                if feature.is_table_anchor and feature.table_markdown
-                else _attachment_line_text(feature, remove_numbering=remove_numbering)
-            )
-            if line.strip():
-                attachment_lines.append(line)
+            # A rendered table already includes the text of its projected cells.
+            if feature.is_table_anchor or feature.table_index not in rendered_tables:
+                line = feature.table_markdown or _attachment_line_text(feature, remove_numbering=remove_numbering)
+                if line.strip():
+                    attachment_lines.append(line)
             attachment_lines.extend(
                 render_feature_images(
                     feature,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -94,6 +95,24 @@ def _is_native_heading_level(
     return True
 
 
+def _paragraph_text(para: Any) -> str:
+    """Read inline text in Word's accepted revision view."""
+    if not para._p.xpath(".//w:ins | .//w:moveTo"):
+        return para.text
+
+    wrappers = {qn("w:hyperlink"), qn("w:ins"), qn("w:moveTo")}
+    run_tag = qn("w:r")
+
+    def inline_text(element: Any) -> Iterator[str]:
+        for child in element:
+            if child.tag == run_tag:
+                yield child.text
+            elif child.tag in wrappers:
+                yield from inline_text(child)
+
+    return "".join(inline_text(para._p))
+
+
 def _neighboring_content_paragraphs(paragraphs: list[Any], index: int) -> tuple[Any, ...]:
     """Return the nearest non-empty paragraph on each side."""
 
@@ -102,7 +121,7 @@ def _neighboring_content_paragraphs(paragraphs: list[Any], index: int) -> tuple[
         candidate_index = index + step
         while 0 <= candidate_index < len(paragraphs):
             candidate = paragraphs[candidate_index]
-            if candidate.text.strip():
+            if _paragraph_text(candidate).strip():
                 neighbors.append(candidate)
                 break
             candidate_index += step
@@ -132,7 +151,7 @@ def read_paragraphs(
     body_element = doc.element.body
     paragraphs = list(doc.paragraphs)
     for paragraph_index, para in enumerate(paragraphs):
-        text = para.text
+        text = _paragraph_text(para)
 
         # Empty layout paragraphs carry no semantic content, but an empty
         # ``Paragraph.text`` can still own an image, formula or explicit page /

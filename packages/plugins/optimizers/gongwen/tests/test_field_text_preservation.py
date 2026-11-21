@@ -361,3 +361,59 @@ def test_meeting_number_and_typed_decisions_keep_their_source_content(number_bef
     assert "### 复核周期。" in body
     assert body_reference in body
     assert unclear in body
+
+
+def test_gongwen_body_preserves_accepted_inline_revisions() -> None:
+    from docx import Document
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    document.add_paragraph("关于办理事项的通知")
+    document.add_paragraph("各学院：")
+    body = document.add_paragraph("请于周五报送")
+    inserted = OxmlElement("w:ins")
+    inserted.set(qn("w:id"), "1")
+    inserted.append(body.add_run("。")._r)
+    body._p.append(inserted)
+    deleted = OxmlElement("w:del")
+    deleted.set(qn("w:id"), "2")
+    removed_run = OxmlElement("w:r")
+    removed_text = OxmlElement("w:delText")
+    removed_text.text = "旧时间"
+    removed_run.append(removed_text)
+    deleted.append(removed_run)
+    body._p.append(deleted)
+    body.add_run("谢谢配合。")
+
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx")
+    assert result["yaml_info"]["主送机关"] == "各学院"
+    assert "请于周五报送。谢谢配合。" in result["markdown"]
+    assert "旧时间" not in result["markdown"]
+
+
+def test_gongwen_attachment_renders_each_table_cell_once() -> None:
+    from docx import Document
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    document.add_paragraph("关于材料归档的通知")
+    document.add_paragraph("各学院：")
+    document.add_paragraph("请按随文附表归档材料。")
+    document.add_paragraph("附件：归档材料表")
+    document.add_paragraph("示例地区人民政府")
+    document.add_paragraph("2026年10月20日")
+    document.add_paragraph("归档材料表")
+    table = document.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "材料类型"
+    table.cell(0, 1).text = "办理要求"
+    table.cell(1, 0).text = "书面计划"
+    table.cell(1, 1).text = "说明资料提交方式"
+
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx")
+    (attachment,) = result["attachment_documents"]
+    assert "| 书面计划 | 说明资料提交方式 |" in attachment.markdown
+    assert attachment.markdown.count("说明资料提交方式") == 1
