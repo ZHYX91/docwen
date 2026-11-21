@@ -255,6 +255,21 @@ def extract_alignment(para: Any) -> str:
     return alignment.name if alignment is not None else ""
 
 
+def has_first_line_indent(para: Any) -> bool:
+    """Read the first-line indent from direct formatting or paragraph styles."""
+    properties = [para._p.pPr]
+    properties.extend(style.element.pPr for style in _iter_style_chain(para.style))
+    for p_pr in properties:
+        indent = p_pr.find(f"{{{NS_W}}}ind") if p_pr is not None else None
+        if indent is None:
+            continue
+        for attr in ("firstLineChars", "firstLine", "hangingChars", "hanging"):
+            value = indent.get(f"{{{NS_W}}}{attr}")
+            if value is not None and re.fullmatch(r"[+-]?\d+", value):
+                return attr.startswith("firstLine") and int(value) > 0
+    return False
+
+
 def extract_outline_level(para: Any) -> int | None:
     try:
         p_pr = para._p.pPr

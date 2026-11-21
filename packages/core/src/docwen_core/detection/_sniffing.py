@@ -316,14 +316,47 @@ def is_text_file(file_path: str, sample_size: int = 8192) -> bool:
     return printable / len(text) > 0.85
 
 
+def _has_enex_root(sample: str) -> bool:
+    """Read only the first XML start event, including a possible ENEX prolog."""
+    try:
+        return next(ElementTree.iterparse(io.StringIO(sample), events=("start",)))[1].tag == "en-export"
+    except (ElementTree.ParseError, StopIteration):
+        return False
+
+
+def _has_mhtml_headers(sample: str) -> bool:
+    """Recognize the outer MIME type, including a transfer-encoded HTML body."""
+    from email.parser import HeaderParser
+
+    separator = re.search(r"\r\n\r\n|\n\n|\r\r", sample)
+    if separator is None:
+        return False
+    headers = HeaderParser().parsestr(sample[: separator.start()])
+    if headers.defects:
+        return False
+    media_type = headers.get_content_type()
+    if media_type in {"multipart/related", "multipart/alternative"}:
+        return bool(headers.get_boundary())
+    if media_type != "text/html":
+        return False
+    # A lone Content-Type line is also common in Markdown notes about HTTP.
+    if any(name in headers for name in ("MIME-Version", "Content-Transfer-Encoding", "Content-Location")):
+        return True
+    return _has_html_document_envelope(sample[separator.end() :])
+
+
+_HTML_CODE_INDENT = re.compile(r"(?:^|[\r\n])(?: {4}| {0,3}\t)[ \t]*\Z")
+
+
 def _has_html_document_envelope(text: str) -> bool:
     """Skip leading comments/instructions without backtracking over their ends."""
-    if re.match(r"(?: {4}| {0,3}\t)", text):
-        return False  # Renderer-protected indented code is not an HTML root.
     offset = 0
     while offset < len(text):
+        whitespace_start = offset
         while offset < len(text) and text[offset].isspace():
             offset += 1
+        if _HTML_CODE_INDENT.search(text, whitespace_start, offset):
+            return False  # An indented Markdown example cannot open an HTML document.
         if text.startswith("<!--", offset):
             terminator = "-->"
         elif text.startswith("<?", offset):
@@ -357,30 +390,29 @@ def detect_text_format(file_path: str) -> str:
         # filename-derived guess.
         return "txt"
 
-    sample = text[:4096]  # First 4K for format detection
-    sample_lower = sample.lower()
+    text_lower = text.lower()
 
     # ENEX — Evernote export format
-    if "<en-export" in sample_lower or ('<?xml version="1.0" encoding="UTF-8"?>' in sample and "<en-export" in sample):
+    if "<en-export" in text and _has_enex_root(text):
         return "enex"
 
     # MHTML — check for MIME headers
-    if any(
-        h in sample_lower for h in ("mime-version:", "multipart/related", "content-type:", "content-transfer-encoding:")
-    ) and ("<html" in sample_lower or "boundary=" in sample_lower):
+    if "content-type:" in text_lower and _has_mhtml_headers(text):
         return "mhtml"
 
     # Raw HTML is also valid inside Markdown. Score only authored Markdown
     # outside HTML blocks; a complete HTML document still takes precedence.
     html_markers = ("<!doctype html", "<html", "<head", "<body", "<meta", "<div", "<p>")
+    sample_lower = text_lower[:4096]
     has_html = any(m in sample_lower for m in html_markers)
     markdown_text = text
     if has_html:
+        if _has_html_document_envelope(text):
+            return "html"
+
         from docwen_core.links import split_markdown_block_segments
 
         segments = split_markdown_block_segments(text)
-        if any(literal and _has_html_document_envelope(part) for part, literal in segments):
-            return "html"
         markdown_text = "".join(
             part if not literal or re.match(r"\s*(?:`{3,}|~{3,}|---(?:\s|$))", part) else "\n"
             for part, literal in segments
@@ -497,7 +529,9 @@ def sniff_delimited_separator(text: str) -> str | None:
     Single neutral records have no generic delimiter fact; callers retain the
     separately validated declared comma/tab contract for those records.
     """
-    sample = text[:_DELIMITED_SNIFF_SIZE]
+    # csv.Sniffer counts physical lines using LF. Normalize its bounded
+    # sample only; the conversion readers preserve embedded field newlines.
+    sample = text[:_DELIMITED_SNIFF_SIZE].replace("\r\n", "\n").replace("\r", "\n")
     try:
         dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
         reader = csv.reader(io.StringIO(sample), dialect)
@@ -586,7 +620,9 @@ def matches_single_column_declaration(file_path: str, declared_format: str) -> b
     if not text:
         return False
     try:
-        rows = csv.reader(io.StringIO(text), delimiter="," if declared_format == "csv" else "\t", strict=True)
+        rows = csv.reader(
+            io.StringIO(text, newline=""), delimiter="," if declared_format == "csv" else "\t", strict=True
+        )
         found = False
         for row in rows:
             if not row:

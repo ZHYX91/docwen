@@ -229,7 +229,7 @@ def build_yaml(
 
             text, continued = recipient_block(features, result, para_idx)
             skip_indices.extend(continued)
-            cleaned_text = remove_colon(re.sub(r"^主送机关\s*[：:]\s*", "", text, count=1))
+            cleaned_text = remove_colon(text)
         elif element_type == "notes":
             cleaned_text = remove_brackets(text)
         elif element_type == "disclosure":

@@ -1,469 +1,342 @@
-"""OFD invoice parsing through ZIP-container and XML extraction."""
+"""Read structured invoice attachments and positioned OFD pages from the package."""
 
 from __future__ import annotations
 
+import posixpath
 import re
 import xml.etree.ElementTree as etree
 import zipfile
-from bisect import bisect_right
+from collections.abc import Iterator
+from contextlib import suppress
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import _compact_text
+from docwen_plugin_optimizer_invoice_cn.invoice_cn.metadata import (
+    merge_page_metadata,
+    parse_invoice_metadata_from_text_and_spans,
+)
+from docwen_plugin_optimizer_invoice_cn.invoice_cn.span_fields import report_metadata_issue
+from docwen_plugin_optimizer_invoice_cn.invoice_cn.yaml_schema import TABLE_HEADERS
 
-# ── XML helpers ──────────────────────────────────────────────────────
+if TYPE_CHECKING:
+    from docwen_core.protocols.execution_context import ProgressSink
+
+_Span = tuple[float, float, float, float, str]
+_POINTS_PER_MM = 72 / 25.4
 
 
 def _xml_local_name(tag: str) -> str:
-    """Strip namespace prefix from an XML tag."""
-    if "}" in tag:
-        return tag.split("}", 1)[1]
-    return tag
+    return tag.rsplit("}", 1)[-1]
 
 
-def _xml_first_text(root: etree.Element, local_name: str) -> str:
-    """Get the first non-empty text content of a named element."""
-    for el in root.iter():
-        if _xml_local_name(el.tag) != local_name:
-            continue
-        v = (el.text or "").strip()
-        if v:
-            return v
-    return ""
+def _children(node: etree.Element, local_name: str) -> list[etree.Element]:
+    return [child for child in node if _xml_local_name(child.tag) == local_name]
 
 
-# ── OFD content item extraction ──────────────────────────────────────
+def _xml_values(node: etree.Element, path: tuple[str, ...]) -> list[str]:
+    parts = [node]
+    for name in path:
+        parts = [child for part in parts for child in _children(part, name)]
+    return [value for part in parts if (value := (part.text or "").strip())]
 
 
-def _extract_ofd_items(
-    file_path: str,
-) -> list[tuple[float, float, str]]:
-    """Extract positioned text items from an OFD file's content.xml pages.
-
-    Args:
-        file_path: Path to the OFD file (ZIP container).
-
-    Returns:
-        List of ``(y, x, text)`` tuples sorted by position.
-    """
-    items: list[tuple[float, float, str]] = []
-    with zipfile.ZipFile(file_path) as zf:
-        for name in zf.namelist():
-            lower = name.lower()
-            if not lower.endswith("content.xml"):
-                continue
-            # OFD zip entries may or may not have a leading slash.
-            is_page = lower.endswith("content.xml") and ("/pages/" in lower or lower.startswith("pages/"))
-            is_tpls = lower.endswith("content.xml") and ("/tpls/" in lower or lower.startswith("tpls/"))
-            if not is_page and not is_tpls:
-                continue
-            try:
-                xml_bytes = zf.read(name)
-            except Exception:
-                continue
-            try:
-                root = etree.fromstring(xml_bytes)
-            except Exception:
-                continue
-
-            for text_obj in root.iter():
-                if _xml_local_name(text_obj.tag) != "TextObject":
-                    continue
-                boundary = (text_obj.get("Boundary") or "").strip()
-                if not boundary:
-                    continue
-                parts = boundary.split()
-                if len(parts) < 2:
-                    continue
-                try:
-                    bx = float(parts[0])
-                    by = float(parts[1])
-                except Exception:
-                    continue
-
-                for code in text_obj.iter():
-                    if _xml_local_name(code.tag) != "TextCode":
-                        continue
-                    s = "".join(code.itertext()).strip()
-                    if not s:
-                        continue
-                    try:
-                        cx = float((code.get("X") or "0").strip() or "0")
-                        cy = float((code.get("Y") or "0").strip() or "0")
-                    except Exception:
-                        cx = 0.0
-                        cy = 0.0
-                    items.append((by + cy, bx + cx, s))
-
-    items.sort(key=lambda t: (t[0], t[1]))
-    return items
+def _xml_text(node: etree.Element, *path: str) -> str:
+    return next(iter(_xml_values(node, path)), "")
 
 
-def _group_items_by_y(
-    items: list[tuple[float, float, str]],
-    *,
-    y_tol: float,
-) -> list[list[tuple[float, str]]]:
-    """Group positioned text items into lines by y-coordinate proximity.
-
-    Args:
-        items: List of ``(y, x, text)`` tuples sorted by y then x.
-        y_tol: Maximum y-difference for items to be considered on the same line.
-
-    Returns:
-        List of lines, each line being a list of ``(x, text)`` tuples.
-    """
-    lines: list[list[tuple[float, str]]] = []
-    current_line: list[tuple[float, str]] = []
-    current_y: float | None = None
-    for y, x, s in items:
-        s = (s or "").strip()
-        if not s:
-            continue
-        if current_y is None:
-            current_y = y
-            current_line = [(x, s)]
-            continue
-        if abs(y - current_y) <= y_tol:
-            current_line.append((x, s))
-            current_y = (current_y + y) / 2.0
-            continue
-        lines.append(current_line)
-        current_y = y
-        current_line = [(x, s)]
-    if current_line:
-        lines.append(current_line)
-    return lines
-
-
-def _extract_ofd_text_from_items(
-    items: list[tuple[float, float, str]],
-) -> str:
-    """Build a plain-text representation from OFD positioned text items."""
-    if not items:
+def _member_path(owner: str, reference: str) -> str:
+    """Resolve an OFD location inside the ZIP, relative to its owning part."""
+    if not reference:
         return ""
-    lines = _group_items_by_y(items, y_tol=2.2)
-    out_lines: list[str] = []
-    for line in lines:
-        line_sorted = sorted(line, key=lambda t: t[0])
-        out_lines.append("".join([s for _x, s in line_sorted]).strip())
-    return "\n".join(line for line in out_lines if line)
-
-
-# ── OFD metadata extraction without InvoiceData.xml ──────────────────
-
-
-def _parse_invoice_metadata_from_ofd_items(
-    items: list[tuple[float, float, str]],
-) -> dict[str, str | None]:
-    """Extract invoice metadata from OFD positioned text items.
-
-    Uses the same compact-text regex approach as PDF parsing,
-    augmented with OFD-specific positional heuristics for
-    buyer/seller names and tax IDs.
-    """
-    from docwen_plugin_optimizer_invoice_cn.invoice_cn.metadata import (
-        parse_invoice_metadata_from_compact_text,
+    reference = reference.strip().replace("\\", "/")
+    path = posixpath.normpath(
+        reference.lstrip("/") if reference.startswith("/") else posixpath.join(posixpath.dirname(owner), reference)
     )
-
-    text = _extract_ofd_text_from_items(items)
-    compact = _compact_text(text)
-    metadata = parse_invoice_metadata_from_compact_text(compact)
-
-    lines = _group_items_by_y(items, y_tol=2.2)
-
-    # Detect left/right split from buyer/seller info labels
-    split_x: float | None = None
-    for line in lines:
-        xs = []
-        for x, s in sorted(line, key=lambda t: t[0]):
-            c = _compact_text(s)
-            if "购买方信息" in c or "销售方信息" in c:
-                xs.append(x)
-        if len(xs) >= 2:
-            xs.sort()
-            split_x = (xs[0] + xs[-1]) / 2.0
-            break
-
-    buyer: str | None = None
-    seller: str | None = None
-    buyer_tax_id: str | None = None
-    seller_tax_id: str | None = None
-
-    if split_x is not None:
-        for line in lines:
-            parts = sorted(line, key=lambda t: t[0])
-            for idx, (x, s) in enumerate(parts):
-                c = _compact_text(s)
-                if c not in {"名称：", "名称:"}:
-                    continue
-                if idx + 1 >= len(parts):
-                    continue
-                _nx, ns = parts[idx + 1]
-                nc = _compact_text(ns)
-                if not nc or "项目名称" in nc or "统一社会信用代码" in nc or "纳税人识别号" in nc:
-                    continue
-                name = str(ns).strip()
-                if not name:
-                    continue
-                if x < split_x and buyer is None:
-                    buyer = name
-                if x >= split_x and seller is None:
-                    seller = name
-            if buyer and seller:
-                break
-
-        def normalize_tax_id(v: str) -> str:
-            v = _compact_text(v).upper()
-            v = re.sub(r"[^0-9A-Z]", "", v)
-            return v
-
-        def try_pick_tax_id(text: str) -> str | None:
-            v = normalize_tax_id(text)
-            if re.fullmatch(r"[0-9A-Z]{15,20}", v):
-                return v
-            return None
-
-        for line in lines:
-            parts = sorted(line, key=lambda t: t[0])
-            for idx, (x, s) in enumerate(parts):
-                side = "buyer" if x < split_x else "seller"
-                c = _compact_text(s)
-                if "统一社会信用代码" not in c and "纳税人识别号" not in c:
-                    continue
-                if "项目名称" in c:
-                    continue
-                tail = ""
-                if "：" in str(s) or ":" in str(s):
-                    tail = re.split(r"[:：]", str(s), maxsplit=1)[-1]
-                picked = try_pick_tax_id(tail) if tail else None
-                if picked is None and idx + 1 < len(parts):
-                    nx, ns = parts[idx + 1]
-                    if (nx < split_x) == (x < split_x):
-                        picked = try_pick_tax_id(str(ns))
-                if not picked:
-                    continue
-                if side == "buyer" and buyer_tax_id is None:
-                    buyer_tax_id = picked
-                if side == "seller" and seller_tax_id is None:
-                    seller_tax_id = picked
-            if buyer_tax_id and seller_tax_id:
-                break
-
-    if buyer:
-        metadata["购买方名称"] = buyer
-    if seller:
-        metadata["销售方名称"] = seller
-    if buyer_tax_id:
-        metadata["购买方纳税人识别号"] = buyer_tax_id
-    if seller_tax_id:
-        metadata["销售方纳税人识别号"] = seller_tax_id
-
-    return metadata
+    return "" if path in {".", ".."} or path.startswith("../") else path
 
 
-# ── OFD row extraction without InvoiceData.xml ───────────────────────
+def _read_xml(package: zipfile.ZipFile, members: dict[str, zipfile.ZipInfo], path: str) -> etree.Element | None:
+    member = members.get(path)
+    if member is None:
+        return None
+    try:
+        return etree.fromstring(package.read(member))
+    except (etree.ParseError, OSError, RuntimeError, NotImplementedError, zipfile.BadZipFile):
+        return None
 
 
-def _parse_invoice_rows_from_ofd_items(
-    items: list[tuple[float, float, str]],
-) -> list[dict[str, str]]:
-    """Parse invoice detail-line rows from OFD positioned text items.
+def _invoice_attachments(
+    package: zipfile.ZipFile,
+    members: dict[str, zipfile.ZipInfo],
+    documents: list[tuple[str, etree.Element]],
+) -> tuple[list[etree.Element], bool]:
+    attachment_paths: list[str] = []
+    broken_relation = False
+    has_attachment_list = False
+    for doc_path, document in documents:
+        relation = _xml_text(document, "Attachments")
+        if not relation:
+            continue
+        has_attachment_list = True
+        list_path = _member_path(doc_path, relation)
+        attachments = _read_xml(package, members, list_path)
+        if attachments is None or _xml_local_name(attachments.tag) != "Attachments":
+            broken_relation = True
+            continue
+        for attachment in _children(attachments, "Attachment"):
+            reference = _xml_text(attachment, "FileLoc")
+            if reference.lower().endswith(".xml") or (attachment.get("Format") or "").lower() == "xml":
+                attachment_paths.append(_member_path(list_path, reference))
 
-    Uses header-detection from OFD items to determine column boundaries.
-    """
-    header_aliases = {
-        "商品名称": {"项目名称", "货物或应税劳务、服务名称", "货物或应税劳务服务名称"},
-        "规格型号": {"规格型号"},
-        "单位": {"单位", "单 位"},
-        "数量": {"数量", "数 量"},
-        "单价": {"单价", "单 价"},
-        "金额": {"金额"},
-        "税率": {"税率/征收率", "税率"},
-        "税额": {"税额", "税 额"},
+    # Producers of the older InvoiceData shape sometimes omit its attachment
+    # listing. Restrict that compatibility path to the established basename.
+    if not has_attachment_list:
+        attachment_paths = [path for path in members if posixpath.basename(path).lower() == "invoicedata.xml"]
+
+    invoices = []
+    for path in dict.fromkeys(attachment_paths):
+        invoice = _read_xml(package, members, path)
+        if invoice is None:
+            broken_relation = True
+        elif _xml_local_name(invoice.tag) == "Invoice" or (
+            has_attachment_list and _xml_local_name(invoice.tag) == "eInvoice"
+        ):
+            invoices.append(invoice)
+    return invoices, broken_relation
+
+
+def _parse_invoice_xml(
+    root: etree.Element, *, sink: ProgressSink | None, location: str
+) -> tuple[dict[str, str | None], list[dict[str, str]]]:
+    def read_field(node: etree.Element, field: str, paths: list[tuple[str, ...]], *, row: int = 0) -> str:
+        values = list(dict.fromkeys(value for path in paths for value in _xml_values(node, path)))
+        if len(values) > 1:
+            field_location = f"{location}:row-{row}:{field}" if row else f"{location}:{field}"
+            report_metadata_issue(
+                sink,
+                code="INVOICE-ROW-AMBIGUOUS" if row else "INVOICE-METADATA-CONFLICT",
+                location=field_location,
+                message=f"The invoice attachment contains conflicting values for {field}.",
+            )
+            return ""
+        return next(iter(values), "")
+
+    metadata: dict[str, str | None] = {"优化类型": "invoice_cn"}
+    fields = {
+        "发票种类": ("InvoiceType",),
+        "发票代码": ("InvoiceCode",),
+        "发票号码": ("InvoiceNo", "InvoiceNumber"),
+        "开票日期": ("IssueDate",),
+        "校验码": ("InvoiceCheckCode", "CheckCode"),
+        "金额": ("TaxExclusiveTotalAmount", "TotalAmount"),
+        "税额": ("TaxTotalAmount", "TotalTax"),
+        "价税合计": ("TaxInclusiveTotalAmount", "AmountWithTax"),
+        "备注": ("Note", "Remark"),
+        "开票人": ("InvoiceClerk", "Issuer"),
+        "收款人": ("Payee",),
+        "复核": ("Checker", "Reviewer"),
     }
+    for key, aliases in fields.items():
+        metadata[key] = read_field(root, key, [(alias,) for alias in aliases])
 
-    label_to_key: dict[str, str] = {}
-    for key, aliases in header_aliases.items():
-        for a in aliases:
-            label_to_key[_compact_text(a)] = key
+    for role, side in (("购买方", "Buyer"), ("销售方", "Seller")):
+        for label, name in (
+            ("名称", "Name"),
+            ("纳税人识别号", "TaxID"),
+            ("地址电话", "AddrTel"),
+            ("开户行及账号", "FinancialAccount"),
+        ):
+            tag = side + name
+            field = role + label
+            metadata[field] = read_field(root, field, [(side, tag), (tag,)])
 
-    if not items:
-        return []
+    line_fields = (
+        ("Item", "GoodsName", "ItemName"),
+        ("Specification", "SpecModel"),
+        ("MeasurementDimension", "Unit"),
+        ("Quantity",),
+        ("Price", "UnitPrice"),
+        ("Amount",),
+        ("TaxScheme", "TaxRate"),
+        ("TaxAmount",),
+    )
+    nodes = (
+        [line for infos in _children(root, "GoodsInfos") for line in _children(infos, "GoodsInfo")]
+        if _xml_local_name(root.tag) == "eInvoice"
+        else [node for node in root.iter() if _xml_local_name(node.tag) == "InvoiceLineInfo"]
+    )
+    rows = [
+        {
+            key: read_field(node, key, [(alias,) for alias in aliases], row=row_index)
+            for key, aliases in zip(TABLE_HEADERS, line_fields, strict=True)
+        }
+        for row_index, node in enumerate(nodes, start=1)
+    ]
+    return metadata, rows
 
-    lines = _group_items_by_y(items, y_tol=2.2)
-    header_idx: int | None = None
-    columns: dict[str, float] = {}
-    for i, line in enumerate(lines):
-        tokens = [s for _x, s in sorted(line, key=lambda t: t[0])]
-        if not tokens:
+
+def _positioned_spans(root: etree.Element) -> list[_Span]:
+    spans: list[_Span] = []
+    for obj in root.iter():
+        if _xml_local_name(obj.tag) != "TextObject":
             continue
-        compact_line = _compact_text("".join(tokens))
-        if "项目名称" not in compact_line and "货物或应税劳务" not in compact_line:
+        try:
+            x0, y0, *_ = (float(value) for value in (obj.get("Boundary") or "").split())
+            font_size = float(obj.get("Size") or "3")
+        except ValueError:
             continue
-        if "金额" not in compact_line or "税" not in compact_line:
-            continue
-
-        xs = [x for x, _s in sorted(line, key=lambda t: t[0])]
-        ss = [s for _x, s in sorted(line, key=lambda t: t[0])]
-
-        for idx in range(len(ss)):
-            merged = ""
-            for j in range(idx, min(idx + 4, len(ss))):
-                merged += _compact_text(ss[j])
-                if merged in label_to_key:
-                    key = label_to_key[merged]
-                    columns.setdefault(key, xs[idx])
-                    break
-
-        if len(columns) >= 4 and "商品名称" in columns:
-            header_idx = i
-            break
-
-    if header_idx is None:
-        return []
-
-    ordered = sorted(columns.items(), key=lambda kv: kv[1])
-    keys = [k for k, _ in ordered]
-    x_starts = [x for _, x in ordered]
-    x_bounds = [(x_starts[i] + x_starts[i + 1]) / 2.0 for i in range(len(x_starts) - 1)]
-
-    def assign_col(x0: float) -> str | None:
-        if not x_bounds:
-            return keys[0]
-        idx = bisect_right(x_bounds, x0)
-        return keys[idx] if idx < len(keys) else None
-
-    row_keys = ["商品名称", "规格型号", "单位", "数量", "单价", "金额", "税率", "税额"]
-    rows: list[dict[str, str]] = []
-    current = dict.fromkeys(row_keys, "")
-
-    def append(k: str, v: str) -> None:
-        v = (v or "").strip()
-        if not v:
-            return
-        if current.get(k):
-            current[k] = (current[k] + v).strip()
-        else:
-            current[k] = v
-
-    def flush() -> None:
-        nonlocal current
-        if any((current.get("商品名称") or "").strip() for _k in ["商品名称"]):
-            rows.append({k: (current.get(k) or "").strip() for k in row_keys})
-        current = dict.fromkeys(row_keys, "")
-
-    star_chars = ("*", "＊", "∗", "﹡")
-    saw_marker = False
-
-    for line in lines[header_idx + 1 :]:
-        line_sorted = sorted(line, key=lambda t: t[0])
-        if any("合计" in _compact_text(s) for _x, s in line_sorted):
-            break
-
-        cols: dict[str, str] = {}
-        for x, s in line_sorted:
-            col = assign_col(x)
-            if not col:
+        for code in _children(obj, "TextCode"):
+            text = "".join(code.itertext()).strip()
+            if not text:
                 continue
-            cols[col] = (cols.get(col, "") + s).strip()
+            try:
+                x = x0 + float(code.get("X") or "0")
+                baseline = y0 + float(code.get("Y") or "0")
+            except ValueError:
+                continue
+            # The TextObject boundary is frequently the full cell. Estimate
+            # this text run's end from the font size and authored advances.
+            width = font_size * sum(1 if ord(char) > 255 else 0.55 for char in text)
+            delta_x = code.get("DeltaX") or ""
+            if delta_x:
+                length = len(text)
+                with suppress(ValueError):
+                    advances = re.sub(
+                        r"g\s+(\d+)\s+(\S+)",
+                        lambda match, max_count=length: (match[2] + " ") * min(int(match[1]), max_count),
+                        delta_x,
+                    )
+                    width = sum(float(advance) for advance in advances.split()) + font_size
+            spans.append(
+                (
+                    x * _POINTS_PER_MM,
+                    baseline * _POINTS_PER_MM,
+                    (x + width) * _POINTS_PER_MM,
+                    baseline * _POINTS_PER_MM,
+                    text,
+                )
+            )
+    return spans
 
-        if not cols:
-            continue
 
-        goods_cell = (cols.get("商品名称") or "").strip()
-        if goods_cell.startswith(star_chars):
-            saw_marker = True
-            if (current.get("商品名称") or "").strip():
-                flush()
+def _page_spans(
+    package: zipfile.ZipFile,
+    members: dict[str, zipfile.ZipInfo],
+    documents: list[tuple[str, etree.Element]],
+) -> Iterator[list[_Span]]:
+    if not documents:
+        paths = sorted(
+            path
+            for path in members
+            if "/pages/" in f"/{path.casefold()}" and posixpath.basename(path).casefold() == "content.xml"
+        )
+        for path in paths:
+            page = _read_xml(package, members, path)
+            yield _positioned_spans(page) if page is not None else []
+        return
 
-        for k, v in cols.items():
-            if k in current:
-                append(k, v)
-
-        if (not saw_marker) and current.get("税额") and (current.get("金额") or current.get("数量")):
-            flush()
-
-    if any(v.strip() for v in current.values()):
-        flush()
-
-    return [r for r in rows if any((r.get(k) or "").strip() for k in ["商品名称", "金额", "数量"])]
-
-
-# ── Main OFD invoice parser ──────────────────────────────────────────
+    for doc_path, document in documents:
+        templates = {
+            node.get("ID"): _member_path(doc_path, node.get("BaseLoc", ""))
+            for common in _children(document, "CommonData")
+            for node in _children(common, "TemplatePage")
+        }
+        for pages in _children(document, "Pages"):
+            for page_ref in _children(pages, "Page"):
+                path = _member_path(doc_path, page_ref.get("BaseLoc", ""))
+                page = _read_xml(package, members, path)
+                if page is None:
+                    yield []
+                    continue
+                spans = _positioned_spans(page)
+                for source in _children(page, "Template"):
+                    template_path = templates.get(source.get("TemplateID"), "")
+                    template = _read_xml(package, members, template_path)
+                    if template is not None:
+                        spans.extend(_positioned_spans(template))
+                yield spans
 
 
 def parse_ofd_invoice(
-    file_path: str,
+    file_path: str, *, diagnostic_sink: ProgressSink | None = None
 ) -> tuple[dict[str, str | None], list[dict[str, str]]]:
-    """Parse an OFD invoice into metadata and detail-line rows.
-
-    Two code paths:
-    1. If ``InvoiceData.xml`` is found in the ZIP, parse it directly.
-    2. Otherwise, extract positioned text items from OFD content pages
-       and use regex+positional heuristics.
-
-    Args:
-        file_path: Path to the OFD file (ZIP container).
-
-    Returns:
-        A tuple of ``(metadata_dict, rows_list)``.
-
-    Raises:
-        ValueError: If the OFD file cannot be parsed.
-    """
-    # Path 1: Try InvoiceData.xml
-    xml_bytes = None
-    with zipfile.ZipFile(file_path) as zf:
-        for name in zf.namelist():
-            if name.lower().endswith("invoicedata.xml"):
-                xml_bytes = zf.read(name)
-                break
-
-    if not xml_bytes:
-        # Path 2: Fallback to OFD content items
-        items = _extract_ofd_items(file_path)
-        if not items:
-            raise ValueError("未找到 InvoiceData.xml 且无法从 OFD 内容提取文本")
-        text = _extract_ofd_text_from_items(items)
-        metadata = _parse_invoice_metadata_from_ofd_items(items)
-        rows = _parse_invoice_rows_from_ofd_items(items)
-        if not rows:
-            from docwen_plugin_optimizer_invoice_cn.invoice_cn.rows import (
-                parse_invoice_rows_from_pdf_text,
+    """Use the invoice attachment when available, otherwise parse each physical page."""
+    location = Path(file_path).name
+    try:
+        package = zipfile.ZipFile(file_path)
+    except (OSError, zipfile.BadZipFile):
+        raise ValueError("The OFD invoice package could not be opened.") from None
+    with package:
+        members: dict[str, zipfile.ZipInfo] = {}
+        duplicates: set[str] = set()
+        for member in package.infolist():
+            if member.is_dir():
+                continue
+            path = member.filename.lstrip("/")
+            if path in members:
+                duplicates.add(path)
+            members[path] = member
+        if duplicates:
+            for path in duplicates:
+                del members[path]
+            report_metadata_issue(
+                diagnostic_sink,
+                code="INVOICE-OFD-DUPLICATE-MEMBER",
+                location=location,
+                message="The OFD package contains ambiguous duplicate parts.",
             )
+            if "OFD.xml" in duplicates:
+                raise ValueError("The OFD invoice package manifest is ambiguous.")
+        manifest = _read_xml(package, members, "OFD.xml")
+        documents: list[tuple[str, etree.Element]] = []
+        if manifest is not None:
+            for body in _children(manifest, "DocBody"):
+                path = _member_path("OFD.xml", _xml_text(body, "DocRoot"))
+                document = _read_xml(package, members, path)
+                if document is not None:
+                    documents.append((path, document))
+                else:
+                    report_metadata_issue(
+                        diagnostic_sink,
+                        code="INVOICE-OFD-DOCUMENT",
+                        location=location,
+                        message="An OFD document referenced by the package could not be read.",
+                    )
 
-            rows = parse_invoice_rows_from_pdf_text(text, prefer_marked=True)
+        invoices, broken_relation = _invoice_attachments(package, members, documents)
+        if broken_relation or len(invoices) > 1:
+            report_metadata_issue(
+                diagnostic_sink,
+                code="INVOICE-OFD-ATTACHMENT",
+                location=location,
+                message="The OFD invoice attachment is unreadable or the package contains multiple invoice attachments.",
+            )
+        if len(invoices) == 1:
+            return _parse_invoice_xml(invoices[0], sink=diagnostic_sink, location=location)
+        if len(invoices) > 1:
+            raise ValueError("The OFD package contains multiple invoice attachments.")
+
+        metadata: dict[str, str | None] = {}
+        rows: list[dict[str, str]] = []
+        field_pages: dict[str, int] = {}
+        any_spans = False
+        for page_number, spans in enumerate(_page_spans(package, members, documents), start=1):
+            page_location = f"{location}:page-{page_number}"
+            if not spans:
+                report_metadata_issue(
+                    diagnostic_sink,
+                    code="INVOICE-OFD-PAGE-TEXT",
+                    location=page_location,
+                    message="No positioned text could be read from this OFD page.",
+                )
+                continue
+            any_spans = True
+            text = "\n".join(span[-1] for span in sorted(spans, key=lambda span: (round(span[1]), span[0])))
+            page_metadata, page_rows = parse_invoice_metadata_from_text_and_spans(
+                text, spans, diagnostic_sink=diagnostic_sink, location=page_location
+            )
+            merge_page_metadata(metadata, field_pages, page_metadata, page_number, diagnostic_sink, page_location)
+            rows.extend(page_rows)
+        if not any_spans:
+            raise ValueError("未找到电子发票 XML，且无法从 OFD 页面提取文本")
         return metadata, rows
-
-    # Path 1: Parse InvoiceData.xml
-    root = etree.fromstring(xml_bytes)
-
-    metadata: dict[str, str | None] = {
-        "优化类型": "invoice_cn",
-        "发票代码": _xml_first_text(root, "InvoiceCode"),
-        "发票号码": _xml_first_text(root, "InvoiceNumber"),
-        "开票日期": _xml_first_text(root, "IssueDate"),
-        "购买方名称": _xml_first_text(root, "BuyerName"),
-        "销售方名称": _xml_first_text(root, "SellerName"),
-        "金额": _xml_first_text(root, "TotalAmount"),
-        "税额": _xml_first_text(root, "TotalTax"),
-        "价税合计": _xml_first_text(root, "AmountWithTax"),
-    }
-
-    rows: list[dict[str, str]] = []
-    for node in root.iter():
-        if _xml_local_name(node.tag) != "InvoiceLineInfo":
-            continue
-        row = {
-            "商品名称": _xml_first_text(node, "GoodsName") or _xml_first_text(node, "ItemName"),
-            "规格型号": _xml_first_text(node, "SpecModel"),
-            "单位": _xml_first_text(node, "Unit"),
-            "数量": _xml_first_text(node, "Quantity"),
-            "单价": _xml_first_text(node, "UnitPrice"),
-            "金额": _xml_first_text(node, "Amount"),
-            "税率": _xml_first_text(node, "TaxRate"),
-            "税额": _xml_first_text(node, "TaxAmount"),
-        }
-        if any(v.strip() for v in row.values()):
-            rows.append(row)
-
-    return metadata, rows

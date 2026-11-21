@@ -27,8 +27,9 @@ def test_fa09_easyofd_repairs_have_direct_executable_guards() -> None:
     assert "def _patch_content_clip_boundary" in patches
     assert "def _patch_draw_pdf_page_scale" in patches
     assert "self.OP = 72 / 25.4" in patches
-    assert "apply_easyofd_patches()" in converter
+    assert "render_ofd_pdf(input_path," in converter
+    assert "apply_easyofd_patches()" in patches
     assert "test_unbounded_abbreviated_clip_does_not_crash_text_parser" in core_tests
     assert "test_bounded_clip_retains_upstream_position_parsing" in core_tests
     assert "test_draw_pdf_uses_pdf_points_per_millimetre" in core_tests
-    assert "test_ofd_to_pdf_applies_easyofd_patches" in layout_tests
+    assert "test_ofd_to_pdf_uses_shared_renderer" in layout_tests

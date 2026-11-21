@@ -76,11 +76,7 @@ def test_empty_signer_extraction_keeps_the_source_paragraph_and_requires_review(
     assert 0 not in result.skip_indices
     assert "signer_text_preserved" in result.candidates[0].trace
 
-    class Scorer:
-        def score_round(self, _feature, *, round_group):
-            return []
-
-    signals = collect_structured_signals(result, Scorer(), features)
+    signals = collect_structured_signals(result, features)
     assert signals["recognition_summary"]["needs_review"]
     assert any(warning["code"] == "GW003" for warning in signals["gongwen_warnings"])
 
@@ -155,7 +151,7 @@ def test_recipient_keeps_uncertain_agency_suffix_prose_and_requests_review(earli
 
     assert result.yaml_info["主送机关"] == "各市人民政府"
     assert 1 not in result.skip_indices
-    signals = collect_structured_signals(result, scorer, features)
+    signals = collect_structured_signals(result, features)
     assert any(warning["code"] == "GW004" for warning in signals["gongwen_warnings"])
 
 
@@ -222,3 +218,202 @@ def test_uncertain_recipient_prose_remains_in_the_full_docx_markdown_output() ->
     assert "正文内容。" in result["markdown"]
     signals = result["metadata"]["recognition_review_signals"]
     assert any(warning["code"] == "GW004" for warning in signals["gongwen_warnings"])
+
+
+@pytest.mark.parametrize(
+    "line,expected",
+    [
+        ("各有关单位：", "各有关单位"),
+        ("示例研发中心：", "示例研发中心"),
+        ("各区（A区、B区）：", "各区（A区、B区）"),
+        ("示例工信委：", "示例工信委"),
+        ("各县（市、区）人民政府，示例研发中心:", "各县（市、区）人民政府，示例研发中心"),
+        ("各位同仁：", "各位同仁"),
+        ("罗代表：", "罗代表"),
+        ("主送机关：示例研发中心", ""),
+        ("各有关部门参加了讨论，记录如下：", ""),
+        ("各部门应将书面材料提交示例研发中心：", ""),
+        ("讨论已结束。经各单位确认，现将决定列举如下：", ""),
+    ],
+)
+def test_recipient_recognizes_an_opening_address(line: str, expected: str) -> None:
+    from docx import Document
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    document.add_paragraph("示例事项通知")
+    document.add_paragraph(line)
+    document.add_paragraph("正文开始。")
+
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx", options={})
+
+    assert result["yaml_info"]["主送机关"] == expected
+    body = result["markdown"].split("---", 2)[2]
+    assert (line in body) == (not expected)
+
+
+@pytest.mark.parametrize("body_before_address", [False, True])
+def test_recipient_stops_at_the_body_boundary(body_before_address: bool) -> None:
+    from docx import Document
+    from docx.shared import Pt
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    document.add_paragraph("示例事项通知")
+    if body_before_address:
+        document.add_paragraph("以下列出本次工作的详细情况。")
+    address = document.add_paragraph("示例研发中心：")
+    if not body_before_address:
+        address.paragraph_format.first_line_indent = Pt(28)
+    document.add_paragraph("正文开始。")
+
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx")
+
+    assert result["yaml_info"]["主送机关"] == ""
+    assert address.text in result["markdown"].split("---", 2)[2]
+
+
+@pytest.mark.parametrize("opening", ["title_continuation", "centered_note", "indented_list"])
+def test_recipient_uses_the_full_opening_layout(opening: str) -> None:
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.ns import qn
+    from docx.shared import Pt
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    title = document.add_paragraph("关于开展试点的通知")
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    if opening == "title_continuation":
+        lines = [title, document.add_paragraph("第一批示范事项"), document.add_paragraph("联动实施安排")]
+        for line in lines:
+            run = line.runs[0]
+            run.font.name = "方正小标宋"
+            run.font.size = Pt(22)
+            run._element.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), "方正小标宋")
+    elif opening == "centered_note":
+        note = document.add_paragraph("（2026年1月19日）")
+        note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    addressees = "示例协作平台、各位观察员" if opening == "indented_list" else "各位观察员"
+    address = document.add_paragraph(f"{addressees}：")
+    body = document.add_paragraph("为做好试点工作，现将有关事项说明如下：")
+    body.paragraph_format.first_line_indent = Pt(28)
+    if opening == "indented_list":
+        address.paragraph_format.first_line_indent = Pt(28)
+    document.add_paragraph("试点各方应建立工作台账。")
+
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx")
+
+    assert result["yaml_info"]["主送机关"] == addressees
+    markdown_body = result["markdown"].split("---", 2)[2]
+    assert address.text not in markdown_body
+    assert body.text in markdown_body
+
+
+@pytest.mark.parametrize("number_before_title", [False, True])
+def test_meeting_number_and_typed_decisions_keep_their_source_content(number_before_title: bool) -> None:
+    from docx import Document
+
+    from docwen_core.text.heading_numbering import compile_clean_rules_from_data
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    title = "示例演练会议纪要"
+    number = "（2038）7号"
+    narrative = "示例小组查看了各部门的演练记录。有关决定如下："
+    unclear = "示例演练联络组　2038年3月12日"
+    body_reference = "(2037) 6号"
+    for line in (number, title) if number_before_title else (title, number):
+        document.add_paragraph(line)
+    document.add_paragraph(narrative)
+    document.add_paragraph("1.继续检查设备。记录完成时间。")
+    document.add_paragraph("2.复核演练程序。保留变更记录。")
+    document.add_paragraph("3.复核周期。", style="Heading 3")
+    document.add_paragraph("供复核的另一份材料：")
+    document.add_paragraph(body_reference)
+    document.add_paragraph(unclear)
+
+    result = convert_docx_to_md_gongwen(
+        document,
+        "synthetic.docx",
+        options={},
+        cleanup_rules=compile_clean_rules_from_data(
+            [
+                {"id": "arabic_separator", "level": 3, "pattern": r"^\d+\."},
+                {"id": "arabic_bracket", "level": 4, "pattern": r"^[（(]\d+[）)]"},
+            ]
+        ),
+    )
+
+    assert result["yaml_info"]["发文字号"] == number
+    assert result["yaml_info"]["主送机关"] == ""
+    assert result["yaml_info"]["发文机关署名"] == ""
+    assert result["yaml_info"]["成文日期"] == ""
+    body = result["markdown"].split("---", 2)[2]
+    assert number not in body
+    assert narrative in body
+    assert "1. 继续检查设备。记录完成时间。" in body
+    assert "2. 复核演练程序。保留变更记录。" in body
+    assert "### 复核周期。" in body
+    assert body_reference in body
+    assert unclear in body
+
+
+def test_gongwen_body_preserves_accepted_inline_revisions() -> None:
+    from docx import Document
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    document.add_paragraph("关于办理事项的通知")
+    document.add_paragraph("各学院：")
+    body = document.add_paragraph("请于周五报送")
+    inserted = OxmlElement("w:ins")
+    inserted.set(qn("w:id"), "1")
+    inserted.append(body.add_run("。")._r)
+    body._p.append(inserted)
+    deleted = OxmlElement("w:del")
+    deleted.set(qn("w:id"), "2")
+    removed_run = OxmlElement("w:r")
+    removed_text = OxmlElement("w:delText")
+    removed_text.text = "旧时间"
+    removed_run.append(removed_text)
+    deleted.append(removed_run)
+    body._p.append(deleted)
+    body.add_run("谢谢配合。")
+
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx")
+    assert result["yaml_info"]["主送机关"] == "各学院"
+    assert "请于周五报送。谢谢配合。" in result["markdown"]
+    assert "旧时间" not in result["markdown"]
+
+
+def test_gongwen_attachment_renders_each_table_cell_once() -> None:
+    from docx import Document
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    document.add_paragraph("关于材料归档的通知")
+    document.add_paragraph("各学院：")
+    document.add_paragraph("请按随文附表归档材料。")
+    document.add_paragraph("附件：归档材料表")
+    document.add_paragraph("示例地区人民政府")
+    document.add_paragraph("2026年10月20日")
+    document.add_paragraph("归档材料表")
+    table = document.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "材料类型"
+    table.cell(0, 1).text = "办理要求"
+    table.cell(1, 0).text = "书面计划"
+    table.cell(1, 1).text = "说明资料提交方式"
+
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx")
+    (attachment,) = result["attachment_documents"]
+    assert "| 书面计划 | 说明资料提交方式 |" in attachment.markdown
+    assert attachment.markdown.count("说明资料提交方式") == 1

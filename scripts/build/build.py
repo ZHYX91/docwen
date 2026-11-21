@@ -59,6 +59,11 @@ except ModuleNotFoundError:  # Direct ``python scripts/build/build.py`` executio
     from payload_normalization import normalize_base_library_zip, normalize_packaged_record_files
 
 try:
+    from scripts.build.payload_size_audit import audit_payload_size
+except ModuleNotFoundError:  # Direct ``python scripts/build/build.py`` execution.
+    from payload_size_audit import audit_payload_size
+
+try:
     import PyInstaller.__main__ as pyinstaller_main
 except ModuleNotFoundError:
     pyinstaller_main = None
@@ -607,6 +612,40 @@ def copytree_robust(src: Path, dst: Path) -> None:
             shutil.copy2(src_root / f, dst_root / f)
 
 
+def copy_frozen_runtime(src: Path, dst: Path) -> None:
+    """Merge a PyInstaller runtime, preserving relative library links on POSIX."""
+    if IS_WINDOWS:
+        copytree_robust(src, dst)
+        return
+
+    root = src.resolve(strict=True)
+    if src.is_symlink() or dst.is_symlink():
+        raise ValueError("frozen runtime roots must be plain directories")
+
+    def merge_directory(source: Path, destination: Path) -> None:
+        destination.mkdir(parents=True, exist_ok=True)
+        for entry in source.iterdir():
+            target = destination / entry.name
+            if entry.is_symlink():
+                link = entry.readlink()
+                if link.is_absolute() or not entry.resolve(strict=True).is_relative_to(root):
+                    raise ValueError(f"invalid frozen runtime link: {entry.relative_to(src)}")
+                target.unlink(missing_ok=True)
+                target.symlink_to(link)
+            else:
+                # A GUI alias at this name must not redirect a CLI file write.
+                if target.is_symlink():
+                    target.unlink()
+                if entry.is_dir():
+                    merge_directory(entry, target)
+                else:
+                    shutil.copyfile(entry, target)
+                    shutil.copystat(entry, target)
+        shutil.copystat(source, destination)
+
+    merge_directory(src, dst)
+
+
 def compile_cython_modules() -> bool:
     """
     编译 Cython 模块
@@ -928,6 +967,14 @@ def build_app(
         "--exclude-module=telnetlib",
         "--exclude-module=nntplib",
         "--exclude-module=xmlrpc",
+        # The product uses Qt for its GUI and has no Tk desktop surface.
+        # Avoid transitively freezing Tcl/Tk into either the CLI or GUI.
+        "--exclude-module=tkinter",
+        "--exclude-module=turtle",
+        "--exclude-module=idlelib",
+        # Cython is a compiler used before bundling; both production builds
+        # ship Python modules and never compile modules in the user runtime.
+        "--exclude-module=Cython",
         "--exclude-module=PySide6.QtMultimedia",
         "--exclude-module=PySide6.QtMultimediaWidgets",
         "--exclude-module=PySide6.QtNetwork",
@@ -1100,7 +1147,7 @@ def build_app(
             src_internal = cli_output_dir / "_internal"
             dst_internal = deploy_dir / "_internal"
             if src_internal.exists():
-                copytree_robust(src_internal, dst_internal)
+                copy_frozen_runtime(src_internal, dst_internal)
 
         # 补充复制资源文件
         resource_mappings = [
@@ -1184,6 +1231,19 @@ def build_app(
             record_result = normalize_packaged_record_files(target)
             base_library_result = normalize_base_library_zip(target)
             logger.info(f"规范化冻结载荷: {target.name}; RECORD={record_result}; base_library={base_library_result}")
+            size_report = audit_payload_size(target)
+            logger.info(
+                f"冻结载荷体积: {target.name}; physical_bytes={size_report['physical_bytes']}; "
+                f"non_ocr_bytes={size_report['non_ocr_bytes']}; "
+                f"non_model_bytes={size_report['non_model_bytes']}; "
+                f"ocr_model_bytes={size_report['ocr_model_bytes']}; "
+                f"other_model_bytes={size_report['other_model_bytes']}; "
+                f"regular_files={size_report['regular_files']}; links={size_report['links']}"
+            )
+            for group, bytes_used in size_report["top_non_ocr_groups"]:
+                logger.info(f"冻结载荷非 OCR 分组: {target.name}; bytes={bytes_used}; group={group}")
+            for relative_path, bytes_used in size_report["largest_non_ocr_files"]:
+                logger.info(f"冻结载荷非 OCR 大文件: {target.name}; bytes={bytes_used}; path={relative_path}")
 
         if cli_deploy_dir is not None and not verify_build(cli_deploy_dir, with_cli=True, with_gui=False):
             return None

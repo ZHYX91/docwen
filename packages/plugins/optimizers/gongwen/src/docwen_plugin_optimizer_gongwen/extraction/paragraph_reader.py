@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -11,6 +13,7 @@ if TYPE_CHECKING:
 
 from docx.oxml.ns import qn
 
+from docwen_core.docx_parsing.format_features import has_first_line_indent
 from docwen_core.docx_parsing.image_extraction import ImageExtractionNames, extract_images_from_element
 from docwen_core.docx_parsing.list_processing import ListCounterManager, format_list_marker
 from docwen_core.docx_parsing.textbox_extraction import (
@@ -18,6 +21,7 @@ from docwen_core.docx_parsing.textbox_extraction import (
     extract_textbox_paragraphs,
 )
 from docwen_core.text.heading_numbering import detect_heading_prefix
+from docwen_plugin_optimizer_gongwen.constants import RE_MEETING_NUMBER
 from docwen_plugin_optimizer_gongwen.extraction.format_features import (
     extract_alignment,
     extract_font_info,
@@ -91,6 +95,24 @@ def _is_native_heading_level(
     return True
 
 
+def _paragraph_text(para: Any) -> str:
+    """Read inline text in Word's accepted revision view."""
+    if not para._p.xpath(".//w:ins | .//w:moveTo"):
+        return para.text
+
+    wrappers = {qn("w:hyperlink"), qn("w:ins"), qn("w:moveTo")}
+    run_tag = qn("w:r")
+
+    def inline_text(element: Any) -> Iterator[str]:
+        for child in element:
+            if child.tag == run_tag:
+                yield child.text
+            elif child.tag in wrappers:
+                yield from inline_text(child)
+
+    return "".join(inline_text(para._p))
+
+
 def _neighboring_content_paragraphs(paragraphs: list[Any], index: int) -> tuple[Any, ...]:
     """Return the nearest non-empty paragraph on each side."""
 
@@ -99,7 +121,7 @@ def _neighboring_content_paragraphs(paragraphs: list[Any], index: int) -> tuple[
         candidate_index = index + step
         while 0 <= candidate_index < len(paragraphs):
             candidate = paragraphs[candidate_index]
-            if candidate.text.strip():
+            if _paragraph_text(candidate).strip():
                 neighbors.append(candidate)
                 break
             candidate_index += step
@@ -129,7 +151,7 @@ def read_paragraphs(
     body_element = doc.element.body
     paragraphs = list(doc.paragraphs)
     for paragraph_index, para in enumerate(paragraphs):
-        text = para.text
+        text = _paragraph_text(para)
 
         # Empty layout paragraphs carry no semantic content, but an empty
         # ``Paragraph.text`` can still own an image, formula or explicit page /
@@ -183,7 +205,7 @@ def read_paragraphs(
 
         # ── Heading clean-text: display text vs raw text ──
         raw_text = text.strip()
-        display_text = cleaned_text if heading_lvl > 0 else raw_text
+        display_text = cleaned_text.strip() if heading_lvl > 0 or list_marker else raw_text
         heading_body_boundary, heading_body_boundary_source = _detect_mixed_heading_body_boundary(
             para if para.text == text else None,
             display_text,
@@ -234,6 +256,7 @@ def read_paragraphs(
             extracted_images=images,
             table_cell_context=tbl_ctx,
             source_index=body_element.index(para._p),
+            has_first_line_indent=has_first_line_indent(para),
         )
         features.append(pf)
 
@@ -286,19 +309,29 @@ def _detect_paragraph_structure(
     # leading copy ID as an Arabic-space Heading prefix. Incomplete candidates
     # retain that same source for the precise preservation diagnostic; they do
     # not become headings merely because a configured rule matches the ID.
-    if parse_combined_id(text) is not None or looks_like_combined_id(text):
+    if RE_MEETING_NUMBER.fullmatch(text.strip()) or parse_combined_id(text) is not None or looks_like_combined_id(text):
         return text, 0, "", "", 0
+
+    style_map = {"Heading 1": 1, "Heading 2": 2, "Heading 3": 3, "Heading 4": 4, "Heading 5": 5}
+    heading_level = style_map.get(style_name, 0)
 
     # Pass 1: Shared heading numbering detection
     info = detect_heading_prefix(text, rules=cleanup_rules)
     # A prefix that consumes the whole paragraph (for example a pure numeric
     # 份号 such as ``001``) is metadata, not an empty heading.
-    if info is not None and info.clean_text.strip():
-        return info.clean_text.strip(), info.numbering_level, info.prefix, "", 0
+    if info is not None and (content := info.clean_text.strip()):
+        # A typed decimal marker on a prose sentence can be a decision list.
+        # Keep the sentence intact unless Word marks the paragraph as a heading.
+        if (
+            info.rule_id == "arabic_separator"
+            and re.fullmatch(r"[0-9]{1,9}\.", info.prefix)
+            and content.endswith(("。", "；", "！", "？"))
+            and not heading_level
+            and (para is None or extract_outline_level(para) not in range(9))
+        ):
+            return content, 0, "", info.prefix, 0
+        return content, info.numbering_level, info.prefix, "", 0
 
-    # Pass 2: Word style
-    style_map = {"Heading 1": 1, "Heading 2": 2, "Heading 3": 3, "Heading 4": 4, "Heading 5": 5}
-    heading_level = style_map.get(style_name, 0)
     heading_num = ""
     list_marker = ""
     list_level = 0

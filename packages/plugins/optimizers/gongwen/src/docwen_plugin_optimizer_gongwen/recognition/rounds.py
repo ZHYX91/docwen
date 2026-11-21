@@ -10,6 +10,7 @@ The rounds enforce these matching rules:
 
 from __future__ import annotations
 
+from docwen_plugin_optimizer_gongwen.constants import NON_UNIQUE_SCORE_THRESHOLD
 from docwen_plugin_optimizer_gongwen.models import (
     ParagraphFeature,
     RecognitionCandidate,
@@ -120,7 +121,7 @@ def run_round3(
             if contains_chinese(pf.text) and len(pf.text.strip()) > 2:
                 result.candidates[pf.index] = RecognitionCandidate(
                     element_type="body",
-                    score=60,  # NON_UNIQUE_SCORE_THRESHOLD
+                    score=NON_UNIQUE_SCORE_THRESHOLD,
                     para_index=pf.index,
                     trace=["default_body"],
                     confidence="low",
@@ -156,5 +157,7 @@ def _score_best_candidate(
     if not candidates:
         return None
 
-    # candidates are already sorted by score descending in score_round
-    return candidates[0]
+    best = candidates[0]
+    if round_group != "round3" and len(candidates) > 1:
+        best.runner_up = candidates[1]
+    return best

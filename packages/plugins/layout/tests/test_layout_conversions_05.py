@@ -403,7 +403,7 @@ class TestPreprocessChain:
 
     @pytest.mark.parametrize(
         ("enable_ocr", "keep_images", "expected_fragments", "expected_images"),
-        [(False, False, 0, 0), (True, False, 4, 0), (False, True, 0, 5), (True, True, 4, 5)],
+        [(False, False, 0, 0), (True, False, 4, 0), (False, True, 0, 4), (True, True, 4, 4)],
     )
     def test_pdf_to_md_physical_page_matrix_keeps_p_and_k_independent(
         self,
@@ -414,7 +414,7 @@ class TestPreprocessChain:
         expected_fragments: int,
         expected_images: int,
     ) -> None:
-        """Canonical P=4/K=5 producer corpus freezes all four option combinations."""
+        """The fallback renderer delivers its own images across all four option combinations."""
         import docwen_plugin_layout.to_markdown.converter as converter_module
         from docwen_application.bundle_mapping import build_bundle_draft
         from docwen_core.models import validate_artifact_bundle_draft
@@ -441,9 +441,7 @@ class TestPreprocessChain:
                 image_dir.mkdir(parents=True, exist_ok=True)
                 image_name = f"page-{page_number}.png"
                 _write_valid_png(image_dir / image_name)
-                links.append(f"![[physical-matrix_images/{image_name}]]")
-                if page_number == 1:
-                    links.append("![[physical-matrix_images/unresolved.png]]")
+                links.append(f"![[{image_dir.name}/{image_name}]]")
             return "\n".join([*links, f"NATIVE {page_number}"])
 
         statuses = (
@@ -456,8 +454,10 @@ class TestPreprocessChain:
         monkeypatch.setattr(converter_module, "_ocr_page_outcomes", lambda *_args, **_kwargs: list(statuses))
 
         with tempfile.TemporaryDirectory() as staging:
+            unowned_image = Path(staging) / "physical-matrix_images" / "stale.png"
             if keep_images:
-                _write_valid_png(Path(staging) / "physical-matrix_images" / "unresolved.png")
+                _write_valid_png(unowned_image)
+                unowned_bytes = unowned_image.read_bytes()
             context = _build_fake_context(
                 str(pdf_path),
                 staging,
@@ -474,6 +474,8 @@ class TestPreprocessChain:
                 artifacts=result.artifacts,
             )
             validate_artifact_bundle_draft(draft)
+            if keep_images:
+                assert unowned_image.read_bytes() == unowned_bytes
 
         assert result.success is True
         assert len(result.artifacts) == 1 + expected_fragments + expected_images
@@ -489,11 +491,6 @@ class TestPreprocessChain:
                 "success",
             ]
         if keep_images:
-            resolved = [artifact for artifact in images if "source_page" in artifact.metadata]
-            unresolved = [artifact for artifact in images if "source_page" not in artifact.metadata]
-            assert [artifact.metadata["source_page"] for artifact in resolved] == [1, 2, 3, 4]
-            assert len(unresolved) == 1
-            warnings = [
-                diagnostic for diagnostic in result.diagnostics if diagnostic.code == "resource_page_unresolved"
-            ]
-            assert [diagnostic.artifact_id for diagnostic in warnings] == [unresolved[0].artifact_id]
+            assert [artifact.metadata["source_page"] for artifact in images] == [1, 2, 3, 4]
+            assert all(artifact.suggested_name != "stale.png" for artifact in images)
+            assert all(diagnostic.code != "resource_page_unresolved" for diagnostic in result.diagnostics)

@@ -67,6 +67,7 @@ class LayoutPlugin:
                 context.workspace.input_path,
                 context.workspace.staging_dir,
                 source,
+                check_cancel=context.cancellation.check,
             )
             if pre.error_type:
                 return self._preprocess_error(context, pre)
@@ -86,6 +87,7 @@ class LayoutPlugin:
                 context.workspace.input_path,
                 context.workspace.staging_dir,
                 source,
+                check_cancel=context.cancellation.check,
             )
             if pre.error_type:
                 return self._preprocess_error(context, pre)
@@ -106,6 +108,7 @@ class LayoutPlugin:
                 context.workspace.input_path,
                 context.workspace.staging_dir,
                 source,
+                check_cancel=context.cancellation.check,
             )
             if pre.error_type:
                 return self._preprocess_error(context, pre)

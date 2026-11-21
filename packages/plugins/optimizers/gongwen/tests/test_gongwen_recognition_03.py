@@ -17,7 +17,6 @@ class TestStructuredSignals:
             RecognitionCandidate,
             RecognitionResult,
         )
-        from docwen_plugin_optimizer_gongwen.recognition.scorer import ElementScorer
         from docwen_plugin_optimizer_gongwen.recognition.signals import collect_structured_signals
 
         features = [
@@ -39,12 +38,10 @@ class TestStructuredSignals:
             missing_required=[],
             validation_finding_count=0,
         )
-        scorer = ElementScorer()
-        scorer.reset_context(features)
-        signals = collect_structured_signals(result, scorer, features)
-        assert len(signals["low_confidence_passes"]) >= 1
-        for entry in signals["low_confidence_passes"]:
-            assert entry["score"] < 100  # low confidence threshold
+        signals = collect_structured_signals(result, features)
+        assert signals["low_confidence_passes"] == [
+            {"paragraph_index": 0, "element": "body", "round": 3, "score": 60, "threshold": 60}
+        ]
 
     def test_missing_required_generates_warning(self):
         """Missing required fields produce gongwen_warnings entries."""
@@ -53,7 +50,6 @@ class TestStructuredSignals:
             RecognitionCandidate,
             RecognitionResult,
         )
-        from docwen_plugin_optimizer_gongwen.recognition.scorer import ElementScorer
         from docwen_plugin_optimizer_gongwen.recognition.signals import collect_structured_signals
 
         features = [
@@ -75,9 +71,7 @@ class TestStructuredSignals:
             missing_required=["title"],
             validation_finding_count=1,
         )
-        scorer = ElementScorer()
-        scorer.reset_context(features)
-        signals = collect_structured_signals(result, scorer, features)
+        signals = collect_structured_signals(result, features)
         assert any(w["code"] == "GW001" for w in signals["gongwen_warnings"])
 
     def test_structured_signals_includes_summary(self):
@@ -87,7 +81,6 @@ class TestStructuredSignals:
             RecognitionCandidate,
             RecognitionResult,
         )
-        from docwen_plugin_optimizer_gongwen.recognition.scorer import ElementScorer
         from docwen_plugin_optimizer_gongwen.recognition.signals import collect_structured_signals
 
         features = [
@@ -109,9 +102,7 @@ class TestStructuredSignals:
             missing_required=[],
             validation_finding_count=0,
         )
-        scorer = ElementScorer()
-        scorer.reset_context(features)
-        signals = collect_structured_signals(result, scorer, features)
+        signals = collect_structured_signals(result, features)
         assert "recognition_summary" in signals
         assert "status" in signals["recognition_summary"]
         assert "recognized_paragraph_count" in signals["recognition_summary"]
@@ -132,3 +123,41 @@ class TestStructuredSignals:
         assert "low_confidence_passes" in signals
         assert "gongwen_warnings" in signals
         assert "recognition_summary" in signals
+
+    def test_second_round_close_match_uses_available_alternatives_at_assignment(self, monkeypatch):
+        from docwen_plugin_optimizer_gongwen.models import ParagraphFeature, ScoringRule
+        from docwen_plugin_optimizer_gongwen.recognition.rounds import run_rounds
+        from docwen_plugin_optimizer_gongwen.recognition.rules import SCORING_RULES
+        from docwen_plugin_optimizer_gongwen.recognition.scorer import ElementScorer
+        from docwen_plugin_optimizer_gongwen.recognition.signals import collect_structured_signals
+
+        monkeypatch.setitem(SCORING_RULES, "issuing_authority_mark", [ScoringRule("is_after_last_unique_element", 95)])
+        monkeypatch.setitem(SCORING_RULES, "printing_authority", [ScoringRule("is_after_last_unique_element", 85)])
+        features = [ParagraphFeature(index=0, text="示例机关")]
+        result = run_rounds(ElementScorer(), features)
+        signals = collect_structured_signals(result, features)
+        assert signals["close_unique_matches"] == [
+            {
+                "paragraph_index": 0,
+                "element": "issuing_authority_mark",
+                "round": 2,
+                "score": 95,
+                "runner_up_element": "printing_authority",
+                "runner_up_score": 85,
+                "score_gap": 10,
+            }
+        ]
+
+    def test_default_body_is_reported_as_round_three_fallback(self):
+        from docwen_plugin_optimizer_gongwen.models import ParagraphFeature
+        from docwen_plugin_optimizer_gongwen.recognition.rounds import run_rounds
+        from docwen_plugin_optimizer_gongwen.recognition.scorer import ElementScorer
+        from docwen_plugin_optimizer_gongwen.recognition.signals import collect_structured_signals
+
+        features = [ParagraphFeature(index=0, text="这里是无法分配的正文。")]
+        result = run_rounds(ElementScorer(), features)
+        signals = collect_structured_signals(result, features)
+        assert signals["used_fallback"] == [
+            {"paragraph_index": 0, "element": "body", "round": 3, "reason": "default_body"}
+        ]
+        assert signals["low_confidence_passes"] == []

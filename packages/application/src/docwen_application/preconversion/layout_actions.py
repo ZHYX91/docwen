@@ -17,7 +17,8 @@ from docwen_application.preconversion.pre_converter import (
     _is_cancel_requested,
     _prepare_protective_snapshot,
 )
-from docwen_core.ofd import apply_easyofd_patches, easyofd_import_boundary
+from docwen_core.errors import CancellationRequested
+from docwen_core.ofd import render_ofd_pdf
 
 if TYPE_CHECKING:
     from docwen_core.protocols import CancellationTokenView
@@ -55,13 +56,7 @@ def pre_convert_layout(
                     return PreConversionFailure(message="cancelled", cancelled=True, error_type="cancelled")
                 digest.update(block)
         if fmt == "ofd":
-            with easyofd_import_boundary():
-                from easyofd import OFD  # type: ignore[import-untyped]
-
-            apply_easyofd_patches()
-            ofd = OFD()
-            ofd.read(str(protected), fmt="path")
-            pdf_data = ofd.to_pdf()
+            pdf_data = render_ofd_pdf(str(protected), check_cancel=cancel.check if cancel is not None else None)
             backend = "easyofd"
         else:
             import fitz
@@ -81,6 +76,8 @@ def pre_convert_layout(
         destination.write_bytes(pdf_data)
         if _is_cancel_requested(cancel):
             return PreConversionFailure(message="cancelled", cancelled=True, error_type="cancelled")
+    except CancellationRequested:
+        return PreConversionFailure(message="cancelled", cancelled=True, error_type="cancelled")
     except ImportError as exc:
         return PreConversionFailure(
             message=f"Required layout PDF dependency is unavailable: {exc}",
