@@ -35,6 +35,7 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
     ],
     # ── 发文机关标志 ──
     "issuing_authority_mark": [
+        ScoringRule("is_before_title_if_known", 0, required=True),
         ScoringRule("ends_with_authority_suffix", 50),
         ScoringRule("is_after_last_unique_element", 30),
         ScoringRule("within_first_3_paragraphs", 30),

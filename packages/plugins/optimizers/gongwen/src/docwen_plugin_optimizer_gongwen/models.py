@@ -70,6 +70,7 @@ class ParagraphFeature:
     is_table_anchor: bool = False
     table_fidelity_risks: tuple[str, ...] = ()
     table_output_mode: str = ""  # rendered | structural_metadata | unrepresentable
+    has_first_line_indent: bool = False
 
 
 @dataclass

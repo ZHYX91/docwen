@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 from docx.oxml.ns import qn
 
+from docwen_core.docx_parsing.format_features import has_first_line_indent
 from docwen_core.docx_parsing.image_extraction import ImageExtractionNames, extract_images_from_element
 from docwen_core.docx_parsing.list_processing import ListCounterManager, format_list_marker
 from docwen_core.docx_parsing.textbox_extraction import (
@@ -236,6 +237,7 @@ def read_paragraphs(
             extracted_images=images,
             table_cell_context=tbl_ctx,
             source_index=body_element.index(para._p),
+            has_first_line_indent=has_first_line_indent(para),
         )
         features.append(pf)
 

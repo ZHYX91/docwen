@@ -23,7 +23,11 @@ from docwen_plugin_optimizer_gongwen.constants import (
     UNIQUE_SCORE_THRESHOLD,
 )
 from docwen_plugin_optimizer_gongwen.models import ParagraphFeature, RecognitionCandidate
-from docwen_plugin_optimizer_gongwen.recognition.recipient_block import is_recipient_address
+from docwen_plugin_optimizer_gongwen.recognition.recipient_block import (
+    could_continue_recipient,
+    has_recipient_list_separator,
+    is_recipient_address,
+)
 from docwen_plugin_optimizer_gongwen.recognition.rules import SCORING_RULES
 from docwen_plugin_optimizer_gongwen.utils import (
     extract_doc_number_and_name,
@@ -63,6 +67,7 @@ _NAME_PATTERN = rf"{_NAME_PART_PATTERN}(?:[{re.escape(_NAME_SEPARATOR_CHARS)}]{_
 _NAME_RE = re.compile(rf"^{_NAME_PATTERN}$")
 _NAME_LIST_SPLIT_RE = re.compile(r"[、\s　]+")
 _SECURITY_RETENTION_RE = re.compile(r"\w{0,20}★(?:[0-9０-９零〇一二三四五六七八九十百两]+(?:年|个月|月|天|日)|长期)")
+_PARENTHETICAL_TITLE_NOTE = re.compile(r"（[^。！？!?：:\r\n]+）|\([^。！？!?：:\r\n]+\)")
 
 # ── Document keywords blacklist (for person name detection) ───────────
 _DOC_KEYWORDS = [
@@ -496,8 +501,62 @@ class ElementScorer:
         return any(t.endswith(s) for s in _AUTHORITY_SUFFIXES)
 
     def is_recipient_address(self, pf: ParagraphFeature) -> bool:
-        """Require a stand-alone address before applying recipient scores."""
-        return not (pf.heading_level or pf.list_marker) and is_recipient_address(pf.raw_text or pf.text)
+        """Recognize a standalone address between the title and the body."""
+        title_pos = self._get_element_pos("title")
+        text = pf.raw_text or pf.text
+        if (
+            title_pos == -1
+            or pf.index <= title_pos
+            or pf.source != "body"
+            or pf.alignment in {"CENTER", "RIGHT"}
+            or any((pf.heading_level, pf.list_marker, pf.has_image, pf.has_formula))
+            or not is_recipient_address(text)
+            or (pf.has_first_line_indent and not has_recipient_list_separator(text))
+        ):
+            return False
+
+        title = self._all_features[title_pos]
+        last_title_line = title_pos
+        frontmatter = {
+            self._get_element_pos(element)
+            for element in ("doc_number", "combined_id", "combined_doc_number_signer", "signer")
+        }
+        for previous in self._all_features[title_pos + 1 : pf.index]:
+            if previous.index in frontmatter:
+                continue
+            if previous.source != "body" or any(
+                (previous.heading_level, previous.list_marker, previous.has_image, previous.has_formula)
+            ):
+                return False
+            previous_text = (previous.raw_text or previous.text).strip()
+            if previous.index == last_title_line + 1 and self._matches_title_line(previous, title, previous_text):
+                last_title_line = previous.index
+                continue
+            if self.starts_with_subtitle_dash(previous) and self.follows_title_or_title_following(previous):
+                continue
+            if previous.alignment == "CENTER" and _PARENTHETICAL_TITLE_NOTE.fullmatch(previous_text):
+                continue
+            if previous.has_first_line_indent or not could_continue_recipient(previous_text):
+                return False
+        return True
+
+    def _matches_title_line(self, pf: ParagraphFeature, title: ParagraphFeature, text: str) -> bool:
+        """Recognize adjacent display text with the title's typography."""
+        if not text or any(character in text for character in "。！？!?；;：:"):
+            return False
+        return self.is_official_title_font(pf) and (
+            (pf.alignment == "CENTER" and self.is_official_title_size(pf))
+            or (
+                pf.font_name == title.font_name
+                and pf.font_size_pt is not None
+                and pf.font_size_pt == title.font_size_pt
+            )
+        )
+
+    def is_before_title_if_known(self, pf: ParagraphFeature) -> bool:
+        """Keep a recognized title below the issuing authority mark."""
+        title_pos = self._get_element_pos("title")
+        return title_pos == -1 or pf.index < title_pos
 
     # ── Font Checkers ──────────────────────────────────────────────
 
