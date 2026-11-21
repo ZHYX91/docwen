@@ -189,7 +189,8 @@ def test_ofd_normalization_uses_protective_input_and_produces_valid_pdf(
     staging = tmp_path / "staging"
     staging.mkdir()
 
-    def render(input_path: str) -> bytes:
+    def render(input_path: str, *, check_cancel=None) -> bytes:
+        assert check_cancel is None
         assert Path(input_path) == staging / "input.ofd"
         assert Path(input_path).read_bytes() == source.read_bytes()
         with fitz.open() as document:
@@ -205,6 +206,28 @@ def test_ofd_normalization_uses_protective_input_and_produces_valid_pdf(
     with fitz.open(result.pre_converted_path) as pdf:
         assert pdf.page_count == 1
     assert source.read_bytes() == b"source ofd payload"
+
+
+def test_ofd_pdf_action_propagates_cancellation_from_renderer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from docwen_application.preconversion import layout_actions
+    from docwen_core.cancellation import CancellationToken
+
+    source = tmp_path / "source.ofd"
+    source.write_bytes(b"original")
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    owner = CancellationToken()
+
+    def render(_path, *, check_cancel):
+        owner.cancel()
+        check_cancel()
+
+    monkeypatch.setattr(layout_actions, "render_ofd_pdf", render)
+    result = layout_actions.pre_convert_layout(str(source), "ofd", staging_dir=str(staging), cancel=owner.view())
+    assert isinstance(result, PreConversionFailure)
+    assert result.cancelled and result.error_type == "cancelled"
+    assert not list(staging.glob("*.pdf"))
+    assert source.read_bytes() == b"original"
 
 
 def test_single_ofd_split_is_normalized_before_pdf_action(

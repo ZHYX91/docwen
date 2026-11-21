@@ -19,12 +19,14 @@ from __future__ import annotations
 import logging
 import shutil
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TypedDict
 from urllib.parse import unquote, urljoin, urlparse
 from urllib.request import url2pathname
 
+from docwen_core.errors import CancellationRequested
 from docwen_core.tempfiles import TemporaryDirectory
 
 logger = logging.getLogger(__name__)
@@ -73,6 +75,8 @@ def preprocess_layout_input(
     input_path: str,
     staging_dir: str,
     source_format: str,
+    *,
+    check_cancel: Callable[[], None] | None = None,
 ) -> PreprocessResult:
     """Preprocess a fixed-layout input, converting OFD/XPS to PDF if needed.
 
@@ -85,6 +89,8 @@ def preprocess_layout_input(
         A ``PreprocessResult`` — check ``error_type`` before using the
         effective path / format.
     """
+    if check_cancel is not None:
+        check_cancel()
     fmt = source_format.lower().strip()
 
     # ``FileRef.format`` must be concrete after admission. Refuse a generic
@@ -109,7 +115,7 @@ def preprocess_layout_input(
 
     # ── OFD → PDF ────────────────────────────────────────────────────────
     if fmt == "ofd":
-        return _ofd_to_pdf(input_path, staging_dir)
+        return _ofd_to_pdf(input_path, staging_dir, check_cancel=check_cancel)
 
     # ── XPS → PDF ────────────────────────────────────────────────────────
     if fmt == "xps":
@@ -131,7 +137,9 @@ def preprocess_layout_input(
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def _ofd_to_pdf(input_path: str, staging_dir: str) -> PreprocessResult:
+def _ofd_to_pdf(
+    input_path: str, staging_dir: str, *, check_cancel: Callable[[], None] | None = None
+) -> PreprocessResult:
     """Convert OFD → PDF using easyofd.
 
     Returns a *PreprocessResult* whose *effective_source_format* is
@@ -140,7 +148,11 @@ def _ofd_to_pdf(input_path: str, staging_dir: str) -> PreprocessResult:
     from docwen_core.ofd import render_ofd_pdf
 
     try:
-        pdf_bytes = render_ofd_pdf(input_path)
+        pdf_bytes = render_ofd_pdf(input_path, check_cancel=check_cancel)
+        if check_cancel is not None:
+            check_cancel()
+    except CancellationRequested:
+        raise
     except ImportError:
         return PreprocessResult(
             effective_input_path=input_path,

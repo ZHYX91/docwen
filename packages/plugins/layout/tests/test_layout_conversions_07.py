@@ -175,7 +175,7 @@ class TestPreprocessChain:
 
         preprocess_calls: list[dict] = []
 
-        def fake_preprocess(input_path, staging_dir, source_format):
+        def fake_preprocess(input_path, staging_dir, source_format, **_kwargs):
             preprocess_calls.append(
                 {
                     "input_path": input_path,
@@ -290,7 +290,7 @@ class TestPreprocessErrors:
         ofd_path.write_text("fake ofd content")
 
         # Make easyofd import fail
-        def fake_ofd_to_pdf(input_path, staging_dir):
+        def fake_ofd_to_pdf(input_path, staging_dir, **_kwargs):
             from docwen_plugin_layout.preprocess import PreprocessResult
 
             return PreprocessResult(

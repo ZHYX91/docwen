@@ -41,11 +41,30 @@ class TestOfdPreprocess:
         with mock.patch("docwen_core.ofd.render_ofd_pdf", return_value=pdf_bytes) as render:
             result = _ofd_to_pdf("/fake/test.ofd", str(tmp_path))
 
-        render.assert_called_once_with("/fake/test.ofd")
+        render.assert_called_once_with("/fake/test.ofd", check_cancel=None)
         assert result.error_type is None
         assert result.effective_source_format == "pdf"
         assert result.original_source_format == "ofd"
         assert Path(result.effective_input_path).read_bytes() == pdf_bytes
+
+    def test_cancel_during_ofd_render_keeps_staging_empty(self, tmp_path: Path) -> None:
+        from docwen_core.cancellation import CancellationToken
+        from docwen_core.errors import CancellationRequested
+        from docwen_plugin_layout.preprocess import preprocess_layout_input
+
+        owner = CancellationToken()
+        cancel = owner.view()
+
+        def render(_path, *, check_cancel):
+            owner.cancel()
+            check_cancel()
+
+        with (
+            mock.patch("docwen_core.ofd.render_ofd_pdf", side_effect=render),
+            pytest.raises(CancellationRequested),
+        ):
+            preprocess_layout_input("/fake/test.ofd", str(tmp_path), "ofd", check_cancel=cancel.check)
+        assert list(tmp_path.iterdir()) == []
 
     def test_ofd_conversion_failure(self, tmp_path: Path) -> None:
         from docwen_plugin_layout.preprocess import _ofd_to_pdf

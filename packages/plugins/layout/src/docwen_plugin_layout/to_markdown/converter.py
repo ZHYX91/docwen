@@ -95,7 +95,7 @@ def _extract_page_markdown(
 
 def _image_target_spellings(image_file: Path) -> set[str]:
     """Return equivalent textual spellings for one owned extracted image."""
-    spellings = {image_file.name, str(image_file).replace("\\", "/")}
+    spellings = {image_file.name, str(image_file).replace("\\", "/"), f"{image_file.parent.name}/{image_file.name}"}
     with contextlib.suppress(OSError):
         spellings.add(str(image_file.resolve(strict=True)).replace("\\", "/"))
     return spellings
@@ -451,39 +451,25 @@ class LayoutToMarkdownConverter:
             # a potentially misleading user suffix again.
             import fitz
 
-            write_images = keep_images
             extracted_image_pages: dict[Path, set[int]] = {}
             images_prefix = f"{input_stem_val}_images/"
-            images_dir_path = Path(context.workspace.staging_dir) / f"{input_stem_val}_images"
-            if write_images and getattr(pymupdf4llm, "_use_layout", False):
-                # The physical directory belongs only to this invocation, regardless of the source name.
-                images_dir_path = Path(tempfile.mkdtemp(prefix="pdf-images-", dir=context.workspace.staging_dir))
+            # Both renderer variants write into a directory owned by this invocation.
+            images_dir_path = (
+                Path(tempfile.mkdtemp(prefix="pdf-images-", dir=context.workspace.staging_dir)) if keep_images else None
+            )
+            known_images: set[Path] = set()
             with fitz.open(input_path, filetype="pdf") as document:
                 physical_page_count = document.page_count
-                if write_images:
-                    images_dir_path.mkdir(parents=True, exist_ok=True)
                 page_markdown: list[str] = []
-                known_images = (
-                    {
-                        path
-                        for path in images_dir_path.iterdir()
-                        if write_images and path.is_file() and _detected_image_format(path) is not None
-                    }
-                    if write_images
-                    else set()
-                )
-                baseline_images = set(known_images)
                 for page_index in range(physical_page_count):
                     context.cancellation.check()
-                    page_result = _extract_page_markdown(
-                        pymupdf4llm, document, page_index, images_dir_path if write_images else None
-                    )
+                    page_result = _extract_page_markdown(pymupdf4llm, document, page_index, images_dir_path)
                     if isinstance(page_result, list):
                         page_text = "\n".join(str(item) for item in page_result)
                     else:
                         page_text = str(page_result)
                     page_markdown.append(page_text)
-                    if write_images:
+                    if images_dir_path is not None:
                         current_images = {
                             path
                             for path in images_dir_path.iterdir()
@@ -494,20 +480,14 @@ class LayoutToMarkdownConverter:
                         for image_path in _referenced_extracted_images(
                             page_text,
                             images_prefix=images_prefix,
-                            image_files=current_images - baseline_images,
+                            image_files=current_images,
                         ):
                             extracted_image_pages.setdefault(image_path, set()).add(page_index + 1)
                         known_images = current_images
 
-            md_text_raw = "\n".join(page_markdown)
+            md_text = "\n".join(page_markdown)
 
             context.cancellation.check()
-
-            # Normalise: pymupdf4llm may return a list of strings
-            if isinstance(md_text_raw, list):
-                md_text = "\n".join(str(item) for item in md_text_raw)
-            else:
-                md_text = str(md_text_raw)
 
             # ── Collect image artifacts (MF-1 fix) ──────────────────
             image_artifacts: list[ArtifactManifest] = []
@@ -516,16 +496,11 @@ class LayoutToMarkdownConverter:
             resource_diagnostics: list[ConversionDiagnostic] = []
             image_link_style = "wiki_embed"
 
-            if write_images:
+            if images_dir_path is not None:
                 configured_style = str(options.get("image_link_style") or export_semantics.image_link_style).strip()
                 if configured_style in {"wiki_embed", "wiki_link", "markdown_embed", "markdown_link"}:
                     image_link_style = configured_style
-                extracted_image_files: list[Path] = []
-                if images_dir_path.exists() and images_dir_path.is_dir():
-                    for img_file in sorted(images_dir_path.iterdir()):
-                        if not img_file.is_file() or _detected_image_format(img_file) is None:
-                            continue
-                        extracted_image_files.append(img_file)
+                extracted_image_files = sorted(known_images)
 
                 if input_path_override and extracted_image_files:
                     original_files = list(extracted_image_files)
@@ -639,7 +614,7 @@ class LayoutToMarkdownConverter:
             # are present. Generated PDF image refs point at staging artifacts,
             # not paths next to the source PDF, so the generic link resolver
             # would incorrectly mark them as missing.
-            if not write_images:
+            if not keep_images:
                 md_text = _resolve_md_links(md_text, input_path)
 
             from docwen_core.yaml_tools import generate_basic_yaml_frontmatter

@@ -40,7 +40,7 @@ class TestPreprocessChain:
         preprocess_calls: list[dict] = []
         converter_calls: list[dict] = []
 
-        def fake_preprocess(input_path, staging_dir, source_format):
+        def fake_preprocess(input_path, staging_dir, source_format, **_kwargs):
             preprocess_calls.append(
                 {
                     "input_path": input_path,
@@ -124,7 +124,7 @@ class TestPreprocessChain:
 
         preprocess_calls: list[dict] = []
 
-        def fake_preprocess(input_path, staging_dir, source_format):
+        def fake_preprocess(input_path, staging_dir, source_format, **_kwargs):
             preprocess_calls.append(
                 {
                     "input_path": input_path,
@@ -154,7 +154,7 @@ class TestPreprocessChain:
         # We need the override path to point to a real PDF
         # The fake_preprocess returns a text file — that won't work with fitz.
         # Instead, make the fake_preprocess point to the real PDF fixture.
-        def fake_preprocess_v2(input_path, staging_dir, source_format):
+        def fake_preprocess_v2(input_path, staging_dir, source_format, **_kwargs):
             preprocess_calls.append(
                 {
                     "input_path": input_path,
@@ -373,7 +373,7 @@ class TestPreprocessChain:
 
         preprocess_calls: list[dict] = []
 
-        def fake_preprocess(input_path, staging_dir, source_format):
+        def fake_preprocess(input_path, staging_dir, source_format, **_kwargs):
             preprocess_calls.append(
                 {
                     "input_path": input_path,
@@ -446,9 +446,9 @@ class TestPreprocessChain:
         original_preprocess = plugin_module.preprocess_layout_input
         preprocess_calls: list[dict] = []
 
-        def tracking_preprocess(input_path, staging_dir, source_format):
+        def tracking_preprocess(input_path, staging_dir, source_format, **kwargs):
             preprocess_calls.append({"source_format": source_format})
-            return original_preprocess(input_path, staging_dir, source_format)
+            return original_preprocess(input_path, staging_dir, source_format, **kwargs)
 
         monkeypatch.setattr(plugin_module, "preprocess_layout_input", tracking_preprocess)
 
