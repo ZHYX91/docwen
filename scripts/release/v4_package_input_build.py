@@ -8,6 +8,7 @@ from typing import Any, cast
 from scripts.release import v4_candidate_contract as candidate_contract
 from scripts.release import v4_evidence_contract as evidence_contract
 from scripts.release import v4_package_input_contract as input_contract
+from scripts.release.publication_contract import PublicationError, checked_lock_sha256
 
 PACKAGE_NAMES = input_contract.PACKAGE_NAMES
 BuildOutput = input_contract.BuildOutput
@@ -88,10 +89,10 @@ def _verify_base_toolchain(repo: Path, python: Path, uv: Path) -> tuple[dict[str
         "sha256"
     ] != uv_policy.get("binarySha256"):
         raise V4PackageInputError("uv_toolchain_identity_mismatch")
-    lock = cast(dict[str, object], toolchain["lock"])
-    lock_path = repo / str(lock.get("path"))
-    if _identity(lock_path, root=repo)["sha256"] != lock.get("sha256"):
-        raise V4PackageInputError("uv_lock_identity_mismatch")
+    try:
+        checked_lock_sha256(repo)
+    except PublicationError as exc:
+        raise V4PackageInputError("uv_lock_identity_mismatch") from exc
     return policy, {
         "python": {**python_identity, "version": reported_python},
         "uv": {**uv_identity, "version": reported_uv},

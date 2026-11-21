@@ -11,7 +11,7 @@ dependencies = [
     "docwen-core",
     "python-docx>=1.0.0",
     "openpyxl>=3.1.0",
-    "mistune>=3.3.3",
+    "mistune>=3.3.4",
 ]
 
 [tool.hatch.build.targets.wheel]

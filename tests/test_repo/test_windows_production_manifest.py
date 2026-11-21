@@ -169,6 +169,24 @@ def test_v4_toolchain_hashes_the_same_base_interpreter(tmp_path: Path, monkeypat
     base.write_bytes(b"the same stable managed CPython base executable")
     uv.write_bytes(b"the same pinned uv executable")
     lock.write_bytes(b"the exact lock file")
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "uv.lock"], cwd=tmp_path, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=DocWen QA",
+            "-c",
+            "user.email=qa@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-qm",
+            "lock the test source",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
     manifest = {
         "schemaVersion": 1,
         "manifestId": "docwen-windows-production",
@@ -185,7 +203,6 @@ def test_v4_toolchain_hashes_the_same_base_interpreter(tmp_path: Path, monkeypat
                 "build": "b88d7c5c4",
                 "binarySha256": production.sha256_file(uv),
             },
-            "lock": {"path": lock.name, "sha256": production.sha256_file(lock)},
             "pyinstallerVersion": "6.16.0",
         },
     }
@@ -213,6 +230,9 @@ def test_v4_toolchain_hashes_the_same_base_interpreter(tmp_path: Path, monkeypat
 
     _policy, identity = v4_build._verify_base_toolchain(tmp_path, launcher, uv)
     assert identity["python"]["sha256"] == production.sha256_file(base)
+    lock.write_bytes(b"a lock different from the selected source")
+    with pytest.raises(v4_build.V4PackageInputError, match="uv_lock_identity_mismatch"):
+        v4_build._verify_base_toolchain(tmp_path, launcher, uv)
 
 
 def test_machine_contract_files_pin_exact_d2_closure() -> None:

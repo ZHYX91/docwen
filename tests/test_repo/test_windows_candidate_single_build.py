@@ -29,6 +29,8 @@ def test_candidate_records_one_build_without_precomputed_output_hashes(
     python = Path(sys.executable).resolve()
     uv = tmp_path / "uv"
     uv.write_bytes(b"verified-toolchain-placeholder")
+    lock_bytes = b"the lockfile tracked by the selected commit"
+    lock_sha256 = hashlib.sha256(lock_bytes).hexdigest()
     build_calls: list[Sequence[str]] = []
 
     def fake_git(_repo: Path, *args: str) -> str:
@@ -42,7 +44,7 @@ def test_candidate_records_one_build_without_precomputed_output_hashes(
         if command[:2] == ["git", "clone"]:
             (work / "source").mkdir()
         elif command[:2] == ["git", "checkout"]:
-            pass
+            (cwd / "uv.lock").write_bytes(lock_bytes)
         else:
             assert command[1] == "scripts/build/build.py"
             assert env is not None and env["UV_OFFLINE"] == "1"
@@ -53,9 +55,13 @@ def test_candidate_records_one_build_without_precomputed_output_hashes(
             (deploy / "DocWenCLI.exe").write_bytes(b"cli")
         return "primitive build completed"
 
+    def fake_verify_source_contracts(_repo: Path, _manifest: object, *, commit: str) -> dict[str, str]:
+        assert commit == "a" * 40
+        return {"uv.lock": lock_sha256}
+
     monkeypatch.setattr(production, "git", fake_git)
     monkeypatch.setattr(production, "run", fake_run)
-    monkeypatch.setattr(production, "verify_source_contracts", lambda *_: {"contract": "verified"})
+    monkeypatch.setattr(production, "verify_source_contracts", fake_verify_source_contracts)
     monkeypatch.setattr(production, "_verify_toolchain", lambda *_: ({"toolchain": "verified"}, python))
     monkeypatch.setattr(production, "sync_project_environment", lambda *_: python)
     monkeypatch.setattr(production, "windows_build_environment", lambda env, *_: env)
@@ -80,6 +86,7 @@ def test_candidate_records_one_build_without_precomputed_output_hashes(
     result = production.build(args)
 
     assert len(build_calls) == 1
+    assert result["sourceContracts"]["uv.lock"] == lock_sha256
     payload_manifest_path = output / "evidence" / "payload-manifest.json"
     payload_manifest = json.loads(payload_manifest_path.read_bytes())
     assert payload_manifest["files"][0] == {

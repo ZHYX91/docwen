@@ -8,9 +8,9 @@ build-backend = "setuptools.build_meta"
 packages = []
 
 [tool.uv]
-# Dependency/lock maintenance may use a compatible 0.12.x uv. Production
+# Lock maintenance also supports the 0.13.x uv used by Dependabot. Production
 # workflows remain independently pinned to 0.12.0 and its verified binary.
-required-version = ">=0.12.0,<0.13"
+required-version = ">=0.12.0,<0.14"
 # Both upstream consumers import only the shared ``cv2`` module.  pdf2docx
 # already selects the headless wheel, which is also the correct variant when
 # another GUI toolkit (PySide6 here) owns the application windows.  RapidOCR

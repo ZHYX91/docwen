@@ -36,9 +36,9 @@ The Windows production builder limits PyInstaller's DLL search path to the clean
 
 Windows 生产构建器把 PyInstaller 的 DLL 搜索路径限制为干净项目环境、清单验证过的 CPython 基础目录和 Windows 系统目录。载荷禁止包含由宿主偶然选中的 `api-ms-win-*` 转发 DLL 与 `ucrtbase.dll`，这些系统组件由受支持的 Windows 提供；随包发布的四个 MSVC 运行库文件统一替换为锁定 `pikepdf` wheel 中的副本，再记录本次实际文件清单和 SHA-256。
 
-Windows builds once from the verified source and locked toolchain. The resulting payload manifest records actual file paths, sizes and hashes; it is not a checked-in prediction of future executable bytes. There is no preliminary calibration build or per-version payload-hash update. Required entry points, resource/layout checks, path safety, packaged functionality, candidate provenance and hosted-byte verification remain required.
+Windows builds once from the verified source and locked toolchain. Both Windows build entry points check `uv.lock` against the selected Git commit. The production build records its SHA-256 and the actual payload paths, sizes and hashes in the build receipt. Required entry points, resource/layout checks, path safety, packaged functionality, candidate provenance and hosted-byte verification remain required.
 
-Windows 从已验证源码和锁定工具链构建一次，随后记录实际文件路径、大小与哈希；成品清单不再作为预先提交的可执行文件哈希预测表。不需要预校准构建或逐版本修改成品哈希。必需入口、资源/布局、路径安全、实际包功能、候选来源和公开字节验证继续执行。
+Windows 从已验证源码和锁定工具链构建一次。两个 Windows 构建入口均核对 `uv.lock` 与所选 Git 提交，正式构建在回执中记录锁文件 SHA-256，以及实际产物路径、大小与摘要。必需入口、资源与布局、路径安全、实包功能、候选来源和公开字节均须通过验证。
 
 ## Release gates / 发布门禁
 
