@@ -375,15 +375,12 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path, r
                 ("structural_tables", "captions_references", "extended_headings", "typed_endnotes"), True
             )
         },
-        "add_numbering": False,
         "image_mode": "file",
         "image_link_style": "wiki_embed",
-        "numbering_scheme": "gongwen_standard",
         "ocr_language": "auto",
         "ocr_placement": "main_md",
         "preserve_resources": True,
         "recognize_text": False,
-        "remove_numbering": True,
         "table_merge_strategy": "fill",
     }
     assert markdown_plan["result"]["output_shape"] == {

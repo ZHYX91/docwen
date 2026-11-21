@@ -127,8 +127,8 @@ def test_docx_to_markdown_declares_document_resource_graph_and_preserves_images(
     }
     assert "to_md_enable_ocr" not in capability.options_schema["properties"]
     assert "to_md_keep_images" not in capability.options_schema["properties"]
-    # No schema default: an omitted option inherits document.export_numbering_markers.
-    assert capability.options_schema["properties"]["export_numbering_markers"] == {"type": "boolean"}
+    for key in ("remove_numbering", "add_numbering", "numbering_scheme", "export_numbering_markers"):
+        assert "default" not in capability.options_schema["properties"][key]
 
     request = _request(
         source,
@@ -139,15 +139,12 @@ def test_docx_to_markdown_declares_document_resource_graph_and_preserves_images(
     plan = service.plan(request)
     assert plan.limitations == _EXPECTED_DOCUMENT_SEMANTICS_MACHINE_LIMITATIONS
     assert plan.effective_options == {
-        "add_numbering": False,
         "image_mode": "file",
         "image_link_style": "wiki_embed",
-        "numbering_scheme": "gongwen_standard",
         "ocr_language": "auto",
         "ocr_placement": "main_md",
         "preserve_resources": True,
         "recognize_text": False,
-        "remove_numbering": True,
         "table_merge_strategy": "fill",
     }
     outcome = service.execute_accepted(service.accept(plan.plan_id, "task.docx-to-md"))

@@ -433,6 +433,9 @@ def test_all_host_layers_are_required_for_consumer_eligibility(tmp_path: Path) -
 def test_machine_consumer_contract_exposes_exact_closed_route_schemas() -> None:
     options = cast(Mapping[str, object], contract.machine_consumer_contract()["optionsSchemas"])
     docx = cast(Mapping[str, object], cast(Mapping[str, object], options["docx"])["schema"])
+    numbering_properties = cast(Mapping[str, Mapping[str, object]], docx["properties"])
+    for option in ("remove_numbering", "add_numbering", "numbering_scheme"):
+        assert "default" not in numbering_properties[option]
     fixed = cast(Mapping[str, object], cast(Mapping[str, object], options["pdfOfdXps"])["schema"])
     tiff = cast(Mapping[str, object], cast(Mapping[str, object], options["tiff"])["schema"])
     for schema in (docx, fixed, tiff):

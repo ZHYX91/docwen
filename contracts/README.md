@@ -120,9 +120,9 @@ DOCX-to-Markdown publishes this exact closed property set:
 | `ocr_placement` | string enum `image_md`, `main_md` | `main_md` |
 | `image_link_style` | string enum `wiki_embed`, `wiki_link`, `markdown_embed`, `markdown_link` | `wiki_embed` |
 | `table_merge_strategy` | string enum `fill`, `empty`, `marker` | `fill` |
-| `remove_numbering` | boolean | `true` |
-| `add_numbering` | boolean | `false` |
-| `numbering_scheme` | string with `x-docwen-resource-kind=numbering-schemes` | `gongwen_standard` |
+| `remove_numbering` | boolean | Inherits `document.to_md_remove_numbering` |
+| `add_numbering` | boolean | Inherits `document.to_md_add_numbering` |
+| `numbering_scheme` | string with `x-docwen-resource-kind=numbering-schemes` | Inherits `document.to_md_default_scheme` |
 
 This table belongs only to the isolated legacy DOCX-to-Markdown route. It is not a structured-numbering authority,
 cannot supply the v4 Markdown-to-DOCX plan, and is excluded from current v4 numbering evidence. Its schema has

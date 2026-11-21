@@ -313,13 +313,12 @@ _DOCX_TO_MARKDOWN_OPTIONS = _strict_options(
             "enum": ["image_md", "main_md"],
             "default": "main_md",
         },
-        "remove_numbering": {"type": "boolean", "default": True},
-        "add_numbering": {"type": "boolean", "default": False},
-        # Omission inherits the request config; a schema default would mask it.
+        # Omitted numbering options inherit the request's document settings.
+        "remove_numbering": {"type": "boolean"},
+        "add_numbering": {"type": "boolean"},
         "export_numbering_markers": {"type": "boolean"},
         "numbering_scheme": {
             "type": "string",
-            "default": "gongwen_standard",
             "x-docwen-resource-kind": "numbering-schemes",
         },
     }
