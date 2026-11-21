@@ -242,10 +242,6 @@
       "build": "b88d7c5c4",
       "binarySha256": "268cd62b99395eb53825795518e067e4b27ec4b445175df343824689f307c807"
     },
-    "lock": {
-      "path": "uv.lock",
-      "sha256": "43fd7510271c9b86daf4401cfd01c4803fa1370ad54471a2d4d7961d4efeb4c7"
-    },
     "pyinstallerVersion": "6.16.0"
   },
   "payload": {

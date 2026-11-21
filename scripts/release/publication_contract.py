@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import stat
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +70,18 @@ def file_identity(path: Path) -> dict[str, Any]:
         f"file changed while hashing: {path.name}",
     )
     return {"bytes": after.st_size, "sha256": digest}
+
+
+def checked_lock_sha256(repo: Path, *, commit: str = "HEAD") -> str:
+    """Bind the lock used for the build to the selected Git source."""
+
+    try:
+        committed = subprocess.check_output(["git", "cat-file", "blob", f"{commit}:uv.lock"], cwd=repo, timeout=30)
+        actual = file_identity(repo / "uv.lock")["sha256"]
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise PublicationError("source_contract_unreadable:uv.lock") from exc
+    require(actual == hashlib.sha256(committed).hexdigest(), "source_contract_hash_mismatch:uv.lock")
+    return str(actual)
 
 
 def package_names(version: str) -> tuple[str, ...]:
