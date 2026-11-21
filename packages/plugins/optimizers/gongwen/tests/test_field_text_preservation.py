@@ -293,7 +293,7 @@ def test_recipient_uses_the_full_opening_layout(opening: str) -> None:
             run = line.runs[0]
             run.font.name = "方正小标宋"
             run.font.size = Pt(22)
-            run._element.get_or_add_rPr().rFonts.set(qn("w:eastAsia"), "方正小标宋")
+            run._element.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), "方正小标宋")
     elif opening == "centered_note":
         note = document.add_paragraph("（2026年1月19日）")
         note.alignment = WD_ALIGN_PARAGRAPH.CENTER
