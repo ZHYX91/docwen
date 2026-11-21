@@ -1,239 +1,190 @@
-"""Invoice detail-line row parsing from PDF spans and text."""
+"""Invoice detail-line row parsing from positioned spans and text."""
 
 from __future__ import annotations
 
 import re
 from bisect import bisect_right
+from itertools import pairwise
+from typing import TYPE_CHECKING
+from unicodedata import normalize
 
-from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import _compact_text
+from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import _compact_text, _normalize_positioned_amount
+from docwen_plugin_optimizer_invoice_cn.invoice_cn.yaml_schema import TABLE_HEADERS
 
-# ── Header aliases for column detection ──────────────────────────────
+if TYPE_CHECKING:
+    from docwen_core.protocols.execution_context import ProgressSink
 
 _HEADER_ALIASES: dict[str, set[str]] = {
-    "商品名称": {"项目名称", "货物或应税劳务、服务名称", "货物或应税劳务服务名称"},
+    "商品名称": {"商品名称", "项目名称", "货物或应税劳务、服务名称", "货物或应税劳务服务名称"},
     "规格型号": {"规格型号"},
-    "单位": {"单位", "单 位"},
-    "数量": {"数量", "数 量"},
-    "单价": {"单价", "单 价"},
+    "单位": {"单位"},
+    "数量": {"数量"},
+    "单价": {"单价"},
     "金额": {"金额"},
     "税率": {"税率/征收率", "税率征收率", "税率"},
-    "税额": {"税额", "税 额"},
+    "税额": {"税额"},
 }
-
-_ROW_KEYS = ["商品名称", "规格型号", "单位", "数量", "单价", "金额", "税率", "税额"]
-
-
-def _build_label_map() -> dict[str, str]:
-    """Build a label→column-key lookup from header aliases."""
-    label_to_key: dict[str, str] = {}
-    for key, aliases in _HEADER_ALIASES.items():
-        for a in aliases:
-            label_to_key[_compact_text(a)] = key
-    return label_to_key
+_ROW_KEYS = TABLE_HEADERS
+_Span = tuple[float, float, float, float, str]
+_ColumnGeometry = dict[str, tuple[float, float]]
+_NUMERIC_COLUMNS = {"数量", "单价", "金额", "税额"}
+_TAX_RATE = re.compile(r"(?:免税|不征税|[0-9]{1,2}(?:\.[0-9]+)?%)")
+_STARS = ("*", "＊", "∗", "﹡")
+_EXEMPT_TAX = re.compile(r"[*＊∗﹡\-—–]+")
 
 
-def _detect_header_columns(
-    spans: list[tuple[float, float, float, float, str]],
-) -> tuple[dict[str, float], float, float] | None:
-    """Detect one invoice header line, including split or combined spans.
+def _label_text(value: str) -> str:
+    return normalize("NFKC", _compact_text(value))
 
-    Some electronic invoices expose adjacent headers as one PDF text span
-    (for example ``金额税率/征收率``), while others expose every Chinese
-    character as a separate span.  Reconstructing character positions lets the
-    parser recover both shapes without deriving columns from invoice values.
-    """
-    line_groups: list[list[tuple[float, float, float, float, str]]] = []
-    line_y: list[float] = []
-    for span in sorted(spans, key=lambda item: (float(item[1]), float(item[0]))):
-        y0 = float(span[1])
-        if not line_groups or abs(y0 - line_y[-1]) > 1.2:
-            line_groups.append([span])
-            line_y.append(y0)
-            continue
-        line_groups[-1].append(span)
-        line_y[-1] = (line_y[-1] + y0) / 2.0
 
-    aliases_by_key = {
-        key: sorted({_compact_text(alias) for alias in aliases}, key=len, reverse=True)
-        for key, aliases in _HEADER_ALIASES.items()
-    }
-    best: tuple[dict[str, float], float, float] | None = None
-    best_score = 0
-
-    for group in line_groups:
-        characters: list[tuple[float, str]] = []
-        for x0, _y0, x1, _y1, text in group:
-            raw = text or ""
-            if not raw:
-                continue
-            width = max(float(x1) - float(x0), 0.0)
+def _detect_header_columns(spans: list[_Span]) -> tuple[_ColumnGeometry, float] | None:
+    """Recover both edges of each label, including headers split across spans."""
+    groups: list[list[_Span]] = []
+    for span in sorted(spans, key=lambda item: (item[1], item[0])):
+        if not groups or abs(span[1] - groups[-1][0][1]) > 1.5:
+            groups.append([])
+        groups[-1].append(span)
+    best: tuple[_ColumnGeometry, float] | None = None
+    for group in groups:
+        characters: list[tuple[float, float, str]] = []
+        for x0, _y0, x1, _y1, raw in group:
+            advance = max(x1 - x0, 0.0) / max(len(raw), 1)
             for index, char in enumerate(raw):
-                compact_char = _compact_text(char)
-                if not compact_char:
-                    continue
-                characters.append((float(x0) + width * index / len(raw), compact_char))
+                for compact in _label_text(char):
+                    characters.append((x0 + advance * index, x0 + advance * (index + 1), compact))
 
         characters.sort(key=lambda item: item[0])
-        compact_line = "".join(char for _x, char in characters)
-        if not compact_line:
-            continue
-
-        columns: dict[str, float] = {}
-        for key, aliases in aliases_by_key.items():
-            for alias in aliases:
-                start = compact_line.find(alias)
+        line = "".join(char for _x0, _x1, char in characters)
+        columns = {}
+        for key, aliases in _HEADER_ALIASES.items():
+            for alias in sorted(aliases, key=len, reverse=True):
+                start = line.find(alias)
                 if start >= 0:
-                    columns[key] = characters[start][0]
+                    columns[key] = (characters[start][0], characters[start + len(alias) - 1][1])
                     break
-
-        score = len(columns)
-        group_y0 = min(float(span[1]) for span in group)
-        group_y1 = max(float(span[1]) for span in group)
-        if score > best_score or (score == best_score and best is not None and group_y0 < best[1]):
-            best = (columns, group_y0, group_y1)
-            best_score = score
-
-    if best is None or best_score < 4:
-        return None
+        if "商品名称" in columns and len(columns) >= 4 and (best is None or len(columns) > len(best[0])):
+            best = (columns, group[0][1])
     return best
 
 
-# ── Span-based row parsing ───────────────────────────────────────────
+def _assign_column(columns: _ColumnGeometry, x0: float, x1: float, text: str) -> str:
+    compact = _label_text(text)
+    if "税率" in columns and _TAX_RATE.fullmatch(compact) and abs(x0 - columns["税率"][0]) < 30:
+        return "税率"
+    if "税额" in columns and _EXEMPT_TAX.fullmatch(compact) and x0 >= columns["税额"][0] - 15:
+        return "税额"
+    ordered = sorted(columns, key=lambda key: columns[key][0])
+    starts = [columns[key][0] for key in ordered]
+    bounds = [(left + right) / 2 for left, right in pairwise(starts)]
+    column = ordered[bisect_right(bounds, x0)]
+    if (column in _NUMERIC_COLUMNS or column == "税率") and _normalize_positioned_amount(text):
+        candidates = [key for key in ordered if key in _NUMERIC_COLUMNS]
+        # Text may be left- or right-aligned. In particular, a long unit
+        # price extends across the midpoint between price and quantity.
+        return min(
+            candidates,
+            key=lambda key: (min(abs(x0 - columns[key][0]), abs(x1 - columns[key][1])), abs(x0 - columns[key][0])),
+        )
+    return column
+
+
+def _subtotal_labels(spans: list[_Span], *, left_limit: float = float("inf")) -> list[tuple[float, float]]:
+    direct = [
+        (y, x)
+        for x, y, _end, _y1, text in spans
+        if x < left_limit and re.match(r"^合计:?(?:$|[+\-−]?[¥￥])", _label_text(text))
+    ]
+    split = [
+        (y, x)
+        for x, y, _end, _y1, first in spans
+        if x < left_limit
+        and _label_text(first) == "合"
+        and any(
+            abs(y - other_y) <= 2.0 and x < other_x < x + 90 and _label_text(last) in {"计", "计:"}
+            for other_x, other_y, _end, _y1, last in spans
+        )
+    ]
+    return direct + split
 
 
 def parse_invoice_rows_from_pdf_spans(
     *,
-    spans: list[tuple[float, float, float, float, str]],
+    spans: list[_Span],
+    diagnostic_sink: ProgressSink | None = None,
+    location: str = "",
 ) -> list[dict[str, str]]:
-    """Parse invoice detail-line rows from PDF span positions.
-
-    Uses header-detection from spans to determine column boundaries,
-    then assigns each data span to a column based on its x-coordinate.
-
-    Args:
-        spans: List of (x0, y0, x1, y1, text) tuples from PyMuPDF.
-
-    Returns:
-        List of row dicts with keys matching ``_ROW_KEYS``.
-    """
-    label_to_key = _build_label_map()
-    detected_header = _detect_header_columns(spans)
-    if detected_header is None:
+    """Parse one positioned page, assigning each cell to its closest detail row."""
+    header = _detect_header_columns(spans)
+    if header is None:
         return []
-    columns, header_y0, header_y1 = detected_header
+    columns, header_y = header
+    left_limit = columns.get("单位", (columns["商品名称"][0] + 120.0, 0.0))[0]
+    subtotal_levels = [y for y, _x in _subtotal_labels(spans, left_limit=left_limit) if y > header_y + 5]
+    footer_levels = [
+        y
+        for _x, y, _end, _y1, text in spans
+        if y > header_y and re.match(r"^(?:价税合计|备注|开票人|收款人|复核)", _label_text(text))
+    ]
+    end = min(subtotal_levels + footer_levels, default=float("inf"))
+    if subtotal_levels and end == min(subtotal_levels):
+        end -= 4.2
 
-    ordered = sorted(columns.items(), key=lambda kv: kv[1])
-    keys = [k for k, _ in ordered]
-    x_starts = [x for _, x in ordered]
-    x_bounds = [(x_starts[i] + x_starts[i + 1]) / 2.0 for i in range(len(x_starts) - 1)]
-
-    # Detect footer row (价税合计 / 合计)
-    footer_y0: float | None = None
-    for x0, y0, _x1, _y1, s in spans:
-        c = _compact_text(s)
-        if "价税合计" in c:
-            footer_y0 = y0 if footer_y0 is None else min(footer_y0, y0)
+    entries: list[tuple[float, float, float, str, str]] = []
+    for x0, y, x1, _y1, raw in set(spans):
+        text = raw.strip()
+        if not (header_y + 1.5 < y < end and text) or text in {"¥", "￥"}:
             continue
-        x_cap = (x_starts[1] + 5) if len(x_starts) >= 2 else (x_starts[0] + 120)
-        if (("合计" in c) or (c in {"合", "计"})) and y0 > header_y0 + 10 and x0 <= x_cap:
-            footer_y0 = y0 if footer_y0 is None else min(footer_y0, y0)
-
-    def assign_col(x0: float) -> str | None:
-        if not x_bounds:
-            return keys[0]
-        idx = bisect_right(x_bounds, x0)
-        return keys[idx] if idx < len(keys) else None
-
-    def is_header_span(s: str) -> bool:
-        return _compact_text(s) in label_to_key
-
-    star_chars = ("*", "＊", "∗", "﹡")
-
-    entries: list[tuple[float, float, str, str]] = []
-    for x0, y0, _x1, _y1, s in spans:
-        if y0 <= header_y1 + 0.5:
+        column = _assign_column(columns, x0, x1, text)
+        if _label_text(text) in _HEADER_ALIASES.get(column, ()):
             continue
-        if footer_y0 is not None and y0 >= footer_y0 - 2.0:
+        entries.append((y, x0, x1, column, text))
+    entries.sort()
+
+    anchors: list[float] = []
+    for y, _x, _end, column, text in entries:
+        if column == "商品名称" and text.startswith(_STARS) and (not anchors or y - anchors[-1] > 2.5):
+            anchors.append(y)
+    for y, _x, _end, column, text in entries:
+        if column not in {"金额", "税额", "税率"}:
             continue
-        if is_header_span(s):
+        if not (
+            _normalize_positioned_amount(text) or _TAX_RATE.fullmatch(_label_text(text)) or _EXEMPT_TAX.fullmatch(text)
+        ):
             continue
-        t = (s or "").strip()
-        if t in {"¥", "*", "＊", "∗", "﹡"}:
+        if not any(abs(anchor - y) <= 2.5 for anchor in anchors):
+            anchors.append(y)
+    anchors.sort()
+    if not anchors:
+        return []
+
+    buckets: list[dict[str, list[tuple[float, float, float, str]]]] = [{} for _y in anchors]
+    for y, x0, x1, column, text in entries:
+        index = min(range(len(anchors)), key=lambda index: abs(anchors[index] - y))
+        if column == "商品名称" and abs(anchors[index] - y) > 2.5:
+            # Wrapped goods descriptions follow their own line's first span.
+            index = max(bisect_right(anchors, y) - 1, 0)
+        elif column in _NUMERIC_COLUMNS | {"税率", "单位"} and abs(anchors[index] - y) > 2.5:
             continue
-        col = assign_col(x0)
-        if not col:
-            continue
-        entries.append((float(y0), float(x0), col, t))
+        buckets[index].setdefault(column, []).append((y, x0, x1, text))
 
-    entries.sort(key=lambda t: (t[0], t[1]))
-
-    # Group entries into lines by y-coordinate
-    y_tol = 1.2
-    lines_sorted: list[dict[str, str]] = []
-    current_y: float | None = None
-    line_bucket: dict[str, list[tuple[float, str]]] = {}
-    for y0, x0, col, t in entries:
-        if current_y is None or abs(y0 - current_y) > y_tol:
-            if line_bucket:
-                cols = {
-                    k: " ".join([s for _x, s in sorted(v, key=lambda it: it[0])]).strip()
-                    for k, v in line_bucket.items()
-                }
-                cols = {k: v for k, v in cols.items() if v}
-                if cols:
-                    lines_sorted.append(cols)
-            current_y = y0
-            line_bucket = {}
-        else:
-            current_y = (current_y + y0) / 2.0
-        line_bucket.setdefault(col, []).append((x0, t))
-    if line_bucket:
-        cols = {k: " ".join([s for _x, s in sorted(v, key=lambda it: it[0])]).strip() for k, v in line_bucket.items()}
-        cols = {k: v for k, v in cols.items() if v}
-        if cols:
-            lines_sorted.append(cols)
-
-    # Merge lines into rows (multi-line cells)
-    rows: list[dict[str, str]] = []
-    row_bucket = dict.fromkeys(_ROW_KEYS, "")
-
-    def flush() -> None:
-        nonlocal row_bucket
-        if any((row_bucket.get("商品名称") or "").strip() for _k in ["商品名称"]):
-            rows.append({k: (row_bucket.get(k) or "").strip() for k in _ROW_KEYS})
-        row_bucket = dict.fromkeys(_ROW_KEYS, "")
-
-    def append(k: str, v: str) -> None:
-        v = (v or "").strip()
-        if not v:
-            return
-        if row_bucket.get(k):
-            if k in {"商品名称", "规格型号"}:
-                row_bucket[k] = (row_bucket[k] + v).strip()
-            else:
-                row_bucket[k] = (row_bucket[k] + " " + v).strip()
-        else:
-            row_bucket[k] = v
-
-    saw_marker = False
-    for cols in lines_sorted:
-        goods_cell = (cols.get("商品名称") or "").strip()
-        if goods_cell.startswith(star_chars):
-            saw_marker = True
-            if (row_bucket.get("商品名称") or "").strip():
-                flush()
-
-        for k, v in cols.items():
-            if k in row_bucket:
-                append(k, v)
-
-        if (not saw_marker) and row_bucket.get("税额") and (row_bucket.get("金额") or row_bucket.get("数量")):
-            flush()
-
-    if any(v.strip() for v in row_bucket.values()):
-        flush()
-
-    return [r for r in rows if any((r.get(k) or "").strip() for k in ["商品名称", "金额", "数量"])]
+    rows = []
+    for row_number, bucket in enumerate(buckets, start=1):
+        row = dict.fromkeys(_ROW_KEYS, "")
+        for field, parts in bucket.items():
+            values = [text for _y, _x, _end, text in parts]
+            if field in _NUMERIC_COLUMNS and len(values) > 1:
+                if diagnostic_sink is not None:
+                    diagnostic_sink.report_diagnostic(
+                        "warning",
+                        f"Multiple numeric spans claim {field} on this detail row.",
+                        code="INVOICE-ROW-AMBIGUOUS",
+                        location=f"{location}:row-{row_number}:{field}",
+                    )
+                continue
+            row[field] = "".join(values)
+        if any(row.values()):
+            rows.append(row)
+    return rows
 
 
 # ── Text-based row parsing ───────────────────────────────────────────

@@ -76,11 +76,7 @@ def test_empty_signer_extraction_keeps_the_source_paragraph_and_requires_review(
     assert 0 not in result.skip_indices
     assert "signer_text_preserved" in result.candidates[0].trace
 
-    class Scorer:
-        def score_round(self, _feature, *, round_group):
-            return []
-
-    signals = collect_structured_signals(result, Scorer(), features)
+    signals = collect_structured_signals(result, features)
     assert signals["recognition_summary"]["needs_review"]
     assert any(warning["code"] == "GW003" for warning in signals["gongwen_warnings"])
 
@@ -155,7 +151,7 @@ def test_recipient_keeps_uncertain_agency_suffix_prose_and_requests_review(earli
 
     assert result.yaml_info["主送机关"] == "各市人民政府"
     assert 1 not in result.skip_indices
-    signals = collect_structured_signals(result, scorer, features)
+    signals = collect_structured_signals(result, features)
     assert any(warning["code"] == "GW004" for warning in signals["gongwen_warnings"])
 
 
@@ -222,3 +218,83 @@ def test_uncertain_recipient_prose_remains_in_the_full_docx_markdown_output() ->
     assert "正文内容。" in result["markdown"]
     signals = result["metadata"]["recognition_review_signals"]
     assert any(warning["code"] == "GW004" for warning in signals["gongwen_warnings"])
+
+
+@pytest.mark.parametrize(
+    "line,expected",
+    [
+        ("各有关单位：", "各有关单位"),
+        ("示例研发中心：", "示例研发中心"),
+        ("各区（A区、B区）：", "各区（A区、B区）"),
+        ("示例工信委：", "示例工信委"),
+        ("各县（市、区）人民政府，示例研发中心:", "各县（市、区）人民政府，示例研发中心"),
+        ("主送机关：示例研发中心", "示例研发中心"),
+        ("各有关部门参加了讨论，记录如下：", ""),
+        ("各部门应将书面材料提交示例研发中心：", ""),
+        ("讨论已结束。经各单位确认，现将决定列举如下：", ""),
+    ],
+)
+def test_recipient_requires_an_address_before_scoring(line: str, expected: str) -> None:
+    from docx import Document
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    document.add_paragraph("示例事项通知")
+    document.add_paragraph(line)
+    document.add_paragraph("正文开始。")
+
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx", options={})
+
+    assert result["yaml_info"]["主送机关"] == expected
+    body = result["markdown"].split("---", 2)[2]
+    assert (line in body) == (not expected)
+
+
+@pytest.mark.parametrize("number_before_title", [False, True])
+def test_meeting_number_and_typed_decisions_keep_their_source_content(number_before_title: bool) -> None:
+    from docx import Document
+
+    from docwen_core.text.heading_numbering import compile_clean_rules_from_data
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    title = "示例演练会议纪要"
+    number = "（2038）7号"
+    narrative = "示例小组查看了各部门的演练记录。有关决定如下："
+    unclear = "示例演练联络组　2038年3月12日"
+    body_reference = "(2037) 6号"
+    for line in (number, title) if number_before_title else (title, number):
+        document.add_paragraph(line)
+    document.add_paragraph(narrative)
+    document.add_paragraph("1.继续检查设备。记录完成时间。")
+    document.add_paragraph("2.复核演练程序。保留变更记录。")
+    document.add_paragraph("3.复核周期。", style="Heading 3")
+    document.add_paragraph("供复核的另一份材料：")
+    document.add_paragraph(body_reference)
+    document.add_paragraph(unclear)
+
+    result = convert_docx_to_md_gongwen(
+        document,
+        "synthetic.docx",
+        options={},
+        cleanup_rules=compile_clean_rules_from_data(
+            [
+                {"id": "arabic_separator", "level": 3, "pattern": r"^\d+\."},
+                {"id": "arabic_bracket", "level": 4, "pattern": r"^[（(]\d+[）)]"},
+            ]
+        ),
+    )
+
+    assert result["yaml_info"]["发文字号"] == number
+    assert result["yaml_info"]["主送机关"] == ""
+    assert result["yaml_info"]["发文机关署名"] == ""
+    assert result["yaml_info"]["成文日期"] == ""
+    body = result["markdown"].split("---", 2)[2]
+    assert number not in body
+    assert narrative in body
+    assert "1. 继续检查设备。记录完成时间。" in body
+    assert "2. 复核演练程序。保留变更记录。" in body
+    assert "### 复核周期。" in body
+    assert body_reference in body
+    assert unclear in body

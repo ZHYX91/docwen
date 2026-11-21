@@ -1,7 +1,7 @@
 """Tests for Layout OFD/XPS preprocessing with OCR integration (F-I2a-003, F-I2b-019).
 
 Verifies:
-- OFD preprocess path applies ``apply_easyofd_patches`` before using easyofd.
+- OFD preprocess path uses the shared renderer and reports failures.
 - XPS preprocess path works correctly.
 - Layout OCR utils import shared constants from ``docwen_core.text``.
 - OCR language resolution is used (not bypassed with hardcoded Chinese).
@@ -9,7 +9,6 @@ Verifies:
 
 from __future__ import annotations
 
-import sys
 import tempfile
 from pathlib import Path
 from unittest import mock
@@ -25,80 +24,38 @@ pytestmark = pytest.mark.unit
 
 
 class TestOfdPreprocess:
-    """Tests that OFD→PDF preprocess applies patches and handles errors."""
-
-    def test_ofd_missing_dependency(self) -> None:
-        """When easyofd is not installed, return dependency_missing error."""
+    def test_ofd_missing_dependency(self, tmp_path: Path) -> None:
         from docwen_plugin_layout.preprocess import _ofd_to_pdf
 
-        with mock.patch.dict(sys.modules, {"easyofd": None}):
-            # Force ImportError by removing easyofd from sys.modules
-            pass
-
-        # Simulate ImportError via a targeted mock on __import__
-        import builtins
-
-        _real_import = builtins.__import__
-
-        def _block_easyofd(name, *args, **kwargs):
-            if name == "easyofd" or name.startswith("easyofd."):
-                raise ImportError("No module named 'easyofd'")
-            return _real_import(name, *args, **kwargs)
-
-        with mock.patch.object(builtins, "__import__", side_effect=_block_easyofd):
-            result = _ofd_to_pdf("/fake/test.ofd", tempfile.gettempdir())
+        with mock.patch("docwen_core.ofd.render_ofd_pdf", side_effect=ImportError("easyofd")):
+            result = _ofd_to_pdf("/fake/test.ofd", str(tmp_path))
 
         assert result.error_type == "dependency_missing"
         assert result.error_message is not None and "easyofd" in result.error_message
         assert result.diagnostic_code == "OFD2PDF-DEPENDENCY-MISSING"
 
-    def test_ofd_applies_patches_before_conversion(self) -> None:
-        """apply_easyofd_patches must be called before easyofd.OFD usage."""
+    def test_ofd_preprocess_uses_shared_renderer(self, tmp_path: Path) -> None:
         from docwen_plugin_layout.preprocess import _ofd_to_pdf
 
-        fake_pdf_bytes = b"%PDF-1.4 fake ofd output"
+        pdf_bytes = b"%PDF-1.4 fake ofd output"
+        with mock.patch("docwen_core.ofd.render_ofd_pdf", return_value=pdf_bytes) as render:
+            result = _ofd_to_pdf("/fake/test.ofd", str(tmp_path))
 
-        class _FakeOFD:
-            def read(self, path, fmt=None):
-                pass
-
-            def to_pdf(self):
-                return fake_pdf_bytes
-
-        with (
-            mock.patch("docwen_core.ofd.apply_easyofd_patches") as mock_patches,
-            mock.patch("easyofd.OFD", return_value=_FakeOFD()),
-            tempfile.TemporaryDirectory() as td,
-        ):
-            result = _ofd_to_pdf("/fake/test.ofd", td)
-
-        # Patch must have been called exactly once.
-        mock_patches.assert_called_once()
+        render.assert_called_once_with("/fake/test.ofd")
         assert result.error_type is None
         assert result.effective_source_format == "pdf"
         assert result.original_source_format == "ofd"
+        assert Path(result.effective_input_path).read_bytes() == pdf_bytes
 
-    def test_ofd_conversion_failure(self) -> None:
-        """When easyofd raises during conversion, return conversion_failed."""
+    def test_ofd_conversion_failure(self, tmp_path: Path) -> None:
         from docwen_plugin_layout.preprocess import _ofd_to_pdf
 
-        class _CrashingOFD:
-            def read(self, path, fmt=None):
-                pass
-
-            def to_pdf(self):
-                raise RuntimeError("OFD parsing exploded")
-
-        with (
-            mock.patch("docwen_core.ofd.apply_easyofd_patches"),
-            mock.patch("easyofd.OFD", return_value=_CrashingOFD()),
-            tempfile.TemporaryDirectory() as td,
-        ):
-            result = _ofd_to_pdf("/fake/test.ofd", td)
+        with mock.patch("docwen_core.ofd.render_ofd_pdf", side_effect=ValueError("OFD member not found: picture.png")):
+            result = _ofd_to_pdf("/fake/test.ofd", str(tmp_path))
 
         assert result.error_type == "conversion_failed"
         assert result.diagnostic_code == "OFD2PDF-ERROR"
-        assert result.error_message is not None and "OFD parsing exploded" in result.error_message
+        assert result.error_message is not None and "OFD member not found: picture.png" in result.error_message
 
 
 # ═══════════════════════════════════════════════════════════════════════════

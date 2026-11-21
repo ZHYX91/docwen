@@ -74,6 +74,8 @@ def test_complete_amount_token_survives_pdf_runtime_publication(
         "￥--113.00",
         "￥-113.00.4",
         "￥-113.00-7",
+        "￥-11 3",
+        "￥-11 3.00",
     ],
 )
 def test_invalid_amount_is_not_a_valid_numeric_prefix(tmp_path: Path, token: str) -> None:

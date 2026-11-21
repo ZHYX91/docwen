@@ -65,10 +65,9 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
     ],
     # ── 主送机关 ──
     "recipient": [
+        ScoringRule("is_recipient_address", 80, required=True),
         ScoringRule("is_official_title_font", -10),
         ScoringRule("is_official_title_size", -10),
-        ScoringRule("ends_with_colon", 60),
-        ScoringRule("contains_recipient_chars", 20),
         ScoringRule("is_after_last_unique_element", 20),
     ],
     # ── 附件说明 (第1个附件) ──

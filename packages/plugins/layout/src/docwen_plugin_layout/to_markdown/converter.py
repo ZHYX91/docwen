@@ -17,13 +17,15 @@ import contextlib
 import logging
 import os
 import re
+import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from docwen_core.detection import detect_content_format
 from docwen_core.errors import CancellationRequested
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.formats import get_category, get_media_type
+from docwen_core.markdown_utils import sanitize_for_wiki_link
 from docwen_core.paths import input_stem
 from docwen_core.text.ocr import (
     OcrOutcome,
@@ -38,6 +40,10 @@ from docwen_plugin_layout._common import file_size, new_artifact_id, request_sou
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
+    import pymupdf
+
     from docwen_core.export_semantics import MarkdownExportSemantics
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import ConverterContext
@@ -53,6 +59,38 @@ def _detected_image_format(path: Path) -> str | None:
 
 _WIKI_IMAGE_TARGET_RE = re.compile(r"!\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]")
 _MARKDOWN_IMAGE_TARGET_RE = re.compile(r"!\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))")
+
+
+def _extract_page_markdown(
+    renderer: ModuleType, document: pymupdf.Document, page_index: int, image_directory: Path | None
+) -> str | list[str]:
+    if image_directory is not None and getattr(renderer, "_use_layout", False):
+        # The layout writer uses its Markdown-escaped URL as the filesystem path.
+        # Keep the typed picture bytes until DocWen has chosen both destinations.
+        from pymupdf4llm.helpers.document_layout import parse_document
+        from pymupdf4llm.ocr import OCRMode
+
+        parsed = parse_document(document, pages=[page_index], embed_images=True, force_text=True, use_ocr=OCRMode.NEVER)
+        source_name = sanitize_for_wiki_link(Path(document.name or "page").name)
+        for page in parsed.pages:
+            for index, box in enumerate(page.boxes):
+                if isinstance(box.image, bytes):
+                    filename = f"{source_name}-{page_index + 1:04d}-{index:02d}.png"
+                    target = image_directory / filename
+                    target.write_bytes(box.image)
+                    # LayoutBox also accepts a Markdown target, as its own write_images mode does.
+                    box.image = f"<{filename}>"  # pyright: ignore[reportAttributeAccessIssue]
+        return cast(str, parsed.to_markdown(page_chunks=False))
+
+    return renderer.to_markdown(
+        document,
+        pages=[page_index],
+        write_images=image_directory is not None,
+        image_path=str(image_directory) if image_directory is not None else "",
+        image_format="png",
+        use_ocr=False,
+        page_chunks=False,
+    )
 
 
 def _image_target_spellings(image_file: Path) -> set[str]:
@@ -202,7 +240,7 @@ def _rename_preprocessed_image_refs(
 ) -> tuple[str, list[Path]]:
     """Replace an internal preprocessed-PDF prefix with the source filename."""
     effective_name = Path(effective_input_path).name
-    original_name = Path(original_input_path).name
+    original_name = sanitize_for_wiki_link(Path(original_input_path).name)
     if effective_name == original_name:
         return md_text, image_files
 
@@ -416,9 +454,12 @@ class LayoutToMarkdownConverter:
             write_images = keep_images
             extracted_image_pages: dict[Path, set[int]] = {}
             images_prefix = f"{input_stem_val}_images/"
+            images_dir_path = Path(context.workspace.staging_dir) / f"{input_stem_val}_images"
+            if write_images and getattr(pymupdf4llm, "_use_layout", False):
+                # The physical directory belongs only to this invocation, regardless of the source name.
+                images_dir_path = Path(tempfile.mkdtemp(prefix="pdf-images-", dir=context.workspace.staging_dir))
             with fitz.open(input_path, filetype="pdf") as document:
                 physical_page_count = document.page_count
-                images_dir_path = Path(context.workspace.staging_dir) / f"{input_stem_val}_images"
                 if write_images:
                     images_dir_path.mkdir(parents=True, exist_ok=True)
                 page_markdown: list[str] = []
@@ -434,14 +475,8 @@ class LayoutToMarkdownConverter:
                 baseline_images = set(known_images)
                 for page_index in range(physical_page_count):
                     context.cancellation.check()
-                    page_result = pymupdf4llm.to_markdown(
-                        document,
-                        pages=[page_index],
-                        write_images=write_images,
-                        image_path=str(images_dir_path) if write_images else "",
-                        image_format="png",
-                        use_ocr=False,
-                        page_chunks=False,
+                    page_result = _extract_page_markdown(
+                        pymupdf4llm, document, page_index, images_dir_path if write_images else None
                     )
                     if isinstance(page_result, list):
                         page_text = "\n".join(str(item) for item in page_result)
@@ -485,7 +520,6 @@ class LayoutToMarkdownConverter:
                 configured_style = str(options.get("image_link_style") or export_semantics.image_link_style).strip()
                 if configured_style in {"wiki_embed", "wiki_link", "markdown_embed", "markdown_link"}:
                     image_link_style = configured_style
-                images_dir_path = Path(context.workspace.staging_dir) / f"{input_stem_val}_images"
                 extracted_image_files: list[Path] = []
                 if images_dir_path.exists() and images_dir_path.is_dir():
                     for img_file in sorted(images_dir_path.iterdir()):

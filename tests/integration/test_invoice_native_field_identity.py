@@ -104,7 +104,7 @@ def _pdf(path: Path, pages: list[list[_Item]]) -> None:
             assert native_lines == [text for _x, _y, text in items]
 
 
-def _run(source: Path, root: Path) -> tuple[dict[str, Any], list[list[str]], Any]:
+def _run(source: Path, root: Path, *, enable_ocr: bool = False) -> tuple[dict[str, Any], list[list[str]], Any]:
     before = hashlib.sha256(source.read_bytes()).digest()
     output_dir = root / "out"
     output_dir.mkdir()
@@ -126,7 +126,7 @@ def _run(source: Path, root: Path) -> tuple[dict[str, Any], list[list[str]], Any
             ],
             target_format="md",
             action_name="invoice_cn",
-            options={"to_md_enable_ocr": False},
+            options={"to_md_enable_ocr": enable_ocr},
             output_policy=OutputPolicy(output_dir=str(output_dir)),
         )
     )
@@ -137,7 +137,8 @@ def _run(source: Path, root: Path) -> tuple[dict[str, Any], list[list[str]], Any
     assert output.is_file() and output.is_relative_to(output_dir)
     assert artifact.metadata["document_node_committed"] is True
     assert any(d.code == "FINALIZER_DONE" for d in result.diagnostics)
-    assert not any(d.code in {"INVOICE-OCR-OK", "INVOICE-SCAN-DETECTED"} for d in result.diagnostics)
+    if not enable_ocr:
+        assert not any(d.code in {"INVOICE-OCR-OK", "INVOICE-SCAN-DETECTED"} for d in result.diagnostics)
     _, header, body = output.read_text(encoding="utf-8").split("---", 2)
     metadata = yaml.safe_load(header)
     tokens = MarkdownIt("commonmark").enable("table").parse(body)
@@ -280,3 +281,55 @@ def test_complete_party_names_without_colons_retain_the_existing_text_contract(t
     assert (metadata["购买方纳税人识别号"], metadata["销售方纳税人识别号"]) == (_BUYER, _SELLER)
     assert rows == [row]
     assert not any(d.code in {"INVOICE-METADATA-CONFLICT", "INVOICE-PARTY-AMBIGUOUS"} for d in result.diagnostics)
+
+
+def test_mixed_pdf_merges_each_scanned_and_native_page_in_source_order(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from docwen_core.text.ocr import OcrOutcome, OcrStatus
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn import converter, pdf_parser
+
+    first, first_row = _page_items(mode="buyer-only", item_name="本地商品一", include_totals=False)
+    third, third_row = _page_items(mode="seller-only", item_name="本地商品三", include_totals=False)
+    source = tmp_path / "mixed.pdf"
+    _pdf(source, [first, [], third, []])
+
+    extracted = []
+    rendered = []
+    extract = pdf_parser._page_text_and_spans
+
+    def record_native_extraction(page: fitz.Page):
+        extracted.append(page.number)
+        return extract(page)
+
+    def record_render(page: fitz.Page, png_path: str) -> str:
+        assert page.number is not None
+        rendered.append(page.number)
+        Path(png_path).write_text(str(page.number), encoding="utf-8")
+        return png_path
+
+    scanned_rows = [
+        ["OCR商品二", "", "", "", "", "5.00", "6%", "0.30"],
+        ["OCR商品四", "", "", "", "", "3.00", "免税", "***"],
+    ]
+
+    def recognize(path: str, **_options):
+        index = int(Path(path).read_text(encoding="utf-8"))
+        fields = {"购买方名称": "另一购买方", "开票人": "合成开票员"} if index == 1 else {"备注": "第四页备注"}
+        return fields, [dict(zip(_HEADERS, scanned_rows[index // 2], strict=True))], OcrOutcome(OcrStatus.SUCCESS)
+
+    monkeypatch.setattr(pdf_parser, "_page_text_and_spans", record_native_extraction)
+    monkeypatch.setattr(pdf_parser, "render_invoice_page", record_render)
+    monkeypatch.setattr(converter, "_ocr_and_parse_image_invoice", recognize)
+
+    metadata, rows, result = _run(source, tmp_path, enable_ocr=True)
+    assert extracted == [0, 1, 2, 3]
+    assert rendered == [1, 3]
+    assert rows == [first_row, scanned_rows[0], third_row, scanned_rows[1]]
+    assert (metadata["购买方名称"], metadata["销售方名称"]) == ("购买单位", "销售单位")
+    assert (metadata["开票人"], metadata["备注"]) == ("合成开票员", "第四页备注")
+    [conflict] = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "INVOICE-METADATA-CONFLICT"]
+    assert conflict.location == "mixed.pdf:page-2:购买方名称"
+    assert "page-1" in conflict.message and "page-2" in conflict.message
+    [scan] = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "INVOICE-SCAN-DETECTED"]
+    assert "OCR succeeded on pages [2, 4]" in scan.message

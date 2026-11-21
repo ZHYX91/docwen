@@ -5,6 +5,19 @@
 
 ## Unreleased / 未发布
 
+## 0.23.1
+
+- Read structured invoice attachments and match visible fields by page and column. Keep scanned and text pages in source order, preserve discount and tax-exempt rows, and report missing or inconsistent data.
+- 从发票附件读取结构化数据，按页和列匹配票面字段。混合 PDF 按原顺序合并扫描页和文字页，保留折扣及免税行，提示缺失或不一致的数据。
+- Preserve OFD page order, referenced images and searchable Chinese text. Image export also handles spaces in PDF and OFD paths.
+- 普通 OFD 导出按声明顺序保留页面、引用图片和可检索中文。PDF 和 OFD 路径中含空格时也能导出图片。
+- Keep meeting introductions and numbered decisions in the body of official minutes, preserve meeting numbers, and report the scoring round and threshold used.
+- 公文纪要保留完整文号、导语和议定事项，识别诊断显示实际评分轮次和阈值。
+- Keep Word note text and links, Excel time values during merges, and in-cell line breaks when exporting Markdown tables. Improve recognition of delimited and markup inputs.
+- 保留 Word 注释中的文字与链接、Excel 合并时的时间值，以及 Markdown 表格导出到 Excel 时的单元格换行。改进分隔文本和标记文档的识别。
+- Exclude unused Tk and Cython build components from frozen packages while retaining offline OCR models.
+- 发布包排除未使用的 Tk 与 Cython 构建组件，保留离线 OCR 模型。
+
 ## 0.23.0
 
 - Expose HTML and ENEX conversion capabilities to Machine clients with their real dependency status and attachment resources. Keep Markdown containing embedded HTML classified as Markdown while preserving detection of complete HTML documents.

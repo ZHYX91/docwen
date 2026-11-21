@@ -78,6 +78,9 @@ RE_DOC_NUMBER = re.compile(
     r"（\s*\d{4}\s*）|【\s*\d{4}\s*】|［\s*\d{4}\s*］|"
     r"《\s*\d{4}\s*》|\d{4}\s*[-－])\s*\d+\s*号"
 )
+RE_MEETING_NUMBER = re.compile(
+    r"(?:（[^\S\r\n]*\d{4}[^\S\r\n]*）|\([^\S\r\n]*\d{4}[^\S\r\n]*\))[^\S\r\n]*\d+[^\S\r\n]*号"
+)
 RE_DATE = re.compile(r"\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日")
 RE_PRINTING_DATE = re.compile(r"(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)\s*[印印发]")
 RE_SECURITY = re.compile(r"(秘密|机密|绝密)")

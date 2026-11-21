@@ -17,7 +17,7 @@ from docwen_application.preconversion.pre_converter import (
     _is_cancel_requested,
     _prepare_protective_snapshot,
 )
-from docwen_core.ofd import apply_easyofd_patches, easyofd_import_boundary
+from docwen_core.ofd import render_ofd_pdf
 
 if TYPE_CHECKING:
     from docwen_core.protocols import CancellationTokenView
@@ -55,13 +55,7 @@ def pre_convert_layout(
                     return PreConversionFailure(message="cancelled", cancelled=True, error_type="cancelled")
                 digest.update(block)
         if fmt == "ofd":
-            with easyofd_import_boundary():
-                from easyofd import OFD  # type: ignore[import-untyped]
-
-            apply_easyofd_patches()
-            ofd = OFD()
-            ofd.read(str(protected), fmt="path")
-            pdf_data = ofd.to_pdf()
+            pdf_data = render_ofd_pdf(str(protected))
             backend = "easyofd"
         else:
             import fitz

@@ -45,7 +45,7 @@ import stat
 import threading
 import warnings
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, cast
@@ -80,6 +80,19 @@ def apply_easyofd_patches() -> None:
         if missing:
             raise RuntimeError(f"Required easyofd compatibility patches are unavailable: {', '.join(missing)}")
         _patches_applied = True
+
+
+def render_ofd_pdf(input_path: str, *, check_cancel: Callable[[], None] | None = None) -> bytes:
+    """Render an OFD file through the common layout conversion boundary."""
+    with easyofd_import_boundary():
+        from docwen_core._ofd_render import render_ofd_pdf as render
+
+    apply_easyofd_patches()
+    return render(input_path, check_cancel if check_cancel is not None else _no_cancel)
+
+
+def _no_cancel() -> None:
+    pass
 
 
 def silence_easyofd_import_logging() -> None:

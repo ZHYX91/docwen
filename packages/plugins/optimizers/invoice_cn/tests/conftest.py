@@ -8,17 +8,6 @@ from pathlib import Path
 
 import pytest
 
-# Try to find a CJK-capable font for PDF generation.
-_CJK_FONT_PATH: str | None = None
-for _candidate in (
-    "C:/Windows/Fonts/msyh.ttc",
-    "C:/Windows/Fonts/simsun.ttc",
-    "C:/Windows/Fonts/STSONG.TTF",
-):
-    if Path(_candidate).exists():
-        _CJK_FONT_PATH = _candidate
-        break
-
 
 def _create_test_pdf_invoice(path: Path, text: str | None = None) -> None:
     """Create a minimal PDF file with invoice-like text content.
@@ -26,8 +15,7 @@ def _create_test_pdf_invoice(path: Path, text: str | None = None) -> None:
     If *text* is provided, it is written into the PDF page.
     Otherwise a default simulated invoice text is used.
 
-    Uses a CJK-capable font when available so that PyMuPDF text
-    extraction preserves Chinese characters.
+    Use a built-in CJK font so the selected fields have extractable labels.
     """
     import fitz
 
@@ -38,33 +26,12 @@ def _create_test_pdf_invoice(path: Path, text: str | None = None) -> None:
             "发票号码：87654321\n"
             "开票日期：2024年01月15日\n"
             "校验码：12345678901234567890\n"
-            "购买方信息\n"
-            "名称：测试购买方公司\n"
-            "统一社会信用代码/纳税人识别号：91110108MA01ABCD1X\n"
-            "销售方信息\n"
-            "名称：测试销售方公司\n"
-            "统一社会信用代码/纳税人识别号：91110108MA01EFGH2Y\n"
-            "项目名称 规格型号 单位 数量 单价 金额 税率 税额\n"
-            "*测试商品一 件 2 100.00 200.00 13% 26.00\n"
-            "*测试商品二 箱 1 500.00 500.00 13% 65.00\n"
-            "合计 ¥700.00 ¥91.00\n"
-            "价税合计 ¥791.00\n"
-            "收款人：张三  复核：李四  开票人：王五\n"
         )
 
-    doc = fitz.open()
-    page = doc.new_page(width=595, height=842)
-
-    if _CJK_FONT_PATH:
-        try:
-            page.insert_text((72, 72), text, fontfile=_CJK_FONT_PATH, fontsize=10)
-        except Exception:
-            page.insert_text((72, 72), text, fontsize=10)
-    else:
-        page.insert_text((72, 72), text, fontsize=10)
-
-    doc.save(str(path))
-    doc.close()
+    with fitz.open() as document:
+        page = document.new_page(width=595, height=842)
+        page.insert_text((72, 72), text, fontname="china-s", fontsize=10)
+        document.save(str(path))
 
 
 def _create_test_ofd_invoice(path: Path, *, with_xml: bool = True) -> None:

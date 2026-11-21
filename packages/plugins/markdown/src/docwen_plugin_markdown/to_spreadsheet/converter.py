@@ -11,10 +11,11 @@ from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
 from openpyxl import Workbook
+from openpyxl.styles import Alignment
 
 from docwen_core.errors import CancellationRequested
 from docwen_core.export_semantics import LinkRuntimeConfig
-from docwen_core.links import process_markdown_links, split_yaml_front_matter_source
+from docwen_core.links import process_markdown_links, split_markdown_inline_segments, split_yaml_front_matter_source
 from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.models.artifact import (
     ARTIFACT_KIND_PRIMARY,
@@ -50,6 +51,7 @@ from docwen_plugin_markdown.to_spreadsheet.image_plan import XlsxImageTextPlan, 
 from docwen_plugin_markdown.to_spreadsheet.links import SpreadsheetLinks
 from docwen_plugin_markdown.to_spreadsheet.losses import SpreadsheetLosses
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
+    _HTML_BREAK_RE,
     _plain_text_from_markup,
     _plan_rectangular_merges,
     _restore_escaped_merge_marker_literals,
@@ -65,6 +67,21 @@ if TYPE_CHECKING:
 MEDIA_TYPE_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 MEDIA_TYPE_CSV = "text/csv"
 _IMAGE_PLACEHOLDER_RE = re.compile(r"\{\{IMAGE:([^}]+)\}\}")
+_ESCAPED_BREAK_RE = re.compile(r"\\(<br\s*)(?:\\?(/))?\\?>", re.IGNORECASE)
+
+
+def _xlsx_table_text(value: str) -> str:
+    """Project standalone HTML breaks while keeping code and other markup literal."""
+    if "<br" not in value.lower():
+        return _restore_escaped_merge_marker_literals(value)
+    parts: list[str] = []
+    for part, protected in split_markdown_inline_segments(value):
+        if protected:
+            parts.append("\n" if _HTML_BREAK_RE.fullmatch(part) else part)
+        else:
+            literal = _ESCAPED_BREAK_RE.sub(r"\1\2>", part)
+            parts.append(_restore_escaped_merge_marker_literals(literal))
+    return "".join(parts)
 
 
 def _source_stem(context: ConverterContext) -> str:
@@ -211,7 +228,7 @@ class MdToXlsxConverter:
                 progress.report_progress(30.0, "Parsing Markdown tables")
                 tables = parse_raw_md_tables(
                     markdown_body,
-                    preserve_merge_marker_escapes=structural_tables,
+                    preserve_merge_marker_escapes=True,
                     structural_tables=structural_tables,
                 )
 
@@ -238,12 +255,11 @@ class MdToXlsxConverter:
                     for row_idx, row in enumerate(source_rows, 1):
                         cancellable.check()
                         for col_idx, raw_value in enumerate(row, 1):
-                            value = (
-                                _restore_escaped_merge_marker_literals(str(raw_value))
-                                if structural_tables
-                                else raw_value
-                            )
-                            image_plan.assign(ws.cell(row=row_idx, column=col_idx), value)
+                            value = _xlsx_table_text(str(raw_value))
+                            cell = ws.cell(row=row_idx, column=col_idx)
+                            image_plan.assign(cell, value)
+                            if "\n" in value:
+                                cell.alignment = Alignment(wrap_text=True)
 
                     if structural_tables and bool(table.get("structural")):
                         merge_regions, _ = _plan_rectangular_merges(

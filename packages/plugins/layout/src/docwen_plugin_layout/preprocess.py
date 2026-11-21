@@ -137,11 +137,10 @@ def _ofd_to_pdf(input_path: str, staging_dir: str) -> PreprocessResult:
     Returns a *PreprocessResult* whose *effective_source_format* is
     ``"pdf"`` on success.
     """
-    from docwen_core.ofd import apply_easyofd_patches, easyofd_import_boundary
+    from docwen_core.ofd import render_ofd_pdf
 
     try:
-        with easyofd_import_boundary():
-            from easyofd import OFD  # type: ignore[import-untyped]
+        pdf_bytes = render_ofd_pdf(input_path)
     except ImportError:
         return PreprocessResult(
             effective_input_path=input_path,
@@ -153,16 +152,6 @@ def _ofd_to_pdf(input_path: str, staging_dir: str) -> PreprocessResult:
             ),
             diagnostic_code="OFD2PDF-DEPENDENCY-MISSING",
         )
-
-    # Apply runtime monkey-patches before using easyofd (F-I2a-003).
-    # - Redirects FileRead scratch files from CWD to tempdir.
-    # - Wraps draw_annotation with per-item error isolation.
-    apply_easyofd_patches()
-
-    try:
-        ofd = OFD()
-        ofd.read(input_path, fmt="path")
-        pdf_bytes = ofd.to_pdf()
     except Exception as exc:
         return PreprocessResult(
             effective_input_path=input_path,

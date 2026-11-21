@@ -16,12 +16,14 @@ from typing import TYPE_CHECKING
 from docwen_plugin_optimizer_gongwen.constants import (
     NON_UNIQUE_SCORE_THRESHOLD,
     RE_DOC_NUMBER,
+    RE_MEETING_NUMBER,
     ROUND1_ELEMENTS,
     ROUND2_ELEMENTS,
     ROUND3_ELEMENTS,
     UNIQUE_SCORE_THRESHOLD,
 )
 from docwen_plugin_optimizer_gongwen.models import ParagraphFeature, RecognitionCandidate
+from docwen_plugin_optimizer_gongwen.recognition.recipient_block import is_recipient_address
 from docwen_plugin_optimizer_gongwen.recognition.rules import SCORING_RULES
 from docwen_plugin_optimizer_gongwen.utils import (
     extract_doc_number_and_name,
@@ -198,55 +200,49 @@ class ElementScorer:
 
             for rule in rules:
                 checker: Callable | None = getattr(self, rule.condition, None)
-                if checker is None:
-                    continue
-
                 try:
-                    result = checker(pf)
-                    if result:
-                        score += rule.score
-                        sign = "+" if rule.score >= 0 else ""
-                        trace.append(f"{rule.condition}{sign}{rule.score}")
+                    matched = checker is not None and checker(pf)
                 except Exception as exc:
-                    failure_key = (
-                        pf.index,
-                        element_type,
-                        rule.condition,
-                        type(exc).__name__,
-                    )
-                    if failure_key in self._reported_rule_failures:
-                        continue
-                    self._reported_rule_failures.add(failure_key)
-                    self._rule_failures.append(
-                        {
-                            "paragraph_index": pf.index,
-                            "element_type": element_type,
-                            "condition": rule.condition,
-                            "exception_type": type(exc).__name__,
-                        }
-                    )
-                    if self._diagnostic_sink is not None:
-                        self._diagnostic_sink.report_diagnostic(
-                            "warning",
-                            (
-                                f"Skipped Gongwen scoring rule '{rule.condition}' for "
-                                f"element '{element_type}' after {type(exc).__name__}; "
-                                "recognition may be incomplete."
-                            ),
-                            code="GONGWEN-SCORING-RULE-SKIPPED",
-                            location=f"paragraph {pf.index}",
+                    matched = False
+                    failure_key = (pf.index, element_type, rule.condition, type(exc).__name__)
+                    if failure_key not in self._reported_rule_failures:
+                        self._reported_rule_failures.add(failure_key)
+                        self._rule_failures.append(
+                            {
+                                "paragraph_index": pf.index,
+                                "element_type": element_type,
+                                "condition": rule.condition,
+                                "exception_type": type(exc).__name__,
+                            }
                         )
-
-            if score >= threshold:
-                candidates.append(
-                    RecognitionCandidate(
-                        element_type=element_type,
-                        score=score,
-                        para_index=pf.index,
-                        trace=trace,
-                        confidence=self._score_to_confidence(score),
+                        if self._diagnostic_sink is not None:
+                            self._diagnostic_sink.report_diagnostic(
+                                "warning",
+                                (
+                                    f"Skipped Gongwen scoring rule '{rule.condition}' for "
+                                    f"element '{element_type}' after {type(exc).__name__}; "
+                                    "recognition may be incomplete."
+                                ),
+                                code="GONGWEN-SCORING-RULE-SKIPPED",
+                                location=f"paragraph {pf.index}",
+                            )
+                if matched:
+                    score += rule.score
+                    sign = "+" if rule.score >= 0 else ""
+                    trace.append(f"{rule.condition}{sign}{rule.score}")
+                elif rule.required:
+                    break
+            else:
+                if score >= threshold:
+                    candidates.append(
+                        RecognitionCandidate(
+                            element_type=element_type,
+                            score=score,
+                            para_index=pf.index,
+                            trace=trace,
+                            confidence=self._score_to_confidence(score),
+                        )
                     )
-                )
 
         # Python's stable sort preserves the declared round-group priority
         # when candidates have equal scores.
@@ -352,8 +348,22 @@ class ElementScorer:
 
     def is_document_number_format(self, pf: ParagraphFeature) -> bool:
         """Check whether the whole text matches a document number."""
-        text = pf.text.strip()
-        return RE_DOC_NUMBER.fullmatch(text) is not None
+        if RE_DOC_NUMBER.fullmatch(pf.text.strip()):
+            return True
+        if not RE_MEETING_NUMBER.fullmatch((pf.raw_text or pf.text).strip()):
+            return False
+
+        # Prefixless numbers are used next to the meeting-minutes title.
+        # The same expression can occur in body text as a document reference.
+        for neighbors in (reversed(self._all_features[: pf.index]), iter(self._all_features[pf.index + 1 :])):
+            for neighbor in neighbors:
+                text = neighbor.text.strip()
+                if not text or self.starts_with_signer_label(neighbor):
+                    continue
+                if text.endswith("纪要") and self.matches_title_pattern(neighbor):
+                    return True
+                break
+        return False
 
     def has_doc_number_and_signer(self, pf: ParagraphFeature) -> bool:
         """Check for a document number followed by labelled signer names."""
@@ -457,7 +467,7 @@ class ElementScorer:
 
     def is_numbered_list_item(self, pf: ParagraphFeature) -> bool:
         """Check whether text starts a decimal numbered-list item."""
-        return bool(re.match(r"^\d+[\.．]\s*", pf.text.strip()))
+        return bool(re.match(r"^\d+[\.．]\s*", (pf.raw_text or pf.text).strip()))
 
     def is_first_attachment(self, pf: ParagraphFeature) -> bool:
         """Check whether no attachment header has been assigned yet."""
@@ -485,15 +495,9 @@ class ElementScorer:
         t = pf.text.strip()
         return any(t.endswith(s) for s in _AUTHORITY_SUFFIXES)
 
-    def ends_with_colon(self, pf: ParagraphFeature) -> bool:
-        """Check whether text ends with a full-width or ASCII colon."""
-        t = pf.text.strip()
-        return t.endswith(("：", ":"))
-
-    def contains_recipient_chars(self, pf: ParagraphFeature) -> bool:
-        """Check for characters commonly present in recipient names."""
-        chars = ["各", "委", "局", "办", "厅", "部", "院", "校"]
-        return any(c in pf.text for c in chars)
+    def is_recipient_address(self, pf: ParagraphFeature) -> bool:
+        """Require a stand-alone address before applying recipient scores."""
+        return not (pf.heading_level or pf.list_marker) and is_recipient_address(pf.raw_text or pf.text)
 
     # ── Font Checkers ──────────────────────────────────────────────
 

@@ -151,11 +151,7 @@ def _get_runner_up(
         c for c in all_candidates if c.element_type not in occupied or c.element_type not in unique_element_types
     ]
 
-    if len(available) >= 2:
-        runner_up = available[1]
-        if runner_up.score >= 80:  # minimum threshold for switch
-            return runner_up
-    return None
+    return available[1] if len(available) >= 2 else None
 
 
 def _build_result(

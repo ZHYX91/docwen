@@ -179,9 +179,6 @@ def test_ofd_normalization_uses_protective_input_and_produces_valid_pdf(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import hashlib
-    import sys
-    from contextlib import nullcontext
-    from types import SimpleNamespace
 
     import fitz
 
@@ -192,20 +189,14 @@ def test_ofd_normalization_uses_protective_input_and_produces_valid_pdf(
     staging = tmp_path / "staging"
     staging.mkdir()
 
-    class SafeFakeOFD:
-        def read(self, input_path: str, *, fmt: str) -> None:
-            assert fmt == "path"
-            assert Path(input_path) == staging / "input.ofd"
-            assert Path(input_path).read_bytes() == source.read_bytes()
+    def render(input_path: str) -> bytes:
+        assert Path(input_path) == staging / "input.ofd"
+        assert Path(input_path).read_bytes() == source.read_bytes()
+        with fitz.open() as document:
+            document.new_page(width=400, height=600)
+            return document.tobytes()
 
-        def to_pdf(self) -> bytes:
-            with fitz.open() as document:
-                document.new_page(width=400, height=600)
-                return document.tobytes()
-
-    monkeypatch.setitem(sys.modules, "easyofd", SimpleNamespace(OFD=SafeFakeOFD))
-    monkeypatch.setattr(layout_actions, "easyofd_import_boundary", nullcontext)
-    monkeypatch.setattr(layout_actions, "apply_easyofd_patches", lambda: None)
+    monkeypatch.setattr(layout_actions, "render_ofd_pdf", render)
     result = layout_actions.pre_convert_layout(str(source), "ofd", staging_dir=str(staging))
     assert isinstance(result, PreConversionResult)
     assert result.original_source_format == "ofd"
