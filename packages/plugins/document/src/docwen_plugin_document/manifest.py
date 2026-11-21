@@ -32,13 +32,11 @@ DOCX_TO_MD_OPTIONS_SCHEMA: dict = {
         },
         "remove_numbering": {
             "type": "boolean",
-            "default": True,
             "description": "Remove heading numbering from output.",
             "x-docwen-status": "implemented",
         },
         "add_numbering": {
             "type": "boolean",
-            "default": False,
             "description": "Add heading numbering to output using the specified scheme.",
             "x-docwen-status": "implemented",
         },
@@ -50,7 +48,6 @@ DOCX_TO_MD_OPTIONS_SCHEMA: dict = {
         "numbering_scheme": {
             "type": "string",
             "enum": ["gongwen_standard", "hierarchical_standard", "hierarchical_h2_start", "legal_standard"],
-            "default": "gongwen_standard",
             "description": "Numbering scheme ID when add_numbering is True.",
             "x-docwen-status": "implemented",
         },

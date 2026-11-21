@@ -222,9 +222,10 @@ four independent booleans; defaults are false). Its image/resource properties ar
 `image_mode` (`file|base64|embed|omit`, default `file`), `ocr_placement` (`image_md|main_md`, default `main_md`),
 `image_link_style` (`wiki_embed|wiki_link|markdown_embed|markdown_link`, default `wiki_embed`),
 and `table_merge_strategy` (`fill|empty|marker`, default `fill`). Its schema has `required=[]` and
-`additionalProperties=false`. It also exposes `remove_numbering` (default true), `add_numbering` (default false),
-and `numbering_scheme` (default `gongwen_standard`) for source-document conversion. These are separate from
-resolved-plan Markdown-to-DOCX, whose numbering authority is supplied in the typed plan. The schema, manifest,
+`additionalProperties=false`. For source-document conversion, omitted `remove_numbering`, `add_numbering`, and
+`numbering_scheme` inherit `document.to_md_remove_numbering`, `document.to_md_add_numbering`, and
+`document.to_md_default_scheme` from the request configuration snapshot. Explicit options take precedence.
+Resolved-plan Markdown-to-DOCX uses the numbering authority supplied in the typed plan. The schema, manifest,
 fixtures, source/package capability output, and consumers change atomically.
 
 DOCX is a `document_with_resources` route, not a physical-page route. Let `K` be the number of preserved embedded

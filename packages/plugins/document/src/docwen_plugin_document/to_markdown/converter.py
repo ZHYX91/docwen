@@ -234,15 +234,17 @@ class DocxToMarkdownConverter:
         policy = build_docx_markdown_request_policy(context, options)
         self._apply_request_policy(policy)
 
-        # remove_numbering: strip heading numbering prefixes when True
-        remove_numbering = options.get("remove_numbering", True)
-
-        # add_numbering: prepend scheme-based numbering
-        add_numbering = options.get("add_numbering", False)
-        numbering_scheme = options.get("numbering_scheme", "")
+        document_config = context.config.get("document", {})
+        if not isinstance(document_config, Mapping):
+            document_config = {}
+        remove_numbering = options.get("remove_numbering", document_config.get("to_md_remove_numbering", True))
+        add_numbering = options.get("add_numbering", document_config.get("to_md_add_numbering", False))
 
         heading_formatter = None
         if add_numbering:
+            numbering_scheme = options.get(
+                "numbering_scheme", document_config.get("to_md_default_scheme", "hierarchical_standard")
+            )
             try:
                 scheme_config = resolve_heading_numbering_scheme(
                     numbering_scheme,
@@ -268,15 +270,11 @@ class DocxToMarkdownConverter:
                         duration_ms=(time.monotonic() - t_start) * 1000.0,
                     ),
                 )
-            document_config = context.config.get("document", {})
-            marker_default = (
-                document_config.get("export_numbering_markers", False)
-                if isinstance(document_config, Mapping)
-                else False
-            )
             heading_formatter = HeadingFormatter(
                 scheme_config,
-                mark_generated_numbers=bool(options.get("export_numbering_markers", marker_default)),
+                mark_generated_numbers=bool(
+                    options.get("export_numbering_markers", document_config.get("export_numbering_markers", False))
+                ),
             )
 
         # 4. Parse the DOCX (standard path)

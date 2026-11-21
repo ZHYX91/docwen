@@ -459,11 +459,10 @@ def machine_consumer_contract() -> dict[str, object]:
             "default": "wiki_embed",
         },
         "table_merge_strategy": {"type": "string", "enum": ["fill", "empty", "marker"], "default": "fill"},
-        "remove_numbering": {"type": "boolean", "default": True},
-        "add_numbering": {"type": "boolean", "default": False},
+        "remove_numbering": {"type": "boolean"},
+        "add_numbering": {"type": "boolean"},
         "numbering_scheme": {
             "type": "string",
-            "default": "gongwen_standard",
             "x-docwen-resource-kind": "numbering-schemes",
         },
     }
