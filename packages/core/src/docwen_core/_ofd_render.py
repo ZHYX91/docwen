@@ -37,7 +37,12 @@ from reportlab.pdfgen.pathobject import PDFPathObject
 from docwen_core._ofd_glyphs import Outline, OutlineFont
 
 logger = logging.getLogger(__name__)
-_NAMESPACE = {"http://www.ofdspec.org/2016": "ofd", "http://www.ofdspec.org": "ofd"}
+_NAMESPACE = {
+    "http://www.ofdspec.org/2016": "ofd",
+    "http://www.ofdspec.org": "ofd",
+    # Older easyofd-generated documents use the writer author's URI.
+    "http://blog.yuanhaiying.cn": "ofd",
+}
 _NATIVE_IMAGES = {"jpg", "jpeg", "png"}
 
 

@@ -1073,9 +1073,8 @@ def _prepare_physical_page_fault(parent: Path, ordinal: int) -> Path:
 
 
 def _publish_physical_page_fault(prepared: Path, destination: Path) -> None:
-    # The converter takes a baseline of existing valid images. Publish the
-    # complete directory before that baseline; never expose an unfinished PNG
-    # or replace a directory the converter already created.
+    # Plant a complete image under the old source-name-derived staging path.
+    # The PDF conversion must export only images from its owned directory.
     OutputFinalizer._publish_directory_no_clobber(str(prepared), str(destination))
 
 
@@ -3465,7 +3464,7 @@ def _run_machine_protocol_smoke_impl(
         media_type: str,
         ocr_enabled: bool,
         keep_images: bool,
-        inject_unresolved_resource: bool = False,
+        plant_legacy_image: bool = False,
     ) -> tuple[str, dict[str, Any], Path]:
         if list(physical_runtime_temp.glob("dw-*")):
             raise RuntimeError("packaged_physical_page_workspace_residue_before_task")
@@ -3475,9 +3474,7 @@ def _run_machine_protocol_smoke_impl(
         armed = threading.Event()
         injected = threading.Event()
         stop = threading.Event()
-        prepared_images = (
-            _prepare_physical_page_fault(physical_system_temp, ordinal) if inject_unresolved_resource else None
-        )
+        prepared_images = _prepare_physical_page_fault(physical_system_temp, ordinal) if plant_legacy_image else None
 
         def inject_controlled_fault() -> None:
             armed.set()
@@ -3499,7 +3496,7 @@ def _run_machine_protocol_smoke_impl(
                 time.sleep(0.001)
 
         injector: threading.Thread | None = None
-        if inject_unresolved_resource:
+        if plant_legacy_image:
             injector = threading.Thread(target=inject_controlled_fault, name=f"physical-fault-{ordinal}", daemon=True)
             injector.start()
             if not armed.wait(timeout=5):
@@ -3553,10 +3550,10 @@ def _run_machine_protocol_smoke_impl(
             media_type="application/pdf",
             ocr_enabled=ocr_enabled,
             keep_images=keep_images,
-            inject_unresolved_resource=keep_images,
+            plant_legacy_image=keep_images,
         )
         expected_statuses = ("success", "no_text", "recognition_failed", "success") if ocr_enabled else None
-        physical_results.append((*task_result, ocr_enabled, keep_images, 4, 5, expected_statuses, False))
+        physical_results.append((*task_result, ocr_enabled, keep_images, 4, 4, expected_statuses, False))
     for ordinal, (ocr_enabled, keep_images) in enumerate(
         ((False, False), (False, True), (True, False), (True, True)),
         start=5,

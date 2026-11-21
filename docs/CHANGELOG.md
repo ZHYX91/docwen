@@ -13,6 +13,8 @@
 - 普通 OFD 导出按声明顺序保留页面、引用图片和可检索中文。PDF 和 OFD 路径中含空格时也能导出图片。
 - Keep meeting introductions and numbered decisions in the body of official minutes, preserve meeting numbers, and report the scoring round and threshold used.
 - 公文纪要保留完整文号、导语和议定事项，识别诊断显示实际评分轮次和阈值。
+- Detect recipients in official Word documents from their position between the title and body.
+- 按标题与正文之间的段落版式识别 Word 公文的主送机关。
 - Keep Word note text and links, Excel time values during merges, and in-cell line breaks when exporting Markdown tables. Improve recognition of delimited and markup inputs.
 - 保留 Word 注释中的文字与链接、Excel 合并时的时间值，以及 Markdown 表格导出到 Excel 时的单元格换行。改进分隔文本和标记文档的识别。
 - Exclude unused Tk and Cython build components from frozen packages while retaining offline OCR models.
