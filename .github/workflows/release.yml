@@ -21,6 +21,9 @@ on:
         description: Verify only Mac packages after all source gates; no full candidate or publication
         type: boolean
         default: false
+      prior_source_run_id:
+        description: Optional tests run ID for package-only verification when the exact checks can be reused
+        type: string
 
 permissions:
   contents: read
@@ -38,11 +41,15 @@ jobs:
     name: Source identity
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
     outputs:
       version: ${{ steps.identity.outputs.version }}
       build: ${{ steps.identity.outputs.build }}
       publish: ${{ steps.identity.outputs.publish }}
       verify_hosted: ${{ steps.identity.outputs.verify_hosted }}
+      reused_source_checks: ${{ steps.reuse.outputs.reused }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -65,10 +72,22 @@ jobs:
           --operation "$OPERATION" --artifact-id "$ARTIFACT_ID" --resume-id "$RESUME_ID"
           --macos-only "$MACOS_ONLY"
           --github-output "$GITHUB_OUTPUT"
+      - name: Check whether the selected source checks can be reused
+        id: reuse
+        if: >-
+          github.event_name == 'workflow_dispatch' && inputs.operation == 'verify' &&
+          steps.identity.outputs.build == 'true' && !inputs.macos_only && inputs.prior_source_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.prior_source_run_id }}
+          DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT: "15"
+        run: >-
+          uv run --no-project python -m scripts.release.source_check_reuse reuse
+          --run-id "$SOURCE_RUN" --github-output "$GITHUB_OUTPUT"
 
   source-checks:
     needs: identity
-    if: needs.identity.outputs.build == 'true' && !inputs.macos_only
+    if: needs.identity.outputs.build == 'true' && !inputs.macos_only && needs.identity.outputs.reused_source_checks != 'true'
     uses: ./.github/workflows/tests.yml
 
   macos-source-checks:
@@ -106,7 +125,11 @@ jobs:
           retention-days: 14
 
   build-windows:
-    if: ${{ !inputs.macos_only }}
+    if: >-
+      !cancelled() && !inputs.macos_only && needs.identity.result == 'success' &&
+      needs.identity.outputs.build == 'true' &&
+      (needs.source-checks.result == 'success' ||
+       (needs.source-checks.result == 'skipped' && needs.identity.outputs.reused_source_checks == 'true'))
     name: Build Windows packages
     outputs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
@@ -164,6 +187,7 @@ jobs:
           uv run python scripts/release/verify_packaged_gui.py --binary-dir "$output/payload" --gongwen-fields-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Describe the independently verified Windows producer
+        if: needs.identity.outputs.reused_source_checks != 'true'
         shell: pwsh
         run: >-
           uv run --no-project python scripts/release/windows_candidate.py
@@ -171,6 +195,7 @@ jobs:
           --repository "$env:GITHUB_REPOSITORY" --version "$env:RELEASE_VERSION" --commit "$env:GITHUB_SHA"
           --run-id "$env:GITHUB_RUN_ID" --attempt "$env:GITHUB_RUN_ATTEMPT" --source-ref "$env:GITHUB_REF"
       - name: Attest Windows package and producer metadata
+        if: needs.identity.outputs.reused_source_checks != 'true'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: |
@@ -180,7 +205,7 @@ jobs:
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: docwen-windows-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ needs.identity.outputs.reused_source_checks == 'true' && 'docwen-package-only-windows' || 'docwen-windows' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.zip
           compression-level: 0
           if-no-files-found: error
@@ -188,6 +213,7 @@ jobs:
           retention-days: 30
 
       - name: Upload independent Windows metadata
+        if: needs.identity.outputs.reused_source_checks != 'true'
         id: windows-metadata
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -198,7 +224,11 @@ jobs:
           retention-days: 30
 
   build-linux:
-    if: ${{ !inputs.macos_only }}
+    if: >-
+      !cancelled() && !inputs.macos_only && needs.identity.result == 'success' &&
+      needs.identity.outputs.build == 'true' &&
+      (needs.source-checks.result == 'success' ||
+       (needs.source-checks.result == 'skipped' && needs.identity.outputs.reused_source_checks == 'true'))
     name: Build Linux packages
     outputs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
@@ -266,7 +296,7 @@ jobs:
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: docwen-linux-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ needs.identity.outputs.reused_source_checks == 'true' && 'docwen-package-only-linux' || 'docwen-linux' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: publication/
           compression-level: 0
           if-no-files-found: error
@@ -282,7 +312,8 @@ jobs:
       always() && !cancelled() && needs.identity.result == 'success' &&
       needs.identity.outputs.build == 'true' &&
       ((inputs.macos_only && needs.macos-source-checks.result == 'success') ||
-       (!inputs.macos_only && needs.source-checks.result == 'success'))
+       (!inputs.macos_only && (needs.source-checks.result == 'success' ||
+        (needs.source-checks.result == 'skipped' && needs.identity.outputs.reused_source_checks == 'true'))))
     runs-on: macos-15
     timeout-minutes: 90
     env:
@@ -341,7 +372,7 @@ jobs:
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: docwen-macos-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ needs.identity.outputs.reused_source_checks == 'true' && 'docwen-package-only-macos' || 'docwen-macos' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: build/macos-publication/*.tar.gz
           compression-level: 0
           if-no-files-found: error
@@ -362,6 +393,7 @@ jobs:
     if: >-
       always() && !cancelled() && !inputs.macos_only &&
       needs.identity.result == 'success' && needs.identity.outputs.build == 'true' &&
+      needs.identity.outputs.reused_source_checks != 'true' &&
       needs.build-windows.result == 'success' && needs.build-linux.result == 'success' &&
       needs.build-macos.result == 'success'
     outputs:

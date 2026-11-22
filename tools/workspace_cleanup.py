@@ -21,7 +21,7 @@ if __package__ in {None, ""}:
 from tools import process_identity
 from tools.housekeeping_journal import ApplyJournal, exclusive_apply
 from tools.recycle_payload import require_payload_identity, snapshot_payload
-from tools.run_lease import manual_retention_observation
+from tools.run_lease import manual_retention_observation, remove_owned_readonly_file
 from tools.windows_short_path import ShortPathDriveError, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
 from tools.workspace_root import is_governed_workspace_root, registered_repositories, resolve_workspace_root
@@ -202,13 +202,6 @@ def _logical_path(path: str | Path) -> Path:
     if value.startswith("\\\\?\\"):
         return Path(value[4:])
     return Path(value)
-
-
-def _remove_owned_readonly_path(function: object, path: str, error: BaseException) -> None:
-    if not isinstance(error, PermissionError) or not callable(function):
-        raise error
-    os.chmod(path, stat.S_IWRITE)
-    function(path)
 
 
 def cleanup(*, workspace_root: Path, max_age: timedelta, apply: bool, now: datetime | None = None) -> dict[str, Any]:
@@ -1142,7 +1135,7 @@ def _apply_with_journal(plan: dict[str, Any], *, plan_path: Path, journal: Apply
 
                 recovery = recycle_directory(path, expected_identity=entry["identity"]["recyclePayload"])
             else:
-                shutil.rmtree(_windows_extended_path(path), onexc=_remove_owned_readonly_path)
+                shutil.rmtree(_windows_extended_path(path), onexc=remove_owned_readonly_file)
             journal.complete(
                 {
                     "path": str(path),
