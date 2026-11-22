@@ -173,6 +173,9 @@ class InfoAreaViewModel(QObject):
     state_changed = Signal()
     """Emitted when any display-relevant state changes — widgets rebind."""
 
+    history_changed = Signal()
+    """Emitted once when the bounded history changes, independently of status and animation."""
+
     history_navigation_requested = Signal(str)
     """Emitted when user clicks an interactive status summary (target path)."""
 
@@ -415,7 +418,7 @@ class InfoAreaViewModel(QObject):
                 timestamp=timestamp,
                 repeat_count=latest.repeat_count + 1,
             )
-            self._refresh_status()
+            self._refresh_status(history_changed=True)
             return
 
         self._last_message_signature = signature
@@ -440,7 +443,7 @@ class InfoAreaViewModel(QObject):
         if resolved_operation_id and message_type in _IMPORTANT_TYPES:
             self._publish_terminal_transient(resolved_operation_id, message, message_type=message_type)
 
-        self._refresh_status()
+        self._refresh_status(history_changed=True)
         logger.debug("History message: [%s] %s", message_type, message)
 
     def remove_history_row_at(self, index: int) -> None:
@@ -448,13 +451,13 @@ class InfoAreaViewModel(QObject):
         if 0 <= index < len(self._history_rows):
             self._history_rows.pop(index)
             self._last_message_signature = None
-            self._refresh_status()
+            self._refresh_status(history_changed=True)
 
     def clear_history(self) -> None:
         """Clear all history rows."""
         self._history_rows.clear()
         self._last_message_signature = None
-        self._refresh_status()
+        self._refresh_status(history_changed=True)
 
     def reset_session(self) -> None:
         """Atomically reset the information state for the current work session.
@@ -483,7 +486,7 @@ class InfoAreaViewModel(QObject):
             self._activity_timer.stop()
 
         # One refresh keeps the reset atomic from the widget's perspective.
-        self._refresh_status()
+        self._refresh_status(history_changed=True)
 
     # ── Public methods: transient ─────────────────────────────────────────
 
@@ -851,7 +854,7 @@ class InfoAreaViewModel(QObject):
 
     # ── Internal: status refresh ──────────────────────────────────────────
 
-    def _refresh_status(self) -> None:
+    def _refresh_status(self, *, history_changed: bool = False) -> None:
         """Recalculate display state from current data sources.
 
         Task identity takes precedence; unrelated notices are displayed separately.
@@ -994,7 +997,8 @@ class InfoAreaViewModel(QObject):
         # Refresh guide buttons
         self._refresh_guide()
 
-        # Emit
+        if history_changed:
+            self.history_changed.emit()
         self.state_changed.emit()
 
     # ── Internal: activity animation ──────────────────────────────────────

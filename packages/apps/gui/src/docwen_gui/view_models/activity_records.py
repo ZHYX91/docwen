@@ -1,5 +1,6 @@
 """One read-only projection of task outcomes and session notices."""
 
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -13,22 +14,55 @@ from docwen_gui.i18n import t
 from docwen_gui.path_identity import display_path
 from docwen_gui.styles.theme_semantics import get_status_theme_class, get_theme_class_color
 
-from .info_area_vm import InfoAreaViewModel
-from .task_history import TaskHistory
+from .info_area_vm import HistoryRowData, InfoAreaViewModel
+from .task_history import TaskHistory, TaskRecord
 
 
 def activity_status_label(status: str) -> str:
-    return {
-        "info": t("activity.info"),
-        "not_started": t("activity.not_started"),
-        "warning": f"⚠ {t('activity.warning')}",
-        "pending": t("components.file_drop.status.pending"),
-        "processing": t("components.file_drop.status.processing"),
-        "completed": t("components.file_drop.status.completed"),
-        "failed": t("components.file_drop.status.failed"),
-        "skipped": t("components.file_drop.status.skipped"),
-        "cancelled": t("components.file_drop.status.cancelled"),
-    }[status]
+    match status:
+        case "info":
+            return t("activity.info")
+        case "not_started":
+            return t("activity.not_started")
+        case "warning":
+            return f"⚠ {t('activity.warning')}"
+        case "pending":
+            return t("components.file_drop.status.pending")
+        case "processing":
+            return t("components.file_drop.status.processing")
+        case "completed":
+            return t("components.file_drop.status.completed")
+        case "failed":
+            return t("components.file_drop.status.failed")
+        case "skipped":
+            return t("components.file_drop.status.skipped")
+        case "cancelled":
+            return t("components.file_drop.status.cancelled")
+        case _:
+            raise KeyError(status)
+
+
+def _notices_by_source(task: TaskRecord, notices: list[HistoryRowData]) -> dict[str, list[HistoryRowData]]:
+    paths = task.paths
+    if not notices:
+        return {}
+    if len(paths) == 1:
+        return {paths[0]: notices}
+
+    # A notice can refer to either the input or the primary output. Shared
+    # outputs may belong to several sources. Preserve the original notice order.
+    sources_by_location: dict[str, set[str]] = defaultdict(set)
+    for path in paths:
+        sources_by_location[path].add(path)
+        outcome = task.outcomes.get(path)
+        if outcome and outcome.output_path:
+            sources_by_location[Path(outcome.output_path).as_posix()].add(path)
+    by_source: dict[str, list[HistoryRowData]] = defaultdict(list)
+    for row in notices:
+        if row.file_path:
+            for source in sources_by_location.get(Path(row.file_path).as_posix(), ()):
+                by_source[source].append(row)
+    return by_source
 
 
 def _notice_details(message: str, message_type: str) -> str:
@@ -69,14 +103,19 @@ class ActivityRecordsModel(QAbstractTableModel):
         self.feedback = feedback
         self.records: list[ActivityRecord] = []
         history.changed.connect(self.refresh)
-        feedback.state_changed.connect(self.refresh)
+        feedback.history_changed.connect(self.refresh)
         self.refresh()
 
     def refresh(self) -> None:
         notices = self.feedback.history_rows
-        known_operations = {key for key, _ in self.history.entries}
+        notices_by_operation: dict[str, list[HistoryRowData]] = defaultdict(list)
+        for row in notices:
+            if row.event_kind == "notice":
+                notices_by_operation[row.operation_id].append(row)
+        entries = self.history.entries
+        known_operations = {key for key, _ in entries}
         records = []
-        for operation_id, task in self.history.entries:
+        for operation_id, task in entries:
             target = str(task.context.get("target_format") or "").upper()
             operation = t("conversion_panel.convert") + (f" → {target}" if target else "")
             action = str(task.context.get("action_name") or "")
@@ -95,6 +134,7 @@ class ActivityRecordsModel(QAbstractTableModel):
             synthetic_paths = {
                 Path(item).as_posix() for item in task.context.get("synthetic_input_paths", []) if isinstance(item, str)
             }
+            by_source = _notices_by_source(task, notices_by_operation.get(operation_id, []))
             for path in task.paths:
                 if not path:
                     continue
@@ -103,19 +143,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                 source_location_available = path not in synthetic_paths
                 output = outcome.output_path if outcome else ""
                 outputs = outcome.output_paths if outcome else ()
-                matching = [
-                    row
-                    for row in notices
-                    if row.operation_id == operation_id
-                    and row.event_kind == "notice"
-                    and (
-                        (
-                            row.file_path
-                            and Path(row.file_path).as_posix() in {path, Path(output).as_posix() if output else ""}
-                        )
-                        or len(task.paths) == 1
-                    )
-                ]
+                matching = by_source.get(path, [])
                 warnings = outcome.warnings if outcome else ()
                 messages = list(
                     dict.fromkeys(
@@ -199,9 +227,18 @@ class ActivityRecordsModel(QAbstractTableModel):
             )
         if records == self.records:
             return
-        self.beginResetModel()
-        self.records = records
-        self.endResetModel()
+        if len(records) == len(self.records) and all(
+            old.key == new.key for old, new in zip(self.records, records, strict=True)
+        ):
+            # Existing task rows keep their identity while results arrive.
+            # Let Qt update and re-sort just the affected range.
+            changed = [i for i, (old, new) in enumerate(zip(self.records, records, strict=True)) if old != new]
+            self.records = records
+            self.dataChanged.emit(self.index(changed[0], 0), self.index(changed[-1], self.columnCount() - 1))
+        else:
+            self.beginResetModel()
+            self.records = records
+            self.endResetModel()
         self.records_changed.emit()
 
     @property
@@ -226,22 +263,21 @@ class ActivityRecordsModel(QAbstractTableModel):
             theme = "dark" if QApplication.palette().base().color().lightness() < 128 else "light"
             tone = record.status if record.status in {"info", "warning"} else get_status_theme_class(record.status)
             return QColor(get_theme_class_color(tone, theme))
-        if role == Qt.ItemDataRole.UserRole + 1:
-            source_sort = record.source_label or Path(record.source_path).name
-            return (record.timestamp.isoformat(), record.status_label, source_sort.casefold(), record.operation)[
-                index.column()
-            ]
         if role == Qt.ItemDataRole.UserRole:
             return record
         if role == Qt.ItemDataRole.ToolTipRole:
             return record.details
-        if role == Qt.ItemDataRole.DisplayRole:
-            return (
-                record.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                record.status_label,
-                record.source_label or (Path(record.source_path).name if record.source_path else "—"),
-                record.operation,
-            )[index.column()]
+        sort = role == Qt.ItemDataRole.UserRole + 1
+        if sort or role == Qt.ItemDataRole.DisplayRole:
+            column = index.column()
+            if column == 0:
+                return record.timestamp.isoformat() if sort else record.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            if column == 1:
+                return record.status_label
+            if column == 2:
+                name = record.source_label or Path(record.source_path).name
+                return name.casefold() if sort else name or "—"
+            return record.operation
         return None
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
