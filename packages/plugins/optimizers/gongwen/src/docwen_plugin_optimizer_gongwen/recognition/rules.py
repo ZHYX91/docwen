@@ -35,6 +35,7 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
     ],
     # ── 发文机关标志 ──
     "issuing_authority_mark": [
+        ScoringRule("is_before_title_if_known", 0, required=True),
         ScoringRule("ends_with_authority_suffix", 50),
         ScoringRule("is_after_last_unique_element", 30),
         ScoringRule("within_first_3_paragraphs", 30),
@@ -65,10 +66,9 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
     ],
     # ── 主送机关 ──
     "recipient": [
+        ScoringRule("is_recipient_address", 80, required=True),
         ScoringRule("is_official_title_font", -10),
         ScoringRule("is_official_title_size", -10),
-        ScoringRule("ends_with_colon", 60),
-        ScoringRule("contains_recipient_chars", 20),
         ScoringRule("is_after_last_unique_element", 20),
     ],
     # ── 附件说明 (第1个附件) ──

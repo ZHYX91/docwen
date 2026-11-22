@@ -21,7 +21,7 @@ pytestmark = [
 
 
 def test_source_machine_runs_the_canonical_physical_page_release_corpus(tmp_path: Path) -> None:
-    """Run the same P=4/K=5, four-combination verifier used for frozen candidates."""
+    """Run the same physical-page verifier used for frozen candidates."""
 
     work_dir = tmp_path / "work"
     work_dir.mkdir()

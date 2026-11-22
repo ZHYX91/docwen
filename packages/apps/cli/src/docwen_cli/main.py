@@ -174,7 +174,7 @@ def _build_parser() -> argparse.ArgumentParser:
         epilog=(
             f"{cli_t('cli.example')}:\n"
             "  %(prog)s info --json\n"
-            "  %(prog)s convert report.docx --to md --output published-documents\n"
+            "  %(prog)s convert report.docx --to md --output-dir published-documents\n"
             "  %(prog)s validate report.docx --json\n"
             "  %(prog)s merge pdf a.pdf b.pdf --output merged.pdf\n"
             "  %(prog)s gui status --json"

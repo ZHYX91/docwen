@@ -70,6 +70,7 @@ class ParagraphFeature:
     is_table_anchor: bool = False
     table_fidelity_risks: tuple[str, ...] = ()
     table_output_mode: str = ""  # rendered | structural_metadata | unrepresentable
+    has_first_line_indent: bool = False
 
 
 @dataclass
@@ -78,6 +79,7 @@ class ScoringRule:
 
     condition: str  # method name on ElementScorer
     score: int  # points added if condition passes
+    required: bool = False  # ineligible for this element if the rule does not pass
 
 
 @dataclass(order=True)
@@ -89,6 +91,7 @@ class RecognitionCandidate:
     para_index: int = field(compare=False)
     trace: list[str] = field(default_factory=list, compare=False)
     confidence: str = ""  # high, medium, low
+    runner_up: RecognitionCandidate | None = field(default=None, compare=False, repr=False)
 
 
 @dataclass

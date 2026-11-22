@@ -432,15 +432,13 @@ class TestScanPageInConverter:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """A typed OCR failure must preserve the base PDF parser result."""
+        """A typed OCR failure leaves this page's sparse native fields available."""
+        import fitz
+
         import docwen_plugin_optimizer_invoice_cn.invoice_cn.converter as converter_module
-        import docwen_plugin_optimizer_invoice_cn.invoice_cn.pdf_parser as pdf_parser_module
         from docwen_core.text.ocr import OcrOutcome, OcrStatus
         from docwen_plugin_optimizer_invoice_cn.invoice_cn.converter import (
             InvoiceCnConverter,
-        )
-        from docwen_plugin_optimizer_invoice_cn.invoice_cn.yaml_schema import (
-            INVOICE_CN_YAML_SCHEMA,
         )
 
         monkeypatch.setattr(
@@ -452,17 +450,11 @@ class TestScanPageInConverter:
                 OcrOutcome(OcrStatus.MODEL_MISSING, message="private model path"),
             ),
         )
-        fallback_calls: list[str] = []
-
-        def parse_pdf_invoice(input_path: str, *, diagnostic_sink=None):
-            assert diagnostic_sink is not None
-            fallback_calls.append(input_path)
-            return {INVOICE_CN_YAML_SCHEMA[0]: "BASE-PARSER-RESULT"}, []
-
-        monkeypatch.setattr(pdf_parser_module, "parse_pdf_invoice", parse_pdf_invoice)
-
         pdf_path = tmp_path / "typed_failure_scan_invoice.pdf"
-        _make_scan_pdf(pdf_path)
+        with fitz.open() as document:
+            page = document.new_page()
+            page.insert_text((40, 50), "发票号码：87654321", fontname="china-s")
+            document.save(pdf_path)
 
         with tempfile.TemporaryDirectory() as staging:
             context = _build_fake_context(
@@ -476,9 +468,11 @@ class TestScanPageInConverter:
             markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
 
         assert result.success is True
-        assert fallback_calls == [str(pdf_path)]
-        assert "BASE-PARSER-RESULT" in markdown
-        assert any(item[2].startswith("OCR-BEST-EFFORT.") for item in context.progress.diagnostics)
+        assert len(result.artifacts) == 1
+        assert "87654321" in markdown
+        [warning] = [item for item in context.progress.diagnostics if item[2] == "OCR-BEST-EFFORT.model_missing"]
+        assert warning[3] == "typed_failure_scan_invoice.pdf:page-1"
+        assert "private model path" not in warning[1]
         assert not any(d.code == "INVOICE-OCR-OK" for d in result.diagnostics)
 
     def test_scan_pdf_without_ocr_uses_text_path(self, tmp_path: Path) -> None:

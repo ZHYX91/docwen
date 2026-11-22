@@ -97,9 +97,7 @@ def build_manifest() -> PluginManifest:
             ),
             RouteCapabilityRule(
                 source_formats=("ofd",),
-                required_capabilities=("python.easyofd",),
-                optional_capabilities=("python.rapidocr",),
-                limitations=("scanned OFD pages require the optional RapidOCR capability",),
+                limitations=("OFD invoices must contain structured XML or positioned page text",),
             ),
             RouteCapabilityRule(
                 source_formats=("image",),

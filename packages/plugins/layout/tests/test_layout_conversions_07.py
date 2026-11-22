@@ -175,7 +175,7 @@ class TestPreprocessChain:
 
         preprocess_calls: list[dict] = []
 
-        def fake_preprocess(input_path, staging_dir, source_format):
+        def fake_preprocess(input_path, staging_dir, source_format, **_kwargs):
             preprocess_calls.append(
                 {
                     "input_path": input_path,
@@ -290,7 +290,7 @@ class TestPreprocessErrors:
         ofd_path.write_text("fake ofd content")
 
         # Make easyofd import fail
-        def fake_ofd_to_pdf(input_path, staging_dir):
+        def fake_ofd_to_pdf(input_path, staging_dir, **_kwargs):
             from docwen_plugin_layout.preprocess import PreprocessResult
 
             return PreprocessResult(
@@ -356,25 +356,16 @@ class TestPreprocessErrors:
 
     def test_ofd_to_pdf_missing_easyofd(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """OFD→PDF (direct route) with easyofd missing should return error."""
-        import builtins
-
+        import docwen_core.ofd as ofd_render
         from docwen_plugin_layout import LayoutPlugin
 
         ofd_path = tmp_path / "test.ofd"
-        ofd_path.write_text("fake ofd content")
+        ofd_path.write_text("fake ofd content", encoding="utf-8")
 
-        # The direct OFD→PDF route uses OfdToPdfConverter which calls
-        # LayoutToPdfConverter._ofd_to_pdf() which imports easyofd.
-        # Force that import to fail so the test is independent of the
-        # environment actually having easyofd installed.
-        original_import = builtins.__import__
+        def missing_easyofd(*args, **kwargs):
+            raise ImportError("easyofd is not installed")
 
-        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
-            if name == "easyofd":
-                raise ImportError("easyofd is not installed")
-            return original_import(name, globals, locals, fromlist, level)
-
-        monkeypatch.setattr(builtins, "__import__", fake_import)
+        monkeypatch.setattr(ofd_render, "render_ofd_pdf", missing_easyofd)
 
         with tempfile.TemporaryDirectory() as staging:
             context = _build_fake_context(
@@ -390,38 +381,26 @@ class TestPreprocessErrors:
             assert result.error.error_type == "conversion_failed"
             assert result.error.diagnostic_code == "OFD2PDF-DEPENDENCY-MISSING"
 
-    def test_ofd_to_pdf_applies_easyofd_patches(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The direct OFD-to-PDF route applies the shared easyofd patches."""
-        import easyofd
-
-        import docwen_core.ofd as ofd_patches
+    def test_ofd_to_pdf_uses_shared_renderer(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import docwen_core.ofd as ofd_render
         from docwen_plugin_layout import LayoutPlugin
 
         ofd_path = tmp_path / "test.ofd"
         ofd_path.write_bytes(b"fake ofd content")
-        patch_calls: list[bool] = []
+        observed_inputs: list[Path] = []
 
-        class _FakeOFD:
-            def read(self, path, fmt=None):
-                assert patch_calls == [True]
+        def render(path, *, check_cancel):
+            check_cancel()
+            observed_inputs.append(Path(path))
+            return b"%PDF-1.4 fake ofd output"
 
-            def to_pdf(self):
-                return b"%PDF-1.4 fake ofd output"
-
-        monkeypatch.setattr(ofd_patches, "apply_easyofd_patches", lambda: patch_calls.append(True))
-        monkeypatch.setattr(easyofd, "OFD", _FakeOFD)
-
+        monkeypatch.setattr(ofd_render, "render_ofd_pdf", render)
         with tempfile.TemporaryDirectory() as staging:
-            context = _build_fake_context(
-                str(ofd_path),
-                staging,
-                "pdf",
-                source_format="ofd",
-            )
+            context = _build_fake_context(str(ofd_path), staging, "pdf", source_format="ofd")
             result = LayoutPlugin().convert(context)
 
         assert result.success is True
-        assert patch_calls == [True]
+        assert observed_inputs == [ofd_path]
 
     def test_xps_to_pdf_missing_pymupdf(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """XPS→PDF (direct route) with PyMuPDF missing should return error."""

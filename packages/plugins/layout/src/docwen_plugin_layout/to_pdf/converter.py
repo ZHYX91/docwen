@@ -149,26 +149,18 @@ class LayoutToPdfConverter:
     @staticmethod
     def _ofd_to_pdf(input_path: str, task_id: str, stem: str, context: ConverterContext) -> ConversionResult:
         """Convert OFD → PDF using easyofd."""
-        from docwen_core.ofd import apply_easyofd_patches, easyofd_import_boundary
+        from docwen_core.ofd import render_ofd_pdf
 
+        context.cancellation.check()
+        context.progress.report_progress(30.0, "Converting OFD to PDF")
         try:
-            with easyofd_import_boundary():
-                from easyofd import OFD  # type: ignore[import-untyped]
+            pdf_bytes = render_ofd_pdf(input_path, check_cancel=context.cancellation.check)
         except ImportError:
             msg = "easyofd is not installed. Install it with: pip install easyofd"
             context.logger.error(msg)
             return _error_result(task_id, msg, "OFD2PDF-DEPENDENCY-MISSING")
 
-        apply_easyofd_patches()
-
         context.cancellation.check()
-        context.progress.report_progress(30.0, "Converting OFD to PDF")
-
-        ofd = OFD()
-        ofd.read(input_path, fmt="path")
-
-        context.cancellation.check()
-        pdf_bytes = ofd.to_pdf()
 
         output_path = context.workspace.create_artifact_path("primary", ".pdf")
         Path(output_path).write_bytes(pdf_bytes)

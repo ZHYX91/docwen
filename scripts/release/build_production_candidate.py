@@ -29,7 +29,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.build.payload_normalization import normalize_packaged_record_files
-from scripts.release.publication_contract import CHECKSUM_NAME, package_names
+from scripts.release.publication_contract import CHECKSUM_NAME, PublicationError, checked_lock_sha256, package_names
 from tools.run_lease import lease_payload, transition
 
 EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
@@ -261,7 +261,7 @@ def verify_machine_contract_files(repo: Path, contracts: dict[str, Any]) -> dict
     return hashes
 
 
-def verify_source_contracts(repo: Path, manifest: dict[str, Any]) -> dict[str, str]:
+def verify_source_contracts(repo: Path, manifest: dict[str, Any], *, commit: str = "HEAD") -> dict[str, str]:
     product = manifest["product"]
     version = product["version"]
     require(
@@ -278,12 +278,16 @@ def verify_source_contracts(repo: Path, manifest: dict[str, Any]) -> dict[str, s
         require(data["project"]["version"] == version, f"version_projection_mismatch:{relative}")
     hashes: dict[str, str] = {}
     contracts = manifest["sourceContracts"]
-    for item in [contracts["protocol"], contracts["schema"], *contracts["fixtures"], manifest["toolchain"]["lock"]]:
+    for item in [contracts["protocol"], contracts["schema"], *contracts["fixtures"]]:
         path = repo / item["path"]
         actual = sha256_lf_source_file(path)
         require(actual == item["sha256"], f"source_contract_hash_mismatch:{item['path']}")
         hashes[item["path"]] = actual
     hashes.update(verify_machine_contract_files(repo, contracts))
+    try:
+        hashes["uv.lock"] = checked_lock_sha256(repo, commit=commit)
+    except PublicationError as exc:
+        raise ProductionBuildError(str(exc)) from exc
     protocol_source = (repo / contracts["protocol"]["path"]).read_text(encoding="utf-8")
     match = re.search(r"^PROTOCOL_VERSION\s*=\s*(\d+)\s*$", protocol_source, re.MULTILINE)
     require(
@@ -512,7 +516,7 @@ def _build(args: argparse.Namespace) -> dict[str, Any]:
     tree = git(repo, "rev-parse", "HEAD^{tree}")
     epoch = int(git(repo, "show", "-s", "--format=%ct", "HEAD"))
     reproducibility_epoch = int(manifest["build"]["reproducibilityEpoch"])
-    source_hashes = verify_source_contracts(repo, manifest)
+    source_hashes = verify_source_contracts(repo, manifest, commit=commit)
     tool_hashes, base_python = _verify_toolchain(
         manifest,
         args.python.resolve(strict=True),
@@ -529,6 +533,7 @@ def _build(args: argparse.Namespace) -> dict[str, Any]:
         git(clone, "rev-parse", "HEAD") == commit and git(clone, "rev-parse", "HEAD^{tree}") == tree,
         "clone_identity_mismatch",
     )
+    require(sha256_file(clone / "uv.lock") == source_hashes["uv.lock"], "source_contract_hash_mismatch:uv.lock")
     env = dict(os.environ)
     env.update(
         {

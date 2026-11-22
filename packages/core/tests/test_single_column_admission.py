@@ -11,9 +11,10 @@ pytestmark = pytest.mark.contract
 
 
 @pytest.mark.parametrize("suffix", ["csv", "tsv"])
-def test_literal_single_column_is_admitted_as_declared_table(tmp_path: Path, suffix: str) -> None:
+@pytest.mark.parametrize("newline", ["\n", "\r", "\r\n"])
+def test_literal_single_column_is_admitted_as_declared_table(tmp_path: Path, suffix: str, newline: str) -> None:
     source = tmp_path / f"input.{suffix}"
-    source.write_text("literal\n1234567890123456789\n00012\n=1+1\n#N/A\n中文\n", encoding="utf-8")
+    source.write_bytes(newline.join(["literal", "1234567890123456789", "00012", "=1+1", "#N/A", "中文", ""]).encode())
     assert detect_text_format(str(source)) == "txt"
     inspection = inspect_file(str(source))
     assert inspection.detected_format == suffix

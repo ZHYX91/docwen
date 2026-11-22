@@ -366,7 +366,9 @@ def append_formatted_run_text(
     _append_wrapped(parts, raw_text, wrappers)
 
 
-def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
+def resolve_hyperlink_target(
+    para: Any, hyperlink_element: Any, *, hyperlink_targets: dict[str, str] | None = None
+) -> str | None:
     """Resolve the real URL from a ``<w:hyperlink>`` element.
 
     Uses ``para.part.rels[rel_id].target_ref`` for ``r:id`` links. Without
@@ -376,6 +378,7 @@ def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
     Args:
         para: A python-docx Paragraph object.
         hyperlink_element: The ``<w:hyperlink>`` lxml element.
+        hyperlink_targets: External targets belonging to a raw paragraph's own part.
 
     Returns:
         The resolved URL string, or None if resolution fails.
@@ -387,6 +390,8 @@ def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
 
         return resolve_ordinary_heading_target(para, hyperlink_element)
 
+    if hyperlink_targets is not None:
+        return hyperlink_targets.get(rel_id)
     try:
         part = para.part
         rel = part.rels[rel_id]
@@ -590,6 +595,7 @@ def _render_paragraph_run_segments(
     escape_literal_text: bool = True,
     text_transform: Callable[[str], str] | None = None,
     style_parent: Any = None,
+    hyperlink_targets: dict[str, str] | None = None,
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
@@ -626,7 +632,11 @@ def _render_paragraph_run_segments(
 
     def _process_hyperlink(child: Any, *, field: tuple[str, list[Any]] | None = None) -> None:
         nonlocal segments
-        url = field[0] if field is not None else resolve_hyperlink_target(para, child) or ""
+        url = (
+            field[0]
+            if field is not None
+            else resolve_hyperlink_target(para, child, hyperlink_targets=hyperlink_targets) or ""
+        )
         # OOXML targets are literal strings, not Markdown source escape pairs
         # or entities. Preserve each backslash and entity-shaped URI character.
         literal_target = (
@@ -887,6 +897,7 @@ def render_paragraph_runs(
     escape_literal_text: bool = True,
     text_transform: Callable[[str], str] | None = None,
     style_parent: Any = None,
+    hyperlink_targets: dict[str, str] | None = None,
 ) -> str:
     """Render paragraph XML children in order, producing Markdown text.
 
@@ -920,6 +931,7 @@ def render_paragraph_runs(
         escape_literal_text=escape_literal_text,
         text_transform=text_transform,
         style_parent=style_parent,
+        hyperlink_targets=hyperlink_targets,
     )[0]
 
 

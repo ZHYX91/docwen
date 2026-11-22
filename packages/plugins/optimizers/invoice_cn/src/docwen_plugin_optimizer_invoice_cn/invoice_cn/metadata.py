@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING
+from unicodedata import normalize
 
 from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import (
     AMOUNT_TOKEN_PATTERN,
@@ -11,7 +12,6 @@ from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import (
     _normalize_ocr_amount,
     _normalize_ocr_date,
     _normalize_ocr_digits,
-    _normalize_ocr_tax_id,
     _regex_first,
 )
 from docwen_plugin_optimizer_invoice_cn.invoice_cn.span_fields import (
@@ -27,6 +27,14 @@ if TYPE_CHECKING:
 # text or an explicit following field label can delimit this amount. Unknown
 # suffixes (including malformed grouping) remain unowned, not numeric prefixes.
 _MONEY_END = r"(?=$|价税合[计汁]|收款人|复核|开票人|备注|购买方|销售方|发票|开票日期|校验码|机器编号)"
+_DIGITS = r"[0-9OolIZzsB]"
+_DATE = rf"{_DIGITS}{{4}}[年./·•-]{_DIGITS}{{1,2}}[月./·•-]{_DIGITS}{{1,2}}日?"
+_LABELLED_PATTERNS = {
+    "发票代码": (rf"(?:{_DIGITS}{{20}}|{_DIGITS}{{10,12}})(?!{_DIGITS})", _normalize_ocr_digits),
+    "发票号码": (rf"{_DIGITS}{{8,30}}(?!{_DIGITS})", _normalize_ocr_digits),
+    "开票日期": (_DATE, _normalize_ocr_date),
+    "校验码": (rf"{_DIGITS}{{20}}(?!{_DIGITS})", _normalize_ocr_digits),
+}
 
 
 def _unique_compact_field(block: str, pattern: str) -> str:
@@ -46,26 +54,20 @@ def parse_invoice_metadata_from_compact_text(
     Returns:
         A dict of field name → value.  Missing fields are ``None``.
     """
+    compact = normalize("NFKC", compact)
     metadata: dict[str, str | None] = {"优化类型": "invoice_cn"}
 
     # ── Basic fields ─────────────────────────────────────────────────
     invoice_kind = _regex_first(
         compact,
         [
-            r"(电子发票（普通发票）|电子发票（增值税专用发票）|增值税专用发票|增值税普通发票|电子普通发票)",
+            r"(电子发票\((?:普通发票|增值税专用发票)\)|增值税专用发票|增值税普通发票|电子普通发票)",
         ],
     )
-    invoice_code_raw = _regex_first(compact, [r"发票代码[:：]?([0-9OolIZzsB]{10,12})"])
-    invoice_number_raw = _regex_first(compact, [r"发票号码[:：]?([0-9OolIZzsB]{8,30})"])
-    issue_date = _regex_first(
-        compact,
-        [
-            r"开票日期[:：]?([0-9OolIZzsB]{4}[年./·•-][0-9OolIZzsB]{1,2}[月./·•-][0-9OolIZzsB]{1,2}日?)",
-        ],
-    )
-    issue_date = _normalize_ocr_date(issue_date)
-    invoice_code = _normalize_ocr_digits(invoice_code_raw)
-    invoice_number = _normalize_ocr_digits(invoice_number_raw)
+    for field, (pattern, normalize_value) in _LABELLED_PATTERNS.items():
+        raw = _unique_compact_field(compact, rf"{field}:?({pattern})")
+        if raw and (value := normalize_value(raw)):
+            metadata[field] = value
 
     # ── Amount / tax ─────────────────────────────────────────────────
     amount_with_tax = _regex_first(
@@ -99,39 +101,16 @@ def parse_invoice_metadata_from_compact_text(
         end = min(end_candidates) if end_candidates else len(compact)
         seller_block = compact[si:end]
 
-    tax_pattern = r"(?:统一社会信用代码/纳税人识别号|统一社会信用代码|纳税人识别号)[:：]?([0-9A-Z]{15,20})"
-    name_pattern = r"名称[:：]?(.+?)(?=统一社会信用代码|纳税人识别号|开户行及账号|名称[:：]|$)"
+    tax_pattern = r"(?:统一社会信用代码/纳税人识别号|统一社会信用代码|纳税人识别号):?([0-9A-Z]{15,20})(?![0-9A-Z])"
+    name_pattern = r"名称:?([^:]+?)(?=统一社会信用代码|纳税人识别号|开户行及账号|名称:|$)"
     buyer_name = _unique_compact_field(buyer_block, name_pattern)
     seller_name = _unique_compact_field(seller_block, name_pattern)
-    buyer_tax_id = _normalize_ocr_tax_id(_unique_compact_field(buyer_block, tax_pattern))
-    seller_tax_id = _normalize_ocr_tax_id(_unique_compact_field(seller_block, tax_pattern))
-
-    # ── Check code ───────────────────────────────────────────────────
-    check_code_raw = _regex_first(compact, [r"校验码[:：]?([0-9OolIZzsB]{20})"])
-    check_code = _normalize_ocr_digits(check_code_raw)
+    buyer_tax_id = _unique_compact_field(buyer_block, tax_pattern)
+    seller_tax_id = _unique_compact_field(seller_block, tax_pattern)
 
     # ── Populate metadata ────────────────────────────────────────────
     if invoice_kind:
-        metadata["发票种类"] = invoice_kind
-    if invoice_code:
-        metadata["发票代码"] = invoice_code
-    if invoice_number:
-        metadata["发票号码"] = invoice_number
-
-    # Fallback date search
-    if not issue_date:
-        issue_date = _normalize_ocr_date(
-            _regex_first(
-                compact,
-                [
-                    r"((?:20[0-9OolIZzsB]{2})[年./·•-][0-9OolIZzsB]{1,2}[月./·•-][0-9OolIZzsB]{1,2}日?)",
-                ],
-            )
-        )
-    if issue_date:
-        metadata["开票日期"] = issue_date
-    if check_code:
-        metadata["校验码"] = check_code
+        metadata["发票种类"] = invoice_kind.replace("(", "（").replace(")", "）")
     if amount_with_tax:
         metadata["价税合计"] = amount_with_tax
     if total_amount_match:
@@ -182,56 +161,6 @@ def parse_invoice_metadata_from_compact_text(
         if v:
             metadata.setdefault("销售方开户行及账号", v)
 
-    # ── Fallback digit-search for code / number / check-code ─────────
-    if not invoice_code or not invoice_number or not check_code:
-        candidates_raw = re.findall(r"[0-9OolIZzsB]{8,30}", compact)
-        candidates: list[str] = []
-        for raw in candidates_raw:
-            d = _normalize_ocr_digits(raw)
-            if d and len(d) >= 8:
-                candidates.append(d)
-
-        date_digits = ""
-        if issue_date:
-            m = re.search(r"(20[0-9]{2})年([0-9]{2})月([0-9]{2})日", issue_date)
-            if m:
-                date_digits = f"{m.group(1)}{m.group(2)}{m.group(3)}"
-        if not issue_date:
-            for d in candidates:
-                m = re.search(r"(20[0-9]{2})([0-1][0-9])([0-3][0-9])", d)
-                if not m:
-                    continue
-                yyyymmdd = f"{m.group(1)}{m.group(2)}{m.group(3)}"
-                issue_date_val = f"{m.group(1)}年{int(m.group(2)):02d}月{int(m.group(3)):02d}日"
-                metadata["开票日期"] = issue_date_val
-                date_digits = yyyymmdd
-                break
-
-        if not check_code:
-            for d in candidates:
-                if len(d) == 20:
-                    metadata["校验码"] = d
-                    break
-
-        if not invoice_code:
-            for d in candidates:
-                if len(d) in {10, 11, 12}:
-                    metadata["发票代码"] = d
-                    break
-
-        if not invoice_number:
-            for d in candidates:
-                if len(d) == 8 and d != date_digits:
-                    metadata["发票号码"] = d
-                    break
-        if not invoice_number and date_digits:
-            for d in candidates:
-                if date_digits in d:
-                    rest = d.replace(date_digits, "")
-                    if len(rest) == 8:
-                        metadata["发票号码"] = rest
-                        break
-
     return metadata
 
 
@@ -260,73 +189,16 @@ def parse_invoice_metadata_from_pdf_spans(
         items.append((float(y0), float(x0), float(x1), t))
     items.sort(key=lambda t: (t[0], t[1]))
 
-    def find_right_value(*, label_contains: str, value_re: str, y_tol: float = 2.5) -> str:
-        for y, x0, _x1, t in items:
-            if label_contains not in t:
-                continue
-            candidates: list[tuple[float, float, str]] = []
-            for y2, x02, _x12, t2 in items:
-                if abs(y2 - y) > y_tol:
-                    continue
-                if x02 <= x0 + 5:
-                    continue
-                m = re.fullmatch(value_re, _compact_text(t2))
-                if not m:
-                    continue
-                candidates.append((abs(y2 - y), x02, m.group(0)))
-            if candidates:
-                candidates.sort()
-                return candidates[0][2]
-        return ""
-
-    def find_right_text(*, label_contains: str, y_tol: float = 2.5) -> str:
-        for y, x0, _x1, t in items:
-            if label_contains not in t:
-                continue
-            candidates: list[tuple[float, str]] = []
-            for y2, x02, _x12, t2 in items:
-                if abs(y2 - y) > y_tol:
-                    continue
-                if x02 <= x0 + 5:
-                    continue
-                tc = _compact_text(t2)
-                if not tc:
-                    continue
-                if tc.endswith(("：", ":")):
-                    continue
-                if label_contains in tc:
-                    continue
-                candidates.append((x02, t2.strip()))
-            if candidates:
-                candidates.sort()
-                return candidates[0][1]
-        return ""
-
-    invoice_number = find_right_value(label_contains="发票号码", value_re=r"[0-9]{8,30}")
-    issue_date = find_right_value(
-        label_contains="开票日期",
-        value_re=r"20[0-9]{2}年[0-9]{1,2}月[0-9]{1,2}日",
-    )
-    issuer = find_right_text(label_contains="开票人")
-    reviewer = find_right_text(label_contains="复核")
-    payee = find_right_text(label_contains="收款人")
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.span_fields import labelled_span_values, remark_metadata
 
     parties = party_metadata(items, sink=diagnostic_sink, location=location)
     amounts = amount_metadata(items, spans, sink=diagnostic_sink, location=location)
 
-    out: dict[str, str] = {}
-    if invoice_number:
-        out["发票号码"] = invoice_number
-    if issue_date:
-        out["开票日期"] = issue_date
+    out = labelled_span_values(items, _LABELLED_PATTERNS, sink=diagnostic_sink, location=location)
     out.update(parties)
     out.update(amounts)
-    if issuer:
-        out["开票人"] = issuer
-    if reviewer:
-        out["复核"] = reviewer
-    if payee:
-        out["收款人"] = payee
+    if remark := remark_metadata(items):
+        out["备注"] = remark
     return out
 
 
@@ -354,20 +226,31 @@ def parse_invoice_metadata_from_text_and_spans(
     """
     compact = _compact_text(text)
     metadata = parse_invoice_metadata_from_compact_text(compact)
+    if spans:
+        # The compact adapter removes whitespace before OCR matching, which can
+        # erase the boundary between two native amount values inside a span.
+        for field in ("金额", "税额", "价税合计"):
+            metadata.pop(field, None)
+        # Flattening a column's vertical labels can associate its name with
+        # the other column. Text owns a party only with a complete role label.
+        for role in ("购买方", "销售方"):
+            if f"{role}信息" not in normalize("NFKC", text):
+                for suffix in ("名称", "纳税人识别号", "开户行及账号"):
+                    metadata.pop(role + suffix, None)
 
     span_meta = parse_invoice_metadata_from_pdf_spans(spans, diagnostic_sink=diagnostic_sink, location=location)
     for key, value in span_meta.items():
         if not value:
             continue
         previous = metadata.get(key)
-        if previous and previous != value:
+        if previous and normalize("NFKC", previous) != normalize("NFKC", value):
             report_metadata_issue(
                 diagnostic_sink,
                 code="INVOICE-METADATA-CONFLICT",
                 location=f"{location}:{key}",
                 message=f"Conflicting {key} text and position evidence within this page; kept the complete role-labelled text value.",
             )
-        else:
+        elif not previous:
             metadata[key] = value
 
     from docwen_plugin_optimizer_invoice_cn.invoice_cn.rows import (
@@ -375,8 +258,32 @@ def parse_invoice_metadata_from_text_and_spans(
         parse_invoice_rows_from_pdf_text,
     )
 
-    rows = parse_invoice_rows_from_pdf_spans(spans=spans)
+    rows = parse_invoice_rows_from_pdf_spans(spans=spans, diagnostic_sink=diagnostic_sink, location=location)
     if not rows:
         rows = parse_invoice_rows_from_pdf_text(text, prefer_marked=False)
 
     return metadata, rows
+
+
+def merge_page_metadata(
+    metadata: dict[str, str | None],
+    field_pages: dict[str, int],
+    page_metadata: dict[str, str | None],
+    page_number: int,
+    diagnostic_sink: ProgressSink | None,
+    location: str,
+) -> None:
+    for field, value in page_metadata.items():
+        if not value:
+            continue
+        previous = metadata.get(field)
+        if previous is None:
+            metadata[field] = value
+            field_pages[field] = page_number
+        elif normalize("NFKC", previous) != normalize("NFKC", value):
+            report_metadata_issue(
+                diagnostic_sink,
+                code="INVOICE-METADATA-CONFLICT",
+                location=f"{location}:{field}",
+                message=f"Conflicting {field} on page-{field_pages[field]} and page-{page_number}; kept the first page-owned value.",
+            )
