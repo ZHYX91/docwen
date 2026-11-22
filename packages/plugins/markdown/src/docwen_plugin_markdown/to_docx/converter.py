@@ -974,6 +974,7 @@ class MdToDocxConverter:
                 md_body = process_markdown_links(
                     link_source,
                     resource_source_path,
+                    include_front_matter=False,
                     link_config=link_config,
                     target_format="docx",
                     hyperlink_projection=navigation_links.issue,

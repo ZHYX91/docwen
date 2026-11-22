@@ -15,10 +15,11 @@ from docwen_core.links._markdown_inline import (
 from docwen_core.links._markdown_references import (
     _ACTIVE_REFERENCE_DEFINITIONS,
     _ACTIVE_REFERENCE_IMAGE_SOURCE,
-    markdown_reference_definitions,
+    MarkdownReferenceDefinition,
     reference_image_source,
 )
 from docwen_core.links._non_embed import _split_fenced_code_blocks, markdown_inline_source_owners
+from docwen_core.yaml_tools import yaml_front_matter_end
 
 _COMMENT_RE = re.compile(r"<!--|%%")
 
@@ -29,6 +30,7 @@ def markdown_source_owners(
     metadata_patterns: Sequence[re.Pattern[str]] = (),
     semantic_url_suffix: bool = False,
     full_document: bool = False,
+    include_front_matter: bool = True,
     structural_tables: bool = False,
     extended_headings: bool = False,
 ) -> list[MarkdownInlineSourceOwner]:
@@ -39,7 +41,31 @@ def markdown_source_owners(
     atoms cannot own the suffix. Wiki ownership does not hide its semantic
     record. Consumers decide which owner kinds to exclude from their scan.
     """
-    definitions = markdown_reference_definitions(source, extended_headings=extended_headings) if full_document else None
+    body_start = None
+    if full_document:
+        body_start = yaml_front_matter_end(source) if include_front_matter else 0
+    return _collect_source_owners(
+        source,
+        body_start=body_start,
+        metadata_patterns=metadata_patterns,
+        semantic_url_suffix=semantic_url_suffix,
+        structural_tables=structural_tables,
+        extended_headings=extended_headings,
+    )
+
+
+def _collect_source_owners(
+    source: str,
+    *,
+    body_start: int | None,
+    metadata_patterns: Sequence[re.Pattern[str]] = (),
+    semantic_url_suffix: bool = False,
+    structural_tables: bool = False,
+    extended_headings: bool = False,
+) -> list[MarkdownInlineSourceOwner]:
+    """Scan a document with its known body start, or an inline fragment (None)."""
+    full_document = body_start is not None
+    definitions: dict[str, MarkdownReferenceDefinition] | None = {} if full_document else None
 
     def atoms_after(start: int) -> list[tuple[int, int, int, int, str]]:
         base = start
@@ -52,12 +78,18 @@ def markdown_source_owners(
             remaining = "." * (start - base) + remaining
         atoms: list[tuple[int, int, int, int, str]] = []
         projection = remaining
-        if full_document:
+        if body_start is not None:
             parts: list[str] = []
             offset = 0
             source_prefixes: dict[int, int] = {}
             segments = _split_fenced_code_blocks(
-                remaining, extended_headings=extended_headings, source_prefixes=source_prefixes
+                remaining,
+                extended_headings=extended_headings,
+                source_prefixes=source_prefixes,
+                # The first block scan owns all definitions, including forward references.
+                # A resumed comment scan can change its suffix's block context only.
+                references=definitions if start == 0 else None,
+                front_matter_end=body_start if start == 0 else 0,
             )
             for segment, protected in segments:
                 end = offset + len(segment)

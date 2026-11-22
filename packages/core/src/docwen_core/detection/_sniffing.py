@@ -28,6 +28,7 @@ from docwen_core.models.file_inspection import (
     DetectionMethod,
     StructureStatus,
 )
+from docwen_core.yaml_tools import yaml_front_matter_end
 
 # ── Magic-byte signatures ─────────────────────────────────────────────
 
@@ -382,7 +383,7 @@ def detect_text_format(file_path: str) -> str:
     ``"html"``, ``"enex"``, ``"mhtml"``, or ``"txt"``.
     """
     # Try to read the file as text
-    text = _read_text_file(file_path)
+    text, truncated = _read_text_sample(file_path)
     if not text:
         # Text sniffing is content-only. Empty inputs are rejected by
         # ``detect_content_format`` before reaching this helper; callers using
@@ -400,11 +401,19 @@ def detect_text_format(file_path: str) -> str:
     if "content-type:" in text_lower and _has_mhtml_headers(text):
         return "mhtml"
 
+    # A complete properties block is Markdown evidence when followed by a
+    # body. HTML examples inside properties never describe the outer file.
+    front_matter_end = yaml_front_matter_end(text)
+    if truncated and front_matter_end == len(text) and not text.endswith(("\r", "\n")):
+        front_matter_end = 0  # A cut-off line can look like an EOF terminator.
+    if front_matter_end and text[front_matter_end:].strip():
+        return "markdown"
+
     # Raw HTML is also valid inside Markdown. Score only authored Markdown
     # outside HTML blocks; a complete HTML document still takes precedence.
     html_markers = ("<!doctype html", "<html", "<head", "<body", "<meta", "<div", "<p>")
     sample_lower = text_lower[:4096]
-    has_html = any(m in sample_lower for m in html_markers)
+    has_html = not front_matter_end and any(m in sample_lower for m in html_markers)
     markdown_text = text
     if has_html:
         if _has_html_document_envelope(text):
@@ -473,21 +482,21 @@ def _is_text_content(head: bytes) -> bool:
     return all(32 <= b <= 126 or b in (9, 10, 13) for b in head)
 
 
-def _read_text_file(file_path: str, max_size: int = _TEXT_READ_SIZE) -> str | None:
-    """Read a bounded text sample using the canonical strict decoder."""
+def _read_text_sample(file_path: str, max_size: int = _TEXT_READ_SIZE) -> tuple[str | None, bool]:
+    """Decode a bounded text sample and retain whether it ended at EOF."""
     try:
         with open(file_path, "rb") as fh:
             data = fh.read(max_size + 4)
     except OSError:
-        return None
+        return None, False
 
     if not data:
-        return ""
+        return "", False
 
     truncated = len(data) > max_size
     sample = data[:max_size]
     decoded = _decode_text_bytes(sample, final=not truncated)
-    return decoded[0] if decoded is not None else None
+    return (decoded[0] if decoded is not None else None), truncated
 
 
 def _decode_text_bytes(data: bytes, *, final: bool) -> tuple[str, str] | None:
@@ -616,7 +625,7 @@ def matches_single_column_declaration(file_path: str, declared_format: str) -> b
     """Validate the ambiguous single-column subset after neutral text sniffing."""
     if declared_format not in {"csv", "tsv"}:
         return False
-    text = _read_text_file(file_path)
+    text, _ = _read_text_sample(file_path)
     if not text:
         return False
     try:
