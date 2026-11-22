@@ -24,16 +24,29 @@ covered by the per-plugin route tests (for example, ``test_print_routes.py``).
 from __future__ import annotations
 
 import ast
+from importlib import import_module
 from pathlib import Path
 
 import pytest
 
+from docwen_bundle.runtime_factory import _DEFAULT_PLUGIN_IMPORTS
 from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
 from docwen_core.models.manifest import HonestyRoute
 
 pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.mark.parametrize("module", _DEFAULT_PLUGIN_IMPORTS)
+def test_plugin_discovery_matches_exact_declared_routes(module: str) -> None:
+    plugin = import_module(module).PLUGIN_CLASS()
+    for route in plugin.manifest.routes:
+        source, target, action = route.source_format, route.target_format, route.action_name
+        assert plugin.can_handle(source, target, action)
+        assert not plugin.can_handle("unknown-source", target, action)
+        assert not plugin.can_handle(source, "unknown-target", action)
+        assert not plugin.can_handle(source, target, "unknown-action")
 
 
 def _option_read_keys(source: str) -> set[str]:

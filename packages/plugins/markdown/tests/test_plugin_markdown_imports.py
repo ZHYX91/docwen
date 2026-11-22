@@ -243,17 +243,6 @@ def test_markdown_plugin_source_does_not_depend_on_optimizer_plugins() -> None:
     assert "docwen_plugin_optimizer_invoice_cn" not in production_source
 
 
-def test_markdown_plugin_has_no_stale_not_implemented_stub_docstring() -> None:
-    """Markdown plugin manifest routes are implemented or bridge-backed."""
-    import inspect
-
-    from docwen_plugin_markdown import plugin as plugin_module
-
-    source = inspect.getsource(plugin_module.MarkdownPlugin.can_handle)
-    assert "NOT_IMPLEMENTED stubs" not in source
-    assert "RouteResolver can" in source
-
-
 def test_common_utils_has_no_dead_docx_ast_alias() -> None:
     from docwen_plugin_markdown import common_utils
 

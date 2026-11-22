@@ -30,14 +30,7 @@ class ImagePlugin:
         return self._manifest
 
     def can_handle(self, source_format: str, target_format: str, action_name: str = "") -> bool:
-        for route in self.manifest.routes:
-            if (
-                route.source_format == source_format
-                and route.target_format == target_format
-                and route.action_name == action_name
-            ):
-                return True
-        return False
+        return self.manifest.declares_route(source_format, target_format, action_name)
 
     def convert(self, context: PluginExecutionContext) -> ConversionResult:
         from docwen_core.models.file_ref import FileRef
