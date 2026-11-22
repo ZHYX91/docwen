@@ -63,7 +63,9 @@ as `HYPERLINK` formulas. Final restored text still passes the existing Excel cap
 YAML values used in templates follow the same independent policies and the same final-cell rule; existing template
 text is not reparsed as Markdown. Conversion does not rewrite the source files or fetch link destinations.
 XLSX-to-Markdown also retains display text and allowed external native hyperlink destinations with escaped labels
-and URI targets. It does not evaluate `HYPERLINK` formulas or guess worksheet-location/relative targets; unsupported
+and URI targets. An external hyperlink can store the URL and its fragment separately. Export joins them so the
+link opens the same section. Conflicting fragment values fall back to the display text.
+It does not evaluate `HYPERLINK` formulas or guess worksheet-location/relative targets; unsupported
 native destinations remain visible text. This does not promise lossless import of every foreign Office link form.
 
 普通 Wiki 与 Markdown 链接各自支持 `keep`（保留原样）、`extract_text`（提取文字）、`extract_address`
@@ -86,6 +88,7 @@ slug（转为小写、去除标点、空格换为连字符）。输出使用独�
 匹配时投影回 Markdown 链接。提示及书签均是不可信文档内容，不是认证或冻结恢复证据；外来、缺失、含糊、
 已改写或无法证明的结构仅保留可见文字。XLSX 反向转换也保留受支持的原生外链文字和目标，但不执行
 `HYPERLINK` 公式，不猜工作表内部位置或相对目标；不承诺任意外来 Office 链接无损往返。
+如果工作簿把外链网址和章节锚点分开保存，导出的链接仍会跳到原章节。两处记录的锚点冲突时仅保留显示文字。
 
 XLSX 只为最终完整单元格中的一个受支持链接生成原生超链接；混合正文或多个链接时逐个采用回退，保留
 文字和顺序，不选取首个目标、不让无关文字可点击，也不拆分工作簿结构。CSV 没有原生超链接，始终采用
