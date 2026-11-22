@@ -10,8 +10,11 @@ import stat
 import subprocess
 import sys
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from time import monotonic
 from typing import Any
 
 if __package__ in {None, ""}:
@@ -44,6 +47,16 @@ PYTEST_BASETEMP_NAME = "b"
 PYTEST_CACHE_NAME = "c"
 PYTEST_REPORT_NAME = "reports"
 PYTEST_SYSTEM_TEMP_NAME = "t"
+
+
+@contextmanager
+def _timed_phase(name: str) -> Iterator[None]:
+    print(f"[qa] {name} started", flush=True)
+    started = monotonic()
+    try:
+        yield
+    finally:
+        print(f"[qa] {name} elapsed: {monotonic() - started:.2f}s", flush=True)
 
 
 def _run(args: list[str], *, env: dict[str, str] | None = None) -> int:
@@ -454,7 +467,9 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--skip-pyright", action="store_true")
     parser.add_argument("--skip-pytest", action="store_true")
     parser.add_argument(
-        "--tests-only", action="store_true", help="Run tests after a separate required source-check job."
+        "--tests-only",
+        action="store_true",
+        help="Run pytest and its reports separately from the required source checks.",
     )
     parser.add_argument(
         "--compact-coverage",
@@ -615,10 +630,10 @@ def main(argv: list[str]) -> int:
                 pytest_cmd += qa_reports.coverage_arguments(repo_root, runtime_view)
                 environment["COVERAGE_FILE"] = str(runtime_view / ".coverage")
                 environment["DOCWEN_TEST_ALLOW_COVERAGE_TRACE"] = "1"
-            return_code = _run(
-                pytest_cmd,
-                env=environment,
-            )
+            if args.report_output:
+                pytest_cmd += ["-p", "tests._pytest_hooks.progress"]
+            with _timed_phase("pytest process"):
+                return_code = _run(pytest_cmd, env=environment)
         except KeyboardInterrupt:
             interrupted = True
         except BaseException as error:
@@ -654,18 +669,20 @@ def main(argv: list[str]) -> int:
         if return_code is None:
             raise RuntimeError("pytest runner returned no status")
         if args.coverage:
-            for command in qa_reports.coverage_checks(runtime_root):
-                code = _run([sys.executable, *command], env=workspace_environment)
-                return_code = return_code or code
+            with _timed_phase("coverage gates"):
+                for command in qa_reports.coverage_checks(runtime_root):
+                    code = _run([sys.executable, *command], env=workspace_environment)
+                    return_code = return_code or code
         if args.report_output:
             try:
-                qa_reports.export_reports(
-                    runtime_root,
-                    args.report_output,
-                    coverage=args.coverage,
-                    exit_code=return_code,
-                    coverage_detail=not args.compact_coverage,
-                )
+                with _timed_phase("report export"):
+                    qa_reports.export_reports(
+                        runtime_root,
+                        args.report_output,
+                        coverage=args.coverage,
+                        exit_code=return_code,
+                        coverage_detail=not args.compact_coverage,
+                    )
             except (OSError, ValueError) as error:
                 print(f"[qa] compact report export failed: {error}", file=sys.stderr)
                 return_code = return_code or 2
@@ -691,7 +708,8 @@ def main(argv: list[str]) -> int:
                     with cleanup_lease.pin_root():
                         root_pinned = True
                         try:
-                            _cleanup_owned_runtime(runtime_root)
+                            with _timed_phase("raw runtime cleanup"):
+                                _cleanup_owned_runtime(runtime_root)
                         except (OSError, ValueError) as error:
                             cleanup_lease.lease["cleanupError"] = f"{type(error).__name__}:{error}"
                             try:

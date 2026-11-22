@@ -35,7 +35,6 @@ jobs:
 
   tests:
     name: Tests on ${{ matrix.os }}
-    needs: source-checks
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:

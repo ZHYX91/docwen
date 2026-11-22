@@ -35,12 +35,13 @@ def test_required_source_failure_stops_before_pytest(monkeypatch: pytest.MonkeyP
     assert not any("pytest" in command for command in commands)
 
 
+@pytest.mark.parametrize("job", ["source-checks", "tests"])
 @pytest.mark.parametrize("result", ["failure", "skipped", "cancelled", None])
-def test_required_ci_job_cannot_be_skipped_or_missing(result: str | None) -> None:
-    jobs = {"source-checks": {"result": "success"}}
+def test_required_ci_job_cannot_be_skipped_or_missing(job: str, result: str | None) -> None:
+    jobs = {name: {"result": "success"} for name in ("source-checks", "tests") if name != job}
     if result is not None:
-        jobs["tests"] = {"result": result}
-    with pytest.raises(ValueError, match="tests"):
+        jobs[job] = {"result": result}
+    with pytest.raises(ValueError, match=job):
         validate_ci_results(jobs, "workflow_dispatch")
 
 
@@ -57,7 +58,9 @@ def test_ci_has_one_full_coverage_run_and_one_run_per_other_platform() -> None:
     workflow = yaml.load(Path(".github/workflows/tests.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     jobs = workflow["jobs"]
     assert set(jobs) == {"source-checks", "tests", "required"}
-    assert jobs["tests"]["needs"] == "source-checks"
+    assert "needs" not in jobs["tests"]
+    assert "needs" not in jobs["source-checks"]
+    assert jobs["required"]["if"] == "always()"
     assert jobs["tests"]["strategy"]["matrix"]["include"] == [
         {"os": "windows-latest", "suite": "full", "coverage": "true"},
         {"os": "ubuntu-24.04", "suite": "platform", "coverage": "false"},

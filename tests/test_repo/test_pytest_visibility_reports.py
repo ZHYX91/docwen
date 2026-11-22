@@ -318,6 +318,8 @@ def test_xdist_visibility_report_preserves_unmarked_worker_items(
             "-p",
             "tests._pytest_hooks.reporting",
             "-p",
+            "tests._pytest_hooks.progress",
+            "-p",
             "no:pytest_cov",
             "-o",
             "addopts=-q --tb=short --strict-markers --import-mode=importlib -ra",
@@ -337,6 +339,10 @@ def test_xdist_visibility_report_preserves_unmarked_worker_items(
     )
 
     assert completed.returncode == expected_returncode, completed.stdout + completed.stderr
+    assert completed.stdout.count("[qa] worker ") == 2
+    assert "active workers: none" in completed.stdout
+    assert completed.stdout.index("active workers: none") < completed.stdout.index("[qa] test execution ended")
+    assert completed.stdout.count("[qa] post-test hooks before session finish:") == 1
     if expected_returncode:
         assert "primary marker debt exceeded: actual=1, limit=0" in completed.stdout + completed.stderr
     payload = json.loads((report_dir / "missing_marker_report.json").read_text(encoding="utf-8"))
