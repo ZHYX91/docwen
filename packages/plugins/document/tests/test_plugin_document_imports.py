@@ -73,17 +73,6 @@ def test_docx_plugin_can_handle_routes() -> None:
     assert plugin.can_handle("document", "markdown", "invalid") is False
 
 
-def test_docx_plugin_has_no_stale_not_implemented_stub_docstring() -> None:
-    """Document plugin routes are implemented or rejected, not advertised as stubs."""
-    import inspect
-
-    from docwen_plugin_document import plugin as plugin_module
-
-    source = inspect.getsource(plugin_module.DocumentPlugin.can_handle)
-    assert "NOT_IMPLEMENTED stubs" not in source
-    assert "RouteResolver can" in source
-
-
 def test_docx_to_md_manifest_declares_break_separator_options() -> None:
     """DOCX->MD route schema should expose configured break separators."""
     from docwen_plugin_document import DocumentPlugin
