@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Any
 
 import pytest
 from docx import Document
@@ -12,20 +11,25 @@ from docx import Document
 from docwen_application.controller import ApplicationController
 from docwen_application.conversion_contracts import ConversionPlanRequest, LocalInputHandle, StagingOutputTarget
 from docwen_application.conversion_service import ConversionService
+from docwen_bundle.config_port import ConfigPortAdapter
+from docwen_bundle.runtime_factory import create_runtime_port
+from docwen_cli.machine.query_service import MachineQueryService
 from docwen_core.formats import get_media_type
 from docwen_core.paths import filesystem_path
+from docwen_runtime.config import ConfigLoader
 from docwen_runtime.output.artifact_bundle import ArtifactBundleCommitter
 
 pytestmark = pytest.mark.integration
 
 
-def test_machine_executes_declared_gongwen_capability(round_trip_runtime: Any, tmp_path: Path) -> None:
+def test_machine_executes_declared_gongwen_capability(tmp_path: Path) -> None:
     source = tmp_path / "关于开展工作的通知.docx"
     document = Document()
     document.add_paragraph("某某市人民政府文件")
     document.add_paragraph("某政发〔2026〕1号")
     document.add_heading("关于开展工作的通知", 0)
     document.add_paragraph("各有关单位：")
+    document.add_heading("工作要求", level=1)
     document.add_paragraph("请按照要求开展工作。")
     document.add_paragraph("某某市人民政府")
     document.add_paragraph("2026年9月20日")
@@ -33,8 +37,24 @@ def test_machine_executes_declared_gongwen_capability(round_trip_runtime: Any, t
     original = source.read_bytes()
     staging = tmp_path / "output"
     staging.mkdir()
-    controller = ApplicationController(runtime_port=round_trip_runtime)
+    profile = tmp_path / "profile"
+    (profile / "numbering").mkdir(parents=True)
+    (profile / "conversion.toml").write_text('output_locale = "en_US"\n', encoding="utf-8")
+    (profile / "numbering" / "add.toml").write_text(
+        '[schemes.local_notice]\nname = "Local notice"\nenabled = true\nlocales = ["zh_CN"]\n'
+        '[schemes.local_notice.level_1]\nformat = "Section {1.arabic_half}. "\n'
+        '[schemes.retired]\nname = "Retired"\nenabled = false\nlocales = ["*"]\n',
+        encoding="utf-8",
+    )
+    loader = ConfigLoader(user_dir=profile)
+    controller = ApplicationController(
+        runtime_port=create_runtime_port(config_loader=loader), config_port=ConfigPortAdapter(loader)
+    )
     controller.start()
+    resources = MachineQueryService(controller).list_resources("numbering-schemes", locale="zh_CN")
+    ids = {resource["id"] for resource in resources["resources"]}
+    assert "local_notice" in ids
+    assert "retired" not in ids
     service = ConversionService(controller, ArtifactBundleCommitter())
     capability = next(
         item
@@ -56,7 +76,12 @@ def test_machine_executes_declared_gongwen_capability(round_trip_runtime: Any, t
             ),
         ),
         output=StagingOutputTarget(str(staging)),
-        options={"recognize_text": False, "preserve_resources": True},
+        options={
+            "recognize_text": False,
+            "preserve_resources": True,
+            "add_numbering": True,
+            "numbering_scheme": "local_notice",
+        },
     )
     plan = service.plan(request)
     outcome = service.execute_accepted(service.accept(plan.plan_id))
@@ -68,5 +93,6 @@ def test_machine_executes_declared_gongwen_capability(round_trip_runtime: Any, t
     assert len(Path(artifact.logical_path).parts) >= 2
     content = filesystem_path(staging / artifact.locator).read_text(encoding="utf-8")
     assert "关于开展工作的通知" in content and "请按照要求开展工作" in content
+    assert "# Section 1. 工作要求" in content
     assert source.read_bytes() == original
     assert not list(staging.rglob("docwen-node.json"))

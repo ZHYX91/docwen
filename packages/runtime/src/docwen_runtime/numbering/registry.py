@@ -106,10 +106,13 @@ class NumberingSchemeRegistry:
 
     def get_scheme(self, scheme_id: str) -> NumberingSchemeInfo:
         requested = scheme_id.strip()
-        for scheme in self.list_schemes():
-            if scheme.scheme_id == requested:
-                return scheme
-        raise NumberingSchemeNotFoundError(f"编号方案不存在: {scheme_id}")
+        # Locale controls the choices shown in a picker. An explicit ID can
+        # originate from a picker using a different language than the task.
+        schemes = self._load_data().get("schemes", {})
+        raw = schemes.get(requested) if isinstance(schemes, Mapping) else None
+        if not isinstance(raw, dict):
+            raise NumberingSchemeNotFoundError(f"编号方案不存在: {scheme_id}")
+        return _parse_scheme(requested, raw, self._load_translations())
 
     def _load_data(self) -> dict[str, Any]:
         numbering = self._config_snapshot.get("numbering", {})

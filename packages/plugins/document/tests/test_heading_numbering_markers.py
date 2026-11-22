@@ -41,6 +41,52 @@ def test_option_overrides_request_snapshot(tmp_path, config_value, override, exp
     assert (WJ in markdown) is expected
 
 
+@pytest.mark.parametrize(
+    ("overrides", "first_heading", "keeps_marked_heading"),
+    [
+        ({}, "# 1 Title", True),
+        ({"add_numbering": False}, "# Title", True),
+        ({"remove_numbering": True}, "# 1 Title", False),
+    ],
+)
+def test_machine_numbering_options_inherit_document_settings(tmp_path, overrides, first_heading, keeps_marked_heading):
+    source = tmp_path / "headings.docx"
+    document = Document()
+    document.add_heading("Title", level=1)
+    document.add_heading(f"{WJ}9.{WJ} Existing", level=1)
+    document.save(source)
+    config = {
+        "document": {
+            "to_md_remove_numbering": False,
+            "to_md_add_numbering": True,
+            "to_md_default_scheme": "exact",
+        }
+    }
+    options = resolve_conversion_options(overrides, CAPABILITY_BY_ID[DOCX_TO_MARKDOWN_CAPABILITY_ID])
+    context = _context(tmp_path, source, request_id="inherit", config=config, options=options)
+    context._numbering_registry = _ExactSchemeRegistry()
+
+    markdown = _markdown_from_result(DocxToMarkdownConverter().convert(context))
+    headings = [line for line in markdown.splitlines() if line.startswith("# ")]
+    assert headings == [first_heading, f"# {WJ}9.{WJ} Existing" if keeps_marked_heading else "# 2 Existing"]
+
+
+def test_explicit_numbering_scheme_overrides_the_configured_scheme(tmp_path):
+    source = tmp_path / "headings.docx"
+    document = Document()
+    document.add_heading("Title", level=1)
+    document.save(source)
+    config = {"document": {"to_md_add_numbering": True, "to_md_default_scheme": "not-installed"}}
+    options = resolve_conversion_options(
+        {"numbering_scheme": "exact"}, CAPABILITY_BY_ID[DOCX_TO_MARKDOWN_CAPABILITY_ID]
+    )
+    context = _context(tmp_path, source, request_id="override", config=config, options=options)
+    context._numbering_registry = _ExactSchemeRegistry()
+
+    markdown = _markdown_from_result(DocxToMarkdownConverter().convert(context))
+    assert "# 1 Title" in markdown.splitlines()
+
+
 @pytest.mark.parametrize("bold", [False, True])
 @pytest.mark.parametrize("remove", [False, True])
 def test_marked_docx_heading_preserved_or_replaced_without_duplicate(bold, remove):

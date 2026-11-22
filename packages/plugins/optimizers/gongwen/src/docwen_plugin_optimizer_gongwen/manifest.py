@@ -23,9 +23,9 @@ GONGWEN_OPTIONS_SCHEMA: dict = {
         },
         "numbering_scheme": {
             "type": "string",
-            "enum": ["gongwen_standard", "hierarchical_standard", "hierarchical_h2_start", "legal_standard"],
+            "x-docwen-resource-kind": "numbering-schemes",
             "default": "gongwen_standard",
-            "description": "Numbering scheme ID when add_numbering is True.",
+            "description": "Exact numbering scheme ID from the request registry when add_numbering is True.",
         },
         "to_md_keep_images": {
             "type": "boolean",

@@ -116,7 +116,10 @@ class MachineQueryService:
                 ]
                 return {"kind": kind, "resources": resources}
             args = argparse.Namespace(target=target, lang=locale)
-            resources = _template_entries(args) if kind == "templates" else _numbering_entries(args, self._controller)
+            if kind == "templates":
+                resources = _template_entries(args)
+            else:
+                resources = [item for item in _numbering_entries(args, self._controller) if item["enabled"]]
         except CapabilityUnavailableError as exc:
             raise MachineQueryError("resource_unavailable", str(exc)) from exc
 

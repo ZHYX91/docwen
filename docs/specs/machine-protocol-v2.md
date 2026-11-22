@@ -126,10 +126,14 @@ Document-to-Markdown optimizers, including Gongwen, accept DOCX and the declared
 chains. Discovery, planning, and acceptance check every route in the chain. The selected optimizer supplies
 its own closed option schema; it does not inherit unsupported options from ordinary conversion. Other
 optimizer families remain resource metadata until they have an explicit Machine input/output contract.
+Machine `resource/list` (`kind=numbering-schemes`) offers the enabled schemes visible in the requested display
+language. A task resolves an explicitly selected ID even when its output language differs. Gongwen accepts
+built-in and custom scheme IDs and defaults to `gongwen_standard` when adding numbering without an explicit ID.
 
 可执行优化以 `transform` 能力公开，通过 `optimization_id` 绑定优化资源。消费者按资源 ID、输入形状和
 输出媒体类型选择唯一可用能力，不解析能力 ID 的命名，也不把资源列表当作可执行保证。公文优化及普通
 文档转 Markdown 都检查完整预转换链；优化参数来自实际优化路线，不能套用普通转换独有的参数。
+Machine 的 `resource/list`（`kind=numbering-schemes`）按请求的显示语言列出已启用的方案。任务输出语言与显示语言不同时，仍按选中的 ID 执行。公文优化可使用内置或自定义方案，添加序号时若省略方案 ID，则使用 `gongwen_standard`。
 
 ## Source-native Markdown-to-DOCX / 源 Markdown 转 DOCX
 
@@ -222,9 +226,10 @@ four independent booleans; defaults are false). Its image/resource properties ar
 `image_mode` (`file|base64|embed|omit`, default `file`), `ocr_placement` (`image_md|main_md`, default `main_md`),
 `image_link_style` (`wiki_embed|wiki_link|markdown_embed|markdown_link`, default `wiki_embed`),
 and `table_merge_strategy` (`fill|empty|marker`, default `fill`). Its schema has `required=[]` and
-`additionalProperties=false`. It also exposes `remove_numbering` (default true), `add_numbering` (default false),
-and `numbering_scheme` (default `gongwen_standard`) for source-document conversion. These are separate from
-resolved-plan Markdown-to-DOCX, whose numbering authority is supplied in the typed plan. The schema, manifest,
+`additionalProperties=false`. For source-document conversion, omitted `remove_numbering`, `add_numbering`, and
+`numbering_scheme` inherit `document.to_md_remove_numbering`, `document.to_md_add_numbering`, and
+`document.to_md_default_scheme` from the request configuration snapshot. Explicit options take precedence.
+Resolved-plan Markdown-to-DOCX uses the numbering authority supplied in the typed plan. The schema, manifest,
 fixtures, source/package capability output, and consumers change atomically.
 
 DOCX is a `document_with_resources` route, not a physical-page route. Let `K` be the number of preserved embedded
