@@ -1,6 +1,8 @@
 """Field and bookmark proofs must agree with visible native note payloads."""
 
 from copy import deepcopy
+from functools import cache
+from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -11,25 +13,36 @@ from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_document.shared.note_extraction import NoteExtractor
 from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
-from tests.integration.test_markdown_extension_policy import _context
+from tests.support.markdown_dialect import dialect_context
 
 pytestmark = pytest.mark.integration
 Q = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 
-def _document(tmp_path, kind):
-    label = "n" if kind == "footnote" else "endnote:n"
-    source = tmp_path / "source.md"
-    source.write_text(f"First[^{label}], again[^{label}].\n\n[^{label}]: Unique body.\n", encoding="utf-8")
-    result = MdToDocxConverter().convert(_context(tmp_path, source, "docx", {"input": {"typed_endnotes": True}}))
-    assert result.success, result.error
-    return Document(result.artifacts[0].staging_path)
+@pytest.fixture(scope="module")
+def note_docx_bytes(tmp_path_factory):
+    @cache
+    def generate(kind: str) -> bytes:
+        root = tmp_path_factory.mktemp(kind)
+        label = "n" if kind == "footnote" else "endnote:n"
+        source = root / "source.md"
+        source.write_text(f"First[^{label}], again[^{label}].\n\n[^{label}]: Unique body.\n", encoding="utf-8")
+        result = MdToDocxConverter().convert(dialect_context(root, source, "docx", {"input": {"typed_endnotes": True}}))
+        assert result.success, result.error
+        return Path(result.artifacts[0].staging_path).read_bytes()
+
+    return generate
+
+
+@pytest.fixture
+def document(kind, note_docx_bytes):
+    # Mutations in one case must never change the package opened by another.
+    return Document(BytesIO(note_docx_bytes(kind)))
 
 
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("location", ["rPr", "nested_run"])
-def test_fake_native_marker_cannot_authenticate_field(tmp_path, kind, location):
-    document = _document(tmp_path, kind)
+def test_fake_native_marker_cannot_authenticate_field(tmp_path, document, kind, location):
     reference = next(document.element.iter(Q + kind + "Reference"))
     run = reference.getparent()
     container = run.find(Q + "rPr") if location == "rPr" else etree.SubElement(run, Q + "r")
@@ -46,8 +59,7 @@ def test_fake_native_marker_cannot_authenticate_field(tmp_path, kind, location):
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("location", ["simple_field", "bookmark"])
 @pytest.mark.parametrize("marker_case", ["valid", "unknown_type", "attribute", "text", "child"])
-def test_proofing_markers_preserve_only_proven_note_identity(tmp_path, kind, location, marker_case):
-    document = _document(tmp_path, kind)
+def test_proofing_markers_preserve_only_proven_note_identity(tmp_path, document, kind, location, marker_case):
     instruction = next(document.element.iter(Q + "instrText"))
     begin = instruction.getparent().getprevious()
     parts = [begin]
@@ -79,7 +91,7 @@ def test_proofing_markers_preserve_only_proven_note_identity(tmp_path, kind, loc
     reverse = tmp_path / "reverse"
     reverse.mkdir()
     result = DocxToMarkdownConverter().convert(
-        _context(reverse, path, "md", {"output": MarkdownExtensions.obsidian().to_dict()})
+        dialect_context(reverse, path, "md", {"output": MarkdownExtensions.obsidian().to_dict()})
     )
     assert result.success, result.error
     text = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
@@ -92,8 +104,7 @@ def test_proofing_markers_preserve_only_proven_note_identity(tmp_path, kind, loc
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("wrapper_kind", ["sdt", "hyperlink", "smartTag", "customXml", "ins", "moveTo", "fldSimple"])
 @pytest.mark.parametrize("malformed", [False, True])
-def test_note_target_wrappers_preserve_only_well_formed_payload(tmp_path, kind, wrapper_kind, malformed):
-    document = _document(tmp_path, kind)
+def test_note_target_wrappers_preserve_only_well_formed_payload(tmp_path, document, kind, wrapper_kind, malformed):
     reference = next(document.element.iter(Q + kind + "Reference"))
     run = reference.getparent()
     wrapper = etree.Element(Q + wrapper_kind)
@@ -122,8 +133,7 @@ def test_note_target_wrappers_preserve_only_well_formed_payload(tmp_path, kind, 
 
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("property_name", ["b", "fldChar", "drawing", "proofErr"])
-def test_note_target_run_formatting_is_validated(tmp_path, kind, property_name):
-    document = _document(tmp_path, kind)
+def test_note_target_run_formatting_is_validated(tmp_path, document, kind, property_name):
     reference = next(document.element.iter(Q + kind + "Reference"))
     properties = reference.getparent().find(Q + "rPr")
     assert properties is not None
@@ -137,7 +147,7 @@ def _assert_full_note_roundtrip(tmp_path, document, kind, *, valid):
     reverse = tmp_path / "reverse"
     reverse.mkdir()
     result = DocxToMarkdownConverter().convert(
-        _context(reverse, path, "md", {"output": MarkdownExtensions.obsidian().to_dict()})
+        dialect_context(reverse, path, "md", {"output": MarkdownExtensions.obsidian().to_dict()})
     )
     assert result.success, result.error
     text = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
@@ -148,8 +158,7 @@ def _assert_full_note_roundtrip(tmp_path, document, kind, *, valid):
 
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("valid", [True, False])
-def test_note_target_preserves_nested_format_revision_metadata(tmp_path, kind, valid):
-    document = _document(tmp_path, kind)
+def test_note_target_preserves_nested_format_revision_metadata(tmp_path, document, kind, valid):
     reference = next(document.element.iter(Q + kind + "Reference"))
     properties = reference.getparent().find(Q + "rPr")
     assert properties is not None
@@ -162,8 +171,7 @@ def test_note_target_preserves_nested_format_revision_metadata(tmp_path, kind, v
 
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("valid", [True, False])
-def test_note_target_sdt_properties_have_typed_nested_structure(tmp_path, kind, valid):
-    document = _document(tmp_path, kind)
+def test_note_target_sdt_properties_have_typed_nested_structure(tmp_path, document, kind, valid):
     reference = next(document.element.iter(Q + kind + "Reference"))
     run = reference.getparent()
     wrapper = etree.Element(Q + "sdt")
@@ -179,8 +187,7 @@ def test_note_target_sdt_properties_have_typed_nested_structure(tmp_path, kind, 
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("simple", [True, False])
 @pytest.mark.parametrize("malformation", ["field", "duplicate-visibility"])
-def test_note_field_cache_cannot_hide_payload_in_run_properties(tmp_path, kind, simple, malformation):
-    document = _document(tmp_path, kind)
+def test_note_field_cache_cannot_hide_payload_in_run_properties(tmp_path, document, kind, simple, malformation):
     instruction = next(document.element.iter(Q + "instrText"))
     begin = instruction.getparent().getprevious()
     parts = [begin]
@@ -204,8 +211,7 @@ def test_note_field_cache_cannot_hide_payload_in_run_properties(tmp_path, kind, 
 
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("nested", [False, True])
-def test_note_target_conflicting_visibility_properties_are_not_trusted(tmp_path, kind, nested):
-    document = _document(tmp_path, kind)
+def test_note_target_conflicting_visibility_properties_are_not_trusted(tmp_path, document, kind, nested):
     reference = next(document.element.iter(Q + kind + "Reference"))
     properties = reference.getparent().find(Q + "rPr")
     assert properties is not None

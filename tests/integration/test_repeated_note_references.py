@@ -13,7 +13,7 @@ from docwen_plugin_document.shared.markdown_runs import render_paragraph_runs
 from docwen_plugin_document.shared.note_extraction import NoteExtractor
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 from docwen_plugin_markdown.to_docx.note_references import project_repeated_note_references
-from tests.integration.test_markdown_extension_policy import _context
+from tests.support.markdown_dialect import dialect_context
 
 pytestmark = pytest.mark.integration
 NS = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
@@ -34,7 +34,9 @@ def test_duplicate_native_template_references_are_preserved_without_duplicating_
 ):
     source = tmp_path / "template-source.md"
     source.write_text(f"Existing[^{label}].\n\n[^{label}]: Existing body.\n", encoding="utf-8")
-    initial = MdToDocxConverter().convert(_context(tmp_path, source, "docx", {"input": {"typed_endnotes": True}}))
+    initial = MdToDocxConverter().convert(
+        dialect_context(tmp_path, source, "docx", {"input": {"typed_endnotes": True}})
+    )
     assert initial.success, initial.error
     template = Document(initial.artifacts[0].staging_path)
     reference = next(template.element.iter(f"{{{NS['w']}}}{kind}Reference"))
@@ -63,7 +65,7 @@ def test_duplicate_native_template_references_are_preserved_without_duplicating_
     source_bytes = source.read_bytes()
     conversion_root = tmp_path / "conversion"
     conversion_root.mkdir()
-    context = _context(conversion_root, source, "docx", {"input": {"typed_endnotes": True}})
+    context = dialect_context(conversion_root, source, "docx", {"input": {"typed_endnotes": True}})
     context.request.options["template_name"] = str(template_path)
     result = MdToDocxConverter().convert(context)
     assert result.success, result.error
@@ -121,7 +123,7 @@ def test_uncomputed_note_number_is_explicit_and_reported(tmp_path, restart, numb
     doc.save(str(template))
     source = tmp_path / "source.md"
     source.write_text("First[^a], repeated[^a].\n\n[^a]: Body.\n", encoding="utf-8")
-    context = _context(tmp_path, source, "docx", {})
+    context = dialect_context(tmp_path, source, "docx", {})
     context.request.options["template_name"] = str(template)
     result = MdToDocxConverter().convert(context)
     assert result.success, result.error
@@ -260,7 +262,7 @@ def test_repeated_notes_use_one_native_reference_and_linked_fields(
         repeated = f"| Column |\n| --- |\n| {repeated} |"
     source = tmp_path / "repeated.md"
     source.write_text(f"First[^{label}].\n\n{repeated}\n\n[^{label}]: **One** note body.\n", encoding="utf-8")
-    context = _context(tmp_path, source, "docx", {"input": {"typed_endnotes": True}})
+    context = dialect_context(tmp_path, source, "docx", {"input": {"typed_endnotes": True}})
     result = MdToDocxConverter().convert(context)
     assert result.success, result.error
     with ZipFile(result.artifacts[0].staging_path) as archive:

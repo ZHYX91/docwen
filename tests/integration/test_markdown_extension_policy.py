@@ -23,6 +23,7 @@ from tests.support.cancellation import FakeCancellationTokenView
 from tests.support.config import FakeConfigView
 from tests.support.execution import FakeExecutionContext
 from tests.support.logging import FakePluginLogger
+from tests.support.markdown_dialect import dialect_context
 from tests.support.progress import FakeProgressSink
 from tests.support.workspace import FakeWorkspaceHandle
 
@@ -52,31 +53,6 @@ Note[^endnote:n].
 
 [^endnote:n]: Endnote body.
 """
-
-
-def _context(tmp_path: Path, source: Path, target: str, extensions: dict) -> FakeExecutionContext:
-    staging = tmp_path / f"staging-{target}"
-    staging.mkdir()
-    ref = FileRef(path=str(source), format="markdown" if target == "docx" else "docx", category="document")
-    request = ConversionRequest(
-        request_id=f"dialect-{target}",
-        input_refs=[ref],
-        target_format=target,
-        options={"markdown_extensions": extensions, "heading_merge_mode": "never", "remove_numbering": False},
-        output_policy=OutputPolicy(),
-    )
-    return FakeExecutionContext(
-        request,
-        FakeWorkspaceHandle(str(source), str(staging), (ref,)),
-        FakeConfigView(),
-        FakeProgressSink(),
-        FakeCancellationTokenView(),
-        FakePluginLogger(),
-        document_style_catalog=build_document_style_catalog(
-            {"gui": {"language": {"locale": "zh_CN"}}},
-            locales_dir=ROOT / "i18n" / "locales",
-        ),
-    )
 
 
 def _structural_config() -> FakeConfigView:
@@ -222,7 +198,7 @@ def test_input_switches_control_native_structures_and_preserve_disabled_syntax(
 ) -> None:
     source = tmp_path / "source.md"
     source.write_text(SOURCE, encoding="utf-8")
-    context = _context(tmp_path, source, "docx", {"input": dialect.to_dict()})
+    context = dialect_context(tmp_path, source, "docx", {"input": dialect.to_dict()})
     result = MdToDocxConverter().convert(context)
     assert result.success, result.error
     assert len(result.artifacts) == 1
@@ -245,13 +221,13 @@ def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dial
     source = tmp_path / "source.md"
     source.write_text(SOURCE, encoding="utf-8")
     forward = MdToDocxConverter().convert(
-        _context(tmp_path, source, "docx", {"input": MarkdownExtensions.obsidian().to_dict()})
+        dialect_context(tmp_path, source, "docx", {"input": MarkdownExtensions.obsidian().to_dict()})
     )
     assert forward.success, forward.error
     isolated = tmp_path / "input.docx"
     isolated.write_bytes(Path(forward.artifacts[0].staging_path).read_bytes())
     source.unlink()
-    context = _context(tmp_path, isolated, "md", {"output": dialect.to_dict()})
+    context = dialect_context(tmp_path, isolated, "md", {"output": dialect.to_dict()})
     result = DocxToMarkdownConverter().convert(context)
     assert result.success, result.error
     markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
@@ -288,7 +264,7 @@ def test_number_suite_note_identity_and_multiline_round_trip_from_isolated_docx(
 
     forward_root = tmp_path / "notes-forward"
     forward_root.mkdir()
-    forward = MdToDocxConverter().convert(_context(forward_root, source, "docx", {"input": obsidian}))
+    forward = MdToDocxConverter().convert(dialect_context(forward_root, source, "docx", {"input": obsidian}))
     assert forward.success, forward.error
     generated = Path(forward.artifacts[0].staging_path)
     with ZipFile(generated) as package:
@@ -302,7 +278,7 @@ def test_number_suite_note_identity_and_multiline_round_trip_from_isolated_docx(
 
     reverse_root = tmp_path / "notes-reverse"
     reverse_root.mkdir()
-    reverse = DocxToMarkdownConverter().convert(_context(reverse_root, isolated, "md", {"output": obsidian}))
+    reverse = DocxToMarkdownConverter().convert(dialect_context(reverse_root, isolated, "md", {"output": obsidian}))
     assert reverse.success, reverse.error
     markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
     assert "[^endnote:" not in markdown
@@ -326,7 +302,7 @@ def test_repeated_note_fields_survive_full_docx_only_conversion(tmp_path, label,
     policy = MarkdownExtensions.obsidian().to_dict()
     forward_root = tmp_path / "forward"
     forward_root.mkdir()
-    forward = MdToDocxConverter().convert(_context(forward_root, source, "docx", {"input": policy}))
+    forward = MdToDocxConverter().convert(dialect_context(forward_root, source, "docx", {"input": policy}))
     assert forward.success, forward.error
     isolated = tmp_path / "isolated.docx"
     isolated.write_bytes(Path(forward.artifacts[0].staging_path).read_bytes())
@@ -348,7 +324,7 @@ def test_repeated_note_fields_survive_full_docx_only_conversion(tmp_path, label,
         doc.save(isolated)
     reverse_root = tmp_path / "reverse"
     reverse_root.mkdir()
-    reverse = DocxToMarkdownConverter().convert(_context(reverse_root, isolated, "md", {"output": policy}))
+    reverse = DocxToMarkdownConverter().convert(dialect_context(reverse_root, isolated, "md", {"output": policy}))
     assert reverse.success, reverse.error
     markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
     assert f"First{expected}." in markdown
@@ -432,7 +408,7 @@ def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Pat
 
     forward_root = tmp_path / "forward"
     forward_root.mkdir()
-    forward_context = _context(forward_root, source, "docx", {"input": structural})
+    forward_context = dialect_context(forward_root, source, "docx", {"input": structural})
     forward = MdToDocxConverter().convert(forward_context)
     assert forward.success, forward.error
     generated = Path(forward.artifacts[0].staging_path)
@@ -446,7 +422,7 @@ def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Pat
 
     enabled_root = tmp_path / "enabled"
     enabled_root.mkdir()
-    enabled_context = _context(enabled_root, isolated, "md", {"output": structural})
+    enabled_context = dialect_context(enabled_root, isolated, "md", {"output": structural})
     enabled = DocxToMarkdownConverter().convert(enabled_context)
     assert enabled.success, enabled.error
     markdown = Path(enabled.artifacts[0].staging_path).read_text(encoding="utf-8")
@@ -454,7 +430,7 @@ def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Pat
 
     disabled_root = tmp_path / "disabled"
     disabled_root.mkdir()
-    disabled_context = _context(disabled_root, isolated, "md", {"output": MarkdownExtensions().to_dict()})
+    disabled_context = dialect_context(disabled_root, isolated, "md", {"output": MarkdownExtensions().to_dict()})
     disabled = DocxToMarkdownConverter().convert(disabled_context)
     assert disabled.success, disabled.error
     codes = {item.code for item in disabled.diagnostics}
@@ -474,7 +450,7 @@ def test_request_override_does_not_change_other_direction_or_config() -> None:
 def test_real_word_saved_docx_uses_current_body_and_semantics(tmp_path: Path, dialect: MarkdownExtensions) -> None:
     isolated = tmp_path / "edited.docx"
     isolated.write_bytes((ROOT / "tests/fixtures/word-save/edited-markdown-extensions.docx").read_bytes())
-    result = DocxToMarkdownConverter().convert(_context(tmp_path, isolated, "md", {"output": dialect.to_dict()}))
+    result = DocxToMarkdownConverter().convert(dialect_context(tmp_path, isolated, "md", {"output": dialect.to_dict()}))
     assert result.success, result.error
     markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
     assert "Word 实测追加：从独立 DOCX 的当前内容回转。" in markdown
@@ -491,7 +467,7 @@ def test_word_edit_that_adds_a_block_inside_caption_control_reports_invalid_stru
     isolated = tmp_path / "expanded-caption.docx"
     isolated.write_bytes((ROOT / "tests/fixtures/word-save/expanded-caption-control.docx").read_bytes())
     result = DocxToMarkdownConverter().convert(
-        _context(tmp_path, isolated, "md", {"output": MarkdownExtensions.obsidian().to_dict()})
+        dialect_context(tmp_path, isolated, "md", {"output": MarkdownExtensions.obsidian().to_dict()})
     )
     assert not result.success
     assert result.error is not None
@@ -535,7 +511,7 @@ def test_structural_roles_survive_word_conditional_style_normalization(
     reverse_root = tmp_path / "reverse"
     reverse_root.mkdir()
     reverse = DocxToMarkdownConverter().convert(
-        _context(reverse_root, isolated, "md", {"output": {"structural_tables": True}})
+        dialect_context(reverse_root, isolated, "md", {"output": {"structural_tables": True}})
     )
     assert reverse.success, reverse.error
     markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
@@ -559,7 +535,7 @@ def test_structural_role_carrier_coexists_with_caption_and_ordinary_anchor(
     forward_root = tmp_path / "forward"
     forward_root.mkdir()
     dialect = MarkdownExtensions.obsidian().to_dict()
-    forward = MdToDocxConverter().convert(_context(forward_root, source, "docx", {"input": dialect}))
+    forward = MdToDocxConverter().convert(dialect_context(forward_root, source, "docx", {"input": dialect}))
     assert forward.success, forward.error
     document = Document(forward.artifacts[0].staging_path)
     if word_normalized:
@@ -569,7 +545,7 @@ def test_structural_role_carrier_coexists_with_caption_and_ordinary_anchor(
     document.save(isolated)
     reverse_root = tmp_path / "reverse"
     reverse_root.mkdir()
-    reverse = DocxToMarkdownConverter().convert(_context(reverse_root, isolated, "md", {"output": dialect}))
+    reverse = DocxToMarkdownConverter().convert(dialect_context(reverse_root, isolated, "md", {"output": dialect}))
     assert reverse.success, reverse.error
     markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
     assert "| Quarter | Q1 | Q2 |\n| --- || --- | --- |" in markdown
@@ -615,7 +591,7 @@ def test_verified_table_roles_are_independent_of_repeat_headers(tmp_path: Path, 
     reverse_root = tmp_path / "reverse"
     reverse_root.mkdir()
     reverse = DocxToMarkdownConverter().convert(
-        _context(reverse_root, isolated, "md", {"output": {"structural_tables": True}})
+        dialect_context(reverse_root, isolated, "md", {"output": {"structural_tables": True}})
     )
     assert reverse.success, reverse.error
     lines = [
@@ -643,7 +619,7 @@ def test_ordinary_anchor_rejects_undeclared_table_role_bookmark(tmp_path: Path) 
     forward_root = tmp_path / "forward"
     forward_root.mkdir()
     forward = MdToDocxConverter().convert(
-        _context(forward_root, source, "docx", {"input": MarkdownExtensions.obsidian().to_dict()})
+        dialect_context(forward_root, source, "docx", {"input": MarkdownExtensions.obsidian().to_dict()})
     )
     assert forward.success, forward.error
     document = Document(forward.artifacts[0].staging_path)
