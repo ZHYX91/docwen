@@ -30,5 +30,12 @@ def native_cell_markdown(cell: Any) -> str:
         # Relative links and workbook locations need an independent source map.
         # HYPERLINK formulas are never parsed, evaluated or guessed here.
         return display
+    # Some writers store the external URL in the relationship and its
+    # fragment in the worksheet's hyperlink location attribute.
+    location = getattr(hyperlink, "location", None)
+    if location:
+        if any(ord(char) < 32 for char in location) or (parsed.fragment and parsed.fragment != location):
+            return display
+        target = target.partition("#")[0] + "#" + location
     destination = quote(target, safe=":/#?=&%+@;,~-._!")
     return f"[{display}](<{destination}>)"
