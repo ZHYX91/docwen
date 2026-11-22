@@ -253,7 +253,7 @@ wheels = [
 
 [[package]]
 name = "docwen"
-version = "0.23.1"
+version = "0.23.2"
 source = { editable = "." }
 dependencies = [
     { name = "docwen-bundle" },
@@ -369,7 +369,7 @@ provides-extras = ["dev", "lint", "test"]
 
 [[package]]
 name = "docwen-application"
-version = "0.23.1"
+version = "0.23.2"
 source = { editable = "packages/application" }
 dependencies = [
     { name = "docwen-core" },
@@ -380,7 +380,7 @@ requires-dist = [{ name = "docwen-core", editable = "packages/core" }]
 
 [[package]]
 name = "docwen-bundle"
-version = "0.23.1"
+version = "0.23.2"
 source = { editable = "packages/bundle" }
 dependencies = [
     { name = "docwen-application" },
@@ -423,7 +423,7 @@ requires-dist = [
 
 [[package]]
 name = "docwen-cli"
-version = "0.23.1"
+version = "0.23.2"
 source = { editable = "packages/apps/cli" }
 dependencies = [
     { name = "docwen-application" },
@@ -442,13 +442,14 @@ requires-dist = [
 
 [[package]]
 name = "docwen-core"
-version = "0.23.1"
+version = "0.23.2"
 source = { editable = "packages/core" }
 dependencies = [
     { name = "lxml" },
     { name = "pillow" },
     { name = "python-docx" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "pyyaml" },
     { name = "tomlkit" },
 ]
 
@@ -458,12 +459,13 @@ requires-dist = [
     { name = "pillow", specifier = ">=13.0.0,<14.0.0" },
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=311" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "tomlkit" },
 ]
 
 [[package]]
 name = "docwen-gui"
-version = "0.23.1"
+version = "0.23.2"
 source = { editable = "packages/apps/gui" }
 dependencies = [
     { name = "docwen-application" },
@@ -684,7 +686,7 @@ requires-dist = [
 
 [[package]]
 name = "docwen-runtime"
-version = "0.23.1"
+version = "0.23.2"
 source = { editable = "packages/runtime" }
 dependencies = [
     { name = "docwen-core" },

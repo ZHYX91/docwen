@@ -64,8 +64,8 @@ def test_hyperlink_uses_relationship_target_not_rid():
     assert rel_id not in rendered
 
 
-def test_revision_and_simple_field_xml_boundary_is_explicit():
-    """Current renderer keeps inserted text, skips tracked deletions, and reads fldSimple display text.
+def test_revision_and_simple_field_xml_boundary_is_explicit(tmp_path: Path):
+    """Keep accepted edits and the visible label and destination of a static field.
 
     Old Tk/PySide6 fixtures treat comments/revisions/fields as broader final
     artifact scope, so this locks the current clean XML handling without
@@ -120,7 +120,9 @@ def test_revision_and_simple_field_xml_boundary_is_explicit():
 
     rendered = render_paragraph_runs(para, syntax_config=DocxMarkdownSyntaxConfig())
 
-    assert rendered == "Before InsertedMovedToFieldDisplay"
+    expected = "Before InsertedMovedTo[FieldDisplay](https://example.com)"
+    assert expected in _convert_document_fixture_to_markdown(tmp_path, doc, request_id="simple-field")
+    assert rendered == expected
     assert "Deleted" not in rendered
     assert "MovedFrom" not in rendered
     assert "HYPERLINK" not in rendered

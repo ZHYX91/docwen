@@ -83,7 +83,7 @@ def _mask_note_protected_source(source: str) -> str:
     # Obsidian comment delimiter in a literal example must not mask the notes
     # following that code block.
     offset = 0
-    for block, block_protected in split_markdown_block_segments(source):
+    for block, block_protected in split_markdown_block_segments(source, include_front_matter=False):
         if block_protected:
             ranges.append((offset, offset + len(block)))
         offset += len(block)

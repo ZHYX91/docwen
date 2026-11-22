@@ -19,7 +19,6 @@ from docwen_core.links._block_context import (
     _Container,
     _indent_end,
     markdown_table_blocks,
-    yaml_front_matter_end,
 )
 from docwen_core.links._source_document import (
     markdown_heading_ranges,
@@ -27,6 +26,7 @@ from docwen_core.links._source_document import (
     markdown_source_context_lines,
     markdown_source_projection,
 )
+from docwen_core.yaml_tools import yaml_front_matter_end
 
 logger = logging.getLogger(__name__)
 

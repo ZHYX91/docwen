@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote, unquote
 
-import yaml
 from openpyxl.comments import Comment
 from openpyxl.styles import numbers
 from openpyxl.utils import get_column_letter, range_boundaries
@@ -19,12 +18,11 @@ from PIL import Image
 
 from docwen_core.detection import detect_content_format
 from docwen_core.formats import CATEGORY_IMAGE, get_category
-from docwen_core.yaml_tools import extract_yaml
 from docwen_plugin_markdown.common_utils import parse_md_tables, parse_raw_md_tables
 from docwen_plugin_markdown.to_spreadsheet.image_plan import XlsxImageTextPlan
 from docwen_plugin_markdown.xlsx_template import load_template_workbook
 from docwen_plugin_markdown.xlsx_text import existing_xlsx_cells
-from docwen_plugin_markdown.yaml_processor import ensure_title_fallback
+from docwen_plugin_markdown.yaml_processor import ensure_title_fallback, extract_yaml_front_matter
 
 _PLACEHOLDER_RE = re.compile(r"\{\{([^}]+)\}\}")
 _IMAGE_PLACEHOLDER_RE = re.compile(r"\{\{IMAGE:([^\r\n]*?)\}\}")
@@ -59,8 +57,7 @@ def build_template_workbook(
     while whole-cell ``{{↓Header}}`` and ``{{→Header}}`` placeholders consume
     Markdown table columns vertically or horizontally.
     """
-    yaml_text, body = extract_yaml(markdown)
-    yaml_data = _parse_yaml_mapping(yaml_text)
+    yaml_data, body = extract_yaml_front_matter(markdown)
     tables = parse_md_tables(body, structural_tables=structural_tables)
     raw_tables = parse_raw_md_tables(
         body,
@@ -121,13 +118,6 @@ def build_template_workbook(
         "remaining_placeholders_cleaned": remaining_cleaned,
         "table_count": len(tables),
     }
-
-
-def _parse_yaml_mapping(yaml_text: str) -> dict[str, Any]:
-    if not yaml_text.strip():
-        return {}
-    data = yaml.safe_load(yaml_text) or {}
-    return data if isinstance(data, dict) else {}
 
 
 def _columns_from_tables(tables: list[dict[str, Any]]) -> dict[str, list[tuple[Any, str | None]]]:

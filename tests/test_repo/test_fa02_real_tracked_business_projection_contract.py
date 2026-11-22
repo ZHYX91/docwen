@@ -45,7 +45,10 @@ def test_fa02_accepted_view_repairs_have_direct_guards() -> None:
     assert 'elif tag in ("ins", "moveTo", "smartTag", "sdt", "sdtContent", "customXml"):' in renderer
     assert 'elif tag == "fldSimple":' in renderer
     assert 'resolver = getattr(note_extractor, "get_noteref_text", None)' in renderer
-    assert "else:\n                    _process_children(child)" in renderer
+    # The executable guard checks that unsupported, hidden and nested
+    # simple fields still preserve their visible result.
+    fields = _read(PROJECT_ROOT / "packages" / "plugins" / "document" / "tests" / "test_simple_hyperlink_fields.py")
+    _function(ast.parse(fields), "test_simple_hyperlink_respects_field_boundaries_and_visible_results")
     assert 'elif tag == "noBreakHyphen":' in renderer
     assert "return resolve_run_formatting(run, parent).hidden" in renderer
     assert "if _run_is_hidden(run, formatting_parent):\n            return" in renderer

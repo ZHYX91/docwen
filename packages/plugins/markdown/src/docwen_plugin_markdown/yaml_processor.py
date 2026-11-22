@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-import yaml
+from docwen_core.yaml_tools import extract_yaml_properties
 
-from docwen_core.links import split_yaml_front_matter_source
+extract_yaml_front_matter = extract_yaml_properties
 
 # Bundled template placeholder contract.  These values are the title/body
 # translations used by the 12 bundled DOCX templates.
@@ -57,30 +57,6 @@ def is_empty_field_value(value: Any) -> bool:
     if isinstance(value, (list, tuple, set)):
         return all(is_empty_field_value(item) for item in value)
     return False
-
-
-def extract_yaml_front_matter(content: str) -> tuple[dict[str, Any], str]:
-    """Extract YAML front matter from markdown content.
-
-    Args:
-        content: Raw markdown text, possibly starting with ``---\\n``.
-
-    Returns:
-        ``(yaml_dict, remaining_body)``. If no front matter is found or
-        parsing fails, returns ``({}, content)``.
-    """
-    yaml_front, body = split_yaml_front_matter_source(content)
-    if not yaml_front:
-        return {}, content
-    front_lines = yaml_front.removeprefix("\ufeff").splitlines()
-    yaml_text = "\n".join(front_lines[1:-1])
-    try:
-        yaml_data = yaml.safe_load(yaml_text)
-        if not isinstance(yaml_data, dict):
-            return {}, content
-        return yaml_data, body
-    except yaml.YAMLError:
-        return {}, content
 
 
 def ensure_title_fallback(

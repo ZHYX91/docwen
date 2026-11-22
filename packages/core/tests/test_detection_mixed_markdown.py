@@ -40,6 +40,10 @@ REFERENCES = """# Reference markers
     "content",
     [
         REFERENCES,
+        '---\nexample: "<html>"\n...\n普通正文',
+        '---\r\nexample: "<html>"\r\n---\r\n普通正文',
+        "---\ntitle: Page\n...\n<div>Inline example</div>",
+        '---\nsample: "Content-Type: text/html"\n...\n普通正文',
         "Content-Type: text/html\n\n# Parsing HTML\n\nThe header above selects the response format.",
         "# Evernote XML example\n\n```xml\n<en-export><note/></en-export>\n```\n",
         '# Mail example\n\n```text\nContent-Type: multipart/related; boundary="sample"\n```\n',
@@ -63,6 +67,32 @@ def test_markdown_with_html_is_detected_independently_of_suffix(tmp_path: Path, 
         assert inspect_file(str(source)).decision == "allow"
     elif suffix == ".html":
         assert inspect_file(str(source)).decision == "require_explicit_acceptance"
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        ("---", "txt"),
+        ("---\ntitle: x\n---", "markdown"),
+        ("---\ntitle: x\n...", "txt"),
+        ('---\nexample: "<html>"\n...', "txt"),
+        ('---\nexample: "<html>"\n...not a closer\nPlain body', "html"),
+    ],
+)
+def test_frontmatter_detection_requires_a_complete_envelope(tmp_path: Path, content: str, expected: str) -> None:
+    source = tmp_path / "sample.md"
+    source.write_text(content, encoding="utf-8")
+    assert detect_content_format(str(source)).format == expected
+
+
+def test_incomplete_sample_does_not_prove_a_frontmatter_closer(tmp_path: Path) -> None:
+    from docwen_core.detection._sniffing import _TEXT_READ_SIZE
+
+    start = '---\nexample: "<html>"\nlong_field: '
+    prefix = start + "x" * (_TEXT_READ_SIZE - len(start) - len("\n...")) + "\n..."
+    source = tmp_path / "sample.md"
+    source.write_bytes((prefix + "not a closer\n").encode("ascii"))
+    assert detect_content_format(str(source)).format == "html"
 
 
 @pytest.mark.parametrize(

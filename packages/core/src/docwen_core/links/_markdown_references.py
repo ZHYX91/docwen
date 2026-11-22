@@ -234,13 +234,19 @@ def parse_reference_definition(text: str) -> tuple[MarkdownReferenceDefinition |
 
 
 def markdown_reference_definitions(
-    source: str, *, extended_headings: bool = False
+    source: str, *, extended_headings: bool = False, include_front_matter: bool = True
 ) -> dict[str, MarkdownReferenceDefinition]:
     """Collect first definitions from actual visible, eligible source blocks."""
     from docwen_core.links._non_embed import _split_fenced_code_blocks
+    from docwen_core.yaml_tools import yaml_front_matter_end
 
     definitions: dict[str, MarkdownReferenceDefinition] = {}
-    _split_fenced_code_blocks(source, extended_headings=extended_headings, references=definitions)
+    _split_fenced_code_blocks(
+        source,
+        extended_headings=extended_headings,
+        references=definitions,
+        front_matter_end=yaml_front_matter_end(source) if include_front_matter else 0,
+    )
     return definitions
 
 

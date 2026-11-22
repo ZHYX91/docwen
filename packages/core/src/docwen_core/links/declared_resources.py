@@ -244,4 +244,4 @@ def reject_declared_input_link_lookups(
             raise DeclaredResourceError("local wiki link resolution is unavailable for declared-input requests")
         return segment
 
-    _map_visible_markdown(text, reject)
+    _map_visible_markdown(text, reject, include_front_matter=False)

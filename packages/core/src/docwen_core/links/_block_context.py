@@ -23,8 +23,6 @@ THEMATIC_BREAK_RE = re.compile(r" {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[
 ATX_HEADING_RE = re.compile(r" {0,3}(#{1,9})(?!#)(?:[ \t]+|$)")
 SETEXT_HEADING_RE = re.compile(r" {0,3}(=+|-+)[ \t]*$")
 TABLE_DELIMITER_RE = re.compile(r" {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$")
-_YAML_OPEN = re.compile(r"(?:\ufeff)?---[ \t]*(?:\r\n|\r|\n)")
-_YAML_CLOSE = re.compile(r"---[ \t]*(?:\r\n|\r|\n|$)")
 
 
 def markdown_source_lines(source: str) -> list[str]:
@@ -144,19 +142,6 @@ def match_atx_heading(line: str, *, extended_headings: bool = False) -> re.Match
     """Match an actual ATX boundary in the frozen input heading dialect."""
     match = ATX_HEADING_RE.match(line)
     return match if match is not None and (extended_headings or len(match.group(1)) <= 6) else None
-
-
-def yaml_front_matter_end(source: str) -> int:
-    """Return a complete front matter prefix length, without normalizing EOLs."""
-    opening = _YAML_OPEN.match(source)
-    if opening is None:
-        return 0
-    offset = opening.end()
-    for line in markdown_source_lines(source[offset:]):
-        if _YAML_CLOSE.fullmatch(line):
-            return offset + len(line)
-        offset += len(line)
-    return 0
 
 
 @dataclass(frozen=True, slots=True)

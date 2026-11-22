@@ -249,6 +249,15 @@ class PluginManifest:
     extra: dict[str, Any] = field(default_factory=dict)
     """Extension point for plugin-specific metadata."""
 
+    def declares_route(self, source_format: str, target_format: str, action_name: str = "") -> bool:
+        """Return whether this exact source, target and action appear in the manifest."""
+        return any(
+            route.source_format == source_format
+            and route.target_format == target_format
+            and route.action_name == action_name
+            for route in self.routes
+        )
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "plugin_id": self.plugin_id,

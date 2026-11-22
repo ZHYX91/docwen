@@ -29,6 +29,7 @@ from docwen_core.links import (
     markdown_source_owners,
 )
 from docwen_core.markdown_extensions import MarkdownExtensions
+from docwen_core.yaml_tools import yaml_front_matter_end
 from docwen_plugin_markdown.document_semantics_v3 import (
     ExternalCitationResolution,
     ExternalReferenceResolution,
@@ -84,8 +85,6 @@ _PARENTHETICAL_CITATION_RE = re.compile(
     r"\[@(?P<first>[A-Za-z0-9][A-Za-z0-9_-]{0,127})(?P<rest>(?:\s*;\s*@[A-Za-z0-9][A-Za-z0-9_-]{0,127})+)\]"
 )
 _NARRATIVE_CITATION_RE = re.compile(r"(?<![A-Za-z0-9._%+@-])@(?P<key>[A-Za-z0-9][A-Za-z0-9_-]{0,127})")
-_YAML_FRONT_OPEN_RE = re.compile(r"^(?:\ufeff)?---[ \t]*(?:\r?\n)")
-_YAML_FRONT_CLOSE_RE = re.compile(r"^---[ \t]*(?:\r?\n|$)", re.MULTILINE)
 
 type TargetKind = Literal["heading", "figure", "table", "equation", "code_block"]
 type SemanticConsumerProfile = Literal["frozen_v3", "number_suite_direct"]
@@ -871,11 +870,7 @@ def select_safe_fence(body: str) -> str:
 def markdown_semantics_body_start_v3(source: str) -> int:
     """Return the exact body offset while treating closed YAML as non-Markdown."""
 
-    opening = _YAML_FRONT_OPEN_RE.match(source)
-    if opening is None:
-        return 0
-    closing = _YAML_FRONT_CLOSE_RE.search(source, opening.end())
-    return closing.end() if closing is not None else 0
+    return yaml_front_matter_end(source)
 
 
 def _mask_yaml_front_matter(source: str) -> str:

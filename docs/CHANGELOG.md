@@ -5,6 +5,15 @@
 
 ## Unreleased / 未发布
 
+## 0.23.2
+
+- Honor saved heading numbering settings for Word-to-Markdown conversions and resolve enabled custom numbering schemes across display and output languages.
+- Word 转 Markdown 沿用已保存的标题编号设置，界面语言和输出语言不同时也能使用已启用的自定义方案。
+- Preserve Word hyperlink fields and Excel hyperlink fragments in Markdown output.
+- 导出 Markdown 时保留 Word 超链接域和 Excel 超链接的章节锚点。
+- Keep opening horizontal rules, note properties, and Markdown body content distinct when converting notebooks to Word or spreadsheets.
+- 笔记转 Word 或表格时，正确区分开头的分隔线、笔记属性和 Markdown 正文。
+
 ## 0.23.1
 
 - Read structured invoice attachments and match visible fields by page and column. Keep scanned and text pages in source order, preserve discount and tax-exempt rows, and report missing or inconsistent data.

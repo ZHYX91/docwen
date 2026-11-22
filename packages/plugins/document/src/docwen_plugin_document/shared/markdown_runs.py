@@ -655,7 +655,7 @@ def _render_paragraph_run_segments(
         segments = [[]]
         try:
             if field is None:
-                _process_children(child)
+                _process_children(child, allow_field_links=False)
             else:
                 for run in field[1]:
                     _handle_run(run)
@@ -671,7 +671,7 @@ def _render_paragraph_run_segments(
                 else:
                     _parts().append("\n")
 
-    def _process_children(parent: Any) -> None:
+    def _process_children(parent: Any, *, allow_field_links: bool = True) -> None:
         children = list(parent)
         consumed_through = -1
         field_depth = 0
@@ -698,7 +698,7 @@ def _render_paragraph_run_segments(
                     continue
                 hyperlink = (
                     _complex_hyperlink(children, index, formatting_parent, covered_nodes)
-                    if field_depth == 0 and not literal_text
+                    if field_depth == 0 and allow_field_links and not literal_text
                     else None
                 )
                 if hyperlink is not None:
@@ -715,30 +715,37 @@ def _render_paragraph_run_segments(
             elif tag == "hyperlink":
                 _process_hyperlink(child)
             elif tag == "fldSimple":
+                q = f"{{{NS_W}}}"
+                instruction = child.get(q + "instr", "")
+                target = (
+                    _hyperlink_field_target(instruction)
+                    if field_depth == 0 and allow_field_links and not literal_text
+                    else None
+                )
+                # NOTEREF requires a plain cached result. A static hyperlink
+                # can also render native tabs and breaks, like its complex form.
+                result_tags = {q + "rPr", q + "t"}
+                if target is not None:
+                    result_tags.update((q + "tab", q + "br", q + "cr"))
+                runs = [run for run in child if not _is_transparent_proof_marker(run)]
+                visible_runs = bool(runs) and all(
+                    run.tag == q + "r"
+                    and not _run_is_hidden(run, formatting_parent)
+                    and run_metadata_is_valid(run)
+                    and all(node.tag in result_tags for node in run)
+                    for run in runs
+                )
+                if target is not None and visible_runs and not any(node in covered_nodes for node in child.iter()):
+                    _process_hyperlink(child, field=(target, runs))
+                    continue
                 resolver = getattr(note_extractor, "get_noteref_text", None) if not literal_text else None
-                visible_runs = (
-                    len(child) > 0
-                    and all(
-                        _is_transparent_proof_marker(run)
-                        or (
-                            run.tag == f"{{{NS_W}}}r"
-                            and not _run_is_hidden(run, formatting_parent)
-                            and run_metadata_is_valid(run)
-                            and all(node.tag in {f"{{{NS_W}}}rPr", f"{{{NS_W}}}t"} for node in run)
-                        )
-                        for run in child
-                    )
-                    and any(run.tag == f"{{{NS_W}}}r" for run in child)
-                )
-                reference = (
-                    resolver(child.get(f"{{{NS_W}}}instr", "")) if resolver is not None and visible_runs else None
-                )
+                reference = resolver(instruction) if resolver is not None and visible_runs else None
                 if reference is not None:
                     _append(reference)
                 else:
-                    _process_children(child)
+                    _process_children(child, allow_field_links=False)
             elif tag in ("ins", "moveTo", "smartTag", "sdt", "sdtContent", "customXml"):
-                _process_children(child)
+                _process_children(child, allow_field_links=allow_field_links and field_depth == 0)
             elif tag in ("del", "moveFrom"):
                 pass  # skip tracked deletions
             elif tag in ("oMath", "oMathPara"):
@@ -763,7 +770,7 @@ def _render_paragraph_run_segments(
                     branch_rendered = False
                     for branch in branches[branch_kind]:
                         before = [list(segment) for segment in segments]
-                        _process_children(branch)
+                        _process_children(branch, allow_field_links=allow_field_links and field_depth == 0)
                         if segments != before:
                             branch_rendered = True
                             break

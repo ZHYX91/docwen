@@ -131,4 +131,6 @@ def test_invalid_owner_topology_is_rejected_before_marker_planning(damage: str, 
         duplicate["id"] = "another-parent"
         projection["anchors"].append(duplicate)
     with pytest.raises(RuntimeSemanticsV3Unsupported, match=message):
-        _prepare_analyzed_runtime_plan(source, replace(plan.analysis, projection=projection))
+        _prepare_analyzed_runtime_plan(
+            source, replace(plan.analysis, projection=projection), body_start=plan.body_start
+        )

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from docwen_core.yaml_tools import yaml_front_matter_end
 from docwen_plugin_markdown.common_utils import parse_raw_md_tables
 from docwen_plugin_markdown.document_semantics import analyze_document_semantics
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
@@ -19,6 +20,13 @@ pytestmark = pytest.mark.contract
 _FIXTURES = Path(__file__).resolve().parents[4] / "tests/fixtures/files/interoperability"
 _STRUCTURAL = json.loads((_FIXTURES / "structural-tables.json").read_text(encoding="utf-8"))
 _NUMBER_SUITE = json.loads((_FIXTURES / "number-suite.json").read_text(encoding="utf-8"))
+_NOTE_PROPERTIES = json.loads((_FIXTURES / "leading-note-properties.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("fixture", _NOTE_PROPERTIES, ids=lambda fixture: fixture["id"])
+def test_assistant_note_properties_corpus(fixture) -> None:
+    properties = fixture["properties"]
+    assert yaml_front_matter_end(properties + fixture["body"]) == len(properties)
 
 
 def _walk(nodes):
