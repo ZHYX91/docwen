@@ -234,12 +234,26 @@ def test_release_workflow_connects_tag_build_publication_and_independent_readbac
     verify, publish, post = jobs["verify-release"], jobs["publish"], jobs["post-verify"]
     assert workflow["concurrency"] == {"group": "release-${{ github.repository }}", "cancel-in-progress": "false"}
     assert jobs["source-checks"]["uses"] == "./.github/workflows/tests.yml"
-    assert jobs["source-checks"]["if"] == "needs.identity.outputs.build == 'true' && !inputs.macos_only"
+    assert "needs.identity.outputs.build == 'true' && !inputs.macos_only" in jobs["source-checks"]["if"]
+    assert "needs.identity.outputs.reused_source_checks != 'true'" in jobs["source-checks"]["if"]
     assert jobs["source-checks"]["needs"] == "identity"
     assert jobs["build-windows"]["needs"] == ["identity", "source-checks"]
     assert workflow["on"]["push"] == {"tags": ["*.*.*"]}
     assert publish["env"]["RELEASE_VERSION"] == "${{ needs.identity.outputs.version }}"
     assert "publication_entry.py" in _commands(jobs["identity"])
+    reuse = next(step for step in jobs["identity"]["steps"] if step.get("id") == "reuse")
+    assert "github.event_name == 'workflow_dispatch' && inputs.operation == 'verify'" in reuse["if"]
+    assert "needs.identity.outputs.reused_source_checks != 'true'" in verify["if"]
+    for platform in ("windows", "linux", "macos"):
+        builder = jobs[f"build-{platform}"]
+        assert (
+            "needs.source-checks.result == 'skipped' && needs.identity.outputs.reused_source_checks == 'true'"
+            in builder["if"]
+        )
+        upload = next(step for step in builder["steps"] if step.get("id") == "upload")
+        assert f"'docwen-package-only-{platform}'" in upload["with"]["name"]
+    metadata = next(step for step in jobs["build-windows"]["steps"] if step.get("id") == "windows-metadata")
+    assert metadata["if"] == "needs.identity.outputs.reused_source_checks != 'true'"
     assert "needs.identity.outputs.publish == 'true'" in publish["if"]
     assert "needs.identity.outputs.verify_hosted == 'true'" in post["if"]
     assert "needs.verify-release.result == 'success'" in publish["if"]
@@ -253,6 +267,7 @@ def test_release_workflow_connects_tag_build_publication_and_independent_readbac
         "artifact_id",
         "resume_artifact_id",
         "macos_only",
+        "prior_source_run_id",
     }
     assert "publication.py assemble" in _commands(verify)
     assert "publication.py fetch" in _commands(publish)
@@ -336,14 +351,15 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
 
 
 @pytest.mark.parametrize(
-    ("blocked_job", "result", "macos_only", "build", "cancelled", "expected"),
+    ("blocked_job", "result", "macos_only", "build", "cancelled", "reused", "expected"),
     [
-        (None, "success", False, True, False, True),
-        (None, "success", True, True, False, False),
-        (None, "success", False, False, False, False),
-        (None, "success", False, True, True, False),
+        (None, "success", False, True, False, False, True),
+        (None, "success", True, True, False, False, False),
+        (None, "success", False, False, False, False, False),
+        (None, "success", False, True, True, False, False),
+        (None, "success", False, True, False, True, False),
         *[
-            (job, state, False, True, False, False)
+            (job, state, False, True, False, False, False)
             for job in ("identity", "build-windows", "build-linux", "build-macos")
             for state in ("failure", "cancelled", "skipped")
         ],
@@ -355,6 +371,7 @@ def test_release_assembly_handles_optional_ancestor_skip_without_accepting_faile
     macos_only: bool,
     build: bool,
     cancelled: bool,
+    reused: bool,
     expected: bool,
 ) -> None:
     """Evaluate the configured conjunction, with the unused Mac-only ancestor skipped.
@@ -372,6 +389,7 @@ def test_release_assembly_handles_optional_ancestor_skip_without_accepting_faile
         "cancelled()": cancelled,
         "inputs.macos_only": macos_only,
         "needs.identity.outputs.build == 'true'": build,
+        "needs.identity.outputs.reused_source_checks != 'true'": not reused,
         **{f"needs.{name}.result == 'success'": name != blocked_job or result == "success" for name in job["needs"]},
     }
     for atom in sorted(bindings, key=len, reverse=True):

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -70,7 +71,7 @@ def test_failed_terminal_write_preserves_original_exception_and_valid_active_lea
 
 
 @pytest.mark.parametrize("remove_marker", [False, True])
-def test_success_cleanup_failure_keeps_success_outcome(tmp_path, monkeypatch, remove_marker):
+def test_success_cleanup_failure_keeps_success_outcome(tmp_path, monkeypatch, capsys, remove_marker):
     def fail(root, *args, **kwargs):
         if remove_marker:
             (root / ".docwen-temp-lease.json").unlink()
@@ -82,6 +83,18 @@ def test_success_cleanup_failure_keeps_success_outcome(tmp_path, monkeypatch, re
     lease = json.loads((run.root / ".docwen-temp-lease.json").read_text())
     assert lease["state"] == "retained-cleanup-failure"
     assert lease["outcome"] == "completed-success"
+    result = json.loads(capsys.readouterr().err.splitlines()[-1])
+    assert result["outcome"] == "completed-success"
+    assert result["cleanup"] == "failed"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows read-only file attribute")
+def test_managed_run_removes_an_owned_readonly_copy(tmp_path):
+    with _managed(tmp_path) as run:
+        copied = run.root / "copied.doc"
+        copied.write_bytes(b"fixture")
+        copied.chmod(stat.S_IREAD)
+    assert not run.root.exists()
 
 
 def test_cleanup_does_not_overwrite_replaced_marker_and_leaves_external_recovery(tmp_path, monkeypatch):

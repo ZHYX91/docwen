@@ -102,3 +102,17 @@ jobs:
         env:
           DOCWEN_CI_RESULTS: ${{ toJSON(needs) }}
         run: python -m tools.source_checks
+      - name: Record the checked source tree
+        id: source-identity
+        if: github.workflow == 'tests' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        run: /usr/bin/python3 -m scripts.release.source_check_reuse record "$RUNNER_TEMP/source-checks.json"
+      - name: Upload the checked source identity
+        if: steps.source-identity.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: source-checks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/source-checks.json
+          if-no-files-found: error
+          retention-days: 14
