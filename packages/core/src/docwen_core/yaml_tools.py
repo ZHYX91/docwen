@@ -8,7 +8,11 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from yaml.nodes import MappingNode
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +64,15 @@ def format_yaml_scalar(value: str | bool) -> str:
     return _quoted_yaml_string(value)
 
 
-def _front_matter_bounds(content: str) -> tuple[int, int, int] | None:
-    """Return the raw payload start, closing marker start, and body start."""
+@dataclass(frozen=True, slots=True)
+class _FrontMatter:
+    payload: str
+    end: int
+    mapping: MappingNode | None
+
+
+def _read_front_matter(content: str) -> _FrontMatter | None:
+    """Retain the parsed mapping used to recognize this exact source prefix."""
     opening = _YAML_OPEN.match(content)
     if opening is None:
         return None
@@ -69,38 +80,41 @@ def _front_matter_bounds(content: str) -> tuple[int, int, int] | None:
     if closing is None:
         return None
     payload = content[opening.end() : closing.start()]
+    mapping = None
     if payload.strip(" \t\r\n"):
-        # Import the YAML parser only for a candidate block.
-        from docwen_core._yaml_properties import is_properties_mapping
+        from docwen_core._yaml_properties import compose_properties
 
-        if not is_properties_mapping(payload):
+        mapping = compose_properties(payload)
+        if mapping is None:
             return None
-    return opening.end(), closing.start(), closing.end()
+    return _FrontMatter(payload, closing.end(), mapping)
 
 
 def yaml_front_matter_end(content: str) -> int:
     """Return the exact prefix length, or zero for ordinary Markdown."""
-    bounds = _front_matter_bounds(content)
-    return bounds[2] if bounds else 0
+    front = _read_front_matter(content)
+    return front.end if front else 0
 
 
 def split_yaml_payload(content: str) -> tuple[str | None, str]:
     """Return the exact payload and body, preserving BOM and EOL offsets."""
-    bounds = _front_matter_bounds(content)
-    if bounds is None:
+    front = _read_front_matter(content)
+    if front is None:
         return None, content
-    start, stop, end = bounds
-    return content[start:stop], content[end:]
+    return front.payload, content[front.end :]
 
 
 def extract_yaml_properties(content: str) -> tuple[dict[str, Any], str]:
     """Read template fields while preserving the exact authored body."""
-    payload, body = split_yaml_payload(content)
-    if not payload or not payload.strip(" \t\r\n"):
+    front = _read_front_matter(content)
+    if front is None:
+        return {}, content
+    body = content[front.end :]
+    if front.mapping is None:
         return {}, body
     from docwen_core._yaml_properties import property_values
 
-    return property_values(payload), body
+    return property_values(front.mapping), body
 
 
 def extract_yaml(content: str) -> tuple[str, str]:

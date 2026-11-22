@@ -246,3 +246,11 @@ def test_reference_image_binding_cannot_cross_an_inline_container_boundary(token
     resolver = DeclaredResourceResolver("note.md", {"assets/chart.png": "/declared.png"})
     with pytest.raises(DeclaredResourceError, match="visible authored image"):
         resolver.with_bindings(source, _bindings(source, token))
+
+
+def test_masking_a_comment_cannot_turn_a_body_image_into_a_property() -> None:
+    token = "![visible](chart.png)"
+    source = f"---\nnote: %%editor comment%%\nimage: {token}\n---\n"
+    resolver = DeclaredResourceResolver("notes/note.md", {"assets/chart.png": "/declared.png"})
+    bound = resolver.with_bindings(source, _bindings(source, token))
+    assert bind_declared_markdown_images(source, bound) == source.replace(token, "![visible](</declared.png>)")

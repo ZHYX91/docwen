@@ -20,6 +20,7 @@ from docwen_core.links._block_context import (
 from docwen_core.links._markdown_inline import (
     _ANGLE_AUTOLINK_RE,
     _INLINE_HTML_RE,
+    MarkdownInlineSourceOwner,
     matching_backtick_run_end,
     parse_inline_link,
 )
@@ -38,12 +39,26 @@ def markdown_source_projection(
     extended_headings: bool = False,
 ) -> str:
     """Hide block/inline literals, comments, YAML and parsed link metadata."""
-    from docwen_core.links._source_ownership import markdown_source_owners
+    _front_matter_end, owners = _full_document_owners(
+        source, structural_tables=structural_tables, extended_headings=extended_headings
+    )
+    return _project_owners(source, owners, inline_literals=inline_literals)
 
+
+def _full_document_owners(
+    source: str, *, structural_tables: bool, extended_headings: bool
+) -> tuple[int, list[MarkdownInlineSourceOwner]]:
+    from docwen_core.links._source_ownership import _collect_source_owners
+
+    end = yaml_front_matter_end(source)
+    return end, _collect_source_owners(
+        source, body_start=end, structural_tables=structural_tables, extended_headings=extended_headings
+    )
+
+
+def _project_owners(source: str, owners: list[MarkdownInlineSourceOwner], *, inline_literals: bool) -> str:
     chars = list(source)
-    for owner in markdown_source_owners(
-        source, full_document=True, structural_tables=structural_tables, extended_headings=extended_headings
-    ):
+    for owner in owners:
         if not inline_literals and owner.kind not in {"block", "comment"}:
             continue
         chars[owner.start : owner.end] = _blank(source[owner.start : owner.end])
@@ -54,16 +69,19 @@ def markdown_source_context_lines(
     source: str, *, structural_tables: bool = False, extended_headings: bool = False
 ) -> list[MarkdownBlockLine]:
     """Keep original container prefixes while ignoring literal sample markers."""
-    from docwen_core.links._source_ownership import markdown_source_owners
-
-    owners = markdown_source_owners(
-        source, full_document=True, structural_tables=structural_tables, extended_headings=extended_headings
+    front_matter_end, owners = _full_document_owners(
+        source, structural_tables=structural_tables, extended_headings=extended_headings
     )
+    return _context_lines(source, owners, front_matter_end=front_matter_end, extended_headings=extended_headings)
+
+
+def _context_lines(
+    source: str, owners: list[MarkdownInlineSourceOwner], *, front_matter_end: int, extended_headings: bool
+) -> list[MarkdownBlockLine]:
     grammar = list(source)
     for owner in owners:
         if owner.kind == "comment":
             grammar[owner.start : owner.end] = _blank(source[owner.start : owner.end])
-    front_matter_end = yaml_front_matter_end(source)
     grammar[:front_matter_end] = _blank(source[:front_matter_end])
     blocks = [owner for owner in owners if owner.kind == "block"]
     rows: list[MarkdownBlockLine] = []
@@ -113,12 +131,11 @@ def markdown_heading_ranges(
     source: str, *, extended_headings: bool = True, structural_tables: bool = False
 ) -> list[MarkdownHeadingRange]:
     """Return actual ATX/Setext heading owners in original source coordinates."""
-    projection = markdown_source_projection(
-        source, inline_literals=False, structural_tables=structural_tables, extended_headings=extended_headings
-    )
-    contexts = markdown_source_context_lines(
+    front_matter_end, owners = _full_document_owners(
         source, structural_tables=structural_tables, extended_headings=extended_headings
     )
+    projection = _project_owners(source, owners, inline_literals=False)
+    contexts = _context_lines(source, owners, front_matter_end=front_matter_end, extended_headings=extended_headings)
     headings: list[MarkdownHeadingRange] = []
     paragraph: list[tuple[int, int, int]] = []
     offset = 0

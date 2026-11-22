@@ -7,8 +7,11 @@ CI reads only these checked-in copies and never a sibling checkout or installed 
 | --- | --- | --- |
 | structural-tables.json | ZHYX91/obsidian-structural-tables / fc8559003ca95318646b6ddd42634666d0fe5275 | ee46512fc5100d0c1691a804636e24221f970f3ae1e0a82b55484c646e60293c |
 | number-suite.json | ZHYX91/obsidian-number-suite / d3cb0ffe13d9ca04fcd9077a93595ca69fa86203 | fec119f78071e319fd24eb0dfcf6270e52388cba0495592237d273d10f78e8aa |
+| leading-note-properties.json | ZHYX91/obsidian-docwen-assistant / 535d830be4ee174403a57c27343e6cfbe6c2f256 | b253c9066a1d64f3f6eadfb1502643bfa7fb315dd094d2e04d218d57f0fee766 |
 
-Both upstream paths are `tests/fixtures/interoperability-syntax-contract.json`.
+The upstream path for Structural Tables and Number Suite is `tests/fixtures/interoperability-syntax-contract.json`.
+The Assistant fixture is `tests/fixtures/leading-note-properties.json`. Its `properties` and `body`
+fields concatenate to the original note. The properties include the closing line ending when present.
 The consumer tests map each upstream oracle to DocWen's native representation:
 spreadsheet cells retain Markdown source, DOCX AST cells contain parsed inline text,
 invalid merge geometry produces DocWen diagnostics, and an invalid delimiter remains

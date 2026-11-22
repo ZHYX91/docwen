@@ -273,7 +273,7 @@ def _visible_markdown_ranges(
     ranges: list[tuple[int, int]] = []
     block_offset = 0
     for block, block_protected in _split_fenced_code_blocks(
-        text, extended_headings=extended_headings, include_front_matter=False
+        text, extended_headings=extended_headings, front_matter_end=0
     ):
         if not block_protected:
             inline_offset = block_offset

@@ -184,14 +184,13 @@ def _split_fenced_code_blocks(
     extended_headings: bool = False,
     references: dict[str, MarkdownReferenceDefinition] | None = None,
     source_prefixes: dict[int, int] | None = None,
-    include_front_matter: bool = True,
+    front_matter_end: int,
 ) -> list[tuple[str, bool]]:
     """Split Markdown into ``(segment, is_fenced_code)`` pairs."""
     segments: list[tuple[str, bool]] = []
     if not md:
         return segments
 
-    front_matter_end = yaml_front_matter_end(md) if include_front_matter else 0
     if not front_matter_end and md.startswith("\ufeff"):
         front_matter_end = 1
     if front_matter_end:
@@ -377,7 +376,11 @@ def split_markdown_block_segments(
 ) -> list[tuple[str, bool]]:
     """Split Markdown into visible and renderer-protected block segments."""
 
-    return _split_fenced_code_blocks(md, extended_headings=extended_headings, include_front_matter=include_front_matter)
+    return _split_fenced_code_blocks(
+        md,
+        extended_headings=extended_headings,
+        front_matter_end=yaml_front_matter_end(md) if include_front_matter else 0,
+    )
 
 
 def _inline_source_owners(
@@ -597,17 +600,17 @@ def _map_visible_markdown(
         active_tokens.add(token)
         return placeholder
 
+    front_matter_end = yaml_front_matter_end(text) if include_front_matter else 0
     comment_masked = text
     if protect_source_comments:
-        from docwen_core.links._source_ownership import markdown_source_owners
+        from docwen_core.links._source_ownership import _collect_source_owners
 
         check_cancelled()
         comment_parts: list[str] = []
         cursor = 0
-        for owner in markdown_source_owners(
+        for owner in _collect_source_owners(
             text,
-            full_document=True,
-            include_front_matter=include_front_matter,
+            body_start=front_matter_end,
             structural_tables=structural_tables,
             extended_headings=extended_headings,
         ):
@@ -624,7 +627,7 @@ def _map_visible_markdown(
     block_segments = _split_fenced_code_blocks(
         comment_masked,
         extended_headings=extended_headings,
-        include_front_matter=include_front_matter,
+        front_matter_end=front_matter_end,
         references=reference_definitions,
         source_prefixes=source_prefixes,
     )

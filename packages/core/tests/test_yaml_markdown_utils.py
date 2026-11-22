@@ -401,3 +401,24 @@ def test_opaque_fields_do_not_discard_readable_siblings_or_rewrite_quoted_values
         },
         "\nText\n",
     )
+
+
+def test_document_views_compose_the_properties_tree_once_per_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import Mock
+
+    from docwen_core.links import markdown_heading_ranges
+    from docwen_core.yaml_tools import extract_yaml_properties
+
+    source = "\ufeff---\r\ndefaults: &fields {title: Name}\r\nselected: *fields\r\n...\r\n# Heading\r\n"
+    compose = Mock(wraps=yaml.compose)
+    monkeypatch.setattr(yaml, "compose", compose)
+
+    fields, body = extract_yaml_properties(source)
+    assert fields["selected"] is fields["defaults"] and fields["selected"]["title"] == "Name"
+    assert body == "# Heading\r\n"
+    compose.assert_called_once()
+
+    compose.reset_mock()
+    [heading] = markdown_heading_ranges(source)
+    assert source[heading.text_start : heading.text_end] == "Heading"
+    compose.assert_called_once()

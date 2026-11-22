@@ -53,19 +53,17 @@ class _PropertiesLoader(yaml.SafeLoader):
         super().fetch_tag()
 
 
-def is_properties_mapping(payload: str) -> bool:
+def compose_properties(payload: str) -> MappingNode | None:
     """Check structure without constructing custom tags or complex keys."""
     try:
-        return isinstance(yaml.compose(payload, Loader=_PropertiesLoader), MappingNode)
+        root = yaml.compose(payload, Loader=_PropertiesLoader)
+        return root if isinstance(root, MappingNode) else None
     except (yaml.YAMLError, RecursionError):
-        return False
+        return None
 
 
-def property_values(payload: str) -> dict[str, Any]:
+def property_values(root: MappingNode) -> dict[str, Any]:
     """Project safely readable values from a structurally accepted properties map."""
-    root = yaml.compose(payload, Loader=_PropertiesLoader)
-    if not isinstance(root, MappingNode):
-        return {}
     loader = yaml.SafeLoader("")
     try:
         try:
