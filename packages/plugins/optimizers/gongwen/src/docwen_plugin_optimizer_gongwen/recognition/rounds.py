@@ -47,7 +47,7 @@ def run_unique_rounds(
         )
         if best is not None:
             candidates[pf.index] = best
-            identified_unique.add(best.element_type)
+            identified_unique.update(best.represented_elements)
             scorer.update_context(best.element_type, pf.index)
 
     # ── Round 2 ─────────────────────────────────────────────────
@@ -152,7 +152,7 @@ def _score_best_candidate(
     candidates = scorer.score_round(pf, round_group=round_group)
 
     if skip_types:
-        candidates = [c for c in candidates if c.element_type not in skip_types]
+        candidates = [c for c in candidates if skip_types.isdisjoint(c.represented_elements)]
 
     if not candidates:
         return None

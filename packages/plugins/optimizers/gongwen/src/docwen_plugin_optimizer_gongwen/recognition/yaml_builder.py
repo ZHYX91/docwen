@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from docwen_plugin_optimizer_gongwen.constants import MEETING_SIGNATURE_DATE
 from docwen_plugin_optimizer_gongwen.utils import (
     combined_id_preservation_reason,
     convert_date_format,
@@ -19,6 +20,7 @@ from docwen_plugin_optimizer_gongwen.utils import (
     extract_printing_line,
     extract_signers_from_text,
     parse_combined_id,
+    parse_meeting_signature_date,
     process_attachment_item,
     process_copy_to,
     remove_brackets,
@@ -117,6 +119,18 @@ def build_yaml(
             continue
 
         # ── Composite fields ──────────────────────────────────────
+        if element_type == MEETING_SIGNATURE_DATE:
+            signature_date = parse_meeting_signature_date(features[para_idx].raw_text or text)
+            if signature_date is None:
+                result.preserved_source_indices[para_idx] = "incomplete_meeting_signature_date"
+                continue
+            if yaml_info["发文机关署名"] or yaml_info["成文日期"]:
+                result.preserved_source_indices[para_idx] = "conflicting_meeting_signature_date"
+                continue
+            yaml_info["发文机关署名"], yaml_info["成文日期"] = signature_date
+            skip_indices.append(para_idx)
+            continue
+
         if element_type == "combined_id":
             parsed = parse_combined_id(text)
             if parsed is None:

@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
+from docwen_plugin_optimizer_gongwen.constants import MEETING_SIGNATURE_DATE, SIGNATURE_DATE_FIELDS
+
 
 @dataclass(frozen=True, slots=True)
 class AttachmentDocument:
@@ -92,6 +94,12 @@ class RecognitionCandidate:
     trace: list[str] = field(default_factory=list, compare=False)
     confidence: str = ""  # high, medium, low
     runner_up: RecognitionCandidate | None = field(default=None, compare=False, repr=False)
+
+    @property
+    def represented_elements(self) -> tuple[str, ...]:
+        if self.element_type == MEETING_SIGNATURE_DATE:
+            return SIGNATURE_DATE_FIELDS
+        return (self.element_type,)
 
 
 @dataclass
