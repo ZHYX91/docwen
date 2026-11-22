@@ -8,13 +8,12 @@ from __future__ import annotations
 import json
 import logging
 import re
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_YAML_FRONT_PATTERN = re.compile(
-    r"^---\s*\r?\n(.*?)\r?\n---\s*(?:\r?\n|$)(.*)$",
-    re.DOTALL,
-)
+_YAML_OPEN = re.compile(r"(?:\ufeff)?---[ \t]*(?:\r\n|[\r\n])")
+_YAML_CLOSE = re.compile(r"(?<=[\r\n])(?:---|\.\.\.)[ \t]*(?:\r\n|[\r\n]|\Z)")
 
 _YAML_PLAIN_STRING_PATTERN = re.compile(r"^[^\W\d_][\w .()'/+-]*$")
 _YAML_IMPLICIT_STRING_VALUES = frozenset(
@@ -61,26 +60,57 @@ def format_yaml_scalar(value: str | bool) -> str:
     return _quoted_yaml_string(value)
 
 
+def _front_matter_bounds(content: str) -> tuple[int, int, int] | None:
+    """Return the raw payload start, closing marker start, and body start."""
+    opening = _YAML_OPEN.match(content)
+    if opening is None:
+        return None
+    closing = _YAML_CLOSE.search(content, opening.end())
+    if closing is None:
+        return None
+    payload = content[opening.end() : closing.start()]
+    if payload.strip(" \t\r\n"):
+        # Import the YAML parser only for a candidate block.
+        from docwen_core._yaml_properties import is_properties_mapping
+
+        if not is_properties_mapping(payload):
+            return None
+    return opening.end(), closing.start(), closing.end()
+
+
+def yaml_front_matter_end(content: str) -> int:
+    """Return the exact prefix length, or zero for ordinary Markdown."""
+    bounds = _front_matter_bounds(content)
+    return bounds[2] if bounds else 0
+
+
+def split_yaml_payload(content: str) -> tuple[str | None, str]:
+    """Return the exact payload and body, preserving BOM and EOL offsets."""
+    bounds = _front_matter_bounds(content)
+    if bounds is None:
+        return None, content
+    start, stop, end = bounds
+    return content[start:stop], content[end:]
+
+
+def extract_yaml_properties(content: str) -> tuple[dict[str, Any], str]:
+    """Read template fields while preserving the exact authored body."""
+    payload, body = split_yaml_payload(content)
+    if not payload or not payload.strip(" \t\r\n"):
+        return {}, body
+    from docwen_core._yaml_properties import property_values
+
+    return property_values(payload), body
+
+
 def extract_yaml(content: str) -> tuple[str, str]:
-    """Extract YAML front matter and Markdown body from *content*.
-
-    Returns ``(yaml_content, md_body)``.  When no YAML front matter is found,
-    returns ``("", content.strip())``.
-
-    Handles BOM stripping and both LF/CRLF line endings.
-    """
-    if content.startswith("﻿"):
-        content = content.lstrip("﻿")
-
-    match = _YAML_FRONT_PATTERN.search(content)
-    if match:
-        yaml_content = match.group(1).replace("\r\n", "\n").replace("\r", "\n")
-        md_body = match.group(2).strip()
-        logger.debug("Extracted YAML front matter (%d chars)", len(yaml_content))
-        return yaml_content, md_body
-
-    logger.debug("No YAML front matter found; returning full content as body")
-    return "", content.strip()
+    """Return the normalized YAML payload and the stripped Markdown body."""
+    payload, body = split_yaml_payload(content)
+    if payload is None:
+        return "", content.removeprefix("\ufeff").strip()
+    payload = payload.replace("\r\n", "\n").replace("\r", "\n").removesuffix("\n")
+    logger.debug("Extracted YAML front matter (%d chars)", len(payload))
+    return payload, body.strip()
 
 
 def generate_basic_yaml_frontmatter(

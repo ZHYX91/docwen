@@ -121,7 +121,12 @@ def prepare_runtime_semantics_v3(
         )
     except ValueError as exc:
         raise RuntimeSemanticsV3Unsupported(str(exc)) from exc
-    return _prepare_analyzed_runtime_plan(source, analysis)
+    body_start = (
+        number_suite_direct_semantics.markdown_semantics_body_start_v3(source)
+        if extensions is not None or consumer_profile == "number_suite_direct"
+        else markdown_semantics_body_start_v3(source)
+    )
+    return _prepare_analyzed_runtime_plan(source, analysis, body_start=body_start)
 
 
 def prepare_runtime_source_carriers_v3(source: str, *, input_id: str) -> RuntimeSemanticsV3Plan:
@@ -146,11 +151,12 @@ def prepare_runtime_source_carriers_v3(source: str, *, input_id: str) -> Runtime
         ),
         literal_ranges=(),
     )
-    return _prepare_analyzed_runtime_plan(source, analysis)
+    return _prepare_analyzed_runtime_plan(source, analysis, body_start=markdown_semantics_body_start_v3(source))
 
 
-def _prepare_analyzed_runtime_plan(source: str, analysis: MarkdownSemanticsV3Analysis) -> RuntimeSemanticsV3Plan:
-    body_start = markdown_semantics_body_start_v3(source)
+def _prepare_analyzed_runtime_plan(
+    source: str, analysis: MarkdownSemanticsV3Analysis, *, body_start: int
+) -> RuntimeSemanticsV3Plan:
     if analysis.has_errors:
         return RuntimeSemanticsV3Plan(
             analysis=analysis,

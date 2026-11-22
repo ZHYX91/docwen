@@ -494,7 +494,11 @@ def resolve_embedded_links(
             )
 
         return _map_visible_markdown(
-            inner_content, _resolve_visible, structural_tables=structural_tables, extended_headings=extended_headings
+            inner_content,
+            _resolve_visible,
+            structural_tables=structural_tables,
+            include_front_matter=False,
+            extended_headings=extended_headings,
         )
 
     parts: list[str] = []

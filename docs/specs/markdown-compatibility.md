@@ -1,5 +1,23 @@
 # Markdown compatibility / Markdown 兼容
 
+## Leading YAML properties and thematic breaks / 开头的属性与分隔线
+
+A properties block starts on the first physical line with `---` and ends at the first unindented
+`---` or `...` line. Both markers allow trailing spaces or tabs. A leading BOM is accepted.
+The text between the markers must be a YAML mapping or contain only whitespace. Prose, headings
+alone, lists, and malformed YAML remain Markdown. An empty properties block ends at the adjacent
+closer. All following text, including a later thematic break, belongs to the body.
+
+The heading, proofreading, link and table readers use this boundary. A complete, unquoted image
+value such as `cover: ![[照片.png]]` belongs to its property. Template fields read supported YAML
+values, and an opaque tag or a complex property key does not invalidate unrelated fields.
+
+属性块须从第一行的 `---` 开始，以第一个独占一行且未缩进的 `---` 或 `...` 结束。标记后允许空格或制表符，
+文件开头允许 BOM。两行之间必须是 YAML 映射或空白。普通正文、单独的标题、列表和语法损坏的 YAML 按 Markdown
+处理。紧挨着的结束标记关闭空属性块，后面的分隔线仍属于正文。标题编号、校对、链接和表格转换共用同一边界。
+类似 `cover: ![[照片.png]]` 的完整图片属性值留在属性块内。模板可继续读取有效字段，即使同一块还含有不支持的标签或复杂键。
+
+
 DocWen supports a documented Markdown subset for conversion to and from office formats. Route options freeze syntax, link, image, numbering and template behavior per request.
 
 DocWen 为 Office 双向转换支持一组明确的 Markdown 子集。语法、链接、图片、编号和模板行为在每个请求开始前冻结。

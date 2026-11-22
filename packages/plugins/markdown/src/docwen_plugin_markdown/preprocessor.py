@@ -45,7 +45,9 @@ def _rewrite_non_code_markdown(
     """
 
     result: list[str] = []
-    for block_text, is_literal_block in split_markdown_block_segments(text, extended_headings=extended_headings):
+    for block_text, is_literal_block in split_markdown_block_segments(
+        text, extended_headings=extended_headings, include_front_matter=False
+    ):
         if is_literal_block:
             result.append(block_text)
             continue

@@ -16,7 +16,6 @@ from docwen_core.links._block_context import (
     html_block_mode,
     markdown_inline_regions,
     markdown_source_lines,
-    yaml_front_matter_end,
 )
 from docwen_core.links._embed_dispatch import _is_table_context
 from docwen_core.links._error_semantics import LinkErrorKind, dispatch_error_output
@@ -51,6 +50,7 @@ from docwen_core.links._markdown_references import (
 from docwen_core.links._patterns import WIKI_EMBED_PATTERN
 from docwen_core.links._resolver import resolve_file_path
 from docwen_core.markdown_math import DISPLAY_MATH_START, display_math_closer, match_formula
+from docwen_core.yaml_tools import yaml_front_matter_end
 
 logger = logging.getLogger(__name__)
 
@@ -184,13 +184,14 @@ def _split_fenced_code_blocks(
     extended_headings: bool = False,
     references: dict[str, MarkdownReferenceDefinition] | None = None,
     source_prefixes: dict[int, int] | None = None,
+    include_front_matter: bool = True,
 ) -> list[tuple[str, bool]]:
     """Split Markdown into ``(segment, is_fenced_code)`` pairs."""
     segments: list[tuple[str, bool]] = []
     if not md:
         return segments
 
-    front_matter_end = yaml_front_matter_end(md)
+    front_matter_end = yaml_front_matter_end(md) if include_front_matter else 0
     if not front_matter_end and md.startswith("\ufeff"):
         front_matter_end = 1
     if front_matter_end:
@@ -371,10 +372,12 @@ def _split_fenced_code_blocks(
     return segments
 
 
-def split_markdown_block_segments(md: str, *, extended_headings: bool = False) -> list[tuple[str, bool]]:
+def split_markdown_block_segments(
+    md: str, *, extended_headings: bool = False, include_front_matter: bool = True
+) -> list[tuple[str, bool]]:
     """Split Markdown into visible and renderer-protected block segments."""
 
-    return _split_fenced_code_blocks(md, extended_headings=extended_headings)
+    return _split_fenced_code_blocks(md, extended_headings=extended_headings, include_front_matter=include_front_matter)
 
 
 def _inline_source_owners(
@@ -556,6 +559,7 @@ def _map_visible_markdown(
     *,
     protect_bare_urls: bool = True,
     protect_source_comments: bool = False,
+    include_front_matter: bool = True,
     structural_tables: bool = False,
     extended_headings: bool = False,
     cancellation_check: Callable[[], None] | None = None,
@@ -601,7 +605,11 @@ def _map_visible_markdown(
         comment_parts: list[str] = []
         cursor = 0
         for owner in markdown_source_owners(
-            text, full_document=True, structural_tables=structural_tables, extended_headings=extended_headings
+            text,
+            full_document=True,
+            include_front_matter=include_front_matter,
+            structural_tables=structural_tables,
+            extended_headings=extended_headings,
         ):
             check_cancelled()
             if owner.kind == "comment":
@@ -616,6 +624,7 @@ def _map_visible_markdown(
     block_segments = _split_fenced_code_blocks(
         comment_masked,
         extended_headings=extended_headings,
+        include_front_matter=include_front_matter,
         references=reference_definitions,
         source_prefixes=source_prefixes,
     )
@@ -1098,6 +1107,7 @@ def _process_non_embed_links(
         structural_tables=structural_tables,
         extended_headings=extended_headings,
         cancellation_check=cancellation_check,
+        include_front_matter=False,
     )
     logger.debug("Processed non-embed links: input=%d output=%d", len(text), len(result))
     return result

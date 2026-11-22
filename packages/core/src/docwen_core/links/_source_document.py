@@ -16,7 +16,6 @@ from docwen_core.links._block_context import (
     MarkdownBlockContext,
     MarkdownBlockLine,
     match_atx_heading,
-    yaml_front_matter_end,
 )
 from docwen_core.links._markdown_inline import (
     _ANGLE_AUTOLINK_RE,
@@ -24,6 +23,7 @@ from docwen_core.links._markdown_inline import (
     matching_backtick_run_end,
     parse_inline_link,
 )
+from docwen_core.yaml_tools import yaml_front_matter_end
 
 
 def _blank(source: str) -> str:

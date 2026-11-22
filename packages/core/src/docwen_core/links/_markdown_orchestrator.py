@@ -32,6 +32,7 @@ from docwen_core.links._non_embed import (
     split_markdown_inline_segments,
 )
 from docwen_core.links._patterns import WIKI_EMBED_PATTERN
+from docwen_core.yaml_tools import yaml_front_matter_end
 
 logger = logging.getLogger(__name__)
 
@@ -271,7 +272,9 @@ def _visible_markdown_ranges(
     """Return source-position ranges outside renderer-protected atoms."""
     ranges: list[tuple[int, int]] = []
     block_offset = 0
-    for block, block_protected in _split_fenced_code_blocks(text, extended_headings=extended_headings):
+    for block, block_protected in _split_fenced_code_blocks(
+        text, extended_headings=extended_headings, include_front_matter=False
+    ):
         if not block_protected:
             inline_offset = block_offset
             for segment, inline_protected in split_markdown_inline_segments(
@@ -345,6 +348,7 @@ def process_markdown_links(
     temp_dir: str | None = None,
     table_safe: bool = False,
     image_scope: str | None = None,
+    include_front_matter: bool = True,
     _visited_files: set[str] | None = None,
     _depth: int = 0,
     _canonicalize_local_docx_targets: bool = False,
@@ -367,6 +371,10 @@ def process_markdown_links(
     if not text:
         return text
 
+    # Only the authored document start owns front matter. Later link rewrites
+    # and fragments can resemble YAML without becoming new documents.
+    end = yaml_front_matter_end(text) if include_front_matter else 0
+    front_matter, text = text[:end], text[end:]
     resolved_max_depth = link_config.max_depth
     resolved_image_mode = link_config.embed_wiki_image_mode
     resolved_markdown_image_mode = link_config.embed_markdown_image_mode
@@ -420,6 +428,7 @@ def process_markdown_links(
             temp_dir=temp_dir,
             table_safe=table_safe,
             image_scope=image_scope,
+            include_front_matter=False,
             _visited_files=inner_visited,
             _depth=inner_depth,
             _canonicalize_local_docx_targets=True,
@@ -508,6 +517,7 @@ def process_markdown_links(
             protect_bare_urls=False,
             structural_tables=structural_tables,
             extended_headings=extended_headings,
+            include_front_matter=False,
             protect_source_comments=protect_source_comments,
             cancellation_check=cancellation_check,
         )
@@ -517,6 +527,7 @@ def process_markdown_links(
         _resolve_embeds,
         structural_tables=structural_tables,
         extended_headings=extended_headings,
+        include_front_matter=False,
         protect_source_comments=protect_source_comments,
         cancellation_check=cancellation_check,
     )
@@ -536,6 +547,7 @@ def process_markdown_links(
             image_scope=image_scope,
             cancellation_check=cancellation_check,
         ),
+        include_front_matter=False,
         protect_source_comments=protect_source_comments,
         structural_tables=structural_tables,
         extended_headings=extended_headings,
@@ -601,6 +613,7 @@ def process_markdown_links(
                 temp_dir=temp_dir,
                 table_safe=False,
                 image_scope=image_scope,
+                include_front_matter=False,
                 _visited_files=_visited_files,
                 _depth=_depth,
                 _canonicalize_local_docx_targets=(_canonicalize_local_docx_targets),
@@ -629,4 +642,4 @@ def process_markdown_links(
             result = result[:start] + replacement + result[end:]
 
     logger.info("process_markdown_links complete")
-    return result
+    return front_matter + result

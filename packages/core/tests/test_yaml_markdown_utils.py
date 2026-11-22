@@ -351,3 +351,53 @@ class TestFormatSanitizedImageLink:
     def test_default_style_is_wiki_embed(self) -> None:
         result = format_sanitized_image_link("img.png")
         assert result == "![[img.png]]"
+
+
+@pytest.mark.parametrize("eol", ["\n", "\r\n", "\r"])
+@pytest.mark.parametrize("closer", ["---", "..."])
+def test_raw_properties_stop_at_first_exact_closer(eol: str, closer: str) -> None:
+    from docwen_core.yaml_tools import extract_yaml_properties, split_yaml_payload, yaml_front_matter_end
+
+    source = f"\ufeff---  {eol}title: Title{eol}value: |{eol}  ---{eol}{closer}\t{eol}Body{eol}---{eol}"
+    payload, body = split_yaml_payload(source)
+    assert payload == f"title: Title{eol}value: |{eol}  ---{eol}"
+    assert body == source[yaml_front_matter_end(source) :] == f"Body{eol}---{eol}"
+    assert extract_yaml_properties(source) == ({"title": "Title", "value": "---\n"}, body)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "# Heading",
+        "some text",
+        "- a list",
+        "title: [unfinished",
+        "unknown: *absent",
+        "cover: ![[picture.png",
+        "cover: ![some alt](oops",
+    ],
+)
+def test_nonproperties_stay_markdown(payload: str) -> None:
+    from docwen_core.yaml_tools import extract_yaml_properties, yaml_front_matter_end
+
+    source = f"---\n{payload}\n---\nBody\n"
+    assert yaml_front_matter_end(source) == 0
+    assert extract_yaml_properties(source) == ({}, source)
+
+
+def test_opaque_fields_do_not_discard_readable_siblings_or_rewrite_quoted_values() -> None:
+    from docwen_core.yaml_tools import extract_yaml_properties
+
+    source = (
+        "---\nopaque: !unknown value\ntitle:\t Title\nimages:\n  - ![[图 片.png|别名]] # comment\n"
+        "  - ![Example](other.png)\n[complex, key]: item\n"
+        "notes: |\n  cover: ![[sample.png]]\n  title:\t literal\n...\n\nText\n"
+    )
+    assert extract_yaml_properties(source) == (
+        {
+            "title": "Title",
+            "images": ["![[图 片.png|别名]]", "![Example](other.png)"],
+            "notes": "cover: ![[sample.png]]\ntitle:\t literal\n",
+        },
+        "\nText\n",
+    )

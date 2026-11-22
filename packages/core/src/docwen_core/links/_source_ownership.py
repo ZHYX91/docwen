@@ -29,6 +29,7 @@ def markdown_source_owners(
     metadata_patterns: Sequence[re.Pattern[str]] = (),
     semantic_url_suffix: bool = False,
     full_document: bool = False,
+    include_front_matter: bool = True,
     structural_tables: bool = False,
     extended_headings: bool = False,
 ) -> list[MarkdownInlineSourceOwner]:
@@ -39,7 +40,13 @@ def markdown_source_owners(
     atoms cannot own the suffix. Wiki ownership does not hide its semantic
     record. Consumers decide which owner kinds to exclude from their scan.
     """
-    definitions = markdown_reference_definitions(source, extended_headings=extended_headings) if full_document else None
+    definitions = (
+        markdown_reference_definitions(
+            source, extended_headings=extended_headings, include_front_matter=include_front_matter
+        )
+        if full_document
+        else None
+    )
 
     def atoms_after(start: int) -> list[tuple[int, int, int, int, str]]:
         base = start
@@ -57,7 +64,10 @@ def markdown_source_owners(
             offset = 0
             source_prefixes: dict[int, int] = {}
             segments = _split_fenced_code_blocks(
-                remaining, extended_headings=extended_headings, source_prefixes=source_prefixes
+                remaining,
+                extended_headings=extended_headings,
+                source_prefixes=source_prefixes,
+                include_front_matter=include_front_matter and base == 0,
             )
             for segment, protected in segments:
                 end = offset + len(segment)

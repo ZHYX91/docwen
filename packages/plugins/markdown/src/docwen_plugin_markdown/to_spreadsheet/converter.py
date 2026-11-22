@@ -167,6 +167,7 @@ class MdToXlsxConverter:
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),
+                include_front_matter=False,
                 link_config=_request_link_config(context),
                 target_format="xlsx",
                 literal_projection=links.issue_literal,
@@ -423,6 +424,7 @@ class MdToCsvConverter:
             markdown_body = process_markdown_links(
                 markdown_body,
                 link_source_path(context.request, input_path),
+                include_front_matter=False,
                 link_config=_request_link_config(context),
                 target_format="csv",
                 literal_projection=links.issue_literal,
