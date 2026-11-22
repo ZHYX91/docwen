@@ -47,7 +47,7 @@ DOCX_TO_MD_OPTIONS_SCHEMA: dict = {
         },
         "numbering_scheme": {
             "type": "string",
-            "enum": ["gongwen_standard", "hierarchical_standard", "hierarchical_h2_start", "legal_standard"],
+            "x-docwen-resource-kind": "numbering-schemes",
             "description": "Numbering scheme ID when add_numbering is True.",
             "x-docwen-status": "implemented",
         },

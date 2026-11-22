@@ -79,12 +79,7 @@ MARKDOWN_OPTIONS_SCHEMA: dict[str, Any] = {
         },
         "numbering_scheme": {
             "type": "string",
-            "enum": [
-                "gongwen_standard",
-                "hierarchical_standard",
-                "hierarchical_h2_start",
-                "legal_standard",
-            ],
+            "x-docwen-resource-kind": "numbering-schemes",
             "default": "hierarchical_standard",
             "description": "Default numbering scheme",
         },

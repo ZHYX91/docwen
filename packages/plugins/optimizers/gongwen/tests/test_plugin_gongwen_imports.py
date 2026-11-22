@@ -64,12 +64,9 @@ def test_gongwen_manifest_declares_only_consumed_action_options() -> None:
         "locale",
         "table_merge_strategy",
     }
-    assert props["numbering_scheme"]["enum"] == [
-        "gongwen_standard",
-        "hierarchical_standard",
-        "hierarchical_h2_start",
-        "legal_standard",
-    ]
+    assert props["numbering_scheme"]["x-docwen-resource-kind"] == "numbering-schemes"
+    assert props["numbering_scheme"]["default"] == "gongwen_standard"
+    assert "enum" not in props["numbering_scheme"]
     assert props["ocr_language"]["enum"] == _OCR_LANGUAGE_ENUM
     assert props["locale"]["x-docwen-status"] == "implemented"
     assert props["table_merge_strategy"]["enum"] == ["fill", "empty", "marker"]

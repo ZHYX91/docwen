@@ -126,10 +126,14 @@ Document-to-Markdown optimizers, including Gongwen, accept DOCX and the declared
 chains. Discovery, planning, and acceptance check every route in the chain. The selected optimizer supplies
 its own closed option schema; it does not inherit unsupported options from ordinary conversion. Other
 optimizer families remain resource metadata until they have an explicit Machine input/output contract.
+Machine `resource/list` (`kind=numbering-schemes`) offers the enabled schemes visible in the requested display
+language. A task resolves an explicitly selected ID even when its output language differs. Gongwen accepts
+built-in and custom scheme IDs and defaults to `gongwen_standard` when adding numbering without an explicit ID.
 
 可执行优化以 `transform` 能力公开，通过 `optimization_id` 绑定优化资源。消费者按资源 ID、输入形状和
 输出媒体类型选择唯一可用能力，不解析能力 ID 的命名，也不把资源列表当作可执行保证。公文优化及普通
 文档转 Markdown 都检查完整预转换链；优化参数来自实际优化路线，不能套用普通转换独有的参数。
+Machine 的 `resource/list`（`kind=numbering-schemes`）按请求的显示语言列出已启用的方案。任务输出语言与显示语言不同时，仍按选中的 ID 执行。公文优化可使用内置或自定义方案，添加序号时若省略方案 ID，则使用 `gongwen_standard`。
 
 ## Source-native Markdown-to-DOCX / 源 Markdown 转 DOCX
 

@@ -61,12 +61,7 @@ MD_TO_DOCX_OPTIONS_SCHEMA: dict = {
         },
         "numbering_scheme": {
             "type": "string",
-            "enum": [
-                "gongwen_standard",
-                "hierarchical_standard",
-                "hierarchical_h2_start",
-                "legal_standard",
-            ],
+            "x-docwen-resource-kind": "numbering-schemes",
             "default": "hierarchical_standard",
             "description": "Numbering scheme when add_numbering is True.",
         },
@@ -262,11 +257,7 @@ MD_NUMBERING_OPTIONS_SCHEMA: dict = {
         },
         "numbering_scheme": {
             "type": "string",
-            "enum": [
-                "gongwen_standard",
-                "hierarchical_standard",
-                "legal_standard",
-            ],
+            "x-docwen-resource-kind": "numbering-schemes",
             "default": "gongwen_standard",
             "description": "Numbering scheme ID (e.g. gongwen_standard).",
         },
