@@ -42,7 +42,7 @@ REFERENCES = """# Reference markers
         REFERENCES,
         '---\nexample: "<html>"\n...\n普通正文',
         '---\r\nexample: "<html>"\r\n---\r\n普通正文',
-        '---\ntitle: Page\n...\n<div>Inline example</div>',
+        "---\ntitle: Page\n...\n<div>Inline example</div>",
         '---\nsample: "Content-Type: text/html"\n...\n普通正文',
         "Content-Type: text/html\n\n# Parsing HTML\n\nThe header above selects the response format.",
         "# Evernote XML example\n\n```xml\n<en-export><note/></en-export>\n```\n",
