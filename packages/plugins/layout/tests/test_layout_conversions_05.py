@@ -523,4 +523,5 @@ class TestPreprocessChain:
         assert result.error is not None
         assert result.error.error_type == "conversion_failed"
         assert result.error.diagnostic_code == "PDF2MD-ERROR"
+        assert "one outcome per page" in result.error.message
         assert not result.artifacts
