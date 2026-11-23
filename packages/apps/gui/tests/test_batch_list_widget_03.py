@@ -289,13 +289,18 @@ class TestContextMenu:
 
 
 class TestSelection:
-    def test_selection_changed_signal(self, populated_widget: BatchList) -> None:
-        emitted: list[object] = []
-        populated_widget.selection_changed.connect(lambda f: emitted.append(f))
-        # Trigger selection change via current item change
-        list_widget = populated_widget._tabs[populated_widget._vm.current_category]
-        if list_widget.count() > 0:
-            list_widget.setCurrentRow(0)
+    def test_selection_changed_signal(self, widget: BatchList, vm: BatchListViewModel) -> None:
+        first, second = "/test/first.docx", "/test/second.docx"
+        _add_synthetic(vm, [first, second])
+        assert widget.select_file(first)
+        assert widget.get_current_file() == first
+        selections: list[str | None] = []
+        widget.selection_changed.connect(selections.append)
+
+        widget._tabs["document"].setCurrentRow(1)
+
+        assert widget.get_current_file() == second
+        assert selections and selections[-1] == second
 
     def test_select_file_respects_native_separators(self, qapp: QApplication, vm: BatchListViewModel) -> None:
         stored_path = "C:/Users/Example/Documents/report.docx"
