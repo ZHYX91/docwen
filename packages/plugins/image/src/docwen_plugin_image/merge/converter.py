@@ -16,7 +16,6 @@ from docwen_core.models.file_ref import (
 )
 from docwen_plugin_image._common import (
     file_size,
-    has_alpha,
     is_heic_format,
     new_artifact_id,
     paste_on_white,
@@ -67,7 +66,7 @@ def _load_image_frames(path: str, frames: list[Image.Image], pixels: int, cancel
 
 
 def _to_rgb_with_white(img: Image.Image) -> Image.Image:
-    if has_alpha(img):
+    if img.has_transparency_data:
         return paste_on_white(img)
     if img.mode != "RGB":
         return img.convert("RGB")
@@ -131,7 +130,7 @@ class ImageToTiffMerger:
 
             failed_input_name = None
 
-            target_mode = "RGBA" if mode == "smart" and any(has_alpha(img) for img in loaded) else "RGB"
+            target_mode = "RGBA" if mode == "smart" and any(img.has_transparency_data for img in loaded) else "RGB"
             for img in loaded:
                 context.cancellation.check()
                 if target_mode == "RGBA":

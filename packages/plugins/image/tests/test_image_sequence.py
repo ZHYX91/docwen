@@ -90,3 +90,33 @@ def test_animation_size_limit_does_not_flatten_sequence(tmp_path: Path) -> None:
     with Image.open(result.artifacts[0].staging_path) as output:
         assert getattr(output, "n_frames", 1) == 2
     assert Path(result.artifacts[0].staging_path).stat().st_size <= 10 * 1024
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_interrupted_split_discards_every_page(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cancel: bool) -> None:
+    from docwen_core.errors import CancellationRequested
+    from docwen_plugin_image.format_conversion import converter
+
+    source = tmp_path / "pages.tif"
+    with Image.new("RGB", (4, 4), "red") as first, Image.new("RGB", (4, 4), "blue") as second:
+        first.save(source, save_all=True, append_images=[second])
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    context = _build_fake_context(str(source), str(staging), "png")
+    save = converter.save_image_with_options
+
+    def interrupt_after_save(*args, **kwargs):
+        save(*args, **kwargs)
+        if cancel:
+            context.cancellation.cancel()
+        else:
+            raise OSError("write interrupted")
+
+    monkeypatch.setattr(converter, "save_image_with_options", interrupt_after_save)
+    if cancel:
+        with pytest.raises(CancellationRequested):
+            ImageFormatConverter().convert(context)
+    else:
+        assert not ImageFormatConverter().convert(context).success
+    assert not context.workspace.registered_artifacts
+    assert list(staging.iterdir()) == []

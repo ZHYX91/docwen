@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from PIL import Image
 
-from docwen_plugin_image._common import prepare_flat_export, save_image_with_options
+from docwen_plugin_image._common import convert_mode_for_format, prepare_flat_export, save_image_with_options
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -49,14 +49,14 @@ def save_sequence(
         for index in range(start, getattr(source, "n_frames", 1)):
             cancel_check()
             source.seek(index)
-            frame, frame_metadata = prepare_flat_export(source)
+            prepared, frame_metadata = prepare_flat_export(source)
+            with prepared:
+                # Seeking composites the input's disposal and blend operations.
+                # Normalize every frame, including those passed as append_images.
+                frame = (
+                    convert_mode_for_format(prepared, target) if target in ("gif", "tif") else prepared.convert("RGBA")
+                )
             stack.callback(frame.close)
-            if target != "tif":
-                # Seeking through Pillow's decoder composites disposal/blend
-                # operations. Export full frames with replacement semantics.
-                rgba = frame.convert("RGBA")
-                stack.callback(rgba.close)
-                frame = rgba
             # Encoders may fall back to image.info when an explicit save option
             # is absent (notably a GIF that should play only once).
             frame.info.pop("loop", None)

@@ -131,30 +131,40 @@ def file_size(path: str) -> int:
     return os.path.getsize(path) if os.path.isfile(path) else 0
 
 
-def has_alpha(img: Image.Image) -> bool:
-    return img.mode in ("RGBA", "LA", "PA") or (img.mode == "P" and img.info.get("transparency") is not None)
-
-
 def paste_on_white(img: Image.Image) -> Image.Image:
     background = Image.new("RGB", img.size, (255, 255, 255))
-    working = img.convert("RGBA") if img.mode in ("P", "PA") else img
-    if working.mode in ("RGBA", "LA"):
-        background.paste(working, mask=working.split()[-1])
-    else:
-        background.paste(working)
+    with img.convert("RGBA") as rgba, rgba.getchannel("A") as alpha:
+        background.paste(rgba, mask=alpha)
     return background
+
+
+def _gif_with_transparency(img: Image.Image) -> Image.Image:
+    """Reserve one palette entry for all fully transparent pixels."""
+    with img.convert("RGBA") as rgba, rgba.getchannel("A") as alpha:
+        if alpha.getextrema()[0] != 0:
+            return rgba.convert("RGB")
+        with rgba.convert("RGB") as rgb:
+            palette = rgb.quantize(colors=255)
+        with alpha.point([255, *([0] * 255)]) as transparent:
+            palette.paste(255, mask=transparent)
+        palette.info["transparency"] = 255
+        return palette
 
 
 def convert_mode_for_format(img: Image.Image, target_format: str) -> Image.Image:
     target = normalize_format(target_format)
     if target in ("jpg", "bmp"):
-        if has_alpha(img):
+        if img.has_transparency_data:
             return paste_on_white(img)
         supported_modes = ("RGB", "L") if target == "jpg" else ("RGB",)
         if img.mode not in supported_modes:
             return img.convert("RGB")
         return img.copy()
     if target == "gif":
+        if img.mode == "P" and isinstance(img.info.get("transparency"), int):
+            return img.copy()
+        if img.has_transparency_data:
+            return _gif_with_transparency(img)
         if img.mode not in ("P", "L"):
             return img.convert("P")
         return img.copy()
@@ -169,13 +179,15 @@ def convert_mode_for_format(img: Image.Image, target_format: str) -> Image.Image
             return img.convert("RGB")
         return img.copy()
     if target == "webp":
-        if has_alpha(img) or img.mode in ("LA", "La", "RGBa"):
+        if img.has_transparency_data:
             return img.convert("RGBA")
         if img.mode not in ("RGB", "L"):
             return img.convert("RGB")
         return img.copy()
     if target == "tif":
-        if img.mode in ("P", "LA"):
+        if img.has_transparency_data and img.mode not in ("RGBA", "LA"):
+            return img.convert("RGBA")
+        if img.mode == "P":
             return img.convert("RGB")
         return img.copy()
     return img.copy()
