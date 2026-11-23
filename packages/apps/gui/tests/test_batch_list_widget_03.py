@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from ._batch_list_widget_support import (
@@ -77,6 +79,31 @@ class TestFilter:
             assert widget.get_current_file() == failed
             assert list_widget.currentItem() is not None
             assert not list_widget.currentItem().isHidden()
+        finally:
+            widget.deleteLater()
+
+    def test_active_filter_tracks_added_files_and_status_changes(self, qapp: QApplication) -> None:
+        vm = BatchListViewModel()
+        first, second = "/test/b.docx", "/test/a.docx"
+        _add_synthetic(vm, [first])
+        widget = BatchList(view_model=vm)
+        try:
+            vm.set_sort_state("name", True)
+            vm.set_status_filter("failed")
+            _add_synthetic(vm, [second])
+            rows = widget._tabs["document"]
+            assert [rows.item(i).data(Qt.ItemDataRole.UserRole) for i in range(2)] == vm.get_files_for_category(
+                "document"
+            )
+            assert all(rows.item(i).isHidden() for i in range(2))
+            vm.set_file_status(first, "failed")
+            assert not rows.item(1).isHidden() and widget.get_current_file() == first
+            vm.set_file_status(second, "failed")
+            vm.set_file_status(first, "pending")
+            assert rows.item(1).isHidden() and widget.get_current_file() == second
+            vm.set_file_status(second, "completed")
+            assert all(rows.item(i).isHidden() for i in range(2))
+            assert widget.get_current_file() is None
         finally:
             widget.deleteLater()
 
@@ -252,13 +279,14 @@ class TestSelection:
         if list_widget.count() > 0:
             list_widget.setCurrentRow(0)
 
-    def test_select_file_accepts_raw_windows_path(self, qapp: QApplication, vm: BatchListViewModel) -> None:
+    def test_select_file_respects_native_separators(self, qapp: QApplication, vm: BatchListViewModel) -> None:
         stored_path = "C:/Users/Example/Documents/report.docx"
         raw_path = r"C:\Users\Example\Documents\report.docx"
         _add_synthetic(vm, [stored_path])
         w = BatchList(view_model=vm)
         try:
-            assert w.select_file(raw_path) is True
+            assert w.select_file(raw_path) is (os.name == "nt")
+            assert w.select_file(stored_path)
             assert w.get_current_file() == stored_path
         finally:
             w.deleteLater()
