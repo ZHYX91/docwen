@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import gc
 import threading
+import weakref
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -220,3 +222,20 @@ def test_invalid_controller_handle_is_rejected_and_the_captured_owner_is_release
     assert error.value.code == "invalid_cancellation_reservation"
     assert controller._cancellation_scopes == {}
     assert "task.invalid" not in service._tasks
+
+
+def test_terminal_tasks_release_execution_data_and_keep_session_identity(admitted_service):
+    _runtime, controller, service, request = admitted_service
+    task_id = service.accept(service.plan(request).plan_id, "task.finished")
+    reservation = weakref.ref(controller._cancellation_scopes[task_id])
+
+    assert service.execute_accepted(task_id).state == "failed"
+    gc.collect()
+    assert reservation() is None
+    assert service.cancel(task_id) == "already_terminal"
+    with pytest.raises(ConversionServiceError) as execute_error:
+        service.execute_accepted(task_id)
+    assert execute_error.value.code == "task_not_accepted"
+    with pytest.raises(ConversionServiceError) as accept_error:
+        service.accept(service.plan(request).plan_id, task_id)
+    assert accept_error.value.code == "task_id_in_use"

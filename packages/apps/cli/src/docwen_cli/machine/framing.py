@@ -76,7 +76,10 @@ class FrameWriter:
         self._lock = threading.Lock()
 
     def write(self, payload: dict[str, Any]) -> None:
-        frame = encode_frame(payload)
+        self.write_frame(encode_frame(payload))
+
+    def write_frame(self, frame: bytes) -> None:
+        """Write a complete frame prepared by encode_frame."""
         with self._lock:
             self._stream.write(frame)
             self._stream.flush()
