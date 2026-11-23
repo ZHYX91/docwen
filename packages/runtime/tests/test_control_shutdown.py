@@ -6,7 +6,9 @@ import sys
 import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
+from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
@@ -112,6 +114,41 @@ def test_stop_settles_server_when_peer_stalls_during_authentication() -> None:
         peer.close()
         if server._thread is not None:
             server.stop(timeout=2)
+
+
+def test_pipe_client_retries_busy_open_but_reports_vanished_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    from multiprocessing import connection
+
+    from docwen_runtime.control import ControlClient, ControlNotRunningError, transport
+
+    # A successful wait does not reserve a pipe instance for this client.
+    busy = OSError("pipe instance already taken")
+    busy.winerror = 231
+    vanished = FileNotFoundError("pipe disappeared before open")
+    vanished.winerror = 2
+    wait = Mock()
+    open_pipe = Mock(side_effect=[busy, vanished])
+    api = SimpleNamespace(
+        WaitNamedPipe=wait,
+        CreateFile=open_pipe,
+        ERROR_PIPE_BUSY=231,
+        ERROR_SEM_TIMEOUT=121,
+        GENERIC_READ=0x80000000,
+        GENERIC_WRITE=0x40000000,
+        NULL=0,
+        OPEN_EXISTING=3,
+        FILE_FLAG_OVERLAPPED=0x40000000,
+    )
+    monkeypatch.setitem(sys.modules, "_winapi", api)
+    monkeypatch.setattr(connection, "PipeConnection", Mock(), raising=False)
+    monkeypatch.setattr(transport, "sys", SimpleNamespace(platform="win32"))
+
+    with pytest.raises(ControlNotRunningError) as failure:
+        ControlClient(app_name="docwen-pipe-open-race").request("status", timeout=2)
+
+    assert wait.call_count == open_pipe.call_count == 2
+    assert failure.value.code == "gui_not_running"
+    assert failure.value.__cause__ is vanished
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows named-pipe authentication contract")

@@ -333,6 +333,33 @@ def test_analysis_is_nonblocking_cached_and_rejects_stale_results(qtbot, monkeyp
         model.close()
 
 
+def test_completion_queued_before_selection_change_cannot_publish(qapp, monkeypatch, tmp_path):
+    from openpyxl import Workbook
+    from PySide6.QtCore import QThreadPool
+
+    from docwen_gui.view_models import spreadsheet_analysis
+
+    pool = QThreadPool()
+    monkeypatch.setattr(spreadsheet_analysis, "QThreadPool", SimpleNamespace(globalInstance=lambda: pool))
+    first, second = (tmp_path / name for name in ("a.xlsx", "b.xlsx"))
+    workbook = Workbook()
+    workbook.save(first)
+    workbook.save(second)
+    model = spreadsheet_analysis.SpreadsheetAnalysis()
+    published = []
+    model.changed.connect(lambda: published.extend(info.path for info in model.results))
+    try:
+        for path in (first, second):
+            model.select((str(path),))
+            # Finish the real worker without delivering its queued signal in the GUI thread.
+            assert pool.waitForDone(5000)
+            assert model.pending and not model.results
+        qapp.processEvents()
+        assert not model.pending and published == [str(second)]
+    finally:
+        model.close()
+
+
 def test_follow_system_survives_font_changes_and_ignores_system_when_explicit(qapp, monkeypatch):
     from docwen_gui.styles.theme_manager import ThemeManager
 

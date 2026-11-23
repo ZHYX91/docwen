@@ -142,6 +142,7 @@ class TestUserVisibleParitySmoke:
     def test_system_tray_setup_creates_icon_when_enabled(
         self,
         qapp,
+        qtbot,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         monkeypatch.setattr(
@@ -154,10 +155,11 @@ class TestUserVisibleParitySmoke:
             {"gui.notifications.system_tray": True},
         )
         try:
-            assert window._system_tray_icon is not None
-            assert window._system_tray_icon.isVisible()
+            tray = window._system_tray_icon
+            assert tray is not None and tray.isVisible()
         finally:
             window.close()
+        qtbot.waitUntil(lambda: not tray.isVisible())
 
     def test_task_completion_notification_respects_min_elapsed_and_tray_config(
         self,
