@@ -565,3 +565,13 @@ def test_sparse_record_insertion_shifts_only_stored_cells_and_counts_gaps(tmp_pa
     assert summary["counts"] == {"skipped": distance - 1, "replaced": 0, "added": 1, "combined": 0}
     assert summary["locations"]["skipped"] == [f"{label} {index}" for index in range(1, 21)]
     assert all(p.read_bytes() == before for p, before in originals.items())
+
+
+@pytest.mark.parametrize("mode", ["row", "col"])
+def test_aligned_equal_record_preserves_earlier_replacement_priority(tmp_path, mode):
+    _write(tmp_path / "base.xlsx", [["A", None], ["A", "B"]], mode)
+    _write(tmp_path / "collect.xlsx", [[None, None], ["A", "B"]], mode)
+    result = _run(tmp_path, mode)
+    assert result.success, result.error
+    assert _records(result.artifacts[0].staging_path, mode) == [("A", "B"), ("A", "B")]
+    assert result.metrics.extra["merge_summaries"][0]["counts"]["replaced"] == 1

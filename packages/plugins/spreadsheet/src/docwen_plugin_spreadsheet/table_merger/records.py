@@ -113,6 +113,7 @@ def merge_records(
     source = _stored_records(collect, by_row, offset, cancel_check)
     contents = _stored_records(base, by_row, 0, cancel_check)
     identities = {index: values for index, fields in contents.items() if (values := _identities(fields))}
+    minimum_fields = min((len(values) for values in identities.values()), default=float("inf"))
     width, collect_extent = (collect.max_column, collect.max_row) if by_row else (collect.max_row, collect.max_column)
     base_extent = base.max_row if by_row else base.max_column
     label = "row" if by_row else "column"
@@ -124,11 +125,17 @@ def merge_records(
             continue
         _skip_empty_records(summary, label, next_record, index)
         next_record = index + 1
+        # Equivalent aligned records are common in dense sheets. If no earlier
+        # record can be strictly shorter, an exact match unconditionally skips.
+        if len(incoming) <= minimum_fields and incoming == identities.get(index):
+            summary.record("skipped", f"{label} {index}")
+            continue
         decision, target = _best_position(identities, incoming, base_extent, width, offset, cancel_check)
         summary.record(decision, f"{label} {index}")
         if decision == "skipped":
             continue
         if decision == "added":
+            minimum_fields = min(minimum_fields, len(incoming))
             base_extent += 1
             check_extent(base_extent if by_row else width + offset, width + offset if by_row else base_extent)
             insert_sparse(base, by_row=by_row, start=target, amount=1, cancel_check=cancel_check)
