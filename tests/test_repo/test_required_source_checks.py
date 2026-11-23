@@ -54,6 +54,14 @@ def test_all_events_require_the_same_source_and_platform_matrix(event: str) -> N
         validate_ci_results(jobs, event)
 
 
+def test_only_superseded_runs_for_the_same_pull_request_are_cancelled() -> None:
+    workflow = yaml.load(Path(".github/workflows/tests.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    assert workflow["concurrency"] == {
+        "group": "tests-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}",
+        "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+    }
+
+
 def test_ci_has_one_full_coverage_run_and_one_run_per_other_platform() -> None:
     workflow = yaml.load(Path(".github/workflows/tests.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     jobs = workflow["jobs"]
