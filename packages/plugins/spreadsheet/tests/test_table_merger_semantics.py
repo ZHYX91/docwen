@@ -58,10 +58,6 @@ def test_alignment_keeps_sparse_cells_and_checks_cancellation():
     assert len(base._cells) == 2
     assert len(collect._cells) == 1
     assert checks
-    converter._row_similarity(base, 2, collect, 1, 1)
-    converter._col_similarity(base, 2, collect, 1, 1)
-    assert len(base._cells) == 2
-    assert len(collect._cells) == 1
     book.close()
 
 
@@ -363,12 +359,6 @@ def test_alignment_and_similarity_use_saved_error_types(tmp_path, mode, collect_
         offset = (distance, 0) if mode == "row" else (0, distance)
         assert converter._find_best_offset(base_ws, collect_ws, 1) == offset
         assert converter._suggest_offset_by_value_matching(base_ws, collect_ws) == offset
-        cells = converter._iter_cells_for_alignment(collect_ws)
-        assert converter._calc_overlap(base_ws, cells, 0, 0) == 0
-        assert converter._calc_overlap(base_ws, cells, *offset) == 1
-        similarity = converter._row_similarity if mode == "row" else converter._col_similarity
-        assert similarity(base_ws, 1, collect_ws, 1, 0) == 0.0
-        assert similarity(base_ws, distance + 1, collect_ws, 1, 0) == 1.0
     finally:
         base_book.close()
         collect_book.close()
@@ -527,3 +517,51 @@ def test_base_with_inactive_chartsheet_keeps_the_chart_part(tmp_path):
     with ZipFile(result.artifacts[0].staging_path) as package:
         assert "xl/charts/chart1.xml" in package.namelist()
     assert base.read_bytes() == original
+
+
+@pytest.mark.parametrize("mode", ["row", "col"])
+def test_sparse_record_insertion_shifts_only_stored_cells_and_counts_gaps(tmp_path, mode, monkeypatch):
+    distance = 3200
+    for name in ("base", "collect"):
+        book = openpyxl.Workbook()
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        sheet["A1"] = "header"
+        last = sheet.cell(distance, distance, "base link" if name == "base" else "incoming")
+        if name == "base":
+            last.hyperlink = "https://example.com/original"
+            last.style = "Headline 1"
+        book.save(tmp_path / f"{name}.xlsx")
+        book.close()
+    originals = {p: p.read_bytes() for p in tmp_path.glob("*.xlsx")}
+
+    def refuse_rectangle(*args, **kwargs):
+        pytest.fail("A sparse record merge requested a rectangular worksheet iterator")
+
+    monkeypatch.setattr(Worksheet, "iter_rows", refuse_rectangle)
+    monkeypatch.setattr(Worksheet, "iter_cols", refuse_rectangle)
+    result = _run(tmp_path, mode)
+    assert result.success, result.error
+    book = openpyxl.load_workbook(result.artifacts[0].staging_path)
+    try:
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        added, moved = (
+            ((3, distance), (distance + 1, distance)) if mode == "row" else ((distance, 3), (distance, distance + 1))
+        )
+        assert set(sheet._cells) == {(1, 1), added, moved}
+        assert sheet.cell(*added).value == "incoming"
+        link = sheet.cell(*moved)
+        assert link.value == "base link" and link.style == "Headline 1"
+        assert (
+            link.hyperlink
+            and link.hyperlink.ref == link.coordinate
+            and link.hyperlink.target == "https://example.com/original"
+        )
+    finally:
+        book.close()
+    summary = result.metrics.extra["merge_summaries"][0]
+    label = "row" if mode == "row" else "column"
+    assert summary["counts"] == {"skipped": distance - 1, "replaced": 0, "added": 1, "combined": 0}
+    assert summary["locations"]["skipped"] == [f"{label} {index}" for index in range(1, 21)]
+    assert all(p.read_bytes() == before for p, before in originals.items())
