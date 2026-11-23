@@ -351,6 +351,46 @@ def test_task_warnings_and_skip_reasons_survive_notice_eviction(activity_model):
     assert next(row for row in model.records if row.source_path == paths[0]).status == "warning"
 
 
+def test_completed_batch_publishes_all_rows_and_warnings_in_the_same_callback(activity_model):
+    history, feedback, model = activity_model
+    paths = [f"/file-{index}.md" for index in range(30)]
+    history.remember({"request_id": "files", "file_paths": paths})
+    updates = []
+    model.records_changed.connect(lambda: updates.append(tuple(row.status for row in model.records)))
+    with history.batch_outcomes():
+        for path in paths:
+            history.record("files", path, "completed")
+    with feedback.batch_messages():
+        for path in paths:
+            feedback.add_message("check", "warning", operation_id="files", file_path=path)
+    assert updates == [("completed",) * len(paths), ("warning",) * len(paths)]
+
+
+def test_secondary_output_notice_augments_existing_file_warnings(activity_model):
+    history, feedback, model = activity_model
+    history.remember({"request_id": "split", "file_paths": ["/one.pdf", "/two.pdf"]})
+    history.record(
+        "split",
+        "/one.pdf",
+        "completed",
+        output_path="/page1.png",
+        output_paths=("/page1.png", "/page2.png"),
+        warnings=("Low resolution",),
+    )
+    feedback.add_message("Check page two", "warning", operation_id="split", file_path="/page2.png")
+    feedback.add_message(
+        "one.pdf: Low resolution",
+        "warning",
+        details_message="Low resolution",
+        operation_id="split",
+        file_path="/page1.png",
+    )
+    first, second = model.records
+    assert first.warning_messages == ("Low resolution", "Check page two")
+    assert "Check page two" in first.details and first.details.count("Low resolution") == 1
+    assert not second.warning_messages
+
+
 def test_shared_output_and_source_notices_keep_arrival_order(activity_model):
     history, feedback, model = activity_model
     paths = ["/a.md", "/b.md", "/unrelated.md"]

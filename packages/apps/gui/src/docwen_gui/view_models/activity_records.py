@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication
 
 from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.i18n import t
-from docwen_gui.path_identity import display_path
+from docwen_gui.path_identity import display_path, path_key
 from docwen_gui.styles.theme_semantics import get_status_theme_class, get_theme_class_color
 
 from .info_area_vm import HistoryRowData, InfoAreaViewModel
@@ -49,18 +49,20 @@ def _notices_by_source(task: TaskRecord, notices: list[HistoryRowData]) -> dict[
     if len(paths) == 1:
         return {paths[0]: notices}
 
-    # A notice can refer to either the input or the primary output. Shared
+    # A notice can refer to the input or any retained output. Shared
     # outputs may belong to several sources. Preserve the original notice order.
     sources_by_location: dict[str, set[str]] = defaultdict(set)
     for path in paths:
-        sources_by_location[path].add(path)
+        sources_by_location[path_key(path)].add(path)
         outcome = task.outcomes.get(path)
-        if outcome and outcome.output_path:
-            sources_by_location[Path(outcome.output_path).as_posix()].add(path)
+        if outcome:
+            for output in outcome.output_paths or (outcome.output_path,):
+                if output:
+                    sources_by_location[path_key(output)].add(path)
     by_source: dict[str, list[HistoryRowData]] = defaultdict(list)
     for row in notices:
         if row.file_path:
-            for source in sources_by_location.get(Path(row.file_path).as_posix(), ()):
+            for source in sources_by_location.get(path_key(row.file_path), ()):
                 by_source[source].append(row)
     return by_source
 
@@ -147,9 +149,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                 warnings = outcome.warnings if outcome else ()
                 messages = list(
                     dict.fromkeys(
-                        _notice_details(row.details_message or row.message, row.message_type)
-                        for row in matching
-                        if not warnings or row.message_type != "warning"
+                        _notice_details(row.details_message or row.message, row.message_type) for row in matching
                     )
                 )
                 has_warning = bool(warnings) or any(row.message_type == "warning" for row in matching)
@@ -187,7 +187,14 @@ class ActivityRecordsModel(QAbstractTableModel):
                         outcome.diagnostic if outcome else DiagnosticSummary(status="pending"),
                         tuple(
                             dict.fromkeys(
-                                (*warnings, *(row.message for row in matching if row.message_type == "warning"))
+                                (
+                                    *warnings,
+                                    *(
+                                        row.details_message or row.message
+                                        for row in matching
+                                        if row.message_type == "warning"
+                                    ),
+                                )
                             )
                         ),
                     )

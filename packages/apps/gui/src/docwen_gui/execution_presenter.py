@@ -204,18 +204,19 @@ class ExecutionPresenter(QObject):
             warning_messages = _result_warning_messages(result)
             completion_tone = "warning" if warning_messages else "success"
             merge_details = [item.message for item in result.diagnostics if item.code == "MERGE-SUMMARY"]
-            for index, path in enumerate(file_paths):
-                self.file_status(
-                    path,
-                    "completed",
-                    output_path=output_path,
-                    output_paths=result_paths,
-                    operation_id=task_id,
-                    error_message="",
-                    warnings=tuple(warning_messages),
-                    diagnostic=DiagnosticSummary.from_result(result, output_count=len(result_paths)),
-                    local_details=(merge_details[index - 1],) if 0 < index <= len(merge_details) else (),
-                )
+            with self._task_history.batch_outcomes():
+                for index, path in enumerate(file_paths):
+                    self.file_status(
+                        path,
+                        "completed",
+                        output_path=output_path,
+                        output_paths=result_paths,
+                        operation_id=task_id,
+                        error_message="",
+                        warnings=tuple(warning_messages),
+                        diagnostic=DiagnosticSummary.from_result(result, output_count=len(result_paths)),
+                        local_details=(merge_details[index - 1],) if 0 < index <= len(merge_details) else (),
+                    )
             self._info_area_vm.add_message(
                 _t("info_area.history_completed", name=context.get("display_name", Path(file_path).name)),
                 completion_tone,
@@ -225,15 +226,16 @@ class ExecutionPresenter(QObject):
                 navigate_file_path=output_path or "",
                 operation_id=task_id,
             )
-            for warning_message in warning_messages:
-                self._info_area_vm.add_message(
-                    warning_message,
-                    "warning",
-                    show_location=bool(output_path),
-                    file_path=output_path or file_path,
-                    navigate_file_path=output_path or "",
-                    operation_id=task_id,
-                )
+            with self._info_area_vm.batch_messages():
+                for warning_message in warning_messages:
+                    self._info_area_vm.add_message(
+                        warning_message,
+                        "warning",
+                        show_location=bool(output_path),
+                        file_path=output_path or file_path,
+                        navigate_file_path=output_path or "",
+                        operation_id=task_id,
+                    )
             guide_actions = self._info_area_vm.compute_guide_actions(
                 "success",
             )
@@ -288,37 +290,38 @@ class ExecutionPresenter(QObject):
             "col": _t("settings.spreadsheet.merge_modes.by_column"),
             "cell": _t("settings.spreadsheet.merge_modes.by_cell"),
         }
-        for summary in summaries[:summary_limit]:
-            if not isinstance(summary, dict):
-                continue
-            counts = summary.get("counts")
-            source_name, sheet, mode = summary.get("source_name"), summary.get("sheet"), summary.get("mode")
-            if (
-                not isinstance(source_name, str)
-                or not 0 < len(source_name) <= 1024
-                or not isinstance(sheet, str)
-                or not 0 < len(sheet) <= 256
-                or not isinstance(mode, str)
-                or mode not in modes
-                or not isinstance(counts, dict)
-                or any(
-                    type(counts.get(key)) is not int or not 0 <= counts[key] <= (2**63 - 1)
-                    for key in ("added", "replaced", "skipped", "combined")
+        with self._info_area_vm.batch_messages():
+            for summary in summaries[:summary_limit]:
+                if not isinstance(summary, dict):
+                    continue
+                counts = summary.get("counts")
+                source_name, sheet, mode = summary.get("source_name"), summary.get("sheet"), summary.get("mode")
+                if (
+                    not isinstance(source_name, str)
+                    or not 0 < len(source_name) <= 1024
+                    or not isinstance(sheet, str)
+                    or not 0 < len(sheet) <= 256
+                    or not isinstance(mode, str)
+                    or mode not in modes
+                    or not isinstance(counts, dict)
+                    or any(
+                        type(counts.get(key)) is not int or not 0 <= counts[key] <= (2**63 - 1)
+                        for key in ("added", "replaced", "skipped", "combined")
+                    )
+                ):
+                    continue
+                message = _t(
+                    "main_window.merge_result_summary",
+                    source=source_name,
+                    sheet=sheet,
+                    mode=modes[mode],
+                    added=counts["added"],
+                    replaced=counts["replaced"],
+                    skipped=counts["skipped"],
+                    combined=counts["combined"],
                 )
-            ):
-                continue
-            message = _t(
-                "main_window.merge_result_summary",
-                source=source_name,
-                sheet=sheet,
-                mode=modes[mode],
-                added=counts["added"],
-                replaced=counts["replaced"],
-                skipped=counts["skipped"],
-                combined=counts["combined"],
-            )
-            self._info_area_vm.add_message(message, "info", operation_id=context.get("request_id", ""))
-            messages.append(message)
+                self._info_area_vm.add_message(message, "info", operation_id=context.get("request_id", ""))
+                messages.append(message)
         if messages:
             self._info_area_vm.set_execution_summary(" · ".join(messages))
 
@@ -333,14 +336,15 @@ class ExecutionPresenter(QObject):
         total_count = int(context.get("total_count", len(file_paths) or 1))
         self._action_area_vm.hide_cancel()
         message = error_message or "Conversion failed"
-        for path in file_paths:
-            self.file_status(
-                path,
-                "failed",
-                error_message=message,
-                operation_id=task_id,
-                output_path="",
-            )
+        with self._task_history.batch_outcomes():
+            for path in file_paths:
+                self.file_status(
+                    path,
+                    "failed",
+                    error_message=message,
+                    operation_id=task_id,
+                    output_path="",
+                )
         self._info_area_vm.add_message(
             _localized_failure_message(message),
             "danger",
@@ -391,92 +395,93 @@ class ExecutionPresenter(QObject):
         first_retained_failure: tuple[str, str, str] | None = None
 
         self._show_ocr_notice([r for r in results if isinstance(r, ConversionResult)], context)
-        for index, file_path in enumerate(file_paths):
-            raw_result = results[index] if index < len(results) else None
-            if not isinstance(raw_result, ConversionResult):
-                failed_count += 1
-                message = "Invalid batch conversion result"
-                if not first_failed_path:
-                    first_failed_path = file_path
-                    first_error_message = message
-                    first_error_summary_source = "INVALID-BATCH-RESULT"
-                self.file_status(
-                    file_path,
-                    "failed",
-                    output_path="",
-                    error_message=message,
-                    operation_id=task_id,
-                )
-                continue
+        with self._task_history.batch_outcomes():
+            for index, file_path in enumerate(file_paths):
+                raw_result = results[index] if index < len(results) else None
+                if not isinstance(raw_result, ConversionResult):
+                    failed_count += 1
+                    message = "Invalid batch conversion result"
+                    if not first_failed_path:
+                        first_failed_path = file_path
+                        first_error_message = message
+                        first_error_summary_source = "INVALID-BATCH-RESULT"
+                    self.file_status(
+                        file_path,
+                        "failed",
+                        output_path="",
+                        error_message=message,
+                        operation_id=task_id,
+                    )
+                    continue
 
-            if raw_result.success:
-                success_count += 1
-                output_path = self._output_path(raw_result)
-                result_paths = result_output_paths(raw_result)
-                if output_path:
-                    output_paths.append(output_path)
-                warning_messages = _result_warning_messages(raw_result)
-                for warning_message in warning_messages:
-                    warning_rows.append((file_path, output_path, warning_message))
-                self.file_status(
-                    file_path,
-                    "completed",
-                    output_path=output_path,
-                    output_paths=result_paths,
-                    error_message="",
-                    operation_id=task_id,
-                    warnings=tuple(warning_messages),
-                    diagnostic=DiagnosticSummary.from_result(raw_result, output_count=len(result_paths)),
-                )
-                continue
+                if raw_result.success:
+                    success_count += 1
+                    output_path = self._output_path(raw_result)
+                    result_paths = result_output_paths(raw_result)
+                    if output_path:
+                        output_paths.append(output_path)
+                    warning_messages = _result_warning_messages(raw_result)
+                    for warning_message in warning_messages:
+                        warning_rows.append((file_path, output_path, warning_message))
+                    self.file_status(
+                        file_path,
+                        "completed",
+                        output_path=output_path,
+                        output_paths=result_paths,
+                        error_message="",
+                        operation_id=task_id,
+                        warnings=tuple(warning_messages),
+                        diagnostic=DiagnosticSummary.from_result(raw_result, output_count=len(result_paths)),
+                    )
+                    continue
 
-            error = raw_result.error
-            error_type = getattr(error, "error_type", "") if error is not None else ""
-            message = error.message if error is not None else "Conversion failed"
-            if error_type == "cancelled":
-                cancelled_count += 1
-                self.file_status(
-                    file_path,
-                    "cancelled",
-                    diagnostic=DiagnosticSummary.from_result(raw_result, output_count=0),
-                    output_path="",
-                    error_message=message,
-                    operation_id=task_id,
-                )
-            elif error_type == "skipped":
-                skipped_count += 1
-                self.file_status(
-                    file_path,
-                    "skipped",
-                    diagnostic=DiagnosticSummary.from_result(raw_result, output_count=0),
-                    output_path="",
-                    skip_reason=message,
-                    error_message="",
-                    operation_id=task_id,
-                )
-            else:
-                failed_count += 1
-                retained_output_path = self.existing_output_path(raw_result)
-                if retained_output_path:
-                    retained_failure_paths.append(retained_output_path)
-                self.file_status(
-                    file_path,
-                    "failed",
-                    output_path=retained_output_path,
-                    diagnostic=DiagnosticSummary.from_result(
-                        raw_result, output_count=len(result_output_paths(raw_result, existing_only=True))
-                    ),
-                    output_paths=result_output_paths(raw_result, existing_only=True),
-                    error_message=message,
-                    operation_id=task_id,
-                )
-                if retained_output_path and first_retained_failure is None:
-                    first_retained_failure = (file_path, retained_output_path, message)
-                if not first_failed_path:
-                    first_failed_path = file_path
-                    first_error_message = message
-                    first_error_summary_source = error or message
-                    first_error_output = retained_output_path
+                error = raw_result.error
+                error_type = getattr(error, "error_type", "") if error is not None else ""
+                message = error.message if error is not None else "Conversion failed"
+                if error_type == "cancelled":
+                    cancelled_count += 1
+                    self.file_status(
+                        file_path,
+                        "cancelled",
+                        diagnostic=DiagnosticSummary.from_result(raw_result, output_count=0),
+                        output_path="",
+                        error_message=message,
+                        operation_id=task_id,
+                    )
+                elif error_type == "skipped":
+                    skipped_count += 1
+                    self.file_status(
+                        file_path,
+                        "skipped",
+                        diagnostic=DiagnosticSummary.from_result(raw_result, output_count=0),
+                        output_path="",
+                        skip_reason=message,
+                        error_message="",
+                        operation_id=task_id,
+                    )
+                else:
+                    failed_count += 1
+                    retained_output_path = self.existing_output_path(raw_result)
+                    if retained_output_path:
+                        retained_failure_paths.append(retained_output_path)
+                    self.file_status(
+                        file_path,
+                        "failed",
+                        output_path=retained_output_path,
+                        diagnostic=DiagnosticSummary.from_result(
+                            raw_result, output_count=len(result_output_paths(raw_result, existing_only=True))
+                        ),
+                        output_paths=result_output_paths(raw_result, existing_only=True),
+                        error_message=message,
+                        operation_id=task_id,
+                    )
+                    if retained_output_path and first_retained_failure is None:
+                        first_retained_failure = (file_path, retained_output_path, message)
+                    if not first_failed_path:
+                        first_failed_path = file_path
+                        first_error_message = message
+                        first_error_summary_source = error or message
+                        first_error_output = retained_output_path
 
         completed_count = success_count + failed_count
         if cancelled_count and not failed_count:
@@ -518,15 +523,17 @@ class ExecutionPresenter(QObject):
             navigate_file_path=guide_output_path,
             operation_id=task_id,
         )
-        for warning_file, warning_output, warning_message in warning_rows:
-            self._info_area_vm.add_message(
-                f"{Path(warning_file).name}: {warning_message}",
-                "warning",
-                show_location=bool(warning_output),
-                file_path=warning_output or warning_file,
-                navigate_file_path=warning_output or "",
-                operation_id=task_id,
-            )
+        with self._info_area_vm.batch_messages():
+            for warning_file, warning_output, warning_message in warning_rows:
+                self._info_area_vm.add_message(
+                    f"{Path(warning_file).name}: {warning_message}",
+                    "warning",
+                    details_message=warning_message,
+                    show_location=bool(warning_output),
+                    file_path=warning_output or warning_file,
+                    navigate_file_path=warning_output or "",
+                    operation_id=task_id,
+                )
         if first_error_message:
             self._info_area_vm.add_message(
                 _localized_failure_message(first_error_summary_source or first_error_message),
@@ -636,16 +643,17 @@ class ExecutionPresenter(QObject):
         retained_paths = () if cancelled else result_output_paths(result, existing_only=True)
 
         entry_status = "cancelled" if cancelled else "failed"
-        for path in file_paths:
-            self.file_status(
-                path,
-                entry_status,
-                diagnostic=DiagnosticSummary.from_result(result, output_count=len(retained_paths)),
-                output_path=retained_output_path,
-                output_paths=retained_paths,
-                error_message=message,
-                operation_id=task_id,
-            )
+        with self._task_history.batch_outcomes():
+            for path in file_paths:
+                self.file_status(
+                    path,
+                    entry_status,
+                    diagnostic=DiagnosticSummary.from_result(result, output_count=len(retained_paths)),
+                    output_path=retained_output_path,
+                    output_paths=retained_paths,
+                    error_message=message,
+                    operation_id=task_id,
+                )
         self._info_area_vm.add_message(
             _t("main_window.task_cancelled_status") if cancelled else _localized_failure_message(error),
             tone,

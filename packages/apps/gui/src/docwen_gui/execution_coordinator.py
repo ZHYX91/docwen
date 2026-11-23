@@ -223,8 +223,9 @@ class ExecutionCoordinator(QObject):
             self._view_model.begin_execution_telemetry(
                 task_id, runtime_ids, intermediate_task_owners=intermediate_owners
             )
-            for path in file_paths:
-                self._results.file_status(path, "processing", operation_id=task_id)
+            with self._task_history.batch_outcomes():
+                for path in file_paths:
+                    self._results.file_status(path, "processing", operation_id=task_id)
             self._action_area_vm.show_cancel()
             self._results.started(context)
             self.request_started.emit(request)
