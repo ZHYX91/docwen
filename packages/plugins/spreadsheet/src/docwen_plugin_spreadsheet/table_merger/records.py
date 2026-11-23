@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import copy
 from typing import Any
 
 from docwen_plugin_spreadsheet.table_merger.semantics import MergeSummary, value_identity
@@ -18,13 +19,57 @@ def write_scalar(cell: Any, value: Any, source_type: str | None = None) -> None:
         cell.data_type = "e" if source_type == "e" else "s"
 
 
+EXCEL_MAX_ROWS = 1_048_576
+EXCEL_MAX_COLUMNS = 16_384
+
+
 def check_extent(rows: int, columns: int) -> None:
-    if rows > 1_048_576 or columns > 16_384:
+    if rows > EXCEL_MAX_ROWS or columns > EXCEL_MAX_COLUMNS:
         raise ValueError("Merged worksheet exceeds Excel's row or column limit")
+
+
+def _shift_dimensions(ws: Any, by_row: bool, start: int, amount: int, cancel_check: Callable[[], None]) -> None:
+    """Keep stored formatting and visibility with the old axes; new positions use the sheet defaults."""
+    if by_row:
+        for index in sorted((row for row in ws.row_dimensions if row >= start), reverse=True):
+            cancel_check()
+            dimension = ws.row_dimensions.pop(index)
+            # Only metadata for empty positions can extend past the grid.
+            # Stored cell extents are checked separately by the merger.
+            if index + amount > EXCEL_MAX_ROWS:
+                continue
+            dimension.index = index + amount
+            ws.row_dimensions[dimension.index] = dimension
+        return
+
+    from openpyxl.utils.cell import column_index_from_string, get_column_letter
+
+    dimensions = ws.column_dimensions
+    for key in sorted(dimensions, key=column_index_from_string, reverse=True):
+        cancel_check()
+        dimension = dimensions[key]
+        dimension.reindex()
+        if dimension.max < start:
+            continue
+        if dimension.min < start:
+            # One OOXML <col> can describe a whole range, including empty
+            # columns. Split it so incoming columns do not inherit a hidden group.
+            right = copy(dimension)
+            dimension.max = start - 1
+            right.min = start
+        else:
+            right = dimensions.pop(key)
+        right.min += amount
+        if right.min > EXCEL_MAX_COLUMNS:
+            continue
+        right.max = min(right.max + amount, EXCEL_MAX_COLUMNS)
+        right.index = get_column_letter(right.min)
+        dimensions[right.index] = right
 
 
 def insert_sparse(ws: Any, *, by_row: bool, start: int, amount: int, cancel_check: Callable[[], None]) -> None:
     """Move stored cells, including styled blanks, in descending coordinate order."""
+    _shift_dimensions(ws, by_row, start, amount, cancel_check)
     # openpyxl insert_rows/cols materializes the entire affected rectangle first.
     for index, (row, col) in enumerate(sorted(ws._cells, reverse=True)):
         if index % 1000 == 0:

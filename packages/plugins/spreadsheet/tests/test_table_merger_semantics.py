@@ -575,3 +575,73 @@ def test_aligned_equal_record_preserves_earlier_replacement_priority(tmp_path, m
     assert result.success, result.error
     assert _records(result.artifacts[0].staging_path, mode) == [("A", "B"), ("A", "B")]
     assert result.metrics.extra["merge_summaries"][0]["counts"]["replaced"] == 1
+
+
+@pytest.mark.parametrize("mode", ["row", "col"])
+def test_inserted_record_does_not_take_the_original_records_hidden_dimension(tmp_path, mode):
+    base = tmp_path / "base.xlsx"
+    _write(base, [["header", "field"], ["original", "private"]], mode=mode)
+    _write(tmp_path / "collect.xlsx", [["header", "field"], ["incoming", "visible"]], mode=mode)
+    book = openpyxl.load_workbook(base)
+    sheet = book.active
+    assert isinstance(sheet, Worksheet)
+    if mode == "row":
+        dim = sheet.row_dimensions[2]
+        dim.height = 41
+    else:
+        dim = sheet.column_dimensions["B"]
+        dim.width = 41
+    dim.hidden = True
+    dim.outlineLevel = 2
+    book.save(base)
+    book.close()
+    original = base.read_bytes()
+
+    result = _run(tmp_path, mode)
+    assert result.success and base.read_bytes() == original
+    book = openpyxl.load_workbook(result.artifacts[0].staging_path)
+    try:
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        if mode == "row":
+            assert sheet["A2"].value == "incoming" and sheet["A3"].value == "original"
+            assert 2 not in sheet.row_dimensions
+            moved = sheet.row_dimensions[3]
+            assert moved.height == 41
+        else:
+            assert sheet["B1"].value == "incoming" and sheet["C1"].value == "original"
+            assert "B" not in sheet.column_dimensions
+            moved = sheet.column_dimensions["C"]
+            assert moved.width == 41 and (moved.min, moved.max) == (3, 3)
+        assert moved.hidden and moved.outlineLevel == 2
+    finally:
+        book.close()
+
+
+@pytest.mark.parametrize(("last", "expected_end"), [("C", 4), ("XFD", 16_384)])
+def test_inserting_inside_a_column_dimension_keeps_original_columns_grouped(tmp_path, last, expected_end):
+    base = tmp_path / "base.xlsx"
+    _write(base, [["header", "field"], ["original", "private"]], mode="col")
+    _write(tmp_path / "collect.xlsx", [["header", "field"], ["incoming", "visible"]], mode="col")
+    book = openpyxl.load_workbook(base)
+    sheet = book.active
+    assert isinstance(sheet, Worksheet)
+    # A group can extend through empty columns all the way to the grid edge.
+    sheet.column_dimensions.group("A", last, outline_level=2, hidden=True)
+    sheet.column_dimensions["A"].width = 29
+    book.save(base)
+    book.close()
+
+    result = _run(tmp_path, "col")
+    assert result.success
+    book = openpyxl.load_workbook(result.artifacts[0].staging_path)
+    try:
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        assert sheet["B1"].value == "incoming"
+        assert [(d.min, d.max, d.hidden, d.width, d.outlineLevel) for d in sheet.column_dimensions.values()] == [
+            (1, 1, True, 29, 2),
+            (3, expected_end, True, 29, 2),
+        ]
+    finally:
+        book.close()
