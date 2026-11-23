@@ -87,19 +87,31 @@ New local workspaces use `runtime/workspace.json` with schema `docwen.workspace.
 Local QA and CI use `tools/qa.py` for the same mandatory source checks: whole-repository Ruff,
 test governance, all Import-Linter dependency contracts, architecture cleanliness, and Pyright
 for Windows, Linux and macOS. Run them separately with `python tools/qa.py --skip-pytest`.
-In CI, source checks and the three platform test jobs start independently. Both must succeed for
-`Required checks` to pass. The release workflow reuses this gate before building packages.
-Windows runs the full suite once with coverage;
-Linux and macOS each run one `platform` selection combining fast contracts and declared release cases.
-The full Windows run already includes GUI, PR and release cases; no second coverage or GUI test run is needed.
+In CI, the source checks and platform tests start independently. Windows partitions the full suite
+by test file. One runner executes `packages/apps/` and `packages/plugins/`; a second executes
+everything else, including new paths. Each test runs once. The Windows coverage job verifies both
+selections against the full collection, combines the branch data, and runs the global, source
+manifest, core and GUI checks. Linux and macOS each run the `platform` selection combining fast
+contracts and declared release cases. All of these jobs must succeed for `Required checks` to
+pass. The release workflow reuses this gate before building packages. The
+`qa-windows-latest-<run>-<attempt>` artifact contains the combined coverage and visibility
+reports. To compare both shards with an independent full run of the same revision, manually
+start the **Windows shard trial** workflow in GitHub Actions. If a Windows shard needs a retry,
+choose **Re-run all jobs** so both reports come from the same attempt.
 A passing package preflight alone is insufficient.
 
 With `--report-output`, the pytest log lists workers as they exit and shows when test execution
-ends. The following interval includes pytest-cov combining data and generating reports on Windows.
+ends. On Windows each shard saves its raw branch data. The dependent Windows job combines those
+data files and generates the coverage report.
 QA logs separate elapsed times for the pytest process, coverage gates, report export and raw runtime cleanup.
 
-CI 并行执行源码检查和三平台测试，两组都成功后总检查才会通过。使用 `--report-output` 时，
-日志会列出已退出和仍在运行的 worker。测试执行结束后，Windows 还要合并覆盖率并生成报告。
+CI 并行执行源码检查和三平台测试。Windows 将全量测试按文件分给两台 runner，一台负责
+`packages/apps/` 和 `packages/plugins/`，另一台负责其余路径。汇总作业核对用例集合，
+合并原始分支覆盖数据，再执行现有覆盖率检查。汇总报告保存在 `qa-windows-latest-<run>-<attempt>`。
+如需与同一提交的整跑逐行对照，在 GitHub Actions 中手动运行 **Windows shard trial**。如需重试分片，请选择 **Re-run all jobs**，
+以确保两份报告来自同一次尝试。
+各作业都成功后总检查才会通过。使用 `--report-output` 时，
+日志会列出已退出和仍在运行的 worker。Windows 两个分片各自保存原始分支数据，汇总作业随后合并数据并生成覆盖率报告。
 QA 分别记录 pytest 进程、覆盖率检查、报告导出和原始运行目录清理的耗时。
 
 Tests are grouped by primary behavior family and execution cost. The default repository run selects only non-slow unit and contract tests; GUI, integration, end-to-end and environment-owned checks run in their explicit lanes.

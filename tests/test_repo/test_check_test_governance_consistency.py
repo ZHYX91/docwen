@@ -104,9 +104,9 @@ def run_subprocess(timeout: float | None = DEFAULT_SUBPROCESS_TIMEOUT_SECONDS):
         """
 uv run python tools/qa.py --skip-pytest
 uv run python tools/qa.py --tests-only --suite "$QA_SUITE" --coverage --pytest-runtime-root "$RUNNER_TEMP/raw" --own-pytest-runtime --report-output "$RUNNER_TEMP/docwen-qa-reports/"
-suite: full
-suite: platform
-needs: [source-checks, tests]
+QA_SUITE: full
+QA_SUITE: platform
+needs: [source-checks, tests, windows]
 DOCWEN_PYTEST_XDIST: "1"
 DOCWEN_PYTEST_XDIST_WORKERS: "auto"
 libegl1

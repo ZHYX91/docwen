@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 from coverage import CoverageData
-from tools.ci_shard_trial import GROUPS, selected
-from tools.ci_shard_trial.compare import check_inventories, coverage_differences
+from tools.windows_shards import GROUPS, selected
+from tools.windows_shards.compare import check_inventories, coverage_differences
 
 pytestmark = pytest.mark.unit
 
@@ -71,6 +71,32 @@ def test_incomplete_or_changed_evidence_cannot_pass(tmp_path: Path, mutation: st
     path.write_text(json.dumps(receipt), encoding="utf-8")
     with pytest.raises(ValueError):
         check_inventories(directories)
+
+
+def test_matching_external_deselections_do_not_make_a_full_windows_run(tmp_path: Path) -> None:
+    directories = _inputs(tmp_path)
+    directories.pop("control")  # Production compares the two independent shard collections.
+    for directory in directories.values():
+        path = directory / "node-evidence.json"
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+        receipt["inventory"]["deselected"].append("tests/test_lost.py::test_lost")
+        path.write_text(json.dumps(receipt), encoding="utf-8")
+    with pytest.raises(ValueError, match=r"deselected before the full-suite partition: .*test_lost"):
+        check_inventories(directories)
+
+
+def test_platform_skip_is_a_selected_and_completed_node(tmp_path: Path) -> None:
+    directories = _inputs(tmp_path)
+    for group in ("control", "remaining"):
+        directory = directories[group]
+        path = directory / "node-evidence.json"
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+        receipt["outcomes"][NEW] = {"setup": "skipped", "teardown": "passed"}
+        path.write_text(json.dumps(receipt), encoding="utf-8")
+        (directory / "skip_report.json").write_text(
+            json.dumps({"items": [{"nodeid": NEW, "phase": "setup", "reason": "requires macOS"}]}), encoding="utf-8"
+        )
+    assert check_inventories(directories) == {"control": 2, "apps-plugins": 1, "remaining": 1}
 
 
 def test_identical_hit_lines_can_have_different_arcs() -> None:

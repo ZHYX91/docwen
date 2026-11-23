@@ -26,8 +26,10 @@ jobs:
   source-checks:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - &setup-uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: "0.12.0"
           python-version: "3.12.13"
@@ -44,23 +46,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            suite: full
-            coverage: true
-          - os: ubuntu-24.04
-            suite: platform
-            coverage: false
-          - os: macos-15
-            suite: platform
-            coverage: false
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
-        with:
-          version: "0.12.0"
-          python-version: "3.12.13"
-          enable-cache: true
+        os: [ubuntu-24.04, macos-15]
+    env:
+      QA_SUITE: platform
+      QA_ARTIFACT: qa-${{ matrix.os }}
+    steps: &platform-steps
+      - *checkout
+      - *setup-uv
       - name: Install Linux Qt dependencies
         if: runner.os == 'Linux'
         shell: bash
@@ -71,33 +63,91 @@ jobs:
       - name: Install macOS image dependencies
         if: runner.os == 'macOS'
         run: brew install libheif
-      - name: Install exact lockfile
+      - &install
+        name: Install exact lockfile
         run: uv sync --frozen --extra test --extra dev --extra lint
       - name: Run the platform selection once, export compact reports, and clean raw tests
         shell: pwsh
-        env:
-          QA_SUITE: ${{ matrix.suite }}
-          QA_COVERAGE: ${{ matrix.coverage }}
         run: |
-          $coverageArgs = @()
-          if ($env:QA_COVERAGE -eq 'true') { $coverageArgs = @('--coverage') }
-          uv run python tools/qa.py --tests-only --suite "$env:QA_SUITE" @coverageArgs `
+          $shardArgs = @()
+          if ($env:QA_SHARD) { $shardArgs = @('--coverage', '--windows-shard', $env:QA_SHARD) }
+          uv run python tools/qa.py --tests-only --suite "$env:QA_SUITE" @shardArgs `
             --pytest-runtime-root "$env:RUNNER_TEMP/docwen-qa-runtime" --own-pytest-runtime `
             --report-output "$env:RUNNER_TEMP/docwen-qa-reports"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload compact visibility and coverage reports
+        id: reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: qa-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ env.QA_ARTIFACT }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/docwen-qa-reports/
-          if-no-files-found: warn
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-apps:
+    name: Windows shard apps-plugins
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      QA_SUITE: full
+      QA_SHARD: apps-plugins
+      QA_ARTIFACT: qa-windows-latest-apps-plugins
+    outputs: &shard-outputs
+      artifact-id: ${{ steps.reports.outputs.artifact-id }}
+    steps: *platform-steps
+
+  windows-remaining:
+    name: Windows shard remaining
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      QA_SUITE: full
+      QA_SHARD: remaining
+      QA_ARTIFACT: qa-windows-latest-remaining
+    outputs: *shard-outputs
+    steps: *platform-steps
+
+  windows:
+    name: Tests on windows-latest
+    needs: [windows-apps, windows-remaining]
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - *checkout
+      - *setup-uv
+      - *install
+      - name: Download apps and plugins evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        if: needs.windows-apps.outputs.artifact-id != ''
+        with:
+          artifact-ids: ${{ needs.windows-apps.outputs.artifact-id }}
+          path: ${{ runner.temp }}/apps-plugins
+      - name: Download remaining tests evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        if: needs.windows-remaining.outputs.artifact-id != ''
+        with:
+          artifact-ids: ${{ needs.windows-remaining.outputs.artifact-id }}
+          path: ${{ runner.temp }}/remaining
+      - name: Verify the complete Windows selection and publish its coverage and visibility reports
+        shell: pwsh
+        run: |
+          uv run python -m tools.windows_shards.merge_reports "$env:RUNNER_TEMP/apps-plugins" `
+            "$env:RUNNER_TEMP/remaining" "$env:RUNNER_TEMP/docwen-qa-reports"
+          exit $LASTEXITCODE
+      - name: Upload combined Windows reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: qa-windows-latest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/docwen-qa-reports/
+          if-no-files-found: error
           retention-days: 14
 
   required:
     name: Required checks
     if: always()
-    needs: [source-checks, tests]
+    needs: [source-checks, tests, windows]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -105,3 +155,17 @@ jobs:
         env:
           DOCWEN_CI_RESULTS: ${{ toJSON(needs) }}
         run: python -m tools.source_checks
+      - name: Record the checked source tree
+        id: source-identity
+        if: github.workflow == 'tests' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        run: /usr/bin/python3 -m scripts.release.source_check_reuse record "$RUNNER_TEMP/source-checks.json"
+      - name: Upload the checked source identity
+        if: steps.source-identity.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: source-checks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/source-checks.json
+          if-no-files-found: error
+          retention-days: 14

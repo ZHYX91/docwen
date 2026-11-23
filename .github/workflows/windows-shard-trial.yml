@@ -1,19 +1,13 @@
 name: Windows shard trial
 
 on:
-  pull_request:
-    paths:
-      - .github/workflows/windows-shard-trial.yml
-      - tools/ci_shard_trial/**
-      - tools/qa.py
-      - tools/qa_reports.py
-      - tests/test_repo/test_ci_shard_trial.py
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: windows-shard-trial-${{ github.event.pull_request.number }}
+  group: windows-shard-trial-${{ github.run_id }}
   cancel-in-progress: true
 
 env:
@@ -26,7 +20,6 @@ env:
 
 jobs:
   control:
-    if: &trial github.event.pull_request.number == 198
     name: Windows full control
     runs-on: windows-latest
     timeout-minutes: 90
@@ -56,13 +49,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: ${{ env.ARTIFACT }}
+          name: ${{ env.ARTIFACT }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/docwen-qa-reports/
           if-no-files-found: error
           retention-days: 7
 
   shards:
-    if: *trial
     name: Windows shard ${{ matrix.group }}
     runs-on: windows-latest
     timeout-minutes: 90
@@ -85,19 +77,19 @@ jobs:
       - *install
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          pattern: trial-shard-*
+          pattern: trial-shard-*-${{ github.run_attempt }}
           path: ${{ runner.temp }}/inputs
       - name: Apply the existing coverage gates to both shards together
         shell: pwsh
         run: |
-          uv run python -m tools.ci_shard_trial.compare merge "$env:RUNNER_TEMP/inputs/trial-shard-apps-plugins" `
-            "$env:RUNNER_TEMP/inputs/trial-shard-remaining" "$env:RUNNER_TEMP/merged"
+          uv run python -m tools.windows_shards.compare merge "$env:RUNNER_TEMP/inputs/trial-shard-apps-plugins-$env:GITHUB_RUN_ATTEMPT" `
+            "$env:RUNNER_TEMP/inputs/trial-shard-remaining-$env:GITHUB_RUN_ATTEMPT" "$env:RUNNER_TEMP/merged"
           exit $LASTEXITCODE
       - name: Save combined coverage and gate results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: merged-windows-coverage
+          name: merged-windows-coverage-${{ github.run_attempt }}
           path: ${{ runner.temp }}/merged/
           if-no-files-found: error
           retention-days: 7
@@ -112,20 +104,20 @@ jobs:
       - *install
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          pattern: trial-*
+          pattern: trial-*-${{ github.run_attempt }}
           path: ${{ runner.temp }}/inputs
       - name: Compare test IDs, outcomes, exclusions and executed lines and arcs
         shell: pwsh
         run: |
-          uv run python -m tools.ci_shard_trial.compare "$env:RUNNER_TEMP/inputs/trial-control" `
-            "$env:RUNNER_TEMP/inputs/trial-shard-apps-plugins" "$env:RUNNER_TEMP/inputs/trial-shard-remaining" `
+          uv run python -m tools.windows_shards.compare "$env:RUNNER_TEMP/inputs/trial-control-$env:GITHUB_RUN_ATTEMPT" `
+            "$env:RUNNER_TEMP/inputs/trial-shard-apps-plugins-$env:GITHUB_RUN_ATTEMPT" "$env:RUNNER_TEMP/inputs/trial-shard-remaining-$env:GITHUB_RUN_ATTEMPT" `
             "$env:RUNNER_TEMP/comparison"
           exit $LASTEXITCODE
       - name: Save comparison including any differences
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: windows-evidence-comparison
+          name: windows-evidence-comparison-${{ github.run_attempt }}
           path: ${{ runner.temp }}/comparison/
           if-no-files-found: error
           retention-days: 7

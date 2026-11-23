@@ -42,9 +42,9 @@ def test_shard_trial_exports_the_named_database_and_inventory(tmp_path: Path, gr
         (runtime / "coverage.xml").write_bytes(b"<coverage/>")
 
     output = tmp_path / "export"
-    qa_reports.export_reports(runtime, output, coverage=True, exit_code=0, shard_trial=group)
+    qa_reports.export_reports(runtime, output, coverage=True, exit_code=0, shard=group)
     summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
-    assert summary["shardTrial"] == group
+    assert summary["shard"] == group
     assert (output / "coverage-data.sqlite").read_bytes() == b"database"
     assert (output / "node-evidence.json").read_text(encoding="utf-8") == "{}"
     assert (output / "coverage.xml").exists() == (group == "control")

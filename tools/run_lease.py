@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.process_identity import observe
+from tools.recycle_payload import assert_plain_chain
 
 STATES = frozenset(
     {
@@ -33,6 +34,25 @@ STATES = frozenset(
 class ManagedRun:
     root: Path
     state: str = "completed-success"
+
+
+def remove_owned_readonly_file(function: object, path: str, error: BaseException) -> None:
+    """Retry unlinking one ordinary read-only file in an already validated owned tree."""
+    if os.name != "nt" or not isinstance(error, PermissionError) or function is not os.unlink:
+        raise error
+    target = Path(path)
+    assert_plain_chain(target)
+    metadata = target.lstat()
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_nlink != 1
+        or not metadata.st_file_attributes & stat.FILE_ATTRIBUTE_READONLY
+    ):
+        raise error
+    if not _same_entry(target, metadata):
+        raise error
+    target.chmod(metadata.st_mode | stat.S_IWRITE)
+    os.unlink(path)
 
 
 def _same_entry(path: Path, expected: os.stat_result) -> bool:
@@ -311,7 +331,7 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
                     root_pinned = True
                     try:
                         check_root()
-                        shutil.rmtree(root)
+                        shutil.rmtree(root, onexc=remove_owned_readonly_file)
                     except (OSError, ValueError) as primary:
                         try:
                             save("retained-cleanup-failure", restore_missing=True)
@@ -330,6 +350,12 @@ def managed_run(parent: Path, *, prefix: str, owner: str, kind: str) -> Iterator
                         outcome=run.state,
                         recording_error=primary,
                     )
+                print(
+                    json.dumps(
+                        {"type": "managed-run-closeout", "outcome": run.state, "cleanup": "failed", "root": str(root)}
+                    ),
+                    file=sys.stderr,
+                )
                 raise
 
 

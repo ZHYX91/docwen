@@ -10,18 +10,18 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from tools.ci_shard_trial import GROUPS, selected
+from tools.windows_shards import GROUPS, selected
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    group = os.environ.get("DOCWEN_CI_TRIAL_GROUP", "")
-    output = Path(os.environ.get("DOCWEN_CI_TRIAL_OUTPUT", ""))
+    group = os.environ.get("DOCWEN_PYTEST_SHARD", "")
+    output = Path(os.environ.get("DOCWEN_PYTEST_SHARD_OUTPUT", ""))
     if group not in GROUPS or not output.is_absolute():
-        raise pytest.UsageError("shard trial requires a known group and an absolute output directory")
-    config.pluginmanager.register(TrialEvidence(group, output), "docwen-trial-evidence")
+        raise pytest.UsageError("shard evidence requires a known group and an absolute output directory")
+    config.pluginmanager.register(ShardEvidence(group, output), "docwen-shard-evidence")
 
 
-class TrialEvidence:
+class ShardEvidence:
     def __init__(self, group: str, output: Path) -> None:
         self.group = group
         self.output = output
@@ -55,11 +55,11 @@ class TrialEvidence:
         self.inventory["selected"] = [item.nodeid for item in session.items]
         workeroutput = getattr(session.config, "workeroutput", None)
         if workeroutput is not None:
-            workeroutput["trial_inventory"] = self.inventory
+            workeroutput["shard_inventory"] = self.inventory
 
     @pytest.hookimpl(optionalhook=True)
     def pytest_testnodedown(self, node: Any, error: object | None) -> None:
-        inventory = getattr(node, "workeroutput", {}).get("trial_inventory")
+        inventory = getattr(node, "workeroutput", {}).get("shard_inventory")
         if error is not None or inventory is None:
             self.errors.append(f"{node.gateway.id} exited without a clean collection receipt")
         elif self.inventory is None:

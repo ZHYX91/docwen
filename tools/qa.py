@@ -478,9 +478,10 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument("--coverage", action="store_true", help="Measure full-suite coverage and all domain reports.")
     parser.add_argument(
+        "--windows-shard",
         "--windows-shard-trial",
         choices=("control", "apps-plugins", "remaining"),
-        help="Run the Windows scheduling experiment and export data for its separate comparison.",
+        help="Select a Windows full-suite partition, or the complete control for a comparison.",
     )
     parser.add_argument(
         "--report-output", type=Path, help="Export compact reports to a new external directory before cleanup."
@@ -516,9 +517,9 @@ def main(argv: list[str]) -> int:
         parser.error("--compact-coverage requires --coverage and --report-output")
     if args.report_output and args.skip_pytest:
         parser.error("--report-output requires pytest")
-    if args.windows_shard_trial and not (args.tests_only and args.coverage and args.report_output):
-        parser.error("--windows-shard-trial requires --tests-only --suite full --coverage and --report-output")
-    partial_coverage = args.windows_shard_trial in ("apps-plugins", "remaining")
+    if args.windows_shard and not (args.tests_only and args.coverage and args.report_output):
+        parser.error("--windows-shard requires --tests-only --suite full --coverage and --report-output")
+    partial_coverage = args.windows_shard in ("apps-plugins", "remaining")
 
     repo_root = Path(__file__).resolve().parents[1]
     try:
@@ -640,10 +641,10 @@ def main(argv: list[str]) -> int:
                 environment["DOCWEN_TEST_ALLOW_COVERAGE_TRACE"] = "1"
             if args.report_output:
                 pytest_cmd += ["-p", "tests._pytest_hooks.progress"]
-            if args.windows_shard_trial:
-                pytest_cmd += ["-p", "tools.ci_shard_trial.plugin"]
-                environment["DOCWEN_CI_TRIAL_GROUP"] = args.windows_shard_trial
-                environment["DOCWEN_CI_TRIAL_OUTPUT"] = str(runtime_view / PYTEST_REPORT_NAME)
+            if args.windows_shard:
+                pytest_cmd += ["-p", "tools.windows_shards.plugin"]
+                environment["DOCWEN_PYTEST_SHARD"] = args.windows_shard
+                environment["DOCWEN_PYTEST_SHARD_OUTPUT"] = str(runtime_view / PYTEST_REPORT_NAME)
             with _timed_phase("pytest process"):
                 return_code = _run(pytest_cmd, env=environment)
         except KeyboardInterrupt:
@@ -694,7 +695,7 @@ def main(argv: list[str]) -> int:
                         coverage=args.coverage,
                         exit_code=return_code,
                         coverage_detail=not args.compact_coverage,
-                        shard_trial=args.windows_shard_trial,
+                        shard=args.windows_shard,
                     )
             except (OSError, ValueError) as error:
                 print(f"[qa] compact report export failed: {error}", file=sys.stderr)

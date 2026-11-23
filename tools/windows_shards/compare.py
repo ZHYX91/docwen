@@ -15,7 +15,7 @@ from typing import Any
 from coverage import CoverageData
 from coverage.exceptions import CoverageException
 from tools import qa_reports
-from tools.ci_shard_trial import GROUPS, selected
+from tools.windows_shards import GROUPS, selected
 
 RAW_DATABASE = "coverage-data.sqlite"
 
@@ -66,6 +66,11 @@ def check_inventories(directories: dict[str, Path]) -> dict[str, int]:
             evidence["exitstatus"] == 0 and not evidence["errors"], f"{group}: incomplete run: {evidence['errors']}"
         )
         inventory = evidence["inventory"]
+        deselected = inventory["deselected"]
+        _require(
+            deselected == [],
+            f"{group}: tests deselected before the full-suite partition: {deselected[:8]}",
+        )
         full = _unique(inventory["full"], f"{group} full node ID")
         chosen = _unique(inventory["selected"], f"{group} selected node ID")
         _require(bool(chosen), f"{group}: empty test selection")
@@ -85,7 +90,6 @@ def check_inventories(directories: dict[str, Path]) -> dict[str, int]:
             "chosen": chosen,
             "outcomes": outcomes,
             "identity": evidence["identity"],
-            "deselected": _unique(inventory["deselected"], f"{group} deselected node ID"),
             "exclusions": _exclusions(directory),
             "skips": _skips(directory),
         }
@@ -93,7 +97,6 @@ def check_inventories(directories: dict[str, Path]) -> dict[str, int]:
     first = inventories["apps-plugins"]
     for group, inventory in inventories.items():
         _same(first["full"], inventory["full"], f"{group} full inventory")
-        _same(first["deselected"], inventory["deselected"], f"{group} deselections")
         _require(first["exclusions"] == inventory["exclusions"], f"{group}: collection exclusions differ")
         _require(first["identity"] == inventory["identity"], f"{group}: checkout or run attempt differs")
     other = inventories["remaining"]

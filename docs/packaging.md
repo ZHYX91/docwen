@@ -52,7 +52,7 @@ tags before a version tag is pushed. 仓库设置必须在推送版本标签前�
 
 The hosted GitHub Release workflow enforces this deterministic baseline before publishing one Windows archive, two Ubuntu 24.04 x64 archives and two macOS arm64 archives:
 
-1. Shared required source checks (Ruff, test governance, Import-Linter, architecture checks and Pyright for all three targets), one Windows full suite with source/core/GUI coverage reports, and the union of fast and release tests on Linux and macOS. Ordinary CI and release use this same gate.
+1. Shared required source checks (Ruff, test governance, Import-Linter, architecture checks and Pyright for all three targets), the complete Windows suite on two runners with combined source/core/GUI coverage reports, and the union of fast and release tests on Linux and macOS. Ordinary CI and release use this same gate.
 2. Windows package resource/layout verification.
 3. Packaged Windows CLI baseline doctor, conversion, and JSON checks.
 4. Packaged Windows GUI settings-page construction smoke.
@@ -65,7 +65,7 @@ Selected native acceptance uses the exact candidate that will be published. Its 
 
 托管的 GitHub Release 工作流在发布一个 Windows 压缩包、两个 Ubuntu 24.04 x64 压缩包和两个 macOS arm64 压缩包前执行以下确定性基线：
 
-1. 先运行统一必需源码检查（Ruff、测试治理、Import-Linter、架构检查及三个目标平台的 Pyright）；Windows 完整测试只运行一次并生成源码/core/GUI 覆盖率报告，Linux 与 macOS 各运行 fast 和 release 测试的并集。普通 CI 与发布使用同一门禁。
+1. 先运行统一必需源码检查（Ruff、测试治理、Import-Linter、架构检查及三个目标平台的 Pyright）；Windows 全量测试按文件分给两台 runner，合并后生成源码/core/GUI 覆盖率报告，Linux 与 macOS 各运行 fast 和 release 测试的并集。普通 CI 与发布使用同一门禁。
 2. 验证 Windows 打包资源与 Layout 资源。
 3. 验证 Windows 打包 CLI 的基础 doctor、转换和 JSON 路径。
 4. 验证 Windows 打包 GUI 的设置页构造。
@@ -91,6 +91,8 @@ When native acceptance must precede merging and publication, select the candidat
 The default sequence is selected-platform local download and native acceptance, the unchanged cloud full-inventory publication gate, then one independent public readback. Local aggregate `fetch` followed by `inspect` remains available when a complete local inventory is needed for a specific investigation or review; it is not an additional routine release prerequisite. Download and provenance failures retain the artifact/asset subject, exit code (or timeout), and a bounded, redacted stderr reason. These diagnostics do not change verification gates, budgets, retries or reconciliation of uncertain writes.
 
 For independent hosted verification, use `operation=verify` with the candidate `artifact_id` and a selected ref pointing to its source commit. For an interrupted publication, use `operation=publish`, that same candidate ID and the saved `docwen-publication-progress-RUN-ATTEMPT` ID in `resume_artifact_id`. The IDs retrieve their transport digests from GitHub; there is no manual version, run lookup or digest copying. The previous progress owner must have completed. Uncertain tag, draft, upload or publish writes are reconciled by reading before further action. Exact published releases are read-only; matching drafts upload only missing assets. Do not rerun build jobs to recover publication. A manual `publish` without an artifact ID performs the normal build chain from the selected ref and still requires default-branch acceptance before publication.
+
+For a package-only test, optionally supply `prior_source_run_id` with `operation=verify` and leave `artifact_id` empty. The successful same-repository `tests` run must have an unexpired source receipt for the exact attempt and all required platform jobs. The checked Git tree, lockfile and test workflow must match. A matching run builds and checks the three packages under `docwen-package-only-*` artifact names. Release and Store candidate metadata are reserved for the regular verification route. Missing or mismatched checks fall back to the full checks.
 
 For a local host, prefer `publication.py fetch-platform --platform windows` (or `linux`) with the same `--repository`, `--version`, `--commit`, `--artifact-id`, `--directory` and `--receipt` arguments. The workflow uploads a small `docwen-publication-metadata-RUN-ATTEMPT` artifact containing the attested `candidate.json` and checksums. The command resolves only the exact producer run/attempt's metadata and platform artifact IDs, checks every required producer job, verifies archive digests and the selected package against the full manifest, and verifies provenance. It downloads no other platform or aggregate archive. Missing metadata fails explicitly; there is no silent full-download fallback.
 
