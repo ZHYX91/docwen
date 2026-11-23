@@ -216,17 +216,25 @@ def test_input_switches_control_native_structures_and_preserve_disabled_syntax(
     assert source.read_text(encoding="utf-8") == SOURCE
 
 
-@pytest.mark.parametrize("dialect", DIALECTS)
-def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dialect: MarkdownExtensions) -> None:
-    source = tmp_path / "source.md"
+@pytest.fixture(scope="module")
+def obsidian_docx_bytes(tmp_path_factory: pytest.TempPathFactory) -> bytes:
+    root = tmp_path_factory.mktemp("obsidian-docx")
+    source = root / "source.md"
     source.write_text(SOURCE, encoding="utf-8")
     forward = MdToDocxConverter().convert(
-        dialect_context(tmp_path, source, "docx", {"input": MarkdownExtensions.obsidian().to_dict()})
+        dialect_context(root, source, "docx", {"input": MarkdownExtensions.obsidian().to_dict()})
     )
     assert forward.success, forward.error
-    isolated = tmp_path / "input.docx"
-    isolated.write_bytes(Path(forward.artifacts[0].staging_path).read_bytes())
     source.unlink()
+    return Path(forward.artifacts[0].staging_path).read_bytes()
+
+
+@pytest.mark.parametrize("dialect", DIALECTS)
+def test_output_switches_are_independent_and_need_only_docx(
+    tmp_path: Path, dialect: MarkdownExtensions, obsidian_docx_bytes: bytes
+) -> None:
+    isolated = tmp_path / "input.docx"
+    isolated.write_bytes(obsidian_docx_bytes)
     context = dialect_context(tmp_path, isolated, "md", {"output": dialect.to_dict()})
     result = DocxToMarkdownConverter().convert(context)
     assert result.success, result.error

@@ -26,6 +26,21 @@ from ._resolved_carrier_roundtrip_support import (
 pytestmark = pytest.mark.integration
 
 
+def _quoted_caption_bytes(root: Path, *, enabled: bool) -> bytes:
+    source = "> Table: Cap\n>\n> |a|\n> |---|\n> |b|\n\n^outer\n"
+    return write_caption_document(root, source, target_end=source.index("\n\n^outer"), enabled=enabled).read_bytes()
+
+
+@pytest.fixture(scope="module")
+def disabled_caption_bytes(tmp_path_factory: pytest.TempPathFactory) -> bytes:
+    return _quoted_caption_bytes(tmp_path_factory.mktemp("disabled-caption"), enabled=False)
+
+
+@pytest.fixture(scope="module")
+def enabled_caption_bytes(tmp_path_factory: pytest.TempPathFactory) -> bytes:
+    return _quoted_caption_bytes(tmp_path_factory.mktemp("enabled-caption"), enabled=True)
+
+
 def _caption_sequence_scope(package: ZipFile) -> str:
     roots = [
         etree.fromstring(package.read(name))
@@ -163,10 +178,11 @@ def test_caption_kind_does_not_restrict_the_authenticated_nested_native_carrier(
 @pytest.mark.parametrize(
     "mutation", ["unknown_parent", "non_block_parent", "duplicate", "third_slot", "swap_slots", "missing_map", "field"]
 )
-def test_nested_carrier_acceptance_still_rejects_unowned_or_tampered_packages(tmp_path: Path, mutation: str) -> None:
-    source = "> Table: Cap\n>\n> |a|\n> |---|\n> |b|\n\n^outer\n"
-    output = write_caption_document(tmp_path / "write", source, target_end=source.index("\n\n^outer"))
-    before = hashlib.sha256(output.read_bytes()).hexdigest()
+def test_nested_carrier_acceptance_still_rejects_unowned_or_tampered_packages(
+    tmp_path: Path, mutation: str, disabled_caption_bytes: bytes
+) -> None:
+    output = tmp_path / "original.docx"
+    output.write_bytes(disabled_caption_bytes)
     with ZipFile(output) as package:
         members = {name: package.read(name) for name in package.namelist()}
     document = etree.fromstring(members["word/document.xml"])
@@ -219,7 +235,7 @@ def test_nested_carrier_acceptance_still_rejects_unowned_or_tampered_packages(tm
     result, markdown = read_document(tmp_path / "read", tampered)
     assert not result.success
     assert not result.artifacts and not markdown
-    assert hashlib.sha256(output.read_bytes()).hexdigest() == before
+    assert output.read_bytes() == disabled_caption_bytes
 
 
 @pytest.mark.parametrize("route", ["v3", "v4"])
@@ -348,10 +364,11 @@ def test_list_anchor_owns_caption_and_native_table_without_quote_special_cases(
 
 
 @pytest.mark.parametrize("mutation", ["unowned_bookmark", "wrong_seq", "wrong_scope", "template_counter", "map_scope"])
-def test_enabled_idless_caption_candidate_requires_its_independent_field_proof(tmp_path: Path, mutation: str) -> None:
-    source = "> Table: Cap\n>\n> |a|\n> |---|\n> |b|\n\n^outer\n"
-    output = write_caption_document(tmp_path / "write", source, target_end=source.index("\n\n^outer"), enabled=True)
-    original = hashlib.sha256(output.read_bytes()).hexdigest()
+def test_enabled_idless_caption_candidate_requires_its_independent_field_proof(
+    tmp_path: Path, mutation: str, enabled_caption_bytes: bytes
+) -> None:
+    output = tmp_path / "original.docx"
+    output.write_bytes(enabled_caption_bytes)
     with ZipFile(output) as package:
         members = {name: package.read(name) for name in package.namelist()}
         scope = _caption_sequence_scope(package)
@@ -392,4 +409,4 @@ def test_enabled_idless_caption_candidate_requires_its_independent_field_proof(t
             package.writestr(name, data)
     result, markdown = read_document(tmp_path / "read", tampered)
     assert not result.success and not result.artifacts and not markdown
-    assert hashlib.sha256(output.read_bytes()).hexdigest() == original
+    assert output.read_bytes() == enabled_caption_bytes
