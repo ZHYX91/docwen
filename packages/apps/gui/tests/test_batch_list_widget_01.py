@@ -218,7 +218,7 @@ class TestConstruction:
         assert any("1" in cast(_PivotText, item).text() for item in populated_widget._pivot_items.values())
         pivot_item = populated_widget._pivot_items["layout"]
         assert pivot_item.isVisible()
-        pivot_item.click()
+        qtbot.mouseClick(pivot_item, Qt.MouseButton.LeftButton)
         assert populated_widget.view_model.current_category == "layout"
         assert populated_widget.category_stack.currentWidget() is populated_widget._tabs["layout"]
 
