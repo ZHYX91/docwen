@@ -296,7 +296,9 @@ class TestImageToPdf:
                 ImageToPdfConverter().convert(context)
         else:
             result = ImageToPdfConverter().convert(context)
-            assert not result.success and result.error.diagnostic_code == "IMG2PDF-ERROR"
+            assert not result.success
+            assert result.error is not None
+            assert result.error.diagnostic_code == "IMG2PDF-ERROR"
         assert context.workspace.registered_artifacts == []
         assert list(tmp_path.iterdir()) == [source]
 
