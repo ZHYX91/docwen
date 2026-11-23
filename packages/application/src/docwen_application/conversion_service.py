@@ -42,7 +42,7 @@ from docwen_application.conversion_routes import resolve_conversion_route_plan
 from docwen_application.optimization_catalog import parse_optimization_catalog
 from docwen_application.ports.runtime import ArtifactBundleCommitPort
 from docwen_application.runtime_capability_catalog import RuntimeCapabilityCatalog
-from docwen_core.detection import FileAdmissionPathError
+from docwen_core.detection import FileAdmissionError, FileAdmissionPathError
 from docwen_core.models import (
     ArtifactBundleValidationError,
     ConversionRequest,
@@ -240,6 +240,8 @@ class ConversionService:
                     raw_result = self._controller.execute_aggregate(task.request, task.binding.action_name)
                 else:
                     raw_result = self._controller.execute_single(task.request)
+            except FileAdmissionError as exc:
+                raise ConversionServiceError("invalid_request", exc.error_type, str(exc)) from exc
             except FileAdmissionPathError as exc:
                 raise ConversionServiceError("security", exc.error_type, str(exc)) from exc
             if not isinstance(raw_result, ConversionResult):
