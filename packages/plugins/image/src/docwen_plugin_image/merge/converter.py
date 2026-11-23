@@ -20,6 +20,7 @@ from docwen_plugin_image._common import (
     new_artifact_id,
     paste_on_white,
     register_heic_decoder,
+    rgba_for_export,
 )
 
 if TYPE_CHECKING:
@@ -134,7 +135,7 @@ class ImageToTiffMerger:
             for img in loaded:
                 context.cancellation.check()
                 if target_mode == "RGBA":
-                    converted.append(img.convert("RGBA") if img.mode != "RGBA" else img.copy())
+                    converted.append(rgba_for_export(img))
                 else:
                     converted.append(_to_rgb_with_white(img))
 

@@ -70,3 +70,51 @@ def test_transparent_regions_survive_on_every_frame(tmp_path: Path, target: str)
             output.seek(index)
             with output.convert("RGBA") as decoded, decoded.getchannel("A") as alpha:
                 assert alpha.tobytes() == bytes(expected)
+
+
+@pytest.mark.parametrize("target", ["png", "tif", "webp", "gif", "bmp"])
+def test_16bit_colour_key_compares_original_samples_before_downsampling(tmp_path: Path, target: str) -> None:
+    import struct
+
+    source = tmp_path / "16bit.png"
+    values = [0, 4095, 4096, 65535]
+    with Image.frombytes("I;16", (4, 1), struct.pack("<4H", *values)) as source_image:
+        source_image.save(source, transparency=4096)
+    result = ImageFormatConverter().convert(_build_fake_context(str(source), str(tmp_path), target))
+    assert result.success, result.error
+    with Image.open(result.artifacts[0].staging_path) as output:
+        if target in ("png", "tif"):
+            assert list(output.get_flattened_data()) == values
+            if target == "tif":
+                assert any(item.code == "IMAGE-TIFF-16BIT-TRANSPARENCY" for item in result.diagnostics)
+            else:
+                assert output.info["transparency"] == 4096
+        else:
+            with output.convert("RGBA") as rgba:
+                second, third = rgba.getpixel((1, 0)), rgba.getpixel((2, 0))
+                assert isinstance(second, tuple) and isinstance(third, tuple)
+                assert 14 <= second[0] <= 17 and second[3] == 255
+                if target == "bmp":
+                    assert third == (255, 255, 255, 255)
+                else:
+                    assert third[3] == 0
+
+
+@pytest.mark.parametrize("options", [{}, {"compress_mode": "limit_size", "size_limit": 1, "size_unit": "KB"}])
+def test_wide_apng_retains_distinct_native_frames_and_colour_key(tmp_path: Path, options: dict) -> None:
+    import struct
+
+    source = tmp_path / "wide.png"
+    first = struct.pack("<4H", 0, 4095, 4096, 65535)
+    second = struct.pack("<4H", 123, 4095, 4096, 65535)
+    with Image.frombytes("I;16", (4, 1), first) as a, Image.frombytes("I;16", (4, 1), second) as b:
+        a.save(source, save_all=True, append_images=[b], transparency=4096, duration=[40, 80], loop=2)
+    result = ImageFormatConverter().convert(_build_fake_context(str(source), str(tmp_path), "png", options))
+    assert result.success, result.error
+    with Image.open(result.artifacts[0].staging_path) as output:
+        assert getattr(output, "n_frames", 1) == 2
+        for i, expected in enumerate([first, second]):
+            output.seek(i)
+            assert output.mode == "I;16" and output.info["transparency"] == 4096
+            assert output.info["duration"] == [40, 80][i]
+            assert output.tobytes() == expected

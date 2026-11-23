@@ -7,10 +7,17 @@ from typing import TYPE_CHECKING, Any
 
 from PIL import Image
 
-from docwen_plugin_image._common import convert_mode_for_format, prepare_flat_export, save_image_with_options
+from docwen_plugin_image._common import (
+    convert_mode_for_format,
+    prepare_flat_export,
+    rgba_for_export,
+    save_image_with_options,
+    target_size_bytes,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import BinaryIO
 
 
 def _loop_metadata(source: Image.Image, target: str) -> dict[str, int]:
@@ -38,8 +45,30 @@ def save_sequence(
     options: dict[str, Any],
     *,
     cancel_check: Callable[[], None],
+    source_stream: BinaryIO,
 ) -> int:
     """Save composited frames, preserving playback timing and loop semantics."""
+    if source.format == "PNG" and source.mode.startswith("I;16") and target == "png":
+        # Pillow computes APNG frame differences via an 8-bit projection. Two
+        # distinct wide samples can collapse to one frame even if mode is retained.
+        count = getattr(source, "n_frames", 1)
+        for index in range(count):
+            cancel_check()
+            source.seek(index)
+            source.load()
+        compress_mode = options.get("compress_mode") or "lossless"
+        if compress_mode == "limit_size":
+            limit = target_size_bytes(options.get("size_limit"), options.get("size_unit", "KB"))
+            if source_stream.seek(0, 2) > limit:
+                raise ValueError("The original 16-bit APNG exceeds the requested size limit.")
+        elif compress_mode != "lossless":
+            raise ValueError(f"Unknown compress_mode: {compress_mode}")
+        source_stream.seek(0)
+        with open(output_path, "wb") as destination:
+            while chunk := source_stream.read(1024 * 1024):
+                cancel_check()
+                destination.write(chunk)
+        return count
     with ExitStack() as stack:
         frames: list[Image.Image] = []
         durations: list[int] = []
@@ -54,7 +83,7 @@ def save_sequence(
                 # Seeking composites the input's disposal and blend operations.
                 # Normalize every frame, including those passed as append_images.
                 frame = (
-                    convert_mode_for_format(prepared, target) if target in ("gif", "tif") else prepared.convert("RGBA")
+                    convert_mode_for_format(prepared, target) if target in ("gif", "tif") else rgba_for_export(prepared)
                 )
             stack.callback(frame.close)
             # Encoders may fall back to image.info when an explicit save option

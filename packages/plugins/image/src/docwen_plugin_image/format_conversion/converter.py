@@ -12,6 +12,7 @@ from docwen_core.errors import CancellationRequested
 from docwen_plugin_image._common import (
     INTEGER_PNG_CLIPPING_WARNING,
     file_size,
+    has_16bit_transparency_key,
     media_type_for,
     new_artifact_id,
     normalize_format,
@@ -64,8 +65,16 @@ class ImageFormatConverter:
 
         staged_paths: list[str] = []
         try:
-            with Image.open(input_path) as img:
+            with open(input_path, "rb") as source_stream, Image.open(source_stream) as img:
                 n_frames = getattr(img, "n_frames", 1)
+                if target == "tif" and has_16bit_transparency_key(img):
+                    diagnostics.append(
+                        ConversionDiagnostic(
+                            level="warning",
+                            code="IMAGE-TIFF-16BIT-TRANSPARENCY",
+                            message="The TIFF retains the 16-bit grayscale samples. The PNG transparency key is not supported by the TIFF writer, so its matching shade is opaque.",
+                        )
+                    )
 
                 if n_frames > 1 and ((source_format == "tif" and target != "tif") or target in ("jpg", "bmp")):
                     frames = n_frames
@@ -130,7 +139,12 @@ class ImageFormatConverter:
                                 )
                             )
                         frames = save_sequence(
-                            img, output_path, target, context.request.options, cancel_check=context.cancellation.check
+                            img,
+                            output_path,
+                            target,
+                            context.request.options,
+                            cancel_check=context.cancellation.check,
+                            source_stream=source_stream,
                         )
                         width, height = img.size
                     elif target in ("jpg", "webp"):
