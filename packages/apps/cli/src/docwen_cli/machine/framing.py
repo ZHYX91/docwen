@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import threading
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Never
 
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
 MAX_HEADER_BYTES = 64
@@ -18,6 +18,10 @@ class FramingError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+
+
+def _reject_non_json_number(literal: str) -> Never:
+    raise ValueError(f"Invalid JSON number: {literal}")
 
 
 def read_frame(stream: BinaryIO) -> dict[str, Any] | None:
@@ -42,8 +46,8 @@ def read_frame(stream: BinaryIO) -> dict[str, Any] | None:
         raise FramingError("frame_too_large", f"frame exceeds {MAX_MESSAGE_BYTES} bytes")
     body = _read_exact(stream, content_length)
     try:
-        payload = json.loads(body.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        payload = json.loads(body.decode("utf-8"), parse_constant=_reject_non_json_number)
+    except ValueError as exc:
         raise FramingError("invalid_frame_payload", "frame body must be one UTF-8 JSON object") from exc
     if not isinstance(payload, dict):
         raise FramingError("invalid_frame_payload", "frame body must be one JSON object")
@@ -62,7 +66,10 @@ def _read_exact(stream: BinaryIO, length: int) -> bytes:
 
 def encode_frame(payload: dict[str, Any]) -> bytes:
     """Validate the exact UTF-8 byte budget without writing to the transport."""
-    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    try:
+        body = json.dumps(payload, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise FramingError("invalid_frame_payload", "frame body must be one UTF-8 JSON object") from exc
     if len(body) > MAX_MESSAGE_BYTES:
         raise FramingError("frame_too_large", f"frame exceeds {MAX_MESSAGE_BYTES} bytes")
     return f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body
@@ -81,7 +88,12 @@ class FrameWriter:
     def write_frame(self, frame: bytes) -> None:
         """Write a complete frame prepared by encode_frame."""
         with self._lock:
-            self._stream.write(frame)
+            remaining = memoryview(frame)
+            while remaining:
+                written = self._stream.write(remaining)
+                if not written or written < 0 or written > len(remaining):
+                    raise OSError("Machine transport failed to write a complete frame")
+                remaining = remaining[written:]
             self._stream.flush()
 
 
