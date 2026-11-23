@@ -123,9 +123,9 @@ def test_pipe_client_retries_busy_open_but_reports_vanished_endpoint(monkeypatch
 
     # A successful wait does not reserve a pipe instance for this client.
     busy = OSError("pipe instance already taken")
-    busy.winerror = 231
+    monkeypatch.setattr(busy, "winerror", 231, raising=False)
     vanished = FileNotFoundError("pipe disappeared before open")
-    vanished.winerror = 2
+    monkeypatch.setattr(vanished, "winerror", 2, raising=False)
     wait = Mock()
     open_pipe = Mock(side_effect=[busy, vanished])
     api = SimpleNamespace(

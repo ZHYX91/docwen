@@ -139,6 +139,41 @@ def test_management_page_toggles_and_copies_through_shared_model(qapp, template_
     page.deleteLater()
 
 
+def test_visible_management_page_reloads_external_templates_on_reactivation(qapp, qtbot, template_vm, monkeypatch):
+    from unittest.mock import Mock
+
+    from PySide6.QtCore import Qt
+
+    from docwen_gui.widgets.settings.templates_tab import TemplatesTab
+
+    page = TemplatesTab(view_model=template_vm)
+    qtbot.addWidget(page)
+    page.show()
+    qtbot.waitUntil(page.isVisible)
+    qapp.processEvents()
+
+    original = template_vm.templates[0].path
+    original.with_name("External.docx").write_bytes(original.read_bytes())
+    catalog = page._lists["docx"]
+    assert catalog.count() == 1
+
+    refresh = Mock(wraps=page.refresh)
+    monkeypatch.setattr(page, "refresh", refresh)
+    qapp.applicationStateChanged.emit(Qt.ApplicationState.ApplicationInactive)
+    refresh.assert_not_called()
+    assert catalog.count() == 1
+
+    qapp.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)
+    refresh.assert_called_once_with()
+    assert catalog.count() == 2
+    assert any(item.path.name == "External.docx" for item in template_vm.templates)
+
+    page.hide()
+    refresh.reset_mock()
+    qapp.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)
+    refresh.assert_not_called()
+
+
 def test_settings_has_shared_template_page_and_no_text_selector(qapp, template_vm):
     from docwen_gui.widgets.settings.dialog import SettingsDialog
     from docwen_gui.widgets.settings.templates_tab import TemplatesTab
