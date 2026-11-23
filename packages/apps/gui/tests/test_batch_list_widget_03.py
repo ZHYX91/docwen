@@ -130,6 +130,24 @@ class TestFilter:
 
 
 class TestSortWidget:
+    def test_readmission_reorders_visible_files_without_losing_selection(self, qapp: QApplication) -> None:
+        from docwen_core.models.file_ref import FileRef
+
+        vm = BatchListViewModel()
+        first, second = "/batch/first.docx", "/batch/second.docx"
+        _add_synthetic(vm, [first, second])
+        widget = BatchList(view_model=vm)
+        try:
+            vm.set_sort_state("size", True)
+            assert widget.select_file(first)
+            vm.refresh_admission(FileRef(path=first, format="docx", category="document", size_bytes=63))
+            rows = widget._tabs["document"]
+            assert vm.get_files_for_category("document") == [second, first]
+            assert [rows.item(i).data(Qt.ItemDataRole.UserRole) for i in range(2)] == [second, first]
+            assert widget.get_current_file() == first
+        finally:
+            widget.deleteLater()
+
     def test_sort_button_exists(self, populated_widget: BatchList) -> None:
         assert populated_widget.sort_button is not None
 

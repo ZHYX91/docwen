@@ -1211,6 +1211,7 @@ class BatchList(QWidget):
         vm.status_changed.connect(self._on_status_changed)
         vm.filter_changed.connect(self._on_filter_changed)
         vm.sort_changed.connect(self._on_sort_changed)
+        vm.category_order_changed.connect(self._apply_sort_for_category)
         vm.current_category_changed.connect(self._on_category_changed)
         vm.entry_count_changed.connect(self._on_entry_count_changed)
         vm.pulse_requested.connect(self._on_pulse_requested)
