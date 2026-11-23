@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from itertools import pairwise
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from docwen_core.docx_parsing.format_features import (
     DocxMarkdownSyntaxConfig,
@@ -21,6 +21,9 @@ from docwen_core.docx_parsing.xml_ns import NS_W
 from docwen_core.markdown_math import match_formula
 from docwen_core.text.markdown_literal import escape_markdown_literal
 from docwen_plugin_document.shared.word_metadata import run_metadata_is_valid
+
+if TYPE_CHECKING:
+    from docwen_plugin_document.shared.heading_navigation import HeadingNavigationIndex
 
 # Gray fill colours treated as inline code shading.
 _WPS_RUN_SHADING_GRAY_COLORS = frozenset(
@@ -367,7 +370,11 @@ def append_formatted_run_text(
 
 
 def resolve_hyperlink_target(
-    para: Any, hyperlink_element: Any, *, hyperlink_targets: dict[str, str] | None = None
+    para: Any,
+    hyperlink_element: Any,
+    *,
+    hyperlink_targets: dict[str, str] | None = None,
+    navigation: HeadingNavigationIndex | None = None,
 ) -> str | None:
     """Resolve the real URL from a ``<w:hyperlink>`` element.
 
@@ -388,7 +395,7 @@ def resolve_hyperlink_target(
     if not rel_id:
         from docwen_plugin_document.shared.heading_navigation import resolve_ordinary_heading_target
 
-        return resolve_ordinary_heading_target(para, hyperlink_element)
+        return resolve_ordinary_heading_target(para, hyperlink_element, navigation=navigation)
 
     if hyperlink_targets is not None:
         return hyperlink_targets.get(rel_id)
@@ -596,6 +603,7 @@ def _render_paragraph_run_segments(
     text_transform: Callable[[str], str] | None = None,
     style_parent: Any = None,
     hyperlink_targets: dict[str, str] | None = None,
+    navigation: HeadingNavigationIndex | None = None,
 ) -> list[str]:
     """Render paragraph XML children into page-aware Markdown segments."""
     segments: list[list[str]] = [[]]
@@ -635,7 +643,7 @@ def _render_paragraph_run_segments(
         url = (
             field[0]
             if field is not None
-            else resolve_hyperlink_target(para, child, hyperlink_targets=hyperlink_targets) or ""
+            else resolve_hyperlink_target(para, child, hyperlink_targets=hyperlink_targets, navigation=navigation) or ""
         )
         # OOXML targets are literal strings, not Markdown source escape pairs
         # or entities. Preserve each backslash and entity-shaped URI character.
@@ -905,6 +913,7 @@ def render_paragraph_runs(
     text_transform: Callable[[str], str] | None = None,
     style_parent: Any = None,
     hyperlink_targets: dict[str, str] | None = None,
+    navigation: HeadingNavigationIndex | None = None,
 ) -> str:
     """Render paragraph XML children in order, producing Markdown text.
 
@@ -939,6 +948,7 @@ def render_paragraph_runs(
         text_transform=text_transform,
         style_parent=style_parent,
         hyperlink_targets=hyperlink_targets,
+        navigation=navigation,
     )[0]
 
 
@@ -956,6 +966,7 @@ def render_paragraph_runs_split_on_page_breaks(
     literal_text: bool = False,
     escape_literal_text: bool = True,
     text_transform: Callable[[str], str] | None = None,
+    navigation: HeadingNavigationIndex | None = None,
 ) -> list[str]:
     """Render rich Markdown segments separated at accepted page breaks.
 
@@ -979,4 +990,5 @@ def render_paragraph_runs_split_on_page_breaks(
         literal_text=literal_text,
         escape_literal_text=escape_literal_text,
         text_transform=text_transform,
+        navigation=navigation,
     )
