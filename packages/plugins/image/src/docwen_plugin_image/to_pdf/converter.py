@@ -2,44 +2,27 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
 
-from docwen_core.paths import input_stem
-from docwen_core.tempfiles import TemporaryDirectory
-from docwen_plugin_image._common import (
-    file_size,
-    new_artifact_id,
-    save_image_with_options,
-    source_format_from_context,
-)
+from docwen_core.errors import CancellationRequested
+from docwen_plugin_image._common import file_size, new_artifact_id
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
 
 
-def _layout_fun(quality_mode: str, is_landscape: bool):
+def _layout_fun(quality_mode: str):
     import img2pdf
 
-    if quality_mode == "original":
-        return None
-    if quality_mode == "a4":
-        pagesize = (
-            (img2pdf.mm_to_pt(297), img2pdf.mm_to_pt(210))
-            if is_landscape
-            else (img2pdf.mm_to_pt(210), img2pdf.mm_to_pt(297))
-        )
-        return img2pdf.get_layout_fun(pagesize)
-    if quality_mode == "a3":
-        pagesize = (
-            (img2pdf.mm_to_pt(420), img2pdf.mm_to_pt(297))
-            if is_landscape
-            else (img2pdf.mm_to_pt(297), img2pdf.mm_to_pt(420))
-        )
-        return img2pdf.get_layout_fun(pagesize)
-    return None
+    paper = {"a4": (210, 297), "a3": (297, 420)}.get(quality_mode)
+    if paper is None:
+        return img2pdf.default_layout_fun
+    width, height = paper
+    return img2pdf.get_layout_fun((img2pdf.mm_to_pt(width), img2pdf.mm_to_pt(height)), auto_orient=True)
 
 
 class ImageToPdfConverter:
@@ -63,33 +46,24 @@ class ImageToPdfConverter:
         context.progress.report_progress(0.0, "Starting image to PDF conversion")
 
         mpo_frame_count = 0
+        output_path = ""
+        complete = False
         try:
             import img2pdf
 
-            with TemporaryDirectory() as temp_dir:
-                source_for_pdf = input_path
-                source_format = source_format_from_context(context)
-                if source_format == "bmp":
-                    source_for_pdf = str(Path(temp_dir) / f"{input_stem(input_path)}.png")
-                    with Image.open(input_path) as img:
-                        save_image_with_options(img, source_for_pdf, "png", {"compress_mode": "lossless"})
+            with Image.open(input_path) as img:
+                if img.format == "MPO":
+                    mpo_frame_count = int(getattr(img, "n_frames", 1))
 
-                with Image.open(source_for_pdf) as img:
-                    width, height = img.size
-                    is_landscape = width > height
-                    if img.format == "MPO":
-                        mpo_frame_count = int(getattr(img, "n_frames", 1))
-
-                layout = _layout_fun(str(quality_mode), is_landscape)
-                if layout is None:
-                    pdf_bytes = img2pdf.convert(source_for_pdf)
-                else:
-                    pdf_bytes = img2pdf.convert(source_for_pdf, layout_fun=layout)
-                if pdf_bytes is None:
-                    raise RuntimeError("img2pdf did not return PDF bytes")
-
+            # Let img2pdf read the original image's physical resolution. Its
+            # layout callback is evaluated for each page of a multiframe input.
             output_path = context.workspace.create_artifact_path("primary", ".pdf")
-            Path(output_path).write_bytes(pdf_bytes)
+            with Path(output_path).open("wb") as destination:
+                img2pdf.convert(input_path, layout_fun=_layout_fun(str(quality_mode)), outputstream=destination)
+            context.cancellation.check()
+            complete = True
+        except CancellationRequested:
+            raise
         except Exception:
             context.logger.error("Image to PDF failed")
             message = "Image to PDF conversion failed."
@@ -101,6 +75,11 @@ class ImageToPdfConverter:
                 ),
                 diagnostics=[ConversionDiagnostic(level="error", message=message, code="IMG2PDF-ERROR")],
             )
+
+        finally:
+            if output_path and not complete:
+                with suppress(OSError):
+                    Path(output_path).unlink(missing_ok=True)
 
         artifact = ArtifactManifest(
             artifact_id=new_artifact_id(),
