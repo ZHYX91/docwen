@@ -478,6 +478,11 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument("--coverage", action="store_true", help="Measure full-suite coverage and all domain reports.")
     parser.add_argument(
+        "--windows-shard-trial",
+        choices=("control", "apps-plugins", "remaining"),
+        help="Run the Windows scheduling experiment and export data for its separate comparison.",
+    )
+    parser.add_argument(
         "--report-output", type=Path, help="Export compact reports to a new external directory before cleanup."
     )
     parser.add_argument(
@@ -511,6 +516,9 @@ def main(argv: list[str]) -> int:
         parser.error("--compact-coverage requires --coverage and --report-output")
     if args.report_output and args.skip_pytest:
         parser.error("--report-output requires pytest")
+    if args.windows_shard_trial and not (args.tests_only and args.coverage and args.report_output):
+        parser.error("--windows-shard-trial requires --tests-only --suite full --coverage and --report-output")
+    partial_coverage = args.windows_shard_trial in ("apps-plugins", "remaining")
 
     repo_root = Path(__file__).resolve().parents[1]
     try:
@@ -627,11 +635,15 @@ def main(argv: list[str]) -> int:
                 pytest_cmd += ["-m", _platform_mark_expr(f"(({FAST_MARK_EXPR}) or ({RELEASE_GATE_MARK_EXPR}))")]
             environment = _runtime_environment_for_view(pytest_environment, runtime_view)
             if args.coverage:
-                pytest_cmd += qa_reports.coverage_arguments(repo_root, runtime_view)
+                pytest_cmd += qa_reports.coverage_arguments(repo_root, runtime_view, partial=partial_coverage)
                 environment["COVERAGE_FILE"] = str(runtime_view / ".coverage")
                 environment["DOCWEN_TEST_ALLOW_COVERAGE_TRACE"] = "1"
             if args.report_output:
                 pytest_cmd += ["-p", "tests._pytest_hooks.progress"]
+            if args.windows_shard_trial:
+                pytest_cmd += ["-p", "tools.ci_shard_trial.plugin"]
+                environment["DOCWEN_CI_TRIAL_GROUP"] = args.windows_shard_trial
+                environment["DOCWEN_CI_TRIAL_OUTPUT"] = str(runtime_view / PYTEST_REPORT_NAME)
             with _timed_phase("pytest process"):
                 return_code = _run(pytest_cmd, env=environment)
         except KeyboardInterrupt:
@@ -668,7 +680,7 @@ def main(argv: list[str]) -> int:
             return 2
         if return_code is None:
             raise RuntimeError("pytest runner returned no status")
-        if args.coverage:
+        if args.coverage and not partial_coverage:
             with _timed_phase("coverage gates"):
                 for command in qa_reports.coverage_checks(runtime_root):
                     code = _run([sys.executable, *command], env=workspace_environment)
@@ -682,6 +694,7 @@ def main(argv: list[str]) -> int:
                         coverage=args.coverage,
                         exit_code=return_code,
                         coverage_detail=not args.compact_coverage,
+                        shard_trial=args.windows_shard_trial,
                     )
             except (OSError, ValueError) as error:
                 print(f"[qa] compact report export failed: {error}", file=sys.stderr)

@@ -1,0 +1,131 @@
+name: Windows shard trial
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/windows-shard-trial.yml
+      - tools/ci_shard_trial/**
+      - tools/qa.py
+      - tools/qa_reports.py
+      - tests/test_repo/test_ci_shard_trial.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-shard-trial-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: "1"
+  DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
+  QT_QPA_PLATFORM: offscreen
+  DOCWEN_PYTEST_XDIST: "1"
+  DOCWEN_PYTEST_XDIST_WORKERS: "auto"
+
+jobs:
+  control:
+    if: &trial github.event.pull_request.number == 198
+    name: Windows full control
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      TRIAL_GROUP: control
+      ARTIFACT: trial-control
+    steps: &run-tests
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - &setup
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.0"
+          python-version: "3.12.13"
+          enable-cache: true
+      - &install
+        name: Install exact lockfile
+        run: uv sync --frozen --extra test --extra dev --extra lint
+      - name: Run selected Windows tests with branch coverage
+        shell: pwsh
+        run: |
+          uv run python tools/qa.py --tests-only --suite full --coverage --windows-shard-trial "$env:TRIAL_GROUP" `
+            --pytest-runtime-root "$env:RUNNER_TEMP/docwen-qa-runtime" --own-pytest-runtime `
+            --report-output "$env:RUNNER_TEMP/docwen-qa-reports"
+          exit $LASTEXITCODE
+      - name: Save test inventory, outcomes and coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ${{ env.ARTIFACT }}
+          path: ${{ runner.temp }}/docwen-qa-reports/
+          if-no-files-found: error
+          retention-days: 7
+
+  shards:
+    if: *trial
+    name: Windows shard ${{ matrix.group }}
+    runs-on: windows-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [apps-plugins, remaining]
+    env:
+      TRIAL_GROUP: ${{ matrix.group }}
+      ARTIFACT: trial-shard-${{ matrix.group }}
+    steps: *run-tests
+
+  merge:
+    name: Merge Windows shard coverage
+    needs: shards
+    runs-on: windows-latest
+    steps:
+      - *checkout
+      - *setup
+      - *install
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: trial-shard-*
+          path: ${{ runner.temp }}/inputs
+      - name: Apply the existing coverage gates to both shards together
+        shell: pwsh
+        run: |
+          uv run python -m tools.ci_shard_trial.compare merge "$env:RUNNER_TEMP/inputs/trial-shard-apps-plugins" `
+            "$env:RUNNER_TEMP/inputs/trial-shard-remaining" "$env:RUNNER_TEMP/merged"
+          exit $LASTEXITCODE
+      - name: Save combined coverage and gate results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: merged-windows-coverage
+          path: ${{ runner.temp }}/merged/
+          if-no-files-found: error
+          retention-days: 7
+
+  compare:
+    name: Compare full and sharded Windows evidence
+    needs: [control, shards]
+    runs-on: windows-latest
+    steps:
+      - *checkout
+      - *setup
+      - *install
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: trial-*
+          path: ${{ runner.temp }}/inputs
+      - name: Compare test IDs, outcomes, exclusions and executed lines and arcs
+        shell: pwsh
+        run: |
+          uv run python -m tools.ci_shard_trial.compare "$env:RUNNER_TEMP/inputs/trial-control" `
+            "$env:RUNNER_TEMP/inputs/trial-shard-apps-plugins" "$env:RUNNER_TEMP/inputs/trial-shard-remaining" `
+            "$env:RUNNER_TEMP/comparison"
+          exit $LASTEXITCODE
+      - name: Save comparison including any differences
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: windows-evidence-comparison
+          path: ${{ runner.temp }}/comparison/
+          if-no-files-found: error
+          retention-days: 7

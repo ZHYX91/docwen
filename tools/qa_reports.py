@@ -18,7 +18,10 @@ VISIBILITY_REPORTS = (
 )
 
 
-def coverage_arguments(repo_root: Path, runtime: Path) -> list[str]:
+def coverage_arguments(repo_root: Path, runtime: Path, *, partial: bool = False) -> list[str]:
+    if partial:
+        # The trial applies the configured threshold once to the combined branch data.
+        return ["--cov", "--cov-config=pyproject.toml", "--cov-report=", "--cov-fail-under=0"]
     config = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
     threshold = config["tool"]["coverage"]["report"]["fail_under"]
     return [
@@ -40,7 +43,13 @@ def coverage_checks(runtime: Path) -> list[list[str]]:
 
 
 def export_reports(
-    runtime: Path, output: Path, *, coverage: bool, exit_code: int, coverage_detail: bool = True
+    runtime: Path,
+    output: Path,
+    *,
+    coverage: bool,
+    exit_code: int,
+    coverage_detail: bool = True,
+    shard_trial: str | None = None,
 ) -> None:
     """Copy only named reports; never preserve test fixtures, cache, or credentials."""
 
@@ -52,7 +61,14 @@ def export_reports(
         if report_root.is_symlink() or getattr(info, "st_file_attributes", 0) & 0x400:
             raise ValueError("QA reports cannot traverse a link or reparse point")
     sources = [(report_root / name, name) for name in VISIBILITY_REPORTS]
-    if coverage:
+    if shard_trial:
+        sources.extend(
+            [
+                (runtime / ".coverage", "coverage-data.sqlite"),
+                (report_root / "node-evidence.json", "node-evidence.json"),
+            ]
+        )
+    if coverage and shard_trial in (None, "control"):
         sources.append((runtime / "coverage.xml", "coverage.xml"))
     records = {}
     output.mkdir()  # Exclusive; validation must already have checked the owning parent.
@@ -86,5 +102,7 @@ def export_reports(
             stream.write(content)
         records[name] = {"bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()}
     summary = {"schema": "docwen-qa-reports-v1", "exitCode": exit_code, "coverage": coverage, "reports": records}
+    if shard_trial:
+        summary["shardTrial"] = shard_trial
     with (output / "summary.json").open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(summary, indent=2) + "\n")
