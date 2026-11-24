@@ -1259,6 +1259,7 @@ format_combo_tooltip = "Выберите целевой формат табли�
 window_title = "Редактор схем"
 scheme_list = "Схемы"
 default_scheme = "По умолчанию:"
+insert_placeholder = "Вставить заполнитель для заголовка уровня {level}"
 level_format_config = "Формат уровня"
 realtime_preview = "Предпросмотр"
 format_help = "📖 Помощь"

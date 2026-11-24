@@ -15,6 +15,7 @@ from typing import Any, ClassVar
 
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import (
+    QBoxLayout,
     QComboBox,
     QDialog,
     QFormLayout,
@@ -180,17 +181,33 @@ class NumberingAddDialog(QDialog):
         if event.type() == QEvent.Type.PaletteChange and hasattr(self, "_compat_label"):
             self._update_word_native_compatibility()
 
+    def event(self, event: QEvent) -> bool:
+        result = super().event(event)
+        if event.type() in (QEvent.Type.Resize, QEvent.Type.LayoutRequest) and hasattr(self, "_level_grid"):
+            edit = self.level_edits[1]
+            # Reserve a natural line-edit width alongside the localized level label and controls.
+            form_width = (
+                self._level_grid.minimumSize().width() - edit.minimumSizeHint().width() + edit.sizeHint().width()
+            )
+            list_width = self._panels.itemAt(0).minimumSize().width()
+            available = self.layout().contentsRect().width() - self._panels.spacing()
+            stacked = available < max(list_width + form_width, form_width * 3 // 2)
+            direction = QBoxLayout.Direction.TopToBottom if stacked else QBoxLayout.Direction.LeftToRight
+            if self._panels.direction() != direction:
+                self._panels.setDirection(direction)
+        return result
+
     # ── UI construction ──────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
 
-        content = QHBoxLayout()
-        root.addLayout(content, 1)
+        self._panels = QHBoxLayout()
+        root.addLayout(self._panels, 1)
 
         # -- left panel: scheme list + buttons --
         left = QVBoxLayout()
-        content.addLayout(left, 1)
+        self._panels.addLayout(left, 1)
         left.addWidget(QLabel(t("editors.numbering_add.scheme_list"), self))
 
         self.scheme_list = QListWidget(self)
@@ -231,7 +248,7 @@ class NumberingAddDialog(QDialog):
         right = QVBoxLayout(form_content)
         right.setContentsMargins(0, 0, 0, 0)
         form_scroll.setWidget(form_content)
-        content.addWidget(form_scroll, 2)
+        self._panels.addWidget(form_scroll, 2)
 
         top_row = QHBoxLayout()
         top_row.addWidget(QLabel(t("editors.numbering_add.default_scheme"), self))
@@ -255,7 +272,7 @@ class NumberingAddDialog(QDialog):
         right.addLayout(form)
 
         right.addWidget(QLabel(t("editors.numbering_add.level_format_config"), self))
-        level_grid = QGridLayout()
+        level_grid = self._level_grid = QGridLayout()
         self.level_edits: dict[int, QLineEdit] = {}
         for idx in range(1, 10):
             label = QLabel(t(f"editors.numbering_add.level_{idx}"), self)
@@ -263,6 +280,10 @@ class NumberingAddDialog(QDialog):
             edit.textChanged.connect(lambda text, level=idx: self._on_level_changed(level, text))
             placeholder_btn = QToolButton(self)
             placeholder_btn.setText("+")
+            action_name = t("editors.numbering_add.insert_placeholder", level=idx)
+            placeholder_btn.setAccessibleName(action_name)
+            placeholder_btn.setToolTip(action_name)
+            label.setBuddy(edit)
             placeholder_btn.clicked.connect(lambda _checked=False, level=idx: self._show_placeholder_menu(level))
             status_label = QLabel("", self)
             set_metric(status_label, "setMinimumWidth", 24)
