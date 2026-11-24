@@ -170,3 +170,65 @@ def test_narrow_action_button_keeps_icon_separate_from_wrapped_caption(
     else:
         assert min(x for x, _y in red_pixels) > raster.width() * 2 // 3
     assert button.height() >= button.heightForWidth(button.width())
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_arrow_uses_theme_alpha_in_painted_and_high_dpi_icons(qapp, theme) -> None:
+    from PySide6.QtCore import QRect
+    from PySide6.QtGui import QImage, QPainter, QPalette
+
+    from docwen_gui.resources import load_svg_icon
+    from docwen_gui.styles.theme_manager import ThemeManager
+
+    original = qapp.palette()
+    palette = ThemeManager._build_application_palette(theme)
+    icon = load_svg_icon("move_up.svg")
+    assert isinstance(icon, QIcon)
+    try:
+        qapp.setPalette(palette)
+        for mode, group in (
+            (QIcon.Mode.Normal, QPalette.ColorGroup.Active),
+            (QIcon.Mode.Disabled, QPalette.ColorGroup.Disabled),
+        ):
+            expected = palette.color(group, QPalette.ColorRole.WindowText)
+            painted = QImage(24, 24, QImage.Format.Format_ARGB32_Premultiplied)
+            painted.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(painted)
+            icon.paint(painter, QRect(0, 0, 24, 24), Qt.AlignmentFlag.AlignCenter, mode)
+            painter.end()
+            for raster in (painted, icon.pixmap(QSize(24, 24), 2.0, mode).toImage()):
+                peak = max(
+                    raster.pixelColor(x, y).alpha() for x in range(raster.width()) for y in range(raster.height())
+                )
+                assert peak == pytest.approx(expected.alpha(), abs=1)
+    finally:
+        qapp.setPalette(original)
+
+
+def test_disabled_theme_paint_preserves_authored_svg_colors_and_opacity(qapp, tmp_path, monkeypatch) -> None:
+    from PySide6.QtGui import QColor, QPalette
+
+    from docwen_gui import resources
+
+    asset = tmp_path / "mixed.svg"
+    asset.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="10">'
+        '<rect width="10" height="10" fill="#000" fill-opacity="0.5"/>'
+        '<path d="M 10 5 H 20" stroke="black" stroke-width="4"/>'
+        '<rect x="20" width="10" height="10" fill="#3b82f6"/></svg>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(resources, "asset_path", lambda _path: asset)
+    icon = resources.load_svg_asset_icon(str(asset))
+    assert isinstance(icon, QIcon)
+    original = qapp.palette()
+    try:
+        palette = QPalette(original)
+        palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(30, 60, 90, 128))
+        qapp.setPalette(palette)
+        raster = icon.pixmap(QSize(30, 10), 1.0, QIcon.Mode.Disabled).toImage()
+        assert raster.pixelColor(5, 5).alpha() == pytest.approx(64, abs=1)
+        assert raster.pixelColor(15, 5).getRgb() == pytest.approx((30, 60, 90, 128), abs=2)
+        assert raster.pixelColor(25, 5) == QColor("#3b82f6")
+    finally:
+        qapp.setPalette(original)
