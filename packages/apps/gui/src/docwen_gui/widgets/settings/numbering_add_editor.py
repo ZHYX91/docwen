@@ -189,8 +189,8 @@ class NumberingAddDialog(QDialog):
             form_width = (
                 self._level_grid.minimumSize().width() - edit.minimumSizeHint().width() + edit.sizeHint().width()
             )
-            list_width = self._panels.itemAt(0).minimumSize().width()
-            available = self.layout().contentsRect().width() - self._panels.spacing()
+            list_width = self._scheme_list_layout.minimumSize().width()
+            available = self._panels.contentsRect().width() - self._panels.spacing()
             stacked = available < max(list_width + form_width, form_width * 3 // 2)
             direction = QBoxLayout.Direction.TopToBottom if stacked else QBoxLayout.Direction.LeftToRight
             if self._panels.direction() != direction:
@@ -206,7 +206,7 @@ class NumberingAddDialog(QDialog):
         root.addLayout(self._panels, 1)
 
         # -- left panel: scheme list + buttons --
-        left = QVBoxLayout()
+        left = self._scheme_list_layout = QVBoxLayout()
         self._panels.addLayout(left, 1)
         left.addWidget(QLabel(t("editors.numbering_add.scheme_list"), self))
 
