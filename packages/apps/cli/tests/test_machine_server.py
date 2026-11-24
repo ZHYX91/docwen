@@ -15,6 +15,7 @@ from docwen_application.conversion_contracts import (
 )
 from docwen_cli.machine.contracts import MachineContractValidator
 from docwen_cli.machine.framing import MAX_MESSAGE_BYTES, FrameWriter, read_frame
+from docwen_cli.machine.query_service import MachineQueryService
 from docwen_cli.machine.server import MachineProtocolServer
 from docwen_core.models import (
     ArtifactBundle,
@@ -431,6 +432,21 @@ def test_typed_query_and_gui_methods_are_schema_valid() -> None:
     assert responses[2]["result"]["content_sha256"] == "0" * 64
     assert responses[3]["result"]["resources"][0]["id"] == "standard"
     assert responses[4]["result"] == {"action": "status", "accepted": True, "running": False}
+
+
+def test_health_discovery_failure_keeps_the_initialized_session_usable() -> None:
+    class UnavailableRuntime:
+        def describe_runtime_capabilities(self) -> dict[str, Any]:
+            raise OSError("Runtime unavailable")
+
+    requests = [_initialize(), _request("health/check", 2, {}), _request("capability/list", 3, {})]
+    exit_code, responses = _run(requests, _Service(), MachineQueryService(UnavailableRuntime()))
+
+    assert exit_code == 0
+    assert responses[1]["id"] == 2
+    assert responses[1]["error"]["data"]["code"] == "capability_unavailable"
+    assert responses[2]["id"] == 3
+    assert responses[2]["result"]["capabilities"][0]["capability_id"] == "convert.markdown.to_docx"
 
 
 def test_method_before_initialize_is_rejected_without_starting_task() -> None:

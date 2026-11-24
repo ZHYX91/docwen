@@ -33,7 +33,10 @@ class MachineQueryService:
         self._gui_control = gui_control
 
     def health_check(self) -> dict[str, Any]:
-        projection = runtime_capability_projection(self._controller)
+        try:
+            projection = runtime_capability_projection(self._controller)
+        except CapabilityUnavailableError as exc:
+            raise MachineQueryError("capability_unavailable", str(exc)) from exc
         checks = collect_doctor_checks(self._controller, projection)
         return {
             "all_ok": all(check.ok for check in checks),
