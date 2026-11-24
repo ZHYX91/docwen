@@ -60,7 +60,7 @@ uv run --frozen docwen-gui
 uv run --frozen docwen --help
 ```
 
-`uv run --frozen` usa o ambiente sincronizado sem ativação manual. A CI e as compilações de produção usam uv 0.12.0; a manutenção de dependências aceita versões 0.12.x compatíveis. `pip install -e` não é suportado porque o pip não aplica a exclusão específica de dependências deste repositório.
+`uv run --frozen` usa o ambiente sincronizado sem ativação manual. A CI e as compilações de produção usam uv 0.12.0. `pip install -e` não é suportado porque o pip não aplica a exclusão específica de dependências deste repositório.
 
 ### Observações para macOS
 
