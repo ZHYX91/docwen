@@ -250,3 +250,21 @@ def test_empty_optimization_group_adds_neither_heading_nor_placeholder(qapp, mon
         assert window._tab_widget.count() == window._compact_navigation.count() == len(general_keys)
     finally:
         window.close()
+
+
+def test_selected_page_indicator_follows_live_layout_direction(dialog, qapp) -> None:
+    dialog.setStyleSheet(build_settings_stylesheet("light"))
+    button = _item(dialog, "general")
+    assert button.isChecked()
+    button.clearFocus()
+    for direction in (Qt.LayoutDirection.LeftToRight, Qt.LayoutDirection.RightToLeft, Qt.LayoutDirection.LeftToRight):
+        dialog.setLayoutDirection(direction)
+        qapp.processEvents()
+        image = button.grab().toImage()
+        left = image.pixelColor(0, image.height() // 2)
+        right = image.pixelColor(image.width() - 1, image.height() // 2)
+        highlight = button.palette().color(QPalette.ColorRole.Highlight)
+        assert (left == highlight, right == highlight) == (
+            direction == Qt.LayoutDirection.LeftToRight,
+            direction == Qt.LayoutDirection.RightToLeft,
+        )
