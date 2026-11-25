@@ -368,11 +368,12 @@ class DocxValidator:
             # Determine if this is a corrupted document error
             error_type = "conversion_failed"
             diag_code = DIAGNOSTIC_ERROR
-            msg = str(exc)
-            if "not a valid" in msg.lower() or "corrupt" in msg.lower():
+            detail = str(exc).lower()
+            msg = "Could not complete DOCX proofreading."
+            if "not a valid" in detail or "corrupt" in detail:
                 error_type = "invalid_input"
                 diag_code = DIAGNOSTIC_CORRUPTED
-                msg = f"Corrupted or invalid DOCX file: {exc}"
+                msg = "Corrupted or invalid DOCX file."
 
             return ConversionResult(
                 task_id=task_id,
@@ -385,7 +386,7 @@ class DocxValidator:
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
-                        message=f"DOCX proofread failed: {exc}",
+                        message=msg,
                         code=diag_code,
                     )
                 ],

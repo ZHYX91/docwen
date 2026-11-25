@@ -373,3 +373,25 @@ separate source-validation capability, not an implementation of this operation.
 `proofread` 只对源 Markdown→DOCX 能力开放。省略对象保持旧行为；空对象启用配置默认四规则；成员逐项覆盖配置，
 四项全 false 则明确跳过。校对发生在生成 DOCX 后，通过批注提示，不改源 Markdown；失败或取消不返回部分成功产物。
 客户端须按发现的 schema 判断支持，不能静默丢弃用户开启的校对。resolved-v4 和独立 Markdown 校对保持原合同。
+
+## Proofreading an existing DOCX / 校对已有 DOCX
+
+Discover `validate.docx` to proofread one native DOCX (`kind=document`, `role=source`).
+The runtime route requires `python.docx`. Its closed options object accepts the same four rule
+switches listed above, directly as optional booleans. Supplied values override `proofread.engine`;
+omitted values inherit the configuration. A successful plan lists all four effective booleans.
+Acceptance rechecks them. A changed effective selection requires a new plan. If all four are off,
+planning or acceptance returns `invalid_request / proofread_no_rules_enabled`: no task runs.
+An untrusted configuration returns `unavailable / proofread_config_unavailable` at admission.
+
+With any rule enabled, successful execution delivers one DOCX document as the preferred primary
+Bundle v3 entry, including when the validator finds zero issues. The validator reviews main-story
+text, including table cells, and annotates findings with Word comments. Existing text and comments
+stay in the copy. Where a finding cannot be anchored, inspect the validator's diagnostics (including
+`PROOFREAD-COMMENTS-PARTIAL`). The input is never overwritten. No report or intermediate file is
+delivered. Consumers discover this capability independently of Markdown report generation and
+source Markdown export.
+
+通过 `validate.docx` 对一个已有 DOCX 执行校对。四项布尔开关直接放在 `options` 内，省略项继承配置。
+计划返回实际开关，接受时复核。全部关闭会在派发前以 `proofread_no_rules_enabled` 拒绝；
+已执行且零问题仍交付一份 DOCX 副本。原文、原有批注和原件均保留，无法精确加批注时须检查诊断。

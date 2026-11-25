@@ -13,6 +13,7 @@ from docwen_application.conversion_contracts import (
     CSV_MEDIA_TYPE,
     DOCX_MEDIA_TYPE,
     DOCX_TO_MARKDOWN_CAPABILITY_ID,
+    DOCX_VALIDATE_CAPABILITY_ID,
     ENEX_MEDIA_TYPE,
     ENEX_TO_MARKDOWN_CAPABILITY_ID,
     GIF_MEDIA_TYPE,
@@ -222,18 +223,21 @@ _MARKDOWN_TO_DOCX_OPTIONS = _strict_options(
 )
 
 
+_DOCX_PROOFREAD_RULES = {
+    "enable_symbol_pairing": {"type": "boolean"},
+    "enable_symbol_correction": {"type": "boolean"},
+    "enable_typos_rule": {"type": "boolean"},
+    "enable_sensitive_word": {"type": "boolean"},
+}
+
+
 _MARKDOWN_SOURCE_TO_DOCX_OPTIONS = _strict_options(
     {
         **_MARKDOWN_TO_DOCX_OPTIONS["properties"],
         "markdown_resource_bindings": MARKDOWN_RESOURCE_BINDINGS_SCHEMA,
         "proofread": {
             "type": "object",
-            "properties": {
-                "enable_symbol_pairing": {"type": "boolean"},
-                "enable_symbol_correction": {"type": "boolean"},
-                "enable_typos_rule": {"type": "boolean"},
-                "enable_sensitive_word": {"type": "boolean"},
-            },
+            "properties": _DOCX_PROOFREAD_RULES,
             "required": [],
             "additionalProperties": False,
         },
@@ -719,6 +723,18 @@ CAPABILITY_BINDINGS = (
         limitations=_PHYSICAL_PAGE_OCR_LIMITATIONS,
         dependency_ids=("python.pillow", "python.rapidocr"),
         project_runtime_limitations=False,
+    ),
+    CapabilityBinding(
+        capability_id=DOCX_VALIDATE_CAPABILITY_ID,
+        input_media_type=DOCX_MEDIA_TYPE,
+        input_format="docx",
+        input_category=CATEGORY_DOCUMENT,
+        target_format="docx",
+        output_media_type=DOCX_MEDIA_TYPE,
+        runtime_route_id="docwen_plugin_proofread:docx:docx:validate",
+        operation="validate",
+        action_name="validate",
+        options_schema=_strict_options(_DOCX_PROOFREAD_RULES),
     ),
     CapabilityBinding(
         capability_id=MARKDOWN_VALIDATE_CAPABILITY_ID,

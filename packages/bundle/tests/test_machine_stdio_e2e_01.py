@@ -161,6 +161,7 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path, r
         "convert.png.to_ocr_markdown",
         "convert.markdown_tables.to_csv",
         "convert.tiff_frames.to_png",
+        "validate.docx",
         "validate.markdown",
         "transform.markdown.heading_numbering",
         "merge.pdf.documents",
