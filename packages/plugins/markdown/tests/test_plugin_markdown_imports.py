@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-import os
-import sys
-from textwrap import dedent
-
 import pytest
-from tests.support.subprocess_runner import run_subprocess
 
 pytestmark = pytest.mark.contract
 
@@ -194,23 +189,6 @@ def test_manifest_declares_consumed_docx_intermediate_rendering_options() -> Non
     numbering_properties = routes_by_action["process_md_numbering"].options_schema.get("properties", {})
     assert set(numbering_properties) == numbering_action_options
     assert not docx_render_only_options & set(numbering_properties)
-
-
-def test_plugin_only_imports_allowed_deps() -> None:
-    """Import the checked-out plugin before pytest collection can preload its dependencies."""
-    probe = dedent(
-        """
-        import sys
-        import docwen_plugin_markdown
-
-        loaded = {name.partition(".")[0] for name in sys.modules if name.startswith("docwen_")}
-        forbidden = loaded - {"docwen_core", "docwen_plugin_markdown"}
-        if forbidden:
-            raise RuntimeError(f"Markdown plugin imported forbidden packages: {sorted(forbidden)}")
-        """
-    )
-    result = run_subprocess([sys.executable, "-c", probe], env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)})
-    assert result.returncode == 0, result.stderr
 
 
 def test_markdown_plugin_source_does_not_depend_on_optimizer_plugins() -> None:

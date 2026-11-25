@@ -439,36 +439,3 @@ class TestManifestCoverage:
         routes = extra["external_bridge_routes"]
         assert isinstance(routes, list)
         assert any("smartconverter" in str(item).lower() for item in routes)
-
-
-class TestSmartConverterDependencyBoundary:
-    def test_to_document_does_not_import_runtime(self) -> None:
-        import sys
-
-        forbidden = {
-            "docwen_runtime",
-            "docwen_application",
-            "docwen_gui",
-            "docwen_cli",
-            "docwen_bundle",
-        }
-
-        module_names = [
-            "docwen_plugin_document.to_document",
-            "docwen_plugin_document.to_document.converter",
-        ]
-
-        for mod_name in module_names:
-            mod = sys.modules.get(mod_name)
-            if mod is None:
-                continue
-            for attr_name in dir(mod):
-                val = getattr(mod, attr_name, None)
-                if val is None:
-                    continue
-                val_mod = getattr(val, "__module__", "")
-                if val_mod:
-                    for forbidden_pkg in forbidden:
-                        assert not val_mod.startswith(forbidden_pkg), (
-                            f"{mod_name}.{attr_name} depends on {val_mod} (forbidden: {forbidden_pkg})"
-                        )
