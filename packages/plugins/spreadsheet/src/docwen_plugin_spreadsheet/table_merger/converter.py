@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.errors import CancellationRequested
+from docwen_core.spreadsheet_projection import SpreadsheetProjectionLimitError
 from docwen_plugin_spreadsheet.table_merger.inputs import MissingFormulaCacheError, load_merge_workbook
 from docwen_plugin_spreadsheet.table_merger.semantics import MergeSummary, coverage_relation, value_identity
 from docwen_plugin_spreadsheet.table_merger.text_limits import MergeCellTextTooLongError, check_cell_text
@@ -141,7 +142,7 @@ class TableMergerConverter:
                 wb = load_merge_workbook(
                     base_path, base=True, cancel_check=context.cancellation.check, source_name=base_source_path
                 )
-            except (MissingFormulaCacheError, CancellationRequested):
+            except (MissingFormulaCacheError, SpreadsheetProjectionLimitError, CancellationRequested):
                 raise
             except Exception as exc:
                 raise RuntimeError(f"Failed to merge '{Path(base_path).name}': {exc}") from exc
@@ -166,7 +167,7 @@ class TableMergerConverter:
                         cancel_check=context.cancellation.check,
                         source_name=source_paths[i + 1],
                     )
-                except (MissingFormulaCacheError, CancellationRequested):
+                except (MissingFormulaCacheError, SpreadsheetProjectionLimitError, CancellationRequested):
                     raise
                 except Exception as exc:
                     raise RuntimeError(f"Failed to merge '{Path(collect_file).name}': {exc}") from exc
@@ -219,7 +220,10 @@ class TableMergerConverter:
                 wb.close()
             code = "MERGE-PARSE-ERROR"
             message = str(exc)
-            if isinstance(exc, MissingFormulaCacheError):
+            if isinstance(exc, SpreadsheetProjectionLimitError):
+                code = exc.diagnostic_code
+                message = f"{exc} Merge inputs: {', '.join(merged_sources)}."
+            elif isinstance(exc, MissingFormulaCacheError):
                 code = "MERGE-FORMULA-CACHE-MISSING"
             elif isinstance(exc, MergeCellTextTooLongError):
                 code = "MERGE-XLSX-CELL-TEXT-TOO-LONG"

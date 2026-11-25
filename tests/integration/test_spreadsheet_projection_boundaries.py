@@ -58,7 +58,7 @@ def test_sparse_delimited_grid_retains_coordinates_without_creating_blank_cells(
     expected = [[""] * 250 for _ in range(250)]
     expected[249][249] = "ONLY"
     assert actual == expected
-    assert len(loaded) == 2
+    assert len(loaded) == 1
     assert all(set(view.worksheets[0]._cells) == {(250, 250)} for view in loaded)
 
 
@@ -200,12 +200,12 @@ def test_projection_budget_rejects_before_expansion_or_final_publication(
     if kind == "merge":
         assert loaded == []
     else:
-        assert len(loaded) == 2
+        assert len(loaded) == 1
         assert all(view in closed for view in loaded)
 
 
 @pytest.mark.parametrize("phase", ["formula-scan", "grid"])
-def test_real_runtime_cancellation_closes_both_views_without_partial_output(
+def test_real_runtime_cancellation_closes_cached_workbook_without_partial_output(
     tmp_path: Path, round_trip_runtime: Any, monkeypatch: pytest.MonkeyPatch, phase: str
 ) -> None:
     import docwen_core.export_semantics as semantics
@@ -232,7 +232,7 @@ def test_real_runtime_cancellation_closes_both_views_without_partial_output(
     def capture(*args: Any, **kwargs: Any) -> Any:
         view = load(*args, **kwargs)
         loaded.append(view)
-        if phase == "formula-scan" and len(loaded) == 2:
+        if phase == "formula-scan":
             round_trip_runtime.cancel("spreadsheet-final-content")
         return view
 
@@ -259,7 +259,7 @@ def test_real_runtime_cancellation_closes_both_views_without_partial_output(
     assert result.error.error_type == "cancelled"
     assert result.artifacts == []
     assert not output.exists() or not list(output.rglob("*"))
-    assert len(loaded) == 2 and all(view in closed for view in loaded)
+    assert len(loaded) == 1 and all(view in closed for view in loaded)
     if phase == "grid":
         assert 32 <= built <= 1032
 

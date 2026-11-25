@@ -215,6 +215,33 @@ def test_cell_merge_keeps_sparse_inputs_sparse_and_counts_implicit_blanks(tmp_pa
     assert len(summary["locations"]["skipped"]) == 20
 
 
+@pytest.mark.parametrize("over_budget", ["base", "collect"])
+def test_merge_checks_sheet_budgets_before_loading_each_input(tmp_path, monkeypatch, over_budget):
+    from docwen_plugin_spreadsheet.table_merger import inputs
+
+    sources = {}
+    for name in ("base", "collect"):
+        path = tmp_path / f"{name}.xlsx"
+        _write(path, [["Key", "Value"]] if name == over_budget else [["Key"]])
+        sources[path] = path.read_bytes()
+
+    monkeypatch.setattr(inputs, "MAX_SPREADSHEET_PROJECTION_CELLS", 1)
+    loaded = []
+    load = openpyxl.load_workbook
+
+    def capture_load(stream, **kwargs):
+        loaded.append(Path(stream.name).name)
+        return load(stream, **kwargs)
+
+    monkeypatch.setattr(openpyxl, "load_workbook", capture_load)
+    result = _run(tmp_path)
+    assert not result.success and result.error.diagnostic_code == "SPREADSHEET-PROJECTION-LIMIT"
+    assert f"{over_budget}.xlsx" in result.error.message
+    assert not result.artifacts and not list((tmp_path / "staging").iterdir())
+    assert loaded == ([] if over_budget == "base" else ["base.xlsx"])
+    assert {path: path.read_bytes() for path in sources} == sources
+
+
 @pytest.mark.parametrize("mode", ["row", "col", "cell"])
 @pytest.mark.parametrize("formula_source", ["base", "collect"])
 def test_missing_formula_cache_stops_before_creating_output(tmp_path, mode, formula_source):

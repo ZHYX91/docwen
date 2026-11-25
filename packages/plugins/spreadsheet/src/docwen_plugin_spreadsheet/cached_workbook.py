@@ -3,14 +3,63 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from pathlib import Path
+from typing import TYPE_CHECKING
 from zipfile import ZipFile
 
-from lxml import etree
-from openpyxl.utils.cell import coordinate_to_tuple, get_column_letter
+from docwen_core.spreadsheet_package import ordinary_worksheet_parts, preflight_worksheet_allocations
 
-from docwen_core.spreadsheet_package import ordinary_worksheet_parts
+if TYPE_CHECKING:
+    from openpyxl import Workbook
 
 _MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+
+
+def load_cached_workbook(path: str, *, cancel_check: Callable[[], None], limit: int) -> Workbook:
+    """Check allocation budgets before opening the cached values of admitted XLSX content."""
+    import openpyxl
+
+    preflight_worksheet_allocations(path, cancel_check=cancel_check, limit=limit)
+    # File admission is content-based. Passing the stream preserves that decision
+    # even when the source name has a misleading extension.
+    with Path(path).open("rb") as stream:
+        return openpyxl.load_workbook(stream, data_only=True)
+
+
+def find_unavailable_formula_caches(
+    values_workbook: Workbook,
+    *,
+    input_path: str,
+    sheet_names: list[str] | None = None,
+    location_limit: int = 20,
+    cancel_check: Callable[[], None] | None = None,
+) -> tuple[int, list[str]]:
+    """Find formula cells whose cached scalar value is unavailable to openpyxl."""
+
+    count = 0
+    locations: list[str] = []
+
+    def visit(sheet_name: str, coordinate: str, known_empty: bool) -> None:
+        nonlocal count
+        if known_empty or values_workbook[sheet_name][coordinate].value is not None:
+            return
+        count += 1
+        if len(locations) < location_limit:
+            locations.append(f"{sheet_name}!{coordinate}")
+
+    visit_formula_caches(input_path, visit, sheet_names=sheet_names, cancel_check=cancel_check)
+    return count, locations
+
+
+def formula_cache_warning_message(count: int, locations: list[str]) -> str:
+    shown = ", ".join(locations)
+    omitted = count - len(locations)
+    suffix = f"; {omitted} more not listed" if omitted > 0 else ""
+    return (
+        f"{count} formula cell(s) have no usable cached value in this workbook and were exported as empty text. "
+        f"Locations: {shown}{suffix}. Recalculate and save the workbook in a spreadsheet application when values "
+        "are required. This warning does not establish whether any existing cached values are current."
+    )
 
 
 def visit_formula_caches(
@@ -26,6 +75,9 @@ def visit_formula_caches(
     Worksheet relationships exclude chartsheets and external relationships.
     Streams close even when the visitor or cancellation raises.
     """
+    from lxml import etree
+    from openpyxl.utils.cell import coordinate_to_tuple, get_column_letter
+
     selected = None if sheet_names is None else set(sheet_names)
     with ZipFile(path) as package:
         for name, part in ordinary_worksheet_parts(package):
