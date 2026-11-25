@@ -64,9 +64,6 @@ _HASH_CHUNK_BYTES = 1024 * 1024
 
 class _ExecutionController(Protocol):
     @property
-    def config_port(self) -> ConfigPort | None: ...
-
-    @property
     def has_runtime(self) -> bool: ...
 
     def describe_runtime_capabilities(self) -> dict[str, Any]: ...
@@ -533,7 +530,7 @@ class ConversionService:
                 )
         effective_options = resolve_conversion_options(request.options, binding)
         if binding.capability_id == DOCX_VALIDATE_CAPABILITY_ID:
-            config_port = self._controller.config_port
+            config_port: ConfigPort | None = getattr(self._controller, "config_port", None)
             try:
                 engine = config_port.get("proofread.engine", {}) if config_port is not None else {}
             except RuntimeError as exc:
@@ -547,7 +544,7 @@ class ConversionService:
                     "proofread_no_rules_enabled",
                     "DOCX proofreading requires at least one enabled rule.",
                 )
-        if binding.capability_id == MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID and "proofread" in effective_options:
+        elif binding.capability_id == MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID and "proofread" in effective_options:
             # Omitted switches inherit configuration, so only four explicit
             # false values can prove that no validator is needed at admission.
             checks = effective_options["proofread"]
