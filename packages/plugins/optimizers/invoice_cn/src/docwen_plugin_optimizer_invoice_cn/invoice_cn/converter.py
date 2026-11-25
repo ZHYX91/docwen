@@ -220,8 +220,8 @@ class InvoiceCnConverter:
 
         input_bytes = file_size(input_path)
 
+        context.cancellation.check()
         try:
-            context.cancellation.check()
             from docwen_plugin_optimizer_invoice_cn.invoice_cn.validation import validate_invoice
 
             if source_format in {"pdf", "ofd"} or ocr_succeeded:

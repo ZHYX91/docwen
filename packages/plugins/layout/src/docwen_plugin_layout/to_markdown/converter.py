@@ -693,6 +693,8 @@ class LayoutToMarkdownConverter:
                 ),
             )
 
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"Layout to Markdown failed: {exc}")
             return ConversionResult(
