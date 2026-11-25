@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import os
+from collections import Counter
 from collections.abc import Iterator
-from itertools import count
 from pathlib import Path
 from typing import Literal
 
@@ -74,16 +74,21 @@ def isolate_user_runtime_roots(tmp_path_factory: pytest.TempPathFactory) -> Iter
             os.environ[config_variable] = previous_config_root
 
 
-# Each xdist worker owns its basetemp. A new suffix also isolates repeated
-# executions of the same node in that worker.
-_case_numbers = count()
+@pytest.fixture(scope="session")
+def case_directory_counts() -> Counter[str]:
+    """Count repeated node IDs in this worker without enumerating directories."""
+    return Counter()
 
 
 @pytest.fixture
-def case_directory(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory) -> Path:
+def case_directory(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory, case_directory_counts: Counter[str]
+) -> Path:
     """Name the case's private directory without creating or scanning it."""
     digest = hashlib.sha256(request.node.nodeid.encode("utf-8")).hexdigest()[:12]
-    return tmp_path_factory.getbasetemp() / f"t{digest}{next(_case_numbers)}"
+    suffix = case_directory_counts[digest]
+    case_directory_counts[digest] += 1
+    return tmp_path_factory.getbasetemp() / f"t{digest}{suffix}"
 
 
 @pytest.fixture
