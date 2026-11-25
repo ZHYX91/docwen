@@ -42,7 +42,7 @@ def _save_screenshot(widget, name: str, screenshot_dir: Path) -> str | None:
 
 @pytest.fixture
 def window(qtbot, qapp):
-    """Create a fully set-up MainWindow with a null controller."""
+    """Return an exposed MainWindow with a null controller."""
     from docwen_gui.main_window import MainWindow
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
@@ -50,8 +50,8 @@ def window(qtbot, qapp):
     w = MainWindow(view_model=vm)
     w.setup_ui()
     qtbot.addWidget(w)
-    w.show()
-    qtbot.waitExposed(w)
+    with qtbot.waitExposed(w):
+        w.show()
     return w
 
 
