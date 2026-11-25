@@ -50,16 +50,30 @@ class TestCancellationToken:
         token.cancel()
         assert called == ["fired"]
 
-    def test_add_callback_when_already_cancelled(self) -> None:
+    @pytest.mark.parametrize("already_cancelled", [True, False])
+    def test_callbacks_can_read_and_reenter_the_cancelled_token(self, already_cancelled: bool) -> None:
         token = CancellationToken()
-        token.cancel()
-        called: list[str] = []
+        observed = []
 
-        def cb() -> None:
-            called.append("fired")
+        def callback() -> None:
+            observed.append(token.reason)
+            token.cancel("second request")
+            token.add_callback(lambda: observed.append(token.view().is_cancelled))
 
-        token.add_callback(cb)
-        assert called == ["fired"]  # called immediately
+        def run() -> None:
+            if already_cancelled:
+                token.cancel("first request")
+            token.add_callback(callback)
+            if not already_cancelled:
+                token.cancel("first request")
+            observed.append("returned")
+            token.cancel("repeated request")
+
+        worker = threading.Thread(target=run, daemon=True)
+        worker.start()
+        worker.join(timeout=5)
+        assert not worker.is_alive(), "cancellation callback deadlocked"
+        assert observed == ["first request", True, "returned"]
 
     def test_callback_exception_does_not_break_cancel(self) -> None:
         token = CancellationToken()

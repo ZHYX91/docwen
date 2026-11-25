@@ -58,13 +58,13 @@ class CancellationToken:
                     but not forwarded to callbacks (callbacks are
                     ``Callable[[], None]``).
         """
-        callbacks: list[Callable[[], None]] = []
         with self._lock:
-            if not self._cancelled:
-                self._cancelled = True
-                self._cancel_reason = reason
-                callbacks = list(self._callbacks)
-        import contextlib
+            if self._cancelled:
+                return
+            self._cancelled = True
+            self._cancel_reason = reason
+            callbacks = self._callbacks
+            self._callbacks = []
 
         for cb in callbacks:
             with contextlib.suppress(Exception):
@@ -96,12 +96,12 @@ class CancellationToken:
         Callbacks should be fast and must not raise.
         """
         with self._lock:
-            if self._cancelled:
-                # Already cancelled — invoke immediately
-                with contextlib.suppress(Exception):
-                    cb()
+            if not self._cancelled:
+                self._callbacks.append(cb)
                 return
-            self._callbacks.append(cb)
+        # A late subscriber may inspect the token or register another callback.
+        with contextlib.suppress(Exception):
+            cb()
 
     def view(self) -> _CancellationTokenViewImpl:
         """Return a read-only view suitable for passing to plugins.
