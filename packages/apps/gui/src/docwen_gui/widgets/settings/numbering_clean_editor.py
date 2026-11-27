@@ -235,6 +235,8 @@ class NumberingCleanDialog(QDialog):
         right.addWidget(self.test_result, 1)
 
         self.status_label = QLabel("", self)
+        self.status_label.setWordWrap(True)
+        self.status_label.setTextFormat(Qt.TextFormat.PlainText)
         right.addWidget(self.status_label)
 
         # -- bottom bar --
@@ -363,8 +365,12 @@ class NumberingCleanDialog(QDialog):
         self.save_btn.setEnabled(self._dirty and self._can_save())
 
     def _can_save(self) -> bool:
-        err_prefix = t("editors.numbering_clean.regex_error", "Regex Error")
-        return not self.status_label.text().startswith(f"{err_prefix}:")
+        try:
+            for rule in self.rules.values():
+                re.compile(rule.pattern)
+        except (re.error, OverflowError, RecursionError):
+            return False
+        return True
 
     def _refresh_action_states(self) -> None:
         rule = self._current_rule()
@@ -528,9 +534,9 @@ class NumberingCleanDialog(QDialog):
         pattern = rule.pattern
         try:
             match = re.match(pattern, text)
-        except re.error as exc:
-            self.status_label.setText(f"{t('editors.numbering_clean.regex_error', 'Regex Error')}: {exc}")
-            self.test_result.setPlainText(pattern)
+        except (re.error, OverflowError, RecursionError) as exc:
+            self.status_label.setText(t("editors.numbering_clean.regex_error", "Regex Error"))
+            self.test_result.setPlainText(f"{exc}\n\n{pattern}")
             self._refresh_dirty_state()
             return
 

@@ -475,5 +475,6 @@ class TestNumberingCleanRegexTest:
         dlg.test_input.setText("test")
         dlg._run_regex_test()
         status = dlg.status_label.text()
-        assert status.startswith(f"{t('editors.numbering_clean.regex_error', 'Regex Error')}:")
+        assert status == t("editors.numbering_clean.regex_error", "Regex Error")
+        assert "[unclosed" in dlg.test_result.toPlainText()
         dlg.close()
