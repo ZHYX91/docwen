@@ -43,7 +43,7 @@ def typecheck_steps() -> list[tuple[str, list[str], bool]]:
 
 
 def validate_ci_results(results: dict[str, Any], event: str) -> None:
-    required = {"source-checks", "tests"}
+    required = {"source-checks", "tests", "windows"}
     if event not in {"pull_request", "push", "workflow_dispatch"}:
         raise ValueError("unsupported source-check event")
     missing = sorted(name for name in required if results.get(name, {}).get("result") != "success")

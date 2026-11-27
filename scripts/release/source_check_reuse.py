@@ -22,6 +22,8 @@ WORKFLOW = ".github/workflows/tests.yml"
 RECEIPT = "source-checks.json"
 REQUIRED_JOBS = {
     "source-checks": "ubuntu-24.04",
+    "Windows shard apps-plugins": "windows-latest",
+    "Windows shard remaining": "windows-latest",
     "Tests on windows-latest": "windows-latest",
     "Tests on ubuntu-24.04": "ubuntu-24.04",
     "Tests on macos-15": "macos-15",

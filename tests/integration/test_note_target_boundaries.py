@@ -156,6 +156,17 @@ def _assert_full_note_roundtrip(tmp_path, document, kind, *, valid):
     assert text.count("Unique body.") == 1
 
 
+def test_note_target_rejects_a_wrapper_under_the_marker_run(tmp_path, round_trip_runtime):
+    from tests.integration._round_trip_helper import md_to_docx
+
+    source = tmp_path / "source.md"
+    source.write_text("First[^n], again[^n].\n\n[^n]: Unique body.\n", encoding="utf-8")
+    document = Document(md_to_docx(round_trip_runtime, source, tmp_path / "forward"))
+    reference = next(document.element.iter(Q + "footnoteReference"))
+    etree.SubElement(reference.getparent(), Q + "smartTag")
+    _assert_full_note_roundtrip(tmp_path, document, "footnote", valid=False)
+
+
 @pytest.mark.parametrize("kind", ["footnote", "endnote"])
 @pytest.mark.parametrize("valid", [True, False])
 def test_note_target_preserves_nested_format_revision_metadata(tmp_path, document, kind, valid):
