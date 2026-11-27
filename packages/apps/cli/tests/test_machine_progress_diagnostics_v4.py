@@ -14,7 +14,7 @@ from docwen_application.conversion_contracts import (
     ConversionTaskOutcome,
 )
 from docwen_cli.machine.contracts import MachineContractValidator
-from docwen_cli.machine.framing import FrameWriter, read_frame
+from docwen_cli.machine.framing import MAX_MESSAGE_BYTES, FrameWriter, read_frame
 from docwen_cli.machine.server import MachineProtocolServer
 from docwen_core.models import (
     ArtifactBundle,
@@ -388,6 +388,46 @@ def test_oversized_utf8_outcome_reports_delivery_failure_before_completion(state
     assert lifecycle[-1] == terminal
     assert active == {}
     MachineContractValidator().validate_message(terminal)
+
+
+def test_session_accepts_another_task_after_a_result_exceeds_the_wire_limit(monkeypatch) -> None:
+    task_ids = iter(("task.oversized", "task.next"))
+    message = "汉" * 4096
+    diagnostic = ConversionDiagnostic(level="info", code="MERGE-SUMMARY", message=message)
+    count = MAX_MESSAGE_BYTES // len(message.encode("utf-8")) + 1
+
+    def outcome(task_id: str) -> ConversionTaskOutcome:
+        completed = _completed_outcome(task_id)
+        if task_id == "task.oversized":
+            return replace(completed, diagnostics=(diagnostic,) * count)
+        return completed
+
+    service = _Service(outcome_factory=outcome)
+    monkeypatch.setattr(service, "accept", lambda _plan_id: next(task_ids))
+    outgoing = io.BytesIO()
+    server = MachineProtocolServer(service, io.BytesIO(), outgoing)  # type: ignore[arg-type]
+    service.event_callback = server.report_runtime_event
+    initialize, plan, execute = _messages()
+    with server._executor as executor:
+        for message in (initialize, plan, execute):
+            server._dispatch(message)
+        executor.submit(lambda: None).result(timeout=30)
+        server._dispatch({**plan, "id": 4})
+        server._dispatch({**execute, "id": 5})
+
+    outgoing.seek(0)
+    responses = []
+    while (response := read_frame(outgoing)) is not None:
+        responses.append(response)
+    lifecycle = _lifecycle(responses)
+    oversized = [message for message in lifecycle if message["params"]["task_id"] == "task.oversized"]
+    terminal = oversized[-1]
+    assert [message["method"] for message in oversized] == ["task/progress", "task/failed"]
+    assert oversized[0]["params"]["completed"] == 0
+    assert terminal["params"]["error"]["code"] == "response_too_large"
+    assert "bundle" not in terminal["params"]
+    assert lifecycle[-1]["method"] == "task/completed"
+    assert lifecycle[-1]["params"]["bundle"]["task_id"] == "task.next"
 
 
 def test_failed_semantic_diagnostic_carries_complete_source_evidence() -> None:
