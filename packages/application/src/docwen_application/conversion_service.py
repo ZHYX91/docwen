@@ -27,6 +27,7 @@ from docwen_application.conversion_capabilities import (
 )
 from docwen_application.conversion_contracts import (
     DOCX_TO_MARKDOWN_CAPABILITY_ID,
+    DOCX_VALIDATE_CAPABILITY_ID,
     MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID,
     MARKDOWN_TO_DOCX_CAPABILITY_ID,
     ConversionPlan,
@@ -40,7 +41,7 @@ from docwen_application.conversion_options import resolve_conversion_options
 from docwen_application.conversion_requests import build_conversion_request
 from docwen_application.conversion_routes import resolve_conversion_route_plan
 from docwen_application.optimization_catalog import parse_optimization_catalog
-from docwen_application.ports.runtime import ArtifactBundleCommitPort
+from docwen_application.ports.runtime import ArtifactBundleCommitPort, ConfigPort
 from docwen_application.runtime_capability_catalog import RuntimeCapabilityCatalog
 from docwen_core.detection import FileAdmissionError, FileAdmissionPathError
 from docwen_core.models import (
@@ -53,6 +54,7 @@ from docwen_core.models.resolved_numbering import (
     ResolvedNumberingPortError,
     load_resolved_numbering_bytes,
 )
+from docwen_core.options.proofread import resolve_proofread_switches
 from docwen_core.paths import filesystem_path
 
 logger = logging.getLogger(__name__)
@@ -531,7 +533,22 @@ class ConversionService:
                     f"input role {slot.role} has invalid cardinality",
                 )
         effective_options = resolve_conversion_options(request.options, binding)
-        if binding.capability_id == MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID and "proofread" in effective_options:
+        if binding.capability_id == DOCX_VALIDATE_CAPABILITY_ID:
+            config_port: ConfigPort | None = getattr(self._controller, "config_port", None)
+            try:
+                engine = config_port.get("proofread.engine", {}) if config_port is not None else {}
+            except RuntimeError as exc:
+                raise ConversionServiceError(
+                    "unavailable", "proofread_config_unavailable", "Cannot read a trusted proofreading configuration."
+                ) from exc
+            effective_options = resolve_proofread_switches({"proofread": {"engine": engine}}, effective_options)
+            if not any(effective_options.values()):
+                raise ConversionServiceError(
+                    "invalid_request",
+                    "proofread_no_rules_enabled",
+                    "DOCX proofreading requires at least one enabled rule.",
+                )
+        elif binding.capability_id == MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID and "proofread" in effective_options:
             # Omitted switches inherit configuration, so only four explicit
             # false values can prove that no validator is needed at admission.
             checks = effective_options["proofread"]
