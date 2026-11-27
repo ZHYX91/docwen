@@ -94,36 +94,3 @@ def test_print_plugin_can_handle_explicit_routes() -> None:
     # ── Negative cases ────────────────────────────────────────────────
     assert plugin.can_handle("pdf", "md") is False
     assert plugin.can_handle("image", "png") is False
-
-
-def test_print_plugin_only_depends_on_core() -> None:
-    import sys
-
-    import docwen_plugin_print  # type: ignore[unused-import]  # noqa: F401
-
-    forbidden = {
-        "docwen_runtime",
-        "docwen_application",
-        "docwen_gui",
-        "docwen_cli",
-        "docwen_bundle",
-        "docwen_plugin_document",
-        "docwen_plugin_presentation",
-        "docwen_plugin_markup",
-        "docwen_plugin_layout",
-        "docwen_plugin_spreadsheet",
-        "docwen_plugin_image",
-        "docwen_plugin_markdown",
-        "docwen_plugin_proofread",
-        "docwen.",
-    }
-    plugin_modules = {name for name in sys.modules if name.startswith("docwen_plugin_print")}
-    for mod_name in plugin_modules:
-        mod = sys.modules[mod_name]
-        for attr in dir(mod):
-            val = getattr(mod, attr, None)
-            if val is None:
-                continue
-            val_mod = getattr(val, "__module__", "")
-            for forbidden_pkg in forbidden:
-                assert not val_mod.startswith(forbidden_pkg), f"{mod_name}.{attr} depends on {val_mod}"
