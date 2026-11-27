@@ -10,6 +10,16 @@ from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.ui_scale import dp, set_metric
 
 
+class _NavigationButton(QPushButton):
+    def changeEvent(self, event: QEvent) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.LayoutDirectionChange:
+            # Qt caches property selectors even when the inherited direction changes.
+            self.style().unpolish(self)
+            self.style().polish(self)
+            self.update()
+
+
 class SettingsSidebar(QScrollArea):
     """Grouped page buttons stay reachable without taking height from the content."""
 
@@ -54,7 +64,7 @@ class SettingsSidebar(QScrollArea):
         self._layout.insertWidget(self._layout.count() - 1, label)
 
     def add_page(self, key: str, title: str, icon: QIcon | None) -> QPushButton:
-        button = QPushButton(title, self._content)
+        button = _NavigationButton(title, self._content)
         button.setProperty("settingsNavigationItem", True)
         button.setCheckable(True)
         button.setAutoExclusive(True)
