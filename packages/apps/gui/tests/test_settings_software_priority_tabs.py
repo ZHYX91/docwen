@@ -206,3 +206,44 @@ def test_spreadsheet_ods_priority_filters_wps_and_unknown_backends(qapp) -> None
     config.software_priority.ods_conversion = ["wps_spreadsheets"]
     vm.load_full_config(config)
     assert vm.config.software_priority.ods_conversion == ["msoffice_excel", "libreoffice"]
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+@pytest.mark.parametrize("style_name", ["Windows", "Fusion"])
+def test_priority_list_paints_each_edge_and_keyboard_focus(qapp, qtbot, request, theme, style_name) -> None:
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QPalette
+    from PySide6.QtWidgets import QStyleFactory
+
+    from docwen_gui.styles.settings import build_settings_stylesheet
+    from docwen_gui.styles.theme_manager import ThemeManager
+    from docwen_gui.widgets.settings.priority_editor import SoftwarePriorityEditor
+
+    editor = SoftwarePriorityEditor("Priority")
+    qtbot.addWidget(editor)
+    widget = editor.list_widget
+    style = QStyleFactory.create(style_name)
+    assert style is not None
+    style.setParent(editor)
+    widget.setStyle(style)
+    palette = ThemeManager._build_application_palette(theme)
+    original = qapp.palette()
+    request.addfinalizer(lambda: qapp.setPalette(original))
+    qapp.setPalette(palette)
+    editor.setStyleSheet(build_settings_stylesheet(theme))
+    widget.addItems(["Word", "LibreOffice"])
+    widget.setCurrentRow(0)
+    editor.show()
+    editor.activateWindow()
+    for target, role in (
+        (editor.move_down_button, QPalette.ColorRole.Midlight),
+        (widget, QPalette.ColorRole.Highlight),
+    ):
+        target.setFocus(Qt.FocusReason.TabFocusReason)
+        qtbot.waitUntil(target.hasFocus)
+        image = widget.grab().toImage()
+        width, height = image.width(), image.height()
+        expected = palette.color(role).rgba()
+        for x, y in ((0, height // 2), (width - 1, height // 2), (width // 2, 0), (width // 2, height - 1)):
+            assert image.pixelColor(x, y).rgba() == expected
+        assert widget.currentRow() == 0

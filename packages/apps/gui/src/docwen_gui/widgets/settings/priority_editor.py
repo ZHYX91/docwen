@@ -71,13 +71,13 @@ class SoftwarePriorityEditor(QWidget):
         button_height = max(dp(Sizing.CONTROL_HEIGHT), *(button.sizeHint().height() for button in buttons))
         for button in buttons:
             button.setFixedSize(button_width, button_height)
-        width = max(1, self.list_widget.viewport().width() - 16)
+        width = max(1, self.list_widget.viewport().width() - dp(Spacing.LG))
         metrics = self.list_widget.fontMetrics()
         row_height = max(dp(Sizing.CONTROL_HEIGHT), metrics.height() + dp(Spacing.MD))
         for index in range(self.list_widget.count()):
             text = self.list_widget.item(index).text()
             bounds = metrics.boundingRect(QRect(0, 0, width, 10000), Qt.TextFlag.TextWordWrap, text)
-            row_height = max(row_height, bounds.height() + 12)
+            row_height = max(row_height, bounds.height() + dp(Spacing.MD))
         size = QSize(0, row_height)
         for index in range(self.list_widget.count()):
             item = self.list_widget.item(index)
