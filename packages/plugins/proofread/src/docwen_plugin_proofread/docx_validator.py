@@ -10,6 +10,7 @@ from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from docwen_core.docx_comments import append_docx_comment
+from docwen_core.errors import CancellationRequested
 
 if TYPE_CHECKING:
     from docx.document import Document as DocumentObject
@@ -363,6 +364,8 @@ class DocxValidator:
                 ),
             )
 
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"DOCX proofread failed: {exc}")
             # Determine if this is a corrupted document error

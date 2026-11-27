@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from docwen_core.errors import CancellationRequested
 from docwen_core.page_selection import PageSelectionError, validate_pdf_split_selection
 from docwen_core.paths import input_stem
 from docwen_plugin_layout._common import file_size, new_artifact_id
@@ -149,6 +150,8 @@ class PdfMerger:
 
             output_path = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".pdf")
             merged.save(output_path)
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"PDF merge failed: {exc}")
             return ConversionResult(
@@ -267,6 +270,8 @@ class PdfSplitter:
                     return self._split_odd_even(src, total_pages, task_id, stem, context)
                 else:
                     return self._split_custom(src, list(selection.pages), total_pages, task_id, stem, context)
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"PDF split failed: {exc}")
             return ConversionResult(
