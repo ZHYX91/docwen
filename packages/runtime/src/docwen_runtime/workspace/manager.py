@@ -237,21 +237,26 @@ class WorkspaceManager:
                     destination_stream.write(chunk)
                 destination_stream.flush()
                 os.fsync(destination_stream.fileno())
-            shutil.copystat(source, destination, follow_symlinks=False)
+                source_stat = os.fstat(source_stream.fileno())
+            # Keep input dates without copying source permissions or flags. The
+            # workspace owns this disposable copy, including on Windows where
+            # a read-only file prevents normal directory cleanup.
+            os.utime(destination, ns=(source_stat.st_atime_ns, source_stat.st_mtime_ns))
             if cancellation is not None:
                 cancellation.check()
-            expected_sha = item.metadata.get(MANAGED_INPUT_SHA256_METADATA_KEY)
-            expected_size = item.metadata.get(MANAGED_INPUT_SIZE_BYTES_METADATA_KEY)
-            if expected_sha is None and expected_size is None:
-                expected_sha = item.metadata.get("machine_input_sha256")
-                expected_size = item.metadata.get("machine_input_size_bytes")
-            if (expected_sha is None) != (expected_size is None):
-                raise ValueError("typed input integrity metadata must provide both size and sha256")
-            if isinstance(expected_sha, str) and isinstance(expected_size, int):
+            sha_key, size_key = MANAGED_INPUT_SHA256_METADATA_KEY, MANAGED_INPUT_SIZE_BYTES_METADATA_KEY
+            if sha_key not in item.metadata and size_key not in item.metadata:
+                sha_key, size_key = "machine_input_sha256", "machine_input_size_bytes"
+            if sha_key in item.metadata or size_key in item.metadata:
+                expected_sha, expected_size = item.metadata.get(sha_key), item.metadata.get(size_key)
+                if not isinstance(expected_sha, str) or type(expected_size) is not int or expected_size < 0:
+                    raise TypedInputIntegrityError()
                 digest = hashlib.sha256()
                 size_bytes = 0
                 with destination.open("rb") as stream:
                     while chunk := stream.read(1024 * 1024):
+                        if cancellation is not None:
+                            cancellation.check()
                         size_bytes += len(chunk)
                         digest.update(chunk)
                 if size_bytes != expected_size or digest.hexdigest() != expected_sha:
