@@ -12,7 +12,7 @@ import time as _time_module
 from collections.abc import Generator
 
 import pytest
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QCoreApplication, QEvent, QTimer
 from PySide6.QtTest import QSignalSpy
 
 from docwen_gui.view_models.info_area_vm import (
@@ -227,6 +227,18 @@ class TestTransientThrottle:
 
 
 class TestTransientTTL:
+    def test_reused_key_ignores_old_timeout_and_releases_retired_timers(self, vm: InfoAreaViewModel) -> None:
+        vm.set_transient_message("notice", "first", ttl_ms=1000)
+        old = vm._transient_timers["notice"]
+        vm.clear_transient_message("notice")
+        vm.set_transient_message("notice", "second", ttl_ms=1000)
+        old.timeout.emit()
+        assert vm.transient_count == 1
+        for index in range(20):
+            vm.set_transient_message("notice", str(index), ttl_ms=1000)
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        assert vm.findChildren(QTimer) == [vm._transient_timers["notice"]]
+
     def test_transient_expires_after_ttl(self, vm: InfoAreaViewModel) -> None:
         """Transient should clear itself after TTL expires."""
         vm.set_transient_message("test", "Temporary", "info", ttl_ms=10, source="test-src")

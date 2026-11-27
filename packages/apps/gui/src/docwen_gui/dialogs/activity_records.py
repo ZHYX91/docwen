@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QModelIndex, QSize, QSortFilterProxyModel, Qt, Signal
+from PySide6.QtCore import QModelIndex, QSize, QSortFilterProxyModel, Qt, QTimer, Signal
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -205,6 +205,11 @@ class ActivityRecordsDialog(QDialog):
         self.status_filter.currentIndexChanged.connect(self._change_filters)
         self.operation_filter.currentIndexChanged.connect(self._change_filters)
         self.table.selectionModel().currentChanged.connect(self._show_selected)
+        # Measuring all visible cells for each item in a synchronous result
+        # burst repeats the same layout. Only column geometry can wait a turn.
+        self._resize_timer = QTimer(self)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.timeout.connect(self._resize_columns)
         model.modelAboutToBeReset.connect(self._before_reset)
         model.records_changed.connect(self._refresh)
         self._refresh()
@@ -213,17 +218,26 @@ class ActivityRecordsDialog(QDialog):
         self._resetting = True
 
     def _refresh(self) -> None:
+        operations = sorted({row.operation for row in self._model.records})
         selected_operation = self.operation_filter.currentData() or ""
-        self.operation_filter.blockSignals(True)
-        self.operation_filter.clear()
-        self.operation_filter.addItem(t("activity.all_operations"), "")
-        for operation in sorted({row.operation for row in self._model.records}):
-            self.operation_filter.addItem(operation, operation)
-        self.operation_filter.setCurrentIndex(max(0, self.operation_filter.findData(selected_operation)))
-        self.operation_filter.blockSignals(False)
-        self._apply_filters()
+        if not self.operation_filter.count() or operations != [
+            self.operation_filter.itemData(i) for i in range(1, self.operation_filter.count())
+        ]:
+            self.operation_filter.blockSignals(True)
+            self.operation_filter.clear()
+            self.operation_filter.addItem(t("activity.all_operations"), "")
+            for operation in operations:
+                self.operation_filter.addItem(operation, operation)
+            self.operation_filter.setCurrentIndex(max(0, self.operation_filter.findData(selected_operation)))
+            self.operation_filter.blockSignals(False)
+        filter_changed = selected_operation != self.operation_filter.currentData()
+        if self._resetting or filter_changed or not self.table.currentIndex().isValid():
+            self._apply_filters(invalidate=filter_changed)
         self._resetting = False
         self._show_selected()
+        self._resize_timer.start(0)
+
+    def _resize_columns(self) -> None:
         self.table.resizeColumnToContents(0)
         self.table.resizeColumnToContents(1)
 
@@ -233,11 +247,12 @@ class ActivityRecordsDialog(QDialog):
         self._proxy.source_path = ""
         self._apply_filters()
 
-    def _apply_filters(self, *_args) -> None:
+    def _apply_filters(self, *, invalidate: bool = True) -> None:
         self._proxy.query = self.search.text().strip().casefold()
         self._proxy.status = self.status_filter.currentData() or ""
         self._proxy.operation = self.operation_filter.currentData() or ""
-        self._proxy.invalidate()
+        if invalidate:
+            self._proxy.invalidate()
         for index in range(self._proxy.rowCount()):
             item = self._proxy.index(index, 0)
             record = item.data(Qt.ItemDataRole.UserRole)
