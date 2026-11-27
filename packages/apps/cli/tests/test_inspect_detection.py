@@ -9,6 +9,7 @@ Exercises the canonical ``inspect_file`` result through the CLI user path.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import tempfile
@@ -19,6 +20,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from docwen_cli.commands.inspect import _discover_supported_actions, execute_inspect
+from docwen_cli.machine.query_service import MachineQueryError, MachineQueryService
 from docwen_core.detection import OOXML_SIGNATURE_VALIDATION_UNAVAILABLE
 
 pytestmark = pytest.mark.contract
@@ -598,3 +600,26 @@ class TestInspectSupportedActionsContract:
         assert payload["data"]["supported_actions"] == ["inspect"]
         assert payload["data"]["supported_actions_discovery"]["state"] == "unavailable"
         assert payload["data"]["supported_actions_discovery"]["error"]["code"] == "capability_unavailable"
+
+
+def test_machine_inspection_distinguishes_discovery_failure_from_no_actions(tmp_path: Path) -> None:
+    source = tmp_path / "source.md"
+    content = b"# Hello"
+    source.write_bytes(content)
+    handle = {
+        "locator": {"path": str(source)},
+        "size_bytes": len(content),
+        "sha256": hashlib.sha256(content).hexdigest(),
+    }
+
+    result = MachineQueryService(_CapabilityController([])).inspect_file(handle)
+    assert result["supported_actions"] == ["inspect"]
+    assert result["content_sha256"] == handle["sha256"]
+    with pytest.raises(MachineQueryError) as failed:
+        MachineQueryService(None).inspect_file(handle)
+    assert failed.value.code == "capability_unavailable"
+
+    source.write_bytes(b"# Other")
+    with pytest.raises(MachineQueryError) as changed:
+        MachineQueryService(None).inspect_file(handle)
+    assert changed.value.code == "input_integrity_mismatch"

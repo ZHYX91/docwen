@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 from pathlib import Path
 from typing import Any, Literal
 
@@ -13,8 +12,8 @@ from docwen_cli.commands.doctor import collect_doctor_checks
 from docwen_cli.commands.inspect import build_inspection_data
 from docwen_cli.commands.resources import _numbering_entries, _template_entries
 from docwen_cli.gui_control_port import GuiControlError, GuiControlPort
+from docwen_core.detection import inspect_file
 
-_HASH_CHUNK_BYTES = 1024 * 1024
 ResourceKind = Literal["formats", "optimizations", "templates", "numbering-schemes"]
 
 
@@ -34,7 +33,10 @@ class MachineQueryService:
         self._gui_control = gui_control
 
     def health_check(self) -> dict[str, Any]:
-        projection = runtime_capability_projection(self._controller)
+        try:
+            projection = runtime_capability_projection(self._controller)
+        except CapabilityUnavailableError as exc:
+            raise MachineQueryError("capability_unavailable", str(exc)) from exc
         checks = collect_doctor_checks(self._controller, projection)
         return {
             "all_ok": all(check.ok for check in checks),
@@ -42,15 +44,23 @@ class MachineQueryService:
         }
 
     def inspect_file(self, input_handle: dict[str, Any]) -> dict[str, Any]:
-        path = self._verified_file(input_handle)
+        path = Path(input_handle["locator"]["path"])
+        if not path.is_absolute():
+            raise MachineQueryError("file_not_found", "The input must be an existing absolute file path.")
         try:
-            inspection = build_inspection_data(self._controller, str(path))
+            file = inspect_file(str(path))
         except FileNotFoundError as exc:
             raise MachineQueryError("file_not_found", "The input file does not exist.") from exc
         except OSError as exc:
             raise MachineQueryError("file_unreadable", "The input file cannot be inspected.") from exc
+        if file.size_bytes != input_handle["size_bytes"] or file.content_sha256 != input_handle["sha256"]:
+            raise MachineQueryError("input_integrity_mismatch", "The declared input integrity does not match.")
+        inspection = build_inspection_data(self._controller, file)
+        discovery = inspection["supported_actions_discovery"]
+        if discovery["state"] == "unavailable":
+            raise MachineQueryError("capability_unavailable", discovery["error"]["message"])
         return {
-            key: inspection.get(key)
+            key: inspection[key]
             for key in (
                 "file_path",
                 "size_bytes",
@@ -165,24 +175,6 @@ class MachineQueryService:
             return {"action": action, "accepted": True}
         except GuiControlError as exc:
             raise MachineQueryError(exc.code, str(exc)) from exc
-
-    @staticmethod
-    def _verified_file(input_handle: dict[str, Any]) -> Path:
-        path = Path(str(input_handle["locator"]["path"]))
-        if not path.is_absolute() or not path.is_file():
-            raise MachineQueryError("file_not_found", "The input must be an existing absolute file path.")
-        digest = hashlib.sha256()
-        size_bytes = 0
-        try:
-            with path.open("rb") as stream:
-                while chunk := stream.read(_HASH_CHUNK_BYTES):
-                    size_bytes += len(chunk)
-                    digest.update(chunk)
-        except OSError as exc:
-            raise MachineQueryError("file_unreadable", "The input file cannot be read.") from exc
-        if size_bytes != int(input_handle["size_bytes"]) or digest.hexdigest() != str(input_handle["sha256"]):
-            raise MachineQueryError("input_integrity_mismatch", "The declared input integrity does not match.")
-        return path
 
 
 __all__ = ["MachineQueryError", "MachineQueryService"]

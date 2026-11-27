@@ -16,7 +16,13 @@ from docwen_application.conversion_contracts import ConversionServiceError
 from docwen_application.conversion_service import ConversionService
 from docwen_core.models.result import ConversionErrorInfo, ConversionResult
 
-from ._conversion_service_support import MARKDOWN_TO_XLSX_CAPABILITY_ID, _Committer, _Controller, _request
+from ._conversion_service_support import (
+    MARKDOWN_TO_XLSX_CAPABILITY_ID,
+    MARKDOWN_VALIDATE_CAPABILITY_ID,
+    _Committer,
+    _Controller,
+    _request,
+)
 
 pytestmark = pytest.mark.contract
 
@@ -66,6 +72,30 @@ def admitted_service(tmp_path: Path):
     service = ConversionService(controller, _Committer())
     request = _request(source, staging, capability_id=MARKDOWN_TO_XLSX_CAPABILITY_ID)
     return runtime, controller, service, request
+
+
+@pytest.mark.parametrize(
+    ("content", "code"),
+    [(b"", "file_empty"), (bytes(range(64)), "file_content_unrecognized")],
+)
+def test_content_admission_rejection_releases_the_accepted_task(admitted_service, tmp_path, content, code):
+    runtime, controller, service, _ = admitted_service
+    source = tmp_path / "rejected.md"
+    source.write_bytes(content)
+    staging = tmp_path / "output"
+    request = _request(source, staging, capability_id=MARKDOWN_VALIDATE_CAPABILITY_ID)
+    task_id = service.accept(service.plan(request).plan_id)
+
+    with pytest.raises(ConversionServiceError) as failed:
+        service.execute_accepted(task_id)
+
+    assert failed.value.category == "invalid_request"
+    assert failed.value.code == code
+    assert failed.value.retryable is False
+    assert runtime.executed == []
+    assert not list(staging.iterdir())
+    assert service.cancel(task_id) == "already_terminal"
+    assert controller._cancellation_scopes == {}
 
 
 @pytest.mark.parametrize("phase", ["accepted", "running"])
