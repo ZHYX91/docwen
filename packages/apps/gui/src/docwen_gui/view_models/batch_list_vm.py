@@ -190,6 +190,9 @@ class BatchListViewModel(QObject):
     filter_changed = Signal(str)
     """Emitted when filter state changes (payload: filter_key)."""
 
+    category_order_changed = Signal(str)
+    """An entry changed under the active automatic sort."""
+
     sort_changed = Signal(str, bool)
     """Emitted when sort changes (payload: sort_key, ascending)."""
 
@@ -358,10 +361,23 @@ class BatchListViewModel(QObject):
         """Refresh an existing row without changing its order or retaining stale task results."""
         normalized = path_key(ref.path)
         record = self._entries.get(normalized)
-        if record is None or record[1].metadata == ref.metadata:
+        if record is None:
             return
         old_category, entry = record
+        if (
+            entry.metadata == ref.metadata
+            and entry.detected_format == ref.format
+            and entry.workflow_category == ref.category
+            and entry.warning_message == (ref.warning_message or None)
+            and (not ref.size_bytes or entry.size_bytes == ref.size_bytes)
+        ):
+            return
         category = self._display_category(ref.category)
+        order_changed = (
+            self._sort_key == "mtime"
+            or (self._sort_key == "size" and entry.size_bytes != ref.size_bytes)
+            or (self._sort_key == "type" and entry.detected_format != ref.format)
+        )
         entry.detected_format = ref.format
         entry.workflow_category = ref.category
         entry.warning_message = ref.warning_message or None
@@ -375,6 +391,8 @@ class BatchListViewModel(QObject):
             self._custom_order_by_category[category].append(normalized)
             self.files_removed.emit(entry.file_path)
             self.files_added.emit([entry.file_path], [])
+        elif order_changed:
+            self.category_order_changed.emit(category)
         self.set_file_status(normalized, "pending")
 
     @staticmethod

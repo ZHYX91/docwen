@@ -989,11 +989,6 @@ def _source_path_text(file_path: str) -> str:
     return parent_text
 
 
-def _path_compare_key(file_path: str) -> str:
-    """Use the same file identity as the view models and request builder."""
-    return path_key(file_path)
-
-
 # ── BatchList main widget ──────────────────────────────────────────────
 
 
@@ -1018,6 +1013,7 @@ class BatchList(QWidget):
         super().__init__(parent)
         self._vm = view_model
         self._tabs: dict[str, ReorderableListWidget] = {}
+        self._items_by_path: dict[str, tuple[QListWidget, QListWidgetItem]] = {}
         self._pivot_items: dict[str, QWidget] = {}
         self._pivot_compact_mode = False
         self._category_reflow_timer = QTimer(self)
@@ -1215,6 +1211,7 @@ class BatchList(QWidget):
         vm.status_changed.connect(self._on_status_changed)
         vm.filter_changed.connect(self._on_filter_changed)
         vm.sort_changed.connect(self._on_sort_changed)
+        vm.category_order_changed.connect(self._apply_sort_for_category)
         vm.current_category_changed.connect(self._on_category_changed)
         vm.entry_count_changed.connect(self._on_entry_count_changed)
         vm.pulse_requested.connect(self._on_pulse_requested)
@@ -1231,6 +1228,7 @@ class BatchList(QWidget):
         self._refresh_filter_button()
 
     def _on_files_added(self, added: list[str], _failed: list[tuple[str, str]]) -> None:
+        affected_categories: set[str] = set()
         for file_path in added:
             entry = self._vm.get_file_entry(file_path)
             if entry is None:
@@ -1243,7 +1241,13 @@ class BatchList(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, file_path)
             item.setData(Qt.ItemDataRole.UserRole + 1, entry)
             list_widget.addItem(item)
+            self._items_by_path[path_key(file_path)] = (list_widget, item)
+            item.setHidden(not self._vm._entry_matches_filter(entry))
+            affected_categories.add(category)
             self._pending_entry_widget_attachments.append((list_widget, item, entry))
+        if self._vm.sort_key != "custom":
+            for category in affected_categories:
+                self._apply_sort_for_category(category)
         if self._pending_entry_widget_attachments and not self._entry_widget_attach_timer.isActive():
             self._attach_pending_entry_widgets()
         self._refresh_titles()
@@ -1256,23 +1260,22 @@ class BatchList(QWidget):
             show_batch_add_failed_dialog(self, _failed)
 
     def _on_file_removed(self, file_path: str) -> None:
-        for list_widget in self._tabs.values():
-            for index in range(list_widget.count()):
-                item = list_widget.item(index)
-                data = item.data(Qt.ItemDataRole.UserRole)
-                if data == file_path:
-                    widget = list_widget.itemWidget(item)
-                    if widget is not None:
-                        widget.deleteLater()
-                    list_widget.takeItem(index)
-                    self._refresh_sequence_numbers(list_widget)
-                    self._refresh_titles()
-                    self._update_reorder_buttons()
-                    return
+        row = self._items_by_path.pop(path_key(file_path), None)
+        if row is None:
+            return
+        list_widget, item = row
+        widget = list_widget.itemWidget(item)
+        if widget is not None:
+            widget.deleteLater()
+        list_widget.takeItem(list_widget.row(item))
+        self._refresh_sequence_numbers(list_widget)
+        self._refresh_titles()
+        self._update_reorder_buttons()
 
     def _on_files_cleared(self) -> None:
         self._entry_widget_attach_timer.stop()
         self._pending_entry_widget_attachments.clear()
+        self._items_by_path.clear()
         for list_widget in self._tabs.values():
             list_widget.clear()
         self._refresh_titles()
@@ -1281,25 +1284,34 @@ class BatchList(QWidget):
 
     def _on_status_changed(self, file_path: str, new_status: str) -> None:
         entry = self._vm.get_file_entry(file_path)
-        if entry is None:
+        row = self._items_by_path.get(path_key(file_path))
+        if entry is None or row is None:
             return
-        # Find the item and update its widget
-        for list_widget in self._tabs.values():
-            for index in range(list_widget.count()):
-                item = list_widget.item(index)
-                data = item.data(Qt.ItemDataRole.UserRole)
-                if data == file_path:
-                    widget = list_widget.itemWidget(item)
-                    if isinstance(widget, BatchEntryItemWidget):
-                        widget._apply_entry(entry)
-                        widget.bind_list_item(list_widget, item)
-                    else:
-                        self._attach_entry_widget(list_widget, item, entry)
-                    self._update_widget_state(list_widget, item)
-                    self._refresh_titles()
-                    return
+        list_widget, item = row
+        widget = list_widget.itemWidget(item)
+        if isinstance(widget, BatchEntryItemWidget):
+            widget._apply_entry(entry)
+            widget.bind_list_item(list_widget, item)
+        self._update_widget_state(list_widget, item)
+        visible = self._vm._entry_matches_filter(entry)
+        if item.isHidden() == visible:
+            previous = self.get_current_file()
+            self._set_item_visible(list_widget, item, visible)
+            self._ensure_visible_current_item(list_widget)
+            self._refresh_titles()
+            self._update_reorder_buttons()
+            if previous != self.get_current_file():
+                self._handle_selection_changed()
+
+    @staticmethod
+    def _set_item_visible(list_widget: QListWidget, item: QListWidgetItem, visible: bool) -> None:
+        item.setHidden(not visible)
+        widget = list_widget.itemWidget(item)
+        if widget is not None:
+            widget.setVisible(visible)
 
     def _on_filter_changed(self, _filter_key: str) -> None:
+        previous = self.get_current_file()
         for list_widget in self._tabs.values():
             for index in range(list_widget.count()):
                 item = list_widget.item(index)
@@ -1307,16 +1319,14 @@ class BatchList(QWidget):
                 from ..view_models.batch_list_vm import BatchFileEntry as BFE
 
                 if isinstance(entry, BFE):
-                    visible = self._vm._entry_matches_filter(entry)
-                    item.setHidden(not visible)
-                    widget = list_widget.itemWidget(item)
-                    if widget is not None:
-                        widget.setVisible(visible)
+                    self._set_item_visible(list_widget, item, self._vm._entry_matches_filter(entry))
             self._ensure_visible_current_item(list_widget)
         self._refresh_titles()
         self._update_reorder_buttons()
         self._refresh_all_item_states()
         self._refresh_filter_button()
+        if previous != self.get_current_file():
+            self.selection_changed.emit(self.get_current_file())
 
     def _on_sort_changed(self, _sort_key: str, _ascending: bool) -> None:
         for category in _CATEGORY_ORDER:
@@ -1336,14 +1346,12 @@ class BatchList(QWidget):
         self._refresh_pivot_labels()
 
     def _on_pulse_requested(self, file_path: str) -> None:
-        for list_widget in self._tabs.values():
-            for index in range(list_widget.count()):
-                item = list_widget.item(index)
-                if item.data(Qt.ItemDataRole.UserRole) == file_path:
-                    widget = list_widget.itemWidget(item)
-                    if isinstance(widget, BatchEntryItemWidget):
-                        widget.pulse_processing_transition()
-                    return
+        row = self._items_by_path.get(path_key(file_path))
+        if row is not None:
+            list_widget, item = row
+            widget = list_widget.itemWidget(item)
+            if isinstance(widget, BatchEntryItemWidget):
+                widget.pulse_processing_transition()
 
     # ── Tab navigation ─────────────────────────────────────────────────
 
@@ -1467,6 +1475,8 @@ class BatchList(QWidget):
     # ── Selection management ───────────────────────────────────────────
 
     def _handle_selection_changed(self) -> None:
+        if self._suspend_selection_sync:
+            return
         self._refresh_all_item_states()
         self._refresh_summary()
         self._update_reorder_buttons()
@@ -1576,6 +1586,8 @@ class BatchList(QWidget):
         list_widget.setItemWidget(item, widget)
         widget.bind_list_item(list_widget, item)
         widget.set_sequence_number(list_widget.row(item) + 1)
+        if item.isHidden():
+            widget.hide()
         self._update_widget_state(list_widget, item)
 
     @staticmethod
@@ -1977,26 +1989,25 @@ class BatchList(QWidget):
 
         Returns ``True`` when the entry exists and selection changed.
         """
-        target = _path_compare_key(str(file_path))
-        for category, list_widget in self._tabs.items():
-            for index in range(list_widget.count()):
-                item = list_widget.item(index)
-                stored = item.data(Qt.ItemDataRole.UserRole)
-                if not isinstance(stored, str) or _path_compare_key(stored) != target:
-                    continue
-                self._suspend_tab_selection_sync = True
-                try:
-                    self._activate_tab(category)
-                finally:
-                    self._suspend_tab_selection_sync = False
-                self._suspend_selection_sync = True
-                try:
-                    list_widget.clearSelection()
-                    item.setSelected(True)
-                    list_widget.setCurrentItem(item)
-                    list_widget.scrollToItem(item)
-                finally:
-                    self._suspend_selection_sync = False
-                self._handle_selection_changed()
-                return True
-        return False
+        row = self._items_by_path.get(path_key(file_path))
+        if row is None:
+            return False
+        list_widget, item = row
+        if item.isHidden():
+            return False
+        category = str(list_widget.property("batchCategory"))
+        self._suspend_tab_selection_sync = True
+        try:
+            self._activate_tab(category)
+        finally:
+            self._suspend_tab_selection_sync = False
+        self._suspend_selection_sync = True
+        try:
+            list_widget.clearSelection()
+            item.setSelected(True)
+            list_widget.setCurrentItem(item)
+            list_widget.scrollToItem(item)
+        finally:
+            self._suspend_selection_sync = False
+        self._handle_selection_changed()
+        return True

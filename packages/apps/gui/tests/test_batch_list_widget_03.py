@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from ._batch_list_widget_support import (
@@ -80,6 +82,31 @@ class TestFilter:
         finally:
             widget.deleteLater()
 
+    def test_active_filter_tracks_added_files_and_status_changes(self, qapp: QApplication) -> None:
+        vm = BatchListViewModel()
+        first, second = "/test/b.docx", "/test/a.docx"
+        _add_synthetic(vm, [first])
+        widget = BatchList(view_model=vm)
+        try:
+            vm.set_sort_state("name", True)
+            vm.set_status_filter("failed")
+            _add_synthetic(vm, [second])
+            rows = widget._tabs["document"]
+            assert [rows.item(i).data(Qt.ItemDataRole.UserRole) for i in range(2)] == vm.get_files_for_category(
+                "document"
+            )
+            assert all(rows.item(i).isHidden() for i in range(2))
+            vm.set_file_status(first, "failed")
+            assert not rows.item(1).isHidden() and widget.get_current_file() == first
+            vm.set_file_status(second, "failed")
+            vm.set_file_status(first, "pending")
+            assert rows.item(1).isHidden() and widget.get_current_file() == second
+            vm.set_file_status(second, "completed")
+            assert all(rows.item(i).isHidden() for i in range(2))
+            assert widget.get_current_file() is None
+        finally:
+            widget.deleteLater()
+
     def test_reorder_buttons_respect_visible_filter(self, qapp: QApplication) -> None:
         vm = BatchListViewModel()
         pending = "/test/pending.docx"
@@ -103,6 +130,24 @@ class TestFilter:
 
 
 class TestSortWidget:
+    def test_readmission_reorders_visible_files_without_losing_selection(self, qapp: QApplication) -> None:
+        from docwen_core.models.file_ref import FileRef
+
+        vm = BatchListViewModel()
+        first, second = "/batch/first.docx", "/batch/second.docx"
+        _add_synthetic(vm, [first, second])
+        widget = BatchList(view_model=vm)
+        try:
+            vm.set_sort_state("size", True)
+            assert widget.select_file(first)
+            vm.refresh_admission(FileRef(path=first, format="docx", category="document", size_bytes=63))
+            rows = widget._tabs["document"]
+            assert vm.get_files_for_category("document") == [second, first]
+            assert [rows.item(i).data(Qt.ItemDataRole.UserRole) for i in range(2)] == [second, first]
+            assert widget.get_current_file() == first
+        finally:
+            widget.deleteLater()
+
     def test_sort_button_exists(self, populated_widget: BatchList) -> None:
         assert populated_widget.sort_button is not None
 
@@ -244,21 +289,27 @@ class TestContextMenu:
 
 
 class TestSelection:
-    def test_selection_changed_signal(self, populated_widget: BatchList) -> None:
-        emitted: list[object] = []
-        populated_widget.selection_changed.connect(lambda f: emitted.append(f))
-        # Trigger selection change via current item change
-        list_widget = populated_widget._tabs[populated_widget._vm.current_category]
-        if list_widget.count() > 0:
-            list_widget.setCurrentRow(0)
+    def test_selection_changed_signal(self, widget: BatchList, vm: BatchListViewModel) -> None:
+        first, second = "/test/first.docx", "/test/second.docx"
+        _add_synthetic(vm, [first, second])
+        assert widget.select_file(first)
+        assert widget.get_current_file() == first
+        selections: list[str | None] = []
+        widget.selection_changed.connect(selections.append)
 
-    def test_select_file_accepts_raw_windows_path(self, qapp: QApplication, vm: BatchListViewModel) -> None:
+        widget._tabs["document"].setCurrentRow(1)
+
+        assert widget.get_current_file() == second
+        assert selections and selections[-1] == second
+
+    def test_select_file_respects_native_separators(self, qapp: QApplication, vm: BatchListViewModel) -> None:
         stored_path = "C:/Users/Example/Documents/report.docx"
         raw_path = r"C:\Users\Example\Documents\report.docx"
         _add_synthetic(vm, [stored_path])
         w = BatchList(view_model=vm)
         try:
-            assert w.select_file(raw_path) is True
+            assert w.select_file(raw_path) is (os.name == "nt")
+            assert w.select_file(stored_path)
             assert w.get_current_file() == stored_path
         finally:
             w.deleteLater()
