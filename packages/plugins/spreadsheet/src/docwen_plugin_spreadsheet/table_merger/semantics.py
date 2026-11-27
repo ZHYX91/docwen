@@ -32,17 +32,6 @@ def value_identity(value: Any, *, source_type: str | None = None) -> Any:
     return ("str", str(value))
 
 
-def coverage_relation(*, base_unique: bool, collect_unique: bool) -> str:
-    """Classify non-conflicting records after all aligned fields were compared."""
-    if base_unique and collect_unique:
-        return "complementary"
-    if collect_unique:
-        return "collect_covers_base"
-    if base_unique:
-        return "base_covers_collect"
-    return "equal"
-
-
 @dataclass
 class MergeSummary:
     """Count decisions with bounded source locations, never cell contents.
