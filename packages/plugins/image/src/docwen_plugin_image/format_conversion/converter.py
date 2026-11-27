@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
 
+from docwen_core.errors import CancellationRequested
 from docwen_plugin_image._common import (
     INTEGER_PNG_CLIPPING_WARNING,
     file_size,
+    has_16bit_transparency_key,
     media_type_for,
     new_artifact_id,
     normalize_format,
@@ -59,9 +63,18 @@ class ImageFormatConverter:
                 )
             )
 
+        staged_paths: list[str] = []
         try:
-            with Image.open(input_path) as img:
+            with open(input_path, "rb") as source_stream, Image.open(source_stream) as img:
                 n_frames = getattr(img, "n_frames", 1)
+                if target == "tif" and has_16bit_transparency_key(img):
+                    diagnostics.append(
+                        ConversionDiagnostic(
+                            level="warning",
+                            code="IMAGE-TIFF-16BIT-TRANSPARENCY",
+                            message="The TIFF retains the 16-bit grayscale samples. The PNG transparency key is not supported by the TIFF writer, so its matching shade is opaque.",
+                        )
+                    )
 
                 if n_frames > 1 and ((source_format == "tif" and target != "tif") or target in ("jpg", "bmp")):
                     frames = n_frames
@@ -79,6 +92,7 @@ class ImageFormatConverter:
                         output_path = context.workspace.create_artifact_path(
                             "primary" if idx == 1 else "auxiliary", suffix
                         )
+                        staged_paths.append(output_path)
                         img.seek(idx - 1)
                         with img.copy() as frame:
                             save_image_with_options(
@@ -101,10 +115,10 @@ class ImageFormatConverter:
                             },
                             is_primary=(idx == 1),
                         )
-                        context.workspace.add_artifact(artifact)
                         artifacts.append(artifact)
                 else:
                     output_path = context.workspace.create_artifact_path("primary", suffix)
+                    staged_paths.append(output_path)
                     if n_frames > 1:
                         from docwen_plugin_image.format_conversion.sequence import save_sequence
 
@@ -125,7 +139,12 @@ class ImageFormatConverter:
                                 )
                             )
                         frames = save_sequence(
-                            img, output_path, target, context.request.options, cancel_check=context.cancellation.check
+                            img,
+                            output_path,
+                            target,
+                            context.request.options,
+                            cancel_check=context.cancellation.check,
+                            source_stream=source_stream,
                         )
                         width, height = img.size
                     elif target in ("jpg", "webp"):
@@ -156,8 +175,12 @@ class ImageFormatConverter:
                         metadata={"target_format": target, "width": width, "height": height},
                         is_primary=True,
                     )
-                    context.workspace.add_artifact(artifact)
                     artifacts.append(artifact)
+            context.cancellation.check()
+            # All encoders and the final cancellation check succeeded.
+            staged_paths.clear()
+        except CancellationRequested:
+            raise
         except Exception:
             context.logger.error("Image format conversion failed")
             message = "Image format conversion failed."
@@ -172,6 +195,13 @@ class ImageFormatConverter:
                 diagnostics=[ConversionDiagnostic(level="error", message=message, code="IMAGEFMT-CONVERT-ERROR")],
             )
 
+        finally:
+            for path in staged_paths:
+                with suppress(OSError):
+                    Path(path).unlink(missing_ok=True)
+
+        for artifact in artifacts:
+            context.workspace.add_artifact(artifact)
         context.progress.report_progress(100.0, "Image format conversion complete")
         if artifacts:
             context.progress.report_artifact_ready(artifacts[0].artifact_id, artifacts[0].suggested_name)
