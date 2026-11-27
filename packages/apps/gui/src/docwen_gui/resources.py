@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QByteArray, QRectF, QSize, Qt
-from PySide6.QtGui import QAction, QIcon, QIconEngine, QPainter, QPixmap
+from PySide6.QtGui import QAction, QColor, QIcon, QIconEngine, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QAbstractButton
 
@@ -67,12 +67,20 @@ class _SvgIconEngine(QIconEngine):
         return _SvgIconEngine(self._svg_bytes, color=self._color)
 
     def _renderer(self, mode: QIcon.Mode = QIcon.Mode.Normal) -> QSvgRenderer:
-        color = (
-            _resolve_theme_icon_color(mode)
-            if mode == QIcon.Mode.Disabled
-            else self._color or _resolve_theme_icon_color(mode)
-        )
         svg_text = self._svg_bytes.decode("utf-8")
+        color = self._color
+        if mode == QIcon.Mode.Disabled or not color:
+            foreground = _resolve_theme_icon_color(mode)
+            color = foreground.name()
+            if foreground.alpha() < 255:
+                # SVG Tiny solidColor carries alpha for themed fill/stroke only.
+                # Existing artwork colors and per-shape opacity keep their meaning.
+                paint = (
+                    f'<defs><solidColor id="docwen-theme-foreground" solid-color="{color}" '
+                    f'solid-opacity="{foreground.alphaF()}"/></defs>'
+                )
+                svg_text = svg_text.replace("</svg>", f"{paint}</svg>", 1)
+                color = "url(#docwen-theme-foreground)"
         for attribute in ("fill", "stroke"):
             for old_color in ("#000", "#000000", "black"):
                 svg_text = svg_text.replace(f'{attribute}="{old_color}"', f'{attribute}="{color}"')
@@ -121,7 +129,7 @@ class _SvgIconEngine(QIconEngine):
         return pixmap
 
 
-def _resolve_theme_icon_color(mode: QIcon.Mode = QIcon.Mode.Normal) -> str:
+def _resolve_theme_icon_color(mode: QIcon.Mode = QIcon.Mode.Normal) -> QColor:
     """Determine the current theme's text color for SVG fill adaptation."""
     try:
         from PySide6.QtGui import QPalette
@@ -130,11 +138,10 @@ def _resolve_theme_icon_color(mode: QIcon.Mode = QIcon.Mode.Normal) -> str:
         app = QApplication.instance()
         if isinstance(app, QApplication):
             group = QPalette.ColorGroup.Disabled if mode == QIcon.Mode.Disabled else QPalette.ColorGroup.Active
-            color = app.palette().color(group, QPalette.ColorRole.WindowText)
-            return str(color.name())
+            return app.palette().color(group, QPalette.ColorRole.WindowText)
     except Exception:
         pass
-    return "#000000"
+    return QColor("#000000")
 
 
 def load_svg_asset_icon(
