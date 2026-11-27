@@ -60,7 +60,7 @@ uv run --frozen docwen-gui
 uv run --frozen docwen --help
 ```
 
-`uv run --frozen`은 동기화된 환경을 사용하므로 수동 활성화가 필요 없습니다. CI와 제품 빌드는 uv 0.12.0을, 의존성 관리는 호환되는 0.12.x를 사용합니다. `pip install -e`는 저장소의 특정 의존성 제외 규칙을 적용할 수 없어 지원하지 않습니다.
+`uv run --frozen`은 동기화된 환경을 사용하므로 수동 활성화가 필요 없습니다. CI와 제품 빌드는 uv 0.12.0을 사용합니다. `pip install -e`는 저장소의 특정 의존성 제외 규칙을 적용할 수 없어 지원하지 않습니다.
 
 ### macOS 설치 안내
 

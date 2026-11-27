@@ -60,7 +60,7 @@ uv run --frozen docwen-gui
 uv run --frozen docwen --help
 ```
 
-`uv run --frozen` 使用已同步的環境，不需手動啟用。測試與正式建置使用 uv 0.12.0；依賴維護可用相容的 0.12.x。`pip install -e` 無法套用此儲存庫的依賴排除規則，因此不支援此方式。
+`uv run --frozen` 使用已同步的環境，不需手動啟用。測試與正式建置使用 uv 0.12.0。`pip install -e` 無法套用此儲存庫的依賴排除規則，因此不支援此方式。
 
 ### macOS 安裝說明
 
