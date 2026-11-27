@@ -279,3 +279,49 @@ class TestCancellation:
             assert result.error is not None
             assert result.error.error_type == "cancelled"
             assert result.error.diagnostic_code == "LAYOUT2IMG-CANCELLED"
+
+
+@pytest.mark.parametrize("target", ["png", "jpg", "tif"])
+def test_page_exports_retain_print_resolution_and_size(tmp_path: Path, target: str) -> None:
+    import fitz
+    from PIL import Image
+
+    from docwen_plugin_layout.to_image.converter import LayoutToImageConverter
+
+    source = tmp_path / "sizes.pdf"
+    with fitz.open() as pdf:
+        for w, h in [(72, 144), (144, 72)]:
+            pdf.new_page(width=w, height=h)
+        pdf.save(source)
+    result = LayoutToImageConverter(target).convert(
+        _build_fake_context(str(source), str(tmp_path), target, {"render_dpi": 200})
+    )
+    assert result.success, result.error
+    sizes = []
+    for artifact in result.artifacts:
+        with Image.open(artifact.staging_path) as image:
+            for index in range(getattr(image, "n_frames", 1)):
+                image.seek(index)
+                assert image.info["dpi"] == pytest.approx((200, 200), abs=0.03)
+                sizes.append(image.size)
+    assert sizes == [(200, 400), (400, 200)]
+
+
+@pytest.mark.parametrize("target", ["png", "jpg", "tif"])
+def test_cancellation_after_first_page_discards_partial_render(
+    sample_multi_page_pdf_path: Path, tmp_path: Path, target: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from docwen_core.cancellation import CancellationToken
+    from docwen_plugin_layout.to_image.converter import LayoutToImageConverter
+
+    token = CancellationToken()
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    context = _build_fake_context(
+        str(sample_multi_page_pdf_path), str(staging), target, {"render_dpi": 72}, cancellation=token
+    )
+    monkeypatch.setattr(context.progress, "report_progress", lambda *_args: token.cancel())
+    result = LayoutToImageConverter(target).convert(context)
+    assert result.error and result.error.error_type == "cancelled"
+    assert not context.workspace.registered_artifacts
+    assert list(staging.iterdir()) == []

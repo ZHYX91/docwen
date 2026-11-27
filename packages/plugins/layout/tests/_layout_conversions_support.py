@@ -26,6 +26,8 @@ from tests.support.xps import (
     raster_visual_projection,
 )
 
+from docwen_core.cancellation import CancellationToken
+
 if TYPE_CHECKING:
     import fitz
 
@@ -90,6 +92,7 @@ def _build_fake_context(
     config_values: dict[str, Any] | None = None,
     config_snapshot: dict[str, Any] | None = None,
     pre_cancelled: bool = False,
+    cancellation: CancellationToken | None = None,
 ) -> Any:
     from tests.support.config import FakeConfigView
     from tests.support.execution import FakeExecutionContext
@@ -97,7 +100,6 @@ def _build_fake_context(
     from tests.support.progress import FakeProgressSink
     from tests.support.workspace import FakeWorkspaceHandle
 
-    from docwen_core.cancellation import CancellationToken
     from docwen_core.models.file_ref import FileRef
     from docwen_core.models.request import ConversionRequest, OutputPolicy
 
@@ -119,7 +121,7 @@ def _build_fake_context(
         output_policy=OutputPolicy(),
     )
     config = FakeConfigView(config_values)
-    token = CancellationToken()
+    token = cancellation or CancellationToken()
     if pre_cancelled:
         token.cancel("test cancellation")
     return FakeExecutionContext(
