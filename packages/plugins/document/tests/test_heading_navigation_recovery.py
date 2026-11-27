@@ -263,3 +263,36 @@ def test_hidden_or_uncertain_title_visibility_never_proves_a_target(hidden_sourc
     assert properties is not None
     properties.append(hidden)
     assert resolve_hyperlink_target(paragraph, link) is None
+
+
+def test_conversion_reuses_heading_evidence_for_body_and_table_only_in_the_current_document(tmp_path, monkeypatch):
+    from docwen_plugin_document.shared import heading_navigation
+    from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
+
+    from ._request_scoped_docx_policy_support import _context, _markdown_from_result
+
+    document, _, link, *_ = _document()
+    for _ in range(4):
+        document.add_paragraph()._p.append(deepcopy(link))
+    document.add_table(rows=1, cols=1).cell(0, 0).paragraphs[0]._p.append(deepcopy(link))
+    paths = [tmp_path / "unique.docx", tmp_path / "ambiguous.docx"]
+    document.save(paths[0])
+    document.add_heading("Intro", level=1)
+    document.save(paths[1])
+
+    checks = 0
+    check_visibility = heading_navigation._heading_may_hide_text
+
+    def count_visibility(heading, styles):
+        nonlocal checks
+        checks += 1
+        return check_visibility(heading, styles)
+
+    monkeypatch.setattr(heading_navigation, "_heading_may_hide_text", count_visibility)
+    converter = DocxToMarkdownConverter()
+    for path in paths:
+        context = _context(tmp_path, path, request_id=path.stem, config={})
+        text = _markdown_from_result(converter.convert(context))
+        assert text.count("Jump") == 6
+        assert text.count("[Jump](#intro)") == (6 if path == paths[0] else 0)
+    assert checks == 3  # one visible heading in the first file, two in the next

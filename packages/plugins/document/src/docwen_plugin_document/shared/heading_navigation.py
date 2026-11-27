@@ -8,12 +8,14 @@ used as navigation authority here.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
+from functools import cached_property
 from typing import Any
 from urllib.parse import quote, unquote
 
 from docx.oxml.ns import qn
 
-from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_bookmark_name
+from docwen_core.docx_bookmarks import DocxBookmarkInventory, build_docx_bookmark_inventory, prove_bookmark_name
 from docwen_core.docx_xml import parse_word_xml_int
 
 _NAVIGATION_NAME = re.compile(r"DWNav_[0-9a-f]{32}")
@@ -162,13 +164,42 @@ def _heading_may_hide_text(element: Any, styles: dict[str, list[Any]]) -> bool:
     return any(_properties_hide_text(properties) for properties in run_properties)
 
 
-def _matches_heading(title: str, fragment: str) -> bool:
-    title = title.strip()
-    slug = re.sub(r"[^\w\- ]", "", title.lower()).replace(" ", "-")
-    return bool(title) and fragment in {title, slug}
+@dataclass
+class HeadingNavigationIndex:
+    """Request-scoped evidence for the immutable DOCX being exported."""
+
+    document: Any
+    bookmarks: DocxBookmarkInventory
+
+    @cached_property
+    def unique_headings(self) -> dict[str, Any]:
+        styles: dict[str, list[Any]] = {}
+        for style in self.document.styles.element:
+            if style.tag == qn("w:style"):
+                styles.setdefault(style.get(qn("w:styleId"), ""), []).append(style)
+        defaults = self.document.styles.element.find(f"{qn('w:docDefaults')}/{qn('w:rPrDefault')}/{qn('w:rPr')}")
+        if _properties_hide_text(defaults):
+            return {}
+        headings: dict[str, Any] = {}
+        for candidate in self.document.element.body.iter(qn("w:p")):
+            if _heading_level(candidate, styles) is None:
+                continue
+            if _heading_may_hide_text(candidate, styles):
+                return {}
+            title = _heading_text(candidate)
+            if title is None:
+                return {}
+            title = title.strip()
+            if title:
+                slug = re.sub(r"[^\w\- ]", "", title.lower()).replace(" ", "-")
+                for fragment in {title, slug}:
+                    headings[fragment] = None if fragment in headings else candidate
+        return headings
 
 
-def resolve_ordinary_heading_target(paragraph: Any, hyperlink: Any) -> str | None:
+def resolve_ordinary_heading_target(
+    paragraph: Any, hyperlink: Any, *, navigation: HeadingNavigationIndex | None = None
+) -> str | None:
     """Return a safe fragment only after structural and visible-heading checks."""
     try:
         anchor = hyperlink.get(qn("w:anchor"), "")
@@ -184,8 +215,9 @@ def resolve_ordinary_heading_target(paragraph: Any, hyperlink: Any) -> str | Non
             return None
         document = paragraph.part.package.main_document_part.document
         body = document.element.body
-        inventory = build_docx_bookmark_inventory(document)
-        proof = prove_bookmark_name(inventory, anchor, scope_element=body)
+        if navigation is None or navigation.document.element is not document.element:
+            navigation = HeadingNavigationIndex(document, build_docx_bookmark_inventory(document))
+        proof = prove_bookmark_name(navigation.bookmarks, anchor, scope_element=body)
         if not proof.valid or proof.start is None or proof.end is None:
             return None
         start, end = proof.start.element, proof.end.element
@@ -227,27 +259,7 @@ def resolve_ordinary_heading_target(paragraph: Any, hyperlink: Any) -> str | Non
             if owner is None or owner.tag not in {qn("w:tbl"), qn("w:tr"), qn("w:tc"), qn("w:sdt"), qn("w:sdtContent")}:
                 return None
             owner = owner.getparent()
-        styles: dict[str, list[Any]] = {}
-        for style in document.styles.element:
-            if style.tag == qn("w:style"):
-                styles.setdefault(style.get(qn("w:styleId"), ""), []).append(style)
-        defaults = document.styles.element.find(f"{qn('w:docDefaults')}/{qn('w:rPrDefault')}/{qn('w:rPr')}")
-        if _properties_hide_text(defaults):
-            return None
-        if _heading_level(target, styles) is None:
-            return None
-        matched: list[Any] = []
-        for candidate in body.iter(qn("w:p")):
-            if _heading_level(candidate, styles) is None:
-                continue
-            if _heading_may_hide_text(candidate, styles):
-                return None
-            title = _heading_text(candidate)
-            if title is None:
-                return None
-            if _matches_heading(title, fragment):
-                matched.append(candidate)
-        if len(matched) != 1 or matched[0] is not target:
+        if navigation.unique_headings.get(fragment) is not target:
             return None
         return "#" + quote(hint[1:], safe="/%-._~")
     except (AttributeError, KeyError, TypeError, ValueError):

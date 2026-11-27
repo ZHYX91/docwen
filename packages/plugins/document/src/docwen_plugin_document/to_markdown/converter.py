@@ -29,6 +29,7 @@ from docx.oxml.ns import qn
 from docwen_core.conversion_loss import ConversionLoss, LossCollector, loss_text
 from docwen_core.errors import CancellationRequested
 from docwen_core.text.ocr import report_ocr_outcome
+from docwen_plugin_document.shared.heading_navigation import HeadingNavigationIndex
 from docwen_plugin_document.to_markdown.metadata import build_yaml_header, extract_title_metadata
 
 if TYPE_CHECKING:
@@ -149,6 +150,7 @@ class DocxToMarkdownConverter:
         self._syntax_config = self._request_policy.syntax
         self._note_extractor: Any | None = None
         self._semantic_bookmark_inventory: DocxBookmarkInventory | None = None
+        self._heading_navigation: HeadingNavigationIndex | None = None
         self._semantic_v3_recovery = DocxSemanticsV3Recovery()
         self._extensions = MarkdownExtensions.obsidian()
         self._resolved_v4_recovery: ResolvedNumberingV4Recovery | None = None
@@ -190,8 +192,10 @@ class DocxToMarkdownConverter:
             self._discard_pending_artifacts()
             self._image_names = ImageExtractionNames(str(context.workspace.staging_dir))
             self._inline_image_refs = {}
-            self._inline_image_refs = {}
-            return self._convert_once(context)
+            try:
+                return self._convert_once(context)
+            finally:
+                self._heading_navigation = None
 
     def _convert_once(self, context: PluginExecutionContext) -> Any:
         """Run the DOCX → Markdown conversion.
@@ -645,6 +649,7 @@ class DocxToMarkdownConverter:
                     raise ValueError("image_mode=omit cannot preserve an authenticated DOCX image owner")
         semantic_bookmark_inventory = build_docx_bookmark_inventory(doc)
         self._semantic_bookmark_inventory = semantic_bookmark_inventory
+        self._heading_navigation = HeadingNavigationIndex(doc, semantic_bookmark_inventory)
         semantic_caption_by_object_index: dict[int, Any] = {}
         semantic_table_captions: dict[str, tuple[int, Any]] = {}
         semantic_caption_indices: set[int] = set()
@@ -2112,6 +2117,7 @@ class DocxToMarkdownConverter:
             note_extractor=self._note_extractor,
             preserve_formatting=(self._preserve_formatting if preserve_formatting is None else preserve_formatting),
             syntax_config=self._syntax_for_rendering(),
+            navigation=self._heading_navigation,
             style_detector_config=style_detector_config,
             math_renderer=self._render_formula,
             image_renderer=self._render_inline_images,
@@ -2231,6 +2237,7 @@ class DocxToMarkdownConverter:
             note_extractor=self._note_extractor,
             preserve_formatting=preserve_formatting,
             syntax_config=self._syntax_for_rendering(),
+            navigation=self._heading_navigation,
             style_detector_config=style_detector_config,
             math_renderer=self._render_formula,
             text_transform=text_transform,
@@ -2284,6 +2291,7 @@ class DocxToMarkdownConverter:
             note_extractor=self._note_extractor,
             preserve_formatting=preserve_formatting,
             syntax_config=self._syntax_for_rendering(),
+            navigation=self._heading_navigation,
             style_detector_config=style_detector_config,
             reference_spans=reference_spans,
             literal_text=literal_text,
@@ -2800,6 +2808,7 @@ class DocxToMarkdownConverter:
                         note_extractor=self._note_extractor,
                         preserve_formatting=preserve_formatting,
                         syntax_config=self._syntax_for_rendering(),
+                        navigation=self._heading_navigation,
                         style_detector_config=self._request_policy.style_detector,
                         image_renderer=self._render_inline_images,
                     )
