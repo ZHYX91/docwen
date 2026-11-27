@@ -402,6 +402,10 @@ class TestFullClosedLoop:
         assert not output_dir.exists()
         assert not list(tmp_path.glob("docwen_pre_*"))
         event_types = [event.event_type for event in adapter.collected_events]
+        assert not any(
+            event.event_type == "task_progress" and event.payload.get("message") == "Finalizing output"
+            for event in adapter.collected_events
+        )
         assert event_types[-1] == "task_cancelled"
         assert "task_completed" not in event_types
 

@@ -90,6 +90,8 @@ class TestFullClosedLoop:
         finalize_calls: list[str] = []
 
         def count_finalize(**kwargs):
+            assert events[-1].event_type == "task_progress"
+            assert events[-1].payload["message"] == "Finalizing output"
             finalize_calls.append(kwargs["task_id"])
             return real_finalize(**kwargs)
 
@@ -135,7 +137,7 @@ class TestFullClosedLoop:
         assert [artifact.suggested_name for artifact in result.artifacts] == ["legacy_fromDoc.docx"]
         assert "TASK_EVENT_LISTENER_ERROR" in [diagnostic.code for diagnostic in result.diagnostics]
         event_types = [event.event_type for event in events]
-        assert len([event for event in event_types if event in {"task_completed", "task_failed"}]) == 1
+        assert [event for event in event_types if event in {"task_completed", "task_failed"}] == ["task_failed"]
 
     def test_preconversion_same_stem_batch_finalizes_to_each_original_parent(
         self,

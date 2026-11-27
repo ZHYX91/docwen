@@ -229,8 +229,8 @@ def test_page_break_segments_preserve_formula_callback_order():
     assert rendered == ["Before$x$", "After"]
 
 
-@pytest.mark.parametrize("wrapper_tag", ("w:ins", "w:moveTo"))
-def test_page_break_segments_include_accepted_revision_text(wrapper_tag: str):
+@pytest.mark.parametrize("wrapper_tag", ("w:ins", "w:moveTo", "w:sdt", "w:smartTag", "w:customXml"))
+def test_page_break_segments_include_visible_wrapped_text(wrapper_tag: str):
     doc = Document()
     paragraph = doc.add_paragraph()
     wrapper = OxmlElement(wrapper_tag)
@@ -244,7 +244,12 @@ def test_page_break_segments_include_accepted_revision_text(wrapper_tag: str):
     after = OxmlElement("w:t")
     after.text = "After"
     run.append(after)
-    wrapper.append(run)
+    if wrapper_tag == "w:sdt":
+        content = OxmlElement("w:sdtContent")
+        wrapper.append(content)
+        content.append(run)
+    else:
+        wrapper.append(run)
     paragraph._p.append(wrapper)
 
     rendered = render_paragraph_runs_split_on_page_breaks(

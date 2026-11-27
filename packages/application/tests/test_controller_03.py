@@ -110,6 +110,7 @@ class TestExecuteMethods:
         output_mode: str,
     ) -> None:
         from docwen_application.preconversion.pre_converter import PreConversionResult
+        from docwen_core.models.file_inspection import FILE_ADMISSION_ACCEPTANCE_METADATA_KEY
         from docwen_core.models.result import ConversionResult
 
         first_dir = tmp_path / "first"
@@ -131,28 +132,24 @@ class TestExecuteMethods:
             else [str(first_dir), str(second_dir)]
         )
         staging_dirs: list[Path] = []
-        seen: list[tuple[Path, str, dict[str, object], dict[str, Any], str]] = []
+        seen: list[FileRef] = []
+        payloads: list[str] = []
+        policies: list[dict[str, Any]] = []
 
         def fake_pre_convert(input_path: str, _source_format: str, *, staging_dir: str, **_kwargs):
             stage = Path(staging_dir)
             stage.mkdir(parents=True, exist_ok=True)
             staging_dirs.append(stage)
             output = stage / f"{Path(input_path).stem}.docx"
-            output.write_text(Path(input_path).read_text(encoding="utf-8"), encoding="utf-8")
+            output.write_bytes(b"hub:" + Path(input_path).read_bytes())
             return PreConversionResult(str(output), "doc", "Fake Office")
 
         def fake_runtime_execute(runtime_request: ConversionRequest) -> ConversionResult:
             runtime_ref = runtime_request.input_refs[0]
-            runtime_path = Path(runtime_ref.path)
-            seen.append(
-                (
-                    runtime_path,
-                    runtime_path.read_text(encoding="utf-8"),
-                    runtime_request.output_policy.to_dict(),
-                    dict(runtime_ref.metadata),
-                    runtime_ref.warning_message,
-                )
-            )
+            seen.append(runtime_ref)
+            payloads.append(Path(runtime_ref.path).read_text(encoding="utf-8"))
+            policies.append(runtime_request.output_policy.to_dict())
+            runtime_ref.metadata["tags"].append("converted")
             return ConversionResult(task_id=runtime_request.request_id, success=True)
 
         mock_runtime.execute.side_effect = fake_runtime_execute
@@ -164,15 +161,16 @@ class TestExecuteMethods:
                     path=str(first),
                     format="doc",
                     category="document",
+                    encoding="cp1252",
                     warning_message="first warning",
-                    metadata={"detector": "first"},
+                    metadata={"detector": "first", "tags": ["source"], FILE_ADMISSION_ACCEPTANCE_METADATA_KEY: {}},
                 ),
                 FileRef(
                     path=str(second),
                     format="doc",
                     category="document",
                     warning_message="second warning",
-                    metadata={"detector": "second"},
+                    metadata={"detector": "second", "tags": ["source"]},
                 ),
             ],
             target_format="md",
@@ -199,10 +197,16 @@ class TestExecuteMethods:
                 results = ctrl.execute_batch(request)
 
             assert [result.success for result in results] == [True, True]
-            assert [item[1] for item in seen] == ["FIRST", "SECOND"]
-            assert seen[0][0] != seen[1][0]
-            assert [item[0].name for item in seen] == ["report.docx", "report.docx"]
-            assert [item[2] for item in seen] == [
+            assert payloads == ["hub:FIRST", "hub:SECOND"]
+            assert seen[0].path != seen[1].path
+            assert [Path(ref.path).name for ref in seen] == ["report.docx", "report.docx"]
+            assert [ref.size_bytes for ref in seen] == [len(b"hub:FIRST"), len(b"hub:SECOND")]
+            assert [ref.encoding for ref in seen] == ["cp1252", "utf-8"]
+            assert [ref.category for ref in seen] == ["document", "document"]
+            assert FILE_ADMISSION_ACCEPTANCE_METADATA_KEY not in seen[0].metadata
+            assert FILE_ADMISSION_ACCEPTANCE_METADATA_KEY in request.input_refs[0].metadata
+            assert all(ref.metadata["tags"] == ["source"] for ref in request.input_refs)
+            assert policies == [
                 {
                     "output_dir": expected_output_dirs[0],
                     "output_path": None,
@@ -222,16 +226,17 @@ class TestExecuteMethods:
                     "open_after_done": True,
                 },
             ]
-            assert [item[3]["detector"] for item in seen] == ["first", "second"]
-            provenance = [item[3]["_docwen_preconversion_source"] for item in seen]
+            assert [ref.metadata["detector"] for ref in seen] == ["first", "second"]
+            provenance = [ref.metadata["_docwen_preconversion_source"] for ref in seen]
             assert [item["path"] for item in provenance] == [str(first), str(second)]
             assert [item["format"] for item in provenance] == ["doc", "doc"]
             assert [item["category"] for item in provenance] == ["document", "document"]
             assert [item["warning_message"] for item in provenance] == ["first warning", "second warning"]
             assert [item["inspection"] for item in provenance] == [None, None]
-            assert [item[4] for item in seen] == ["", ""]
+            assert [ref.warning_message for ref in seen] == ["", ""]
             assert [result.task_id for result in results] == ["same-stem-0", "same-stem-1"]
-            assert staging_dirs and not list(tmp_path.glob("docwen_pre_*"))
+            assert len(staging_dirs) == 2 and all(not stage.exists() for stage in staging_dirs)
+            assert (first.read_bytes(), second.read_bytes()) == (b"FIRST", b"SECOND")
         finally:
             for root in tmp_path.glob("docwen_pre_*"):
                 shutil.rmtree(root, ignore_errors=True)
@@ -334,45 +339,55 @@ class TestExecuteMethods:
         assert seen[0][1] == str(legacy_output)
         assert seen[1] == (str(direct), str(direct_output))
 
+    @pytest.mark.parametrize("entry", ["single", "batch", "document-group"])
     def test_preconversion_staging_is_cleaned_when_runtime_raises(
         self,
         mock_runtime: MagicMock,
-        tmp_path,
+        tmp_path: Path,
         monkeypatch,
+        entry: str,
     ) -> None:
         from docwen_application.preconversion.pre_converter import PreConversionResult
 
         source = tmp_path / "legacy.doc"
-        source.write_text("legacy", encoding="utf-8")
+        source.write_bytes(b"legacy")
+        stage_root = tmp_path / "temp"
+        stage_root.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(stage_root))
 
         def fake_pre_convert(input_path: str, _source_format: str, *, staging_dir: str, **_kwargs):
-            stage = Path(staging_dir)
-            stage.mkdir(parents=True, exist_ok=True)
-            output = stage / "legacy.docx"
-            output.write_text(Path(input_path).read_text(encoding="utf-8"), encoding="utf-8")
+            output = Path(staging_dir) / "legacy.docx"
+            output.write_bytes(Path(input_path).read_bytes())
             return PreConversionResult(str(output), "doc", "Fake Office")
 
-        mock_runtime.execute.side_effect = RuntimeError("runtime exploded")
-        ctrl = ApplicationController(runtime_port=mock_runtime)
-        monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
-        try:
-            with (
-                patch(
-                    "docwen_application.preconversion.chain_resolver.resolve_chain",
-                    return_value=["docx", "md"],
-                ),
-                patch(
-                    "docwen_application.preconversion.pre_converter.pre_convert",
-                    side_effect=fake_pre_convert,
-                ),
-                pytest.raises(RuntimeError, match="runtime exploded"),
-            ):
-                ctrl.execute_single(_request("runtime-error", str(source), source_format="doc"))
+        received: list[bytes] = []
 
-            assert not list(tmp_path.glob("docwen_pre_*"))
-        finally:
-            for root in tmp_path.glob("docwen_pre_*"):
-                shutil.rmtree(root, ignore_errors=True)
+        def fail_runtime(child: ConversionRequest):
+            received.append(Path(child.input_refs[0].path).read_bytes())
+            raise RuntimeError("runtime exploded")
+
+        mock_runtime.execute.side_effect = fail_runtime
+        ctrl = ApplicationController(runtime_port=mock_runtime)
+        request = _request("runtime-error", str(source), source_format="doc")
+        with (
+            patch("docwen_application.preconversion.chain_resolver.resolve_chain", return_value=["docx", "md"]),
+            patch("docwen_application.preconversion.pre_converter.pre_convert", side_effect=fake_pre_convert),
+        ):
+            if entry == "document-group":
+                (result,) = ctrl.execute_document_group_batch(request, (request,))
+                assert result.task_id == "runtime-error-0" and not result.success
+                assert result.error is not None and result.error.error_type == "conversion_failed"
+            else:
+                execute = ctrl.execute_single if entry == "single" else ctrl.execute_batch
+                with pytest.raises(RuntimeError, match="runtime exploded"):
+                    execute(request)
+
+        mock_runtime.execute.assert_called_once()
+        assert received == [b"legacy"]
+        staged = Path(mock_runtime.execute.call_args.args[0].input_refs[0].path)
+        assert not staged.exists()
+        assert list(stage_root.iterdir()) == []
+        assert source.read_bytes() == b"legacy"
 
     def test_preconversion_staging_is_cleaned_when_backend_is_unavailable(
         self,
