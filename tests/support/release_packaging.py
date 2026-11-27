@@ -46,6 +46,15 @@ def write_packaged_common_resources(binary_dir: Path) -> None:
         model_path = binary_dir / "models" / rel_path
         model_path.parent.mkdir(parents=True, exist_ok=True)
         model_path.write_bytes(b"onnx")
+    rapidocr_dir = binary_dir / packaged_resources.RAPIDOCR_PACKAGE
+    rapidocr_dir.mkdir(parents=True, exist_ok=True)
+    (rapidocr_dir / "config.yaml").write_text(
+        "".join(
+            f"{section}:\n  model_path: {packaged_resources.packaged_rapidocr_model_path(filename)}\n"
+            for section, filename in packaged_resources.RAPIDOCR_DEFAULT_MODELS.items()
+        ),
+        encoding="utf-8",
+    )
     locales_dir = binary_dir / "_internal" / "docwen" / "i18n" / "locales"
     locales_dir.mkdir(parents=True)
     for rel_path in verify_packaged_cli._REQUIRED_LOCALE_FILES:

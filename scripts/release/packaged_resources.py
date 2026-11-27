@@ -9,6 +9,12 @@ from docwen_runtime.pymupdf_layout_resources import (
 )
 
 RESOURCE_DIRS = ("templates", "configs", "models")
+RAPIDOCR_PACKAGE = Path("_internal/rapidocr_onnxruntime")
+RAPIDOCR_DEFAULT_MODELS = {
+    "Det": "ch_PP-OCRv4_det_infer.onnx",
+    "Rec": "ch_PP-OCRv4_rec_infer.onnx",
+    "Cls": "ch_ppocr_mobile_v2.0_cls_infer.onnx",
+}
 REQUIRED_CONFIG_FILES = (
     "conversion.toml",
     "document.toml",
@@ -162,6 +168,10 @@ def missing_files(path: Path, required: tuple[str, ...]) -> list[str]:
     return [name for name in required if not (path / name).is_file()]
 
 
+def packaged_rapidocr_model_path(filename: str) -> str:
+    return f"../../models/rapidocr/{filename}"
+
+
 def pymupdf_layout_source_resource_files() -> tuple[str, ...]:
     """Verify and return the explicitly pinned source resource contract."""
 
@@ -235,6 +245,8 @@ def verify_common_resource_layout(binary_dir: Path, *, error_prefix: str) -> Non
     if missing_models:
         raise RuntimeError(f"{error_prefix}_models_missing: {missing_models}")
 
+    verify_rapidocr_model_layout(binary_dir, error_prefix=error_prefix)
+
     locale_dirs = [binary_dir / rel_path for rel_path in LOCALE_DIR_CANDIDATES]
     if not any(path.is_dir() and not missing_files(path, REQUIRED_LOCALE_FILES) for path in locale_dirs):
         missing_by_dir = {
@@ -244,3 +256,26 @@ def verify_common_resource_layout(binary_dir: Path, *, error_prefix: str) -> Non
         raise RuntimeError(f"{error_prefix}_locales_missing: {missing_by_dir}")
 
     verify_pymupdf_layout_resource_layout(binary_dir, error_prefix=error_prefix)
+
+
+def verify_rapidocr_model_layout(binary_dir: Path, *, error_prefix: str) -> None:
+    import yaml
+
+    rapidocr_dir = binary_dir / RAPIDOCR_PACKAGE
+    duplicates = sorted(
+        path.name for path in (rapidocr_dir / "models").glob("*.onnx") if path.name in RAPIDOCR_DEFAULT_MODELS.values()
+    )
+    if duplicates:
+        raise RuntimeError(f"{error_prefix}_rapidocr_duplicate_models: {duplicates}")
+
+    try:
+        config = yaml.safe_load((rapidocr_dir / "config.yaml").read_text(encoding="utf-8"))
+        incorrect = [
+            section
+            for section, filename in RAPIDOCR_DEFAULT_MODELS.items()
+            if config[section]["model_path"] != packaged_rapidocr_model_path(filename)
+        ]
+    except (OSError, TypeError, KeyError, yaml.YAMLError) as exc:
+        raise RuntimeError(f"{error_prefix}_rapidocr_config_invalid") from exc
+    if incorrect:
+        raise RuntimeError(f"{error_prefix}_rapidocr_default_models_invalid: {incorrect}")
