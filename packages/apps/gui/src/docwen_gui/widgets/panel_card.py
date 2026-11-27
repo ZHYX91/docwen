@@ -377,6 +377,20 @@ class InlineNotice(QFrame):
 
     def setText(self, text: str) -> None:
         self.label.setText(text)
+        self._sync_notice_height()
+
+    def event(self, event: QEvent) -> bool:
+        handled = super().event(event)
+        if event.type() in {QEvent.Type.Resize, QEvent.Type.LayoutRequest}:
+            self._sync_notice_height()
+        return handled
+
+    def _sync_notice_height(self) -> None:
+        # The label can gain a wrapped line during resize, before the card's
+        # next layout pass. Reserve its padded height on the frame itself.
+        height = self.heightForWidth(self.width())
+        if height >= 0 and self.minimumHeight() != height:
+            self.setMinimumHeight(height)
 
 
 class TaskActivityList(QFrame):

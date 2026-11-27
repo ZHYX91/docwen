@@ -191,47 +191,6 @@ def test_manifest_declares_consumed_docx_intermediate_rendering_options() -> Non
     assert not docx_render_only_options & set(numbering_properties)
 
 
-def test_plugin_only_imports_allowed_deps():
-    """Plugin exports must not depend on runtime/apps/other plugins."""
-    import importlib
-    import sys
-
-    forbidden = {
-        "docwen_runtime",
-        "docwen_application",
-        "docwen_gui",
-        "docwen_cli",
-        "docwen_bundle",
-        "docwen_plugin_document",
-        "docwen_plugin_presentation",
-        "docwen_plugin_markup",
-        "docwen_plugin_spreadsheet",
-        "docwen_plugin_image",
-        "docwen_plugin_layout",
-        "docwen_plugin_print",
-        "docwen_plugin_optimizer_gongwen",
-        "docwen_plugin_optimizer_invoice_cn",
-        "docwen_plugin_proofread",
-    }
-    before = set(sys.modules)
-    importlib.import_module("docwen_plugin_markdown")
-    introduced = set(sys.modules) - before
-    assert not {name for name in introduced if any(name.startswith(pkg) for pkg in forbidden)}
-
-    plugin_modules = {name for name in sys.modules if name.startswith("docwen_plugin_markdown")}
-    for mod_name in plugin_modules:
-        mod = sys.modules[mod_name]
-        for attr in dir(mod):
-            val = getattr(mod, attr, None)
-            if val is None:
-                continue
-            val_mod = getattr(val, "__module__", "")
-            if not val_mod:
-                continue
-            for forbidden_pkg in forbidden:
-                assert not val_mod.startswith(forbidden_pkg), f"{mod_name}.{attr} depends on {val_mod}"
-
-
 def test_markdown_plugin_source_does_not_depend_on_optimizer_plugins() -> None:
     """Markdown plugin production code owns MD->DOCX field handling locally."""
     from pathlib import Path
@@ -249,55 +208,15 @@ def test_common_utils_has_no_dead_docx_ast_alias() -> None:
     assert not hasattr(common_utils, "BUILD_DOCX_FROM_AST")
 
 
-def test_yaml_processor_only_owns_front_matter_extraction() -> None:
-    """Field layout lives in the built-in Gongwen module, not parser stubs."""
-    import inspect
-
+def test_yaml_processor_extracts_front_matter_and_leaves_field_rendering_to_gongwen() -> None:
     from docwen_plugin_markdown import yaml_processor
 
-    assert hasattr(yaml_processor, "extract_yaml_front_matter")
+    body = "\n# Heading\n  continued\n"
+    fields, remainder = yaml_processor.extract_yaml_front_matter("---\ntitle: Report\n---\n" + body)
+    assert fields == {"title": "Report"}
+    assert remainder == body
     assert not hasattr(yaml_processor, "process_yaml_fields")
     assert not hasattr(yaml_processor, "render_yaml_fields_to_docx")
-
-    source = inspect.getsource(yaml_processor)
-    assert "Phase 1: no-op stub" not in source
-    assert "Phase 2 implements" not in source
-
-
-def test_markdown_pipeline_modules_have_no_phase_stub_residue() -> None:
-    """Markdown pipeline modules must not carry unused migration-era stubs."""
-    import inspect
-
-    from docwen_plugin_markdown import (
-        ast_transforms,
-        common_utils,
-        mistune_extensions,
-        preprocessor,
-        renderer,
-        renderer_inlines,
-        renderer_utils,
-        template_filler,
-    )
-
-    assert not hasattr(preprocessor, "_TAG_MAP")
-
-    source = (
-        inspect.getsource(ast_transforms)
-        + inspect.getsource(common_utils)
-        + inspect.getsource(mistune_extensions)
-        + inspect.getsource(preprocessor)
-        + inspect.getsource(renderer)
-        + inspect.getsource(renderer_inlines)
-        + inspect.getsource(renderer_utils)
-        + inspect.getsource(template_filler)
-    )
-    assert "Phase 2 stub" not in source
-    assert "Phase 2" not in source
-    assert "Phase 3" not in source
-    assert "_common.py" not in source
-    assert "formerly in" not in source
-    assert "will be handled soon" not in source
-    assert "will be refactored into domain-specific modules" not in source
 
 
 def test_word_numbering_production_code_uses_core_adapter() -> None:

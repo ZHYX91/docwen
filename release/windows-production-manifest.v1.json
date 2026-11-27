@@ -3,7 +3,7 @@
   "manifestId": "docwen-windows-production",
   "product": {
     "name": "DocWen",
-    "version": "0.23.2",
+    "version": "0.24.0",
     "stableSemverOnly": true,
     "cliJsonProtocolVersion": 3,
     "releaseTagFormat": "{version}"
@@ -271,10 +271,10 @@
   },
   "releaseAssetAllowlist": [
     "DocWen-windows-x64.zip",
-    "DocWen-0.23.2-linux-x64.tar.gz",
-    "DocWenCLI-0.23.2-linux-x64.tar.gz",
-    "DocWen-0.23.2-macos-arm64.tar.gz",
-    "DocWenCLI-0.23.2-macos-arm64.tar.gz",
+    "DocWen-0.24.0-linux-x64.tar.gz",
+    "DocWenCLI-0.24.0-linux-x64.tar.gz",
+    "DocWen-0.24.0-macos-arm64.tar.gz",
+    "DocWenCLI-0.24.0-macos-arm64.tar.gz",
     "SHA256SUMS.txt"
   ]
 }

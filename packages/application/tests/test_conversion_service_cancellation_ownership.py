@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import gc
 import threading
+import weakref
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -14,7 +16,13 @@ from docwen_application.conversion_contracts import ConversionServiceError
 from docwen_application.conversion_service import ConversionService
 from docwen_core.models.result import ConversionErrorInfo, ConversionResult
 
-from ._conversion_service_support import MARKDOWN_TO_XLSX_CAPABILITY_ID, _Committer, _Controller, _request
+from ._conversion_service_support import (
+    MARKDOWN_TO_XLSX_CAPABILITY_ID,
+    MARKDOWN_VALIDATE_CAPABILITY_ID,
+    _Committer,
+    _Controller,
+    _request,
+)
 
 pytestmark = pytest.mark.contract
 
@@ -64,6 +72,30 @@ def admitted_service(tmp_path: Path):
     service = ConversionService(controller, _Committer())
     request = _request(source, staging, capability_id=MARKDOWN_TO_XLSX_CAPABILITY_ID)
     return runtime, controller, service, request
+
+
+@pytest.mark.parametrize(
+    ("content", "code"),
+    [(b"", "file_empty"), (bytes(range(64)), "file_content_unrecognized")],
+)
+def test_content_admission_rejection_releases_the_accepted_task(admitted_service, tmp_path, content, code):
+    runtime, controller, service, _ = admitted_service
+    source = tmp_path / "rejected.md"
+    source.write_bytes(content)
+    staging = tmp_path / "output"
+    request = _request(source, staging, capability_id=MARKDOWN_VALIDATE_CAPABILITY_ID)
+    task_id = service.accept(service.plan(request).plan_id)
+
+    with pytest.raises(ConversionServiceError) as failed:
+        service.execute_accepted(task_id)
+
+    assert failed.value.category == "invalid_request"
+    assert failed.value.code == code
+    assert failed.value.retryable is False
+    assert runtime.executed == []
+    assert not list(staging.iterdir())
+    assert service.cancel(task_id) == "already_terminal"
+    assert controller._cancellation_scopes == {}
 
 
 @pytest.mark.parametrize("phase", ["accepted", "running"])
@@ -220,3 +252,20 @@ def test_invalid_controller_handle_is_rejected_and_the_captured_owner_is_release
     assert error.value.code == "invalid_cancellation_reservation"
     assert controller._cancellation_scopes == {}
     assert "task.invalid" not in service._tasks
+
+
+def test_terminal_tasks_release_execution_data_and_keep_session_identity(admitted_service):
+    _runtime, controller, service, request = admitted_service
+    task_id = service.accept(service.plan(request).plan_id, "task.finished")
+    reservation = weakref.ref(controller._cancellation_scopes[task_id])
+
+    assert service.execute_accepted(task_id).state == "failed"
+    gc.collect()
+    assert reservation() is None
+    assert service.cancel(task_id) == "already_terminal"
+    with pytest.raises(ConversionServiceError) as execute_error:
+        service.execute_accepted(task_id)
+    assert execute_error.value.code == "task_not_accepted"
+    with pytest.raises(ConversionServiceError) as accept_error:
+        service.accept(service.plan(request).plan_id, task_id)
+    assert accept_error.value.code == "task_id_in_use"

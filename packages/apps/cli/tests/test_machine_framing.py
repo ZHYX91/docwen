@@ -12,6 +12,7 @@ from docwen_cli.machine.framing import (
     MAX_MESSAGE_BYTES,
     FrameWriter,
     FramingError,
+    encode_frame,
     read_frame,
 )
 
@@ -97,3 +98,50 @@ def test_writer_and_reader_accept_exact_machine_message_limit() -> None:
     FrameWriter(stream).write(payload)
 
     assert read_frame(io.BytesIO(stream.getvalue())) == payload
+
+
+def test_writer_finishes_short_writes_before_flushing_each_frame() -> None:
+    class ShortWriter(io.BytesIO):
+        def write(self, data, /):
+            return super().write(data[:7])
+
+        def flush(self):
+            flushed.append(self.getvalue())
+
+    flushed: list[bytes] = []
+    stream = ShortWriter()
+    writer = FrameWriter(stream)
+    first = {"id": "甲"}
+    second = {"id": "乙"}
+    writer.write(first)
+    writer.write_frame(encode_frame(second))
+
+    assert flushed == [encode_frame(first), encode_frame(first) + encode_frame(second)]
+    stream.seek(0)
+    assert read_frame(stream) == first
+    assert read_frame(stream) == second
+    assert read_frame(stream) is None
+
+
+def test_writer_reports_a_stream_that_stops_accepting_bytes() -> None:
+    class StalledWriter(io.BytesIO):
+        def write(self, data, /):
+            return super().write(data[:1]) if self.tell() == 0 else 0
+
+    with pytest.raises(OSError):
+        FrameWriter(StalledWriter()).write({"id": 1})
+
+
+@pytest.mark.parametrize("literal", ["NaN", "Infinity", "-Infinity"])
+def test_non_json_numbers_are_rejected_in_both_directions(literal: str) -> None:
+    body = ('{"value":' + literal + "}").encode("ascii")
+    raw = f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body
+    with pytest.raises(FramingError) as incoming:
+        read_frame(io.BytesIO(raw))
+    assert incoming.value.code == "invalid_frame_payload"
+
+    stream = io.BytesIO()
+    with pytest.raises(FramingError) as outgoing:
+        FrameWriter(stream).write({"value": float(literal)})
+    assert outgoing.value.code == "invalid_frame_payload"
+    assert stream.getvalue() == b""

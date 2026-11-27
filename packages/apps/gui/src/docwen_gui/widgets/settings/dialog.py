@@ -621,10 +621,8 @@ class SettingsDialog(QDialog):
         from docwen_gui.styles.theme_manager import ThemeManager
 
         appearance = ThemeManager.get_instance()
-        if appearance.get_ui_scale() != self._initial_scale:
-            appearance.apply_ui_scale(self._initial_scale)
-        if appearance.get_font_size_preset() != self._initial_font:
-            appearance.apply_font_size_preset(self._initial_font)
+        if (appearance.get_ui_scale(), appearance.get_font_size_preset()) != (self._initial_scale, self._initial_font):
+            appearance.apply_typography(scale=self._initial_scale, font_size_preset=self._initial_font)
         if self._initial_theme is not None and _read_initial_theme() != self._initial_theme:
             _apply_theme_no_persist(self._initial_theme)
 
@@ -934,12 +932,12 @@ class SettingsDialog(QDialog):
     def _apply_visual_config_as_preview_baseline(self) -> None:
         """Apply persisted visual settings after an immediate reset action."""
         gui = self._vm.persisted_config.gui
-        _apply_theme_no_persist(gui.theme)
         from docwen_gui.styles.theme_manager import ThemeManager
 
         appearance = ThemeManager.get_instance()
-        appearance.apply_ui_scale(gui.scale_percent)
-        appearance.apply_font_size_preset(gui.font_size_preset)
+        if appearance.get_requested_theme() != gui.theme:
+            _apply_theme_no_persist(gui.theme)
+        appearance.apply_typography(scale=gui.scale_percent, font_size_preset=gui.font_size_preset)
         opacity = gui.transparency_value if gui.transparency_enabled else 1.0
         _apply_opacity_no_persist(opacity, self.parentWidget())
         self._commit_preview_state()

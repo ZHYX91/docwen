@@ -5,6 +5,15 @@
 
 ## Unreleased / 未发布
 
+## 0.24.0
+
+- Expose standalone DOCX proofreading through Machine capability discovery. The result is a separate document that retains the original content and existing comments.
+- Machine 能力发现支持独立 DOCX 校对，返回保留原文与已有批注的独立文档。
+- Release finished Machine task data, verify the identity of inspected files, and preserve cancellation and temporary-file cleanup across converters.
+- 完成后释放 Machine 任务数据，核对文件检查的输入身份，并修复取消提示和临时文件清理。
+- Share duplicate OCR models in installed packages and improve spreadsheet, image, and document conversion.
+- 安装包共享重复的 OCR 模型，并改进表格、图像和文档转换。
+
 ## 0.23.2
 
 - Honor saved heading numbering settings for Word-to-Markdown conversions and resolve enabled custom numbering schemes across display and output languages.

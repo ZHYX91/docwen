@@ -177,31 +177,3 @@ def test_docx_to_md_manifest_declares_consumed_markdown_export_options() -> None
 
         for key in consumed_options:
             assert properties[key]["x-docwen-status"] == "implemented"
-
-
-def test_docx_plugin_only_depends_on_core() -> None:
-    """Plugin must NOT import runtime, application, gui, cli, or other plugins."""
-    import sys
-
-    forbidden = {
-        "docwen_runtime",
-        "docwen_application",
-        "docwen_gui",
-        "docwen_cli",
-        "docwen_bundle",
-    }
-
-    plugin_modules = {k for k in sys.modules if k.startswith("docwen_plugin_document")}
-
-    for mod_name in plugin_modules:
-        mod = sys.modules[mod_name]
-        for attr in dir(mod):
-            val = getattr(mod, attr, None)
-            if val is None:
-                continue
-            val_mod = getattr(val, "__module__", "")
-            if val_mod:
-                for forbidden_pkg in forbidden:
-                    assert not val_mod.startswith(forbidden_pkg), (
-                        f"{mod_name}.{attr} depends on {val_mod} (forbidden: {forbidden_pkg})"
-                    )

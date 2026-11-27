@@ -10,6 +10,7 @@ from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from docwen_core.docx_comments import append_docx_comment
+from docwen_core.errors import CancellationRequested
 
 if TYPE_CHECKING:
     from docx.document import Document as DocumentObject
@@ -363,16 +364,19 @@ class DocxValidator:
                 ),
             )
 
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"DOCX proofread failed: {exc}")
             # Determine if this is a corrupted document error
             error_type = "conversion_failed"
             diag_code = DIAGNOSTIC_ERROR
-            msg = str(exc)
-            if "not a valid" in msg.lower() or "corrupt" in msg.lower():
+            detail = str(exc).lower()
+            msg = "Could not complete DOCX proofreading."
+            if "not a valid" in detail or "corrupt" in detail:
                 error_type = "invalid_input"
                 diag_code = DIAGNOSTIC_CORRUPTED
-                msg = f"Corrupted or invalid DOCX file: {exc}"
+                msg = "Corrupted or invalid DOCX file."
 
             return ConversionResult(
                 task_id=task_id,
@@ -385,7 +389,7 @@ class DocxValidator:
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
-                        message=f"DOCX proofread failed: {exc}",
+                        message=msg,
                         code=diag_code,
                     )
                 ],

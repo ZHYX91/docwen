@@ -17,7 +17,7 @@ source .venv/bin/activate  # macOS/Linux
 
 ### 安装器边界
 
-DocWen 的 CI 与生产构建仍严格固定 `uv 0.12.0`；依赖与锁文件维护允许兼容的 `uv 0.12.x`，以便自动安全更新刷新仓库内 `uv.lock`，而不改变生产工具链。
+DocWen 的 CI 与生产构建固定使用 `uv 0.12.0`。更新依赖和锁文件时，请使用 [pyproject.toml](pyproject.toml) 的 `tool.uv.required-version` 允许的版本。
 不要使用 `pip install -e`：pip 不读取项目的 uv scoped dependency exclusion，会同时安装
 两个互斥且覆盖相同 `cv2` 文件的 OpenCV 分发包。
 

@@ -28,7 +28,7 @@ def _governance_root(engineering_root: Path) -> Path:
 
 @pytest.mark.parametrize("failure", [None, "pytest", "source-manifest", "gui", "missing-report"])
 def test_full_coverage_exports_one_report_set_and_cleans_only_successful_raw_runs(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str | None
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], failure: str | None
 ) -> None:
     governed = _governance_root(tmp_path / "engineering")
     monkeypatch.setenv(qa.WORKSPACE_ROOT_ENV, str(governed))
@@ -46,6 +46,7 @@ def test_full_coverage_exports_one_report_set_and_cleans_only_successful_raw_run
             assert env["DOCWEN_TEST_ALLOW_COVERAGE_TRACE"] == "1"
             assert "--cov-fail-under=81" in command
             assert "--cov" in command
+            assert "tests._pytest_hooks.progress" in command
             assert not any(arg.startswith("--cov=docwen_gui") for arg in command)
             for name in qa.qa_reports.VISIBILITY_REPORTS:
                 if failure != "missing-report" or name != "skip_report.json":
@@ -63,6 +64,10 @@ def test_full_coverage_exports_one_report_set_and_cleans_only_successful_raw_run
     report = governed / "acceptance" / "qa-reports"
     result = qa.main(["--tests-only", "--suite", "full", "--coverage", "--report-output", str(report)])
     assert (result == 0) is (failure is None)
+    output = capsys.readouterr().out
+    for name in ("pytest process", "coverage gates", "report export"):
+        assert f"[qa] {name} elapsed:" in output
+    assert ("[qa] raw runtime cleanup elapsed:" in output) is (failure is None)
     assert len(observed) == 1
     assert len(commands) == 4  # One test run and three summaries from its single XML.
     assert not (report / "private-test-fixture.env").exists()

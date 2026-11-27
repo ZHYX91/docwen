@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -35,9 +36,17 @@ class TaskRecord:
     outcomes: dict[str, FileOutcome] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
 
-    @property
-    def paths(self) -> tuple[str, ...]:
-        return tuple(self.context.get("file_paths") or [self.context.get("file_path", "")])
+    paths: tuple[str, ...] = field(init=False)
+    _sources_by_key: dict[str, str] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self.paths = tuple(self.context.get("file_paths") or [self.context.get("file_path", "")])
+        self._sources_by_key = {}
+        for source in self.paths:
+            self._sources_by_key.setdefault(path_key(source), source)
+
+    def source_path(self, path: str) -> str:
+        return self._sources_by_key.get(path_key(path)) or normalize_path(path)
 
     @property
     def failed_paths(self) -> list[str]:
@@ -66,6 +75,7 @@ class TaskHistory(QObject):
     ) -> None:
         super().__init__()
         self._limit = limit
+        self._pending_outcomes: dict[str, TaskRecord] | None = None
         self._records: OrderedDict[str, TaskRecord] = OrderedDict()
         self._retain_paths = retain_paths or (lambda _owner, _paths: None)
         self._release_owner = release_owner or (lambda _owner: None)
@@ -89,6 +99,24 @@ class TaskHistory(QObject):
     def get(self, operation_id: str) -> TaskRecord | None:
         return self._records.get(operation_id)
 
+    @contextmanager
+    def batch_outcomes(self) -> Iterator[None]:
+        """Publish one history change for outcomes delivered in the same GUI callback."""
+        if self._pending_outcomes is not None:
+            yield
+            return
+        pending: dict[str, TaskRecord] = {}
+        self._pending_outcomes = pending
+        try:
+            yield
+        finally:
+            self._pending_outcomes = None
+            for operation_id, record in pending.items():
+                if self.get(operation_id) is record:
+                    self._sync_snapshot_retention(operation_id, record)
+            if pending:
+                self.changed.emit()
+
     def record(
         self,
         operation_id: str,
@@ -105,8 +133,7 @@ class TaskHistory(QObject):
     ) -> None:
         record = self.get(operation_id)
         if record is not None:
-            key = path_key(path)
-            path = next((source for source in record.paths if path_key(source) == key), normalize_path(path))
+            path = record.source_path(path)
             record.outcomes[path] = FileOutcome(
                 path,
                 status,
@@ -123,8 +150,11 @@ class TaskHistory(QObject):
                 ),
                 local_details=local_details,
             )
-            self._sync_snapshot_retention(operation_id, record)
-            self.changed.emit()
+            if self._pending_outcomes is not None:
+                self._pending_outcomes[operation_id] = record
+            else:
+                self._sync_snapshot_retention(operation_id, record)
+                self.changed.emit()
 
     def _sync_snapshot_retention(self, operation_id: str, record: TaskRecord) -> None:
         active = {"pending", "processing"}

@@ -3,8 +3,8 @@
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QPoint, QPointF, QRect, Qt
-from PySide6.QtGui import QTextLayout, QTextOption
+from PySide6.QtCore import QPoint, QPointF, QRect, Qt, Signal
+from PySide6.QtGui import QPaintEvent, QTextLayout, QTextOption
 from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication, QScrollArea, QVBoxLayout, QWidget
 
@@ -16,6 +16,14 @@ from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 from docwen_gui.widgets.input_area import InputArea
 
 pytestmark = pytest.mark.gui
+
+
+class _PaintedInputArea(InputArea):
+    painted = Signal(int)
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        super().paintEvent(event)
+        self.painted.emit(self.width())
 
 
 @pytest.mark.parametrize(
@@ -127,7 +135,7 @@ def test_actions_remain_visible_and_separate_during_live_resize(
     qapp: QApplication, qtbot, scale: int, font_preset: str, theme: str
 ) -> None:
     main_vm = MainWindowViewModel(controller=None)
-    widget = InputArea(view_model=InputAreaViewModel(main_vm=main_vm))
+    widget = _PaintedInputArea(view_model=InputAreaViewModel(main_vm=main_vm))
     qtbot.addWidget(widget)
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, theme)
@@ -135,7 +143,13 @@ def test_actions_remain_visible_and_separate_during_live_resize(
     manager.apply_ui_scale(scale)
     controls = (widget.add_button, widget.paste_button, widget._paste_menu_button, widget.clear_button)
 
-    def visible_and_separate() -> None:
+    def check_resized_actions(width: int) -> None:
+        widget.resize(width, 760)
+        # At large scales Qt can enforce a minimum wider than the requested
+        # width. Measure the first paint at the width this resize actually gets.
+        with qtbot.waitSignal(widget.painted, timeout=1000) as paint:
+            widget.update()
+        assert paint.args == [widget.width()]
         frame = widget._action_frame
         rects = [QRect(control.mapTo(frame, QPoint(0, 0)), control.size()) for control in controls]
         detail = (widget.width(), frame.rect(), rects, [control.sizeHint() for control in controls])
@@ -153,11 +167,9 @@ def test_actions_remain_visible_and_separate_during_live_resize(
     try:
         widget.show()
         for width in (720, 460, 360, 720):
-            widget.resize(width, 760)
-            qtbot.waitUntil(visible_and_separate, timeout=1000)
+            check_resized_actions(width)
         compact_widths = [control.width() for control in controls]
-        widget.resize(1000, 760)
-        qtbot.waitUntil(visible_and_separate)
+        check_resized_actions(1000)
         assert [control.width() for control in controls] == compact_widths
         assert widget.paste_menu_button.arrowType() == Qt.ArrowType.NoArrow
         assert not widget.paste_menu_button.icon().isNull()
@@ -168,8 +180,7 @@ def test_actions_remain_visible_and_separate_during_live_resize(
         ):
             control.setText(label)
         for width in (720, 460, 360, 720):
-            widget.resize(width, 760)
-            qtbot.waitUntil(visible_and_separate, timeout=1000)
+            check_resized_actions(width)
     finally:
         widget.close()
         main_vm.cancel_inspection()

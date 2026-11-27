@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -201,6 +202,84 @@ class TestWorkspaceManager:
 
         assert len(manager) == 0
         assert not list(workspace_root.iterdir())
+
+    @pytest.mark.parametrize("invalid_size", [None, "8", True, -1])
+    def test_invalid_integrity_metadata_cleans_up_read_only_input(self, tmp_path, invalid_size):
+        source = tmp_path / "note.md"
+        source.write_bytes(b"input")
+        source.chmod(stat.S_IREAD)
+        manager = WorkspaceManager(tmp_path / "workspaces")
+        ref = FileRef(
+            path=str(source),
+            format="markdown",
+            category="markdown",
+            input_role="source",
+            logical_path="note.md",
+            metadata={
+                "machine_input_size_bytes": invalid_size,
+                "machine_input_sha256": hashlib.sha256(b"input").hexdigest(),
+            },
+        )
+        try:
+            with pytest.raises(ValueError, match="integrity"):
+                manager.create("invalid", str(source), (ref,))
+            assert not list(Path(manager.root_dir).iterdir())
+            assert not source.stat().st_mode & stat.S_IWRITE
+        finally:
+            source.chmod(stat.S_IREAD | stat.S_IWRITE)
+
+    def test_cancel_during_staged_digest_stops_after_one_chunk(self, tmp_path, monkeypatch):
+        from types import SimpleNamespace
+
+        from docwen_core.cancellation import CancellationToken
+        from docwen_core.errors import CancellationRequested
+        from docwen_runtime.workspace import manager as workspace_module
+
+        token = CancellationToken()
+        source = tmp_path / "source.md"
+        data = b"x" * (3 * 1024 * 1024)
+        source.write_bytes(data)
+        ref = FileRef(
+            path=str(source),
+            format="markdown",
+            category="markdown",
+            input_role="source",
+            logical_path="source.md",
+            metadata={"machine_input_size_bytes": len(data), "machine_input_sha256": hashlib.sha256(data).hexdigest()},
+        )
+        observed = []
+
+        class CancellingDigest:
+            def update(self, chunk):
+                observed.append(len(chunk))
+                token.cancel("verification cancelled")
+
+        monkeypatch.setattr(workspace_module, "hashlib", SimpleNamespace(sha256=CancellingDigest))
+        manager = WorkspaceManager(tmp_path / "workspaces")
+        with pytest.raises(CancellationRequested):
+            manager.create("cancel", str(source), (ref,), cancellation=token)
+        assert observed == [1024 * 1024]
+        assert not list(Path(manager.root_dir).iterdir())
+
+    def test_read_only_source_remains_unchanged_after_workspace_cleanup(self, tmp_path):
+        source = tmp_path / "readonly.md"
+        source.write_bytes(b"note")
+        source.chmod(stat.S_IREAD)
+        original = source.stat()
+        manager = WorkspaceManager(tmp_path / "workspaces")
+        ref = FileRef(
+            path=str(source), format="markdown", category="markdown", input_role="source", logical_path="note.md"
+        )
+        try:
+            handle = manager.create("readonly", str(source), (ref,))
+            copy = Path(handle.input_path)
+            assert copy.read_bytes() == b"note" and copy.stat().st_mtime_ns == original.st_mtime_ns
+            assert copy.stat().st_mode & stat.S_IWRITE
+            manager.cleanup("readonly")
+            assert not list(Path(manager.root_dir).iterdir())
+            assert source.read_bytes() == b"note" and source.stat().st_mode == original.st_mode
+        finally:
+            source.chmod(stat.S_IREAD | stat.S_IWRITE)
 
     def test_typed_workspace_rejects_plan_without_primary_document(self, tmp_path: Path) -> None:
         plan = tmp_path / "numbering-export-plan.json"

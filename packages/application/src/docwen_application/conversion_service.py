@@ -27,6 +27,7 @@ from docwen_application.conversion_capabilities import (
 )
 from docwen_application.conversion_contracts import (
     DOCX_TO_MARKDOWN_CAPABILITY_ID,
+    DOCX_VALIDATE_CAPABILITY_ID,
     MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID,
     MARKDOWN_TO_DOCX_CAPABILITY_ID,
     ConversionPlan,
@@ -40,9 +41,9 @@ from docwen_application.conversion_options import resolve_conversion_options
 from docwen_application.conversion_requests import build_conversion_request
 from docwen_application.conversion_routes import resolve_conversion_route_plan
 from docwen_application.optimization_catalog import parse_optimization_catalog
-from docwen_application.ports.runtime import ArtifactBundleCommitPort
+from docwen_application.ports.runtime import ArtifactBundleCommitPort, ConfigPort
 from docwen_application.runtime_capability_catalog import RuntimeCapabilityCatalog
-from docwen_core.detection import FileAdmissionPathError
+from docwen_core.detection import FileAdmissionError, FileAdmissionPathError
 from docwen_core.models import (
     ArtifactBundleValidationError,
     ConversionRequest,
@@ -53,6 +54,7 @@ from docwen_core.models.resolved_numbering import (
     ResolvedNumberingPortError,
     load_resolved_numbering_bytes,
 )
+from docwen_core.options.proofread import resolve_proofread_switches
 from docwen_core.paths import filesystem_path
 
 logger = logging.getLogger(__name__)
@@ -120,7 +122,9 @@ class ConversionService:
         self._bundle_committer = bundle_committer
         self._lock = threading.Lock()
         self._plans: dict[str, _PlanRecord] = {}
-        self._tasks: dict[str, _TaskRecord] = {}
+        # Keep the ID for session-wide replay and late cancellation, while allowing
+        # terminal requests, effective options and reservations to be collected.
+        self._tasks: dict[str, _TaskRecord | None] = {}
 
     def list_capabilities(self) -> tuple[MachineCapability, ...]:
         discovery = self._discover_runtime()
@@ -228,6 +232,8 @@ class ConversionService:
         with self._lock:
             task = self._tasks.get(task_id)
             if task is None:
+                if task_id in self._tasks:
+                    raise ConversionServiceError("conflict", "task_not_accepted", "task cannot execute from terminal")
                 raise ConversionServiceError("conflict", "task_not_found", f"task is not accepted: {task_id}")
             if task.state != "accepted":
                 raise ConversionServiceError("conflict", "task_not_accepted", f"task cannot execute from {task.state}")
@@ -240,6 +246,8 @@ class ConversionService:
                     raw_result = self._controller.execute_aggregate(task.request, task.binding.action_name)
                 else:
                     raw_result = self._controller.execute_single(task.request)
+            except FileAdmissionError as exc:
+                raise ConversionServiceError("invalid_request", exc.error_type, str(exc)) from exc
             except FileAdmissionPathError as exc:
                 raise ConversionServiceError("security", exc.error_type, str(exc)) from exc
             if not isinstance(raw_result, ConversionResult):
@@ -253,15 +261,13 @@ class ConversionService:
         finally:
             self._controller.release_execution_cancellation(task_id, task.reservation)
             with self._lock:
-                task.state = "terminal"
+                self._tasks[task_id] = None
 
     def cancel(self, task_id: str) -> str:
         with self._lock:
             task = self._tasks.get(task_id)
             if task is None:
-                return "not_found"
-            if task.state == "terminal":
-                return "already_terminal"
+                return "already_terminal" if task_id in self._tasks else "not_found"
         self._controller.cancel(task_id, reservation=task.reservation)
         return "cancellation_requested"
 
@@ -527,7 +533,22 @@ class ConversionService:
                     f"input role {slot.role} has invalid cardinality",
                 )
         effective_options = resolve_conversion_options(request.options, binding)
-        if binding.capability_id == MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID and "proofread" in effective_options:
+        if binding.capability_id == DOCX_VALIDATE_CAPABILITY_ID:
+            config_port: ConfigPort | None = getattr(self._controller, "config_port", None)
+            try:
+                engine = config_port.get("proofread.engine", {}) if config_port is not None else {}
+            except RuntimeError as exc:
+                raise ConversionServiceError(
+                    "unavailable", "proofread_config_unavailable", "Cannot read a trusted proofreading configuration."
+                ) from exc
+            effective_options = resolve_proofread_switches({"proofread": {"engine": engine}}, effective_options)
+            if not any(effective_options.values()):
+                raise ConversionServiceError(
+                    "invalid_request",
+                    "proofread_no_rules_enabled",
+                    "DOCX proofreading requires at least one enabled rule.",
+                )
+        elif binding.capability_id == MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID and "proofread" in effective_options:
             # Omitted switches inherit configuration, so only four explicit
             # false values can prove that no validator is needed at admission.
             checks = effective_options["proofread"]

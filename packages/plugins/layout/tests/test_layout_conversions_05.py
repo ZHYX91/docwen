@@ -484,6 +484,12 @@ class TestPreprocessChain:
         assert "OCR PAGE 1" not in primary_text
         assert "OCR PAGE 4" not in primary_text
         if enable_ocr:
+            assert [(artifact.metadata["page_index"], artifact.metadata["page_count"]) for artifact in fragments] == [
+                (1, 4),
+                (2, 4),
+                (3, 4),
+                (4, 4),
+            ]
             assert [artifact.metadata["ocr_status"] for artifact in fragments] == [
                 "success",
                 "no_text",
@@ -494,3 +500,28 @@ class TestPreprocessChain:
             assert [artifact.metadata["source_page"] for artifact in images] == [1, 2, 3, 4]
             assert all(artifact.suggested_name != "stale.png" for artifact in images)
             assert all(diagnostic.code != "resource_page_unresolved" for diagnostic in result.diagnostics)
+
+    @pytest.mark.parametrize("ocr_page_count", [1, 3], ids=["missing-page", "extra-page"])
+    def test_pdf_to_md_rejects_ocr_page_count_mismatch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ocr_page_count: int
+    ) -> None:
+        import docwen_plugin_layout.to_markdown.converter as converter_module
+
+        pdf_path = tmp_path / "two-pages.pdf"
+        _create_text_pdf(pdf_path, ["FIRST", "SECOND"])
+        renderer = types.SimpleNamespace(to_markdown=lambda *_args, **_kwargs: "native text")
+        monkeypatch.setitem(sys.modules, "pymupdf4llm", renderer)
+        outcomes = [_ocr_success(f"OCR {page + 1}") for page in range(ocr_page_count)]
+        monkeypatch.setattr(converter_module, "_ocr_page_outcomes", lambda *_args, **_kwargs: outcomes)
+        context = _build_fake_context(
+            str(pdf_path), str(tmp_path), "md", options={"to_md_enable_ocr": True, "to_md_keep_images": False}
+        )
+
+        result = converter_module.LayoutToMarkdownConverter().convert(context)
+
+        assert not result.success
+        assert result.error is not None
+        assert result.error.error_type == "conversion_failed"
+        assert result.error.diagnostic_code == "PDF2MD-ERROR"
+        assert "one outcome per page" in result.error.message
+        assert not result.artifacts

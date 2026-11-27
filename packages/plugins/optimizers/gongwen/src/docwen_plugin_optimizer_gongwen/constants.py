@@ -26,6 +26,9 @@ FIELDS = [
     "公开方式",
 ]
 
+MEETING_SIGNATURE_DATE = "meeting_signature_date"
+SIGNATURE_DATE_FIELDS = ("issuing_authority_signature", "issue_date")
+
 # Ordered recognition rounds; stable ordering breaks equal-score ties.
 ROUND1_ELEMENTS = (
     "combined_id",
@@ -38,6 +41,7 @@ ROUND1_ELEMENTS = (
     "title",
     "recipient",
     "attachment_header",
+    MEETING_SIGNATURE_DATE,
     "issuing_authority_signature",
     "issue_date",
     "notes",
@@ -70,6 +74,25 @@ NON_UNIQUE_SCORE_THRESHOLD = 60
 TITLE_FONTS = ["小标宋", "方正小标宋", "华文中宋"]
 BODY_FONTS = ["仿宋", "仿宋_GB2312", "华文仿宋"]
 HEITI_FONTS = ["黑体", "华文黑体"]
+
+AUTHORITY_SUFFIXES = (
+    "人民政府",
+    "委员会",
+    "办公室",
+    "局",
+    "厅",
+    "部",
+    "院",
+    "校",
+    "中心",
+    "办",
+    "组",
+    "室",
+    "司",
+    "署",
+    "处",
+    "科",
+)
 
 # Regex patterns
 RE_DOC_NUMBER = re.compile(

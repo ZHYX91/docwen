@@ -520,6 +520,11 @@ class TestExecuteMethods:
 
         first_reservation = ctrl.prepare_execution_cancellation(request)
         assert ctrl.execute_single(request).success is True
+
+        ctrl.cancel(request.request_id, reservation=first_reservation)
+        assert not first_reservation.token.is_cancelled
+        mock_runtime.cancel.assert_not_called()
+
         with pytest.raises(ControllerError, match="awaiting release"):
             ctrl.prepare_execution_cancellation(request)
 

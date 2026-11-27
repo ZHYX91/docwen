@@ -62,6 +62,7 @@ class TestElementScorer:
             "title",
             "recipient",
             "attachment_header",
+            "meeting_signature_date",
             "issuing_authority_signature",
             "issue_date",
             "notes",

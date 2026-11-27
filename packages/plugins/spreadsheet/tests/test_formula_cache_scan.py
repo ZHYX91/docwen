@@ -7,8 +7,11 @@ from zipfile import ZipFile
 import openpyxl
 import pytest
 
-from docwen_plugin_spreadsheet.csv_xlsx.converter import _find_unavailable_formula_caches, _load_xlsx_views
-from docwen_plugin_spreadsheet.csv_xlsx.formula_cache import visit_formula_caches
+from docwen_plugin_spreadsheet.cached_workbook import (
+    find_unavailable_formula_caches,
+    load_cached_workbook,
+    visit_formula_caches,
+)
 
 pytestmark = pytest.mark.contract
 
@@ -22,19 +25,18 @@ def test_sparse_hidden_worksheet_does_not_materialize_empty_cells(tmp_path, form
     sheet.cell(400, 400, "=1+2" if formula else "only stored value")
     book.save(path)
     book.close()
-    values, formulas = _load_xlsx_views(str(path))
+    values = load_cached_workbook(str(path), cancel_check=lambda: None, limit=1)
     try:
-        sizes = [len(view["Sparse"]._cells) for view in (values, formulas)]
-        result = _find_unavailable_formula_caches(values, formulas, input_path=str(path))
+        assert len(values["Sparse"]._cells) == 1
+        result = find_unavailable_formula_caches(values, input_path=str(path))
         assert result == ((1, ["Sparse!OJ400"]) if formula else (0, []))
-        assert [len(view["Sparse"]._cells) for view in (values, formulas)] == sizes == [1, 1]
-        assert _find_unavailable_formula_caches(values, formulas, input_path=str(path), sheet_names=["Sheet"]) == (
+        assert len(values["Sparse"]._cells) == 1
+        assert find_unavailable_formula_caches(values, input_path=str(path), sheet_names=["Sheet"]) == (
             0,
             [],
         )
     finally:
         values.close()
-        formulas.close()
 
 
 def test_scan_handles_implicit_coordinates_and_shared_formula_elements(tmp_path):
@@ -82,7 +84,7 @@ def test_cancelled_scan_closes_package_and_propagates(tmp_path, monkeypatch):
             streams.append(stream)
             return stream
 
-    monkeypatch.setattr("docwen_plugin_spreadsheet.csv_xlsx.formula_cache.ZipFile", TrackedZip)
+    monkeypatch.setattr("docwen_plugin_spreadsheet.cached_workbook.ZipFile", TrackedZip)
 
     def fail_during_visit(*_):
         raise RuntimeError("cancelled")

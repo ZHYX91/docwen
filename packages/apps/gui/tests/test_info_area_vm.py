@@ -12,7 +12,7 @@ import time as _time_module
 from collections.abc import Generator
 
 import pytest
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QCoreApplication, QEvent, QTimer
 from PySide6.QtTest import QSignalSpy
 
 from docwen_gui.view_models.info_area_vm import (
@@ -26,7 +26,7 @@ pytestmark = pytest.mark.gui
 
 
 @pytest.fixture
-def vm() -> Generator[InfoAreaViewModel, None, None]:
+def vm(qapp) -> Generator[InfoAreaViewModel, None, None]:
     v = InfoAreaViewModel()
     yield v
     v.stop_all_timers()
@@ -227,6 +227,18 @@ class TestTransientThrottle:
 
 
 class TestTransientTTL:
+    def test_reused_key_ignores_old_timeout_and_releases_retired_timers(self, vm: InfoAreaViewModel) -> None:
+        vm.set_transient_message("notice", "first", ttl_ms=1000)
+        old = vm._transient_timers["notice"]
+        vm.clear_transient_message("notice")
+        vm.set_transient_message("notice", "second", ttl_ms=1000)
+        old.timeout.emit()
+        assert vm.transient_count == 1
+        for index in range(20):
+            vm.set_transient_message("notice", str(index), ttl_ms=1000)
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        assert vm.findChildren(QTimer) == [vm._transient_timers["notice"]]
+
     def test_transient_expires_after_ttl(self, vm: InfoAreaViewModel) -> None:
         """Transient should clear itself after TTL expires."""
         vm.set_transient_message("test", "Temporary", "info", ttl_ms=10, source="test-src")
@@ -541,9 +553,15 @@ class TestActivityAnimation:
     def test_start_stop_animation(self, vm: InfoAreaViewModel) -> None:
         assert not vm.activity_enabled
         vm.start_activity_animation("Working")
-        assert vm.activity_enabled
+        timer = vm._activity_timer
+        assert vm.activity_enabled and timer is not None and timer.isActive()
+        timer_id = timer.timerId()
+        vm.start_activity_animation("Working")
+        assert timer.timerId() == timer_id
+
         vm.stop_activity_animation()
-        assert not vm.activity_enabled
+        vm.stop_activity_animation()
+        assert not vm.activity_enabled and not timer.isActive()
 
     def test_animation_tick_updates_meta(self, vm: InfoAreaViewModel) -> None:
         vm.start_activity_animation("Working")
@@ -640,6 +658,8 @@ class TestClearAll:
         assert progress_key in vm._pending_transient_updates
         stale_flush_timer = vm._transient_flush_timers[progress_key]
         vm.start_activity_animation("Working")
+        activity_timer = vm._activity_timer
+        assert activity_timer is not None and activity_timer.isActive()
         state_changed = QSignalSpy(vm.state_changed)
 
         vm.reset_session()
@@ -655,6 +675,7 @@ class TestClearAll:
         assert vm._pending_transient_updates == {}
         assert vm._transient_timers == {}
         assert vm._transient_flush_timers == {}
+        assert not activity_timer.isActive()
         assert stale_flush_timer.isActive() is False
 
         # Reusing the same key after reset must not let the stale callback
@@ -671,3 +692,5 @@ class TestClearAll:
         vm.stop_all_timers()
         assert len(vm._transient_timers) == 0
         assert vm._activity_timer is None
+        vm.clear_task_summary()
+        assert not vm.activity_enabled and vm._activity_timer is None

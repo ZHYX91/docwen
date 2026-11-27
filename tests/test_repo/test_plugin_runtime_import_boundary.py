@@ -1,64 +1,67 @@
-"""Governance test: plugin src layer runtime import boundary.
-
-plugin src may NOT import from any docwen_runtime sub-module.
-runtime is a peer layer, not a dependency of plugins.
-Static system schemes / rule data must come via docwen_core or
-runtime-time injection, never via direct runtime import.
-"""
+"""Built-in plugins may use DocWen Core and their own implementation."""
 
 from __future__ import annotations
 
 import ast
+import os
+import sys
 from pathlib import Path
+from textwrap import dedent
 
 import pytest
+from tests.support.subprocess_runner import run_subprocess
+
+from docwen_bundle.runtime_factory import _DEFAULT_PLUGIN_IMPORTS
 
 pytestmark = pytest.mark.contract
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-
-PLUGIN_SRC_ROOTS = [
-    "packages/plugins/document/src/docwen_plugin_document",
-    "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet",
-    "packages/plugins/image/src/docwen_plugin_image",
-    "packages/plugins/print/src/docwen_plugin_print",
-    "packages/plugins/layout/src/docwen_plugin_layout",
-    "packages/plugins/markdown/src/docwen_plugin_markdown",
-    "packages/plugins/markup/src/docwen_plugin_markup",
-    "packages/plugins/presentation/src/docwen_plugin_presentation",
-    "packages/plugins/proofread/src/docwen_plugin_proofread",
-    "packages/plugins/optimizers/gongwen/src/docwen_plugin_optimizer_gongwen",
-    "packages/plugins/optimizers/invoice_cn/src/docwen_plugin_optimizer_invoice_cn",
-]
+PLUGIN_ROOTS = {root.name: root for root in (REPO_ROOT / "packages/plugins").glob("**/src/docwen_plugin_*")}
 
 
-def _collect_runtime_imports(source_dir: Path) -> list[tuple[int, str]]:
-    violations: list[tuple[int, str]] = []
-    for py_file in sorted(source_dir.rglob("*.py")):
-        try:
-            tree = ast.parse(py_file.read_text(encoding="utf-8"))
-        except SyntaxError:
-            continue
+@pytest.mark.parametrize("plugin", _DEFAULT_PLUGIN_IMPORTS)
+def test_plugin_source_uses_only_core_and_local_modules(plugin: str) -> None:
+    violations = []
+    root = PLUGIN_ROOTS[plugin]
+    for path in sorted(root.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom):
-                module = node.module or ""
-                if module.startswith("docwen_runtime"):
-                    violations.append((node.lineno, module))
-            elif isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name.startswith("docwen_runtime"):
-                        violations.append((node.lineno, alias.name))
-    return violations
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and not node.level and node.module:
+                modules = [node.module]
+            else:
+                continue
+            for module in modules:
+                package = module.partition(".")[0]
+                if (package == "docwen" or package.startswith("docwen_")) and package not in {"docwen_core", plugin}:
+                    violations.append(f"{path.relative_to(REPO_ROOT)}:{node.lineno}: {module}")
+    assert not violations, "\n".join(violations)
 
 
-class TestPluginRuntimeImportBoundary:
-    """plugin src must not import from any docwen_runtime sub-module."""
+@pytest.mark.parametrize("module", [*_DEFAULT_PLUGIN_IMPORTS, "docwen_plugin_document.to_document.converter"])
+def test_plugin_import_in_a_clean_interpreter(module: str) -> None:
+    plugin = module.partition(".")[0]
+    probe = dedent(
+        """
+        import importlib
+        import sys
+        from pathlib import Path
 
-    @pytest.mark.parametrize("src_root", PLUGIN_SRC_ROOTS)
-    def test_plugin_src_no_runtime_imports(self, src_root: str) -> None:
-        root = REPO_ROOT / src_root
-        assert root.is_dir(), f"required plugin source root is missing: {src_root}"
-        bad = _collect_runtime_imports(root)
-        assert not bad, f"{src_root} imports from docwen_runtime (forbidden):\n" + "\n".join(
-            f"  line {ln}: {mod}" for ln, mod in bad
-        )
+        module, expected_root = sys.argv[1:]
+        plugin = module.partition(".")[0]
+        loaded_module = importlib.import_module(module)
+        if not Path(loaded_module.__file__).resolve().is_relative_to(expected_root):
+            raise RuntimeError(f"{module} resolved outside the checkout: {loaded_module.__file__}")
+        local = {name.partition(".")[0] for name in sys.modules if name == "docwen" or name.startswith("docwen_")}
+        forbidden = local - {plugin, "docwen_core"}
+        if forbidden:
+            raise RuntimeError(f"{module} imported forbidden packages: {sorted(forbidden)}")
+        """
+    )
+    root = PLUGIN_ROOTS[plugin]
+    result = run_subprocess(
+        [sys.executable, "-c", probe, module, str(root)],
+        env={**os.environ, "PYTHONPATH": os.pathsep.join([str(root.parent), *sys.path])},
+    )
+    assert result.returncode == 0, result.stderr

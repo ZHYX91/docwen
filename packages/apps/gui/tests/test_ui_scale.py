@@ -181,7 +181,18 @@ def test_settings_apply_then_cancel_restores_last_saved_appearance(qapp, tmp_pat
         assert port.get("gui.font.size_preset") == "large"
         tab._scale_combo.setCurrentIndex(tab._scale_combo.findData(90))
         tab._font_combo.setCurrentIndex(tab._font_combo.findData("small"))
+        # Qt repolishes the entire application on each stylesheet assignment.
+        # A single Cancel must not install a transient font/scale combination.
+        applied_styles = []
+        set_stylesheet = qapp.setStyleSheet
+
+        def record_stylesheet(stylesheet):
+            applied_styles.append(stylesheet)
+            set_stylesheet(stylesheet)
+
+        monkeypatch.setattr(qapp, "setStyleSheet", record_stylesheet)
         dialog.reject()
+        assert applied_styles == [qapp.styleSheet()]
         assert (manager.get_ui_scale(), manager.get_font_size_preset()) == (125, "large")
         assert port.get("gui.appearance.scale_percent") == 125
     finally:

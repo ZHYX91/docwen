@@ -96,10 +96,24 @@ accepted task.
 5. `task/cancel` acknowledges the request. Cancellation is complete only after `task/cancelled`; a race may
    instead end in `task/completed` or `task/failed`, but never a second terminal notification.
 
+The stdio session retains up to 256 unconsumed plans. Machine 2.0 has no operation to discard an
+unaccepted plan. A client that reaches `pending_plan_limit` after abandoning previews should finish or
+cancel any active task, close the session, reconnect, and plan again. Repeating `task/plan` in the same
+session while the slots remain occupied returns the same error.
+
 JSON-RPC `error` is reserved for framing, parsing, invalid request/parameters, unknown method, and server-level
 protocol faults. A conversion failure after task acceptance uses `task/failed` with a stable product error
 `category` and `code`. A successful terminal notification contains one complete Bundle. Failed and cancelled
 tasks do not publish partial Bundles.
+
+If the result metadata exceeds the transport limit after writing files, the terminal is `task/failed`
+with code `response_too_large`. Files may already exist in the request-owned staging root. Clients must
+publish only a validated Bundle from `task/completed` and clean up their own staging root after the task
+has settled.
+
+`resource/list` with `kind=formats` supplies display metadata. Its route IDs describe the runtime
+projection. To make an executable request, use a `capability_id` and the input and option contract returned
+by `capability/list`.
 
 For both source Markdown and resolved-document DOCX capabilities, `locale` is an optional explicit task-language
 override. An omitted locale stays absent from `plan.effective_options` and the accepted request; its schema has no

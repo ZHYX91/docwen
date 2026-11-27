@@ -209,12 +209,25 @@ class TestConstruction:
         self,
         populated_widget: BatchList,
         qapp: QApplication,
+        qtbot,
     ) -> None:
         populated_widget.resize(1200, 640)
         populated_widget.show()
         qapp.processEvents()
 
         assert any("1" in cast(_PivotText, item).text() for item in populated_widget._pivot_items.values())
+        pivot_item = populated_widget._pivot_items["layout"]
+        assert pivot_item.isVisible()
+        qtbot.mouseClick(pivot_item, Qt.MouseButton.LeftButton)
+        assert populated_widget.view_model.current_category == "layout"
+        assert populated_widget.category_stack.currentWidget() is populated_widget._tabs["layout"]
+
+        populated_widget.setFixedWidth(180)
+        selector = populated_widget._category_selector
+        qtbot.waitUntil(selector.isVisible)
+        selector.setCurrentIndex(selector.findData("document"))
+        assert populated_widget.view_model.current_category == "document"
+        assert populated_widget.category_stack.currentWidget() is populated_widget._tabs["document"]
 
     def test_category_stack_exists(self, widget: BatchList) -> None:
         assert widget.category_stack is not None

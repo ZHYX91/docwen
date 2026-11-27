@@ -58,10 +58,6 @@ def test_alignment_keeps_sparse_cells_and_checks_cancellation():
     assert len(base._cells) == 2
     assert len(collect._cells) == 1
     assert checks
-    converter._row_similarity(base, 2, collect, 1, 1)
-    converter._col_similarity(base, 2, collect, 1, 1)
-    assert len(base._cells) == 2
-    assert len(collect._cells) == 1
     book.close()
 
 
@@ -215,6 +211,33 @@ def test_cell_merge_keeps_sparse_inputs_sparse_and_counts_implicit_blanks(tmp_pa
     assert len(summary["locations"]["skipped"]) == 20
 
 
+@pytest.mark.parametrize("over_budget", ["base", "collect"])
+def test_merge_checks_sheet_budgets_before_loading_each_input(tmp_path, monkeypatch, over_budget):
+    from docwen_plugin_spreadsheet.table_merger import inputs
+
+    sources = {}
+    for name in ("base", "collect"):
+        path = tmp_path / f"{name}.xlsx"
+        _write(path, [["Key", "Value"]] if name == over_budget else [["Key"]])
+        sources[path] = path.read_bytes()
+
+    monkeypatch.setattr(inputs, "MAX_SPREADSHEET_PROJECTION_CELLS", 1)
+    loaded = []
+    load = openpyxl.load_workbook
+
+    def capture_load(stream, **kwargs):
+        loaded.append(Path(stream.name).name)
+        return load(stream, **kwargs)
+
+    monkeypatch.setattr(openpyxl, "load_workbook", capture_load)
+    result = _run(tmp_path)
+    assert not result.success and result.error.diagnostic_code == "SPREADSHEET-PROJECTION-LIMIT"
+    assert f"{over_budget}.xlsx" in result.error.message
+    assert not result.artifacts and not list((tmp_path / "staging").iterdir())
+    assert loaded == ([] if over_budget == "base" else ["base.xlsx"])
+    assert {path: path.read_bytes() for path in sources} == sources
+
+
 @pytest.mark.parametrize("mode", ["row", "col", "cell"])
 @pytest.mark.parametrize("formula_source", ["base", "collect"])
 def test_missing_formula_cache_stops_before_creating_output(tmp_path, mode, formula_source):
@@ -363,12 +386,6 @@ def test_alignment_and_similarity_use_saved_error_types(tmp_path, mode, collect_
         offset = (distance, 0) if mode == "row" else (0, distance)
         assert converter._find_best_offset(base_ws, collect_ws, 1) == offset
         assert converter._suggest_offset_by_value_matching(base_ws, collect_ws) == offset
-        cells = converter._iter_cells_for_alignment(collect_ws)
-        assert converter._calc_overlap(base_ws, cells, 0, 0) == 0
-        assert converter._calc_overlap(base_ws, cells, *offset) == 1
-        similarity = converter._row_similarity if mode == "row" else converter._col_similarity
-        assert similarity(base_ws, 1, collect_ws, 1, 0) == 0.0
-        assert similarity(base_ws, distance + 1, collect_ws, 1, 0) == 1.0
     finally:
         base_book.close()
         collect_book.close()
@@ -527,3 +544,131 @@ def test_base_with_inactive_chartsheet_keeps_the_chart_part(tmp_path):
     with ZipFile(result.artifacts[0].staging_path) as package:
         assert "xl/charts/chart1.xml" in package.namelist()
     assert base.read_bytes() == original
+
+
+@pytest.mark.parametrize("mode", ["row", "col"])
+def test_sparse_record_insertion_shifts_only_stored_cells_and_counts_gaps(tmp_path, mode, monkeypatch):
+    distance = 3200
+    for name in ("base", "collect"):
+        book = openpyxl.Workbook()
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        sheet["A1"] = "header"
+        last = sheet.cell(distance, distance, "base link" if name == "base" else "incoming")
+        if name == "base":
+            last.hyperlink = "https://example.com/original"
+            last.style = "Headline 1"
+        book.save(tmp_path / f"{name}.xlsx")
+        book.close()
+    originals = {p: p.read_bytes() for p in tmp_path.glob("*.xlsx")}
+
+    def refuse_rectangle(*args, **kwargs):
+        pytest.fail("A sparse record merge requested a rectangular worksheet iterator")
+
+    monkeypatch.setattr(Worksheet, "iter_rows", refuse_rectangle)
+    monkeypatch.setattr(Worksheet, "iter_cols", refuse_rectangle)
+    result = _run(tmp_path, mode)
+    assert result.success, result.error
+    book = openpyxl.load_workbook(result.artifacts[0].staging_path)
+    try:
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        added, moved = (
+            ((3, distance), (distance + 1, distance)) if mode == "row" else ((distance, 3), (distance, distance + 1))
+        )
+        assert set(sheet._cells) == {(1, 1), added, moved}
+        assert sheet.cell(*added).value == "incoming"
+        link = sheet.cell(*moved)
+        assert link.value == "base link" and link.style == "Headline 1"
+        assert (
+            link.hyperlink
+            and link.hyperlink.ref == link.coordinate
+            and link.hyperlink.target == "https://example.com/original"
+        )
+    finally:
+        book.close()
+    summary = result.metrics.extra["merge_summaries"][0]
+    label = "row" if mode == "row" else "column"
+    assert summary["counts"] == {"skipped": distance - 1, "replaced": 0, "added": 1, "combined": 0}
+    assert summary["locations"]["skipped"] == [f"{label} {index}" for index in range(1, 21)]
+    assert all(p.read_bytes() == before for p, before in originals.items())
+
+
+@pytest.mark.parametrize("mode", ["row", "col"])
+def test_aligned_equal_record_preserves_earlier_replacement_priority(tmp_path, mode):
+    _write(tmp_path / "base.xlsx", [["A", None], ["A", "B"]], mode)
+    _write(tmp_path / "collect.xlsx", [[None, None], ["A", "B"]], mode)
+    result = _run(tmp_path, mode)
+    assert result.success, result.error
+    assert _records(result.artifacts[0].staging_path, mode) == [("A", "B"), ("A", "B")]
+    assert result.metrics.extra["merge_summaries"][0]["counts"]["replaced"] == 1
+
+
+@pytest.mark.parametrize("mode", ["row", "col"])
+def test_inserted_record_does_not_take_the_original_records_hidden_dimension(tmp_path, mode):
+    base = tmp_path / "base.xlsx"
+    _write(base, [["header", "field"], ["original", "private"]], mode=mode)
+    _write(tmp_path / "collect.xlsx", [["header", "field"], ["incoming", "visible"]], mode=mode)
+    book = openpyxl.load_workbook(base)
+    sheet = book.active
+    assert isinstance(sheet, Worksheet)
+    if mode == "row":
+        dim = sheet.row_dimensions[2]
+        dim.height = 41
+    else:
+        dim = sheet.column_dimensions["B"]
+        dim.width = 41
+    dim.hidden = True
+    dim.outlineLevel = 2
+    book.save(base)
+    book.close()
+    original = base.read_bytes()
+
+    result = _run(tmp_path, mode)
+    assert result.success and base.read_bytes() == original
+    book = openpyxl.load_workbook(result.artifacts[0].staging_path)
+    try:
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        if mode == "row":
+            assert sheet["A2"].value == "incoming" and sheet["A3"].value == "original"
+            assert 2 not in sheet.row_dimensions
+            moved = sheet.row_dimensions[3]
+            assert moved.height == 41
+        else:
+            assert sheet["B1"].value == "incoming" and sheet["C1"].value == "original"
+            assert "B" not in sheet.column_dimensions
+            moved = sheet.column_dimensions["C"]
+            assert moved.width == 41 and (moved.min, moved.max) == (3, 3)
+        assert moved.hidden and moved.outlineLevel == 2
+    finally:
+        book.close()
+
+
+@pytest.mark.parametrize(("last", "expected_end"), [("C", 4), ("XFD", 16_384)])
+def test_inserting_inside_a_column_dimension_keeps_original_columns_grouped(tmp_path, last, expected_end):
+    base = tmp_path / "base.xlsx"
+    _write(base, [["header", "field"], ["original", "private"]], mode="col")
+    _write(tmp_path / "collect.xlsx", [["header", "field"], ["incoming", "visible"]], mode="col")
+    book = openpyxl.load_workbook(base)
+    sheet = book.active
+    assert isinstance(sheet, Worksheet)
+    # A group can extend through empty columns all the way to the grid edge.
+    sheet.column_dimensions.group("A", last, outline_level=2, hidden=True)
+    sheet.column_dimensions["A"].width = 29
+    book.save(base)
+    book.close()
+
+    result = _run(tmp_path, "col")
+    assert result.success
+    book = openpyxl.load_workbook(result.artifacts[0].staging_path)
+    try:
+        sheet = book.active
+        assert isinstance(sheet, Worksheet)
+        assert sheet["B1"].value == "incoming"
+        assert [(d.min, d.max, d.hidden, d.width, d.outlineLevel) for d in sheet.column_dimensions.values()] == [
+            (1, 1, True, 29, 2),
+            (3, expected_end, True, 29, 2),
+        ]
+    finally:
+        book.close()

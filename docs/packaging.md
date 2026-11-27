@@ -52,7 +52,7 @@ tags before a version tag is pushed. 仓库设置必须在推送版本标签前�
 
 The hosted GitHub Release workflow enforces this deterministic baseline before publishing one Windows archive, two Ubuntu 24.04 x64 archives and two macOS arm64 archives:
 
-1. Shared required source checks (Ruff, test governance, Import-Linter, architecture checks and Pyright for all three targets), one Windows full suite with source/core/GUI coverage reports, and the union of fast and release tests on Linux and macOS. Ordinary CI and release use this same gate.
+1. Shared required source checks (Ruff, test governance, Import-Linter, architecture checks and Pyright for all three targets), the complete Windows suite on two runners with combined source/core/GUI coverage reports, and the union of fast and release tests on Linux and macOS. Ordinary CI and release use this same gate.
 2. Windows package resource/layout verification.
 3. Packaged Windows CLI baseline doctor, conversion, and JSON checks.
 4. Packaged Windows GUI settings-page construction smoke.
@@ -65,7 +65,7 @@ Selected native acceptance uses the exact candidate that will be published. Its 
 
 托管的 GitHub Release 工作流在发布一个 Windows 压缩包、两个 Ubuntu 24.04 x64 压缩包和两个 macOS arm64 压缩包前执行以下确定性基线：
 
-1. 先运行统一必需源码检查（Ruff、测试治理、Import-Linter、架构检查及三个目标平台的 Pyright）；Windows 完整测试只运行一次并生成源码/core/GUI 覆盖率报告，Linux 与 macOS 各运行 fast 和 release 测试的并集。普通 CI 与发布使用同一门禁。
+1. 先运行统一必需源码检查（Ruff、测试治理、Import-Linter、架构检查及三个目标平台的 Pyright）；Windows 全量测试按文件分给两台 runner，合并后生成源码/core/GUI 覆盖率报告，Linux 与 macOS 各运行 fast 和 release 测试的并集。普通 CI 与发布使用同一门禁。
 2. 验证 Windows 打包资源与 Layout 资源。
 3. 验证 Windows 打包 CLI 的基础 doctor、转换和 JSON 路径。
 4. 验证 Windows 打包 GUI 的设置页构造。

@@ -60,7 +60,7 @@ uv run --frozen docwen-gui
 uv run --frozen docwen --help
 ```
 
-`uv run --frozen` 会使用已同步的环境，无需手动激活。测试与正式构建使用 uv 0.12.0；依赖维护可使用兼容的 0.12.x。`pip install -e` 无法应用本仓库的依赖排除规则，因此不支持这种方式。
+`uv run --frozen` 会使用已同步的环境，无需手动激活。测试与正式构建使用 uv 0.12.0。`pip install -e` 无法应用本仓库的依赖排除规则，因此不支持这种方式。
 
 ### macOS 安装说明
 

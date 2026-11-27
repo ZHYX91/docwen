@@ -5,13 +5,36 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass
+from datetime import date
 
 from docwen_plugin_optimizer_gongwen.constants import (
+    AUTHORITY_SUFFIXES,
     COPY_TO_LABELS,
     RE_DOC_NUMBER,
 )
 
 _COPY_TO_LABEL_RE = re.compile(rf"^(?:{'|'.join(re.escape(label) for label in COPY_TO_LABELS)})\s*[：:]\s*")
+
+
+_MEETING_SIGNATURE_DATE_RE = re.compile(
+    r"([\u3400-\u9fff]+)[^\S\r\n]+(\d{4})[^\S\r\n]*年[^\S\r\n]*"
+    r"(\d{1,2})[^\S\r\n]*月[^\S\r\n]*(\d{1,2})[^\S\r\n]*日"
+)
+
+
+def parse_meeting_signature_date(text: str) -> tuple[str, str] | None:
+    """Split a complete same-line institution and calendar date."""
+    match = _MEETING_SIGNATURE_DATE_RE.fullmatch(text.strip())
+    if match is None:
+        return None
+    authority, year, month, day = match.groups()
+    if not authority.endswith(AUTHORITY_SUFFIXES) or authority in AUTHORITY_SUFFIXES:
+        return None
+    try:
+        date(int(year), int(month), int(day))
+    except ValueError:
+        return None
+    return authority, f"{year}年{month}月{day}日"
 
 
 def contains_chinese(text: str) -> bool:

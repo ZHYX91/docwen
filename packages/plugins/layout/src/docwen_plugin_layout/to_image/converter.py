@@ -7,8 +7,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from docwen_core.errors import CancellationRequested
 from docwen_core.models.artifact import (
-    ARTIFACT_KIND_AUXILIARY,
     ARTIFACT_KIND_IMAGE,
     ARTIFACT_KIND_PRIMARY,
     ArtifactManifest,
@@ -68,7 +68,7 @@ class LayoutToImageConverter:
         # ── Cancellation check ──────────────────────────────────────
         try:
             context.cancellation.check()
-        except Exception:
+        except CancellationRequested:
             return self._cancelled(task_id)
 
         # ── Import PyMuPDF ──────────────────────────────────────────
@@ -100,182 +100,101 @@ class LayoutToImageConverter:
                 f"Failed to open {input_fmt.upper()} file: {exc}",
             )
 
-        total_pages = len(doc)
-        input_bytes = file_size(input_file)
-
+        staged_paths: list[str] = []
+        artifacts: list[ArtifactManifest] = []
+        complete = False
         try:
-            zoom = dpi / 72.0
-            mat = fitz.Matrix(zoom, zoom)
+            with doc:
+                total_pages = len(doc)
+                if not total_pages:
+                    raise ValueError("PDF has no pages to render")
+                if self._target_format == "tif":
+                    from PIL.TiffImagePlugin import AppendingTiffWriter
 
-            if self._target_format in ("png", "jpg"):
-                # ── Per-page image output ──────────────────────────
-                artifacts: list[ArtifactManifest] = []
-                width = max(len(str(total_pages)), 2)
-                total_output_bytes = 0
-                use_alpha = self._target_format == "png"
-
-                for page_num in range(total_pages):
-                    try:
-                        context.cancellation.check()
-                    except Exception:
-                        doc.close()
-                        return self._cancelled(task_id)
-
-                    page = doc.load_page(page_num)
-                    pix = page.get_pixmap(matrix=mat, alpha=use_alpha)
-
-                    image_filename = f"{stem}_page_{str(page_num + 1).zfill(width)}.{self._target_format}"
-                    staging_path = context.workspace.create_artifact_path(
-                        ARTIFACT_KIND_IMAGE, f".{self._target_format}"
-                    )
-
-                    pix.save(staging_path)
-                    output_bytes = file_size(staging_path)
-                    total_output_bytes += output_bytes
-
-                    artifact = ArtifactManifest(
-                        artifact_id=new_artifact_id(),
-                        kind=ARTIFACT_KIND_IMAGE,
-                        staging_path=staging_path,
-                        suggested_name=image_filename,
-                        media_type=MEDIA_TYPES[self._target_format],
-                        metadata={
-                            "page": page_num + 1,
-                            "total_pages": total_pages,
-                            "width": pix.width,
-                            "height": pix.height,
-                            "dpi": dpi,
-                        },
-                        is_primary=(page_num == 0),
-                    )
-                    context.workspace.add_artifact(artifact)
-                    artifacts.append(artifact)
-
-                    context.progress.report_progress(
-                        (page_num + 1) / total_pages * 100.0,
-                        f"Rendered page {page_num + 1}/{total_pages}",
-                    )
-
-                doc.close()
-                elapsed_ms = (time.monotonic() - start_time) * 1000.0
-                return ConversionResult(
-                    task_id=task_id,
-                    success=True,
-                    artifacts=artifacts,
-                    diagnostics=[
-                        ConversionDiagnostic(
-                            level="info",
-                            message=f"Rendered {total_pages} page(s) to {self._target_format.upper()} at {dpi} DPI",
-                            code="LAYOUT2IMG-RENDERED",
+                    path = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".tif")
+                    staged_paths.append(path)
+                    with AppendingTiffWriter(path, new=True) as writer:
+                        for page_num in range(total_pages):
+                            context.cancellation.check()
+                            pix = doc.load_page(page_num).get_pixmap(dpi=dpi, alpha=False)
+                            with pix.pil_image() as image:
+                                image.save(writer, format="TIFF", compression="tiff_lzw", dpi=(dpi, dpi))
+                            writer.newFrame()
+                            context.progress.report_progress(
+                                (page_num + 1) / total_pages * 100.0, f"Rendered page {page_num + 1}/{total_pages}"
+                            )
+                    artifacts.append(
+                        ArtifactManifest(
+                            artifact_id=new_artifact_id(),
+                            kind=ARTIFACT_KIND_PRIMARY,
+                            staging_path=path,
+                            suggested_name=f"{stem}.tif",
+                            media_type=MEDIA_TYPES["tif"],
+                            metadata={"page_count": total_pages, "dpi": dpi},
+                            is_primary=True,
                         )
-                    ],
-                    metrics=ConversionMetrics(
-                        duration_ms=elapsed_ms,
-                        input_bytes=input_bytes,
-                        output_bytes=total_output_bytes,
-                        extra={"page_count": total_pages, "dpi": dpi},
-                    ),
-                )
-
-            else:  # tif — multi-page TIFF
-                from PIL import Image
-
-                page_images: list[str] = []
-
-                for page_num in range(total_pages):
-                    try:
-                        context.cancellation.check()
-                    except Exception:
-                        doc.close()
-                        # Clean up temp page images
-                        for p in page_images:
-                            with contextlib.suppress(OSError):
-                                Path(p).unlink(missing_ok=True)
-                        return self._cancelled(task_id)
-
-                    page = doc.load_page(page_num)
-                    pix = page.get_pixmap(matrix=mat, alpha=False)
-
-                    # Save intermediate PNG for multi-page TIFF assembly
-                    inter_path = context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".png")
-                    pix.save(inter_path)
-                    page_images.append(inter_path)
-
-                doc.close()
-
-                # Combine into multi-page TIFF
-                tif_staging = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".tif")
-
-                if total_pages == 1:
-                    with Image.open(page_images[0]) as img:
-                        img.save(tif_staging, format="TIFF", compression="tiff_lzw")
+                    )
                 else:
-                    opened: list[Image.Image] = []
-                    try:
-                        first = Image.open(page_images[0])
-                        opened.append(first)
-                        rest = [Image.open(p) for p in page_images[1:]]
-                        opened.extend(rest)
-                        first.save(
-                            tif_staging,
-                            format="TIFF",
-                            save_all=True,
-                            append_images=rest,
-                            compression="tiff_lzw",
+                    width = max(len(str(total_pages)), 2)
+                    for page_num in range(total_pages):
+                        context.cancellation.check()
+                        pix = doc.load_page(page_num).get_pixmap(dpi=dpi, alpha=self._target_format == "png")
+                        path = context.workspace.create_artifact_path(ARTIFACT_KIND_IMAGE, f".{self._target_format}")
+                        staged_paths.append(path)
+                        pix.save(path)
+                        artifacts.append(
+                            ArtifactManifest(
+                                artifact_id=new_artifact_id(),
+                                kind=ARTIFACT_KIND_IMAGE,
+                                staging_path=path,
+                                suggested_name=f"{stem}_page_{page_num + 1:0{width}d}.{self._target_format}",
+                                media_type=MEDIA_TYPES[self._target_format],
+                                metadata={
+                                    "page": page_num + 1,
+                                    "total_pages": total_pages,
+                                    "width": pix.width,
+                                    "height": pix.height,
+                                    "dpi": dpi,
+                                },
+                                is_primary=page_num == 0,
+                            )
                         )
-                    finally:
-                        for im in opened:
-                            with contextlib.suppress(Exception):
-                                im.close()
-
-                # Clean up intermediate PNGs
-                for p in page_images:
-                    with contextlib.suppress(OSError):
-                        Path(p).unlink(missing_ok=True)
-
-                output_bytes = file_size(tif_staging)
-                artifact = ArtifactManifest(
-                    artifact_id=new_artifact_id(),
-                    kind=ARTIFACT_KIND_PRIMARY,
-                    staging_path=tif_staging,
-                    suggested_name=f"{stem}.tif",
-                    media_type=MEDIA_TYPES["tif"],
-                    metadata={
-                        "page_count": total_pages,
-                        "dpi": dpi,
-                    },
-                    is_primary=True,
-                )
+                        context.progress.report_progress(
+                            (page_num + 1) / total_pages * 100.0, f"Rendered page {page_num + 1}/{total_pages}"
+                        )
+            context.cancellation.check()
+            for artifact in artifacts:
                 context.workspace.add_artifact(artifact)
-
-                elapsed_ms = (time.monotonic() - start_time) * 1000.0
-                return ConversionResult(
-                    task_id=task_id,
-                    success=True,
-                    artifacts=[artifact],
-                    diagnostics=[
-                        ConversionDiagnostic(
-                            level="info",
-                            message=f"Rendered {total_pages} page(s) to multi-page TIF at {dpi} DPI",
-                            code="LAYOUT2IMG-RENDERED",
-                        )
-                    ],
-                    metrics=ConversionMetrics(
-                        duration_ms=elapsed_ms,
-                        input_bytes=input_bytes,
-                        output_bytes=output_bytes,
-                        extra={"page_count": total_pages, "dpi": dpi},
-                    ),
-                )
-
+            complete = True
+        except CancellationRequested:
+            return self._cancelled(task_id)
         except Exception as exc:
-            with contextlib.suppress(Exception):
-                doc.close()
-            return self._conversion_error(
-                task_id,
-                "LAYOUT2IMG-RENDER-ERROR",
-                f"Failed to render pages: {exc}",
-            )
+            return self._conversion_error(task_id, "LAYOUT2IMG-RENDER-ERROR", f"Failed to render pages: {exc}")
+        finally:
+            if not complete:
+                for path in staged_paths:
+                    with contextlib.suppress(OSError):
+                        Path(path).unlink(missing_ok=True)
+
+        label = "multi-page TIF" if self._target_format == "tif" else self._target_format.upper()
+        return ConversionResult(
+            task_id=task_id,
+            success=True,
+            artifacts=artifacts,
+            diagnostics=[
+                ConversionDiagnostic(
+                    level="info",
+                    message=f"Rendered {total_pages} page(s) to {label} at {dpi} DPI",
+                    code="LAYOUT2IMG-RENDERED",
+                )
+            ],
+            metrics=ConversionMetrics(
+                duration_ms=(time.monotonic() - start_time) * 1000.0,
+                input_bytes=file_size(input_file),
+                output_bytes=sum(file_size(path) for path in staged_paths),
+                extra={"page_count": total_pages, "dpi": dpi},
+            ),
+        )
 
     # ── Helpers ──────────────────────────────────────────────────────
 

@@ -16,26 +16,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.errors import CancellationRequested
+from docwen_core.spreadsheet_projection import SpreadsheetProjectionLimitError
 from docwen_plugin_spreadsheet.table_merger.inputs import MissingFormulaCacheError, load_merge_workbook
-from docwen_plugin_spreadsheet.table_merger.semantics import MergeSummary, coverage_relation, value_identity
-from docwen_plugin_spreadsheet.table_merger.text_limits import MergeCellTextTooLongError, check_cell_text
+from docwen_plugin_spreadsheet.table_merger.records import check_extent, insert_sparse, merge_records, write_scalar
+from docwen_plugin_spreadsheet.table_merger.semantics import MergeSummary, value_identity
+from docwen_plugin_spreadsheet.table_merger.text_limits import MergeCellTextTooLongError
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
-
-
-def _write_scalar(cell: Any, value: Any, source_type: str | None = None) -> None:
-    """Write saved values without reinterpreting literal text as formulas or errors."""
-    if isinstance(value, str):
-        check_cell_text(value, sheet=cell.parent.title, coordinate=cell.coordinate)
-    cell.value = value
-    if isinstance(value, str):
-        cell.data_type = "e" if source_type == "e" else "s"
-
-
-def _check_extent(rows: int, columns: int) -> None:
-    if rows > 1_048_576 or columns > 16_384:
-        raise ValueError("Merged worksheet exceeds Excel's row or column limit")
 
 
 class TableMergerConverter:
@@ -141,7 +129,7 @@ class TableMergerConverter:
                 wb = load_merge_workbook(
                     base_path, base=True, cancel_check=context.cancellation.check, source_name=base_source_path
                 )
-            except (MissingFormulaCacheError, CancellationRequested):
+            except (MissingFormulaCacheError, SpreadsheetProjectionLimitError, CancellationRequested):
                 raise
             except Exception as exc:
                 raise RuntimeError(f"Failed to merge '{Path(base_path).name}': {exc}") from exc
@@ -166,7 +154,7 @@ class TableMergerConverter:
                         cancel_check=context.cancellation.check,
                         source_name=source_paths[i + 1],
                     )
-                except (MissingFormulaCacheError, CancellationRequested):
+                except (MissingFormulaCacheError, SpreadsheetProjectionLimitError, CancellationRequested):
                     raise
                 except Exception as exc:
                     raise RuntimeError(f"Failed to merge '{Path(collect_file).name}': {exc}") from exc
@@ -182,30 +170,40 @@ class TableMergerConverter:
                     # Make room for leading collection fields instead of
                     # clipping them at worksheet row/column zero.
                     if row_offset < 0 and mode != self.MODE_BY_ROW:
-                        _check_extent(base_ws.max_row - row_offset, base_ws.max_column)
-                        base_ws.insert_rows(1, -row_offset)
+                        check_extent(base_ws.max_row - row_offset, base_ws.max_column)
+                        insert_sparse(
+                            base_ws, by_row=True, start=1, amount=-row_offset, cancel_check=context.cancellation.check
+                        )
                         row_offset = 0
                     if col_offset < 0 and mode != self.MODE_BY_COLUMN:
-                        _check_extent(base_ws.max_row, base_ws.max_column - col_offset)
-                        base_ws.insert_cols(1, -col_offset)
+                        check_extent(base_ws.max_row, base_ws.max_column - col_offset)
+                        insert_sparse(
+                            base_ws, by_row=False, start=1, amount=-col_offset, cancel_check=context.cancellation.check
+                        )
                         col_offset = 0
                     summary = MergeSummary(
                         Path(source_paths[i + 1]).name, collect_ws.title, mode_str, row_offset, col_offset
                     )
-                    merge = {
-                        self.MODE_BY_ROW: self._merge_by_row,
-                        self.MODE_BY_COLUMN: self._merge_by_column,
-                        self.MODE_BY_CELL: self._merge_by_cell,
-                    }[mode]
-                    merge(
-                        base_ws,
-                        collect_ws,
-                        row_offset,
-                        col_offset,
-                        summary=summary,
-                        cancel_check=context.cancellation.check,
-                    )
-                    _check_extent(base_ws.max_row, base_ws.max_column)
+                    if mode == self.MODE_BY_CELL:
+                        self._merge_by_cell(
+                            base_ws,
+                            collect_ws,
+                            row_offset,
+                            col_offset,
+                            summary=summary,
+                            cancel_check=context.cancellation.check,
+                        )
+                    else:
+                        by_row = mode == self.MODE_BY_ROW
+                        merge_records(
+                            base_ws,
+                            collect_ws,
+                            by_row=by_row,
+                            offset=col_offset if by_row else row_offset,
+                            summary=summary,
+                            cancel_check=context.cancellation.check,
+                        )
+                    check_extent(base_ws.max_row, base_ws.max_column)
                     summaries.append(summary)
                 finally:
                     collect_wb.close()
@@ -219,7 +217,10 @@ class TableMergerConverter:
                 wb.close()
             code = "MERGE-PARSE-ERROR"
             message = str(exc)
-            if isinstance(exc, MissingFormulaCacheError):
+            if isinstance(exc, SpreadsheetProjectionLimitError):
+                code = exc.diagnostic_code
+                message = f"{exc} Merge inputs: {', '.join(merged_sources)}."
+            elif isinstance(exc, MissingFormulaCacheError):
                 code = "MERGE-FORMULA-CACHE-MISSING"
             elif isinstance(exc, MergeCellTextTooLongError):
                 code = "MERGE-XLSX-CELL-TEXT-TOO-LONG"
@@ -369,27 +370,6 @@ class TableMergerConverter:
 
         return best_offset
 
-    def _calc_overlap(
-        self,
-        base_ws: Any,
-        collect_cells: list[tuple[int, int, object]],
-        row_offset: int,
-        col_offset: int,
-    ) -> int:
-        """Count matching cells at given offset."""
-        overlap = 0
-        for c_row, c_col, c_val in collect_cells:
-            b_row = c_row + row_offset
-            b_col = c_col + col_offset
-            if b_row < 1 or b_col < 1:
-                continue
-            if b_row > base_ws.max_row or b_col > base_ws.max_column:
-                continue
-            b_val = self._cell_identity(base_ws._cells.get((b_row, b_col)))
-            if b_val is not None and c_val == b_val:
-                overlap += 1
-        return overlap
-
     def _iter_cells_for_alignment(self, ws: Any) -> list[tuple[int, int, object]]:
         """Iterate non-empty cells for alignment, up to MAX_CELLS_FOR_ALIGNMENT."""
         result: list[tuple[int, int, object]] = []
@@ -457,343 +437,7 @@ class TableMergerConverter:
                 for col in range(merged_range.min_col, merged_range.max_col + 1):
                     cell = worksheet.cell(row=row, column=col)
                     if type(cell).__name__ != "MergedCell":
-                        _write_scalar(cell, merged_value, merged_type)
-
-    # ── Merge by row ──────────────────────────────────────────────────
-
-    def _merge_by_row(
-        self,
-        base_ws: Any,
-        collect_ws: Any,
-        row_offset: int,
-        col_offset: int,
-        *,
-        summary: MergeSummary | None = None,
-        cancel_check: Callable[[], None] | None = None,
-    ) -> None:
-        """Merge collection rows into base, inserting at most similar positions."""
-        for collect_row_idx in range(1, collect_ws.max_row + 1):
-            if cancel_check is not None:
-                cancel_check()
-            location = f"row {collect_row_idx}"
-            if self._is_row_empty(collect_ws, collect_row_idx):
-                if summary is not None:
-                    summary.record("skipped", location)
-                continue
-
-            covered = False
-            for base_row_idx in range(1, base_ws.max_row + 1):
-                coverage = self._check_row_coverage(base_ws, base_row_idx, collect_ws, collect_row_idx, col_offset)
-                if coverage == "skip_empty":
-                    continue
-                if coverage == "collect_covers_base":
-                    self._replace_row(base_ws, base_row_idx, collect_ws, collect_row_idx, col_offset)
-                    if summary is not None:
-                        summary.record("replaced", location)
-                    covered = True
-                    break
-                elif coverage in {"equal", "base_covers_collect"}:
-                    if summary is not None:
-                        summary.record("skipped", location)
-                    covered = True
-                    break
-
-            if not covered:
-                self._insert_at_most_similar_row(base_ws, collect_ws, collect_row_idx, col_offset)
-                if summary is not None:
-                    summary.record("added", location)
-
-    @staticmethod
-    def _is_row_empty(ws: Any, row_idx: int) -> bool:
-        for col_idx in range(1, ws.max_column + 1):
-            cell = ws._cells.get((row_idx, col_idx))
-            v = cell.value if cell is not None else None
-            if v is not None and str(v).strip() != "":
-                return False
-        return True
-
-    def _check_row_coverage(
-        self,
-        base_ws: Any,
-        base_row: int,
-        collect_ws: Any,
-        collect_row: int,
-        col_offset: int,
-    ) -> str:
-        if base_row < 1 or base_row > base_ws.max_row:
-            return "out_of_range"
-
-        if self._is_row_empty(base_ws, base_row):
-            return "skip_empty"
-
-        base_has_unique = False
-        collect_has_unique = False
-
-        max_col = max(base_ws.max_column, collect_ws.max_column + col_offset)
-        for col_idx in range(1, max_col + 1):
-            base_val = (
-                self._cell_identity(base_ws._cells.get((base_row, col_idx))) if col_idx <= base_ws.max_column else None
-            )
-            base_empty = base_val is None
-
-            cc = col_idx - col_offset
-            if cc < 1 or cc > collect_ws.max_column:
-                if not base_empty:
-                    base_has_unique = True
-                continue
-
-            collect_val = self._cell_identity(collect_ws._cells.get((collect_row, cc)))
-            collect_empty = collect_val is None
-
-            if base_empty and collect_empty:
-                continue
-            if base_empty and not collect_empty:
-                collect_has_unique = True
-            elif not base_empty and collect_empty:
-                base_has_unique = True
-            else:
-                if base_val != collect_val:
-                    return "conflict"
-
-        return coverage_relation(base_unique=base_has_unique, collect_unique=collect_has_unique)
-
-    @staticmethod
-    def _replace_row(base_ws: Any, base_row: int, collect_ws: Any, collect_row: int, col_offset: int) -> None:
-        for col_idx in range(1, collect_ws.max_column + 1):
-            base_col = col_idx + col_offset
-            if base_col < 1:
-                continue
-            cell = base_ws.cell(base_row, base_col)
-            if type(cell).__name__ != "MergedCell":
-                source = collect_ws.cell(collect_row, col_idx)
-                _write_scalar(cell, source.value, source.data_type)
-
-    def _insert_at_most_similar_row(
-        self,
-        base_ws: Any,
-        collect_ws: Any,
-        collect_row: int,
-        col_offset: int,
-    ) -> None:
-        max_sim = 0.0
-        best_row = 1
-        for base_row_idx in range(1, base_ws.max_row + 1):
-            sim = self._row_similarity(base_ws, base_row_idx, collect_ws, collect_row, col_offset)
-            if sim > max_sim:
-                max_sim = sim
-                best_row = base_row_idx
-
-        insert_pos = best_row + 1
-        _check_extent(base_ws.max_row + 1, max(base_ws.max_column, collect_ws.max_column + col_offset))
-        base_ws.insert_rows(insert_pos)
-        for col_idx in range(1, collect_ws.max_column + 1):
-            base_col = col_idx + col_offset
-            if base_col < 1:
-                continue
-            cell = base_ws.cell(insert_pos, base_col)
-            if type(cell).__name__ != "MergedCell":
-                source = collect_ws.cell(collect_row, col_idx)
-                _write_scalar(cell, source.value, source.data_type)
-
-    def _row_similarity(
-        self,
-        base_ws: Any,
-        base_row: int,
-        collect_ws: Any,
-        collect_row: int,
-        col_offset: int,
-    ) -> float:
-        total = 0
-        match = 0
-        max_col = max(base_ws.max_column, collect_ws.max_column + col_offset)
-        for col_idx in range(1, max_col + 1):
-            be = True
-            bv = None
-            if col_idx <= base_ws.max_column:
-                bv = self._cell_identity(base_ws._cells.get((base_row, col_idx)))
-                be = bv is None
-
-            cc = col_idx - col_offset
-            if cc < 1 or cc > collect_ws.max_column:
-                if not be:
-                    total += 1
-                continue
-
-            cv = self._cell_identity(collect_ws._cells.get((collect_row, cc)))
-            ce = cv is None
-            total += 1
-
-            if (be and ce) or (not be and not ce and bv == cv):
-                match += 1
-
-        return match / total if total > 0 else 0.0
-
-    # ── Merge by column ───────────────────────────────────────────────
-
-    def _merge_by_column(
-        self,
-        base_ws: Any,
-        collect_ws: Any,
-        row_offset: int,
-        col_offset: int,
-        *,
-        summary: MergeSummary | None = None,
-        cancel_check: Callable[[], None] | None = None,
-    ) -> None:
-        for collect_col_idx in range(1, collect_ws.max_column + 1):
-            if cancel_check is not None:
-                cancel_check()
-            location = f"column {collect_col_idx}"
-            if self._is_col_empty(collect_ws, collect_col_idx):
-                if summary is not None:
-                    summary.record("skipped", location)
-                continue
-
-            covered = False
-            for base_col_idx in range(1, base_ws.max_column + 1):
-                coverage = self._check_column_coverage(base_ws, base_col_idx, collect_ws, collect_col_idx, row_offset)
-                if coverage == "skip_empty":
-                    continue
-                if coverage == "collect_covers_base":
-                    self._replace_column(base_ws, base_col_idx, collect_ws, collect_col_idx, row_offset)
-                    if summary is not None:
-                        summary.record("replaced", location)
-                    covered = True
-                    break
-                elif coverage in {"equal", "base_covers_collect"}:
-                    if summary is not None:
-                        summary.record("skipped", location)
-                    covered = True
-                    break
-
-            if not covered:
-                self._insert_at_most_similar_column(base_ws, collect_ws, collect_col_idx, row_offset)
-                if summary is not None:
-                    summary.record("added", location)
-
-    @staticmethod
-    def _is_col_empty(ws: Any, col_idx: int) -> bool:
-        for row_idx in range(1, ws.max_row + 1):
-            cell = ws._cells.get((row_idx, col_idx))
-            v = cell.value if cell is not None else None
-            if v is not None and str(v).strip() != "":
-                return False
-        return True
-
-    def _check_column_coverage(
-        self,
-        base_ws: Any,
-        base_col: int,
-        collect_ws: Any,
-        collect_col: int,
-        row_offset: int,
-    ) -> str:
-        if base_col < 1 or base_col > base_ws.max_column:
-            return "out_of_range"
-        if self._is_col_empty(base_ws, base_col):
-            return "skip_empty"
-
-        base_has_unique = False
-        collect_has_unique = False
-
-        max_row = max(base_ws.max_row, collect_ws.max_row + row_offset)
-        for row_idx in range(1, max_row + 1):
-            base_val = (
-                self._cell_identity(base_ws._cells.get((row_idx, base_col))) if row_idx <= base_ws.max_row else None
-            )
-            base_empty = base_val is None
-
-            cr = row_idx - row_offset
-            if cr < 1 or cr > collect_ws.max_row:
-                if not base_empty:
-                    base_has_unique = True
-                continue
-
-            collect_val = self._cell_identity(collect_ws._cells.get((cr, collect_col)))
-            collect_empty = collect_val is None
-
-            if base_empty and collect_empty:
-                continue
-            if base_empty and not collect_empty:
-                collect_has_unique = True
-            elif not base_empty and collect_empty:
-                base_has_unique = True
-            else:
-                if base_val != collect_val:
-                    return "conflict"
-
-        return coverage_relation(base_unique=base_has_unique, collect_unique=collect_has_unique)
-
-    @staticmethod
-    def _replace_column(base_ws: Any, base_col: int, collect_ws: Any, collect_col: int, row_offset: int) -> None:
-        for row_idx in range(1, collect_ws.max_row + 1):
-            base_row = row_idx + row_offset
-            if base_row < 1:
-                continue
-            cell = base_ws.cell(base_row, base_col)
-            if type(cell).__name__ != "MergedCell":
-                source = collect_ws.cell(row_idx, collect_col)
-                _write_scalar(cell, source.value, source.data_type)
-
-    def _insert_at_most_similar_column(
-        self,
-        base_ws: Any,
-        collect_ws: Any,
-        collect_col: int,
-        row_offset: int,
-    ) -> None:
-        max_sim = 0.0
-        best_col = 1
-        for base_col_idx in range(1, base_ws.max_column + 1):
-            sim = self._col_similarity(base_ws, base_col_idx, collect_ws, collect_col, row_offset)
-            if sim > max_sim:
-                max_sim = sim
-                best_col = base_col_idx
-
-        insert_pos = best_col + 1
-        _check_extent(max(base_ws.max_row, collect_ws.max_row + row_offset), base_ws.max_column + 1)
-        base_ws.insert_cols(insert_pos)
-        for row_idx in range(1, collect_ws.max_row + 1):
-            base_row = row_idx + row_offset
-            if base_row < 1:
-                continue
-            cell = base_ws.cell(base_row, insert_pos)
-            if type(cell).__name__ != "MergedCell":
-                source = collect_ws.cell(row_idx, collect_col)
-                _write_scalar(cell, source.value, source.data_type)
-
-    def _col_similarity(
-        self,
-        base_ws: Any,
-        base_col: int,
-        collect_ws: Any,
-        collect_col: int,
-        row_offset: int,
-    ) -> float:
-        total = 0
-        match = 0
-        max_row = max(base_ws.max_row, collect_ws.max_row + row_offset)
-        for row_idx in range(1, max_row + 1):
-            be = True
-            bv = None
-            if row_idx <= base_ws.max_row:
-                bv = self._cell_identity(base_ws._cells.get((row_idx, base_col)))
-                be = bv is None
-
-            cr = row_idx - row_offset
-            if cr < 1 or cr > collect_ws.max_row:
-                if not be:
-                    total += 1
-                continue
-
-            cv = self._cell_identity(collect_ws._cells.get((cr, collect_col)))
-            ce = cv is None
-            total += 1
-
-            if (be and ce) or (not be and not ce and bv == cv):
-                match += 1
-
-        return match / total if total > 0 else 0.0
+                        write_scalar(cell, merged_value, merged_type)
 
     # ── Merge by cell ─────────────────────────────────────────────────
 
@@ -841,12 +485,12 @@ class TableMergerConverter:
             base_col = cell.column + col_offset
             if base_row < 1 or base_col < 1:
                 continue
-            _check_extent(base_row, base_col)
+            check_extent(base_row, base_col)
             base_cell = base_ws.cell(base_row, base_col)
             if type(base_cell).__name__ != "MergedCell":
                 original = base_cell.value
                 value, source_type = self._merge_cell_values(original, cell.value, base_cell.data_type, cell.data_type)
-                _write_scalar(base_cell, value, source_type)
+                write_scalar(base_cell, value, source_type)
                 if summary is not None:
                     decision = (
                         "added"

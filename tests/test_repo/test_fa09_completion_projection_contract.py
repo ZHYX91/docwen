@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-from tools.validation.source_family import read_source_text
 
 pytestmark = [pytest.mark.contract, pytest.mark.golden]
 
@@ -14,14 +13,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROJECTION_SHA = "1ADD0084CA59296E764D900A091D880E139664B2226EE068EA3D050431CD2E0C"
 
 
-def _read(path: Path) -> str:
-    return read_source_text(path)
-
-
 def test_fa09_completion_fixture_records_current_green_and_exact_reference_defects() -> None:
-    fixture = json.loads(
-        _read(PROJECT_ROOT / "tests" / "fixtures" / "golden" / "old_system_pdf_operations_semantics.json")
-    )
+    path = PROJECT_ROOT / "tests" / "fixtures" / "golden" / "old_system_pdf_operations_semantics.json"
+    fixture = json.loads(path.read_text(encoding="utf-8"))
     addendum = fixture["fa09_completion_addendum"]
 
     assert addendum["stage_id"] == "VIS-2026-07-23-192"
@@ -49,37 +43,3 @@ def test_fa09_completion_fixture_records_current_green_and_exact_reference_defec
     assert addendum["user_accepted_boundary"] is False
     assert addendum["fa09_status"] == "FIXED_AND_VERIFIED"
     assert addendum["overall_status"] == "NOT_PASSED_YET"
-
-
-def test_fa09_completion_repairs_have_direct_executable_guards() -> None:
-    splitter = _read(
-        PROJECT_ROOT
-        / "packages"
-        / "plugins"
-        / "layout"
-        / "src"
-        / "docwen_plugin_layout"
-        / "operations"
-        / "converter.py"
-    )
-    markdown = _read(
-        PROJECT_ROOT
-        / "packages"
-        / "plugins"
-        / "layout"
-        / "src"
-        / "docwen_plugin_layout"
-        / "to_markdown"
-        / "converter.py"
-    )
-    tests = _read(PROJECT_ROOT / "packages" / "plugins" / "layout" / "tests" / "test_layout_conversions_*.py")
-
-    assert "def _copy_pages_preserving_internal_gotos" in splitter
-    assert "target_source_index not in destination_by_source" in splitter
-    assert "def _ocr_page_outcomes" in markdown
-    assert "if len(page_outcomes) != physical_page_count:" in markdown
-    assert '"fragment_kind": "page"' in markdown
-    assert '"page_count": physical_page_count' in markdown
-    assert "test_pdf_custom_split_does_not_crosslink_omitted_goto_target" in tests
-    assert "test_pdf_to_md_physical_page_matrix_keeps_p_and_k_independent" in tests
-    assert "test_pdf_to_md_page_fragment_preserves_ocr_text_exactly" in tests

@@ -302,7 +302,7 @@ def test_themed_batch_details_fit_inside_the_actual_list_item(qapp, qtbot, prese
 
 def test_large_batch_target_notice_fits_narrow_panel(qapp, qtbot, tmp_path) -> None:
     from openpyxl import Workbook
-    from PySide6.QtCore import QPoint
+    from PySide6.QtCore import QEvent, QObject, QPoint
 
     from docwen_gui.styles.theme_manager import ThemeManager
     from docwen_gui.view_models.conversion_panel_vm import ConversionPanelViewModel
@@ -319,23 +319,84 @@ def test_large_batch_target_notice_fits_narrow_panel(qapp, qtbot, tmp_path) -> N
     vm = ConversionPanelViewModel(FakeMainWindowViewModel())  # type: ignore[arg-type]
     widget = ConversionPanel(vm)
     qtbot.addWidget(widget)
+    painted = []
+
+    class NoticePaints(QObject):
+        def eventFilter(self, obj, event):
+            if (
+                event.type() == QEvent.Type.Paint
+                and isinstance(obj, InlineNotice)
+                and obj.objectName() == "targetAvailabilityNotice"
+                and widget.isAncestorOf(obj)
+            ):
+                label = obj.label
+                bottom = label.mapTo(obj, QPoint(0, label.height())).y()
+                painted.append(
+                    (widget.width(), label.heightForWidth(label.width()), label.height(), bottom, obj.height())
+                )
+            return False
+
+    observer = NoticePaints()
+    qapp.installEventFilter(observer)
     widget.resize(288, 840)
-    widget.show()
     try:
+        with qtbot.waitExposed(widget):
+            widget.show()
         vm.set_file_info("spreadsheet", "xlsx", xlsx, list(formats), "batch", source_formats=formats)
         qtbot.waitUntil(lambda: not vm.spreadsheet_analysis_pending)
-        qtbot.wait(100)
-        notices = widget.findChildren(InlineNotice, "targetAvailabilityNotice")
-        visible = [notice for notice in notices if notice.isVisible()]
-        assert visible
-        for notice in visible:
-            label = notice.label
-            assert label.heightForWidth(label.width()) <= label.height()
-            assert label.mapTo(notice, QPoint(0, label.height())).y() <= notice.height()
+        for width in (288, 420, 248, 422, 288):
+            first = len(painted)
+            widget.resize(width, 840)
+            for notice in widget.findChildren(InlineNotice, "targetAvailabilityNotice"):
+                notice.update()
+            qtbot.waitUntil(lambda width=width, first=first: any(frame[0] == width for frame in painted[first:]))
+        for _, required_height, label_height, bottom, notice_height in painted:
+            assert required_height <= label_height
+            assert bottom <= notice_height
     finally:
+        qapp.removeEventFilter(observer)
         vm.close()
         widget.close()
         ThemeManager.reset_instance()
+
+
+def test_inline_notice_reflows_when_text_and_typography_change(qapp, qtbot) -> None:
+    from PySide6.QtWidgets import QVBoxLayout, QWidget
+
+    from docwen_gui.widgets.panel_card import InlineNotice
+
+    host = QWidget()
+    qtbot.addWidget(host)
+    layout = QVBoxLayout(host)
+    notice = InlineNotice("Short", host)
+    layout.addWidget(notice)
+    layout.addStretch()
+    host.resize(240, 500)
+    with qtbot.waitExposed(host):
+        host.show()
+
+    notice_layout = notice.layout()
+    assert notice_layout is not None
+    margins = notice_layout.contentsMargins()
+
+    def text_and_padding_fit():
+        label = notice.label
+        return label.heightForWidth(label.width()) + margins.top() + margins.bottom() <= notice.height()
+
+    short_height = notice.height()
+    notice.setText("The spreadsheet requires a different target format. " * 3)
+    qtbot.waitUntil(lambda: notice.height() > short_height and text_and_padding_fit())
+    long_height = notice.height()
+    host.resize(420, 500)
+    qtbot.waitUntil(lambda: notice.height() < long_height and text_and_padding_fit())
+    host.resize(240, 500)
+    qtbot.waitUntil(lambda: notice.height() == long_height and text_and_padding_fit())
+    notice.label.setStyleSheet(f"font-size: {notice.label.font().pointSizeF() + 6}pt")
+    qtbot.waitUntil(lambda: notice.height() > long_height and text_and_padding_fit())
+    notice.label.setStyleSheet("")
+    qtbot.waitUntil(lambda: notice.height() == long_height and text_and_padding_fit())
+    notice.setText("Short")
+    qtbot.waitUntil(lambda: notice.height() == short_height and text_and_padding_fit())
 
 
 def test_large_layout_render_controls_stay_inside_right_panel(qapp) -> None:

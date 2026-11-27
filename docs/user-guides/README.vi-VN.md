@@ -60,7 +60,7 @@ uv run --frozen docwen-gui
 uv run --frozen docwen --help
 ```
 
-`uv run --frozen` sử dụng môi trường đã đồng bộ mà không cần kích hoạt thủ công. CI và bản dựng sản phẩm dùng uv 0.12.0; bảo trì phụ thuộc cho phép bản 0.12.x tương thích. Không hỗ trợ `pip install -e` vì pip không áp dụng được quy tắc loại trừ phụ thuộc cụ thể của kho mã.
+`uv run --frozen` sử dụng môi trường đã đồng bộ mà không cần kích hoạt thủ công. CI và bản dựng sản phẩm dùng uv 0.12.0. Không hỗ trợ `pip install -e` vì pip không áp dụng được quy tắc loại trừ phụ thuộc cụ thể của kho mã.
 
 ### Ghi chú cho macOS
 

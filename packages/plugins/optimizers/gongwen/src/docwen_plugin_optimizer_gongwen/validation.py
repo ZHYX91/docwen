@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from docwen_plugin_optimizer_gongwen.constants import MEETING_SIGNATURE_DATE
+
 if TYPE_CHECKING:
     from docwen_plugin_optimizer_gongwen.models import RecognitionResult
 
@@ -33,10 +35,15 @@ def validate_result(result: RecognitionResult) -> RecognitionResult:
 
     Returns the result with updated validation_finding_count and missing_required.
     """
-    found_types = {c.element_type for c in result.candidates.values()}
+    positions = {
+        element: index
+        for index, candidate in result.candidates.items()
+        if candidate.element_type != MEETING_SIGNATURE_DATE or index not in result.preserved_source_indices
+        for element in candidate.represented_elements
+    }
 
     # Check required elements
-    missing = REQUIRED_ELEMENTS - found_types
+    missing = REQUIRED_ELEMENTS - positions.keys()
     result.missing_required = sorted(missing)
 
     # Count findings
@@ -44,18 +51,9 @@ def validate_result(result: RecognitionResult) -> RecognitionResult:
 
     # Check structural rules
     for before_type, after_type, _rule_id, message in STRUCTURAL_RULES:
-        if before_type in found_types and after_type in found_types:
-            before_idx = None
-            after_idx = None
-            for idx, c in result.candidates.items():
-                if c.element_type == before_type:
-                    before_idx = idx
-                elif c.element_type == after_type:
-                    after_idx = idx
-
-            if before_idx is not None and after_idx is not None and before_idx > after_idx:
-                result.review_signals.append(f"structural: {message}")
-                finding_count += 1
+        if before_type in positions and after_type in positions and positions[before_type] > positions[after_type]:
+            result.review_signals.append(f"structural: {message}")
+            finding_count += 1
 
     result.validation_finding_count = finding_count
     return result
@@ -69,8 +67,11 @@ def get_confidence_summary(result: RecognitionResult) -> dict:
     confidences = {}
     levels = {"high": 3, "medium": 2, "low": 1}
 
-    for c in result.candidates.values():
-        confidences[c.element_type] = c.confidence
+    for index, c in result.candidates.items():
+        if c.element_type == MEETING_SIGNATURE_DATE and index in result.preserved_source_indices:
+            continue
+        for element in c.represented_elements:
+            confidences[element] = c.confidence
 
     if confidences:
         avg_level = sum(levels.get(c, 0) for c in confidences.values()) / len(confidences)

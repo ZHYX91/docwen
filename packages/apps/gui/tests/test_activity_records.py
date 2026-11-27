@@ -4,7 +4,7 @@ import json
 from dataclasses import replace
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPersistentModelIndex, Qt
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QApplication
 
@@ -63,10 +63,16 @@ def test_note_failures_have_localized_specific_diagnoses(qapp, locale):
 
 
 @pytest.fixture
-def activity(qtbot):
+def activity_model(qapp):
     history = TaskHistory()
     feedback = InfoAreaViewModel()
-    model = ActivityRecordsModel(history, feedback)
+    yield history, feedback, ActivityRecordsModel(history, feedback)
+    feedback.stop_all_timers()
+
+
+@pytest.fixture
+def activity(activity_model, qtbot):
+    history, feedback, model = activity_model
     history.remember(
         {
             "request_id": "one",
@@ -89,8 +95,7 @@ def activity(qtbot):
     dialog = ActivityRecordsDialog(model)
     qtbot.addWidget(dialog)
     dialog.show_records()
-    yield history, feedback, model, dialog
-    feedback.stop_all_timers()
+    return history, feedback, model, dialog
 
 
 def test_records_search_filter_sort_and_open_details(activity):
@@ -126,8 +131,8 @@ def test_records_search_filter_sort_and_open_details(activity):
     assert history.get("one").failure_details
 
 
-def test_merge_locations_and_request_summary_survive_notice_eviction_without_becoming_copyable(activity):
-    history, feedback, model, _dialog = activity
+def test_merge_locations_and_request_summary_survive_notice_eviction_without_becoming_copyable(activity_model):
+    history, feedback, model = activity_model
     history.remember(
         {
             "request_id": "merge",
@@ -271,8 +276,9 @@ def test_animation_does_not_reset_selected_detail_or_text_selection(activity, qt
     cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor, 5)
     dialog.details.setTextCursor(cursor)
     selection = dialog.details.textCursor().selectedText()
-    feedback.begin_task(operation_id="active", current_file="next.md", total_count=1)
-    qtbot.wait(350)
+    with qtbot.assertNotEmitted(feedback.history_changed):
+        feedback.begin_task(operation_id="active", current_file="next.md", total_count=1)
+        qtbot.wait(350)
     assert dialog.details.textCursor().selectedText() == selection
     assert dialog._selected().operation_id == "one"
 
@@ -293,8 +299,8 @@ def test_clear_records_preserves_active_task_and_outputs(activity):
     assert any("Later failure" in row.details for row in model.records)
 
 
-def test_single_success_uses_one_status_heading(activity):
-    _, feedback, _, _ = activity
+def test_single_success_uses_one_status_heading(activity_model):
+    _, feedback, _ = activity_model
     feedback.set_task_summary(
         state="success",
         tone="success",
@@ -309,8 +315,8 @@ def test_single_success_uses_one_status_heading(activity):
     assert feedback.status_meta_text not in feedback.status_summary_text
 
 
-def test_batch_details_do_not_blame_another_file(activity):
-    history, feedback, model, _ = activity
+def test_batch_details_do_not_blame_another_file(activity_model):
+    history, feedback, model = activity_model
     history.remember({"request_id": "batch", "file_paths": ["/a.md", "/b.md"]})
     history.record("batch", "/a.md", "failed", "A is locked")
     history.record("batch", "/b.md", "completed", output_path="/b.docx")
@@ -325,14 +331,16 @@ def test_batch_details_do_not_blame_another_file(activity):
     assert any("Batch notice" in row.details and not row.source_path for row in model.records)
 
 
-def test_task_warnings_and_skip_reasons_survive_notice_eviction(activity):
-    history, feedback, model, _ = activity
+def test_task_warnings_and_skip_reasons_survive_notice_eviction(activity_model):
+    history, feedback, model = activity_model
     paths = [f"/batch/{index}.md" for index in range(105)]
     history.remember({"request_id": "large", "file_paths": paths})
     for index, path in enumerate(paths):
         warning = f"Review item {index}"
         history.record("large", path, "completed", warnings=(warning,))
         feedback.add_message(warning, "warning", operation_id="large", file_path=path)
+    assert len(feedback.history_rows) == feedback.max_messages == 100
+    assert all(row.file_path != paths[0] for row in feedback.history_rows)
     first = next(row for row in model.records if row.source_path == paths[0])
     assert first.status == "warning" and "Review item 0" in first.details
     history.remember({"request_id": "skip", "file_path": "/skipped.md"})
@@ -341,6 +349,86 @@ def test_task_warnings_and_skip_reasons_survive_notice_eviction(activity):
     skipped = next(row for row in model.records if row.operation_id == "skip")
     assert "Unsupported in this operation" in skipped.details
     assert next(row for row in model.records if row.source_path == paths[0]).status == "warning"
+
+
+def test_completed_batch_publishes_all_rows_and_warnings_in_the_same_callback(activity_model):
+    history, feedback, model = activity_model
+    paths = [f"/file-{index}.md" for index in range(30)]
+    history.remember({"request_id": "files", "file_paths": paths})
+    updates = []
+    model.records_changed.connect(lambda: updates.append(tuple(row.status for row in model.records)))
+    with history.batch_outcomes():
+        for path in paths:
+            history.record("files", path, "completed")
+    with feedback.batch_messages():
+        for path in paths:
+            feedback.add_message("check", "warning", operation_id="files", file_path=path)
+    assert updates == [("completed",) * len(paths), ("warning",) * len(paths)]
+
+
+def test_secondary_output_notice_augments_existing_file_warnings(activity_model):
+    history, feedback, model = activity_model
+    history.remember({"request_id": "split", "file_paths": ["/one.pdf", "/two.pdf"]})
+    history.record(
+        "split",
+        "/one.pdf",
+        "completed",
+        output_path="/page1.png",
+        output_paths=("/page1.png", "/page2.png"),
+        warnings=("Low resolution",),
+    )
+    feedback.add_message("Check page two", "warning", operation_id="split", file_path="/page2.png")
+    feedback.add_message(
+        "one.pdf: Low resolution",
+        "warning",
+        details_message="Low resolution",
+        operation_id="split",
+        file_path="/page1.png",
+    )
+    first, second = model.records
+    assert first.warning_messages == ("Low resolution", "Check page two")
+    assert "Check page two" in first.details and first.details.count("Low resolution") == 1
+    assert not second.warning_messages
+
+
+def test_shared_output_and_source_notices_keep_arrival_order(activity_model):
+    history, feedback, model = activity_model
+    paths = ["/a.md", "/b.md", "/unrelated.md"]
+    history.remember({"request_id": "batch", "file_paths": paths})
+    for path in paths[:2]:
+        history.record("batch", path, "completed", output_path="/merged.docx")
+    for message, path in (("first", "/merged.docx"), ("second", "/a.md"), ("third", "/merged.docx")):
+        feedback.add_message(message, "warning", operation_id="batch", file_path=path)
+    assert [record.warning_messages for record in model.records] == [
+        ("first", "second", "third"),
+        ("first", "third"),
+        (),
+    ]
+
+
+def test_open_dialog_updates_filtered_result_and_survives_notice_removal_immediately(activity):
+    history, feedback, model, dialog = activity
+    dialog.status_filter.setCurrentIndex(dialog.status_filter.findData("warning"))
+    assert dialog._proxy.rowCount() == 0
+    selected_file = QPersistentModelIndex(model.index(1, 2))
+    history.record("two", "/source/a.csv", "completed", warnings=("Review formula",))
+    assert selected_file.isValid() and selected_file.data() == "a.csv"
+    assert dialog._proxy.rowCount() == 1
+    assert "Review formula" in dialog.details.toPlainText()
+
+    feedback.add_message("Temporary notice", "warning")
+    feedback.add_message("Temporary notice", "warning")
+    assert dialog._proxy.rowCount() == 2
+    assert feedback.history_rows[-1].repeat_count == 2
+    feedback.remove_history_row_at(len(feedback.history_rows) - 1)
+    assert dialog._proxy.rowCount() == 1
+    assert "Review formula" in dialog.details.toPlainText()
+    history.record("two", "/source/a.csv", "completed")
+    assert dialog._proxy.rowCount() == 0 and not dialog.details.toPlainText()
+    feedback.add_message("Session notice", "warning")
+    assert dialog._proxy.rowCount() == 1
+    feedback.reset_session()
+    assert dialog._proxy.rowCount() == 0 and not dialog.details.toPlainText()
 
 
 def test_file_sort_uses_visible_basename_before_directory(activity):

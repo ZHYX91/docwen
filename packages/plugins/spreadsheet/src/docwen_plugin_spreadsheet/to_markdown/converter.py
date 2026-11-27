@@ -25,7 +25,6 @@ from docwen_core.detection import sniff_delimited_separator
 from docwen_core.errors import CancellationRequested
 from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.markdown_utils import encode_markdown_table_cell
-from docwen_core.spreadsheet_package import preflight_worksheet_allocations
 from docwen_core.spreadsheet_projection import (
     MAX_SPREADSHEET_PROJECTION_CELLS,
     ProjectionBudget,
@@ -383,6 +382,9 @@ def _extract_sheet_images(
 
     if not hasattr(ws, "_images") or not ws._images:
         return images_info, extraction_loss_count
+
+    if image_counter_start - 1 + len(ws._images) > MAX_SPREADSHEET_PROJECTION_CELLS:
+        raise SpreadsheetProjectionLimitError("Image occurrences exceed the projection budget.")
 
     from docwen_core.markdown_utils import format_sanitized_image_link
 
@@ -771,32 +773,30 @@ class SpreadsheetToMarkdownConverter:
         """
         if options is None:
             options = context.request.options
-        from docwen_plugin_spreadsheet.csv_xlsx.converter import (
-            _find_unavailable_formula_caches,
-            _formula_cache_warning_message,
-            _load_xlsx_views,
+        from docwen_plugin_spreadsheet.cached_workbook import (
+            find_unavailable_formula_caches,
+            formula_cache_warning_message,
+            load_cached_workbook,
         )
 
         context.progress.report_progress(20.0, "Opening workbook...")
 
-        preflight_worksheet_allocations(
+        wb = load_cached_workbook(
             input_path, cancel_check=context.cancellation.check, limit=MAX_SPREADSHEET_PROJECTION_CELLS
         )
-        wb, formula_wb = _load_xlsx_views(input_path)
         try:
             worksheets = ordinary_worksheets(wb.worksheets)
             budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
             copy_budget = ProjectionBudget(limit=MAX_SPREADSHEET_PROJECTION_CELLS)
-            unavailable_formula_count, unavailable_formula_locations = _find_unavailable_formula_caches(
+            unavailable_formula_count, unavailable_formula_locations = find_unavailable_formula_caches(
                 wb,
-                formula_wb,
                 input_path=input_path,
                 sheet_names=[worksheet.title for worksheet in worksheets],
                 cancel_check=context.cancellation.check,
             )
             if unavailable_formula_count:
                 stats["formula_cache_unavailable_count"] = unavailable_formula_count
-                stats["formula_cache_warning_message"] = _formula_cache_warning_message(
+                stats["formula_cache_warning_message"] = formula_cache_warning_message(
                     unavailable_formula_count,
                     unavailable_formula_locations,
                 )
@@ -844,8 +844,6 @@ class SpreadsheetToMarkdownConverter:
                     ocr_language = str(options.get("ocr_language") or "auto")
                     current_locale = str(options.get("locale") or "zh_CN")
 
-                    if total_images_extracted + len(ws._images) > MAX_SPREADSHEET_PROJECTION_CELLS:
-                        raise SpreadsheetProjectionLimitError("Image occurrences exceed the projection budget.")
                     sheet_images, sheet_image_extraction_losses = _extract_sheet_images(
                         ws,
                         sheet_name,
@@ -1048,4 +1046,3 @@ class SpreadsheetToMarkdownConverter:
             return md_content.strip() + "\n", stats
         finally:
             wb.close()
-            formula_wb.close()

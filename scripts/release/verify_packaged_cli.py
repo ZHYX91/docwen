@@ -2956,6 +2956,7 @@ def _run_machine_protocol_smoke_impl(
         "convert.png.to_ocr_markdown",
         "convert.markdown_tables.to_csv",
         "convert.tiff_frames.to_png",
+        "validate.docx",
         "validate.markdown",
         "transform.markdown.heading_numbering",
         "merge.pdf.documents",

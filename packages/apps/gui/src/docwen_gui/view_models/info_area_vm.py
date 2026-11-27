@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.i18n import isolate_filename
@@ -90,7 +92,6 @@ class _PendingTransient:
     priority: int
     ttl_ms: int
     source: str
-    version: int
 
 
 @dataclass(slots=True)
@@ -173,6 +174,9 @@ class InfoAreaViewModel(QObject):
     state_changed = Signal()
     """Emitted when any display-relevant state changes — widgets rebind."""
 
+    history_changed = Signal()
+    """Emitted once when the bounded history changes, independently of status and animation."""
+
     history_navigation_requested = Signal(str)
     """Emitted when user clicks an interactive status summary (target path)."""
 
@@ -195,21 +199,17 @@ class InfoAreaViewModel(QObject):
         # ── History state ────────────────────────────────────────────────
         self._history_rows: list[HistoryRowData] = []
         self._last_message_signature: tuple | None = None
+        self._batching_messages = False
+        self._history_refresh_pending = False
 
         # ── Transient state ──────────────────────────────────────────────
         # _transient_messages: key -> (message, message_type, priority)
         self._transient_messages: dict[str, tuple[str, str, int]] = {}
         self._transient_timers: dict[str, QTimer] = {}
-        self._transient_versions: dict[str, int] = {}
         self._transient_sources: dict[str, str] = {}
         self._transient_last_displayed_at: dict[str, float] = {}
         self._pending_transient_updates: dict[str, _PendingTransient] = {}
         self._transient_flush_timers: dict[str, QTimer] = {}
-        # Invalidates already-queued timer callbacks when the current working
-        # session is reset.  Stopping a QTimer prevents future timeouts, but a
-        # callback that was already queued in Qt's event loop must also be made
-        # harmless before the same transient key can be reused.
-        self._transient_generation: int = 0
 
         # ── Task summary (DTO) ─────────────────────────────────────────
         self._task_summary: TaskSummaryState = TaskSummaryState()
@@ -366,6 +366,21 @@ class InfoAreaViewModel(QObject):
 
     # ── Public methods: history ───────────────────────────────────────────
 
+    @contextmanager
+    def batch_messages(self) -> Iterator[None]:
+        """Render a synchronous group of history notices after the group is recorded."""
+        if self._batching_messages:
+            yield
+            return
+        self._batching_messages = True
+        try:
+            yield
+        finally:
+            self._batching_messages = False
+            if self._history_refresh_pending:
+                self._history_refresh_pending = False
+                self._refresh_status(history_changed=True)
+
     def add_message(
         self,
         message: str,
@@ -415,7 +430,7 @@ class InfoAreaViewModel(QObject):
                 timestamp=timestamp,
                 repeat_count=latest.repeat_count + 1,
             )
-            self._refresh_status()
+            self._refresh_status(history_changed=True)
             return
 
         self._last_message_signature = signature
@@ -440,7 +455,7 @@ class InfoAreaViewModel(QObject):
         if resolved_operation_id and message_type in _IMPORTANT_TYPES:
             self._publish_terminal_transient(resolved_operation_id, message, message_type=message_type)
 
-        self._refresh_status()
+        self._refresh_status(history_changed=True)
         logger.debug("History message: [%s] %s", message_type, message)
 
     def remove_history_row_at(self, index: int) -> None:
@@ -448,13 +463,13 @@ class InfoAreaViewModel(QObject):
         if 0 <= index < len(self._history_rows):
             self._history_rows.pop(index)
             self._last_message_signature = None
-            self._refresh_status()
+            self._refresh_status(history_changed=True)
 
     def clear_history(self) -> None:
         """Clear all history rows."""
         self._history_rows.clear()
         self._last_message_signature = None
-        self._refresh_status()
+        self._refresh_status(history_changed=True)
 
     def reset_session(self) -> None:
         """Atomically reset the information state for the current work session.
@@ -470,7 +485,6 @@ class InfoAreaViewModel(QObject):
         self._output_destination_hint = ""
         self._execution_summary = ""
 
-        self._transient_generation += 1
         self._clear_transient_state()
 
         self._task_summary = TaskSummaryState()
@@ -483,7 +497,7 @@ class InfoAreaViewModel(QObject):
             self._activity_timer.stop()
 
         # One refresh keeps the reset atomic from the widget's perspective.
-        self._refresh_status()
+        self._refresh_status(history_changed=True)
 
     # ── Public methods: transient ─────────────────────────────────────────
 
@@ -518,8 +532,6 @@ class InfoAreaViewModel(QObject):
         key_base = self._transient_key_base(key)
         priority = _TRANSIENT_PRIORITY.get(key_base, 99)
         resolved_source = source or key
-        version = self._transient_versions.get(key, 0) + 1
-        self._transient_versions[key] = version
 
         payload = _PendingTransient(
             message=message,
@@ -527,7 +539,6 @@ class InfoAreaViewModel(QObject):
             priority=priority,
             ttl_ms=ttl_ms,
             source=resolved_source,
-            version=version,
         )
 
         throttle_ms = _TRANSIENT_THROTTLE_MS.get(key_base, 0)
@@ -545,46 +556,39 @@ class InfoAreaViewModel(QObject):
             self._apply_transient_update(key, payload)
         else:
             self._pending_transient_updates[key] = payload
-            self._restart_transient_ttl_timer(key, version, ttl_ms)
+            self._restart_transient_ttl_timer(key, ttl_ms)
             delay_ms = max(0, throttle_ms - int((now - last_displayed_at) * 1000))
-            self._schedule_transient_flush(key, version, delay_ms)
+            self._schedule_transient_flush(key, delay_ms)
 
     def clear_transient_message(self, key: str) -> None:
         """Clear a transient message by key."""
         self._transient_messages.pop(key, None)
-        self._transient_versions.pop(key, None)
         self._transient_sources.pop(key, None)
         self._transient_last_displayed_at.pop(key, None)
         self._pending_transient_updates.pop(key, None)
 
-        if key in self._transient_timers:
-            self._transient_timers[key].stop()
-            del self._transient_timers[key]
-        if key in self._transient_flush_timers:
-            self._transient_flush_timers[key].stop()
-            del self._transient_flush_timers[key]
+        self._discard_timer(self._transient_timers.pop(key, None))
+        self._discard_timer(self._transient_flush_timers.pop(key, None))
 
         self._refresh_status()
 
     def clear_all_transients(self) -> None:
         """Clear all transient messages and stop all related timers."""
-        self._transient_generation += 1
         self._clear_transient_state()
         self._refresh_status()
 
     def _clear_transient_state(self) -> None:
         """Clear transient state without emitting a display refresh."""
         self._transient_messages.clear()
-        self._transient_versions.clear()
         self._transient_sources.clear()
         self._transient_last_displayed_at.clear()
         self._pending_transient_updates.clear()
 
         for timer in self._transient_timers.values():
-            timer.stop()
+            self._discard_timer(timer)
         self._transient_timers.clear()
         for timer in self._transient_flush_timers.values():
-            timer.stop()
+            self._discard_timer(timer)
         self._transient_flush_timers.clear()
 
     # ── Public methods: task summary ──────────────────────────────────────
@@ -658,7 +662,6 @@ class InfoAreaViewModel(QObject):
 
     def begin_task(self, *, operation_id: str, current_file: str, total_count: int) -> None:
         """Replace prior result actions before a new worker can emit telemetry."""
-        self._transient_generation += 1
         self._clear_transient_state()
         self.set_task_summary(operation_id=operation_id, current_file=current_file, total_count=total_count)
 
@@ -713,14 +716,13 @@ class InfoAreaViewModel(QObject):
     def stop_all_timers(self) -> None:
         """Stop all timers (transient TTL, flush, activity). Call before destruction."""
         for timer in self._transient_timers.values():
-            timer.stop()
+            self._discard_timer(timer)
         self._transient_timers.clear()
         for timer in self._transient_flush_timers.values():
-            timer.stop()
+            self._discard_timer(timer)
         self._transient_flush_timers.clear()
-        if self._activity_timer is not None:
-            self._activity_timer.stop()
-            self._activity_timer = None
+        self._discard_timer(self._activity_timer)
+        self._activity_timer = None
 
     # ── Public methods: actions ──────────────────────────────────────────
 
@@ -757,10 +759,7 @@ class InfoAreaViewModel(QObject):
     # ── Internal: transient management ────────────────────────────────────
 
     def _apply_transient_update(self, key: str, payload: _PendingTransient) -> None:
-        """Apply a pending transient update, checking version for staleness."""
-        current_version = self._transient_versions.get(key)
-        if current_version != payload.version:
-            return
+        """Publish the current update and restart its expiration timer."""
 
         self._pending_transient_updates.pop(key, None)
         self._transient_messages[key] = (
@@ -771,56 +770,62 @@ class InfoAreaViewModel(QObject):
         self._transient_sources[key] = payload.source
         self._transient_last_displayed_at[key] = time.monotonic()
 
-        if key in self._transient_flush_timers:
-            self._transient_flush_timers[key].stop()
-            del self._transient_flush_timers[key]
+        self._discard_timer(self._transient_flush_timers.pop(key, None))
 
-        self._restart_transient_ttl_timer(key, payload.version, payload.ttl_ms)
+        self._restart_transient_ttl_timer(key, payload.ttl_ms)
         self._refresh_status()
 
-    def _restart_transient_ttl_timer(self, key: str, version: int, ttl_ms: int) -> None:
+    @staticmethod
+    def _discard_timer(timer: QTimer | None) -> None:
+        if timer is not None:
+            timer.stop()
+            timer.deleteLater()
+
+    def _restart_transient_ttl_timer(self, key: str, ttl_ms: int) -> None:
         """(Re)start the auto-expiry timer for a transient message."""
-        if key in self._transient_timers:
-            self._transient_timers[key].stop()
-            del self._transient_timers[key]
+        self._discard_timer(self._transient_timers.pop(key, None))
 
         if ttl_ms <= 0:
             return
 
         timer = QTimer(self)
         timer.setSingleShot(True)
-        generation = self._transient_generation
-        timer.timeout.connect(lambda k=key, v=version, g=generation: self._expire_transient(k, v, g))
+        timer.setProperty("transientKey", key)
+        timer.timeout.connect(self._expire_transient)
         timer.start(ttl_ms)
         self._transient_timers[key] = timer
 
-    def _schedule_transient_flush(self, key: str, version: int, delay_ms: int) -> None:
+    def _schedule_transient_flush(self, key: str, delay_ms: int) -> None:
         """Schedule a delayed flush for a throttled transient update."""
-        if key in self._transient_flush_timers:
-            self._transient_flush_timers[key].stop()
-            del self._transient_flush_timers[key]
+        self._discard_timer(self._transient_flush_timers.pop(key, None))
 
         timer = QTimer(self)
         timer.setSingleShot(True)
-        generation = self._transient_generation
-        timer.timeout.connect(lambda k=key, v=version, g=generation: self._flush_pending_transient(k, v, g))
+        timer.setProperty("transientKey", key)
+        timer.timeout.connect(self._flush_pending_transient)
         timer.start(delay_ms)
         self._transient_flush_timers[key] = timer
 
-    def _flush_pending_transient(self, key: str, version: int, generation: int | None = None) -> None:
+    @Slot()
+    def _flush_pending_transient(self) -> None:
         """Flush a pending transient update (called by delayed timer)."""
-        if generation is not None and generation != self._transient_generation:
+        timer = self.sender()
+        if not isinstance(timer, QTimer):
             return
+        key = timer.property("transientKey")
         payload = self._pending_transient_updates.get(key)
-        if payload is None or payload.version != version:
+        if payload is None or self._transient_flush_timers.get(key) is not timer:
             return
         self._apply_transient_update(key, payload)
 
-    def _expire_transient(self, key: str, version: int, generation: int | None = None) -> None:
+    @Slot()
+    def _expire_transient(self) -> None:
         """Handle transient TTL expiry (called by single-shot timer)."""
-        if generation is not None and generation != self._transient_generation:
+        timer = self.sender()
+        if not isinstance(timer, QTimer):
             return
-        if self._transient_versions.get(key) != version:
+        key = timer.property("transientKey")
+        if self._transient_timers.get(key) is not timer:
             return
         self.clear_transient_message(key)
 
@@ -851,11 +856,14 @@ class InfoAreaViewModel(QObject):
 
     # ── Internal: status refresh ──────────────────────────────────────────
 
-    def _refresh_status(self) -> None:
+    def _refresh_status(self, *, history_changed: bool = False) -> None:
         """Recalculate display state from current data sources.
 
         Task identity takes precedence; unrelated notices are displayed separately.
         """
+        if self._batching_messages:
+            self._history_refresh_pending |= history_changed
+            return
         activity_enabled = False
         overview_source = "idle"
         badge_tone = "secondary"
@@ -994,7 +1002,8 @@ class InfoAreaViewModel(QObject):
         # Refresh guide buttons
         self._refresh_guide()
 
-        # Emit
+        if history_changed:
+            self.history_changed.emit()
         self.state_changed.emit()
 
     # ── Internal: activity animation ──────────────────────────────────────

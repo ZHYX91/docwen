@@ -24,7 +24,9 @@
 """
 
 import argparse
+import base64
 import contextlib
+import csv
 import datetime
 import hashlib
 import importlib.metadata
@@ -278,6 +280,49 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _share_rapidocr_default_models(payload: Path) -> None:
+    """Point RapidOCR's native defaults at the packaged DocWen model copies."""
+    import yaml
+    from scripts.release.packaged_resources import (
+        RAPIDOCR_DEFAULT_MODELS,
+        RAPIDOCR_PACKAGE,
+        packaged_rapidocr_model_path,
+    )
+
+    package_dir = payload / RAPIDOCR_PACKAGE
+    config_path = package_dir / "config.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    for section, filename in RAPIDOCR_DEFAULT_MODELS.items():
+        if config[section]["model_path"] != f"models/{filename}":
+            raise RuntimeError(f"build_rapidocr_default_model_path_changed: {section}")
+        vendor_model = package_dir / "models" / filename
+        shared_model = payload / "models" / "rapidocr" / filename
+        if _sha256_file(vendor_model) != _sha256_file(shared_model):
+            raise RuntimeError(f"build_rapidocr_default_model_bytes_differ: {filename}")
+        config[section]["model_path"] = packaged_rapidocr_model_path(filename)
+
+    # The wheel metadata is also collected by PyInstaller. Keep its data
+    # entries consistent with the frozen config and removed model files.
+    rendered = yaml.safe_dump(config, sort_keys=False).encode("utf-8")
+    config_digest = base64.urlsafe_b64encode(hashlib.sha256(rendered).digest()).rstrip(b"=").decode("ascii")
+    absent_paths = {f"rapidocr_onnxruntime/models/{filename}" for filename in RAPIDOCR_DEFAULT_MODELS.values()}
+    config_path.write_bytes(rendered)
+    for record in package_dir.parent.glob("rapidocr_onnxruntime-*.dist-info/RECORD"):
+        with record.open(encoding="utf-8", newline="") as stream:
+            rows = list(csv.reader(stream))
+        with record.open("w", encoding="utf-8", newline="") as stream:
+            output = csv.writer(stream, lineterminator="\n")
+            for row in rows:
+                path = row[0]
+                if path == "rapidocr_onnxruntime/config.yaml":
+                    row = [path, f"sha256={config_digest}", str(len(rendered))]
+                if path not in absent_paths:
+                    output.writerow(row)
+
+    for filename in RAPIDOCR_DEFAULT_MODELS.values():
+        (package_dir / "models" / filename).unlink()
 
 
 def _prepare_external_models(destination_root: Path) -> dict[str, Path]:
@@ -1228,6 +1273,7 @@ def build_app(
         if cli_deploy_dir is not None:
             normalization_targets.append(cli_deploy_dir)
         for target in normalization_targets:
+            _share_rapidocr_default_models(target)
             record_result = normalize_packaged_record_files(target)
             base_library_result = normalize_base_library_zip(target)
             logger.info(f"规范化冻结载荷: {target.name}; RECORD={record_result}; base_library={base_library_result}")

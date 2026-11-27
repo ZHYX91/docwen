@@ -15,6 +15,7 @@ from docwen_cli.file_admission_i18n import render_file_inspection_message
 from docwen_cli.i18n import cli_t
 from docwen_cli.parser import get_common_parser
 from docwen_core.detection import inspect_file
+from docwen_core.models.file_inspection import FileInspection
 
 
 def register_inspect_parser(subparsers: Any) -> argparse.ArgumentParser:
@@ -42,7 +43,7 @@ def execute_inspect(args: argparse.Namespace, controller: Any = None) -> int:
         return _print_inspect_error(args, f"文件不存在: {file_path}", error_code="file_not_found")
 
     try:
-        inspect_data = build_inspection_data(controller, abs_path)
+        inspect_data = build_inspection_data(controller, inspect_file(abs_path))
     except FileNotFoundError:
         return _print_inspect_error(args, f"文件不存在: {file_path}", error_code="file_not_found")
     except OSError as exc:
@@ -59,10 +60,9 @@ def execute_inspect(args: argparse.Namespace, controller: Any = None) -> int:
     return int(ExitCode.OK)
 
 
-def build_inspection_data(controller: Any, file_path: str) -> dict[str, Any]:
+def build_inspection_data(controller: Any, inspection: FileInspection) -> dict[str, Any]:
     """Build the canonical machine/CLI inspection payload without presenting it."""
 
-    inspection = inspect_file(file_path)
     if inspection.may_execute:
         try:
             supported_actions, supported_actions_discovery = _discover_supported_actions(

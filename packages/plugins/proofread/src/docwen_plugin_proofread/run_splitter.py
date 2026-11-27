@@ -126,6 +126,8 @@ def ensure_run_at_position(paragraph, position: int) -> object:
             for i, t in enumerate(t_elems):
                 if i == 0:
                     t.text = before_text
+                    if before_text != before_text.strip():
+                        t.set(qn("xml:space"), "preserve")
                 else:
                     r_elem.remove(t)
 

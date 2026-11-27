@@ -231,6 +231,78 @@ class TestImageFormatConversion:
 
 class TestImageToPdf:
     @pytest.mark.contract
+    def test_original_bmp_preserves_non_square_resolution(self, tmp_path: Path) -> None:
+        import fitz
+
+        from docwen_plugin_image.to_pdf.converter import ImageToPdfConverter
+
+        source = tmp_path / "scan.bmp"
+        with Image.new("RGB", (600, 300), "blue") as image:
+            image.save(source, dpi=(300, 150))
+        original = source.read_bytes()
+        context = _build_fake_context(str(source), str(tmp_path), "pdf", {"quality_mode": "original"})
+        result = ImageToPdfConverter().convert(context)
+
+        assert result.success and source.read_bytes() == original
+        with fitz.open(result.artifacts[0].staging_path) as doc:
+            assert len(doc) == 1
+            assert (doc[0].rect.width, doc[0].rect.height) == pytest.approx((144, 144), abs=0.1)
+            assert doc[0].get_images()[0][2:4] == (600, 300)
+
+    @pytest.mark.contract
+    @pytest.mark.parametrize(("paper", "sides_mm"), [("a4", (210, 297)), ("a3", (297, 420))])
+    def test_fixed_paper_follows_each_tiff_page(self, tmp_path: Path, paper, sides_mm) -> None:
+        import fitz
+
+        from docwen_plugin_image.to_pdf.converter import ImageToPdfConverter
+
+        source = tmp_path / "mixed.tif"
+        with Image.new("RGB", (32, 16), "red") as first, Image.new("RGB", (16, 32), "blue") as second:
+            first.save(source, save_all=True, append_images=[second])
+        context = _build_fake_context(str(source), str(tmp_path), "pdf", {"quality_mode": paper})
+        result = ImageToPdfConverter().convert(context)
+
+        assert result.success
+        with fitz.open(result.artifacts[0].staging_path) as doc:
+            assert len(doc) == 2
+            short, long = (mm * 72 / 25.4 for mm in sides_mm)
+            assert (doc[0].rect.width, doc[0].rect.height) == pytest.approx((long, short))
+            assert (doc[1].rect.width, doc[1].rect.height) == pytest.approx((short, long))
+            assert [page.get_images()[0][2:4] for page in doc] == [(32, 16), (16, 32)]
+
+    @pytest.mark.contract
+    @pytest.mark.parametrize("cancelled", [True, False])
+    def test_interrupted_image_pdf_does_not_leave_a_partial_output(self, tmp_path: Path, monkeypatch, cancelled):
+        import img2pdf
+
+        from docwen_core.errors import CancellationRequested
+        from docwen_plugin_image.to_pdf.converter import ImageToPdfConverter
+
+        source = tmp_path / "photo.png"
+        with Image.new("RGB", (16, 12), "red") as image:
+            image.save(source)
+        context = _build_fake_context(str(source), str(tmp_path), "pdf")
+
+        def interrupt_write(*_args, outputstream, **_kwargs):
+            outputstream.write(b"%PDF-")
+            if cancelled:
+                context.cancellation.cancel("cancel while writing")
+            else:
+                raise OSError("write failed")
+
+        monkeypatch.setattr(img2pdf, "convert", interrupt_write)
+        if cancelled:
+            with pytest.raises(CancellationRequested):
+                ImageToPdfConverter().convert(context)
+        else:
+            result = ImageToPdfConverter().convert(context)
+            assert not result.success
+            assert result.error is not None
+            assert result.error.diagnostic_code == "IMG2PDF-ERROR"
+        assert context.workspace.registered_artifacts == []
+        assert list(tmp_path.iterdir()) == [source]
+
+    @pytest.mark.contract
     def test_fa08_mpo_delivers_every_frame_with_auxiliary_warning(self, tmp_path: Path) -> None:
         fitz = pytest.importorskip("fitz")
         from docwen_plugin_image.to_pdf.converter import ImageToPdfConverter

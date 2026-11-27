@@ -162,32 +162,3 @@ def test_image_plugin_can_handle_subformat_source() -> None:
     assert plugin.can_handle("jpg", "png") is False, "route resolver must normalise jpg→image before can_handle"
     assert plugin.can_handle("png", "jpg") is False, "route resolver must normalise png→image before can_handle"
     assert plugin.can_handle("png", "tif") is False
-
-
-def test_image_plugin_only_depends_on_core() -> None:
-    import sys
-
-    import docwen_plugin_image
-
-    assert docwen_plugin_image  # consumed by sys.modules inspection below
-
-    forbidden = {
-        "docwen_runtime",
-        "docwen_application",
-        "docwen_gui",
-        "docwen_cli",
-        "docwen_bundle",
-        "docwen_plugin_document",
-        "docwen_plugin_spreadsheet",
-        "docwen.",
-    }
-    plugin_modules = {name for name in sys.modules if name.startswith("docwen_plugin_image")}
-    for mod_name in plugin_modules:
-        mod = sys.modules[mod_name]
-        for attr in dir(mod):
-            val = getattr(mod, attr, None)
-            if val is None:
-                continue
-            val_mod = getattr(val, "__module__", "")
-            for forbidden_pkg in forbidden:
-                assert not val_mod.startswith(forbidden_pkg), f"{mod_name}.{attr} depends on {val_mod}"

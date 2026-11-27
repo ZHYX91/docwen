@@ -19,7 +19,7 @@ from docwen_gui.font_utils import apply_application_font, normalize_font_size_pr
 
 from .global_aggregate import build_global_stylesheet
 from .theme_semantics import DEFAULT_THEME
-from .ui_scale import apply_scale_percent, scale_percent, scaled_stylesheet
+from .ui_scale import apply_scale_percent, normalize_scale_percent, scale_percent, scaled_stylesheet
 
 logger = logging.getLogger(__name__)
 
@@ -152,21 +152,27 @@ class ThemeManager(QObject):
 
     def apply_font_size_preset(self, preset: str | None) -> str:
         """Apply one semantic typography preset to existing and future UI."""
-        normalized = normalize_font_size_preset(preset)
-        self._font_size_preset = normalized
+        self.apply_typography(scale=scale_percent(), font_size_preset=preset)
+        return self._font_size_preset
 
+    def apply_typography(self, *, scale: object, font_size_preset: str | None) -> None:
+        """Apply both typography settings before repolishing the application."""
+        normalized_scale = normalize_scale_percent(scale)
+        normalized_font = normalize_font_size_preset(font_size_preset)
+        scale_changed = normalized_scale != scale_percent()
+        if self._app is not None and not scale_changed and normalized_font == self._font_size_preset:
+            return
+        if scale_changed:
+            apply_scale_percent(normalized_scale)
+        self._font_size_preset = normalized_font
         if self._app is None:
             app = QApplication.instance()
-            if isinstance(app, QApplication):
-                self._app = app
-        if self._app is None:
-            logger.warning("ThemeManager.apply_font_size_preset called without QApplication")
-            return normalized
-
-        apply_application_font(self._app, font_size_preset=normalized)
+            if not isinstance(app, QApplication):
+                return
+            self._app = app
+        apply_application_font(self._app, font_size_preset=normalized_font)
         self.apply_theme(self._requested_theme)
         self.appearance_changed.emit()
-        return normalized
 
     def get_font_size_preset(self) -> str:
         return self._font_size_preset
@@ -177,9 +183,8 @@ class ThemeManager(QObject):
 
     def apply_ui_scale(self, percent: object) -> int:
         """Relayout existing controls and set the scale for future controls."""
-        normalized = apply_scale_percent(percent)
-        self.apply_font_size_preset(self._font_size_preset)
-        return normalized
+        self.apply_typography(scale=percent, font_size_preset=self._font_size_preset)
+        return scale_percent()
 
     def get_ui_scale(self) -> int:
         return scale_percent()

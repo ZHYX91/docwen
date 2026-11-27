@@ -14,7 +14,24 @@ IDENTITY = {"tree": "c" * 40, "lockSha256": "d" * 64, "workflowSha256": "e" * 64
 
 
 @pytest.mark.parametrize(
-    "case", ["match", "tree", "lock", "workflow", "missing", "wrong-attempt", "fork", "failed-job", "label"]
+    "case",
+    [
+        "match",
+        "tree",
+        "lock",
+        "workflow",
+        "missing",
+        "wrong-attempt",
+        "fork",
+        "failed-job",
+        "skipped-job",
+        "cancelled-job",
+        "label",
+        "legacy-graph",
+        "missing-shard",
+        "extra-job",
+        "duplicate-shard",
+    ],
 )
 def test_source_check_reuse_admits_only_exact_package_checks(tmp_path, monkeypatch, case):
     origin = {"full_name": REPO}
@@ -46,12 +63,29 @@ def test_source_check_reuse_admits_only_exact_package_checks(tmp_path, monkeypat
             "status": "completed",
             "conclusion": "success",
         }
-        for name, runner in reuse.REQUIRED_JOBS.items()
+        for name, runner in (
+            ("source-checks", "ubuntu-24.04"),
+            ("Windows shard apps-plugins", "windows-latest"),
+            ("Windows shard remaining", "windows-latest"),
+            ("Tests on windows-latest", "windows-latest"),
+            ("Tests on ubuntu-24.04", "ubuntu-24.04"),
+            ("Tests on macos-15", "macos-15"),
+            ("Required checks", "ubuntu-24.04"),
+        )
     ]
-    if case == "failed-job":
-        jobs[1]["conclusion"] = "failure"
-    if case == "label":
+    failed_conclusions = {"failed-job": "failure", "skipped-job": "skipped", "cancelled-job": "cancelled"}
+    if case in failed_conclusions:
+        jobs[1]["conclusion"] = failed_conclusions[case]
+    elif case == "label":
         jobs[1]["labels"] = ["self-hosted"]
+    elif case == "legacy-graph":
+        del jobs[1:3]
+    elif case == "missing-shard":
+        del jobs[2]
+    elif case == "extra-job":
+        jobs.append({**jobs[2], "name": "Additional Windows work"})
+    elif case == "duplicate-shard":
+        jobs[2] = jobs[1].copy()
     source = {"sha": MERGE, "parents": [{"sha": "1" * 40}, {"sha": HEAD}], "tree": {"sha": IDENTITY["tree"]}}
     receipt = {
         "schema": "docwen.source-checks/v1",

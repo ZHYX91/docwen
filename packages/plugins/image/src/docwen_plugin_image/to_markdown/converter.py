@@ -442,9 +442,8 @@ class ImageToMarkdownConverter:
                     lines_out.append(f"> {heading}")
             return "\n".join(lines_out)
 
+        context.cancellation.check()
         try:
-            context.cancellation.check()
-
             # Resolve link style and export modes from export semantics so the
             # output respects user preferences (wiki_embed / markdown_embed, etc.).
             request_policy = resolve_markdown_request_policy(context)
