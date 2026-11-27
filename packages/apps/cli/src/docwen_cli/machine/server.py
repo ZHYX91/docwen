@@ -122,7 +122,7 @@ class MachineProtocolServer:
             tuple[Literal["conversion", "validation"], set[tuple[str, str]]],
         ] = {}
         self._task_progress: dict[str, _TaskProgressState] = {}
-        self._progress_lock = threading.Lock()
+        self._progress_lock = threading.RLock()
 
     def run(self) -> int:
         """Process frames until clean EOF or a fatal framing error."""
@@ -427,38 +427,7 @@ class MachineProtocolServer:
                 "diagnostics": diagnostics,
             }
 
-        self._validate_terminal_preview(
-            method,
-            outcome.task_id,
-            payload,
-            success_progress=outcome.state == "completed",
-        )
-        if outcome.state == "completed":
-            self._write_progress(outcome.task_id, 100, status="complete")
         self._write_terminal(method, outcome.task_id, payload)
-
-    def _validate_terminal_preview(
-        self,
-        method: str,
-        task_id: str,
-        payload: dict[str, Any],
-        *,
-        success_progress: bool,
-    ) -> None:
-        with self._progress_lock:
-            state = self._task_progress.get(task_id)
-            if state is None:
-                raise RuntimeError("terminal notification has no accepted task state")
-            terminal_sequence = state.sequence + (2 if success_progress and state.completed < 100 else 1)
-        message = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": {"task_id": task_id, "sequence": terminal_sequence, **payload},
-        }
-        self._validator.validate_message(message)
-        # Check the same byte representation as FrameWriter before announcing
-        # 100% or releasing the task state needed to send a failure terminal.
-        encode_frame(message)
 
     def _write_internal_failure(self, task_id: str) -> None:
         payload = {
@@ -522,16 +491,20 @@ class MachineProtocolServer:
             state = self._task_progress.get(task_id)
             if state is None:
                 raise RuntimeError("terminal notification has no accepted task state")
-            state.sequence += 1
+            # Prepare the exact terminal frame before advertising completion. Keep
+            # sequencing atomic with respect to late Runtime progress callbacks.
+            complete = method == "task/completed" and state.completed < 100
+            message = {
+                "jsonrpc": "2.0",
+                "method": method,
+                "params": {"task_id": task_id, "sequence": state.sequence + (2 if complete else 1), **payload},
+            }
+            self._validator.validate_message(message)
+            frame = encode_frame(message)
             try:
-                self._write_notification(
-                    method,
-                    {
-                        "task_id": task_id,
-                        "sequence": state.sequence,
-                        **payload,
-                    },
-                )
+                if complete:
+                    self._write_progress(task_id, 100, status="complete")
+                self._writer.write_frame(frame)
             finally:
                 self._task_progress.pop(task_id, None)
 

@@ -120,7 +120,9 @@ class ConversionService:
         self._bundle_committer = bundle_committer
         self._lock = threading.Lock()
         self._plans: dict[str, _PlanRecord] = {}
-        self._tasks: dict[str, _TaskRecord] = {}
+        # Keep the ID for session-wide replay and late cancellation, while allowing
+        # terminal requests, effective options and reservations to be collected.
+        self._tasks: dict[str, _TaskRecord | None] = {}
 
     def list_capabilities(self) -> tuple[MachineCapability, ...]:
         discovery = self._discover_runtime()
@@ -228,6 +230,8 @@ class ConversionService:
         with self._lock:
             task = self._tasks.get(task_id)
             if task is None:
+                if task_id in self._tasks:
+                    raise ConversionServiceError("conflict", "task_not_accepted", "task cannot execute from terminal")
                 raise ConversionServiceError("conflict", "task_not_found", f"task is not accepted: {task_id}")
             if task.state != "accepted":
                 raise ConversionServiceError("conflict", "task_not_accepted", f"task cannot execute from {task.state}")
@@ -253,15 +257,13 @@ class ConversionService:
         finally:
             self._controller.release_execution_cancellation(task_id, task.reservation)
             with self._lock:
-                task.state = "terminal"
+                self._tasks[task_id] = None
 
     def cancel(self, task_id: str) -> str:
         with self._lock:
             task = self._tasks.get(task_id)
             if task is None:
-                return "not_found"
-            if task.state == "terminal":
-                return "already_terminal"
+                return "already_terminal" if task_id in self._tasks else "not_found"
         self._controller.cancel(task_id, reservation=task.reservation)
         return "cancellation_requested"
 
