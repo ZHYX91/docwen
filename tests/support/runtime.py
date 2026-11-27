@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import os
+from collections import Counter
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal
@@ -72,7 +74,31 @@ def isolate_user_runtime_roots(tmp_path_factory: pytest.TempPathFactory) -> Iter
             os.environ[config_variable] = previous_config_root
 
 
+@pytest.fixture(scope="session")
+def case_directory_counts() -> Counter[str]:
+    """Count repeated node IDs in this worker without enumerating directories."""
+    return Counter()
+
+
+@pytest.fixture
+def case_directory(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory, case_directory_counts: Counter[str]
+) -> Path:
+    """Name the case's private directory without creating or scanning it."""
+    digest = hashlib.sha256(request.node.nodeid.encode("utf-8")).hexdigest()[:12]
+    suffix = case_directory_counts[digest]
+    case_directory_counts[digest] += 1
+    return tmp_path_factory.getbasetemp() / f"t{digest}{suffix}"
+
+
+@pytest.fixture
+def tmp_path(case_directory: Path) -> Path:
+    """Materialize the same short physical path if the test needs storage."""
+    case_directory.mkdir(mode=0o700, exist_ok=True)
+    return case_directory
+
+
 @pytest.fixture(autouse=True)
-def isolate_template_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def isolate_template_data(case_directory: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Template discovery persists IDs; each test owns its catalog state."""
-    monkeypatch.setenv("DOCWEN_DATA_DIR", str(tmp_path / "template-data"))
+    monkeypatch.setenv("DOCWEN_DATA_DIR", str(case_directory / "template-data"))
