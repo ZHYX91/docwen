@@ -1,8 +1,7 @@
 """Tests for bundle/gui_bootstrap.py.
 
 Tests cover argument parsing, control-disable logic, and the bootstrap decision
-flow. Real file locks are avoided by setting control-disable flags or using
-unique app names with cleanup.
+flow. Real forwarding tests use an isolated application name and IPC directory.
 """
 
 from __future__ import annotations
@@ -12,6 +11,7 @@ import threading
 import time
 from collections.abc import Generator
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
@@ -181,17 +181,28 @@ class TestGuiBootstrapDecision:
 # ── bootstrap_gui integration tests ─────────────────────────────────────
 
 
+@pytest.fixture
+def ipc_app_name(monkeypatch: pytest.MonkeyPatch) -> Generator[str, None, None]:
+    """Give each live primary/secondary pair its own lock and control endpoint."""
+    with TemporaryDirectory(prefix="docwen-bootstrap-") as directory:
+        root = Path(directory).resolve()
+        if os.name != "nt":
+            monkeypatch.setenv("XDG_RUNTIME_DIR", str(root))
+        yield root.name
+
+
 class TestBootstrapGui:
     """Integration tests for the bootstrap_gui function."""
 
     @pytest.mark.parametrize("delay_phase", ["primary_startup", "response"])
-    def test_secondary_file_waits_for_slow_primary_without_duplicate_delivery(self, delay_phase: str) -> None:
+    def test_secondary_file_waits_for_slow_primary_without_duplicate_delivery(
+        self, delay_phase: str, ipc_app_name: str
+    ) -> None:
         from docwen_runtime.control import ControlServer
 
-        app_name = f"test_bootstrap_slow_{delay_phase}"
         test_file = str(Path(__file__).resolve())
         received: list[str] = []
-        primary = bootstrap_gui(app_name, argv=["script.py"])
+        primary = bootstrap_gui(ipc_app_name, argv=["script.py"])
 
         def handle(action: str, payload: dict[str, object]) -> dict[str, bool]:
             assert action == "open"
@@ -200,11 +211,11 @@ class TestBootstrapGui:
             received.append(str(payload["file"]))
             return {"accepted": True}
 
-        server = ControlServer(handle, app_name=app_name)
+        server = ControlServer(handle, app_name=ipc_app_name)
         delayed_start = threading.Timer(5.5 if delay_phase == "primary_startup" else 0, server.start)
         delayed_start.start()
         try:
-            secondary = bootstrap_gui(app_name, argv=["script.py", test_file])
+            secondary = bootstrap_gui(ipc_app_name, argv=["script.py", test_file])
             assert secondary.should_exit and not secondary.should_start_gui
             assert secondary.exit_code == 0
             assert received == [test_file]
@@ -247,9 +258,9 @@ class TestBootstrapGui:
         assert decision.should_exit is False
         assert decision.instance_lock is None
 
-    def test_bootstrap_primary_instance(self) -> None:
+    def test_bootstrap_primary_instance(self, ipc_app_name: str) -> None:
         """First bootstrap should acquire lock and return start_gui=True."""
-        decision = bootstrap_gui("test_bootstrap_primary")
+        decision = bootstrap_gui(ipc_app_name)
         try:
             assert decision.should_start_gui is True
             assert decision.should_exit is False
@@ -258,21 +269,20 @@ class TestBootstrapGui:
             if decision.instance_lock:
                 decision.instance_lock.release()
 
-    def test_bootstrap_secondary_instance_forwards(self) -> None:
+    def test_bootstrap_secondary_instance_forwards(self, ipc_app_name: str) -> None:
         """Second bootstrap activates the primary through runtime/control."""
         from docwen_runtime.control import ControlServer
 
-        app_name = "test_bootstrap_secondary"
         received: list[tuple[str, dict[str, object]]] = []
-        decision1 = bootstrap_gui(app_name, argv=["script.py"])
+        decision1 = bootstrap_gui(ipc_app_name, argv=["script.py"])
         server = ControlServer(
             lambda action, payload: received.append((action, payload)) or {"accepted": True},
-            app_name=app_name,
+            app_name=ipc_app_name,
         )
         server.start()
         try:
             assert decision1.should_start_gui is True
-            decision2 = bootstrap_gui(app_name, argv=["script.py"])
+            decision2 = bootstrap_gui(ipc_app_name, argv=["script.py"])
             assert decision2.should_start_gui is False
             assert decision2.should_exit is True
             assert decision2.exit_code == 0
@@ -288,23 +298,22 @@ class TestBootstrapGui:
             if decision1.instance_lock:
                 decision1.instance_lock.release()
 
-    def test_bootstrap_secondary_with_files(self) -> None:
+    def test_bootstrap_secondary_with_files(self, ipc_app_name: str) -> None:
         """Secondary instance forwards canonical files through runtime/control."""
         from docwen_runtime.control import ControlServer
 
         test_file = str(Path(__file__).resolve())
-        app_name = "test_bootstrap_files"
         received: list[tuple[str, dict[str, object]]] = []
-        decision1 = bootstrap_gui(app_name, argv=["script.py"])
+        decision1 = bootstrap_gui(ipc_app_name, argv=["script.py"])
         server = ControlServer(
             lambda action, payload: received.append((action, payload)) or {"accepted": True},
-            app_name=app_name,
+            app_name=ipc_app_name,
         )
         server.start()
         try:
             assert decision1.should_start_gui is True
             decision2 = bootstrap_gui(
-                app_name,
+                ipc_app_name,
                 argv=["script.py", test_file],
             )
             assert decision2.should_start_gui is False
