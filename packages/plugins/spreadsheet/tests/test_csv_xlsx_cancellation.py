@@ -169,11 +169,9 @@ def test_existing_delimited_staging_file_is_not_overwritten_or_cleaned(
 
 @pytest.mark.parametrize(("converter_type", "target"), [(XlsxToCsvConverter, "csv"), (XlsxToTsvConverter, "tsv")])
 @pytest.mark.parametrize("cancel", [False, True])
-def test_replaced_batch_output_is_not_published_or_deleted_and_workbook_views_close(
+def test_replaced_batch_output_is_not_published_or_deleted_and_workbook_closes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, converter_type: type, target: str, cancel: bool
 ) -> None:
-    from docwen_plugin_spreadsheet.csv_xlsx import converter as converter_module
-
     source = tmp_path / "source.xlsx"
     workbook = openpyxl.Workbook()
     workbook.worksheets[0]["A1"] = "first"
@@ -186,13 +184,13 @@ def test_replaced_batch_output_is_not_published_or_deleted_and_workbook_views_cl
     context = _build_fake_context(str(source), str(staging), target_format=target)
     allocate = context.workspace.create_artifact_path
     created, loaded, closed = [], [], []
-    load_views = converter_module._load_xlsx_views
+    load = openpyxl.load_workbook
     close_view = openpyxl.Workbook.close
 
-    def capture_views(path):
-        views = load_views(path)
-        loaded.extend(views)
-        return views
+    def capture_load(*args, **kwargs):
+        view = load(*args, **kwargs)
+        loaded.append(view)
+        return view
 
     def capture_close(view):
         closed.append(view)
@@ -210,7 +208,7 @@ def test_replaced_batch_output_is_not_published_or_deleted_and_workbook_views_cl
         return path
 
     monkeypatch.setattr(context.workspace, "create_artifact_path", replace_previous)
-    monkeypatch.setattr(converter_module, "_load_xlsx_views", capture_views)
+    monkeypatch.setattr(openpyxl, "load_workbook", capture_load)
     monkeypatch.setattr(openpyxl.Workbook, "close", capture_close)
     if cancel:
         with pytest.raises(CancellationRequested):
@@ -222,7 +220,7 @@ def test_replaced_batch_output_is_not_published_or_deleted_and_workbook_views_cl
     assert list(staging.iterdir()) == [created[0]]
     assert created[0].read_bytes() == b"a later writer owns this path"
     assert context.workspace.registered_artifacts == []
-    assert len(loaded) == 2 and loaded == closed
+    assert len(loaded) == 1 and loaded == closed
     assert source.read_bytes() == before
 
 
@@ -300,12 +298,10 @@ def test_delimited_wide_row_preserves_all_columns_without_timing_assumptions(
         workbook.close()
 
 
-def test_formula_cache_scan_cancellation_closes_both_workbook_views(
+def test_formula_cache_scan_cancellation_closes_cached_workbook(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from docwen_plugin_spreadsheet.csv_xlsx import converter as converter_module
-
     source = tmp_path / "input.xlsx"
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -320,33 +316,28 @@ def test_formula_cache_scan_cancellation_closes_both_workbook_views(
     context = _build_fake_context(str(source), str(staging), target_format="csv")
     loaded: list[openpyxl.Workbook] = []
     closed: set[int] = set()
-    load_views = converter_module._load_xlsx_views
+    load = openpyxl.load_workbook
 
-    def load_then_cancel(path: str):
-        values, formulas = load_views(path)
-        loaded.extend((values, formulas))
-        assert values.worksheets[0]["A2"].value is None
-        assert formulas.worksheets[0]["A2"].value == "=1+1"
-        for view in (values, formulas):
-            original_close = view.close
-            view_identity = id(view)
-
-            def close(*, close_view=original_close, identity=view_identity) -> None:
-                closed.add(identity)
-                close_view()
-
-            monkeypatch.setattr(view, "close", close)
+    def load_then_cancel(*args, **kwargs):
+        view = load(*args, **kwargs)
+        loaded.append(view)
+        assert view.worksheets[0]["A2"].value is None
         context.cancellation.cancel("scan cancellation")
-        return values, formulas
+        return view
 
-    monkeypatch.setattr(converter_module, "_load_xlsx_views", load_then_cancel)
+    close = openpyxl.Workbook.close
 
-    # The real cache scanner receives the cancelled token after both native
-    # views are open. No placeholder ZIP or replacement scanner can hide leaks.
+    def capture_close(view):
+        closed.add(id(view))
+        close(view)
+
+    monkeypatch.setattr(openpyxl, "load_workbook", load_then_cancel)
+    monkeypatch.setattr(openpyxl.Workbook, "close", capture_close)
+
     with pytest.raises(CancellationRequested, match="Task has been cancelled"):
         XlsxToCsvConverter().convert(context)
 
-    assert len(loaded) == 2
+    assert len(loaded) == 1
     assert closed == {id(view) for view in loaded}
     assert context.workspace.registered_artifacts == []
     assert not list(staging.glob("*.csv"))

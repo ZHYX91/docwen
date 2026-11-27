@@ -6,7 +6,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from docwen_plugin_spreadsheet.csv_xlsx.converter import _find_unavailable_formula_caches, _load_xlsx_views
+from docwen_core.spreadsheet_projection import MAX_SPREADSHEET_PROJECTION_CELLS
+from docwen_plugin_spreadsheet.cached_workbook import find_unavailable_formula_caches, load_cached_workbook
 
 
 class MissingFormulaCacheError(ValueError):
@@ -33,20 +34,18 @@ def load_merge_workbook(
     """Check every retained base sheet, or only the collected active sheet."""
     from openpyxl.worksheet.worksheet import Worksheet
 
-    values, formulas = _load_xlsx_views(path)
+    values = load_cached_workbook(path, cancel_check=cancel_check, limit=MAX_SPREADSHEET_PROJECTION_CELLS)
     try:
-        active = formulas.active
+        active = values.active
         if not isinstance(active, Worksheet):
             raise ValueError("Table merging requires an active worksheet.")
         sheets = None if base else [active.title]
-        count, locations = _find_unavailable_formula_caches(
-            values, formulas, input_path=path, sheet_names=sheets, cancel_check=cancel_check
+        count, locations = find_unavailable_formula_caches(
+            values, input_path=path, sheet_names=sheets, cancel_check=cancel_check
         )
         if count:
             raise MissingFormulaCacheError(source_name or path, count, locations)
     except BaseException:
         values.close()
         raise
-    finally:
-        formulas.close()
     return values

@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING, Any
 
 from docwen_core.detection import sniff_delimited_separator
 from docwen_core.errors import CancellationRequested
-from docwen_core.spreadsheet_package import preflight_worksheet_allocations
 from docwen_core.spreadsheet_projection import (
     MAX_SPREADSHEET_PROJECTION_CELLS,
     DelimitedWrite,
@@ -29,6 +28,11 @@ from docwen_core.spreadsheet_projection import (
     ordinary_worksheets,
     plan_delimited_projection,
     write_delimited_projection,
+)
+from docwen_plugin_spreadsheet.cached_workbook import (
+    find_unavailable_formula_caches,
+    formula_cache_warning_message,
+    load_cached_workbook,
 )
 from docwen_plugin_spreadsheet.delimited import decoded_samples
 from docwen_plugin_spreadsheet.xlsx_text import XLSX_CELL_TEXT_LIMIT, xlsx_cell_text_length
@@ -82,72 +86,6 @@ class DelimitedCellTextTooLongError(ValueError):
             f"Cell text at row {row}, column {column} has {length} UTF-16 code units; "
             f"Excel supports at most {self.limit} UTF-16 code units in one cell."
         )
-
-
-def _load_admitted_xlsx(file_path: str, *, data_only: bool = True) -> Any:
-    """Load admitted XLSX content without consulting its user-facing suffix.
-
-    ``openpyxl.load_workbook()`` rejects misleading filenames before it reads
-    the OOXML package when passed a path.  Core admission already established
-    the concrete source format, so plugin parsers consume the bytes directly.
-    """
-    import openpyxl
-
-    with Path(file_path).open("rb") as workbook_stream:
-        return openpyxl.load_workbook(workbook_stream, data_only=data_only)
-
-
-def _load_xlsx_views(file_path: str) -> tuple[Any, Any]:
-    """Load cached-value and formula views of the same admitted workbook."""
-
-    values = _load_admitted_xlsx(file_path, data_only=True)
-    try:
-        formulas = _load_admitted_xlsx(file_path, data_only=False)
-    except BaseException:
-        values.close()
-        raise
-    return values, formulas
-
-
-def _find_unavailable_formula_caches(
-    values_workbook: Any,
-    formula_workbook: Any,
-    *,
-    input_path: str,
-    sheet_names: list[str] | None = None,
-    location_limit: int = 20,
-    cancel_check: Callable[[], None] | None = None,
-) -> tuple[int, list[str]]:
-    """Find formula cells whose cached scalar value is unavailable to openpyxl."""
-
-    from .formula_cache import visit_formula_caches
-
-    # Keep the two-view caller contract; formula locations come from stored XML,
-    # not iter_rows(), which fills every absent cell in a sparse worksheet.
-    count = 0
-    locations: list[str] = []
-
-    def visit(sheet_name: str, coordinate: str, known_empty: bool) -> None:
-        nonlocal count
-        if known_empty or values_workbook[sheet_name][coordinate].value is not None:
-            return
-        count += 1
-        if len(locations) < location_limit:
-            locations.append(f"{sheet_name}!{coordinate}")
-
-    visit_formula_caches(input_path, visit, sheet_names=sheet_names, cancel_check=cancel_check)
-    return count, locations
-
-
-def _formula_cache_warning_message(count: int, locations: list[str]) -> str:
-    shown = ", ".join(locations)
-    omitted = count - len(locations)
-    suffix = f"; {omitted} more not listed" if omitted > 0 else ""
-    return (
-        f"{count} formula cell(s) have no usable cached value in this workbook and were exported as empty text. "
-        f"Locations: {shown}{suffix}. Recalculate and save the workbook in a spreadsheet application when values "
-        "are required. This warning does not establish whether any existing cached values are current."
-    )
 
 
 def _build_delimited_workbook(
@@ -387,13 +325,10 @@ class XlsxToCsvConverter:
         context.logger.info(f"XLSX→CSV: reading {input_path}")
 
         # ── Phase 1: Parse XLSX ───────────────────────────────────────
-        wb = None
-        formula_wb = None
         try:
-            preflight_worksheet_allocations(
+            wb = load_cached_workbook(
                 input_path, cancel_check=context.cancellation.check, limit=MAX_SPREADSHEET_PROJECTION_CELLS
             )
-            wb, formula_wb = _load_xlsx_views(input_path)
         except CancellationRequested:
             raise
         except Exception as exc:
@@ -430,9 +365,8 @@ class XlsxToCsvConverter:
                 cancel_check=context.cancellation.check,
                 limit=MAX_SPREADSHEET_PROJECTION_CELLS,
             )
-            formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
+            formula_cache_unavailable_count, formula_cache_locations = find_unavailable_formula_caches(
                 wb,
-                formula_wb,
                 cancel_check=context.cancellation.check,
                 input_path=input_path,
             )
@@ -503,10 +437,7 @@ class XlsxToCsvConverter:
             )
         finally:
             with ExitStack() as cleanup:
-                if formula_wb is not None:
-                    cleanup.callback(formula_wb.close)
-                if wb is not None:
-                    cleanup.callback(wb.close)
+                cleanup.callback(wb.close)
                 if not completed:
                     for written in writes:
                         cleanup.callback(written.cleanup)
@@ -526,7 +457,7 @@ class XlsxToCsvConverter:
                 0,
                 ConversionDiagnostic(
                     level="warning",
-                    message=_formula_cache_warning_message(
+                    message=formula_cache_warning_message(
                         formula_cache_unavailable_count,
                         formula_cache_locations,
                     ),
@@ -718,13 +649,10 @@ class XlsxToTsvConverter:
         context.logger.info(f"XLSX→TSV: reading {input_path}")
 
         # ── Phase 1: Parse XLSX ───────────────────────────────────────
-        wb = None
-        formula_wb = None
         try:
-            preflight_worksheet_allocations(
+            wb = load_cached_workbook(
                 input_path, cancel_check=context.cancellation.check, limit=MAX_SPREADSHEET_PROJECTION_CELLS
             )
-            wb, formula_wb = _load_xlsx_views(input_path)
         except CancellationRequested:
             raise
         except Exception as exc:
@@ -761,9 +689,8 @@ class XlsxToTsvConverter:
                 cancel_check=context.cancellation.check,
                 limit=MAX_SPREADSHEET_PROJECTION_CELLS,
             )
-            formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
+            formula_cache_unavailable_count, formula_cache_locations = find_unavailable_formula_caches(
                 wb,
-                formula_wb,
                 cancel_check=context.cancellation.check,
                 input_path=input_path,
             )
@@ -833,10 +760,7 @@ class XlsxToTsvConverter:
             )
         finally:
             with ExitStack() as cleanup:
-                if formula_wb is not None:
-                    cleanup.callback(formula_wb.close)
-                if wb is not None:
-                    cleanup.callback(wb.close)
+                cleanup.callback(wb.close)
                 if not completed:
                     for written in writes:
                         cleanup.callback(written.cleanup)
@@ -856,7 +780,7 @@ class XlsxToTsvConverter:
                 0,
                 ConversionDiagnostic(
                     level="warning",
-                    message=_formula_cache_warning_message(
+                    message=formula_cache_warning_message(
                         formula_cache_unavailable_count,
                         formula_cache_locations,
                     ),
