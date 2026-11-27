@@ -14,6 +14,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from docwen_plugin_optimizer_gongwen.constants import (
+    AUTHORITY_SUFFIXES,
     NON_UNIQUE_SCORE_THRESHOLD,
     RE_DOC_NUMBER,
     RE_MEETING_NUMBER,
@@ -34,31 +35,12 @@ from docwen_plugin_optimizer_gongwen.utils import (
     extract_doc_number_and_signers,
     extract_printing_line,
     parse_combined_id,
+    parse_meeting_signature_date,
     starts_with_copy_to_label,
 )
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ProgressSink
-
-# ── Authority suffixes (from old ends_with keyword list) ──────────────
-_AUTHORITY_SUFFIXES = [
-    "人民政府",
-    "委员会",
-    "办公室",
-    "局",
-    "厅",
-    "部",
-    "院",
-    "校",
-    "中心",
-    "办",
-    "组",
-    "室",
-    "司",
-    "署",
-    "处",
-    "科",
-]
 
 # ── Name matching patterns (inlined from old name_utils) ──────────────
 _NAME_PART_PATTERN = r"[一-龥]{2,12}"
@@ -370,6 +352,39 @@ class ElementScorer:
                 break
         return False
 
+    def is_meeting_signature_date_header(self, pf: ParagraphFeature) -> bool:
+        """Require a complete pair between a recognized meeting header and its lead."""
+        if pf.source != "body" or any(
+            (pf.heading_level, pf.list_marker, pf.has_image, pf.has_formula, pf.has_page_break, pf.has_section_break)
+        ):
+            return False
+        number_index = self._get_element_pos("doc_number")
+        title_index = self._get_element_pos("title")
+        if not (0 <= number_index < pf.index and 0 <= title_index < pf.index):
+            return False
+        if parse_meeting_signature_date(pf.raw_text or pf.text) is None:
+            return False
+
+        title = self._all_features[title_index]
+        if not title.text.strip().endswith("纪要") or not self.matches_title_pattern(title):
+            return False
+        first_index, last_index = sorted((title_index, number_index))
+        if any(
+            header.text.strip() and not self.starts_with_signer_label(header)
+            for header in self._all_features[first_index + 1 : last_index]
+        ):
+            return False
+        if any(
+            header.text.strip() and header.index != title_index
+            for header in self._all_features[number_index + 1 : pf.index]
+        ):
+            return False
+
+        lead = next((other for other in self._all_features[pf.index + 1 :] if other.text.strip()), None)
+        if lead is None or lead.source != "body" or lead.heading_level or lead.list_marker:
+            return False
+        return bool(re.search(r"[。！？]|(?:如下|下列)[：:]$", lead.text.strip()))
+
     def has_doc_number_and_signer(self, pf: ParagraphFeature) -> bool:
         """Check for a document number followed by labelled signer names."""
         # The validated number and explicit label provide the evidence. Names
@@ -498,7 +513,7 @@ class ElementScorer:
     def ends_with_authority_suffix(self, pf: ParagraphFeature) -> bool:
         """Check whether text ends with a known organization suffix."""
         t = pf.text.strip()
-        return any(t.endswith(s) for s in _AUTHORITY_SUFFIXES)
+        return t.endswith(AUTHORITY_SUFFIXES)
 
     def is_recipient_address(self, pf: ParagraphFeature) -> bool:
         """Recognize a standalone address between the title and the body."""

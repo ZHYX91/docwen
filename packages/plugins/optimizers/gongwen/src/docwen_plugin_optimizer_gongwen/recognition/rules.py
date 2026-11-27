@@ -7,6 +7,7 @@ Positive scores = evidence for, negative scores = evidence against.
 
 from __future__ import annotations
 
+from docwen_plugin_optimizer_gongwen.constants import MEETING_SIGNATURE_DATE, UNIQUE_SCORE_THRESHOLD
 from docwen_plugin_optimizer_gongwen.models import ScoringRule
 
 # ── Scoring Rules Table ──────────────────────────────────────────────
@@ -79,6 +80,10 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
         ScoringRule("is_after_last_unique_element", 20),
         ScoringRule("is_first_attachment", 20),
         ScoringRule("is_too_close_to_recipient_or_title", -20),
+    ],
+    # One source paragraph supplies both fields.
+    MEETING_SIGNATURE_DATE: [
+        ScoringRule("is_meeting_signature_date_header", UNIQUE_SCORE_THRESHOLD, required=True),
     ],
     # ── 发文机关署名 ──
     "issuing_authority_signature": [

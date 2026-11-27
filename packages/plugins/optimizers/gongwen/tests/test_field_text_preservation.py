@@ -417,3 +417,91 @@ def test_gongwen_attachment_renders_each_table_cell_once() -> None:
     (attachment,) = result["attachment_documents"]
     assert "| 书面计划 | 说明资料提交方式 |" in attachment.markdown
     assert attachment.markdown.count("说明资料提交方式") == 1
+
+
+@pytest.mark.parametrize("number_before_title", [False, True])
+def test_meeting_header_signature_and_date_are_projected_together(number_before_title: bool) -> None:
+    from docx import Document
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    title = "示例工作会议纪要"
+    number = "（2036）4号"
+    signature = "演练管理局"
+    issue_date = "2036年2月29日"
+    signature_line = f"{signature}          {issue_date}"
+    lead = "当天召集各部门会商。有关决定如下："
+    body_pair = "示例联络组　2036年3月1日"
+    body_number = "(2034) 8号"
+    decision = "按计划核对设备。"
+
+    document = Document()
+    for line in (number, title) if number_before_title else (title, number):
+        document.add_paragraph(line)
+    document.add_paragraph(signature_line)
+    document.add_paragraph(lead)
+    document.add_paragraph(decision)
+    document.add_paragraph(body_number)
+    document.add_paragraph(body_pair)
+    document.add_paragraph("保留上述材料供复查。")
+
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx", options={})
+
+    assert result["yaml_info"]["发文字号"] == number
+    assert result["yaml_info"]["发文机关署名"] == signature
+    assert result["yaml_info"]["成文日期"] == issue_date
+    assert result["yaml_info"]["主送机关"] == ""
+    assert result["metadata"]["missing_required"] == []
+    confidence = result["metadata"]["confidence"]
+    assert confidence["finding_count"] == 0
+    assert {"issuing_authority_signature", "issue_date", "body"} <= confidence["fields"].keys()
+    signals = result["metadata"]["recognition_review_signals"]
+    assert signals["used_fallback"] == []
+    body = result["markdown"].split("---", 2)[2]
+    assert signature_line not in body
+    assert lead in body and decision in body
+    assert body_number in body and body_pair in body
+
+
+@pytest.mark.parametrize(
+    "signature_line, lead",
+    [
+        ("示例管理局　2035年2月29日", "会商结束。有关事项如下："),
+        ("示例管理局\n2035年2月28日", "会商结束。有关事项如下："),
+        ("示例管理局 2035年2月28日", "一、参会名单"),
+        ("负责办理的业务 2035年2月28日", "会商结束。有关事项如下："),
+    ],
+)
+def test_unproven_meeting_header_pair_remains_visible(signature_line: str, lead: str) -> None:
+    from docx import Document
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    for line in ("示例会商纪要", "（2035）9号", signature_line, lead, "其余材料继续留存。"):
+        document.add_paragraph(line)
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx", options={})
+
+    assert result["yaml_info"]["发文机关署名"] == ""
+    assert result["yaml_info"]["成文日期"] == ""
+    assert set(result["metadata"]["missing_required"]) == {"issuing_authority_signature", "issue_date"}
+    assert signature_line in result["markdown"].split("---", 2)[2]
+
+
+def test_meeting_signature_and_date_with_page_break_remain_in_body() -> None:
+    from docx import Document
+    from docx.enum.text import WD_BREAK
+
+    from docwen_plugin_optimizer_gongwen.pipeline import convert_docx_to_md_gongwen
+
+    document = Document()
+    document.add_paragraph("示例工作会议纪要")
+    document.add_paragraph("（2036）4号")
+    pair = "演练管理局　2036年2月29日"
+    document.add_paragraph(pair).add_run().add_break(WD_BREAK.PAGE)
+    document.add_paragraph("当天召集各部门会商。有关决定如下：")
+    result = convert_docx_to_md_gongwen(document, "synthetic.docx")
+
+    assert result["yaml_info"]["发文机关署名"] == ""
+    assert result["yaml_info"]["成文日期"] == ""
+    assert pair in result["markdown"].split("---", 2)[2]

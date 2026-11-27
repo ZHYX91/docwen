@@ -11,6 +11,7 @@ from docwen_plugin_optimizer_gongwen.models import (
     RecognitionCandidate,
     RecognitionResult,
 )
+from docwen_plugin_optimizer_gongwen.validation import REQUIRED_ELEMENTS
 
 
 def maybe_reevaluate(
@@ -30,9 +31,8 @@ def maybe_reevaluate(
 
     Returns the best result found, or the original if no improvement.
     """
-    required_types = {"title", "issuing_authority_signature", "issue_date"}
-    found_types = {c.element_type for c in result.candidates.values()}
-    missing = required_types - found_types
+    found_types = {element for c in result.candidates.values() for element in c.represented_elements}
+    missing = REQUIRED_ELEMENTS - found_types
 
     if not missing:
         result.missing_required = []
@@ -58,9 +58,10 @@ def maybe_reevaluate(
         pf = features[idx]
         all_candidates = scorer.score_round(pf, round_group="round1")
         for cand in all_candidates:
-            if cand.element_type in missing:
+            represented = set(cand.represented_elements)
+            if represented <= missing:
                 modified[idx] = cand
-                new_missing = missing - {cand.element_type}
+                new_missing = missing - represented
                 if len(new_missing) < best_missing_count:
                     best_result = _build_result(
                         modified,
@@ -98,13 +99,13 @@ def maybe_reevaluate(
             continue
 
         # Skip if runner-up type would create a duplicate for unique elements
-        if runner_up.element_type in unique_element_types and runner_up.element_type in found_types:
+        if unique_element_types.intersection(runner_up.represented_elements) & found_types:
             continue  # unique element types shouldn't appear twice
 
         modified = dict(result.candidates)
         modified[idx] = runner_up
-        new_found = {c.element_type for c in modified.values()}
-        new_missing = required_types - new_found
+        new_found = {element for c in modified.values() for element in c.represented_elements}
+        new_missing = REQUIRED_ELEMENTS - new_found
 
         if len(new_missing) < best_missing_count:
             best_result = _build_result(
@@ -126,7 +127,7 @@ def _get_runner_up(
     all_candidates = scorer.score_round(pf, round_group="round1")
 
     # Filter out already-occupied unique element types
-    occupied = {c.element_type for i, c in result.candidates.items() if i != para_idx}
+    occupied = {element for i, c in result.candidates.items() if i != para_idx for element in c.represented_elements}
 
     unique_element_types = {
         "title",
@@ -147,9 +148,7 @@ def _get_runner_up(
         "printing_authority",
         "attachment_header",
     }
-    available = [
-        c for c in all_candidates if c.element_type not in occupied or c.element_type not in unique_element_types
-    ]
+    available = [c for c in all_candidates if not unique_element_types.intersection(c.represented_elements) & occupied]
 
     return available[1] if len(available) >= 2 else None
 
