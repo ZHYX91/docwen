@@ -250,10 +250,12 @@ class DocxValidator:
 
                 split_positions = plan_run_splits(para, errors)
                 for pos in split_positions:
+                    context.cancellation.check()
                     ensure_run_at_position(para, pos)
 
                 # ── Annotate errors as Word comments ─────────────
                 for err in errors:
+                    context.cancellation.check()
                     comment_text = format_comment(err, lang)
                     try:
                         runs = runs_for_range(para, err.start_pos, err.end_pos)
