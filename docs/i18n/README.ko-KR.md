@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ar.md)
 
 DocWen은 Word, Markdown, Excel 등 업무용 형식을 위한 로컬 문서·표 변환 도구입니다. 안정적인 오프라인 작업 흐름을 지향하며 문서 처리를 사용자의 장치 안에서 수행합니다.
 
@@ -38,13 +38,13 @@ Markdown을 가져와 템플릿을 선택하고 Word 문서를 생성합니다(�
 ![Markdown을 가져와 템플릿을 선택하고 Word 문서를 생성합니다(영어 화면).](../assets/screenshots/markdown-generation-en.png)
 
 
-변경 이력: [CHANGELOG.md](../CHANGELOG.md) 참고
+변경 이력: [CHANGELOG.md](../../CHANGELOG.md) 참고
 
 ## 🚀 빠른 시작
 
 ### 다운로드하여 실행
 
-[Releases](https://github.com/ZHYX91/docwen/releases)에서 환경에 맞는 압축 파일을 받으세요. **Windows x64**, **Ubuntu 24.04 x64**, **Apple Silicon macOS 14+** 패키지를 제공하며 Python 설치는 필요 없습니다. 전체 압축을 푼 뒤 Windows에서는 `DocWen.exe`, Ubuntu에서는 `./DocWen`을 실행하세요. Mac에서는 `DocWen.app`을 응용 프로그램으로 옮긴 뒤 [첫 실행 안내](macos.md)를 따르세요. Ubuntu와 macOS에는 CLI 전용 패키지도 있습니다. 다른 Linux 배포판과 Intel Mac은 패키지 대상이 아닙니다.
+[Releases](https://github.com/ZHYX91/docwen/releases)에서 환경에 맞는 압축 파일을 받으세요. **Windows x64**, **Ubuntu 24.04 x64**, **Apple Silicon macOS 14+** 패키지를 제공하며 Python 설치는 필요 없습니다. 전체 압축을 푼 뒤 Windows에서는 `DocWen.exe`, Ubuntu에서는 `./DocWen`을 실행하세요. Mac에서는 `DocWen.app`을 응용 프로그램으로 옮긴 뒤 [첫 실행 안내](../guides/macos.md)를 따르세요. Ubuntu와 macOS에는 CLI 전용 패키지도 있습니다. 다른 Linux 배포판과 Intel Mac은 패키지 대상이 아닙니다.
 
 제공되는 파일은 버전마다 다릅니다. 사용 중인 시스템용으로 실제 등록된 파일을 선택하세요. 이전 버전에는 macOS 패키지가 없을 수 있습니다.
 
@@ -64,7 +64,7 @@ uv run --frozen docwen --help
 
 ### macOS 설치 안내
 
-Mac 패키지는 ad-hoc 서명을 유지하며 Developer ID 서명과 Apple 공증은 사용하지 않습니다. [설치 및 첫 실행](macos.md)을 참고하세요.
+Mac 패키지는 ad-hoc 서명을 유지하며 Developer ID 서명과 Apple 공증은 사용하지 않습니다. [설치 및 첫 실행](../guides/macos.md)을 참고하세요.
 
 **LibreOffice 지원(선택)**
 
@@ -111,7 +111,7 @@ Mac 패키지는 ad-hoc 서명을 유지하며 Developer ID 서명과 Apple 공�
 
 ## 🖥️ 그래픽 인터페이스 사용
 
-작업을 시작하면 실제 요청의 설정 요약이 표시됩니다. 템플릿은 이름이나 용도로 검색할 수 있습니다. “이번 세션에서 최근 사용”은 시작한 작업의 템플릿을 표시하며 기본 템플릿을 바꾸지 않습니다. 표 병합은 [범위, 모드 및 결과 확인 안내](table-merge.md)를 참고하세요.
+작업을 시작하면 실제 요청의 설정 요약이 표시됩니다. 템플릿은 이름이나 용도로 검색할 수 있습니다. “이번 세션에서 최근 사용”은 시작한 작업의 템플릿을 표시하며 기본 템플릿을 바꾸지 않습니다. 표 병합은 [범위, 모드 및 결과 확인 안내](../guides/table-merge.md)를 참고하세요.
 
 ### 인터페이스 개요
 

@@ -192,6 +192,13 @@ def verify_signatures(root: Path, *, app: Path | None = None) -> dict[str, Any]:
     }
 
 
+def copy_first_open_guides(root: Path) -> None:
+    for suffix in (".md", ".zh-CN.md"):
+        text = (REPO / f"docs/guides/macos{suffix}").read_text(encoding="utf-8")
+        text = text.replace("(macos.md)", "(FIRST-OPEN.md)").replace("(macos.zh-CN.md)", "(FIRST-OPEN.zh-CN.md)")
+        (root / f"FIRST-OPEN{suffix}").write_text(text, encoding="utf-8", newline="\n")
+
+
 def compose_app(payload: Path, root: Path, version: str) -> Path:
     app = root / "DocWen.app"
     contents = app / "Contents"
@@ -200,7 +207,7 @@ def compose_app(payload: Path, root: Path, version: str) -> Path:
     resources.mkdir()
     inventory(payload)  # Validate links before copying anything.
     shutil.copytree(payload, resources / "payload", symlinks=True)
-    shutil.copyfile(REPO / "docs/user-guides/macos.md", root / "FIRST-OPEN.md")
+    copy_first_open_guides(root)
     (contents / "Info.plist").write_bytes(
         plistlib.dumps(
             {
@@ -278,7 +285,7 @@ def package(dist: Path, output: Path, report: Path) -> None:
                 payload = dist / f"DocWenCLI_v{version}_macos-arm64"
                 inventory(payload)
                 shutil.copytree(payload, root, dirs_exist_ok=True, symlinks=True)
-                shutil.copyfile(REPO / "docs/user-guides/macos.md", root / "FIRST-OPEN.md")
+                copy_first_open_guides(root)
                 sign_payload(root)
             signatures = verify_signatures(root, app=app)
             write_inventory(root)

@@ -530,7 +530,7 @@ jobs:
             --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA" \
             --artifact-id "$ARTIFACT_ID" \
             --directory "$RUNNER_TEMP/publication" --receipt "$RUNNER_TEMP/publication-progress.json" \
-            --notes docs/CHANGELOG.md "${resume_args[@]}"
+            --notes CHANGELOG.md "${resume_args[@]}"
       - name: Preserve publication progress, including uncertain writes
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

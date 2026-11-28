@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ar.md)
 
 DocWen converts office files locally. Use it to turn Word files into Markdown, export Markdown to Word, extract text and tables from PDFs, or clean up files for a report. It has a desktop interface for everyday work and a command line for repeatable tasks.
 
@@ -38,13 +38,13 @@ Import Markdown and choose a template to generate a Word document.
 ![Import Markdown and choose a template to generate a Word document.](docs/assets/screenshots/markdown-generation-en.png)
 
 
-Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
+Changelog: see [CHANGELOG.md](CHANGELOG.md)
 
 ## 🚀 Quick Start
 
 ### Download and run
 
-Download the matching archive from [Releases](https://github.com/ZHYX91/docwen/releases). Packages support **Windows x64**, **Ubuntu 24.04 x64** and **Apple Silicon macOS 14+**. No Python installation is required. Extract the complete archive: on Windows open `DocWen.exe`; on Ubuntu run `./DocWen`; on macOS move `DocWen.app` to Applications and follow the [first-launch guide](docs/user-guides/macos.md). Ubuntu and macOS also have separate CLI-only archives. Other Linux distributions and Intel Macs are not package targets.
+Download the matching archive from [Releases](https://github.com/ZHYX91/docwen/releases). Packages support **Windows x64**, **Ubuntu 24.04 x64** and **Apple Silicon macOS 14+**. No Python installation is required. Extract the complete archive: on Windows open `DocWen.exe`; on Ubuntu run `./DocWen`; on macOS move `DocWen.app` to Applications and follow the [first-launch guide](docs/guides/macos.md). Ubuntu and macOS also have separate CLI-only archives. Other Linux distributions and Intel Macs are not package targets.
 
 Release assets vary by version; choose an archive actually listed for your system. Older releases may not include macOS packages.
 
@@ -68,7 +68,7 @@ Download the `macos-arm64` archive for Apple Silicon Macs running macOS 14 or la
 The desktop archive contains `DocWen.app`; move the whole app to Applications.
 Mac packages retain ad-hoc signatures and are **not Developer ID signed or notarized**.
 First launch may require **System Settings → Privacy & Security → Open Anyway** after an
-attempted launch. See [macOS installation and first launch](docs/user-guides/macos.md)
+attempted launch. See [macOS installation and first launch](docs/guides/macos.md)
 for checksum checks, CLI use and update instructions.
 
 **LibreOffice support (Optional)**
@@ -116,7 +116,7 @@ These prerequisites do not extend that support claim to another Linux distributi
 
 ## 🖥️ Graphical Interface Usage
 
-Task options appear when a request starts and come from that request. Search templates by name or usage hint; **Recently used in this session** lists templates used by started tasks and does not change your default. For spreadsheet aggregation, see [merge scope, modes and result checks](docs/user-guides/table-merge.md).
+Task options appear when a request starts and come from that request. Search templates by name or usage hint; **Recently used in this session** lists templates used by started tasks and does not change your default. For spreadsheet aggregation, see [merge scope, modes and result checks](docs/guides/table-merge.md).
 
 ### Interface Overview
 

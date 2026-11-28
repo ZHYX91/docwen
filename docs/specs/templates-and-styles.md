@@ -356,7 +356,7 @@ an enabled (or absent, historically enabled by default) text flag becomes text m
 preserves the selected renderer. The sparse `text.toml` stores `heading_numbering_migration_version = 1`,
 when migrating an existing renderer preference or saving a new renderer choice, so later deliberate native
 choices survive restart. Reading a fresh profile does not create user files. Runtime/request overrides
-remain authoritative and are not persisted. See the [heading numbering guide](../user-guides/heading-numbering.md).
+remain authoritative and are not persisted. See the [heading numbering guide](../guides/heading-numbering.md).
 
 Text-mode comments cover only the exact newly inserted number, with the fixed review text; custom Markdown prefixes
 without an exact text anchor are preserved and reported as skipped comments. Existing comment attributes and

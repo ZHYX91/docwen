@@ -1,5 +1,8 @@
 # Contributing
 
+Start with the [development guide](docs/development.md) for environment setup and
+checks, and the [documentation index](docs/README.md) for product contracts.
+
 Thank you for helping improve DocWen. Start with a focused issue before a large change so the intended
 behavior, platform boundary, and test evidence can be agreed first.
 

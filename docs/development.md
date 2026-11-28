@@ -1,49 +1,88 @@
-# Development / 开发
+# Development
 
-DocWen requires Python 3.12. The repository uses a uv workspace containing core, application, runtime, apps, plugins and bundle packages.
+[简体中文](development.zh-CN.md)
 
-DocWen 要求 Python 3.12。仓库使用 uv workspace 管理 core、application、runtime、apps、plugins 和 bundle 包。
+DocWen uses Python 3.12 and a uv workspace for core, application, runtime, apps,
+plugins and bundle packages. Run these commands from the repository root.
 
-## Setup / 环境
+## Prepare the environment
 
-```powershell
-uv sync --frozen --all-extras  # CI/release pin uv 0.12.0
-.\.venv\Scripts\python.exe tools\qa.py --suite fast
-docwen --help
-docwen-gui
+CI and production builds pin **uv 0.12.0**. Dependency and lock maintenance may use
+compatible **uv 0.12.x** without changing the production toolchain.
+
+```sh
+uv sync --frozen --all-extras
 ```
 
-For dependency and lockfile updates, use a uv version allowed by `tool.uv.required-version` in [pyproject.toml](../pyproject.toml).
+Activate `.venv\Scripts\activate` on Windows or `source .venv/bin/activate` on
+macOS/Linux. Do not use `pip install -e`: pip does not apply this workspace's scoped
+dependency exclusion and can install two OpenCV distributions over the same `cv2`
+files. See [external dependencies](external-dependencies.md).
 
-## Application icon / 应用图标
+## Source runs and checks
 
-`assets/icon.svg` is the sole design source. Regenerate the committed PNG and ICO derivatives after
-changing it; use `--check` to verify that they have not drifted from the SVG.
+QA and source launchers keep generated data in an explicitly owned engineering
+directory. Existing maintainer workspaces are reused. For a standalone clone,
+initialize a new directory outside the repository:
 
-`assets/icon.svg` 是唯一设计源。修改后重新生成提交到仓库的 PNG 与 ICO 派生资源；使用
-`--check` 验证派生资源与 SVG 保持一致。
-
-```powershell
-.\.venv\Scripts\python.exe scripts\maintenance\generate_app_icons.py
-.\.venv\Scripts\python.exe scripts\maintenance\generate_app_icons.py --check
+```sh
+python tools/workspace_root.py --init ../docwen-workspace --repository .
+python tools/qa.py --workspace-root ../docwen-workspace
+python tools/run_source.py --workspace-root ../docwen-workspace gui
+python tools/run_source.py --workspace-root ../docwen-workspace cli -- --version
 ```
 
-## UI dimensions and resources / 界面尺寸与资源
+Alternatively, set `DOCWEN_WORKSPACE_ROOT` to that directory's absolute path. The
+standard `repos/docwen` layout and linked worktrees can discover a registered
+workspace. Initialization creates the selected directory or registers the repository
+with an existing root; it does not require private maintainer plans.
 
-See [GUI behavior and visual ownership](specs/gui-behavior.md#visual-system--视觉规范). Add baseline dimensions to shared tokens, bind static geometry through `set_metric`, and use font metrics for responsive text layout. Keep new assets in the existing licensed icon collection or the canonical brand source. MSIX builds require the Windows SDK MakePri tool beside MakeAppx; the package must include `resources.pri`.
+The launcher leases a run directory and passes `DOCWEN_RUNTIME_ROOT` to the product.
+Normal installed applications use their application cache. CI may provide explicit
+`--pytest-runtime-root`, `--own-pytest-runtime` and report directories.
 
-## Contribution rules / 开发规则
+`python tools/qa.py` runs formatting, lint, type checks and the fast test suite.
+Select `--suite full` when a full run is required. Use the owning checks for a small
+change; follow [testing guidance](testing.md) for packaged and interactive scope.
 
-- Put shared contracts, parsing and document semantics in core. Declare its direct library dependencies
-  in `packages/core/pyproject.toml`; shared DOCX semantics use `python-docx` and `lxml` without depending
-  on plugin installation. Keep conversion routes in plugins.
-- Keep orchestration in application/runtime and format behavior in plugins.
-- Add or update the owning tests with every behavioral change.
-- Update current documentation when routes, configuration, output semantics, UI behavior or release gates change.
-- Do not add compatibility shims or second state sources without an explicit public contract.
-- Preserve source files and unrelated user changes during tests and maintenance.
+```sh
+ruff format --check .
+ruff check .
+python tools/typecheck.py
+```
 
-共享契约、解析与文档语义属于 Core；其直接库依赖在 `packages/core/pyproject.toml` 声明。
-共享 DOCX 语义直接使用 `python-docx` 和 `lxml`，不依赖插件安装补齐；转换路线仍属于插件。
+For local formatting, use `ruff format .`; review `ruff check . --fix` changes before
+keeping them. Pyright covers `packages/` and excludes test/build/resource data.
+Optional hooks use `pre-commit install` and `pre-commit run --all-files`.
 
-See [Architecture](architecture.md), [Testing](testing.md) and [Documentation style](maintenance/docs-style-guide.md).
+## Application resources
+
+`assets/icon.svg` is the sole application-icon source. Regenerate and verify its
+committed PNG and ICO derivatives after editing it:
+
+```sh
+python scripts/maintenance/generate_app_icons.py
+python scripts/maintenance/generate_app_icons.py --check
+```
+
+Follow [GUI visual ownership](specs/gui-behavior.md#visual-system--视觉规范): baseline
+dimensions belong in shared tokens, static geometry uses `set_metric`, and responsive
+text layout uses font metrics. Use the existing licensed icon collection or canonical
+brand source. MSIX packaging requires Windows SDK MakePri beside MakeAppx and must
+include `resources.pri`.
+
+## Change ownership
+
+- Keep shared contracts and pure logic in core, orchestration in application/runtime,
+  and format behavior in plugins. Declare direct library dependencies in
+  \`packages/core/pyproject.toml\`. Shared DOCX semantics use \`python-docx\` and \`lxml\`.
+- Update owning tests and documentation when behavior, configuration, output or release
+  requirements change. Keep compatibility decisions explicit; new compatibility shims
+  or secondary state sources need an explicit public contract.
+- Preserve inputs and unrelated local changes. Use reviewed, scoped text edits; avoid
+  in-place shell substitutions that mishandle Windows paths, encoding or line endings.
+- Update imports, references and packaging after renames. Let Git recognize renames;
+  do not remove and recreate unrelated content to make a move look clean.
+
+See [contributing](../CONTRIBUTING.md), [architecture](architecture.md) and
+[documentation style](maintenance/docs-style-guide.md).

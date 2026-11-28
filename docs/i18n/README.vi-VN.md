@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ar.md)
 
 DocWen là công cụ chuyển đổi tài liệu và bảng biểu cục bộ cho Word, Markdown, Excel và các định dạng văn phòng liên quan. Công cụ ưu tiên quy trình offline ổn định và xử lý tài liệu ngay trên thiết bị của người dùng.
 
@@ -38,13 +38,13 @@ Nhập Markdown và chọn mẫu để tạo tài liệu Word (giao diện tiế
 ![Nhập Markdown và chọn mẫu để tạo tài liệu Word (giao diện tiếng Anh).](../assets/screenshots/markdown-generation-en.png)
 
 
-Nhật ký thay đổi: xem [CHANGELOG.md](../CHANGELOG.md)
+Nhật ký thay đổi: xem [CHANGELOG.md](../../CHANGELOG.md)
 
 ## 🚀 Bắt đầu nhanh
 
 ### Tải xuống và chạy
 
-Tải gói phù hợp từ [Releases](https://github.com/ZHYX91/docwen/releases). Có gói cho **Windows x64**, **Ubuntu 24.04 x64** và **Apple Silicon macOS 14+**, không cần cài Python. Giải nén toàn bộ: mở `DocWen.exe` trên Windows, chạy `./DocWen` trên Ubuntu; trên Mac, chuyển `DocWen.app` vào Applications rồi làm theo [hướng dẫn mở lần đầu](macos.md). Ubuntu và macOS còn có gói chỉ chứa CLI. Các bản Linux khác và Mac Intel không thuộc nền tảng đóng gói.
+Tải gói phù hợp từ [Releases](https://github.com/ZHYX91/docwen/releases). Có gói cho **Windows x64**, **Ubuntu 24.04 x64** và **Apple Silicon macOS 14+**, không cần cài Python. Giải nén toàn bộ: mở `DocWen.exe` trên Windows, chạy `./DocWen` trên Ubuntu; trên Mac, chuyển `DocWen.app` vào Applications rồi làm theo [hướng dẫn mở lần đầu](../guides/macos.md). Ubuntu và macOS còn có gói chỉ chứa CLI. Các bản Linux khác và Mac Intel không thuộc nền tảng đóng gói.
 
 Các tệp phát hành khác nhau tùy phiên bản. Hãy chọn tệp thực sự được liệt kê cho hệ điều hành của bạn; phiên bản cũ có thể chưa có gói macOS.
 
@@ -64,7 +64,7 @@ uv run --frozen docwen --help
 
 ### Ghi chú cho macOS
 
-Gói Mac giữ chữ ký ad-hoc, không dùng Developer ID hay công chứng Apple. Xem [cài đặt và mở lần đầu](macos.md).
+Gói Mac giữ chữ ký ad-hoc, không dùng Developer ID hay công chứng Apple. Xem [cài đặt và mở lần đầu](../guides/macos.md).
 
 **Hỗ trợ LibreOffice (Tùy chọn)**
 
@@ -111,7 +111,7 @@ không mở rộng cam kết sang bản phân phối hoặc kiến trúc khác.
 
 ## 🖥️ Sử dụng giao diện đồ hoạ
 
-Khi tác vụ bắt đầu, các tùy chọn từ yêu cầu thực tế sẽ được hiển thị. Có thể tìm mẫu theo tên hoặc gợi ý sử dụng; “Đã dùng gần đây trong phiên này” liệt kê mẫu của tác vụ đã bắt đầu mà không đổi mẫu mặc định. Với bảng tính, xem [phạm vi, chế độ và kiểm tra kết quả gộp](table-merge.md).
+Khi tác vụ bắt đầu, các tùy chọn từ yêu cầu thực tế sẽ được hiển thị. Có thể tìm mẫu theo tên hoặc gợi ý sử dụng; “Đã dùng gần đây trong phiên này” liệt kê mẫu của tác vụ đã bắt đầu mà không đổi mẫu mặc định. Với bảng tính, xem [phạm vi, chế độ và kiểm tra kết quả gộp](../guides/table-merge.md).
 
 ### Tổng quan giao diện
 

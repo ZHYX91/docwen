@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ar.md)
 
 يساعدك DocWen على تحويل المستندات والجداول والصور **على جهازك**، دون رفع الملفات إلى خدمة تحويل على الإنترنت. يمكنك استخدام الواجهة الرسومية للأعمال اليومية أو سطر الأوامر لتنفيذ عمليات متكررة.
 
@@ -30,7 +30,7 @@
 
 ### تنزيل البرنامج وتشغيله
 
-نزّل الأرشيف المناسب من [صفحة الإصدارات](https://github.com/ZHYX91/docwen/releases). تتوفر حزم **Windows x64** و**Ubuntu 24.04 x64** و**Apple Silicon مع macOS 14+**، دون الحاجة إلى تثبيت Python. استخرج الأرشيف كاملًا: افتح `DocWen.exe` على Windows أو شغّل `./DocWen` على Ubuntu؛ على Mac انقل `DocWen.app` إلى التطبيقات واتبع [دليل الفتح الأول](macos.md). تتوفر أيضًا حزم CLI مستقلة لـ Ubuntu وmacOS. توزيعات Linux الأخرى وأجهزة Intel Mac ليست ضمن أهداف الحزم.
+نزّل الأرشيف المناسب من [صفحة الإصدارات](https://github.com/ZHYX91/docwen/releases). تتوفر حزم **Windows x64** و**Ubuntu 24.04 x64** و**Apple Silicon مع macOS 14+**، دون الحاجة إلى تثبيت Python. استخرج الأرشيف كاملًا: افتح `DocWen.exe` على Windows أو شغّل `./DocWen` على Ubuntu؛ على Mac انقل `DocWen.app` إلى التطبيقات واتبع [دليل الفتح الأول](../guides/macos.md). تتوفر أيضًا حزم CLI مستقلة لـ Ubuntu وmacOS. توزيعات Linux الأخرى وأجهزة Intel Mac ليست ضمن أهداف الحزم.
 
 تختلف الملفات المتاحة حسب الإصدار. اختر أرشيفًا مدرجًا بالفعل لنظامك؛ قد لا تتضمن الإصدارات القديمة حزمة macOS.
 
@@ -48,7 +48,7 @@ uv run --frozen docwen --help
 
 يستخدم `uv run --frozen` البيئة المتزامنة دون تفعيلها يدويًا. تستخدم اختبارات CI وبناء المنتج uv 0.12.0. لا يدعم المستودع `pip install -e` لأن pip لا يطبّق قاعدة استبعاد الاعتماديات المحددة فيه.
 
-تتوفر حزم Apple Silicon macOS 14+ arm64 بتوقيع ad-hoc، دون Developer ID أو توثيق Apple. راجع [التثبيت والفتح الأول](macos.md). لا تتوفر حزمة Intel Mac.
+تتوفر حزم Apple Silicon macOS 14+ arm64 بتوقيع ad-hoc، دون Developer ID أو توثيق Apple. راجع [التثبيت والفتح الأول](../guides/macos.md). لا تتوفر حزمة Intel Mac.
 
 ### صور HEIC/HEIF
 
@@ -80,7 +80,7 @@ uv run --frozen docwen --help
 
 النتيجة ليست دائمًا مطابقة للأصل. تأكد من تنسيق الجداول والمعادلات والنص المعترف به عبر OCR قبل استخدام الملف النهائي.
 
-عند بدء المهمة تظهر خيارات الطلب الفعلي. ابحث عن القوالب بالاسم أو بوصف الاستخدام؛ تعرض قائمة «المستخدمة مؤخرًا في هذه الجلسة» قوالب المهام التي بدأت، دون تغيير القالب الافتراضي. لدمج الجداول راجع [النطاق والأوضاع ومراجعة النتائج](table-merge.md).
+عند بدء المهمة تظهر خيارات الطلب الفعلي. ابحث عن القوالب بالاسم أو بوصف الاستخدام؛ تعرض قائمة «المستخدمة مؤخرًا في هذه الجلسة» قوالب المهام التي بدأت، دون تغيير القالب الافتراضي. لدمج الجداول راجع [النطاق والأوضاع ومراجعة النتائج](../guides/table-merge.md).
 
 ## استخدام سطر الأوامر
 
@@ -151,7 +151,7 @@ docwen validate input.md --check typo --report report.json
 
 إن فشل التحويل، افحص نوع الملف وحالة برامج Word أو WPS أو LibreOffice المستخدمة. جرّب مجلد إخراج جديدًا؛ ولا تُعد تشغيل عملية كتابة غير مؤكدة قبل مراجعة النتائج الموجودة.
 
-لطرح سؤال أو تقديم بلاغ، استخدم [مشكلات DocWen](https://github.com/ZHYX91/docwen/issues). راجع [سجل التغييرات](../CHANGELOG.md) لمعرفة ما تغير في كل إصدار.
+لطرح سؤال أو تقديم بلاغ، استخدم [مشكلات DocWen](https://github.com/ZHYX91/docwen/issues). راجع [سجل التغييرات](../../CHANGELOG.md) لمعرفة ما تغير في كل إصدار.
 
 ## الترخيص
 

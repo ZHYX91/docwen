@@ -7,7 +7,7 @@ release bytes. Mac packages retain ad-hoc signatures, with no Developer ID signi
 
 DocWen 的发布目标为 Windows x64、Ubuntu 24.04 x64 和 Apple 芯片 macOS 14+ arm64。
 Mac 提供 `.app`（含 CLI）和独立 CLI 包；保留 ad-hoc 签名，暂不做 Developer ID 签名或 Apple 公证。
-首次打开说明见 [macOS 安装指南](user-guides/macos.md)。
+首次打开说明见 [macOS 安装指南](guides/macos.md)。
 
 | Platform / 平台 | Distribution status / 发行状态 | Required validation / 所需验证 |
 | --- | --- | --- |
@@ -242,7 +242,7 @@ draft asset checks and independent public readback all include the Mac archives.
 
 These checks do not establish browser quarantine handling, manual Gatekeeper approval, native
 menu/drag-drop behavior or every macOS/Office version. Retain those limitations in the compact
-package receipt. See [first launch](user-guides/macos.md) and Apple's linked per-app instructions.
+package receipt. See [first launch](guides/macos.md) and Apple's linked per-app instructions.
 
 For a Mac packaging repair, manual `verify` may select `macos_only=true`: it keeps the
 same required static source checks (including all three Pyright targets), runs the macOS

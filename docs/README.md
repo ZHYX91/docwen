@@ -1,54 +1,71 @@
-# DocWen Documentation / DocWen 文档
+# DocWen documentation
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-DocWen documentation describes the current product, its supported contracts, and the checks required to maintain it. Historical implementation and acceptance records are available from Git history rather than the working tree.
+[简体中文](README.zh-CN.md)
 
-DocWen 文档只描述当前产品、受支持契约和维护门禁。实现与验收历史由 Git 历史追溯，不在工作树中保留阶段报告。
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ar.md)
 
-## User guides / 用户手册
+Use this index for current behavior, supported contracts and maintenance instructions.
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
+## Use DocWen
 
-## Product and development / 产品与开发
-
-- [Merge spreadsheets: scope, modes and results / 表格汇总：范围、模式与结果](user-guides/table-merge.md)
-- [macOS installation and first launch / macOS 安装与首次打开](user-guides/macos.md)
-- [Overview / 概览](overview.md)
-- [Capabilities / 能力矩阵](capabilities.md)
+- [Product guide](../README.md)
+- [Overview](overview.md)
+- [Capabilities](capabilities.md)
 - [CLI](cli.md)
-- [Configuration / 配置](configuration.md)
-- [Heading numbering and markers / 标题编号与标记](user-guides/heading-numbering.md)
-- [Architecture / 架构](architecture.md)
-- [Runtime artifacts / 运行产物](runtime-artifacts.md)
-- [External dependencies / 外部依赖](external-dependencies.md)
-- [Testing / 测试](testing.md)
-- [Packaging / 打包](packaging.md)
-- [Development / 开发](development.md)
+- [Configuration](configuration.md)
+- [Heading numbering and markers](guides/heading-numbering.md)
+- [Merge spreadsheets](guides/table-merge.md)
+- [macOS first launch](guides/macos.md)
+- [Mermaid images](mermaid.md)
+- [Troubleshooting](maintenance/troubleshooting.md)
 
-## Specifications / 规格
+## Develop and release
 
+- [Development](development.md)
+- [Architecture](architecture.md)
+- [Runtime artifacts](runtime-artifacts.md)
+- [External dependencies](external-dependencies.md)
+- [Testing](testing.md)
+- [Packaging and release](packaging.md)
+- [Documentation style](maintenance/docs-style-guide.md)
+- [Changelog](../CHANGELOG.md)
+- [Security reporting](../SECURITY.md)
+
+## Specifications
+
+- [Rejected artifact cleanup](specs/artifact-discard.md)
+- [Delimited spreadsheet fidelity](specs/delimited-spreadsheets.md)
+- [Conversion result-directory output](specs/document-node-output.md)
+- [DOCX proofreading comments](specs/docx-proofread-comments.md)
+- [Golden regression suite / Golden 回归套件](specs/golden-regression-suite.md)
+- [GUI behavior / GUI 行为](specs/gui-behavior.md)
+- [JSON contracts / JSON 契约](specs/json-contracts.md)
 - [Machine Protocol v2 and Artifact Bundle v3](specs/machine-protocol-v2.md)
-- [Markdown document-node output](specs/document-node-output.md)
-- [Routes and actions](specs/routes-and-actions.md)
-- [Plugin manifest](specs/plugin-manifest.md)
-- [JSON contracts](specs/json-contracts.md)
-- [Golden regression suite](specs/golden-regression-suite.md)
-- [GUI behavior](specs/gui-behavior.md)
-- [User profile paths](specs/user-profile.md)
-- [Markdown compatibility](specs/markdown-compatibility.md)
-- [Templates and styles](specs/templates-and-styles.md)
-- [Display and task languages](specs/task-language.md)
+- [Markdown compatibility / Markdown 兼容](specs/markdown-compatibility.md)
+- [Offline OCR table recognition](specs/ocr-tables.md)
 - [Physical-page OCR and artifact relations](specs/physical-page-ocr.md)
-- [Resolved structured numbering and export plan](specs/structured-numbering-phases.md)
+- [Plugin manifest](specs/plugin-manifest.md)
 - [Public API boundaries](specs/public-api-boundaries.md)
+- [Routes and actions](specs/routes-and-actions.md)
+- [Resolved structured numbering and export plan](specs/structured-numbering-phases.md)
+- [Display and task languages](specs/task-language.md)
+- [Templates and styles](specs/templates-and-styles.md)
+- [User profile paths](specs/user-profile.md)
+- [Web archives and HTML image references](specs/web-archives.md)
 
-The resolved-plan capability rejects `remove_numbering`, `add_numbering`, and `numbering_scheme`, never parses a
-manual Heading prefix, and is guarded by an explicit negative capability gate.
+> The resolved-plan capability rejects `remove_numbering`, `add_numbering`, and `numbering_scheme`, never parses a
+> manual Heading prefix, and is guarded by an explicit negative capability gate.
 
-## Maintenance / 维护
+## Design decisions
 
-- [Troubleshooting / 故障排查](maintenance/troubleshooting.md)
-- [Documentation style / 文档规范](maintenance/docs-style-guide.md)
+- [Each line as a Word paragraph](architecture/decisions/each-line-paragraph.md)
+- [Raw Markdown HTML in DOCX exports](architecture/decisions/html-block-text-projection.md)
+- [OFD/XPS normalization for PDF actions](architecture/decisions/layout-pdf-action-composition.md)
+- [Office bridge stage integrity](architecture/decisions/office-bridge-stage-integrity.md)
+- [Markdown document proofreading before legacy Office output](architecture/decisions/proofread-legacy-document-pipeline.md)
+- [Settings information architecture](architecture/decisions/settings-information-architecture.md)
+- [Template file location](architecture/decisions/template-location-affordance.md)
