@@ -547,7 +547,15 @@ def _build(args: argparse.Namespace) -> dict[str, Any]:
     clone_python = sync_project_environment(args.uv, clone, base_python, env)
     build_env = windows_build_environment(env, clone_python, base_python)
     build_log = run(
-        [str(clone_python), "scripts/build/build.py", "--skip-cython", "--version", manifest["product"]["version"]],
+        [
+            str(clone_python),
+            "scripts/build/build.py",
+            "--skip-cython",
+            "--version",
+            manifest["product"]["version"],
+            "--source-commit",
+            commit,
+        ],
         cwd=clone,
         env=build_env,
     )
@@ -558,6 +566,11 @@ def _build(args: argparse.Namespace) -> dict[str, Any]:
     require(deploy.is_dir(), "unified_deploy_directory_missing")
     payload = output / "payload"
     shutil.copytree(deploy, payload, ignore=shutil.ignore_patterns("screenshots"))
+    source_notice = payload / "SOURCE_CODE.txt"
+    require(
+        source_notice.is_file() and f"/archive/{commit}.tar.gz" in source_notice.read_text(encoding="utf-8"),
+        "production_source_notice_mismatch",
+    )
     for readme in sorted(clone.glob(manifest["payload"]["readmeSourceGlob"])):
         shutil.copy2(readme, payload / readme.name)
     msvc_runtime_normalization = normalize_packaged_msvc_runtime(

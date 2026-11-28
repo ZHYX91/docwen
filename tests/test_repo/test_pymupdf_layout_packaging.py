@@ -194,3 +194,16 @@ def test_source_archive_nested_in_another_repository_never_claims_its_revision(
     assert "Unmodified third-party source instructions" in notice
     assert outer_revision not in notice
     assert "tree/0.24.0" not in notice
+
+
+def test_release_source_entry_uses_verified_commit_without_git(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from scripts.build.package_licenses import _source_entry
+
+    (tmp_path / "SOURCE_CODE.txt").write_text("Third-party source instructions", encoding="utf-8")
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("The production builder does not include Git on the primitive build PATH")
+
+    monkeypatch.setattr(subprocess, "check_output", forbidden)
+    revision = "b" * 40
+    assert f"/archive/{revision}.tar.gz" in _source_entry(tmp_path, "0.24.0", source_commit=revision)

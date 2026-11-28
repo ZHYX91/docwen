@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
+from typing import cast
 
 import pikepdf
 import pytest
@@ -46,11 +48,11 @@ def _links(path: Path) -> list[list[tuple[int, tuple[float, ...], str, tuple[flo
             [
                 (
                     page_by_object[target[0].objgen],
-                    tuple(float(number) for number in annotation.Rect),
+                    tuple(float(number) for number in cast(Iterable[float], annotation.Rect)),
                     str(target[1]),
-                    tuple(float(number) for number in list(target)[2:]),
+                    tuple(float(target[index]) for index in range(2, len(target))),
                 )
-                for annotation in page.obj.get("/Annots", [])
+                for annotation in cast(Iterable[pikepdf.Object], page.obj.get("/Annots", pikepdf.Array()))
                 for target in [annotation.A.D if "/A" in annotation else annotation.Dest]
             ]
             for page in pdf.pages
@@ -124,11 +126,12 @@ def test_pdf_split_preserves_filled_indirect_forms(
     for group, artifact in zip(groups, result.artifacts, strict=True):
         with pikepdf.Pdf.open(artifact.staging_path) as doc:
             expected = [(f"field-{page}", f"value-{page}") for page in group]
-            assert [(str(field.T), str(field.V)) for field in doc.Root.AcroForm.Fields] == expected
+            fields = cast(Iterable[pikepdf.Object], doc.Root.AcroForm.Fields)
+            assert [(str(field.T), str(field.V)) for field in fields] == expected
             assert [
                 (str(widget.T), str(widget.V))
                 for page in doc.pages
-                for widget in page.obj.Annots
+                for widget in cast(Iterable[pikepdf.Object], page.obj.Annots)
                 if widget.Subtype == pikepdf.Name.Widget
             ] == expected
     assert source.read_bytes() == source_bytes

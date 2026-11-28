@@ -57,16 +57,23 @@ def _copy_notice(source: Path, destination: Path) -> None:
     shutil.copy2(source, destination)
 
 
-def _source_entry(source_root: Path, release_version: str) -> str:
-    try:
-        git_context = subprocess.check_output(
-            ["git", "rev-parse", "--show-prefix", "HEAD"], cwd=source_root, stderr=subprocess.DEVNULL, text=True
-        )
-    except (OSError, subprocess.CalledProcessError):
-        git_context = ""
-    prefix, _, revision = git_context.partition("\n")
-    revision = revision.strip()
-    if not prefix and re.fullmatch(r"[0-9a-f]{40}", revision):
+def _source_entry(source_root: Path, release_version: str, *, source_commit: str | None = None) -> str:
+    revision = source_commit
+    if revision is None:
+        try:
+            git_context = subprocess.check_output(
+                ["git", "rev-parse", "--show-prefix", "HEAD"], cwd=source_root, stderr=subprocess.DEVNULL, text=True
+            )
+        except (OSError, subprocess.CalledProcessError):
+            git_context = ""
+        prefix, _, checkout_revision = git_context.partition("\n")
+        checkout_revision = checkout_revision.strip()
+        if not prefix and re.fullmatch(r"[0-9a-f]{40}", checkout_revision):
+            revision = checkout_revision
+    elif re.fullmatch(r"[0-9a-f]{40}", revision) is None:
+        raise RuntimeError("The supplied DocWen build revision must be a full Git commit ID")
+
+    if revision is not None:
         source_links = (
             f"Corresponding project source: https://github.com/ZHYX91/docwen/tree/{revision}\n"
             f"Download project source: https://github.com/ZHYX91/docwen/archive/{revision}.tar.gz\n"
@@ -77,12 +84,14 @@ def _source_entry(source_root: Path, release_version: str) -> str:
     return f"DocWen {release_version}\n{source_links}\n{text}"
 
 
-def stage_package_licenses(source_root: Path, payload: Path, release_version: str, *, with_gui: bool) -> None:
+def stage_package_licenses(
+    source_root: Path, payload: Path, release_version: str, *, with_gui: bool, source_commit: str | None = None
+) -> None:
     """Keep version-matched notices outside PyInstaller's import graph."""
     for filename in _PROJECT_NOTICES:
         _copy_notice(source_root / filename, payload / filename)
     (payload / "SOURCE_CODE.txt").write_text(
-        _source_entry(source_root, release_version), encoding="utf-8", newline="\n"
+        _source_entry(source_root, release_version, source_commit=source_commit), encoding="utf-8", newline="\n"
     )
 
     licenses = payload / "licenses"

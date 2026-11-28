@@ -896,6 +896,7 @@ def build_app(
     with_cli: bool = True,
     with_gui: bool = True,
     version_override: str | None = None,
+    source_commit: str | None = None,
 ) -> tuple[str, Path] | None:
     """
     构建应用程序（文件夹模式）
@@ -1244,11 +1245,13 @@ def build_app(
 
         from scripts.build.package_licenses import stage_package_licenses
 
-        stage_package_licenses(PROJECT_ROOT, deploy_dir, version, with_gui=with_gui)
+        stage_package_licenses(PROJECT_ROOT, deploy_dir, version, with_gui=with_gui, source_commit=source_commit)
         if with_cli and cli_output_dir.exists():
             copy_readme_files(cli_output_dir)
             if cli_output_dir != deploy_dir:
-                stage_package_licenses(PROJECT_ROOT, cli_output_dir, version, with_gui=False)
+                stage_package_licenses(
+                    PROJECT_ROOT, cli_output_dir, version, with_gui=False, source_commit=source_commit
+                )
 
         cli_deploy_dir: Path | None = None
         if with_gui and with_cli and cli_output_dir.exists():
@@ -1313,6 +1316,7 @@ def main():
     parser.add_argument("--gui-only", action="store_true", help="仅构建 GUI（不构建 CLI）")
     parser.add_argument("--cli-only", action="store_true", help="仅构建 CLI（不构建 GUI）")
     parser.add_argument("--version", type=str, default=None, help="构建版本号（覆盖源码 __version__，可带 v 前缀）")
+    parser.add_argument("--source-commit", help="由发行构建器核验并传入的完整源码提交 ID")
     parser.add_argument(
         "--work-root",
         type=Path,
@@ -1345,6 +1349,7 @@ def main():
             with_cli=with_cli,
             with_gui=with_gui,
             version_override=args.version,
+            source_commit=args.source_commit,
         )
 
         if result:
