@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import cast
 
 import pikepdf
+import pymupdf
 import pytest
 from reportlab.pdfgen.canvas import Canvas
 
@@ -37,8 +38,39 @@ def _write_links(path: Path) -> None:
                 else:
                     link.A = pikepdf.Dictionary(S=pikepdf.Name.GoTo, D=values)
                 links.append(pdf.make_indirect(link))
+            if index == 2:
+                layer = pdf.make_indirect(pikepdf.Dictionary(Type=pikepdf.Name.OCG, Name="Layer"))
+                links.insert(
+                    1,
+                    pdf.make_indirect(
+                        pikepdf.Dictionary(
+                            Type=pikepdf.Name.Annot,
+                            Subtype=pikepdf.Name.Link,
+                            Rect=pikepdf.Array([180, 170, 215, 200]),
+                            A=pikepdf.Dictionary(
+                                S=pikepdf.Name.SetOCGState,
+                                State=pikepdf.Array([pikepdf.Name.ON, layer]),
+                            ),
+                        )
+                    ),
+                )
             page.obj.Annots = pikepdf.Array(links)
         pdf.save(path)
+
+    # pikepdf exposes indirect scalar objects as Python numbers. Use the raw
+    # xref APIs to construct a PDF where numbers are indirect on disk.
+    with pymupdf.open(path) as document:
+        xref, _, _ = document.page_annot_xrefs(2)[0]
+        coordinate_xref = document.get_new_xref()
+        document.update_object(coordinate_xref, "82")
+        zoom_xref = document.get_new_xref()
+        document.update_object(zoom_xref, "1.5")
+        rect_xref = document.get_new_xref()
+        document.update_object(rect_xref, f"[{coordinate_xref} 0 R 280 120 295]")
+        target_xref = document.page_xref(0)
+        document.xref_set_key(xref, "A/D", f"[{target_xref} 0 R /XYZ {coordinate_xref} 0 R 120 {zoom_xref} 0 R]")
+        document.xref_set_key(xref, "Rect", f"{rect_xref} 0 R")
+        document.saveIncr()
 
 
 def _links(path: Path) -> list[list[tuple[int, tuple[float, ...], str, tuple[float, ...]]]]:
@@ -53,6 +85,7 @@ def _links(path: Path) -> list[list[tuple[int, tuple[float, ...], str, tuple[flo
                     tuple(float(target[index]) for index in range(2, len(target))),
                 )
                 for annotation in cast(Iterable[pikepdf.Object], page.obj.get("/Annots", pikepdf.Array()))
+                if "/Dest" in annotation or ("/A" in annotation and str(annotation.A.S) == "/GoTo")
                 for target in [annotation.A.D if "/A" in annotation else annotation.Dest]
             ]
             for page in pdf.pages
@@ -92,6 +125,31 @@ def test_pdf_operations_preserve_rotated_link_targets_and_zoom(tmp_path: Path) -
         ]
         actual = _links(Path(artifact.staging_path))
         assert [sorted(links) for links in actual] == [sorted(links) for links in wanted]
+    assert source.read_bytes() == source_bytes
+
+
+def test_pdf_split_rejects_cross_page_radio_group_before_staging_any_files(tmp_path: Path) -> None:
+    source = tmp_path / "shared-radio.pdf"
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    canvas = Canvas(str(source))
+    for page in range(1, 5):
+        canvas.drawString(40, 380, f"Distinct page {page}")
+        canvas.acroForm.radio(name="delivery", value=str(page), selected=page == 1, x=40, y=340)
+        canvas.showPage()
+    canvas.save()
+    source_bytes = source.read_bytes()
+
+    context = _build_fake_context(
+        str(source), str(staging), "pdf", {"split_mode": "custom", "pages": [1, 3]}, action_name="split_pdf"
+    )
+    result = PdfSplitter().convert(context)
+
+    assert not result.success
+    assert result.error is not None
+    assert result.error.diagnostic_code == "PDF-SPLIT-UNSUPPORTED-SHARED-FIELDS"
+    assert not result.artifacts
+    assert not list(staging.iterdir())
     assert source.read_bytes() == source_bytes
 
 

@@ -24,7 +24,10 @@ if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
 
 
-_EXPLICIT_GOTO = re.compile(r"\[\s*(\d+)\s+\d+\s+R\s*(/[^\]]+)\]")
+_EXPLICIT_GOTO = re.compile(r"\[\s*(\d+)\s+\d+\s+R\s*(/[A-Za-z]+)(.*?)\]", re.DOTALL)
+_PDF_REFERENCE = re.compile(r"(?<!\S)(\d+)\s+\d+\s+R(?=\s|$)")
+_PDF_NUMBER = re.compile(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)")
+_DESTINATION_OPERANDS = {"/XYZ": 3, "/Fit": 0, "/FitH": 1, "/FitV": 1, "/FitR": 4, "/FitB": 0, "/FitBH": 1, "/FitBV": 1}
 
 
 def _ensure_fitz():
@@ -45,8 +48,54 @@ def _is_valid_pdf(file_path: str) -> bool:
         return False
 
 
+def _array_value(document: pymupdf.Document, xref: int, key: str) -> str | None:
+    kind, value = document.xref_get_key(xref, key)
+    if kind == "xref":
+        value = document.xref_object(int(value.split()[0]), compressed=True)
+    elif kind != "array":
+        return None
+    value = value.strip()
+    return value if value.startswith("[") and value.endswith("]") else None
+
+
+def _explicit_goto(document: pymupdf.Document, xref: int) -> re.Match[str] | None:
+    value = _array_value(document, xref, "Dest")
+    if value is None and document.xref_get_key(xref, "A/S") == ("name", "/GoTo"):
+        value = _array_value(document, xref, "A/D")
+    return _EXPLICIT_GOTO.fullmatch(value) if value is not None else None
+
+
 def _goto_links(page: pymupdf.Page, kind: int) -> list[dict[str, Any]]:
-    return [link for link in page.get_links() if link.get("kind") == kind]
+    links = [link for link in page.get_links() if link.get("kind") == kind]
+    if not any(link.get("xref", 0) <= 0 for link in links):
+        return links
+
+    # An unrelated, unsupported Link action can make PyMuPDF omit the xref
+    # for every link on this page. Match the explicit GoTo annotations instead.
+    document = page.parent
+    assert document is not None
+    annotations: list[tuple[int, int]] = []
+    for xref, _, _ in page.annot_xrefs():
+        if document.xref_get_key(xref, "Subtype") == ("name", "/Link"):
+            match = _explicit_goto(document, xref)
+            if match is not None:
+                annotations.append((xref, int(match[1])))
+    if [target for _, target in annotations] == [document.page_xref(link["page"]) for link in links]:
+        for link, (xref, _) in zip(links, annotations, strict=True):
+            link["xref"] = xref
+    return links
+
+
+def _literal_pdf_numbers(
+    source: pymupdf.Document, value: str, expected_count: int, *, allow_null: bool = False
+) -> str | None:
+    expanded = _PDF_REFERENCE.sub(lambda match: source.xref_object(int(match[1]), compressed=True).strip(), value)
+    tokens = expanded.split()
+    if len(tokens) != expected_count:
+        return None
+    if any(_PDF_NUMBER.fullmatch(token) is None and not (allow_null and token == "null") for token in tokens):
+        return None
+    return " ".join(tokens)
 
 
 def _restore_explicit_gotos(
@@ -68,23 +117,47 @@ def _restore_explicit_gotos(
         xref, copied_xref = original.get("xref", 0), copied.get("xref", 0)
         if xref <= 0 or copied_xref <= 0:
             continue
-        value_type, value = source.xref_get_key(xref, "A/D")
-        if value_type == "null":
-            value_type, value = source.xref_get_key(xref, "Dest")
-        if value_type == "xref":
-            value = source.xref_object(int(value.split()[0]), compressed=True)
-        elif value_type != "array":
-            continue
-        match = _EXPLICIT_GOTO.fullmatch(value.strip())
+        match = _explicit_goto(source, xref)
         if match is None or int(match[1]) != source.page_xref(original["page"]):
             continue
         if destination.xref_get_key(copied_xref, "A/S") != ("name", "/GoTo"):
             continue
+        view, operands = match[2], match[3]
+        count = _DESTINATION_OPERANDS.get(view)
+        if count is None:
+            continue
+        numbers = _literal_pdf_numbers(source, operands, count, allow_null=True)
+        if numbers is None:
+            continue
         target_xref = destination.page_xref(copied["page"])
-        destination.xref_set_key(copied_xref, "A/D", f"[{target_xref} 0 R {match[2]}]")
-        rect_type, rect = source.xref_get_key(xref, "Rect")
-        if rect_type == "array":
-            destination.xref_set_key(copied_xref, "Rect", rect)
+        destination.xref_set_key(copied_xref, "A/D", f"[{target_xref} 0 R {view} {numbers}]")
+        rect = _array_value(source, xref, "Rect")
+        if rect is not None and (coordinates := _literal_pdf_numbers(source, rect[1:-1], 4)) is not None:
+            destination.xref_set_key(copied_xref, "Rect", f"[{coordinates}]")
+
+
+def _has_shared_form_fields(source: pymupdf.Document, cancellation) -> bool:
+    """Detect field trees that separate page grafts cannot safely project."""
+    if not source.is_form_pdf:
+        return False
+    page_by_field: dict[int, int] = {}
+    for page_index in range(source.page_count):
+        cancellation.check()
+        for xref, _, _ in source.page_annot_xrefs(page_index):
+            if source.xref_get_key(xref, "Subtype") != ("name", "/Widget"):
+                continue
+            ancestors = {xref}
+            while True:
+                parent_type, parent = source.xref_get_key(xref, "Parent")
+                if parent_type != "xref":
+                    break
+                xref = int(parent.split()[0])
+                if xref in ancestors:
+                    return True
+                ancestors.add(xref)
+            if page_by_field.setdefault(xref, page_index) != page_index:
+                return True
+    return False
 
 
 def _inline_indirect_acroform(source: pymupdf.Document) -> None:
@@ -347,6 +420,15 @@ class PdfSplitter:
                     )
 
                 context.cancellation.check()
+                if _has_shared_form_fields(src, context.cancellation):
+                    msg = "Cannot safely split a PDF with form fields shared across pages."
+                    code = "PDF-SPLIT-UNSUPPORTED-SHARED-FIELDS"
+                    return ConversionResult(
+                        task_id=task_id,
+                        success=False,
+                        error=ConversionErrorInfo(error_type="invalid_input", message=msg, diagnostic_code=code),
+                        diagnostics=[ConversionDiagnostic(level="error", message=msg, code=code)],
+                    )
                 _inline_indirect_acroform(src)
 
                 if selection.mode == "every_page":

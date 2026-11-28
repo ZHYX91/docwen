@@ -33,7 +33,7 @@ square brackets. A rejected batch member contributes to the totals and nonzero e
   (`DOC`/`WPS`/`RTF`/`ODT` is pre-converted to DOCX by the Application layer); the default is read-only.
 - `number markdown FILE --operation add|remove [--scheme ID] (--output PATH | --in-place)`: explicitly add or remove Markdown heading numbering.
 - `merge pdf|tables|images FILE... --output PATH`: create one exact aggregate output.
-- `split pdf FILE --pages RANGE --output-dir DIR`: split selected PDF pages.
+- `split pdf FILE --pages RANGE --output-dir DIR`: split selected PDF pages. If a form field is shared across pages, DocWen rejects the split before writing any output.
 - `batch convert|validate FILE...`: run an explicit multi-file operation. Batch validation accepts the
   same DOCX, Markdown, and legacy Word-family content as single-file validation.
 - `gui open [FILE]|open-settings --section proofread|activate|status`: stable GUI control surface. `gui open` starts or activates the GUI; an optional absolute `FILE` is opened after startup. `gui open-settings` opens or focuses the non-blocking singleton Settings dialog at the semantic proofread section, starting the GUI only when no instance is running. An already running GUI must advertise `open_settings` and `proofread` through `gui status`; an older running GUI fails with typed `capability_unavailable` instead of launching a second instance or falling back to the main window. `gui activate` only targets an already running GUI.
