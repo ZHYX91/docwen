@@ -36,7 +36,7 @@
    License: MIT
    Copyright: Microsoft Corporation
    Website: https://onnxruntime.ai/
-   Locked releases: https://pypi.org/project/onnxruntime/1.23.2/ (Linux)
+   Locked releases: https://pypi.org/project/onnxruntime/1.31.1/ (Linux)
                     https://pypi.org/project/onnxruntime/1.24.4/ (Windows/macOS)
    Notices: licenses/onnxruntime/LICENSE and licenses/onnxruntime/ThirdPartyNotices.txt
 
@@ -85,10 +85,10 @@
     Copyright: Sébastien Eustace
     Website: https://github.com/sdispater/tomlkit
 
-15. watchdog
-    License: Apache-2.0
-    Copyright: Yesudeep Mangalapilly and contributors
-    Website: https://github.com/gorakhargosh/watchdog
+15. pikepdf and QPDF
+    License: MPL-2.0 for pikepdf and Apache-2.0 for QPDF.
+    Sources: SOURCE_CODE.txt
+    Notices: licenses/pikepdf/ and licenses/qpdf/
 
 16. pywin32
     License: PSF (Python Software Foundation License)
@@ -149,10 +149,11 @@
     Copyright: Delgan
     Website: https://github.com/Delgan/loguru
 
-27. pydantic
-    License: MIT
-    Copyright: Pydantic contributors
-    Website: https://github.com/pydantic/pydantic
+27. Mistune
+    License: BSD-3-Clause
+    Copyright: Hsiaoming Yang
+    Website: https://github.com/lepture/mistune
+    License text: licenses/mistune/LICENSE
 
 28. platformdirs
     License: MIT

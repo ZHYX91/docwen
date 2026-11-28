@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.metadata
+import re
 import shutil
 import tomllib
 from pathlib import Path, PurePosixPath
@@ -157,9 +158,21 @@ def test_release_payload_has_corresponding_source_and_bundled_licenses(tmp_path:
     sources = (tmp_path / "SOURCE_CODE.txt").read_text(encoding="utf-8")
     assert "Corresponding project source: https://github.com/ZHYX91/docwen/tree/" in sources
     assert "pymupdf_layout/tree/1.28.2" in sources
+    assert "pikepdf/tree/v10.5.1" in sources
+    assert "qpdf/tree/v12.3.2" in sources
+    locked = tomllib.loads(Path("uv.lock").read_text(encoding="utf-8"))
+    runtime_versions = {package["version"] for package in locked["package"] if package["name"] == "onnxruntime"}
+    notices = (tmp_path / "LICENSE_THIRD_PARTY.txt").read_text(encoding="utf-8")
+    for text in (sources, notices):
+        assert set(re.findall(r"https://pypi.org/project/onnxruntime/([^/]+)/", text)) == runtime_versions
+
     licenses = tmp_path / "licenses"
     assert "AFFERO GPL" in (licenses / "pymupdf-layout" / "COPYING").read_text(encoding="utf-8")
     assert (licenses / "qt" / "LGPL-3.0-only.txt").stat().st_size > 7_000
     assert (licenses / "pyside6-fluent-widgets" / "LICENSE").stat().st_size > 30_000
     assert "Microsoft Corporation" in (licenses / "onnxruntime" / "LICENSE").read_text(encoding="utf-8")
     assert (licenses / "onnxruntime" / "ThirdPartyNotices.txt").stat().st_size > 0
+    assert "Mozilla Public License" in (licenses / "pikepdf" / "LICENSE.txt").read_text(encoding="utf-8")
+    assert "Apache License" in (licenses / "qpdf" / "LICENSE.txt").read_text(encoding="utf-8")
+    assert (licenses / "qpdf" / "NOTICE.md").stat().st_size > 0
+    assert "Hsiaoming Yang" in (licenses / "mistune" / "LICENSE").read_text(encoding="utf-8")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 from importlib import metadata
 from pathlib import Path
 
@@ -12,13 +13,24 @@ _PROJECT_NOTICES = ("LICENSE", "LICENSE_THIRD_PARTY.txt", "NOTICE.txt")
 _QT_NOTICES = ("GPL-3.0-only.txt", "LGPL-3.0-only.txt", "Qt-GPL-exception-1.0.txt")
 _DIST_INFO_NOTICES = {
     "easyofd": ("LICENSE",),
+    "et-xmlfile": ("LICENCE.python", "LICENCE.rst"),
     "img2pdf": ("LICENSE",),
+    "lxml": ("LICENSE.txt", "LICENSES.txt"),
+    "mistune": ("LICENSE",),
+    "openpyxl": ("LICENCE.rst",),
+    "pandas": ("LICENSE",),
+    "pdf2docx": ("LICENSE",),
+    "pikepdf": ("LICENSE.txt",),
     "pillow": ("LICENSE",),
     "pillow-heif": ("LICENSE.txt", "LICENSES_bundled.txt"),
     "psutil": ("LICENSE",),
     "pymupdf": ("COPYING",),
     "pymupdf-layout": ("COPYING",),
     "pymupdf4llm": ("COPYING",),
+    "python-docx": ("LICENSE",),
+    "python-pptx": ("LICENSE",),
+    "pyyaml": ("LICENSE",),
+    "tomlkit": ("LICENSE",),
 }
 _PACKAGE_NOTICES = {
     "onnxruntime": ("onnxruntime/LICENSE", "onnxruntime/ThirdPartyNotices.txt"),
@@ -71,9 +83,17 @@ def stage_package_licenses(source_root: Path, payload: Path, release_version: st
     )
 
     licenses = payload / "licenses"
-    for name, filename in (("rapidocr", "LICENSE"), ("x265", "COPYING")):
+    for name, filename in (
+        ("rapidocr", "LICENSE"),
+        ("qpdf", "LICENSE.txt"),
+        ("qpdf", "NOTICE.md"),
+        ("x265", "COPYING"),
+    ):
         _copy_notice(source_root / "licenses" / name / filename, licenses / name / filename)
     dist_info_notices = dict(_DIST_INFO_NOTICES)
+    if sys.platform == "win32":
+        # The Windows wheel also ships the MSVC runtime attribution.
+        dist_info_notices["pikepdf"] += ("licenses-for-wheels.txt",)
     if with_gui:
         dist_info_notices["pyside6-fluent-widgets"] = ("LICENSE",)
         for filename in _QT_NOTICES:

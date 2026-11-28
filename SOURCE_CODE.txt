@@ -18,6 +18,8 @@ PyMuPDF4LLM 1.28.2: https://github.com/pymupdf/pymupdf4llm/tree/1.28.2
 PyMuPDF Layout 1.28.2, including its model resources:
 https://github.com/ArtifexSoftware/pymupdf_layout/tree/1.28.2
 img2pdf 0.6.3 (source distribution): https://pypi.org/project/img2pdf/0.6.3/#files
+pikepdf 10.5.1: https://github.com/pikepdf/pikepdf/tree/v10.5.1
+QPDF 12.3.2: https://github.com/qpdf/qpdf/tree/v12.3.2
 
 GUI stack (where included)
 --------------------------
@@ -50,7 +52,7 @@ licenses/pillow-heif/LICENSES_bundled.txt is the original upstream wheel
 notice. Some version links in that notice predate the 1.3.0 build scripts.
 ONNX Runtime (MIT): https://onnxruntime.ai/
 Official versioned distributions:
-https://pypi.org/project/onnxruntime/1.23.2/ (Linux)
+https://pypi.org/project/onnxruntime/1.31.1/ (Linux)
 https://pypi.org/project/onnxruntime/1.24.4/ (Windows/macOS)
 ONNX Runtime's MIT and third-party notices are included in the package.
 
