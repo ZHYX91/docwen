@@ -57,6 +57,9 @@ Use this index for current behavior, supported contracts and maintenance instruc
 - [User profile paths](specs/user-profile.md)
 - [Web archives and HTML image references](specs/web-archives.md)
 
+> The resolved-plan capability rejects `remove_numbering`, `add_numbering`, and `numbering_scheme`, never parses a
+> manual Heading prefix, and is guarded by an explicit negative capability gate.
+
 ## Design decisions
 
 - [Each line as a Word paragraph](architecture/decisions/each-line-paragraph.md)
