@@ -13,6 +13,23 @@ from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 pytestmark = pytest.mark.gui
 
 
+def test_worker_finishes_after_qt_destroys_its_signal_source(qtbot) -> None:
+    from PySide6.QtCore import QCoreApplication, QEvent
+    from shiboken6 import isValid
+
+    from docwen_gui.qt_bridge.background_operation import _OperationTask
+
+    task = _OperationTask(lambda _token: "finished")
+    task.signals.deleteLater()
+    QCoreApplication.sendPostedEvents(task.signals, QEvent.Type.DeferredDelete)
+    assert not isValid(task.signals)
+
+    task.run()
+
+    assert task.result == "finished"
+    assert task.error is None
+
+
 def test_destroyed_owner_does_not_destroy_running_worker(qtbot) -> None:
     from PySide6.QtCore import QCoreApplication, QEvent, QObject
     from shiboken6 import isValid

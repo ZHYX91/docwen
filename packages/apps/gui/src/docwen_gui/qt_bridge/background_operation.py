@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
+from shiboken6 import isValid
 
 from docwen_core.cancellation import CancellationToken
 
@@ -30,7 +31,13 @@ class _OperationTask(QRunnable):
         except Exception as exc:
             self.error = exc
         finally:
-            self.signals.finished.emit()
+            try:
+                self.signals.finished.emit()
+            except RuntimeError:
+                # Qt may destroy the sender during application teardown while
+                # the thread is finishing. A live sender must still propagate errors.
+                if isValid(self.signals):
+                    raise
 
 
 class BackgroundOperation(QObject):
