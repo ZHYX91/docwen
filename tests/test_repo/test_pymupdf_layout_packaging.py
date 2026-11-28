@@ -149,7 +149,6 @@ def test_build_collection_preflight_fails_closed_when_pyinstaller_skips_layout_d
         build._validate_pymupdf_layout_pyinstaller_data_collection()
 
 
-
 def test_release_payload_has_corresponding_source_and_bundled_licenses(tmp_path: Path) -> None:
     from scripts.build.package_licenses import stage_package_licenses
 

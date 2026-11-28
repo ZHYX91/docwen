@@ -66,7 +66,9 @@ def stage_package_licenses(source_root: Path, payload: Path, release_version: st
     """Keep version-matched notices outside PyInstaller's import graph."""
     for filename in _PROJECT_NOTICES:
         _copy_notice(source_root / filename, payload / filename)
-    (payload / "SOURCE_CODE.txt").write_text(_source_entry(source_root, release_version), encoding="utf-8", newline="\n")
+    (payload / "SOURCE_CODE.txt").write_text(
+        _source_entry(source_root, release_version), encoding="utf-8", newline="\n"
+    )
 
     licenses = payload / "licenses"
     for name, filename in (("rapidocr", "LICENSE"), ("x265", "COPYING")):
