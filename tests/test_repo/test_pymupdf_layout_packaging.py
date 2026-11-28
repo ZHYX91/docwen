@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.metadata
 import re
 import shutil
+import subprocess
 import tomllib
 from pathlib import Path, PurePosixPath
 
@@ -160,6 +161,7 @@ def test_release_payload_has_corresponding_source_and_bundled_licenses(tmp_path:
     assert "pymupdf_layout/tree/1.28.2" in sources
     assert "pikepdf/tree/v10.5.1" in sources
     assert "qpdf/tree/v12.3.2" in sources
+    assert "geos/tree/3.13.1" in sources
     locked = tomllib.loads(Path("uv.lock").read_text(encoding="utf-8"))
     runtime_versions = {package["version"] for package in locked["package"] if package["name"] == "onnxruntime"}
     notices = (tmp_path / "LICENSE_THIRD_PARTY.txt").read_text(encoding="utf-8")
@@ -176,3 +178,19 @@ def test_release_payload_has_corresponding_source_and_bundled_licenses(tmp_path:
     assert "Apache License" in (licenses / "qpdf" / "LICENSE.txt").read_text(encoding="utf-8")
     assert (licenses / "qpdf" / "NOTICE.md").stat().st_size > 0
     assert "Hsiaoming Yang" in (licenses / "mistune" / "LICENSE").read_text(encoding="utf-8")
+    assert "GNU LESSER GENERAL PUBLIC LICENSE" in (licenses / "shapely" / "LICENSE_GEOS").read_text(encoding="utf-8")
+
+
+def test_source_archive_nested_in_another_repository_never_claims_its_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scripts.build.package_licenses import _source_entry
+
+    (tmp_path / "SOURCE_CODE.txt").write_text("Unmodified third-party source instructions", encoding="utf-8")
+    outer_revision = "a" * 40
+    monkeypatch.setattr(subprocess, "check_output", lambda *args, **kwargs: f"docwen-source/\n{outer_revision}\n")
+    notice = _source_entry(tmp_path, "0.24.0")
+    assert "Build revision unavailable" in notice
+    assert "Unmodified third-party source instructions" in notice
+    assert outer_revision not in notice
+    assert "tree/0.24.0" not in notice

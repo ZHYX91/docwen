@@ -30,6 +30,7 @@ _DIST_INFO_NOTICES = {
     "python-docx": ("LICENSE",),
     "python-pptx": ("LICENSE",),
     "pyyaml": ("LICENSE",),
+    "shapely": ("LICENSE.txt", "LICENSE_GEOS"),
     "tomlkit": ("LICENSE",),
 }
 _PACKAGE_NOTICES = {
@@ -58,20 +59,22 @@ def _copy_notice(source: Path, destination: Path) -> None:
 
 def _source_entry(source_root: Path, release_version: str) -> str:
     try:
-        revision = subprocess.check_output(
-            ["git", "rev-parse", "--verify", "HEAD"], cwd=source_root, stderr=subprocess.DEVNULL, text=True
-        ).strip()
+        git_context = subprocess.check_output(
+            ["git", "rev-parse", "--show-prefix", "HEAD"], cwd=source_root, stderr=subprocess.DEVNULL, text=True
+        )
     except (OSError, subprocess.CalledProcessError):
-        revision = release_version
-    if not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9]+\.[0-9]+\.[0-9]+)", revision):
-        raise RuntimeError("Release source could not be identified by commit or version")
+        git_context = ""
+    prefix, _, revision = git_context.partition("\n")
+    revision = revision.strip()
+    if not prefix and re.fullmatch(r"[0-9a-f]{40}", revision):
+        source_links = (
+            f"Corresponding project source: https://github.com/ZHYX91/docwen/tree/{revision}\n"
+            f"Download project source: https://github.com/ZHYX91/docwen/archive/{revision}.tar.gz\n"
+        )
+    else:
+        source_links = "Build revision unavailable. Obtain the exact DocWen source from this package's distributor.\n"
     text = (source_root / "SOURCE_CODE.txt").read_text(encoding="utf-8")
-    return (
-        f"DocWen {release_version}\n"
-        f"Corresponding project source: https://github.com/ZHYX91/docwen/tree/{revision}\n"
-        f"Download project source: https://github.com/ZHYX91/docwen/archive/{revision}.tar.gz\n\n"
-        f"{text}"
-    )
+    return f"DocWen {release_version}\n{source_links}\n{text}"
 
 
 def stage_package_licenses(source_root: Path, payload: Path, release_version: str, *, with_gui: bool) -> None:
@@ -94,6 +97,7 @@ def stage_package_licenses(source_root: Path, payload: Path, release_version: st
     if sys.platform == "win32":
         # The Windows wheel also ships the MSVC runtime attribution.
         dist_info_notices["pikepdf"] += ("licenses-for-wheels.txt",)
+        dist_info_notices["shapely"] += ("LICENSE_win32",)
     if with_gui:
         dist_info_notices["pyside6-fluent-widgets"] = ("LICENSE",)
         for filename in _QT_NOTICES:

@@ -35,6 +35,9 @@ https://github.com/zhiyiYo/PyQt-Fluent-Widgets/tree/d90c008c534b2b0079ce7981d19b
 
 Other redistributed components
 ------------------------------
+Shapely 2.1.2: https://github.com/shapely/shapely/tree/2.1.2
+GEOS 3.13.1: https://github.com/libgeos/geos/tree/3.13.1
+
 OpenCV Python wheel 4.13.0.92 and its build inputs: https://github.com/opencv/opencv-python/tree/92
 OpenCV core 4.13.0: https://github.com/opencv/opencv/tree/4.13.0
 The OpenCV wheel's third-party notices accompany these packages in

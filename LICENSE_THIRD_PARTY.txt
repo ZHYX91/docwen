@@ -97,8 +97,8 @@
 
 17. pdf2docx
     License: MIT
-    Copyright: dothinking
-    Website: https://github.com/dothinking/pdf2docx
+    Copyright: Artifex Software, Inc.
+    Release: https://pypi.org/project/pdf2docx/0.5.12/
 
 18. latex2mathml
     License: MIT
@@ -117,8 +117,8 @@
 
 21. easyofd
     License: Apache-2.0
-    Copyright: guowanghuai
-    Website: https://github.com/guowanghuai/easyofd
+    Copyright: Quan guanyu
+    Source: https://pypi.org/project/easyofd/20260427/#files
 
 22. pillow-heif
     License: BSD-3-Clause for the Python project; native components have separate terms.
@@ -175,6 +175,11 @@
 31. psutil
     License: BSD-3-Clause
     Source: https://github.com/giampaolo/psutil
+
+32. Shapely and GEOS
+    License: BSD-3-Clause for Shapely and LGPL-2.1-or-later for GEOS.
+    Sources: SOURCE_CODE.txt
+    Notices: licenses/shapely/
 
 ================================================================================
 
