@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ar.md)
 
 DocWen 在本機轉換辦公檔案。它能把 Word 轉成 Markdown、把 Markdown 匯出為 Word、從 PDF 中擷取文字和表格，也能處理試算表、圖片和常見的檔案整理工作。日常操作使用圖形介面；需要批次自動化時使用命令列。
 
@@ -38,13 +38,13 @@ DocWen 支援 DOCX、XLSX、PDF 和一些舊版辦公、圖片格式，但**並�
 ![傳入 Markdown，選擇範本並產生 Word 文件（截圖為英文介面）。](../assets/screenshots/markdown-generation-en.png)
 
 
-更新日誌：見 [CHANGELOG.md](../CHANGELOG.md)
+更新日誌：見 [CHANGELOG.md](../../CHANGELOG.md)
 
 ## 🚀 快速開始
 
 ### 下載成品並啟動
 
-從 [Releases](https://github.com/ZHYX91/docwen/releases) 下載符合系統的壓縮檔。支援 **Windows x64**、**Ubuntu 24.04 x64** 與 **Apple 晶片 macOS 14+**，不需安裝 Python。完整解壓縮後，Windows 開啟 `DocWen.exe`，Ubuntu 執行 `./DocWen`；Mac 將 `DocWen.app` 移到「應用程式」，依[首次啟動指南](macos.md)開啟。Ubuntu 與 macOS 另有純命令列套件。其他 Linux 發行版與 Intel Mac 不屬於安裝包目標。
+從 [Releases](https://github.com/ZHYX91/docwen/releases) 下載符合系統的壓縮檔。支援 **Windows x64**、**Ubuntu 24.04 x64** 與 **Apple 晶片 macOS 14+**，不需安裝 Python。完整解壓縮後，Windows 開啟 `DocWen.exe`，Ubuntu 執行 `./DocWen`；Mac 將 `DocWen.app` 移到「應用程式」，依[首次啟動指南](../guides/macos.md)開啟。Ubuntu 與 macOS 另有純命令列套件。其他 Linux 發行版與 Intel Mac 不屬於安裝包目標。
 
 各版本提供的附件可能不同，請以所選發行版實際列出的系統包為準；舊版可能沒有 macOS 包。
 
@@ -64,7 +64,7 @@ uv run --frozen docwen --help
 
 ### macOS 安裝說明
 
-Mac 套件保留 ad-hoc 簽章，未使用 Developer ID 簽章或 Apple 公證。首次開啟與更新方法見 [macOS 安裝指南](macos.md)。
+Mac 套件保留 ad-hoc 簽章，未使用 Developer ID 簽章或 Apple 公證。首次開啟與更新方法見 [macOS 安裝指南](../guides/macos.md)。
 
 **LibreOffice 支援（可選）**
 
@@ -111,7 +111,7 @@ Mac 套件保留 ad-hoc 簽章，未使用 Developer ID 簽章或 Apple 公證�
 
 ## 🖥️ 圖形介面使用
 
-工作開始時會顯示來自實際請求的選項摘要。範本可依名稱或用途搜尋；「本次工作階段最近使用」列出已啟動工作所用的範本，不變更預設範本。表格彙整範圍、模式及結果核對方式請見[彙整指南](table-merge.md)。
+工作開始時會顯示來自實際請求的選項摘要。範本可依名稱或用途搜尋；「本次工作階段最近使用」列出已啟動工作所用的範本，不變更預設範本。表格彙整範圍、模式及結果核對方式請見[彙整指南](../guides/table-merge.md)。
 
 ### 介面概覽
 

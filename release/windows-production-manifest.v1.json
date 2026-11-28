@@ -253,7 +253,7 @@
     "excluded": [
       "assets/screenshots/**"
     ],
-    "readmeSourceGlob": "docs/user-guides/README.*.md"
+    "readmeSourceGlob": "docs/i18n/README.*.md"
   },
   "channels": {
     "offlineZip": {

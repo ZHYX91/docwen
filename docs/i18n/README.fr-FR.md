@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ar.md)
 
 DocWen est un outil local de conversion de documents et de tableaux pour Word, Markdown, Excel et des formats bureautiques associés. Il privilégie des flux de travail hors ligne fiables et conserve le traitement des documents sur la machine de l'utilisateur.
 
@@ -38,13 +38,13 @@ Importez du Markdown et choisissez un modèle pour créer un document Word (inte
 ![Importez du Markdown et choisissez un modèle pour créer un document Word (interface en anglais).](../assets/screenshots/markdown-generation-en.png)
 
 
-Journal des modifications : voir [CHANGELOG.md](../CHANGELOG.md)
+Journal des modifications : voir [CHANGELOG.md](../../CHANGELOG.md)
 
 ## 🚀 Démarrage rapide
 
 ### Télécharger et lancer
 
-Téléchargez l’archive adaptée depuis [Releases](https://github.com/ZHYX91/docwen/releases). Les paquets prennent en charge **Windows x64**, **Ubuntu 24.04 x64** et **Apple Silicon sous macOS 14+**, sans installation de Python. Extrayez toute l’archive : ouvrez `DocWen.exe` sous Windows, lancez `./DocWen` sous Ubuntu ; sous macOS, déplacez `DocWen.app` dans Applications et suivez le [guide de premier lancement](macos.md). Ubuntu et macOS disposent aussi de paquets CLI seuls. Les autres distributions Linux et les Mac Intel ne sont pas ciblés.
+Téléchargez l’archive adaptée depuis [Releases](https://github.com/ZHYX91/docwen/releases). Les paquets prennent en charge **Windows x64**, **Ubuntu 24.04 x64** et **Apple Silicon sous macOS 14+**, sans installation de Python. Extrayez toute l’archive : ouvrez `DocWen.exe` sous Windows, lancez `./DocWen` sous Ubuntu ; sous macOS, déplacez `DocWen.app` dans Applications et suivez le [guide de premier lancement](../guides/macos.md). Ubuntu et macOS disposent aussi de paquets CLI seuls. Les autres distributions Linux et les Mac Intel ne sont pas ciblés.
 
 Les fichiers disponibles varient selon la version. Choisissez une archive réellement proposée pour votre système ; les anciennes versions peuvent ne pas contenir de paquet macOS.
 
@@ -64,7 +64,7 @@ uv run --frozen docwen --help
 
 ### Notes pour macOS
 
-Les paquets Mac gardent une signature ad-hoc, sans Developer ID ni notarisation Apple. Voir [installation et premier lancement](macos.md).
+Les paquets Mac gardent une signature ad-hoc, sans Developer ID ni notarisation Apple. Voir [installation et premier lancement](../guides/macos.md).
 
 **Support LibreOffice (Optionnel)**
 
@@ -111,7 +111,7 @@ Les paquets utilisent leur propre moteur d’images. Vérifiez la version instal
 
 ## 🖥️ Utilisation de l'interface graphique
 
-Au démarrage d’une tâche, ses options réelles sont affichées. Recherchez les modèles par nom ou indication d’usage ; « Utilisés dans cette session » répertorie ceux des tâches démarrées sans changer le modèle par défaut. Pour les tableaux, consultez [le périmètre, les modes et la vérification du résultat](table-merge.md).
+Au démarrage d’une tâche, ses options réelles sont affichées. Recherchez les modèles par nom ou indication d’usage ; « Utilisés dans cette session » répertorie ceux des tâches démarrées sans changer le modèle par défaut. Pour les tableaux, consultez [le périmètre, les modes et la vérification du résultat](../guides/table-merge.md).
 
 ### Aperçu de l'interface
 

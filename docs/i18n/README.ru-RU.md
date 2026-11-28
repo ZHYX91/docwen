@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/ZHYX91/docwen/main/assets/icon.svg" alt="DocWen logo" width="120">
 </p>
 
-[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)
+[English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.vi-VN.md) · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ar.md)
 
 DocWen — локальный инструмент для преобразования документов и таблиц Word, Markdown, Excel и других офисных форматов. Он рассчитан на надёжную работу без сети и обрабатывает документы на компьютере пользователя.
 
@@ -38,13 +38,13 @@ DocWen — локальный инструмент для преобразова
 ![Импортируйте Markdown и выберите шаблон для создания документа Word (интерфейс на английском).](../assets/screenshots/markdown-generation-en.png)
 
 
-Журнал изменений: см. [CHANGELOG.md](../CHANGELOG.md)
+Журнал изменений: см. [CHANGELOG.md](../../CHANGELOG.md)
 
 ## 🚀 Быстрый старт
 
 ### Скачать и запустить
 
-Скачайте подходящий архив со страницы [Releases](https://github.com/ZHYX91/docwen/releases). Пакеты поддерживают **Windows x64**, **Ubuntu 24.04 x64** и **Apple Silicon с macOS 14+**; установка Python не нужна. Распакуйте весь архив: в Windows откройте `DocWen.exe`, в Ubuntu запустите `./DocWen`; в macOS перенесите `DocWen.app` в Программы и следуйте [инструкции первого запуска](macos.md). Для Ubuntu и macOS также есть отдельные CLI-пакеты. Другие дистрибутивы Linux и Mac с Intel не являются целевыми платформами пакетов.
+Скачайте подходящий архив со страницы [Releases](https://github.com/ZHYX91/docwen/releases). Пакеты поддерживают **Windows x64**, **Ubuntu 24.04 x64** и **Apple Silicon с macOS 14+**; установка Python не нужна. Распакуйте весь архив: в Windows откройте `DocWen.exe`, в Ubuntu запустите `./DocWen`; в macOS перенесите `DocWen.app` в Программы и следуйте [инструкции первого запуска](../guides/macos.md). Для Ubuntu и macOS также есть отдельные CLI-пакеты. Другие дистрибутивы Linux и Mac с Intel не являются целевыми платформами пакетов.
 
 Набор файлов зависит от версии. Выбирайте архив, действительно указанный для вашей системы; в старых выпусках пакета для macOS может не быть.
 
@@ -64,7 +64,7 @@ uv run --frozen docwen --help
 
 ### Примечания для macOS
 
-Пакеты Mac имеют подпись ad-hoc, без Developer ID и нотариального заверения Apple. См. [установку и первый запуск](macos.md).
+Пакеты Mac имеют подпись ad-hoc, без Developer ID и нотариального заверения Apple. См. [установку и первый запуск](../guides/macos.md).
 
 **Поддержка LibreOffice (необязательно)**
 
@@ -111,7 +111,7 @@ uv run --frozen docwen --help
 
 ## 🖥️ Использование графического интерфейса
 
-При запуске задания отображаются его фактические параметры. Шаблоны можно искать по имени или подсказке; список недавно использованных в этом сеансе содержит шаблоны запущенных заданий и не меняет выбор по умолчанию. Для таблиц см. [область объединения, режимы и проверку результата](table-merge.md).
+При запуске задания отображаются его фактические параметры. Шаблоны можно искать по имени или подсказке; список недавно использованных в этом сеансе содержит шаблоны запущенных заданий и не меняет выбор по умолчанию. Для таблиц см. [область объединения, режимы и проверку результата](../guides/table-merge.md).
 
 ### Обзор интерфейса
 

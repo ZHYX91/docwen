@@ -55,17 +55,17 @@ LOCALIZED_READMES = (
 
 LANGUAGE_NAV = (
     "[English](https://github.com/ZHYX91/docwen/blob/main/README.md)"
-    " · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md)"
-    " · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md)"
-    " · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md)"
-    " · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md)"
-    " · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md)"
-    " · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md)"
-    " · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md)"
-    " · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md)"
-    " · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md)"
-    " · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)"
-    " · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ar.md)"
+    " · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-CN.md)"
+    " · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.zh-TW.md)"
+    " · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.de-DE.md)"
+    " · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.fr-FR.md)"
+    " · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.es-ES.md)"
+    " · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.pt-BR.md)"
+    " · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ru-RU.md)"
+    " · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ja-JP.md)"
+    " · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ko-KR.md)"
+    " · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.vi-VN.md)"
+    " · [العربية](https://github.com/ZHYX91/docwen/blob/main/docs/i18n/README.ar.md)"
 )
 LOGO_BLOCK = (
     '<p align="center">\n'
@@ -101,25 +101,23 @@ BANNED_CURRENT_TOKENS = (
     "协作交接",
     "parity_goal_prompt.txt",
     "cli_json_output_schema",
-    "docs/i18n/",
-    "docs/guides/",
-    "docs/architecture/",
 )
 
 
 def test_current_documentation_inventory_is_complete() -> None:
     missing = sorted(path for path in REQUIRED_DOCS if not (DOCS / path).is_file())
     assert not missing
-    assert {path.name for path in (DOCS / "user-guides").glob("*.md")} == set(LOCALIZED_READMES) | {
-        "macos.md",
-        "table-merge.md",
-        "heading-numbering.md",
-    }
+    assert {path.name for path in (DOCS / "i18n").glob("*.md")} == set(LOCALIZED_READMES)
+    assert (ROOT / "CHANGELOG.md").is_file()
+    assert (ROOT / "SECURITY.md").is_file()
+    assert (DOCS / "guides" / "macos.md").is_file()
+    assert (DOCS / "guides" / "table-merge.md").is_file()
+    assert (DOCS / "guides" / "heading-numbering.md").is_file()
     assert {path.name for path in (DOCS / "assets" / "screenshots").glob("*.png")} == SCREENSHOTS
 
 
 def test_v090_changelog_explicitly_declares_removed_python_import_surfaces() -> None:
-    text = (DOCS / "CHANGELOG.md").read_text(encoding="utf-8")
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     chinese_match = re.search(
         r"### 破坏性变化（中文）\n(?P<section>.*?)(?=\n### Breaking changes \(English\))",
         text,
@@ -151,7 +149,7 @@ def test_v090_changelog_explicitly_declares_removed_python_import_surfaces() -> 
 
 
 def test_public_readmes_share_one_language_navigation_contract() -> None:
-    public_readmes = [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
+    public_readmes = [ROOT / "README.md", *(DOCS / "i18n" / name for name in LOCALIZED_READMES)]
 
     for path in public_readmes:
         text = path.read_text(encoding="utf-8")
@@ -165,7 +163,7 @@ def test_public_readmes_share_one_language_navigation_contract() -> None:
 
 
 def _public_readme_paths() -> list[Path]:
-    return [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
+    return [ROOT / "README.md", *(DOCS / "i18n" / name for name in LOCALIZED_READMES)]
 
 
 CLI_SECTION_HEADING_MARKERS = {
@@ -274,7 +272,7 @@ def test_public_readmes_describe_current_assistant_platform_boundary() -> None:
 
 
 def test_public_readmes_and_architecture_describe_the_network_guard_boundary() -> None:
-    public_readmes = [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
+    public_readmes = [ROOT / "README.md", *(DOCS / "i18n" / name for name in LOCALIZED_READMES)]
     assert {path.name for path in public_readmes} == set(NETWORK_GUARD_EXTERNAL_PROCESS_MARKERS)
 
     # Public guides explain the user-visible scope and link to one technical
@@ -374,20 +372,20 @@ def test_readmes_do_not_reintroduce_stale_localization_guidance() -> None:
         content = path.read_text(encoding="utf-8")
         assert not any(phrase in content for phrase in obsolete), path.name
 
-    arabic = (DOCS / "user-guides" / "README.ar.md").read_text(encoding="utf-8")
+    arabic = (DOCS / "i18n" / "README.ar.md").read_text(encoding="utf-8")
     ocr = next(line for line in arabic.splitlines() if line.startswith("**التعرف على النص (OCR):**"))
     assert "لغة إخراج المهمة" in ocr
     assert "اتباع لغة الواجهة" not in ocr
 
     for locale in ("es-ES", "ko-KR", "vi-VN"):
-        guide = (DOCS / "user-guides" / f"README.{locale}.md").read_text(encoding="utf-8")
+        guide = (DOCS / "i18n" / f"README.{locale}.md").read_text(encoding="utf-8")
         assert "title: Test Document" not in guide
         assert "## Test Title" not in guide
         assert "This is the test body content." not in guide
         assert "## I. Work Requirements." not in guide
         assert "This meeting..." not in guide
 
-    vietnamese = (DOCS / "user-guides" / "README.vi-VN.md").read_text(encoding="utf-8")
+    vietnamese = (DOCS / "i18n" / "README.vi-VN.md").read_text(encoding="utf-8")
     assert "Text Proofreading" not in vietnamese
     assert "Export MD" not in vietnamese
 
@@ -420,7 +418,7 @@ def test_public_guides_explain_supported_proofreading_and_release_selection() ->
 
     # Arabic is intentionally a compact starting point, not a partial copy
     # presented as an equally detailed full reference.
-    arabic = (DOCS / "user-guides" / "README.ar.md").read_text(encoding="utf-8")
+    arabic = (DOCS / "i18n" / "README.ar.md").read_text(encoding="utf-8")
     assert "دليل عربي مختصر" in arabic
     assert "(../../README.md)" in arabic
 
@@ -485,7 +483,7 @@ def test_current_documentation_local_links_resolve() -> None:
 def test_heading_guide_uses_current_controls_and_plain_marker_help(readme_name: str, locale: str) -> None:
     import tomllib
 
-    readme = ROOT / "README.md" if readme_name == "README.md" else DOCS / "user-guides" / readme_name
+    readme = ROOT / "README.md" if readme_name == "README.md" else DOCS / "i18n" / readme_name
     catalog = tomllib.loads((ROOT / "i18n" / "locales" / f"{locale}.toml").read_text(encoding="utf-8"))
     text = catalog["settings"]["text"]
     # Both renderer choices and the independent comment control belong in one

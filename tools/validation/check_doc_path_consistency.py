@@ -13,7 +13,7 @@ Enforces the documentation path-reference rule defined in
 
 Exemption model (a file is exempt — never flagged — if ANY of these hold):
   - It lives under ``docs/archive/`` (archived).
-  - It is a structurally-historical doc: ``docs/CHANGELOG.md`` or
+  - It is a structurally-historical doc: ``CHANGELOG.md`` or
     ``docs/superpowers/**``.
   - It is one of the named migration-mapping docs, or the rule-defining
     spec itself (which necessarily mentions the tokens).
@@ -59,7 +59,7 @@ _EXEMPT_SUBPATHS: tuple[str, ...] = (
 # Specifically-exempt files (migration-mapping docs + the rule-defining spec).
 _EXEMPT_FILES: frozenset[str] = frozenset(
     {
-        "docs/CHANGELOG.md",
+        "CHANGELOG.md",
         "docs/packaging.md",
         "docs/specs/gui-behavior.md",
         "docs/configuration.md",

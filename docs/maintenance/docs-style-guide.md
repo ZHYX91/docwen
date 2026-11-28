@@ -1,33 +1,38 @@
-# Documentation style / 文档规范
+# Documentation style
 
-Repository documentation describes current behavior. Historical explanations belong to Git history and release changelogs.
+[简体中文](docs-style-guide.zh-CN.md)
 
-仓库文档只描述当前行为。历史解释由 Git 历史和版本更新日志承担。
+## Location and names
 
-## Structure / 结构
+- Root files are entry points: `README.md`, `CONTRIBUTING.md`, `SECURITY.md`,
+  `CHANGELOG.md` and the existing license/notice files. Development instructions have
+  one authority in `docs/development.md` and its language version.
+- `docs/README.md` indexes guides, development, architecture and specifications.
+  README translations live in `docs/i18n/README.<locale>.md`; task guides live in
+  `docs/guides/`. Screenshots live in `docs/assets/screenshots/`.
+- Public product READMEs retain `# DocWen` and the shared native-language navigation
+  with `·` separators and absolute GitHub `blob/main` links. Keep existing locale codes.
+- Ordinary document names use lowercase English words separated by hyphens. Keep
+  conventional `README.md` names and existing license filenames. Dates belong to
+  historical records, not long-lived guides.
+- Full language versions are separate: English `name.md`, Chinese `name.zh-CN.md`.
+  Technical terms, quoted interface labels and examples may contain multiple languages.
+  Engineering references do not require newly invented translations.
+- Accepted technical decisions stay with the source in `docs/architecture/decisions/`.
+  Local plans, migration receipts, run logs and historical acceptance records belong
+  to the maintainer workspace. A standalone clone contains the instructions needed
+  to use, build, test and release the product.
 
-- The root `README.md` is the sole English user guide. Translations remain separate files under `docs/user-guides/`.
-- Localized guides use BCP 47 names such as `README.zh-CN.md`. Each public README starts with `# DocWen`, followed by the same native-language navigation using `·` and absolute GitHub `blob/main` links.
-- Product, architecture, specification and maintenance documents contain Chinese and English in one file where prose is maintained long term.
-- Maintainer execution plans stay outside the public repository. Public documents contain only durable current behavior, contracts and verification instructions.
-- Screenshots used by current guides/specifications live under `docs/assets/screenshots/`.
+## Writing and maintenance
 
-- 根目录 `README.md` 是唯一英文用户手册；其他语言译本分别保存在 `docs/user-guides/`。
-- 本地化手册使用 `README.zh-CN.md` 等 BCP 47 文件名。所有公开 README 均以 `# DocWen` 开头，随后使用相同的原生语言导航、`·` 分隔符和 GitHub `blob/main` 绝对链接。
-- 维护者执行计划不进入公开仓库；计划中的稳定结论必须先吸收到相应当前文档。
+- Describe current behavior, owner and limits. Distinguish planned behavior explicitly.
+  Keep stage IDs, completion narratives and test-count snapshots out of current guides;
+  current instructions must not depend on private plans or historical acceptance records.
+- Give each changing fact one authoritative location; link to it instead of copying it.
+- Keep user guides focused on tasks and implementation details in their owning reference.
+- Update maintained language pairs together. Preserve navigation and explicit limits;
+  source checks do not establish packaged or physical acceptance.
+- Moving a document requires updating links, repository URLs, packaging and guards.
+  Preserve license texts and historical original bytes.
 
-## Writing / 写法
-
-- State the current owner, entry point, behavior and boundary.
-- Avoid stage IDs, test-count snapshots, completion narratives and comparison with retired implementations.
-- Describe compatibility as a current contract, not as a migration story.
-- Link to current files and stable symbols; avoid private absolute paths.
-- Update both language sections in the same change.
-
-## Required checks / 必需检查
-
-1. All local links and referenced files resolve.
-2. Current documentation contains no completed-plan or acceptance-report dependency.
-3. Route/config/output/UI changes update their owning document.
-4. Documentation guards and `git diff --check` pass.
-5. User guides do not expose internal guard names or implementation chronology.
+Check local links, documentation guards and `git diff --check` after editing.

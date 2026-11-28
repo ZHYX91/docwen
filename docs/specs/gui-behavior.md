@@ -166,6 +166,8 @@ Changes preview immediately. Apply or OK saves them; Cancel restores the last sa
 
 Windows native title bars follow the resolved Light / Dark / System theme through `ThemeManager` and Qt’s application color-scheme hint. Existing windows update on preview and rollback; Qt applies the current scheme to newly shown or recreated native window handles. The operating system retains the title bar, caption buttons, system menu and geometry behavior. There is no separate caption-color preference.
 
+Application-owned icons use one shared SVG loader and semantic theme colors; native dialogs retain their own artwork. Graphic size, hit target and padding remain separate, with Qt handling device-pixel-ratio rendering so application scaling is not applied twice. Status retains text as well as color, disabled actions remain semantically disabled, and fallback icons preserve accessible labels. Retiring an asset requires checking source, dynamic lookup, packaging, tests, documentation and supported fallbacks together.
+
 Shared checkboxes preserve Qt keyboard/accessibility behavior and draw their indicators as vectors. Brand art uses `assets/icon.svg`; action icons use the licensed SVG collection under `assets/icons`. Runtime icons render for the current paint device. Windows package builds generate theme-aware target-size variants and a `resources.pri` index before MakeAppx packaging; asset/index checks do not replace installed Start menu verification.
 
 ## Regression / 回归
@@ -245,7 +247,29 @@ it never rewrites input YAML. Dedicated official-document fields retain their ex
 list punctuation, comments, attachment-per-item layout and other special formatting.
 
 Settings help keeps the shared keyboard-operable, scroll-bounded plain-text popup.
+The help icon stays adjacent to its field label in horizontal and stacked layouts. Its
+accessible name comes from that label; the explanation belongs in the description.
+Click, Enter and Space open the same help; Escape closes it and returns focus. Long text
+wraps within the available screen, with scrolling instead of clipping. Locale strings
+contain real line breaks; no global escape decoder changes literal paths or examples.
 Descriptions remain plain text and use paragraphs for long explanations. Spin-box outer
 frames own padding/height; their internal text editors add neither. Both numeric types
 retain native keyboard behavior and visible arrows in Light/Dark, disabled and RTL states.
 Source Qt checks do not certify native desktop or final packaged appearance.
+
+## Input format notices
+
+Single-file and batch inputs keep the literal filename, detected-format warning and
+location separate. A known mismatch appears as a compact, non-interactive warning
+badge derived from the frozen inspection facts, never by parsing translated text or
+redetecting the suffix in a widget. Use the shared SVG, font and theme tokens; text
+and actual format remain readable under long translations, large text and narrow
+layouts. A non-blocking warning does not become a red failure card.
+
+Full diagnostics stay available through details/help and logs. Unrelated warnings,
+corruption and unreadable-input failures keep their real reasons; an unknown format
+must not become a reassuring detection badge. Core's required explicit admission
+confirmation remains in force. Batch grouping follows `workflow_category`, while task
+status remains independent of format warnings. Replacement, removal, reinspection,
+mode changes and drag-preview restoration clear stale notices and reject stale async
+results. File names and paths stay literal, with copy/location actions intact.

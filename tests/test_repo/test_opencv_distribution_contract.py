@@ -174,8 +174,8 @@ def test_source_maintenance_range_keeps_ci_on_frozen_production_uv() -> None:
 
     public_source_docs = [
         ROOT / "README.md",
-        ROOT / "DEVELOPMENT.md",
-        *sorted((ROOT / "docs" / "user-guides").glob("README.*.md")),
+        ROOT / "docs/development.zh-CN.md",
+        *sorted((ROOT / "docs" / "i18n").glob("README.*.md")),
     ]
     for path in public_source_docs:
         source = path.read_text(encoding="utf-8")
