@@ -447,7 +447,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 warnings.filterwarnings("ignore", category=SyntaxWarning)
 loguru_logger.disable("easyofd")
-from easyofd import OFD
+with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+    from easyofd import OFD
 
 pages = []
 try:
@@ -522,7 +523,7 @@ def _write_xlsx(path: Path) -> None:
 
 def _write_pymupdf_layout_pdf(path: Path) -> None:
     """Create a tiny, deterministic PDF that exercises the packaged layout route."""
-    import fitz
+    import pymupdf as fitz
 
     document = fitz.open()
     try:
@@ -536,7 +537,7 @@ def _write_pymupdf_layout_pdf(path: Path) -> None:
 def _write_physical_page_pdf(path: Path, *, copy_window_bytes: int = 16 * 1024 * 1024) -> None:
     """Create the canonical P=4/K=4 portion of the packaged physical-page corpus."""
 
-    import fitz
+    import pymupdf as fitz
     from PIL import Image, ImageDraw, ImageFont
 
     document = fitz.open()
@@ -3754,7 +3755,7 @@ def _run_machine_protocol_smoke_impl(
         expected_kind="document",
         expected_media_type="application/pdf",
     )
-    import fitz
+    import pymupdf as fitz
 
     with fitz.open(merged_pdf_output) as merged_document:
         if merged_document.page_count != 2:
