@@ -59,9 +59,9 @@ def test_pymupdf_layout_manifest_tracks_current_distribution_resources() -> None
 
     assert resources == tuple(sorted(resources))
     assert resources
-    assert PYMUPDF_LAYOUT_DISTRIBUTION_VERSION == "1.27.2.2"
+    assert PYMUPDF_LAYOUT_DISTRIBUTION_VERSION == "1.28.2"
     assert locked_versions == [PYMUPDF_LAYOUT_DISTRIBUTION_VERSION]
-    assert len(resources) == 7
+    assert len(resources) == 19
     assert all(not PurePosixPath(name).is_absolute() for name in resources)
     assert {PurePosixPath(name).suffix.lower() for name in resources} >= {".onnx", ".yaml"}
     assert not any("pymupdf_layout" in name for name in resources)
@@ -147,3 +147,20 @@ def test_build_collection_preflight_fails_closed_when_pyinstaller_skips_layout_d
 
     with pytest.raises(RuntimeError, match="pyinstaller_pymupdf_layout_data_collection_incomplete"):
         build._validate_pymupdf_layout_pyinstaller_data_collection()
+
+
+
+def test_release_payload_has_corresponding_source_and_bundled_licenses(tmp_path: Path) -> None:
+    from scripts.build.package_licenses import stage_package_licenses
+
+    stage_package_licenses(Path.cwd(), tmp_path, "0.24.0", with_gui=True)
+
+    sources = (tmp_path / "SOURCE_CODE.txt").read_text(encoding="utf-8")
+    assert "Corresponding project source: https://github.com/ZHYX91/docwen/tree/" in sources
+    assert "pymupdf_layout/tree/1.28.2" in sources
+    licenses = tmp_path / "licenses"
+    assert "AFFERO GPL" in (licenses / "pymupdf-layout" / "COPYING").read_text(encoding="utf-8")
+    assert (licenses / "qt" / "LGPL-3.0-only.txt").stat().st_size > 7_000
+    assert (licenses / "pyside6-fluent-widgets" / "LICENSE").stat().st_size > 30_000
+    assert "Microsoft Corporation" in (licenses / "onnxruntime" / "LICENSE").read_text(encoding="utf-8")
+    assert (licenses / "onnxruntime" / "ThirdPartyNotices.txt").stat().st_size > 0

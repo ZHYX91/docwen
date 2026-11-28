@@ -28,9 +28,13 @@ PyInstaller collection targets are import-package names, not necessarily distrib
 
 PyInstaller 收集参数使用可导入包名，不一定等于发行包名；`pymupdf-layout` 发行包实际安装为 `pymupdf.layout`。构建前置检查会拒绝不存在或不是包的收集目标；产物检查则从当前已安装发行包清单推导全部 Layout 资源路径，要求 ONNX 模型与 YAML 描述文件完整、非空，而不是只写死某一个模型版本文件名。
 
-`pymupdf-layout` 1.27.2.2 ships the same seven resource paths on every platform covered by the locked resource manifests, but its three YAML descriptors use CRLF bytes in the Windows wheel and LF bytes in the Linux and macOS wheels. DocWen therefore pins two complete raw-byte manifests: one for `win32`, and one shared by `linux` and `darwin`. This resource-integrity coverage is independent of the public package-support boundary. Unknown platforms fail closed with `unsupported_resource_platform`; verification does not normalize line endings, accept alternate hashes, or learn trusted bytes from the installed package. Dependency upgrades must audit every locked platform wheel and update both manifests explicitly.
+`pymupdf-layout` 1.28.2 ships the same 19 model and descriptor files with identical bytes in all five locked Windows, Linux and macOS wheels. DocWen pins one raw-byte manifest and admits only these platform families. Upgrades must verify every locked wheel against its lock hash before updating the version and resource digests.
 
-`pymupdf-layout` 1.27.2.2 在锁定资源清单覆盖的平台上提供相同的七条资源路径，但三个 YAML 描述文件在 Windows wheel 中使用 CRLF 字节，在 Linux 与 macOS wheel 中使用 LF 字节。因此 DocWen 固定两套完整的原始字节清单：`win32` 一套，`linux` 与 `darwin` 共用一套。该资源完整性覆盖与正式发布平台边界相互独立。未知平台以 `unsupported_resource_platform` 失败关闭；校验过程不规范化换行、不接受备选哈希，也不从已安装包自举可信字节。升级依赖时必须审计锁文件中的每个平台 wheel，并显式更新两套清单。
+`pymupdf-layout` 1.28.2 的五个锁定 Windows、Linux 和 macOS wheel 包含 19 个逐字节一致的模型与描述文件。DocWen 固定一份原始字节清单，只接受这些平台。升级时先核对各 wheel 的锁文件哈希，再更新版本及资源摘要。
+
+Installable packages include `SOURCE_CODE.txt` with the build commit and matching upstream source links, plus `licenses/` containing the key redistributed components' notice files. Use the same source notice from the GitHub Release and in Microsoft Store's Additional license terms field. Store text should grant the same software permissions as the included license.
+
+安装包内的 `SOURCE_CODE.txt` 记录构建提交及对应上游源码，`licenses/` 保留主要随包组件的原始许可声明。GitHub Release 与 Microsoft Store 的附加许可字段使用同一版本的授权和源码说明。
 
 The Windows production builder limits PyInstaller's DLL search path to the clean project environment, the manifest-verified CPython base directory, and the Windows system directories. Host-selected `api-ms-win-*` forwarders and `ucrtbase.dll` are forbidden in the payload; supported Windows supplies those system components. The four packaged MSVC runtime files are instead replaced from the locked `pikepdf` wheel before the actual payload inventory and SHA-256 hashes are recorded.
 

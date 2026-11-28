@@ -24,55 +24,24 @@ def test_pinned_manifest_matches_the_installed_locked_distribution() -> None:
     manifest = resources.pymupdf_layout_resource_manifest()
 
     assert resources.PYMUPDF_LAYOUT_DISTRIBUTION == "pymupdf-layout"
-    assert resources.PYMUPDF_LAYOUT_DISTRIBUTION_VERSION == "1.27.2.2"
-    assert len(manifest) == 7
+    assert resources.PYMUPDF_LAYOUT_DISTRIBUTION_VERSION == "1.28.2"
+    assert len(manifest) == 19
     assert verification == resources.PymupdfLayoutResourceVerification(
         available=True,
         reason=None,
         resource_types=("onnx", "yaml"),
-        resource_count=7,
+        resource_count=19,
     )
 
 
 def test_platform_manifest_selection_is_explicit_and_unknown_platforms_are_not_supported() -> None:
-    assert (
-        resources._pymupdf_layout_resource_manifest_for_platform("win32")
-        is resources.PYMUPDF_LAYOUT_WINDOWS_RESOURCE_MANIFEST
-    )
-    assert (
-        resources._pymupdf_layout_resource_manifest_for_platform("linux")
-        is resources.PYMUPDF_LAYOUT_POSIX_RESOURCE_MANIFEST
-    )
-    assert (
-        resources._pymupdf_layout_resource_manifest_for_platform("darwin")
-        is resources.PYMUPDF_LAYOUT_POSIX_RESOURCE_MANIFEST
-    )
+    manifest = resources.PYMUPDF_LAYOUT_RESOURCE_MANIFEST
+    for platform in ("win32", "linux", "darwin"):
+        assert resources._pymupdf_layout_resource_manifest_for_platform(platform) is manifest
     assert resources._pymupdf_layout_resource_manifest_for_platform("freebsd14") is None
+    assert len({spec.relative_path for spec in manifest}) == len(manifest)
 
 
-def test_platform_manifests_have_the_same_complete_path_set() -> None:
-    windows = resources.PYMUPDF_LAYOUT_WINDOWS_RESOURCE_MANIFEST
-    posix = resources.PYMUPDF_LAYOUT_POSIX_RESOURCE_MANIFEST
-
-    assert len(windows) == len(posix) == 7
-    assert tuple(spec.relative_path for spec in windows) == tuple(spec.relative_path for spec in posix)
-    assert len({spec.relative_path for spec in windows}) == 7
-    for windows_spec, posix_spec in zip(windows, posix, strict=True):
-        if Path(windows_spec.relative_path).suffix == ".onnx":
-            assert windows_spec == posix_spec
-        else:
-            assert windows_spec.size != posix_spec.size
-            assert windows_spec.sha256 != posix_spec.sha256
-
-
-@pytest.mark.parametrize(
-    "manifest",
-    (
-        resources.PYMUPDF_LAYOUT_WINDOWS_RESOURCE_MANIFEST,
-        resources.PYMUPDF_LAYOUT_POSIX_RESOURCE_MANIFEST,
-    ),
-    ids=("windows", "posix"),
-)
 @pytest.mark.parametrize(
     ("corruption", "expected_reason"),
     (
@@ -80,13 +49,13 @@ def test_platform_manifests_have_the_same_complete_path_set() -> None:
         ("hash", "required_resource_hash_mismatch"),
     ),
 )
-def test_every_platform_manifest_rejects_size_and_hash_corruption_without_exposing_path(
+def test_manifest_rejects_size_and_hash_corruption_without_exposing_path(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
-    manifest: tuple[resources.PymupdfLayoutResourceSpec, ...],
     corruption: str,
     expected_reason: str,
 ) -> None:
+    manifest = resources.PYMUPDF_LAYOUT_RESOURCE_MANIFEST
     _use_manifest(monkeypatch, manifest)
     resource_root = tmp_path / "private-user"
     for spec in manifest:
@@ -146,7 +115,7 @@ def test_distribution_file_list_must_match_the_pinned_manifest(monkeypatch: pyte
     monkeypatch.setattr(
         resources.importlib.metadata,
         "distribution",
-        lambda _name: SimpleNamespace(version="1.27.2.2", files=()),
+        lambda _name: SimpleNamespace(version="1.28.2", files=()),
     )
 
     verification = resources.verify_installed_pymupdf_layout_distribution()

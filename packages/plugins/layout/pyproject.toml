@@ -9,9 +9,9 @@ description = "DocWen Layout Plugin — layout to image (PNG/JPG/TIF), document 
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "docwen-core",
-    "PyMuPDF>=1.25.0",
+    "PyMuPDF>=1.28.2",
     "pdf2docx>=0.5.6",
-    "pymupdf4llm>=0.0.18",
+    "pymupdf4llm>=1.28.2",
 ]
 
 [project.optional-dependencies]

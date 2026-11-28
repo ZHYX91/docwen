@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 def _ensure_fitz():
     """Import PyMuPDF; raise a user-friendly ImportError if absent."""
     try:
-        import fitz
+        import pymupdf as fitz
     except ImportError:
         raise ImportError("PyMuPDF is not installed. Install it with: pip install PyMuPDF") from None
     return fitz

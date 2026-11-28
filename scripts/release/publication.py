@@ -258,7 +258,10 @@ def main(argv: list[str] | None = None) -> int:
                 artifact_digest=args.artifact_digest,
             )
             if args.operation == "publish":
-                result = session.publish(notes=release_notes(args.notes, args.version))
+                source_url = f"https://github.com/{args.repository}/blob/{args.commit}/SOURCE_CODE.txt"
+                notes = release_notes(args.notes, args.version)
+                notes += f"\n\n[Corresponding source and build instructions / 对应源码与构建说明]({source_url})"
+                result = session.publish(notes=notes)
             else:
                 session.verify_source()
                 session.verify_provenance()

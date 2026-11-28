@@ -1242,24 +1242,13 @@ def build_app(
         # 复制 README 文件（所有语言版本，同级目录）
         copy_readme_files(deploy_dir)
 
-        # 复制许可证文件
-        license_files = ["LICENSE", "LICENSE_THIRD_PARTY.txt", "NOTICE.txt"]
-        license_copied = 0
-        for license_file in license_files:
-            src = PROJECT_ROOT / license_file
-            if src.exists():
-                shutil.copy2(src, deploy_dir / license_file)
-                logger.debug(f"复制许可证: {license_file}")
-                license_copied += 1
+        from scripts.build.package_licenses import stage_package_licenses
 
-        logger.info(f"许可证文件已复制 ({license_copied} 个)")
-
+        stage_package_licenses(PROJECT_ROOT, deploy_dir, version, with_gui=with_gui)
         if with_cli and cli_output_dir.exists():
             copy_readme_files(cli_output_dir)
-            for license_file in license_files:
-                src = PROJECT_ROOT / license_file
-                if src.exists():
-                    shutil.copy2(src, cli_output_dir / license_file)
+            if cli_output_dir != deploy_dir:
+                stage_package_licenses(PROJECT_ROOT, cli_output_dir, version, with_gui=False)
 
         cli_deploy_dir: Path | None = None
         if with_gui and with_cli and cli_output_dir.exists():

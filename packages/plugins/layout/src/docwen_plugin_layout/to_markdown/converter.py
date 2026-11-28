@@ -141,7 +141,7 @@ def _ocr_page_outcomes(
 
     Returns one typed best-effort outcome per rendered page.
     """
-    import fitz  # PyMuPDF
+    import pymupdf as fitz
 
     results: list[OcrOutcome] = []
     doc = fitz.open(pdf_path, filetype="pdf")
@@ -449,7 +449,7 @@ class LayoutToMarkdownConverter:
             # Open the admitted PDF explicitly.  Passing a path directly to
             # pymupdf4llm would make its PyMuPDF boundary infer the parser from
             # a potentially misleading user suffix again.
-            import fitz
+            import pymupdf as fitz
 
             extracted_image_pages: dict[Path, set[int]] = {}
             images_prefix = f"{input_stem_val}_images/"

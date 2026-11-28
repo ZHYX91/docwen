@@ -108,8 +108,8 @@ dependencies = [
     "ebooklib>=0.18",
     "python-pptx>=1.0.0",
     # PDF/OFD处理
-    "pymupdf>=1.26.6",
-    "pymupdf4llm>=0.1.8",
+    "pymupdf>=1.28.2",
+    "pymupdf4llm>=1.28.2",
     "pdf2docx>=0.5.6",
     "easyofd>=20260427",  # OFD文件转PDF
     # 数值计算

@@ -1,18 +1,21 @@
 第三方组件许可证声明
 ================================================================================
 
-本软件使用了以下开源组件，特此声明其许可证信息：
+本文件说明 DocWen 使用的主要第三方组件。发行包中的 licenses/ 保留随包许可和归属声明。
+对应源码及按平台发布的版本见 SOURCE_CODE.txt。
 
 ================================================================================
 1. PyMuPDF (pymupdf)
    License: AGPL-3.0
    Copyright: Artifex Software, Inc.
    Website: https://github.com/pymupdf/PyMuPDF
+   Note: Includes the native MuPDF library. The bundled Python bindings and native library follow the AGPL route.
 
 2. RapidOCR
    License: Apache-2.0
    Copyright: RapidAI Team
-   Website: https://github.com/RapidAI/RapidOCR
+   Source: https://github.com/RapidAI/RapidOCR/tree/v1.4.4
+   License text: licenses/rapidocr/LICENSE
 
 3. RapidTable / SLANet table-structure runtime
    License: Apache-2.0
@@ -32,7 +35,10 @@
 5. ONNX Runtime
    License: MIT
    Copyright: Microsoft Corporation
-   Website: https://github.com/microsoft/onnxruntime
+   Website: https://onnxruntime.ai/
+   Locked releases: https://pypi.org/project/onnxruntime/1.23.2/ (Linux)
+                    https://pypi.org/project/onnxruntime/1.24.4/ (Windows/macOS)
+   Notices: licenses/onnxruntime/LICENSE and licenses/onnxruntime/ThirdPartyNotices.txt
 
 6. python-docx
    License: MIT
@@ -45,12 +51,12 @@
    Website: https://openpyxl.readthedocs.io
 
 8. Pillow
-   License: HPND (Historical Permission Notice and Disclaimer)
+   License: MIT-CMU (Pillow 13.0.0)
    Copyright: Jeffrey A. Clark (Alex) and contributors
    Website: https://github.com/python-pillow/Pillow
 
-9. PySide6
-   License: LGPL-3.0
+9. Qt 6 / PySide6 / Shiboken6
+   License: LGPL-3.0-only / GPL alternatives for the bundled open-source Qt modules
    Copyright: Qt Company / Qt for Python contributors
    Website: https://doc.qt.io/qtforpython-6/
 
@@ -110,14 +116,16 @@
     Website: https://github.com/pymupdf/pymupdf4llm
 
 21. easyofd
-    License: MIT
+    License: Apache-2.0
     Copyright: guowanghuai
     Website: https://github.com/guowanghuai/easyofd
 
 22. pillow-heif
-    License: BSD-3-Clause
+    License: BSD-3-Clause for the Python project; native components have separate terms.
     Copyright: Alexander Karpov
     Website: https://github.com/bigcat88/pillow_heif
+    Native sources: SOURCE_CODE.txt
+    Notices: licenses/pillow-heif/LICENSES_bundled.txt
 
 23. img2pdf
     License: LGPL-3.0
@@ -130,7 +138,7 @@
     Website: https://github.com/carpedm20/emoji
 
 25. PySide6-Fluent-Widgets (QFluentWidgets)
-    License: GPL-3.0-or-later / Commercial
+    License: GPLv3 (open-source wheel) / Commercial alternative
     Copyright: zhiyiYo
     Website: https://github.com/zhiyiYo/PyQt-Fluent-Widgets
     Note: 本项目当前按 AGPL 开源分发，GUI Fluent 组件层使用其开源许可证路径；
@@ -151,6 +159,22 @@
     Copyright: platformdirs contributors
     Website: https://github.com/tox-dev/platformdirs
 
+29. PyMuPDF Layout (pymupdf-layout 1.28.2)
+    License: AGPL-3.0 (open-source distribution)
+    Copyright: Artifex Software, Inc.
+    Source: https://github.com/ArtifexSoftware/pymupdf_layout/tree/1.28.2
+    Note: Includes the Layout code and ONNX models shipped by this version.
+          The earlier 1.27.2.2 wheel used a separate PolyForm Noncommercial / commercial licensing arrangement.
+
+30. OpenCV Python headless
+    License: OpenCV core is Apache-2.0, Python packaging is MIT, and bundled media libraries have separate terms.
+    Source: https://github.com/opencv/opencv-python
+    Notices: licenses/opencv-python-headless/
+
+31. psutil
+    License: BSD-3-Clause
+    Source: https://github.com/giampaolo/psutil
+
 ================================================================================
 
 许可证全文链接：
@@ -160,16 +184,13 @@
 - BSD-2-Clause: https://opensource.org/licenses/BSD-2-Clause
 - BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
 - LGPL-3.0: https://www.gnu.org/licenses/lgpl-3.0.txt
-- GPL-3.0-or-later: https://www.gnu.org/licenses/gpl-3.0.txt
-- HPND: https://opensource.org/licenses/HPND
+- GPL-3.0: https://www.gnu.org/licenses/gpl-3.0.txt
 - PSF: https://opensource.org/licenses/Python-2.0
 
 ================================================================================
 
 请注意：
-- 本软件使用的PyMuPDF采用AGPL-3.0许可证，因此整个项目也采用AGPL-3.0许可证
 - 所有第三方组件的版权归其各自所有者所有
-- 使用本软件即表示您同意遵守上述所有许可证条款
 - 本软件可调用用户系统中已安装的 Microsoft Office、WPS Office 或
   LibreOffice 进行格式转换，这些软件不包含在本项目中，用户需自行获取授权
 

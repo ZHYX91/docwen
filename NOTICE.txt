@@ -3,7 +3,7 @@ DocWen (原名：公文图表格式转换软件)
 
 Copyright (c) 2025 ZhengYX
 
-本软件基于 GNU Affero General Public License v3.0 (AGPL-3.0) 发布。
+本软件按 AGPL-3.0-or-later 发布。
 
 项目主页：https://github.com/ZHYX91/docwen
 作者邮箱：zhengyx91@hotmail.com
@@ -23,9 +23,8 @@ Copyright (c) 2025 ZhengYX
 重要提示：
 
 1. 源代码获取
-   本软件的完整源代码可通过以下方式获取：
-   - GitHub 仓库：https://github.com/ZHYX91/docwen
-   - 联系作者获取
+   发行包中的 SOURCE_CODE.txt 列出本版本的 DocWen 源代码、构建脚本和随包组件的对应源码入口。
+   项目发行页：https://github.com/ZHYX91/docwen/releases
 
 2. 第三方组件
    本软件包含第三方开源组件，详细信息请参阅 LICENSE_THIRD_PARTY.txt 文件。

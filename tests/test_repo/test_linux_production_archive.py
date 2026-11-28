@@ -26,7 +26,7 @@ def _write_payload(parent: Path, artifact_id: str = "gui-cli") -> tuple[dict[str
     artifact = linux_archive.select_artifact(contract, artifact_id)
     payload = parent / str(artifact["sourceDirectory"])
     payload.mkdir()
-    required_directories = {"_internal", "configs", "models", "templates"}
+    required_directories = {"_internal", "configs", "licenses", "models", "templates"}
     if artifact_id == "gui-cli":
         required_directories.add("assets")
     for name in sorted(required_directories):
@@ -34,13 +34,14 @@ def _write_payload(parent: Path, artifact_id: str = "gui-cli") -> tuple[dict[str
     (payload / "_internal" / "runtime.so").write_bytes(b"runtime\x00bytes")
     (payload / "configs" / "default.yaml").write_text("locale: zh-CN\n", encoding="utf-8")
     (payload / "models" / "model.bin").write_bytes(b"model")
+    (payload / "licenses" / "component.txt").write_text("upstream license\n", encoding="utf-8")
     (payload / "templates" / "empty.txt").write_bytes(b"")
     long_directory = payload / "templates" / ("long-" + "x" * 60)
     long_directory.mkdir()
     (long_directory / "unicode-文档.txt").write_text("long pax path\n", encoding="utf-8")
     if artifact_id == "gui-cli":
         (payload / "assets" / "icon.png").write_bytes(b"png")
-    for name in ("LICENSE", "LICENSE_THIRD_PARTY.txt", "NOTICE.txt", "README.md"):
+    for name in ("LICENSE", "LICENSE_THIRD_PARTY.txt", "NOTICE.txt", "README.md", "SOURCE_CODE.txt"):
         (payload / name).write_text(f"{name}\n", encoding="utf-8")
     for entry_point in artifact["entryPoints"]:
         path = payload / str(entry_point)
@@ -132,6 +133,8 @@ def test_linux_archives_are_byte_identical_and_normalize_every_header(tmp_path: 
         )
         checksum_paths = [line.split("  ", 1)[1] for line in checksums.splitlines()]
         assert checksum_paths == sorted(checksum_paths, key=lambda value: value.encode("utf-8"))
+        assert "SOURCE_CODE.txt" in checksum_paths
+        assert "licenses/component.txt" in checksum_paths
         assert "manifest.json" in checksum_paths
         assert "SHA256SUMS.txt" not in checksum_paths
 
