@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -561,6 +562,41 @@ def _protected_roots(workspace: Path) -> tuple[Path, ...]:
     return tuple(workspace / name for name in PROTECTED_WORKSPACE_ROOT_NAMES)
 
 
+def _openclaw_failure_boundary(target: Path, *, workspace: Path) -> Path | None:
+    """Recognize an exact failed Gateway run, never its acceptance container."""
+    acceptance = workspace / "acceptance"
+    if acceptance not in target.parents:
+        return None
+    relative = target.relative_to(acceptance).parts
+    if (
+        len(relative) != 3
+        or relative[1] != "build"
+        or not re.fullmatch(r"openclaw-\d+\.\d+\.\d+-\d{8}", relative[0])
+        or not re.fullmatch(r"oc-release-[A-Za-z0-9]+", relative[2])
+    ):
+        return None
+    if workspace.parent / "repos" / "docwen-openclaw" not in registered_repositories(workspace):
+        return None
+    _validate_target_chain(target, boundary=workspace)
+    marker = target / LEASE_NAME
+    metadata = marker.lstat()
+    if not stat.S_ISREG(metadata.st_mode) or _is_link_or_reparse(metadata):
+        raise HousekeepingError(f"openclaw_failure_plain_lease_required:{target}")
+    _, lease = _read_lease(marker, temp_root=acceptance)
+    if (
+        lease.get("owner") != "docwen.openclaw.release"
+        or lease.get("kind") != "openclaw-release-work"
+        or lease.get("state") not in {"retained-failure", "retained-cleanup-failure"}
+        or type(lease.get("pid")) is not int
+        or lease["pid"] <= 0
+    ):
+        raise HousekeepingError(f"openclaw_failure_lease_required:{target}")
+    if os.name == "nt" and not re.fullmatch(r"windows-filetime:[0-9a-f]{16}", str(lease.get("processIdentity"))):
+        raise HousekeepingError(f"openclaw_failure_process_identity_required:{target}")
+    _created_at(lease)
+    return target.parent
+
+
 def _classify_target(
     target: Path,
     *,
@@ -573,6 +609,10 @@ def _classify_target(
         raise HousekeepingError(f"clean_deps_name_required:{absolute_target}")
     if not _is_within(absolute_target, engineering_root):
         raise HousekeepingError(f"target_outside_engineering_root:{absolute_target}")
+    if not clean_dependencies:
+        boundary = _openclaw_failure_boundary(absolute_target, workspace=workspace)
+        if boundary is not None:
+            return "openclaw-failure", boundary
     for protected in _protected_roots(workspace):
         if _is_within(absolute_target, protected):
             raise HousekeepingError(f"protected_target:{absolute_target}")
@@ -880,6 +920,8 @@ def create_plan(
         entries.extend(automatic_entries)
     entries.sort(key=lambda entry: os.path.normcase(str(entry["path"])))
     _assert_non_overlapping(entries)
+    if os.name == "nt" and disposition != "recycle" and any(entry["source"] == "openclaw-failure" for entry in entries):
+        raise HousekeepingError("openclaw_failure_requires_recycle")
     if disposition == "recycle":
         for entry in entries:
             _bind_recycle_payload(entry["identity"], Path(entry["path"]))
@@ -1137,6 +1179,12 @@ def _apply_with_journal(plan: dict[str, Any], *, plan_path: Path, journal: Apply
     entries = plan.get("entries")
     if not isinstance(entries, list):
         raise HousekeepingError("plan_entries_must_be_list")
+    if (
+        os.name == "nt"
+        and disposition != "recycle"
+        and any(entry.get("source") == "openclaw-failure" for entry in entries)
+    ):
+        raise HousekeepingError("openclaw_failure_requires_recycle")
     _assert_non_overlapping(entries)
     if disposition == "recycle":
         for entry in entries:

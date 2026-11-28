@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from functools import partial
 from pathlib import Path
 
@@ -40,6 +41,78 @@ def _leased_run(workspace: Path, *, state: str, pid: int = 999_999_999) -> Path:
     )
     (run / "summary.log").write_bytes(b"passed\n")
     return run
+
+
+def test_openclaw_failure_closeout_reuses_saved_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    workspace = _workspace(tmp_path).rename(tmp_path / "runtime")
+    (tmp_path / "repos" / "docwen-openclaw").mkdir(parents=True)
+    (workspace / "workspace.json").write_text(
+        json.dumps({"schema": "docwen.workspace.v2", "repositories": ["repos/docwen-openclaw"]}), encoding="utf-8"
+    )
+    run = workspace / "acceptance" / "openclaw-3.1.4-20261120" / "build" / "oc-release-test01"
+    run.mkdir(parents=True)
+    marker = run / workspace_cleanup.LEASE_NAME
+    lease = {
+        "schemaVersion": 1,
+        "owner": "docwen.openclaw.release",
+        "kind": "openclaw-release-work",
+        "root": str(run),
+        "pid": 999_999_999,
+        "processIdentity": "windows-filetime:01dd78e60834265a",
+        "createdAt": "2026-11-20T11:55:28Z",
+        "state": "retained-failure",
+    }
+    marker.write_text(json.dumps(lease), encoding="utf-8")
+    (run / "summary.log").write_bytes(b"Gateway rejected the test input\n")
+    request = partial(
+        acceptance_closeout.close_run,
+        workspace_root=workspace,
+        run_root=run,
+        candidate_id="openclaw-3.1.4",
+        gate="gateway-test01",
+        subject_name="plugin.tgz",
+        subject_sha256="0" * 64,
+        subject_bytes=0,
+        result="failed",
+        reason="superseded failure",
+        evidence_files=("summary.log",),
+    )
+    monkeypatch.setattr(workspace_cleanup, "_lease_process_alive", lambda _: True)
+    with pytest.raises(acceptance_closeout.AcceptanceCloseoutError, match="run_owner_still_alive"):
+        request()
+    monkeypatch.setattr(workspace_cleanup, "_lease_process_alive", lambda _: False)
+    marker.write_text(json.dumps({**lease, "owner": "docwen.other"}), encoding="utf-8")
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="openclaw_failure_lease_required"):
+        request()
+    marker.write_text(json.dumps(lease), encoding="utf-8")
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="protected_target"):
+        workspace_cleanup.create_plan(workspace_root=workspace, explicit_targets=(run.parent,), reason="too broad")
+
+    if os.name == "nt":
+        with pytest.raises(workspace_cleanup.HousekeepingError, match="openclaw_failure_requires_recycle"):
+            workspace_cleanup.create_plan(
+                workspace_root=workspace, explicit_targets=(run,), reason="test", disposition="delete"
+            )
+    plan = workspace_cleanup.create_plan(workspace_root=workspace, explicit_targets=(run,), reason="test")
+    assert plan["entries"][0]["source"] == "openclaw-failure"
+    assert plan["entries"][0]["allowedBoundary"] == str(run.parent)
+
+    def read_saved_plan(path: Path, *, workspace_root: Path) -> dict:
+        saved = workspace_cleanup.load_plan(path, workspace_root=workspace_root)
+        assert saved["entries"][0]["path"] == str(run)
+        assert saved["disposition"] == ("recycle" if os.name == "nt" else "delete")
+        workspace_cleanup._revalidate_entry(saved["entries"][0], workspace=workspace_root)
+        (run / "summary.log").unlink()
+        marker.unlink()
+        run.rmdir()
+        return {"status": "fixture-completed"}
+
+    monkeypatch.setattr(workspace_cleanup, "apply_saved_plan", read_saved_plan)
+    result = json.loads(request().read_text(encoding="utf-8"))
+    assert not run.exists()
+    assert result["rawRunRemoved"] and result["result"] == "failed"
+    assert result["originalLease"] == lease
+    assert result["evidence"][0]["text"] == "Gateway rejected the test input\n"
 
 
 def test_closeout_writes_compact_receipt_and_removes_raw_run(tmp_path: Path) -> None:
