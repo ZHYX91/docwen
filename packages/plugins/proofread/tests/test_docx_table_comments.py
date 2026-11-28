@@ -10,7 +10,10 @@ from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import parse_xml
 
+from docwen_core.cancellation import CancellationToken
+from docwen_core.errors import CancellationRequested
 from docwen_core.models.proofread import ProofreadRules
+from docwen_plugin_proofread import docx_validator
 from docwen_plugin_proofread.docx_validator import DocxValidator, _iter_main_story_paragraphs
 
 from ._proofread_plugin_support import _build_fake_context
@@ -160,3 +163,42 @@ def test_table_walk_observes_cancellation_before_entering_nested_cells():
     cancelled = True
     with pytest.raises(RuntimeError, match="cancelled"):
         next(paragraphs)
+
+
+def test_docx_proofread_cancels_between_comments_in_one_paragraph(tmp_path, monkeypatch):
+    source = tmp_path / "source.docx"
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    document = Document()
+    document.add_paragraph("（正文 " * 12)
+    document.save(source)
+    original = source.read_bytes()
+    token = CancellationToken()
+    context = _build_fake_context(
+        str(source),
+        str(staging),
+        action_name="validate",
+        cancellation=token,
+        proofread_rules=ProofreadRules(symbol_pairs=(("（", "）"),)),
+        options={
+            "enable_symbol_pairing": True,
+            "enable_symbol_correction": False,
+            "enable_typos_rule": False,
+            "enable_sensitive_word": False,
+        },
+    )
+    append_comment = docx_validator.append_docx_comment
+    written = 0
+
+    def append_and_cancel(*args, **kwargs):
+        nonlocal written
+        append_comment(*args, **kwargs)
+        written += 1
+        token.cancel()
+
+    monkeypatch.setattr(docx_validator, "append_docx_comment", append_and_cancel)
+    with pytest.raises(CancellationRequested):
+        DocxValidator().convert(context)
+    assert written == 1
+    assert source.read_bytes() == original
+    assert not list(staging.iterdir())

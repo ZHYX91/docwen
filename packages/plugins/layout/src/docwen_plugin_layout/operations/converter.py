@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,14 +16,24 @@ from docwen_core.paths import input_stem
 from docwen_plugin_layout._common import file_size, new_artifact_id
 
 if TYPE_CHECKING:
+    from typing import Any
+
+    import pymupdf
+
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import ConverterContext
+
+
+_EXPLICIT_GOTO = re.compile(r"\[\s*(\d+)\s+\d+\s+R\s*(/[A-Za-z]+)(.*?)\]", re.DOTALL)
+_PDF_REFERENCE = re.compile(r"(?<!\S)(\d+)\s+\d+\s+R(?=\s|$)")
+_PDF_NUMBER = re.compile(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)")
+_DESTINATION_OPERANDS = {"/XYZ": 3, "/Fit": 0, "/FitH": 1, "/FitV": 1, "/FitR": 4, "/FitB": 0, "/FitBH": 1, "/FitBV": 1}
 
 
 def _ensure_fitz():
     """Import PyMuPDF; raise a user-friendly ImportError if absent."""
     try:
-        import fitz
+        import pymupdf as fitz
     except ImportError:
         raise ImportError("PyMuPDF is not installed. Install it with: pip install PyMuPDF") from None
     return fitz
@@ -35,6 +46,126 @@ def _is_valid_pdf(file_path: str) -> bool:
             return fh.read(5) == b"%PDF-"
     except OSError:
         return False
+
+
+def _array_value(document: pymupdf.Document, xref: int, key: str) -> str | None:
+    kind, value = document.xref_get_key(xref, key)
+    if kind == "xref":
+        value = document.xref_object(int(value.split()[0]), compressed=True)
+    elif kind != "array":
+        return None
+    value = value.strip()
+    return value if value.startswith("[") and value.endswith("]") else None
+
+
+def _explicit_goto(document: pymupdf.Document, xref: int) -> re.Match[str] | None:
+    value = _array_value(document, xref, "Dest")
+    if value is None and document.xref_get_key(xref, "A/S") == ("name", "/GoTo"):
+        value = _array_value(document, xref, "A/D")
+    return _EXPLICIT_GOTO.fullmatch(value) if value is not None else None
+
+
+def _goto_links(page: pymupdf.Page, kind: int) -> list[dict[str, Any]]:
+    links = [link for link in page.get_links() if link.get("kind") == kind]
+    if not any(link.get("xref", 0) <= 0 for link in links):
+        return links
+
+    # An unrelated, unsupported Link action can make PyMuPDF omit the xref
+    # for every link on this page. Match the explicit GoTo annotations instead.
+    document = page.parent
+    assert document is not None
+    annotations: list[tuple[int, int]] = []
+    for xref, _, _ in page.annot_xrefs():
+        if document.xref_get_key(xref, "Subtype") == ("name", "/Link"):
+            match = _explicit_goto(document, xref)
+            if match is not None:
+                annotations.append((xref, int(match[1])))
+    if [target for _, target in annotations] == [document.page_xref(link["page"]) for link in links]:
+        for link, (xref, _) in zip(links, annotations, strict=True):
+            link["xref"] = xref
+    return links
+
+
+def _literal_pdf_numbers(
+    source: pymupdf.Document, value: str, expected_count: int, *, allow_null: bool = False
+) -> str | None:
+    expanded = _PDF_REFERENCE.sub(lambda match: source.xref_object(int(match[1]), compressed=True).strip(), value)
+    tokens = expanded.split()
+    if len(tokens) != expected_count:
+        return None
+    if any(_PDF_NUMBER.fullmatch(token) is None and not (allow_null and token == "null") for token in tokens):
+        return None
+    return " ".join(tokens)
+
+
+def _restore_explicit_gotos(
+    source: pymupdf.Document,
+    destination: pymupdf.Document,
+    original_links: list[dict[str, Any]],
+    copied_links: list[dict[str, Any]],
+    destination_by_source: dict[int, int],
+) -> None:
+    """Retain the source PDF's hotspot, destination view and zoom.
+
+    The copy routines emit links in order. Check the complete page mapping
+    before changing a copied link, so a skipped link cannot shift the pairing.
+    """
+    if [destination_by_source[link["page"]] for link in original_links] != [link["page"] for link in copied_links]:
+        return
+
+    for original, copied in zip(original_links, copied_links, strict=True):
+        xref, copied_xref = original.get("xref", 0), copied.get("xref", 0)
+        if xref <= 0 or copied_xref <= 0:
+            continue
+        match = _explicit_goto(source, xref)
+        if match is None or int(match[1]) != source.page_xref(original["page"]):
+            continue
+        if destination.xref_get_key(copied_xref, "A/S") != ("name", "/GoTo"):
+            continue
+        view, operands = match[2], match[3]
+        count = _DESTINATION_OPERANDS.get(view)
+        if count is None:
+            continue
+        numbers = _literal_pdf_numbers(source, operands, count, allow_null=True)
+        if numbers is None:
+            continue
+        target_xref = destination.page_xref(copied["page"])
+        destination.xref_set_key(copied_xref, "A/D", f"[{target_xref} 0 R {view} {numbers}]")
+        rect = _array_value(source, xref, "Rect")
+        if rect is not None and (coordinates := _literal_pdf_numbers(source, rect[1:-1], 4)) is not None:
+            destination.xref_set_key(copied_xref, "Rect", f"[{coordinates}]")
+
+
+def _has_shared_form_fields(source: pymupdf.Document, cancellation) -> bool:
+    """Detect field trees that separate page grafts cannot safely project."""
+    if not source.is_form_pdf:
+        return False
+    page_by_field: dict[int, int] = {}
+    for page_index in range(source.page_count):
+        cancellation.check()
+        for xref, _, _ in source.page_annot_xrefs(page_index):
+            if source.xref_get_key(xref, "Subtype") != ("name", "/Widget"):
+                continue
+            ancestors = {xref}
+            while True:
+                parent_type, parent = source.xref_get_key(xref, "Parent")
+                if parent_type != "xref":
+                    break
+                xref = int(parent.split()[0])
+                if xref in ancestors:
+                    return True
+                ancestors.add(xref)
+            if page_by_field.setdefault(xref, page_index) != page_index:
+                return True
+    return False
+
+
+def _inline_indirect_acroform(source: pymupdf.Document) -> None:
+    """Prevent repeated page grafts from clearing the in-memory source field tree."""
+    catalog = source.pdf_catalog()
+    value_type, value = source.xref_get_key(catalog, "AcroForm")
+    if value_type == "xref":
+        source.xref_set_key(catalog, "AcroForm", source.xref_object(int(value.split()[0]), compressed=True))
 
 
 def _copy_pages_preserving_internal_gotos(src, destination, pages: list[int], cancellation) -> None:
@@ -51,21 +182,32 @@ def _copy_pages_preserving_internal_gotos(src, destination, pages: list[int], ca
 
     for source_index, destination_index in destination_by_source.items():
         cancellation.check()
-        for link in src[source_index].get_links():
-            target_source_index = link.get("page")
-            if link.get("kind") != fitz.LINK_GOTO or target_source_index not in destination_by_source:
-                continue
-            # insert_pdf already copies and remaps links within the copied page.
-            if target_source_index == source_index:
-                continue
+        link_candidates = [
+            link for link in _goto_links(src[source_index], fitz.LINK_GOTO) if link.get("page") in destination_by_source
+        ]
+        local_links = [link for link in link_candidates if link["page"] == source_index]
+        cross_page_links = [link for link in link_candidates if link["page"] != source_index]
+        if not link_candidates:
+            continue
+        output_page = destination[destination_index]
+        for link in cross_page_links:
             remapped_link = {
                 "kind": fitz.LINK_GOTO,
                 "from": link["from"],
-                "page": destination_by_source[target_source_index],
+                "page": destination_by_source[link["page"]],
                 "to": link.get("to", fitz.Point(0, 0)),
                 "zoom": link.get("zoom", 0.0),
             }
-            destination[destination_index].insert_link(remapped_link)
+            output_page.insert_link(remapped_link)
+        if cross_page_links:
+            output_page = destination.reload_page(output_page)
+        _restore_explicit_gotos(
+            src,
+            destination,
+            local_links + cross_page_links,
+            _goto_links(output_page, fitz.LINK_GOTO),
+            destination_by_source,
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -142,7 +284,22 @@ class PdfMerger:
                 total_input_bytes += file_size(ref.path)
                 try:
                     with fitz.open(ref.path, filetype="pdf") as src:
+                        first_page = merged.page_count
                         merged.insert_pdf(src)
+                        destination_by_source = {index: first_page + index for index in range(src.page_count)}
+                        for source_index, destination_index in destination_by_source.items():
+                            context.cancellation.check()
+                            originals = _goto_links(src[source_index], fitz.LINK_GOTO)
+                            if originals:
+                                _restore_explicit_gotos(
+                                    src,
+                                    merged,
+                                    [link for link in originals if link.get("page") in destination_by_source],
+                                    _goto_links(merged[destination_index], fitz.LINK_GOTO),
+                                    destination_by_source,
+                                )
+                except CancellationRequested:
+                    raise
                 except Exception as exc:
                     raise RuntimeError(f"Failed to merge '{Path(ref.path).name}': {exc}") from exc
 
@@ -263,6 +420,16 @@ class PdfSplitter:
                     )
 
                 context.cancellation.check()
+                if _has_shared_form_fields(src, context.cancellation):
+                    msg = "Cannot safely split a PDF with form fields shared across pages."
+                    code = "PDF-SPLIT-UNSUPPORTED-SHARED-FIELDS"
+                    return ConversionResult(
+                        task_id=task_id,
+                        success=False,
+                        error=ConversionErrorInfo(error_type="invalid_input", message=msg, diagnostic_code=code),
+                        diagnostics=[ConversionDiagnostic(level="error", message=msg, code=code)],
+                    )
+                _inline_indirect_acroform(src)
 
                 if selection.mode == "every_page":
                     return self._split_every_page(src, total_pages, task_id, stem, context)

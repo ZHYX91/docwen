@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, cast
 from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import _compact_text
 
 if TYPE_CHECKING:
-    from fitz import Document, Page
+    from pymupdf import Document, Page
 
     from docwen_core.protocols.execution_context import ProgressSink
 
@@ -62,7 +62,7 @@ def render_pdf_page_to_png(*, file_path: str, page_index: int, png_path: str) ->
 
 def render_invoice_page(page: Page, png_path: str) -> str:
     """Render a page already open in the invoice parser."""
-    import fitz
+    import pymupdf as fitz
 
     dpi = 300
     zoom = max(72, int(dpi)) / 72.0
@@ -115,7 +115,7 @@ def render_invoice_page(page: Page, png_path: str) -> str:
 
 def _page_text_and_spans(page: Any) -> tuple[str, list[tuple[float, float, float, float, str]]]:
     """Read one page without mixing its coordinates with another page."""
-    import fitz
+    import pymupdf as fitz
 
     text_page = page.get_textpage(flags=fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES)
     text = str(page.get_text("text", textpage=text_page))
@@ -223,7 +223,7 @@ def get_pdf_page_count(file_path: str) -> int:
 
 def _open_invoice_pdf(file_path: str) -> Document:
     """Keep library exceptions containing source paths out of diagnostics."""
-    import fitz
+    import pymupdf as fitz
 
     try:
         return fitz.open(file_path, filetype="pdf")

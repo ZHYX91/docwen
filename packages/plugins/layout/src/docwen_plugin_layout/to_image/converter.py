@@ -73,7 +73,7 @@ class LayoutToImageConverter:
 
         # ── Import PyMuPDF ──────────────────────────────────────────
         try:
-            import fitz  # PyMuPDF
+            import pymupdf as fitz
         except ImportError:
             return self._dependency_missing(
                 task_id,

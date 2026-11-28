@@ -256,7 +256,7 @@ class TestPreprocessHelpers:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """An admitted XPS is not handed back to PyMuPDF for suffix inference."""
-        import fitz
+        import pymupdf as fitz
 
         from docwen_plugin_layout.preprocess import _xps_to_pdf
 

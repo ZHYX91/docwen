@@ -26,7 +26,7 @@ _PIL_OK = _can_import("PIL.Image")
 _DOCX_OK = _can_import("docx")
 _LXML_OK = _can_import("lxml.etree")
 _PANDAS_OK = _can_import("pandas")
-_FITZ_OK = _can_import("fitz")
+_FITZ_OK = _can_import("pymupdf")
 _LATEX2MATHML_OK = _can_import("latex2mathml")
 _QFLUENTWIDGETS_OK = _can_import("qfluentwidgets")
 

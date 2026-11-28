@@ -150,7 +150,7 @@ def _move_path_to_front(file_paths: Sequence[str], preferred_path: str | None) -
 def _read_pdf_total_pages(file_path: str) -> int | None:
     """Return PDF page count when it can be read without disrupting the GUI."""
     try:
-        import fitz
+        import pymupdf as fitz
 
         with fitz.open(file_path, filetype="pdf") as doc:
             page_count = int(doc.page_count)

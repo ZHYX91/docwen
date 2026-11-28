@@ -53,7 +53,7 @@ class TestPreprocessChain:
             assert result.success is True, f"unexpected error: {result.error}"
             md_artifact = next(artifact for artifact in result.artifacts if artifact.media_type == "text/markdown")
             md_text = Path(md_artifact.staging_path).read_text(encoding="utf-8")
-            assert "# HELLO DOCWEN OCR" in md_text
+            assert md_text.count("HELLO DOCWEN OCR") == 1
             assert "## OCR Text" not in md_text
             page_fragments = _page_fragments(result)
             assert len(page_fragments) == 1

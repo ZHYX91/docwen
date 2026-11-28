@@ -40,9 +40,11 @@ from docwen_plugin_layout._common import file_size, new_artifact_id, request_sou
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from types import ModuleType
 
     import pymupdf
+    from pymupdf4llm.helpers.document_layout import PageLayout
 
     from docwen_core.export_semantics import MarkdownExportSemantics
     from docwen_core.models.result import ConversionResult
@@ -61,28 +63,62 @@ _WIKI_IMAGE_TARGET_RE = re.compile(r"!\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]")
 _MARKDOWN_IMAGE_TARGET_RE = re.compile(r"!\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))")
 
 
+def _duplicates_text_spans(page: PageLayout) -> bool:
+    """Detect source spans claimed by separate plain-text layout boxes."""
+    if len(page.boxes) < 2 or any(box.boxclass != "text" for box in page.boxes):
+        return False
+    previous: set[tuple[tuple[float, ...], str]] = set()
+    for box in page.boxes:
+        spans = {
+            (tuple(span["bbox"]), span["text"])
+            for line in (box.textlines or ())
+            for span in line["spans"]
+            if span["text"].strip()
+        }
+        if previous.intersection(spans):
+            return True
+        previous.update(spans)
+    return False
+
+
 def _extract_page_markdown(
     renderer: ModuleType, document: pymupdf.Document, page_index: int, image_directory: Path | None
-) -> str | list[str]:
-    if image_directory is not None and getattr(renderer, "_use_layout", False):
+) -> tuple[str | list[str], list[Path] | None]:
+    if getattr(renderer, "_use_layout", False):
         # The layout writer uses its Markdown-escaped URL as the filesystem path.
         # Keep the typed picture bytes until DocWen has chosen both destinations.
         from pymupdf4llm.helpers.document_layout import parse_document
         from pymupdf4llm.ocr import OCRMode
 
-        parsed = parse_document(document, pages=[page_index], embed_images=True, force_text=True, use_ocr=OCRMode.NEVER)
+        parsed = parse_document(
+            document,
+            pages=[page_index],
+            embed_images=image_directory is not None,
+            force_text=True,
+            use_ocr=OCRMode.NEVER,
+        )
+        if any(_duplicates_text_spans(page) for page in parsed.pages):
+            # Reuse the geometric renderer for this plain-text page. Keep the
+            # process-wide layout setting and other pages' semantic extraction intact.
+            from pymupdf4llm.helpers.pymupdf_rag import to_markdown
+
+            return to_markdown(document, pages=[page_index], hdr_info=False, ignore_images=True), []
+        if image_directory is None:
+            return cast(str, parsed.to_markdown(page_chunks=False)), []
         source_name = sanitize_for_wiki_link(Path(document.name or "page").name)
+        written_images: list[Path] = []
         for page in parsed.pages:
             for index, box in enumerate(page.boxes):
                 if isinstance(box.image, bytes):
                     filename = f"{source_name}-{page_index + 1:04d}-{index:02d}.png"
                     target = image_directory / filename
                     target.write_bytes(box.image)
+                    written_images.append(target)
                     # LayoutBox also accepts a Markdown target, as its own write_images mode does.
                     box.image = f"<{filename}>"  # pyright: ignore[reportAttributeAccessIssue]
-        return cast(str, parsed.to_markdown(page_chunks=False))
+        return cast(str, parsed.to_markdown(page_chunks=False)), written_images
 
-    return renderer.to_markdown(
+    markdown = renderer.to_markdown(
         document,
         pages=[page_index],
         write_images=image_directory is not None,
@@ -91,6 +127,7 @@ def _extract_page_markdown(
         use_ocr=False,
         page_chunks=False,
     )
+    return markdown, None
 
 
 def _image_target_spellings(image_file: Path) -> set[str]:
@@ -101,31 +138,25 @@ def _image_target_spellings(image_file: Path) -> set[str]:
     return spellings
 
 
-def _referenced_extracted_images(
-    markdown: str,
+def _index_extracted_image_targets(
+    paths_by_target: dict[str, set[Path]],
+    image_files: Iterable[Path],
     *,
     images_prefix: str,
-    image_files: set[Path],
-) -> set[Path]:
-    """Return request-created image files explicitly referenced by one page.
+) -> None:
+    for image_file in image_files:
+        for target in _image_target_spellings(image_file) | {f"{images_prefix}{image_file.name}"}:
+            paths_by_target.setdefault(target, set()).add(image_file)
 
-    This is a typed ownership observation over the page result, not a page
-    inference from a generated filename.  Exact Markdown/wiki image targets
-    are matched against the request-owned files that exist after that page's
-    extraction call.  Callers deliberately exclude files present before the
-    first page so a staging collision can never acquire page ownership.
-    """
+
+def _referenced_extracted_images(markdown: str, paths_by_target: dict[str, set[Path]]) -> set[Path]:
+    """Match exact Markdown and wiki targets against request-created files."""
     targets = {match.group(1).strip().replace("\\", "/") for match in _WIKI_IMAGE_TARGET_RE.finditer(markdown)}
     targets.update(
         (match.group(1) or match.group(2) or "").strip().replace("\\", "/")
         for match in _MARKDOWN_IMAGE_TARGET_RE.finditer(markdown)
     )
-    referenced: set[Path] = set()
-    for image_file in image_files:
-        candidates = _image_target_spellings(image_file) | {f"{images_prefix}{image_file.name}"}
-        if targets & candidates:
-            referenced.add(image_file)
-    return referenced
+    return {image for target in targets if target in paths_by_target for image in paths_by_target[target]}
 
 
 def _ocr_page_outcomes(
@@ -141,7 +172,7 @@ def _ocr_page_outcomes(
 
     Returns one typed best-effort outcome per rendered page.
     """
-    import fitz  # PyMuPDF
+    import pymupdf as fitz
 
     results: list[OcrOutcome] = []
     doc = fitz.open(pdf_path, filetype="pdf")
@@ -449,7 +480,7 @@ class LayoutToMarkdownConverter:
             # Open the admitted PDF explicitly.  Passing a path directly to
             # pymupdf4llm would make its PyMuPDF boundary infer the parser from
             # a potentially misleading user suffix again.
-            import fitz
+            import pymupdf as fitz
 
             extracted_image_pages: dict[Path, set[int]] = {}
             images_prefix = f"{input_stem_val}_images/"
@@ -458,32 +489,44 @@ class LayoutToMarkdownConverter:
                 Path(tempfile.mkdtemp(prefix="pdf-images-", dir=context.workspace.staging_dir)) if keep_images else None
             )
             known_images: set[Path] = set()
+            paths_by_target: dict[str, set[Path]] = {}
             with fitz.open(input_path, filetype="pdf") as document:
                 physical_page_count = document.page_count
                 page_markdown: list[str] = []
                 for page_index in range(physical_page_count):
                     context.cancellation.check()
-                    page_result = _extract_page_markdown(pymupdf4llm, document, page_index, images_dir_path)
+                    page_result, written_images = _extract_page_markdown(
+                        pymupdf4llm, document, page_index, images_dir_path
+                    )
                     if isinstance(page_result, list):
                         page_text = "\n".join(str(item) for item in page_result)
                     else:
                         page_text = str(page_result)
                     page_markdown.append(page_text)
                     if images_dir_path is not None:
-                        current_images = {
-                            path
-                            for path in images_dir_path.iterdir()
-                            if path.is_file() and _detected_image_format(path) is not None
-                        }
-                        for image_path in current_images - known_images:
+                        if written_images is None:
+                            # This renderer returns Markdown only. Discover and index its files
+                            # after extraction so removed or replaced files are handled as before.
+                            current_images = {
+                                path
+                                for path in images_dir_path.iterdir()
+                                if path.is_file() and _detected_image_format(path) is not None
+                            }
+                            new_images = current_images - known_images
+                            known_images = current_images
+                            paths_by_target.clear()
+                            images_to_index = current_images
+                        else:
+                            new_images = {
+                                path for path in written_images if _detected_image_format(path) is not None
+                            } - known_images
+                            known_images.update(new_images)
+                            images_to_index = new_images
+                        _index_extracted_image_targets(paths_by_target, images_to_index, images_prefix=images_prefix)
+                        for image_path in new_images:
                             extracted_image_pages.setdefault(image_path, set()).add(page_index + 1)
-                        for image_path in _referenced_extracted_images(
-                            page_text,
-                            images_prefix=images_prefix,
-                            image_files=current_images,
-                        ):
+                        for image_path in _referenced_extracted_images(page_text, paths_by_target):
                             extracted_image_pages.setdefault(image_path, set()).add(page_index + 1)
-                        known_images = current_images
 
             md_text = "\n".join(page_markdown)
 

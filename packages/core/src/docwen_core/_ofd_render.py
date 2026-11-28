@@ -16,7 +16,7 @@ from typing import Any, cast
 from uuid import uuid4
 from zipfile import BadZipFile, ZipFile
 
-import fitz
+import pymupdf as fitz
 import xmltodict
 from easyofd.draw.draw_pdf import DrawPDF
 from easyofd.draw.find_seal_img import SealExtract

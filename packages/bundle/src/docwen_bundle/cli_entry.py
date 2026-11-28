@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from typing import Any
 
@@ -74,6 +75,15 @@ def main(argv: list[str] | None = None) -> int:
     # Keep successful machine-readable CLI runs silent on stderr while still
     # surfacing and buffering warnings raised before ConfigLoader is available.
     pre_init_logging("WARNING")
+    # PDF dependencies may still import the legacy fitz shim, which emits a
+    # PyMuPDF message when it loads. The upstream environment may itself
+    # route those messages or debug logs to the protocol's stdout descriptor.
+    message_output = "logging:level=30,name=pymupdf"
+    if "--json" in arguments or "--stdio" in arguments:
+        os.environ["PYMUPDF_MESSAGE"] = message_output
+        os.environ["PYMUPDF_LOG"] = "logging:level=10,name=pymupdf"
+    else:
+        os.environ.setdefault("PYMUPDF_MESSAGE", message_output)
 
     try:
         with bind_process_profile(), dependency_egress_guard():

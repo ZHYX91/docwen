@@ -4,7 +4,7 @@
   "manifestId": "docwen-linux-production",
   "product": {
     "name": "DocWen",
-    "version": "0.24.0"
+    "version": "0.24.1"
   },
   "target": {
     "os": "linux",
@@ -51,9 +51,9 @@
     {
       "artifactId": "gui-cli",
       "payloadLayout": "unified-gui-cli-onedir",
-      "sourceDirectory": "DocWen_v0.24.0_linux-x64",
-      "archiveName": "DocWen-0.24.0-linux-x64.tar.gz",
-      "topLevelDirectory": "DocWen-0.24.0-linux-x64",
+      "sourceDirectory": "DocWen_v0.24.1_linux-x64",
+      "archiveName": "DocWen-0.24.1-linux-x64.tar.gz",
+      "topLevelDirectory": "DocWen-0.24.1-linux-x64",
       "entryPoints": [
         "DocWen",
         "DocWenCLI"
@@ -64,12 +64,14 @@
         "LICENSE",
         "LICENSE_THIRD_PARTY.txt",
         "NOTICE.txt",
-        "README.md"
+        "README.md",
+        "SOURCE_CODE.txt"
       ],
       "requiredDirectories": [
         "_internal",
         "assets",
         "configs",
+        "licenses",
         "models",
         "templates"
       ],
@@ -89,12 +91,14 @@
         "README_ru_RU.md",
         "README_vi_VN.md",
         "README_zh_CN.md",
-        "README_zh_TW.md"
+        "README_zh_TW.md",
+        "SOURCE_CODE.txt"
       ],
       "allowedTopLevelDirectories": [
         "_internal",
         "assets",
         "configs",
+        "licenses",
         "models",
         "samples",
         "templates"
@@ -103,9 +107,9 @@
     {
       "artifactId": "cli-only",
       "payloadLayout": "cli-only-onedir",
-      "sourceDirectory": "DocWenCLI_v0.24.0_linux-x64",
-      "archiveName": "DocWenCLI-0.24.0-linux-x64.tar.gz",
-      "topLevelDirectory": "DocWenCLI-0.24.0-linux-x64",
+      "sourceDirectory": "DocWenCLI_v0.24.1_linux-x64",
+      "archiveName": "DocWenCLI-0.24.1-linux-x64.tar.gz",
+      "topLevelDirectory": "DocWenCLI-0.24.1-linux-x64",
       "entryPoints": [
         "DocWenCLI"
       ],
@@ -114,11 +118,13 @@
         "LICENSE",
         "LICENSE_THIRD_PARTY.txt",
         "NOTICE.txt",
-        "README.md"
+        "README.md",
+        "SOURCE_CODE.txt"
       ],
       "requiredDirectories": [
         "_internal",
         "configs",
+        "licenses",
         "models",
         "templates"
       ],
@@ -137,12 +143,14 @@
         "README_ru_RU.md",
         "README_vi_VN.md",
         "README_zh_CN.md",
-        "README_zh_TW.md"
+        "README_zh_TW.md",
+        "SOURCE_CODE.txt"
       ],
       "allowedTopLevelDirectories": [
         "_internal",
         "assets",
         "configs",
+        "licenses",
         "models",
         "samples",
         "templates"

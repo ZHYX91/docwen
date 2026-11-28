@@ -678,11 +678,11 @@ See [how network protection works](docs/architecture.md) for its implementation 
 
 ## 📜 License
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+This project is licensed under the **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
--   This project uses PyMuPDF (licensed under AGPL-3.0), so the entire project is also licensed under AGPL-3.0.
+-   DocWen uses the AGPL releases of PyMuPDF, PyMuPDF4LLM, and PyMuPDF Layout. See [Corresponding Source](SOURCE_CODE.txt) for release source links and [third-party notices](LICENSE_THIRD_PARTY.txt) for attribution.
 -   The current GUI can use `PySide6-Fluent-Widgets` (QFluentWidgets) on supported host paths; this dependency follows a `GPLv3 / commercial` dual-license model, while this repository continues to distribute under AGPL.
 -   You are free to use, modify, and distribute this software.
 -   If you modify this software and provide services over a network, you must provide the modified source code to users.

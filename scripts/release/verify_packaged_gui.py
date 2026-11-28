@@ -699,7 +699,7 @@ def _run_office_smoke(
 
     outputs: list[Path] = []
     case_evidence: list[dict[str, Any]] = []
-    import fitz
+    import pymupdf as fitz
     from scripts.release.office_host_identity import office_host_identity
 
     stdout_parts: list[str] = []
@@ -2399,7 +2399,7 @@ def _verify_conversion_smoke_report(report_path: Path, *, expected_tokens: tuple
     if not output_path.read_bytes().startswith(b"%PDF"):
         raise RuntimeError(f"packaged_gui_conversion_pdf_invalid: {output_path}")
 
-    import fitz
+    import pymupdf as fitz
 
     with fitz.open(output_path) as document:
         page_count = document.page_count

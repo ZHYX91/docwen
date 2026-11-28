@@ -13,7 +13,7 @@ from docwen_core.tempfiles import TemporaryDirectory
 from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning, ocr_diagnostic_code
 
 if TYPE_CHECKING:
-    from fitz import Page
+    from pymupdf import Page
 
     from docwen_core.models.result import ConversionResult
     from docwen_core.protocols.execution_context import ConverterContext

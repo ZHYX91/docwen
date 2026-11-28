@@ -94,8 +94,8 @@ class TestXpsPreprocess:
         _real_import = builtins.__import__
 
         def _block_fitz(name, *args, **kwargs):
-            if name == "fitz":
-                raise ImportError("No module named 'fitz'")
+            if name == "pymupdf":
+                raise ImportError("No module named 'pymupdf'")
             return _real_import(name, *args, **kwargs)
 
         with mock.patch.object(builtins, "__import__", side_effect=_block_fitz):

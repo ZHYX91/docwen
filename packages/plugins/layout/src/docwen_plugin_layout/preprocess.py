@@ -192,7 +192,7 @@ def _xps_to_pdf(input_path: str, staging_dir: str) -> PreprocessResult:
     ``"pdf"`` on success.
     """
     try:
-        import fitz  # PyMuPDF
+        import pymupdf as fitz
     except ImportError:
         return PreprocessResult(
             effective_input_path=input_path,

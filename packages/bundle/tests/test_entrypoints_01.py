@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from ._entrypoints_support import (
     pytest,
 )
@@ -76,6 +78,31 @@ class TestCliEntry:
         assert _captured_gui_control_factory is not None
         assert _captured_machine_server_factory is not None
         assert pre_init_levels == ["WARNING"]
+
+    @pytest.mark.parametrize(
+        ("args", "structured"),
+        [
+            (["convert", "a.pdf", "--to", "docx", "--json"], True),
+            (["--lang", "en_US", "serve", "--stdio"], True),
+            (["convert", "a.pdf", "--to", "docx"], False),
+        ],
+    )
+    def test_pymupdf_diagnostics_respect_stdout_contract(
+        self, args: list[str], structured: bool, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from docwen_bundle import cli_entry
+
+        monkeypatch.setenv("PYMUPDF_MESSAGE", "fd:1")
+        monkeypatch.setenv("PYMUPDF_LOG", "fd:1")
+
+        def dispatch(argv: list[str]) -> int:
+            assert argv == args
+            assert os.environ["PYMUPDF_MESSAGE"] == ("logging:level=30,name=pymupdf" if structured else "fd:1")
+            assert os.environ["PYMUPDF_LOG"] == ("logging:level=10,name=pymupdf" if structured else "fd:1")
+            return 0
+
+        monkeypatch.setattr(cli_entry, "_main_with_guard_active", dispatch)
+        assert cli_entry.main(args) == 0
 
     def test_pyi_cli_entry_delegates_and_preserves_exit_code(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import docwen_bundle.cli_entry as cli_entry

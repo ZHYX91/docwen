@@ -172,7 +172,7 @@ class LayoutToPdfConverter:
     def _xps_to_pdf(input_path: str, task_id: str, stem: str, context: ConverterContext) -> ConversionResult:
         """Convert XPS → PDF using PyMuPDF."""
         try:
-            import fitz  # PyMuPDF
+            import pymupdf as fitz
         except ImportError:
             msg = "PyMuPDF is not installed. Install it with: pip install PyMuPDF"
             context.logger.error(msg)

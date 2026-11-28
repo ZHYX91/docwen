@@ -33,6 +33,7 @@ from typing import Any
 
 import pytest
 
+from docwen_core.cancellation import CancellationToken
 from docwen_runtime.config import build_document_style_catalog
 
 pytestmark = pytest.mark.golden
@@ -55,6 +56,7 @@ def _build_fake_context(
     source_format: str = "",
     *,
     pre_cancelled: bool = False,
+    cancellation: CancellationToken | None = None,
     proofread_rules: Any = None,
 ) -> Any:
     from tests.support.config import FakeConfigView
@@ -63,7 +65,6 @@ def _build_fake_context(
     from tests.support.progress import FakeProgressSink
     from tests.support.workspace import FakeWorkspaceHandle
 
-    from docwen_core.cancellation import CancellationToken
     from docwen_core.models.file_ref import FileRef
     from docwen_core.models.request import ConversionRequest, OutputPolicy
 
@@ -84,7 +85,7 @@ def _build_fake_context(
         output_policy=OutputPolicy(),
     )
     config = FakeConfigView()
-    token = CancellationToken()
+    token = cancellation if cancellation is not None else CancellationToken()
     if pre_cancelled:
         token.cancel("test cancellation")
     return FakeExecutionContext(

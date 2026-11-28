@@ -12,7 +12,6 @@ from ._layout_conversions_support import (
     _create_pdf_ops_fixture_inputs,
     _create_rotated_pdf,
     _create_text_pdf,
-    _expected_interactive_geometry_projection,
     _load_pdf_ops_old_system_fixture,
     _pdf_geometry_projection,
     _pdf_interactive_geometry_projection,
@@ -367,7 +366,7 @@ class TestPluginDispatch:
             projections = [_pdf_geometry_projection(artifact.staging_path) for artifact in split_result.artifacts]
             assert projections == probe["projects"]["docwen-current"]["split_custom_artifact_projections"]
 
-    def test_pdf_operations_interactive_geometry_matches_old_system_projection(self, tmp_path: Path) -> None:
+    def test_pdf_operations_preserve_source_interactive_geometry(self, tmp_path: Path) -> None:
         """Merge/split preserve heterogeneous geometry, URI links, and text notes."""
         from docwen_plugin_layout import LayoutPlugin
 
@@ -402,10 +401,10 @@ class TestPluginDispatch:
 
             assert merge_result.success is True, f"unexpected error: {merge_result.error}"
             assert len(merge_result.artifacts) == 1
-            expected_merge = _expected_interactive_geometry_projection(
-                [*merge_first["pages"], *merge_second["pages"]],
-                page_profiles,
-            )
+            expected_merge = [
+                *_pdf_interactive_geometry_projection(paths[merge_first["name"]]),
+                *_pdf_interactive_geometry_projection(paths[merge_second["name"]]),
+            ]
             assert _pdf_interactive_geometry_projection(merge_result.artifacts[0].staging_path) == expected_merge
 
         with tempfile.TemporaryDirectory() as staging:
@@ -422,11 +421,9 @@ class TestPluginDispatch:
 
             assert split_result.success is True, f"unexpected error: {split_result.error}"
             assert len(split_result.artifacts) == 2
-            expected_groups = [
-                [split_input["pages"][0], split_input["pages"][2]],
-                [split_input["pages"][1], split_input["pages"][3]],
-            ]
+            source_pages = _pdf_interactive_geometry_projection(paths[split_input["name"]])
+            expected_groups = [[source_pages[0], source_pages[2]], [source_pages[1], source_pages[3]]]
             assert [
                 _pdf_interactive_geometry_projection(artifact.staging_path) for artifact in split_result.artifacts
-            ] == [_expected_interactive_geometry_projection(group, page_profiles) for group in expected_groups]
+            ] == expected_groups
             assert [artifact.metadata["pages"] for artifact in split_result.artifacts] == [[1, 3], [2, 4]]

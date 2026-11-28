@@ -5,6 +5,15 @@
 
 ## Unreleased / 未发布
 
+## 0.24.1
+
+- Upgrade PyMuPDF Layout and ship the matching source and third-party license notices with the packages.
+- 更新 PyMuPDF Layout，并随包提供对应源码入口和第三方许可证说明。
+- Recover reading order on affected plain-text PDF pages. Preserve internal destinations during PDF merge and split, and reject unsafe cross-page form splits.
+- 修复受影响的纯文字 PDF 页读序，保留 PDF 合并和拆分后的内部跳转，对无法安全拆分的跨页表单明确报错。
+- Keep diagnostic output out of CLI JSON and Machine frames, improve DOCX cancellation, and fix a desktop shutdown race.
+- 保持 CLI JSON 和 Machine 消息完整，改进 DOCX 校对取消，并修复桌面退出竞态。
+
 ## 0.24.0
 
 - Expose standalone DOCX proofreading through Machine capability discovery. The result is a separate document that retains the original content and existing comments.

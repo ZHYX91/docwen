@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import fitz
 import openpyxl
+import pymupdf as fitz
 from docx import Document
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation

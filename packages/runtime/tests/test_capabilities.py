@@ -343,7 +343,7 @@ def test_pymupdf_layout_resource_probe_verifies_the_pinned_installed_resources()
         "available": True,
         "reason": None,
         "resource_types": ["onnx", "yaml"],
-        "resource_count": 7,
+        "resource_count": 19,
     }
 
 

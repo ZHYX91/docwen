@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 PYMUPDF_LAYOUT_DISTRIBUTION = "pymupdf-layout"
-PYMUPDF_LAYOUT_DISTRIBUTION_VERSION = "1.27.2.2"
+PYMUPDF_LAYOUT_DISTRIBUTION_VERSION = "1.28.2"
 PYMUPDF_LAYOUT_SOURCE_RESOURCE_ROOT = PurePosixPath("pymupdf/layout/resources")
 
 
@@ -38,49 +38,16 @@ class PymupdfLayoutResourceVerification:
     resource_count: int
 
 
-PYMUPDF_LAYOUT_WINDOWS_RESOURCE_MANIFEST = (
+PYMUPDF_LAYOUT_RESOURCE_MANIFEST = (
     PymupdfLayoutResourceSpec(
         relative_path="onnx/feature_imf1.onnx",
-        size=1_116_432,
-        sha256="fac3e029a8c4d1c3e6cc9a6195bca8429175771db3c82c3d42f6ea9e9b8b4520",
+        size=1_264_599,
+        sha256="27e30224174d760ca28536b7ca498133745b6b73ad091d67b2acb3617ce1ae51",
     ),
     PymupdfLayoutResourceSpec(
-        relative_path="onnx/layout_imf1.onnx",
-        size=6_137_495,
-        sha256="80a39fbd859999d812fdafe35b6aa1850f22be13057625dca86d59e58f8858e8",
-    ),
-    PymupdfLayoutResourceSpec(
-        relative_path="onnx/layout_imf1.yaml",
-        size=4_314,
-        sha256="009b475fae8a8f1ae1e8e8276f31b3479f6b3438f7952cdd5eaf8dd45a4b8bac",
-    ),
-    PymupdfLayoutResourceSpec(
-        relative_path="onnx/layout_rf2.4.1+imf1.onnx",
-        size=6_453_771,
-        sha256="77db5779c368084abfaed1fa08522c753776561d15b971a0227099a473e2871c",
-    ),
-    PymupdfLayoutResourceSpec(
-        relative_path="onnx/layout_rf2.4.1+imf1.yaml",
-        size=7_755,
-        sha256="fcdbbd1166a625fe126c18ee30ff8b7274f4f6286141747e4a6449d46ec51f45",
-    ),
-    PymupdfLayoutResourceSpec(
-        relative_path="onnx/layout_rf2.4.1.onnx",
-        size=5_997_803,
-        sha256="1db0a751714404222c80c23f4613e611c2bef0e7b10e0ec8338b6aeb0e4eee02",
-    ),
-    PymupdfLayoutResourceSpec(
-        relative_path="onnx/layout_rf2.4.1.yaml",
-        size=7_742,
-        sha256="975d864374a3ce333c948a16e5083f2a01e1688145748106b38228bc882ca22a",
-    ),
-)
-
-PYMUPDF_LAYOUT_POSIX_RESOURCE_MANIFEST = (
-    PymupdfLayoutResourceSpec(
-        relative_path="onnx/feature_imf1.onnx",
-        size=1_116_432,
-        sha256="fac3e029a8c4d1c3e6cc9a6195bca8429175771db3c82c3d42f6ea9e9b8b4520",
+        relative_path="onnx/feature_imf2.onnx",
+        size=1_330_260,
+        sha256="da2b70759311a4c5b22f427845ee8201f41d1945d609bcc68e299d7bbea4877e",
     ),
     PymupdfLayoutResourceSpec(
         relative_path="onnx/layout_imf1.onnx",
@@ -94,13 +61,13 @@ PYMUPDF_LAYOUT_POSIX_RESOURCE_MANIFEST = (
     ),
     PymupdfLayoutResourceSpec(
         relative_path="onnx/layout_rf2.4.1+imf1.onnx",
-        size=6_453_771,
-        sha256="77db5779c368084abfaed1fa08522c753776561d15b971a0227099a473e2871c",
+        size=8_195_105,
+        sha256="9602ca3f4e4f34b50551ccd2af81bea4af7010bd61b2cc10e77de6f7b125cb20",
     ),
     PymupdfLayoutResourceSpec(
         relative_path="onnx/layout_rf2.4.1+imf1.yaml",
-        size=7_406,
-        sha256="c8198e97a1c58ed0cd765c0208ccf5408fb1563715f8f134096eab1ad9e72316",
+        size=6_561,
+        sha256="afdb4f7ec55900e5fb26239a9ceb78c814b6726c05c5a47eec1efb7beb9ae6c3",
     ),
     PymupdfLayoutResourceSpec(
         relative_path="onnx/layout_rf2.4.1.onnx",
@@ -112,16 +79,69 @@ PYMUPDF_LAYOUT_POSIX_RESOURCE_MANIFEST = (
         size=7_394,
         sha256="c0ebe52f9eea9ff2387d2b5317c1e84065b631e4f4ffed33f0cacd28232d15bd",
     ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v1.onnx",
+        size=683_875,
+        sha256="ca1bbdcf9ed6f322899ca70cc5043f3e6939aa2f9edcdd3a65168d28e717e05f",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v1_old.onnx",
+        size=683_875,
+        sha256="ca1bbdcf9ed6f322899ca70cc5043f3e6939aa2f9edcdd3a65168d28e717e05f",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v1a.onnx",
+        size=1_071_242,
+        sha256="82b1eed0bada8872156f46ec9ffc067909d6942c4a2d1f684f2da926ef4b5417",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v1t.onnx",
+        size=3_904_284,
+        sha256="2f10e54d183a7a912fe985070c4d752a8b121e400909250e6e1a75a37bf7d310",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v2_conn.onnx",
+        size=145_910,
+        sha256="0097e1986f0dee4cd174fb73725dfe31607a91ed7a8a74f7cc649b4148881745",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v2_grid.onnx",
+        size=1_067_089,
+        sha256="53c03e63b4882adf99466736ca2b3f22150a6826d398730952cf00320274b363",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v2c.onnx",
+        size=7_019_379,
+        sha256="f83756e4a1986274aada2b457fd19ea0ded0303617636cb8f0d456ed29f0a698",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v3.onnx",
+        size=1_649_152,
+        sha256="805212c764f0eb461fd6f419c5892d0a03b4ae727a1f83cbabd21e6ae807a88a",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v4.onnx",
+        size=3_652_791,
+        sha256="9c41b156c94cdba4a9b474b5d9aab74288f1460207645dac5a38368013d32fe4",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v4_do.onnx",
+        size=3_652_791,
+        sha256="9c41b156c94cdba4a9b474b5d9aab74288f1460207645dac5a38368013d32fe4",
+    ),
+    PymupdfLayoutResourceSpec(
+        relative_path="onnx/table_grid_model_v4_ep.onnx",
+        size=4_833_323,
+        sha256="ec5d393e6fce44ac692ea75e11f0183ea4dcfca1ea434abc38395a1396cd815e",
+    ),
 )
 
 
 def _pymupdf_layout_resource_manifest_for_platform(
     platform: str,
 ) -> tuple[PymupdfLayoutResourceSpec, ...] | None:
-    if platform == "win32":
-        return PYMUPDF_LAYOUT_WINDOWS_RESOURCE_MANIFEST
-    if platform in {"linux", "darwin"}:
-        return PYMUPDF_LAYOUT_POSIX_RESOURCE_MANIFEST
+    if platform in {"win32", "linux", "darwin"}:
+        return PYMUPDF_LAYOUT_RESOURCE_MANIFEST
     return None
 
 
@@ -247,9 +267,8 @@ def verify_installed_pymupdf_layout_distribution() -> PymupdfLayoutResourceVerif
 __all__ = [
     "PYMUPDF_LAYOUT_DISTRIBUTION",
     "PYMUPDF_LAYOUT_DISTRIBUTION_VERSION",
-    "PYMUPDF_LAYOUT_POSIX_RESOURCE_MANIFEST",
+    "PYMUPDF_LAYOUT_RESOURCE_MANIFEST",
     "PYMUPDF_LAYOUT_SOURCE_RESOURCE_ROOT",
-    "PYMUPDF_LAYOUT_WINDOWS_RESOURCE_MANIFEST",
     "PymupdfLayoutResourceSpec",
     "PymupdfLayoutResourceVerification",
     "pymupdf_layout_resource_manifest",

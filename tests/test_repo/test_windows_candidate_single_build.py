@@ -32,13 +32,15 @@ def test_candidate_records_one_build_without_precomputed_output_hashes(
     lock_bytes = b"the lockfile tracked by the selected commit"
     lock_sha256 = hashlib.sha256(lock_bytes).hexdigest()
     build_calls: list[Sequence[str]] = []
+    source_commit = "a" * 40
+    source_notice = f"Download project source: https://github.com/ZHYX91/docwen/archive/{source_commit}.tar.gz\n"
 
     def fake_git(_repo: Path, *args: str) -> str:
         if args[0] == "status":
             return ""
         if args[0] == "show":
             return "1704067200"
-        return "b" * 40 if args[-1] == "HEAD^{tree}" else "a" * 40
+        return "b" * 40 if args[-1] == "HEAD^{tree}" else source_commit
 
     def fake_run(command: Sequence[str], *, cwd: Path, env: dict[str, str] | None = None) -> str:
         if command[:2] == ["git", "clone"]:
@@ -47,16 +49,18 @@ def test_candidate_records_one_build_without_precomputed_output_hashes(
             (cwd / "uv.lock").write_bytes(lock_bytes)
         else:
             assert command[1] == "scripts/build/build.py"
+            assert command[command.index("--source-commit") + 1] == source_commit
             assert env is not None and env["UV_OFFLINE"] == "1"
             build_calls.append(command)
             deploy = cwd / "dist" / f"DocWen_v{manifest['product']['version']}_win-x64"
             deploy.mkdir(parents=True)
             (deploy / "DocWen.exe").write_bytes(gui_bytes)
             (deploy / "DocWenCLI.exe").write_bytes(b"cli")
+            (deploy / "SOURCE_CODE.txt").write_text(source_notice, encoding="utf-8", newline="\n")
         return "primitive build completed"
 
     def fake_verify_source_contracts(_repo: Path, _manifest: object, *, commit: str) -> dict[str, str]:
-        assert commit == "a" * 40
+        assert commit == source_commit
         return {"uv.lock": lock_sha256}
 
     monkeypatch.setattr(production, "git", fake_git)
@@ -99,7 +103,8 @@ def test_candidate_records_one_build_without_precomputed_output_hashes(
     archive = output / result["offlineZip"]["name"]
     assert result["offlineZip"]["sha256"] == production.sha256_file(archive)
     with zipfile.ZipFile(archive) as packaged:
-        assert packaged.namelist() == ["DocWen.exe", "DocWenCLI.exe"]
+        assert packaged.namelist() == ["DocWen.exe", "DocWenCLI.exe", "SOURCE_CODE.txt"]
         assert packaged.read("DocWen.exe") == gui_bytes
+        assert packaged.read("SOURCE_CODE.txt").decode("utf-8") == source_notice
     assert not work.exists()
     assert not (output / production.PRODUCTION_OUTPUT_LEASE).exists()

@@ -341,41 +341,6 @@ def _pdf_interactive_geometry_projection(path: str | Path) -> list[dict[str, Any
     return projection
 
 
-def _expected_interactive_geometry_projection(
-    page_specs: list[dict[str, Any]],
-    page_profiles: dict[str, dict[str, Any]],
-) -> list[dict[str, Any]]:
-    expected = []
-    for page_spec in page_specs:
-        profile = page_profiles[page_spec["profile"]]
-        output = profile["expected_insert_pdf_geometry"]
-        expected.append(
-            {
-                "text": page_spec["text"],
-                "rotation": profile["rotation"],
-                "rect": output["rect"],
-                "mediabox": output["mediabox"],
-                "cropbox": output["cropbox"],
-                "links": [
-                    {
-                        "kind": 2,
-                        "uri": page_spec["uri"],
-                        "from": output["link_from"],
-                    }
-                ],
-                "annotations": [
-                    {
-                        "type": "Text",
-                        "content": page_spec["note"],
-                        "title": f"{page_spec['text']}-AUTHOR",
-                        "rect": output["annotation_rect"],
-                    }
-                ],
-            }
-        )
-    return expected
-
-
 def _create_forms_actions_pdf(path: Path, input_spec: dict[str, Any]) -> None:
     import fitz
 
@@ -538,7 +503,6 @@ __all__ = (
     "_create_rotated_pdf",
     "_create_text_pdf",
     "_document_node_root",
-    "_expected_interactive_geometry_projection",
     "_io_path",
     "_load_layout_pdf_old_system_fixture",
     "_load_pdf_ops_old_system_fixture",

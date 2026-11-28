@@ -59,14 +59,14 @@ def pre_convert_layout(
             pdf_data = render_ofd_pdf(str(protected), check_cancel=cancel.check if cancel is not None else None)
             backend = "easyofd"
         else:
-            import fitz
+            import pymupdf as fitz
 
             with fitz.open(str(protected), filetype="xps") as source_doc:
                 pdf_data = source_doc.convert_to_pdf()
             backend = "PyMuPDF"
         if _is_cancel_requested(cancel):
             return PreConversionFailure(message="cancelled", cancelled=True, error_type="cancelled")
-        import fitz
+        import pymupdf as fitz
 
         if not isinstance(pdf_data, (bytes, bytearray)) or not pdf_data.startswith(b"%PDF-"):
             raise ValueError("Layout normalization produced non-PDF content")

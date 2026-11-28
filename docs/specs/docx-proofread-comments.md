@@ -2,9 +2,9 @@
 
 Direct DOCX validation (including Application-preconverted legacy documents) and Markdown-to-DOCX postprocessing use the same validator and comment formatter. Four independent switches control typo rules, sensitive-word rules, symbol correction and symbol pairing. The shipped typo and sensitive-word dictionaries remain empty and user-managed; this does not add grammar correction.
 
-The validator visits main-body paragraphs, table cells and nested tables in document order. Each underlying merged cell is checked once, including horizontal and vertical merges. The existing code/quotation skip options and cancellation checks apply inside tables as well. Paragraph, issue and comment counts include these table paragraphs. Headers, footers and text boxes remain outside this validator's supported text scope; a successful result describes the supported scope rather than every text-bearing part of the package.
+The validator visits main-body paragraphs, table cells and nested tables in document order. Each underlying merged cell is checked once, including horizontal and vertical merges. The existing code/quotation skip options and cancellation checks apply inside tables as well. Paragraph, issue and comment counts include these table paragraphs. The supported scope excludes headers, footers, text boxes, and text inside block-level or inline content controls.
 
-校对按文档顺序遍历主正文段落、表格单元格及嵌套表格；横向或纵向合并后的底层单元格只检查一次。表格内同样执行既有代码／引用跳过选项及取消检查，段落、问题和批注统计包含这些表格段落。页眉、页脚和文本框仍不属于本校对器支持的文本范围；成功结果描述受支持范围，不表示包内所有含文字的部件都已检查。
+校对按文档顺序遍历主正文段落、表格单元格及嵌套表格。横向或纵向合并后的底层单元格只检查一次。表格内同样执行既有代码／引用跳过选项及取消检查，段落、问题和批注统计包含这些表格段落。页眉、页脚、文本框，以及块级或行内内容控件中的文字不在支持范围内。
 
 Comments use author `DocWen` and initials `DW`. A rule with an explicit `replacement` produces a localized label and `original → replacement`. Sensitive words and unmatched or crossed symbol pairs have no replacement: their comments ask for contextual review and contain no replacement arrow. Stable `source` and `rule_key` identities and Machine fix eligibility are independent of comment language.
 

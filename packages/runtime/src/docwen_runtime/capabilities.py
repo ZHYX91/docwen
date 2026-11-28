@@ -42,7 +42,7 @@ _MODULE_GATES: dict[str, _ModuleGate] = {
     "python.docx": _ModuleGate("docx", "python-docx"),
     "python.easyofd": _ModuleGate("easyofd", "easyofd"),
     "python.ebooklib": _ModuleGate("ebooklib", "EbookLib"),
-    "python.fitz": _ModuleGate("fitz", "PyMuPDF"),
+    "python.fitz": _ModuleGate("pymupdf", "PyMuPDF"),
     "python.markdownify": _ModuleGate("markdownify", "markdownify"),
     "python.mistune": _ModuleGate("mistune", "Mistune"),
     "python.openpyxl": _ModuleGate("openpyxl", "openpyxl"),
