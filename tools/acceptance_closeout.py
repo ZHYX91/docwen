@@ -61,6 +61,9 @@ def _managed_boundary(run_root: Path, *, workspace_root: Path) -> Path:
             if run_root == boundary:
                 raise AcceptanceCloseoutError(f"managed_root_itself_not_a_run:{run_root}")
             return boundary
+    openclaw = workspace_cleanup._openclaw_failure_boundary(run_root, workspace=workspace_root)
+    if openclaw is not None:
+        return openclaw
     raise AcceptanceCloseoutError(f"run_outside_managed_scratch:{run_root}")
 
 
@@ -83,7 +86,10 @@ def close_run(
     candidate = _validate_token(candidate_id, field="candidate_id")
     gate_name = _validate_token(gate, field="gate")
     subject = _validate_subject(name=subject_name, sha256=subject_sha256, size=subject_bytes)
-    run = Path(os.path.abspath(run_root)).resolve(strict=True)
+    requested_run = Path(os.path.abspath(run_root))
+    run = requested_run.resolve(strict=True)
+    if (workspace / "acceptance") in run.parents and requested_run != run:
+        raise AcceptanceCloseoutError(f"linked_acceptance_run:{requested_run}")
     _managed_boundary(run, workspace_root=workspace)
 
     marker = run / workspace_cleanup.LEASE_NAME
