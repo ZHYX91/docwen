@@ -76,6 +76,35 @@ def test_layout_picture_bytes_keep_physical_path_independent_of_markdown(
     assert _referenced_extracted_images(wiki, _target_index(image_file, "ignored/")) == {image_file}
 
 
+@pytest.mark.parametrize("extract_images", [False, True])
+def test_layout_plain_text_spans_shared_by_two_boxes_keep_their_column_order(tmp_path, extract_images):
+    import pymupdf
+    import pymupdf4llm
+
+    phrases = (
+        "Northern farms occupy the highlands.",
+        "Early harvests are processed locally.",
+        "Two hundred crates left the depot.",
+        "Southern farms follow the river.",
+        "Late harvests serve the nearby market.",
+        "Seven hundred crates went to port.",
+    )
+    with pymupdf.open() as document:
+        page = document.new_page(width=612, height=792)
+        for index, phrase in enumerate(phrases):
+            x = 45 if index < 3 else 322
+            page.insert_text((x, 115 + 22 * (index % 3)), phrase, fontsize=12, fontname="helv")
+        markdown, images = converter._extract_page_markdown(
+            pymupdf4llm, document, 0, tmp_path if extract_images else None
+        )
+
+    assert isinstance(markdown, str)
+    assert [markdown.count(phrase) for phrase in phrases] == [1] * len(phrases)
+    offsets = [markdown.index(phrase) for phrase in phrases]
+    assert offsets == sorted(offsets)
+    assert not images
+
+
 def test_layout_indexes_each_written_image_once_and_keeps_cross_page_references(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

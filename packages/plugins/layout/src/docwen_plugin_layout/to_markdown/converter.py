@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import pymupdf
+    from pymupdf4llm.helpers.document_layout import PageLayout
 
     from docwen_core.export_semantics import MarkdownExportSemantics
     from docwen_core.models.result import ConversionResult
@@ -62,16 +63,48 @@ _WIKI_IMAGE_TARGET_RE = re.compile(r"!\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]")
 _MARKDOWN_IMAGE_TARGET_RE = re.compile(r"!\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))")
 
 
+def _duplicates_text_spans(page: PageLayout) -> bool:
+    """Detect source spans claimed by separate plain-text layout boxes."""
+    if len(page.boxes) < 2 or any(box.boxclass != "text" for box in page.boxes):
+        return False
+    previous: set[tuple[tuple[float, ...], str]] = set()
+    for box in page.boxes:
+        spans = {
+            (tuple(span["bbox"]), span["text"])
+            for line in (box.textlines or ())
+            for span in line["spans"]
+            if span["text"].strip()
+        }
+        if previous.intersection(spans):
+            return True
+        previous.update(spans)
+    return False
+
+
 def _extract_page_markdown(
     renderer: ModuleType, document: pymupdf.Document, page_index: int, image_directory: Path | None
 ) -> tuple[str | list[str], list[Path] | None]:
-    if image_directory is not None and getattr(renderer, "_use_layout", False):
+    if getattr(renderer, "_use_layout", False):
         # The layout writer uses its Markdown-escaped URL as the filesystem path.
         # Keep the typed picture bytes until DocWen has chosen both destinations.
         from pymupdf4llm.helpers.document_layout import parse_document
         from pymupdf4llm.ocr import OCRMode
 
-        parsed = parse_document(document, pages=[page_index], embed_images=True, force_text=True, use_ocr=OCRMode.NEVER)
+        parsed = parse_document(
+            document,
+            pages=[page_index],
+            embed_images=image_directory is not None,
+            force_text=True,
+            use_ocr=OCRMode.NEVER,
+        )
+        if any(_duplicates_text_spans(page) for page in parsed.pages):
+            # Reuse the geometric renderer for this plain-text page. Keep the
+            # process-wide layout setting and other pages' semantic extraction intact.
+            from pymupdf4llm.helpers.pymupdf_rag import to_markdown
+
+            return to_markdown(document, pages=[page_index], hdr_info=False, ignore_images=True), []
+        if image_directory is None:
+            return cast(str, parsed.to_markdown(page_chunks=False)), []
         source_name = sanitize_for_wiki_link(Path(document.name or "page").name)
         written_images: list[Path] = []
         for page in parsed.pages:
